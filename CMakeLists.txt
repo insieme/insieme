@@ -6,8 +6,8 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_CXX_COMPILER /software/gcc450/bin/g++)
 set(CMAKE_C_COMPILER   /software/gcc450/bin/gcc)
 
-set(LLVM_HOME 		 /software/llvm-2.6)
-set(CLANG_SRC_HOME /software/llvm-2.6/src/tools/clang)
+set(LLVM_HOME 		 /home/spellegrini/shared/llvm-2.7/)
+set(CLANG_SRC_HOME /home/spellegrini/shared/llvm-2.7-src/tools/clang)
 
 include_directories( 
 	${CMAKE_CURRENT_SOURCE_DIR}/include
