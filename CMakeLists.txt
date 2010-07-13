@@ -52,7 +52,7 @@ find_library(pthread_LIB pthread)
 file(GLOB insieme_SOURCES 	src/*.cpp )
 
 # Create an executable file called helloworld from sources:
-add_executable(insieme ${insieme_SOURCES})
+add_executable(insiemec ${insieme_SOURCES})
 
 target_link_libraries( insiemec ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
 
