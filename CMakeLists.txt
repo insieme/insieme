@@ -3,7 +3,9 @@ project(insieme)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
-set(LD_LIBRARY_PATH /software/lib-gcc450/:${LD_LIBRARY_PATH})
+MESSAGE("LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}")
+set(ENV{LD_LIBRARY_PATH} /software/lib-gcc450/)
+
 set(CMAKE_CXX_COMPILER /software/gcc450/bin/g++)
 set(CMAKE_C_COMPILER   /software/gcc450/bin/gcc)
 
