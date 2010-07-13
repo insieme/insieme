@@ -1,10 +1,7 @@
-project(insieme)
+project(insiemec)
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
-
-MESSAGE("LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}")
-set(ENV{LD_LIBRARY_PATH} /software/lib-gcc450/)
 
 set(CMAKE_CXX_COMPILER /software/gcc450/bin/g++)
 set(CMAKE_C_COMPILER   /software/gcc450/bin/gcc)
@@ -57,5 +54,5 @@ file(GLOB insieme_SOURCES 	src/*.cpp )
 # Create an executable file called helloworld from sources:
 add_executable(insieme ${insieme_SOURCES})
 
-target_link_libraries( insieme ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
+target_link_libraries( insiemec ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
 
