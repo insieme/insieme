@@ -1,4 +1,4 @@
-project(insiemec)
+project(insieme)
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
@@ -52,7 +52,7 @@ find_library(pthread_LIB pthread)
 file(GLOB insieme_SOURCES 	src/*.cpp )
 
 # Create an executable file called helloworld from sources:
-add_executable(insiemec ${insieme_SOURCES})
+add_executable(insieme ${insieme_SOURCES})
 
-target_link_libraries( insiemec ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
+target_link_libraries( insieme ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
 
