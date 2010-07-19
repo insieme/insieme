@@ -56,3 +56,6 @@ add_executable(insieme ${insieme_SOURCES})
 
 target_link_libraries( insieme ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
 
+# building documentation
+SUBDIRS( docs )
+
