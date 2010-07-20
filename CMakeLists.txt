@@ -3,8 +3,6 @@ project(insieme)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
-message(BUILD_DIRECTORY: ${CMAKE_CURRENT_BINARY_DIR})
-
 set(CMAKE_CXX_COMPILER /software/gcc450/bin/g++)
 set(CMAKE_C_COMPILER   /software/gcc450/bin/gcc)
 
