@@ -1,6 +1,6 @@
-FIND_PACKAGE(LATEX)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-set(PDF_LATEX pdflatex)
+INCLUDE(UseLATEX.cmake)
 
 SUBDIRS(coding_standards)
 SUBDIRS(ir_language_specification)
