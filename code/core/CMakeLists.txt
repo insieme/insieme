@@ -7,7 +7,6 @@ cmake_minimum_required(VERSION 2.6)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB insieme_compiler_core_SOURCES 	src/*.cpp )
-
 file(GLOB insieme_compiler_core_INCS "include/*.h")
 
 # FIXME util include

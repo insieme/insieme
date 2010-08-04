@@ -42,10 +42,13 @@
 #include <sstream>
 #include <memory>
 #include <algorithm>
+#include <boost/algorithm/string/join.hpp>
 
 #include "stringutils.h"
 
 using std::string;
+using std::vector;
+using std::map;
 
 class Type {
 	const string name;
@@ -62,6 +65,20 @@ class TypeVariable : public Type {
 };
 
 
+class AbstractType;
+typedef std::shared_ptr<AbstractType> AbstractTypeRef;
+
+class AbstractType : public Type {
+
+	static AbstractTypeRef instance;
+public:
+	static AbstractTypeRef getInstance() { return instance; }
+
+	AbstractType() : Type("abstract") {}
+	virtual bool isConcrete() const { return true; }
+};
+
+
 
 typedef struct IntegerParameterStruct {
 	typedef enum { VARIABLE, CONCRETE, INFINITE } IntegerParamType;
@@ -70,29 +87,60 @@ typedef struct IntegerParameterStruct {
 		char parameterName;
 		int value;
 	};
+
+	const string toString() const {
+		switch(type) {
+		case VARIABLE: return ::toString(parameterName);
+		case CONCRETE: return ::toString(value);
+		case INFINITE: return ::toString("Inf");
+		}
+	}
+
 } IntTypeParam;
 
 
 class UserType : public Type {
 	static string buildNameString(const string& name, 
-			const std::vector<TypeRef>& typeParams, const std::vector<IntTypeParam>& intPars) {
+			const vector<TypeRef>& typeParams, const vector<IntTypeParam>& intPars) {
 		
-		std::stringstream res;
-		res << name << "<";
-		std::for_each(typeParams.begin(), typeParams.end(), [&res](TypeRef cur){
-			res << "," << cur->getName();
-		} );
-		res << ">";
+		std::stringstream res(name);
+
+		if (typeParams.empty() && intPars.empty() ) {
+			return res.str();
+		}
+
+		vector<string> list;
+		std::transform(typeParams.cbegin(), typeParams.cend(), list.end(), [](const TypeRef cur) { return cur->getName(); });
+		std::transform(intPars.cbegin(), intPars.cend(), list.end(), [](const IntTypeParam cur) { return cur.toString(); });
+
+		res << "<" << boost::join(list, ",") << ">";
+
 		return res.str();
 	}
 
-	const std::vector<TypeRef> typeParams;
-	const std::vector<IntTypeParam> intParams;
+	const vector<TypeRef> typeParams;
+	const vector<IntTypeParam> intParams;
 	const TypeRef baseType;
+
+public:
+	UserType(string name,
+			vector<TypeRef> typeParams = vector<TypeRef>(),
+			vector<IntTypeParam> intTypeParams = vector<IntTypeParam>(),
+			TypeRef baseType = AbstractType::getInstance())
+	   :
+		Type(buildNameString(name, typeParams, intTypeParams)),
+		typeParams(typeParams),
+		intParams(intTypeParams),
+		baseType(baseType) {}
+
+	virtual bool isConcrete() const {
+		auto p = [](const TypeRef cur) { return cur->isConcrete(); };
+		return std::find_if(typeParams.cbegin(), typeParams.cend(), p) != typeParams.end();
+	}
 };
 
 class TupleType : public Type {
-	const std::vector<TypeRef> elementTypes;
+	const vector<TypeRef> elementTypes;
 };
 
 class FunctionType : public Type {
@@ -101,7 +149,7 @@ class FunctionType : public Type {
 };
 
 class NamedCompositeType : public Type {
-	const std::map<const string, const TypeRef> elements;
+	const map<const string, const TypeRef> elements;
 };
 class StructType : public NamedCompositeType {
 };
@@ -135,4 +183,7 @@ class ChannelType : public Type {
 	TypeRef type;
 	unsigned bufferLength;
 };
+
+
+
 

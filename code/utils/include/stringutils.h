@@ -38,8 +38,16 @@
 
 #include <string>
 #include <cstring>
+#include <sstream>
 
 using std::string;
 
 string format(const char* formatString, ...);
+
+template<typename T>
+string toString(T value) {
+	std::stringstream res;
+	res << value;
+	return res.str();
+}
 
