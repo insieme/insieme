@@ -36,20 +36,25 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include <map>
-#include <sstream>
-#include <memory>
 #include <algorithm>
 #include <iterator>
+#include <map>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 #include <boost/algorithm/string/join.hpp>
 
 #include "stringutils.h"
+#include "containerutils.h"
 
 using std::string;
 using std::vector;
 using std::map;
+
+// ---------------------------------------- A token for an abstract type ------------------------------
 
 class Type {
 	const string name;
@@ -61,62 +66,130 @@ public:
 };
 typedef std::shared_ptr<Type> TypeRef;
 
-class TypeVariable : public Type {
-	
+
+// ---------------------------------------- A token for an abstract type ------------------------------
+
+
+class VariableType : public Type {
+	VariableType(const string& name) : Type(format("'%s",name.c_str())){}
+public:
+	virtual bool isConcrete() const { return false; }
 };
+
+
+// ---------------------------------------- A token for an abstract type ------------------------------
 
 
 class AbstractType;
 typedef std::shared_ptr<AbstractType> AbstractTypeRef;
 
+/**
+ * The abstract type is a special (singleton) token representing the base class for types defined
+ * in an abstract way. Hence, type definitions using this type as a base type have to be supported
+ * by the code synthesizer.
+ */
 class AbstractType : public Type {
 
+	/**
+	 * The singleton instance of this type (shared among all type manager instances)
+	 */
 	static AbstractTypeRef instance;
+
+	/**
+	 * The default constructor of this type, fixing the name to "abstract".
+	 */
+	AbstractType() : Type("abstract") {}
+
 public:
+
+	/**
+	 * Obtains a reference to the singleton instance of this type.
+	 */
 	static AbstractTypeRef getInstance() { return instance; }
 
-	AbstractType() : Type("abstract") {}
+	/**
+	 * Overrides the implementation of this method within the parent class (where it is abstract).
+	 * The abstract type is always a concrete type.
+	 */
 	virtual bool isConcrete() const { return true; }
 };
 
 
+// ---------------------------------------- Integer Type Parameters ------------------------------
 
-typedef struct IntegerParameterStruct {
-	typedef enum { VARIABLE, CONCRETE, INFINITE } IntegerParamType;
-	IntegerParamType type;
+class IntTypeParam {
+private:
+	typedef enum { VARIABLE, CONCRETE, INFINITE } Type;
+
+	Type type;
 	union {
-		char parameterName;
+		char symbol;
 		int value;
 	};
 
+	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {};
+	IntTypeParam(const int value) : type(CONCRETE), value(value) {};
+	IntTypeParam() : type(INFINITE) {};
+
+public:
+
 	const string toString() const {
 		switch(type) {
-		case VARIABLE: return ::toString(parameterName);
+		case VARIABLE: return ::toString(symbol);
 		case CONCRETE: return ::toString(value);
 		case INFINITE: return ::toString("Inf");
-		default: throw std::runtime_error("IntegerParameterStruct of unknown type.");
+		default: throw std::runtime_error("Invalid parameter type discovered!");
 		}
 	}
 
-} IntTypeParam;
+	bool isConcrete() const {
+		return type!=VARIABLE;
+	}
+
+private:
+	static IntTypeParam infinite;
+
+public:
+	static IntTypeParam getVariableIntParam(char symbol) {
+		return IntTypeParam(symbol);
+	}
+
+	static IntTypeParam getConcreteIntParam(int value) {
+		return IntTypeParam(value);
+	}
+
+	static IntTypeParam getInfiniteIntParam() {
+		return infinite;
+	}
+
+};
+
+// ---------------------------------------- User defined Type ------------------------------
 
 
 class UserType : public Type {
 	static string buildNameString(const string& name, 
 			const vector<TypeRef>& typeParams, const vector<IntTypeParam>& intParams) {
 		
+		// create output buffer
 		std::stringstream res;
+
+		// add leading name
 		res << name;
 
+		// check whether there are type parameters
 		if (!typeParams.empty() || !intParams.empty()) {
 
+			// convert type parameters to strings ...
 			vector<string> list;
 			std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypeRef cur) { return cur->getName(); });
 			std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) { return cur.toString(); });
 
+			// add type parameter clause
 			res << "<" << boost::join(list, ",") << ">";
 		}
 
+		// return resulting string
 		return res.str();
 	}
 
@@ -125,7 +198,7 @@ class UserType : public Type {
 	const TypeRef baseType;
 
 public:
-	UserType(string name,
+	UserType(const string& name,
 			vector<TypeRef> typeParams = vector<TypeRef>(),
 			vector<IntTypeParam> intTypeParams = vector<IntTypeParam>(),
 			TypeRef baseType = AbstractType::getInstance())
@@ -136,8 +209,19 @@ public:
 		baseType(baseType) {}
 
 	virtual bool isConcrete() const {
+		// init result (to perform lazy evaluation)
+		bool res = true;
+
+		// check whether there is a variable type within the type-parameter list
 		auto p = [](const TypeRef cur) { return cur->isConcrete(); };
-		return std::find_if(typeParams.cbegin(), typeParams.cend(), p) != typeParams.end();
+		res = res && (std::find_if(typeParams.cbegin(), typeParams.cend(), p) != typeParams.end());
+
+		// check whether there is a variable symbol within the integer-parameter list
+		auto q = [](const IntTypeParam cur) { return cur.isConcrete(); };
+		res = res && std::find_if(intParams.cbegin(), intParams.cend(), q) != intParams.end();
+
+		// return result
+		return res;
 	}
 };
 
@@ -172,13 +256,12 @@ public:
 };
 typedef const std::shared_ptr<ArrayType> ArrayTypeRef;
 
-class VectorType : public Type {
-	TypeRef elementType;
-	unsigned length;
+class VectorType : public UserType {
+	VectorType(TypeRef elementType, IntTypeParam size) : UserType("vector", singleton(elementType), singleton(size)) {}
 };
 
-class ReferenceType : public Type {
-	TypeRef referencedType;
+class ReferenceType : public UserType {
+	ReferenceType(TypeRef elementType) : UserType("ref", singleton(elementType), vector<IntTypeParam>()) {}
 };
 
 class ChannelType : public Type {

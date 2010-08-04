@@ -39,14 +39,13 @@
 #include <string>
 #include <map>
 #include <memory>
-#include <exception>
 #include <stdexcept>
 
 #include "types.h"
 
 /**
- * The TypeLookupException indicates that a certain type cannot be found within the repository maintained by a type manager.
- * It will be thrown by <lookup>(const std::string).
+ * The TypeLookupException indicates that a certain type cannot be found within the repository maintained by a
+ * type manager. It will be thrown by <lookup>(const std::string).
  *
  * @see TypeManager
  */
@@ -65,13 +64,20 @@ public:
 };
 
 /**
- * The type manager represents a central repository for managing types. It maintains a list of known types, offers means to look up types based on
- * their names and to creating / registering new types. Thereby it ensures that the type hierarchy remains consistent.
+ * The type manager represents a central repository for managing types. It maintains a list of known types, offers
+ * means to look up types based on their names and to creating / registering new types. Thereby it ensures that the
+ * type hierarchy remains consistent.
  */
 class TypeManager {
 	std::map<const std::string, TypeRef> types;
 
 public:
+
+	TypeManager() {
+		// add abstract type token by default
+		addType(AbstractType::getInstance());
+	}
+
 	TypeRef lookup(const std::string& name) {
 		auto it = types.find(name);
 		if (it == types.end()) {
@@ -87,9 +93,19 @@ public:
 		if (it != types.end()) {
 			return std::dynamic_pointer_cast<ArrayType>(it->second);
 		}
-		// wont types[ref->getName()] = ref;
-		types.insert(std::make_pair(ref->getName(), ref));
+		addType(ref);
 		return ref;
+	}
+
+private:
+
+	/**
+	 * Registers the given type within this type manager.
+	 *
+	 * @param type the new type to be registered.
+	 */
+	void addType(TypeRef type) {
+		types.insert(std::make_pair(type->getName(), type));
 	}
 
 };

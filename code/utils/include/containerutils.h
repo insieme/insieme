@@ -34,40 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include "expressions.h"
-#include "types.h"
-#include "type_manager.h"
+#pragma once
 
-using namespace std;
+#include <vector>
 
-int main(int argc, char** argv) {
-   cout << "Insieme (tm) compiler." << endl;
+using std::vector;
 
-
-   std::vector<TypeRef> emptyRefs;
-   std::vector<IntTypeParam> emptyInts;
-
-   TypeRef simple(new UserType("simple"));
-
-   cout << simple->toString()  << endl;
-
-   vector<TypeRef> v;
-   v.push_back(simple);
-   v.push_back(simple);
-
-   vector<IntTypeParam> p;
-   p.push_back(IntTypeParam::getConcreteIntParam(12));
-   p.push_back(IntTypeParam::getVariableIntParam('a'));
-
-   // works if construct is not private:
-//	p.push_back((IntTypeParam){IntTypeParam::CONCRETE, 12 });
-//	p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'a' });
-
-   UserType complex("complex", v, p, simple);
-   cout << complex.toString() << endl;
-
-   UserType medium("medium", std::vector<TypeRef>(), p);
-   cout << medium.toString() << endl;
+/**
+ * Creates a vector containing (a copy of) the single element provided as an argument.
+ *
+ * @tparam the type of element to be contained within the singleton vector
+ * @param element the element to be included within the new vector
+ *
+ * @return a new vector instance containing a single element
+ */
+template<typename T>
+const vector<T> singleton(T& element) {
+	return vector<T> (1, element);
 }
 
