@@ -42,6 +42,7 @@
 #include <sstream>
 #include <memory>
 #include <algorithm>
+#include <iterator>
 #include <boost/algorithm/string/join.hpp>
 
 #include "stringutils.h"
@@ -93,6 +94,7 @@ typedef struct IntegerParameterStruct {
 		case VARIABLE: return ::toString(parameterName);
 		case CONCRETE: return ::toString(value);
 		case INFINITE: return ::toString("Inf");
+		default: throw std::runtime_error("IntegerParameterStruct of unknown type.");
 		}
 	}
 
@@ -101,19 +103,19 @@ typedef struct IntegerParameterStruct {
 
 class UserType : public Type {
 	static string buildNameString(const string& name, 
-			const vector<TypeRef>& typeParams, const vector<IntTypeParam>& intPars) {
+			const vector<TypeRef>& typeParams, const vector<IntTypeParam>& intParams) {
 		
-		std::stringstream res(name);
+		std::stringstream res;
+		res << name;
 
-		if (typeParams.empty() && intPars.empty() ) {
-			return res.str();
+		if (!typeParams.empty() || !intParams.empty()) {
+
+			vector<string> list;
+			std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypeRef cur) { return cur->getName(); });
+			std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) { return cur.toString(); });
+
+			res << "<" << boost::join(list, ",") << ">";
 		}
-
-		vector<string> list;
-		std::transform(typeParams.cbegin(), typeParams.cend(), list.end(), [](const TypeRef cur) { return cur->getName(); });
-		std::transform(intPars.cbegin(), intPars.cend(), list.end(), [](const IntTypeParam cur) { return cur.toString(); });
-
-		res << "<" << boost::join(list, ",") << ">";
 
 		return res.str();
 	}

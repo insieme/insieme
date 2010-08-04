@@ -49,26 +49,24 @@ int main(int argc, char** argv) {
    std::vector<IntTypeParam> emptyInts;
 
    TypeRef simple(new UserType("simple"));
-   cout << "test" << endl;
 
    cout << simple->toString()  << endl;
-   cout << "test" << endl;
 
    vector<TypeRef> v;
    v.push_back(simple);
    v.push_back(simple);
-   cout << "test" << endl;
 
    vector<IntTypeParam> p;
-   p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'p'});
+   IntTypeParam param;
+   param.type = IntTypeParam::VARIABLE;
+   param.parameterName = 'p';
+   p.push_back(param);
 //   p.push_back((IntTypeParam){.type = IntTypeParam::CONCRETE, .value = 143});
 
    UserType complex("complex", v, p, simple);
-   cout << "test" << endl;
+   cout << complex.toString() << endl;
 
-   cout << complex.toString()  << endl;
-   cout << "test" << endl;
-
-
+   UserType medium("medium", std::vector<TypeRef>(), p);
+   cout << medium.toString() << endl;
 }
 
