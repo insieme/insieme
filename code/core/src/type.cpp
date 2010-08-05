@@ -36,7 +36,7 @@
 
 #include "types.h"
 
-AbstractTypeRef AbstractType::instance(new AbstractType());
+AbstractTypePtr AbstractType::instance(new AbstractType());
 
 
 IntTypeParam IntTypeParam::infinite(IntTypeParam::INFINITE);

@@ -40,6 +40,9 @@
 #include "type_manager.h"
 #include "statements.h"
 
+#include "expressions.h"
+#include "functions.h"
+
 using namespace std;
 
 int main(int argc, char** argv) {

@@ -69,7 +69,7 @@ public:
  * type hierarchy remains consistent.
  */
 class TypeManager {
-	std::map<const std::string, TypeRef> types;
+	std::map<const std::string, TypePtr> types;
 
 public:
 
@@ -78,7 +78,7 @@ public:
 		addType(AbstractType::getInstance());
 	}
 
-	TypeRef lookup(const std::string& name) const {
+	TypePtr lookup(const std::string& name) const {
 		auto it = types.find(name);
 		if (it == types.end()) {
 			throw TypeLookupException(name);
@@ -86,7 +86,7 @@ public:
 		return it->second;
 	}
 
-	ArrayTypeRef getArrayType(const TypeRef elementType, const unsigned dim) {
+	ArrayTypeRef getArrayType(const TypePtr elementType, const unsigned dim) {
 		ArrayTypeRef ref(new ArrayType(elementType, dim));
 		auto it = types.find(ref->getName());
 		if (it != types.end()) {
@@ -103,7 +103,7 @@ private:
 	 *
 	 * @param type the new type to be registered.
 	 */
-	void addType(TypeRef type) {
+	void addType(TypePtr type) {
 		types.insert(std::make_pair(type->getName(), type));
 	}
 
