@@ -34,74 +34,56 @@
  * regarding third party software licenses.
  */
 
+/*
+ * functions.h
+ *
+ *  Defines the class used to represent and manage functions within the IR.
+ *
+ *  Created on: Aug 5, 2010
+ *      Author: Herbert Jordan
+ */
 #pragma once
 
-#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
+#include "stringutils.h"
 #include "types.h"
 
 using std::string;
+using std::vector;
 
-class Expression {
-	
+
+typedef struct {
+	string name;
+	TypePtr type;
+} FunctionParameter;
+
+class Function {
+
+	const FunctionTypePtr type;
+	const vector<FunctionParameter> parameter;
+
 	/**
-	 * The type of the represented expression.
+	 * A flag determining whether
 	 */
-	const TypePtr type;
-
-public:
+	const bool external;
 
 	/**
-	 * Retrieves the type of this expression.
+	 * The statement forming the body of the represented function.
 	 */
-	TypePtr getType() const { return type; }
+	//const StmtPtr body;
 
-};
-
-typedef std::shared_ptr<Expression> ExprPtr;
-
-
-class Variable : public Expression {
-	const string name;
-};
-
-
-class Literal : public Expression {
-};
-
-class IntegerLiteral : public Literal {
-	const int value;
 public:
-	const int getValue() const { return value; }
-};
 
-class BooleanLiteral : public Literal {
-	const bool value;
-public:
-	const bool getValue() const { return value; }
-};
+	Function(FunctionTypePtr type, vector<FunctionParameter> parameter, bool external) :
+		type(type), parameter(parameter), external(external) {
 
-class StringLiteral : public Literal {
-	const string value;
-	const string getValue() const { return value; }
-};
+		// check whether the given type is actually a function type
 
+		// TODO: check whether parameter types are fitting
 
-class LambdaExpression : public Expression {
-};
-
-class CallExpression : public Expression {
-	const ExprPtr function;
-	const ExprPtr argument;
-};
-
-class CastExpression : public Expression {
-	const ExprPtr subExpression;
-};
-
-class LetExpression : public Expression {
-	const TypePtr type;
-	const string name;
-	const ExprPtr definingExpression;
-	const ExprPtr subExpression;
+		// TODO: check
+	}
 };

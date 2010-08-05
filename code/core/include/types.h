@@ -99,6 +99,12 @@ public:
 	virtual bool isConcrete() const = 0;
 
 	/**
+	 * Tests whether the represented type is a function type.
+	 * Since most types are not function types, the default implementation returns false.
+	 */
+	virtual bool isFunctionType() const { return false; }
+
+	/**
 	 * Retrieves the unique name identifying this type.
 	 */
 	const string& getName() const { return name; }
@@ -115,7 +121,7 @@ public:
  * To safely handle type tokens, instances should be maintained via shared pointers. Hence,
  * their life cycle should be handled using the internal shared pointer mechanisms.
  */
-typedef std::shared_ptr<Type> TypeRef;
+typedef std::shared_ptr<Type> TypePtr;
 
 
 // ---------------------------------------- A class for type variables  ------------------------------
@@ -153,7 +159,7 @@ class AbstractType;
 /**
  * A type definition for a shared reference on an abstract type.
  */
-typedef std::shared_ptr<AbstractType> AbstractTypeRef;
+typedef std::shared_ptr<AbstractType> AbstractTypePtr;
 
 /**
  * The abstract type is a special (singleton) token representing the base class for types defined
@@ -165,7 +171,7 @@ class AbstractType : public Type {
 	/**
 	 * The singleton instance of this type (shared among all type manager instances)
 	 */
-	static AbstractTypeRef instance;
+	static AbstractTypePtr instance;
 
 	/**
 	 * The default constructor of this type, fixing the name to "abstract".
@@ -180,7 +186,7 @@ public:
 	 * @return the singleton instance of this type (accessed via a shared pointer to
 	 * 		   be compatible with other type references).
 	 */
-	static AbstractTypeRef getInstance() { return instance; }
+	static AbstractTypePtr getInstance() { return instance; }
 
 	/**
 	 * Overrides the implementation of this method within the parent class (where it is abstract).
@@ -324,7 +330,7 @@ public:
 
 class UserType : public Type {
 	static string buildNameString(const string& name, 
-			const vector<TypeRef>& typeParams, const vector<IntTypeParam>& intParams) {
+			const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intParams) {
 		
 		// create output buffer
 		std::stringstream res;
@@ -335,7 +341,7 @@ class UserType : public Type {
 
 			// convert type parameters to strings ...
 			vector<string> list;
-			std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypeRef cur) { return cur->getName(); });
+			std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypePtr cur) { return cur->getName(); });
 			std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) { return cur.toString(); });
 
 			res << "<" << boost::join(list, ",") << ">";
@@ -343,15 +349,15 @@ class UserType : public Type {
 		return res.str();
 	}
 
-	const vector<TypeRef> typeParams;
+	const vector<TypePtr> typeParams;
 	const vector<IntTypeParam> intParams;
-	const TypeRef baseType;
+	const TypePtr baseType;
 
 public:
 	UserType(const string& name,
-			vector<TypeRef> typeParams = vector<TypeRef>(),
+			vector<TypePtr> typeParams = vector<TypePtr>(),
 			vector<IntTypeParam> intTypeParams = vector<IntTypeParam>(),
-			TypeRef baseType = AbstractType::getInstance())
+			TypePtr baseType = AbstractType::getInstance())
 	   :
 		Type(buildNameString(name, typeParams, intTypeParams)),
 		typeParams(typeParams),
@@ -363,7 +369,7 @@ public:
 		bool res = true;
 
 		// check whether there is a variable type within the type-parameter list
-		auto p = [](const TypeRef cur) { return cur->isConcrete(); };
+		auto p = [](const TypePtr cur) { return cur->isConcrete(); };
 		res = res && (std::find_if(typeParams.cbegin(), typeParams.cend(), p) != typeParams.end());
 
 		// check whether there is a variable symbol within the integer-parameter list
@@ -375,16 +381,20 @@ public:
 };
 
 class TupleType : public Type {
-	const vector<TypeRef> elementTypes;
+	const vector<TypePtr> elementTypes;
 };
 
 class FunctionType : public Type {
-	const TypeRef returnType;
-	const TypeRef argumentType;
+	const TypePtr returnType;
+	const TypePtr argumentType;
+public:
+	virtual bool isFunctionType() const { return true; }
 };
 
+typedef std::shared_ptr<FunctionType> FunctionTypePtr;
+
 class NamedCompositeType : public Type {
-	const map<const string, const TypeRef> elements;
+	const map<const string, const TypePtr> elements;
 };
 class StructType : public NamedCompositeType {
 };
@@ -393,10 +403,10 @@ class UnionType : public NamedCompositeType {
 
 class ArrayType : public Type {
 	friend class TypeManager;
-	const TypeRef elementType;
+	const TypePtr elementType;
 	const unsigned dimensions;
 
-	ArrayType(const TypeRef elementType, const unsigned dim) : 
+	ArrayType(const TypePtr elementType, const unsigned dim) : 
 		Type(format("array<%d,%s>", dim, elementType->getName().c_str())),
 			elementType(elementType), dimensions(dim)  { };
 
@@ -406,15 +416,15 @@ public:
 typedef const std::shared_ptr<ArrayType> ArrayTypeRef;
 
 class VectorType : public UserType {
-	VectorType(TypeRef elementType, IntTypeParam size) : UserType("vector", singleton(elementType), singleton(size)) {}
+	VectorType(TypePtr elementType, IntTypeParam size) : UserType("vector", singleton(elementType), singleton(size)) {}
 };
 
 class ReferenceType : public UserType {
-	ReferenceType(TypeRef elementType) : UserType("ref", singleton(elementType), vector<IntTypeParam>()) {}
+	ReferenceType(TypePtr elementType) : UserType("ref", singleton(elementType), vector<IntTypeParam>()) {}
 };
 
 class ChannelType : public Type {
-	TypeRef type;
+	TypePtr type;
 	unsigned bufferLength;
 };
 
