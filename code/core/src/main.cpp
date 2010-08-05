@@ -38,6 +38,7 @@
 #include "expressions.h"
 #include "types.h"
 #include "type_manager.h"
+#include "statements.h"
 
 using namespace std;
 
