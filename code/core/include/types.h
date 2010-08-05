@@ -56,31 +56,102 @@ using std::map;
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
+/**
+ * The base type for all type tokens. Type tokens are immutable instances of classes derived from this base
+ * class and are used to represent the type of data elements and functions (generally types) within the IR.
+ *
+ * Each type is equipped with a unique name. The name makes them distinguishable. Further, there are two sorts
+ * of types. Concrete types represent types which for which actual values exist. For instance, a value for the type
+ * int<4> would be 7. Variable types however represent a family of types, e.g. the type int<p> represents all
+ * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
+ * both). Variable types can only be used as the input/output types of functions.
+ */
 class Type {
+
+	/**
+	 * The name of this type. This name is used to uniquely identify the represented type. Since types
+	 * are generally immutable, the type name is marked to be constant.
+	 */
 	const string name;
 public:
-	Type(const std::string& name) : name(name) {};
+
+	/**
+	 * Creates a new type using the given name. The constructor is public, however, since
+	 * this class is an abstract class, no actual instance can be created.
+	 *
+	 * @param name the unique name for this type
+	 */
+	Type(const std::string& name) : name(name) {}
+
+	/**
+	 * A simple, virtual destructor for this abstract class.
+	 */
+	virtual ~Type() {}
+
+	/**
+	 * Checks whether the represented type is a concrete type (hence, it does not have any unbound,
+	 * variable type parameters). The method is marked abstract, hence the actual decision whether
+	 * a type is concrete or not is made by actual sub-classes.
+	 *
+	 * @return true if it is a concrete type, false otherwise
+	 */
 	virtual bool isConcrete() const = 0;
-	const string& getName() const { return name; };
-	virtual string toString() const { return getName(); };
+
+	/**
+	 * Retrieves the unique name identifying this type.
+	 */
+	const string& getName() const { return name; }
+
+	/**
+	 * Provides a string representation of this type, which is by default
+	 * the actual name of the type. Specific sub-types may override this method
+	 * to customize the representation.
+	 */
+	virtual string toString() const { return getName(); }
 };
+
+/**
+ * To safely handle type tokens, instances should be maintained via shared pointers. Hence,
+ * their life cycle should be handled using the internal shared pointer mechanisms.
+ */
 typedef std::shared_ptr<Type> TypeRef;
 
 
-// ---------------------------------------- A token for an abstract type ------------------------------
+// ---------------------------------------- A class for type variables  ------------------------------
 
-
+/**
+ * Tokens of this type are used to represent type variables. Instances them-self represent types,
+ * yet no concrete ones.
+ */
 class VariableType : public Type {
+
+	/**
+	 * Creates a new type variable using the given name.
+	 *
+	 * @param name the name of the type variable to be created
+	 */
 	VariableType(const string& name) : Type(format("'%s",name.c_str())){}
 public:
+
+	/**
+	 * Simply returns the false since variable Types are never concrete.
+	 *
+	 * @return always false
+	 *
+	 * @see Type::isConcrete()
+	 */
 	virtual bool isConcrete() const { return false; }
 };
 
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
-
+// pre-definition of abstract type class
 class AbstractType;
+
+/**
+ * A type definition for a shared reference on an abstract type.
+ */
 typedef std::shared_ptr<AbstractType> AbstractTypeRef;
 
 /**
@@ -104,6 +175,9 @@ public:
 
 	/**
 	 * Obtains a reference to the singleton instance of this type.
+	 *
+	 * @return the singleton instance of this type (accessed via a shared pointer to
+	 * 		   be compatible with other type references).
 	 */
 	static AbstractTypeRef getInstance() { return instance; }
 
@@ -117,47 +191,128 @@ public:
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
+/**
+ * Instances of this class represent the integer-type parameters.
+ *
+ * The type system supports two types of generic type parameters - other types (or variables) and integers.
+ * Integer parameters may be concrete values, variables (equal to type variables) or the infinite sigh.
+ */
 class IntTypeParam {
 private:
-	typedef enum { VARIABLE, CONCRETE, INFINITE } Type;
+	/**
+	 * An enumeration to determine the actual type of the integer parameter.
+	 */
+	typedef enum {
+		VARIABLE,
+		CONCRETE,
+		INFINITE
+	} Type;
 
+	/**
+	 * The type of the parameter represented by this instance.
+	 */
 	Type type;
-	union {
-		char symbol;
-		int value;
-	};
 
-	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {};
-	IntTypeParam(const int value) : type(CONCRETE), value(value) {};
-	IntTypeParam() : type(INFINITE) {};
+	/**
+	 * A union containing additional information on the represented type parameter.
+	 */
+	union {
+		/**
+		 * The value represented by the concrete type parameter.
+		 */
+		int value;
+
+		/**
+		 * The symbol used for the integer type variable.
+		 */
+		char symbol;
+	} content;
+
+	/**
+	 * A private constructor to create a variable integer type parameter.
+	 * The constructor is private to enforce the usage of static factory methods.
+	 *
+	 * @param symbol the symbol to be used for the integer type variable
+	 */
+	IntTypeParam(const char symbol) : type(VARIABLE), content({symbol}) {};
+
+	/**
+	 * A private constructor to create a concrete integer type parameter.
+	 * The constructor is private to enforce the usage of static factory methods.
+	 *
+	 * @param value the value to be used for the concrete integer type parameter
+	 */
+	IntTypeParam(const int value) : type(CONCRETE), content({value})  {};
+
+	/**
+	 * A private constructor to create a infinite integer type parameter.
+	 * The constructor is private to enforce the usage of static factory methods.
+	 */
+	IntTypeParam() : type(INFINITE), content({0}) {};
 
 public:
 
+	/**
+	 * Provides a string representation for this token type.
+	 *
+	 * @return a string representation for this type.
+	 */
 	const string toString() const {
 		switch(type) {
-		case VARIABLE: return ::toString(symbol);
-		case CONCRETE: return ::toString(value);
+		case VARIABLE: return ::toString(content.symbol);
+		case CONCRETE: return ::toString(content.value);
 		case INFINITE: return ::toString("Inf");
 		default: throw std::runtime_error("Invalid parameter type discovered!");
 		}
 	}
 
+	/**
+	 * Determines whether this instance is representing a variable integer type
+	 * parameter or a concrete value.
+	 *
+	 * @return false if variable, true otherwise
+	 */
 	bool isConcrete() const {
 		return type!=VARIABLE;
 	}
 
 private:
+
+	/**
+	 * The singleton instance of the infinite integer type parameter. Since
+	 * there is no requirement to maintain multiple of those, this instance is shared
+	 * among all places where it is required.
+	 */
 	static IntTypeParam infinite;
 
 public:
+
+	/**
+	 * A factory method to obtain a integer type parameter variable.
+	 *
+	 * @param symbol the symbol to be used for the variable
+	 * @return an IntTypeParam representing a token for this variable.
+	 */
 	static IntTypeParam getVariableIntParam(char symbol) {
 		return IntTypeParam(symbol);
 	}
 
+	/**
+	 * A factory method to obtain a concrete integer type parameter.
+	 *
+	 * @param value the value to be represented
+	 * @return an IntTypeParam representing a token for this value.
+	 */
 	static IntTypeParam getConcreteIntParam(int value) {
 		return IntTypeParam(value);
 	}
 
+	/**
+	 * A factory method to obtain a integer type parameter representing
+	 * the infinite value.
+	 *
+	 * @return an IntTypeParam representing a token for the infinite value.
+	 */
 	static IntTypeParam getInfiniteIntParam() {
 		return infinite;
 	}
