@@ -211,7 +211,7 @@ private:
 	/**
 	 * The type of the parameter represented by this instance.
 	 */
-	Type type;
+	const Type type;
 
 	/**
 	 * A union containing additional information on the represented type parameter.
@@ -226,7 +226,7 @@ private:
 		 * The symbol used for the integer type variable.
 		 */
 		char symbol;
-	} content;
+	};
 
 	/**
 	 * A private constructor to create a variable integer type parameter.
@@ -234,7 +234,7 @@ private:
 	 *
 	 * @param symbol the symbol to be used for the integer type variable
 	 */
-	IntTypeParam(const char symbol) : type(VARIABLE), content({symbol}) {};
+	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {};
 
 	/**
 	 * A private constructor to create a concrete integer type parameter.
@@ -242,13 +242,13 @@ private:
 	 *
 	 * @param value the value to be used for the concrete integer type parameter
 	 */
-	IntTypeParam(const int value) : type(CONCRETE), content({value})  {};
+	IntTypeParam(const int value) : type(CONCRETE), value(value)  {};
 
 	/**
 	 * A private constructor to create a infinite integer type parameter.
 	 * The constructor is private to enforce the usage of static factory methods.
 	 */
-	IntTypeParam() : type(INFINITE), content({0}) {};
+	IntTypeParam() : type(INFINITE) {};
 
 public:
 
@@ -259,8 +259,8 @@ public:
 	 */
 	const string toString() const {
 		switch(type) {
-		case VARIABLE: return ::toString(content.symbol);
-		case CONCRETE: return ::toString(content.value);
+		case VARIABLE: return ::toString(symbol);
+		case CONCRETE: return ::toString(value);
 		case INFINITE: return ::toString("Inf");
 		default: throw std::runtime_error("Invalid parameter type discovered!");
 		}
@@ -328,8 +328,6 @@ class UserType : public Type {
 		
 		// create output buffer
 		std::stringstream res;
-
-		// add leading name
 		res << name;
 
 		// check whether there are type parameters
@@ -340,11 +338,8 @@ class UserType : public Type {
 			std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypeRef cur) { return cur->getName(); });
 			std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) { return cur.toString(); });
 
-			// add type parameter clause
 			res << "<" << boost::join(list, ",") << ">";
 		}
-
-		// return resulting string
 		return res.str();
 	}
 
@@ -375,7 +370,6 @@ public:
 		auto q = [](const IntTypeParam cur) { return cur.isConcrete(); };
 		res = res && std::find_if(intParams.cbegin(), intParams.cend(), q) != intParams.end();
 
-		// return result
 		return res;
 	}
 };
