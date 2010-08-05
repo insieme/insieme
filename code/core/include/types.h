@@ -40,6 +40,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -211,16 +212,13 @@ private:
 	/**
 	 * The type of the parameter represented by this instance.
 	 */
-	const Type type;
+	Type type : 2;
 
-	/**
-	 * A union containing additional information on the represented type parameter.
-	 */
 	union {
 		/**
 		 * The value represented by the concrete type parameter.
 		 */
-		int value;
+		unsigned short value;
 
 		/**
 		 * The symbol used for the integer type variable.
@@ -242,13 +240,14 @@ private:
 	 *
 	 * @param value the value to be used for the concrete integer type parameter
 	 */
-	IntTypeParam(const int value) : type(CONCRETE), value(value)  {};
+	IntTypeParam(const unsigned short value) : type(CONCRETE), value(value)  {};
 
 	/**
 	 * A private constructor to create a infinite integer type parameter.
 	 * The constructor is private to enforce the usage of static factory methods.
 	 */
-	IntTypeParam() : type(INFINITE) {};
+	IntTypeParam(const Type type) : type(INFINITE) {};
+
 
 public:
 
@@ -278,6 +277,7 @@ public:
 
 private:
 
+
 	/**
 	 * The singleton instance of the infinite integer type parameter. Since
 	 * there is no requirement to maintain multiple of those, this instance is shared
@@ -303,7 +303,7 @@ public:
 	 * @param value the value to be represented
 	 * @return an IntTypeParam representing a token for this value.
 	 */
-	static IntTypeParam getConcreteIntParam(int value) {
+	static IntTypeParam getConcreteIntParam(unsigned short value) {
 		return IntTypeParam(value);
 	}
 

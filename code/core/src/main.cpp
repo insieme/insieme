@@ -42,32 +42,44 @@
 using namespace std;
 
 int main(int argc, char** argv) {
-   cout << "Insieme (tm) compiler." << endl;
 
 
-   std::vector<TypeRef> emptyRefs;
-   std::vector<IntTypeParam> emptyInts;
+//	vector<IntTypeParam> list;
+//	list.push_back(IntTypeParam::getInfiniteIntParam());
+//	list.push_back(IntTypeParam::getInfiniteIntParam());
+//	list.push_back(IntTypeParam::getVariableIntParam('a'));
+//
+//	list[0] = list[2];
 
-   TypeRef simple(new UserType("simple"));
+	cout << sizeof(IntTypeParam);
 
-   cout << simple->toString()  << endl;
 
-   vector<TypeRef> v;
-   v.push_back(simple);
-   v.push_back(simple);
-
-   vector<IntTypeParam> p;
-   p.push_back(IntTypeParam::getConcreteIntParam(12));
-   p.push_back(IntTypeParam::getVariableIntParam('a'));
-
-   // works if construct is not private:
-//	p.push_back((IntTypeParam){IntTypeParam::CONCRETE, 12 });
-//	p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'a' });
-
-   UserType complex("complex", v, p, simple);
-   cout << complex.toString() << endl;
-
-   UserType medium("medium", std::vector<TypeRef>(), p);
-   cout << medium.toString() << endl;
+//   cout << "Insieme (tm) compiler." << endl;
+//
+//
+//   std::vector<TypeRef> emptyRefs;
+//   std::vector<IntTypeParam> emptyInts;
+//
+//   TypeRef simple(new UserType("simple"));
+//
+//   cout << simple->toString()  << endl;
+//
+//   vector<TypeRef> v;
+//   v.push_back(simple);
+//   v.push_back(simple);
+//
+//   vector<IntTypeParam> p;
+//   p.push_back(IntTypeParam::getConcreteIntParam(12));
+//   p.push_back(IntTypeParam::getVariableIntParam('a'));
+//
+//   // works if construct is not private:
+////	p.push_back((IntTypeParam){IntTypeParam::CONCRETE, 12 });
+////	p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'a' });
+//
+//   UserType complex("complex", v, p, simple);
+//   cout << complex.toString() << endl;
+//
+//   UserType medium("medium", std::vector<TypeRef>(), p);
+//   cout << medium.toString() << endl;
 }
 
