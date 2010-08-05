@@ -78,13 +78,12 @@ public:
 		addType(AbstractType::getInstance());
 	}
 
-	TypeRef lookup(const std::string& name) {
+	TypeRef lookup(const std::string& name) const {
 		auto it = types.find(name);
 		if (it == types.end()) {
 			throw TypeLookupException(name);
-		} else {
-			return it->second;
 		}
+		return it->second;
 	}
 
 	ArrayTypeRef getArrayType(const TypeRef elementType, const unsigned dim) {
