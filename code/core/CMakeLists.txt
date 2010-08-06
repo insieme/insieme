@@ -1,4 +1,7 @@
-project(insieme_compiler_core)
+#
+# Builds the insieme core library
+#
+project(insieme_core CXX)
 
 include(../environment.cmake)
 
@@ -6,11 +9,19 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB insieme_compiler_core_SOURCES 	src/*.cpp )
-file(GLOB insieme_compiler_core_INCS "include/*.h")
+file(GLOB insieme_core_SOURCES 	src/*.cpp )
 
-# FIXME util include
-INCLUDE_DIRECTORIES(include ../utils/include)
+# list all include paths
+include_directories( ${insieme_core_include_dir} )
+include_directories( ${insieme_utils_include_dir} )
 
-# Create an executable file called helloworld from sources:
-add_executable(insieme_compiler_core ${insieme_compiler_core_SOURCES} ${insieme_compiler_core_INCS})
+# Build the core library
+add_library(insieme_core ${insieme_core_SOURCES})
+
+
+# Build dummy executable
+add_executable( main src/main.cpp )
+
+# register linked libraries
+target_link_libraries( main insieme_core insieme_utils )
+

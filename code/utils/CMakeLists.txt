@@ -1,16 +1,18 @@
-project(insieme_utils)
+#
+# Builds the insieme util library
+#
+project(insieme_utils CXX)
 
 include(../environment.cmake)
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
-# Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
+# collect source files 
 file(GLOB insieme_utils_SOURCES 	src/*.cpp )
 
-file(GLOB insieme_util_INCS "include/*.h")
+# add include directory
+include_directories(include)
 
-INCLUDE_DIRECTORIES(include)
-
-# Create an executable file called helloworld from sources:
-add_library(insieme_utils ${insieme_utils_SOURCES} ${insieme_util_INCS})
+# build the utils library
+add_library(insieme_utils ${insieme_utils_SOURCES})
