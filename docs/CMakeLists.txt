@@ -1,7 +1,9 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+project(insieme_docs NONE)
 
-INCLUDE(UseLATEX.cmake)
+cmake_minimum_required(VERSION 2.6)
 
-SUBDIRS(coding_standards)
-SUBDIRS(ir_language_specification)
-SUBDIRS(ir_translation)
+include(UseLATEX.cmake)
+
+add_subdirectory(coding_standards)
+add_subdirectory(ir_language_specification)
+add_subdirectory(ir_translation)
