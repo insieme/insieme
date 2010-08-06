@@ -56,6 +56,8 @@ public:
 	 */
 	TypePtr getType() const { return type; }
 
+	virtual string toString() const { return ""; }
+
 };
 
 typedef std::shared_ptr<Expression> ExprPtr;

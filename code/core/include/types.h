@@ -196,6 +196,81 @@ public:
 };
 
 
+// ---------------------------------------- A tuple type ------------------------------
+
+/**
+ * The tuple type represents a special kind of type representing a simple aggregation
+ * (cross-product) of other types. It thereby forms the foundation for functions
+ * accepting multiple input parameters.
+ */
+class TupleType : public Type {
+	/**
+	 * The list of element types this tuple is consisting of.
+	 */
+	const vector<TypePtr> elementTypes;
+
+	/**
+	 * A private utility method building the name of a tuple type.
+	 *
+	 * @param elementTypes	the list of element types
+	 * @return a string representation of the resulting tuple type
+	 */
+	static string buildNameString(const vector<TypePtr>& elementTypes);
+
+public:
+	/**
+	 * Creates a new tuple type based on the given element types.
+	 */
+	TupleType(vector<TypePtr> elementTypes) :
+		Type(buildNameString(elementTypes)),
+		elementTypes(elementTypes) {};
+
+	/**
+	 * Tests whether this generic type instance represents a concrete or variable type.
+	 *
+	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
+	 */
+	virtual bool isConcrete() const {
+		// just test whether all sub-types are concrete
+		auto p = [](const TypePtr cur) {return cur->isConcrete();};
+		return (std::find_if(elementTypes.cbegin(), elementTypes.cend(), p) != elementTypes.end());
+	}
+};
+
+
+// ---------------------------------------- Function Type ------------------------------
+
+/**
+ * This special type represents
+ */
+class FunctionType : public Type {
+	const TypePtr argumentType;
+	const TypePtr returnType;
+public:
+
+	FunctionType(TypePtr argumentType, TypePtr returnType)
+		: Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str())),
+		  argumentType(argumentType),
+		  returnType(returnType) {};
+
+	/**
+	 * Ensures that a function type is considered to be concrete. Since
+	 * generic functions are supported within the IR, type variables are
+	 * not preventing an element from having a generic function type.
+	 *
+	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
+	 */
+	virtual bool isConcrete() const {
+		// all function types are inhabited
+		return true;
+	}
+
+	/**
+	 * Ensures that this type is identifiable as a function type by returning true.
+	 */
+	virtual bool isFunctionType() const { return true; }
+};
+
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
 /**
@@ -256,6 +331,11 @@ private:
 
 
 public:
+
+	/**
+	 * Implements the equality operator for the IntTypeParam type.
+	 */
+	bool operator==(const IntTypeParam&);
 
 	/**
 	 * Provides a string representation for this token type.
@@ -325,36 +405,53 @@ public:
 
 };
 
-// ---------------------------------------- User defined Type ------------------------------
+// ---------------------------------------- Generic Type ------------------------------
 
+/**
+ * This type represents a generic type which can be used to represent arbitrary user defined
+ * or derived types. Each generic type can be equipped with a number of generic type and integer
+ * parameters. Those are represented using other types and IntTypeParam instances.
+ */
+class GenericType : public Type {
 
-class UserType : public Type {
-	static string buildNameString(const string& name, 
-			const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intParams) {
-		
-		// create output buffer
-		std::stringstream res;
-		res << name;
-
-		// check whether there are type parameters
-		if (!typeParams.empty() || !intParams.empty()) {
-
-			// convert type parameters to strings ...
-			vector<string> list;
-			std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypePtr cur) { return cur->getName(); });
-			std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) { return cur.toString(); });
-
-			res << "<" << boost::join(list, ",") << ">";
-		}
-		return res.str();
-	}
-
+	/**
+	 * The list of type parameters being part of this type specification.
+	 */
 	const vector<TypePtr> typeParams;
+
+	/**
+	 * The list of integer type parameter being part of this type specification.
+	 */
 	const vector<IntTypeParam> intParams;
+
+	/**
+	 * the base type of this type if there is any.
+	 *
+	 * TODO: is this actually required?
+	 */
 	const TypePtr baseType;
 
+	/**
+	 * A private utility method building the name of a generic type.
+	 *
+	 * @param name			the name of the generic type (only prefix, generic parameters are added automatically)
+	 * @param typeParams 	the list of type parameters to be appended
+	 * @param intParams		the list of integer type parameters to be appended
+	 * @return a string representation of the type
+	 */
+	static string buildNameString(const string& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intParams);
+
 public:
-	UserType(const string& name,
+
+	/**
+	 * Creates an new generic type instance based on the given parameters.
+	 *
+	 * @param name 			the name of the new type (only the prefix)
+	 * @param typeParams	the type parameters of this type, concrete or variable
+	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+	 * @param baseType		the base type of this generic type
+	 */
+	GenericType(const string& name,
 			vector<TypePtr> typeParams = vector<TypePtr>(),
 			vector<IntTypeParam> intTypeParams = vector<IntTypeParam>(),
 			TypePtr baseType = AbstractType::getInstance())
@@ -364,6 +461,11 @@ public:
 		intParams(intTypeParams),
 		baseType(baseType) {}
 
+	/**
+	 * Tests whether this generic type instance represents a concrete or variable type.
+	 *
+	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
+	 */
 	virtual bool isConcrete() const {
 		// init result (to perform lazy evaluation)
 		bool res = true;
@@ -380,16 +482,6 @@ public:
 	}
 };
 
-class TupleType : public Type {
-	const vector<TypePtr> elementTypes;
-};
-
-class FunctionType : public Type {
-	const TypePtr returnType;
-	const TypePtr argumentType;
-public:
-	virtual bool isFunctionType() const { return true; }
-};
 
 typedef std::shared_ptr<FunctionType> FunctionTypePtr;
 
@@ -415,12 +507,12 @@ public:
 };
 typedef const std::shared_ptr<ArrayType> ArrayTypeRef;
 
-class VectorType : public UserType {
-	VectorType(TypePtr elementType, IntTypeParam size) : UserType("vector", singleton(elementType), singleton(size)) {}
+class VectorType : public GenericType {
+	VectorType(TypePtr elementType, IntTypeParam size) : GenericType("vector", singleton(elementType), singleton(size)) {}
 };
 
-class ReferenceType : public UserType {
-	ReferenceType(TypePtr elementType) : UserType("ref", singleton(elementType), vector<IntTypeParam>()) {}
+class ReferenceType : public GenericType {
+	ReferenceType(TypePtr elementType) : GenericType("ref", singleton(elementType), vector<IntTypeParam>()) {}
 };
 
 class ChannelType : public Type {

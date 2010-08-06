@@ -42,11 +42,22 @@
 
 #include "expressions.h"
 #include "functions.h"
+#include "stringutils.h"
 
 using namespace std;
 
 int main(int argc, char** argv) {
 
+	vector<TypePtr> types;
+	types.push_back(AbstractType::getInstance());
+	types.push_back(TypePtr(new GenericType("myType")));
+	types.push_back(AbstractType::getInstance());
+
+	TupleType tuple(types);
+
+	FunctionType fun(TypePtr(new TupleType(types)), AbstractType::getInstance());
+
+	cout << tuple.getName() << endl;
 
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());
@@ -55,7 +66,7 @@ int main(int argc, char** argv) {
 //
 //	list[0] = list[2];
 
-	cout << sizeof(IntTypeParam);
+//	cout << sizeof(IntTypeParam);
 
 
 //   cout << "Insieme (tm) compiler." << endl;

@@ -67,9 +67,20 @@ public:
 	virtual string toString() const { return "continue"; }
 };
 
+class NoOpStmt;
+typedef std::shared_ptr<NoOpStmt> NoOpStmtPtr;
+
+class NoOpStmt : public Statement {
+	static NoOpStmtPtr instance;
+public:
+	virtual string toString() const { return "{ /* NoOp */ }"; }
+
+	static NoOpStmtPtr getInstance();
+};
 
 class ExpressionStmt : public Statement {
-	ExprPtr expression;
+protected:
+	const ExprPtr expression;
 
 public:
 	ExpressionStmt(ExprPtr expression) : Statement(), expression(expression) {
@@ -118,6 +129,8 @@ class ForStmt : public CompoundStmt {
 };
 
 class IfStmt : public CompoundStmt {
+	StmtPtr thenStmt;
+	StmtPtr elseStmt;
 };
 
 class SwitchStmt : public CompoundStmt {

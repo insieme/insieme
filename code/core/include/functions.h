@@ -48,6 +48,7 @@
 #include <string>
 #include <vector>
 
+#include "statements.h"
 #include "stringutils.h"
 #include "types.h"
 
@@ -55,15 +56,10 @@ using std::string;
 using std::vector;
 
 
-typedef struct {
-	string name;
-	TypePtr type;
-} FunctionParameter;
-
 class Function {
 
 	const FunctionTypePtr type;
-	const vector<FunctionParameter> parameter;
+	const vector<string> parameterNames;
 
 	/**
 	 * A flag determining whether
@@ -73,17 +69,25 @@ class Function {
 	/**
 	 * The statement forming the body of the represented function.
 	 */
-	//const StmtPtr body;
+	const StmtPtr body;
 
-public:
+	/**
+	 * A private constructor for this type requesting values for all member fields.
+	 *
+	 * @param type	the type of the new function
+	 * @param parameterNames	the names of the parameters. Those will be available within
+	 * 			the body as variables of the corresponding type. It has to be ensured that
+	 * 			the number of parameter names and input type parameters is equivalent.
+	 * @param external	should be set to true if this function is defined externally
+	 */
+	Function(FunctionTypePtr type, vector<string> parameterNames, bool external = true, StmtPtr body = NoOpStmt::getInstance()) :
+		type(type), parameterNames(parameterNames), external(external), body(body) {
 
-	Function(FunctionTypePtr type, vector<FunctionParameter> parameter, bool external) :
-		type(type), parameter(parameter), external(external) {
-
-		// check whether the given type is actually a function type
 
 		// TODO: check whether parameter types are fitting
 
 		// TODO: check
 	}
+
+public:
 };
