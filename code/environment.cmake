@@ -13,11 +13,11 @@ set ( insieme_core_include_dir 	${insieme_code_dir}/core/include )
 set ( insieme_utils_src_dir 	${insieme_code_dir}/utils/src )
 set ( insieme_utils_include_dir ${insieme_code_dir}/utils/include )
 
+set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 
 # include boost headers
 find_package( Boost )
 include_directories(BOOST_INCLUDE_DIRS)
-
 
 # disable some warnings within visual studio
 if(MSVC) 
