@@ -41,7 +41,7 @@ class TypesTestSuite : public CxxTest::TestSuite  {
 public:
 	void testIntTypeParam( ) {
 		// test size limitation
-		TS_ASSERT_EQUALS (sizeof(IntTypeParam), 4);
+		TS_ASSERT_LESS_THAN_EQUALS (sizeof(IntTypeParam), 4);
 
 		// test toString format
 		IntTypeParam p12 = IntTypeParam::getConcreteIntParam(12);
