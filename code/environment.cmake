@@ -19,6 +19,9 @@ set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 find_package( Boost )
 include_directories( ${Boost_INCLUDE_DIRS} )
 
+# lookup perl
+find_package( Perl )
+
 # disable some warnings within visual studio
 if(MSVC) 
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} /D "_CRT_SECURE_NO_WARNINGS")
