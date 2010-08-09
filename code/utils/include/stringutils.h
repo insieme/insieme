@@ -50,4 +50,3 @@ string toString(T value) {
 	res << value;
 	return res.str();
 }
-
