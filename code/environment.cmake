@@ -17,7 +17,7 @@ set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 
 # include boost headers
 find_package( Boost )
-include_directories(BOOST_INCLUDE_DIRS)
+include_directories( ${Boost_INCLUDE_DIRS} )
 
 # disable some warnings within visual studio
 if(MSVC) 
