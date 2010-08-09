@@ -9,14 +9,14 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # collect source files 
-file(GLOB insieme_utils_SOURCES 	src/*.cpp )
+file(GLOB insieme_utils_srcs 	src/*.cpp )
+file(GLOB insieme_utils_incs	include/*.h )
 
 # add include directory
 include_directories(include)
 
 # build the utils library
-add_library(insieme_utils ${insieme_utils_SOURCES})
-
+add_library(insieme_utils ${insieme_utils_srcs} ${insieme_utils_incs} )
 
 # enable testing for this project
 find_package(CxxTest)
