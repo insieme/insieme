@@ -36,6 +36,10 @@
 
 #include <stdarg.h>
 
+#include <algorithm>
+
+#include <boost/algorithm/string/join.hpp>
+
 #include "stringutils.h"
  
  string format(const char* formatString, ...)
@@ -48,3 +52,4 @@
 	va_end(arglist);
 	return string(buffer);
 }
+

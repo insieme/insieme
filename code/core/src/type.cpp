@@ -38,5 +38,81 @@
 
 AbstractTypePtr AbstractType::instance(new AbstractType());
 
-
 IntTypeParam IntTypeParam::infinite(IntTypeParam::INFINITE);
+
+bool IntTypeParam::operator==(const IntTypeParam& param) {
+	// quick check on reference
+	if (this == &param) {
+		return true;
+	}
+
+	// different type => different
+	if (type != param.type) {
+		return false;
+	}
+
+	// check type dependent content
+	switch (type) {
+	case VARIABLE:
+		return symbol == param.symbol;
+	case CONCRETE:
+		return value == param.value;
+	case INFINITE:
+		return true;
+	}
+	return false;
+}
+
+// ---------------------------------------- Tuple Type ------------------------------
+
+/**
+ * A private utility method building the name of a tuple type.
+ *
+ * @param elementTypes	the list of element types
+ * @return a string representation of the resulting tuple type
+ */
+string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
+
+	// create output buffer
+	std::stringstream res;
+	res << "(";
+
+	vector<string> list;
+	std::transform(elementTypes.cbegin(), elementTypes.cend(), back_inserter(list), [](const TypePtr cur) {return cur->getName();});
+
+	res << boost::join(list, ",");
+
+	res << ")";
+	return res.str();
+}
+
+
+// ---------------------------------------- Generic Type ------------------------------
+
+/**
+ * A private utility method building the name of a generic type.
+ *
+ * @param name			the name of the generic type (only prefix, generic parameters are added automatically)
+ * @param typeParams 	the list of type parameters to be appended
+ * @param intParams		the list of integer type parameters to be appended
+ * @return a string representation of the type
+ */
+string GenericType::buildNameString(const string& name, const vector<TypePtr>& typeParams,
+		const vector<IntTypeParam>& intParams) {
+
+	// create output buffer
+	std::stringstream res;
+	res << name;
+
+	// check whether there are type parameters
+	if (!typeParams.empty() || !intParams.empty()) {
+
+		// convert type parameters to strings ...
+		vector<string> list;
+		std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypePtr cur) {return cur->getName();});
+		std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) {return cur.toString();});
+
+		res << "<" << boost::join(list, ",") << ">";
+	}
+	return res.str();
+}
