@@ -43,10 +43,14 @@
 #include "expressions.h"
 #include "functions.h"
 #include "stringutils.h"
+#include "cmd_line_utils.h"
 
 using namespace std;
 
+
 int main(int argc, char** argv) {
+
+	CommandLineOptions::Parse(argc, argv, true);
 
 	vector<TypePtr> types;
 	types.push_back(AbstractType::getInstance());

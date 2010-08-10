@@ -18,6 +18,7 @@ set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 # include boost headers
 find_package( Boost )
 include_directories( ${Boost_INCLUDE_DIRS} )
+link_directories(${Boost_LIBRARY_DIRS})
 
 # lookup perl
 find_package( Perl )

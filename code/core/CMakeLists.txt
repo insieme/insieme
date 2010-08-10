@@ -23,9 +23,11 @@ add_library(insieme_core ${insieme_core_srcs} ${insieme_core_incs} )
 # Build dummy executable
 add_executable( main src/main.cpp )
 
+# add boost_program_options library
+target_link_libraries( main boost_program_options )
+
 # register linked libraries
 target_link_libraries( main insieme_core insieme_utils )
-
 
 
 # enable testing for this project
