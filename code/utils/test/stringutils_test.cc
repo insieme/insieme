@@ -34,20 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include <cxxtest/TestSuite.h>
+#include <gtest/gtest.h>
 #include "stringutils.h"
 
-class StringUtilsTestSuite : public CxxTest::TestSuite  {
-public:
-	void testFormat( void ) {
-		TS_ASSERT_EQUALS (format("Hello World"), "Hello World");
-		TS_ASSERT_EQUALS (format("Print %2d ...", 12), "Print 12 ...");
-		TS_ASSERT_EQUALS (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
-	}
 
-	void testToString( void ) {
-		TS_ASSERT_EQUALS (toString("Hello World"), "Hello World");
-		TS_ASSERT_EQUALS (toString(10), "10");
-		TS_ASSERT_EQUALS (toString('c'), "c");
-	}
-};
+TEST(StringUtilsTest, Format) {
+	EXPECT_EQ (format("Hello World"), "Hello World");
+	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");
+	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
+}
+
+TEST(StringUtilsTest, toString) {
+	EXPECT_EQ (toString("Hello World"), "Hello World");
+	EXPECT_EQ (toString(10), "10");
+	EXPECT_EQ (toString('c'), "c");
+}
+

@@ -18,17 +18,19 @@ include_directories(include)
 # build the utils library
 add_library(insieme_utils ${insieme_utils_srcs} ${insieme_utils_incs} )
 
-# enable testing for this project
-find_package(CxxTest)
-if(CXXTEST_FOUND)
-	include_directories(${CXXTEST_INCLUDE_DIR})
 
-	# search for all test cases and register them
-	file(GLOB test_cases test/*.h)
-	foreach( case_file ${test_cases}) 
-		get_filename_component( case_name ${case_file} NAME_WE )
+# enable tests for this project
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
+
+file(GLOB test_cases test/*.cc)
+foreach ( case_file ${test_cases})
+	get_filename_component( case_name ${case_file} NAME_WE )
 	
-		cxxtest_add_test(ut_${case_name} ${case_name}.cc ${case_file})
-		target_link_libraries(ut_${case_name} insieme_utils)	
-	endforeach(case_file)
-endif()
+	add_executable(ut_${case_name} ${case_file})
+	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(ut_${case_name} insieme_utils)
+	
+	add_test(ut_${case_name} ut_${case_name})
+endforeach(case_file)
+ 
