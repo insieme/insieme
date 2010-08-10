@@ -36,7 +36,7 @@
 
 #include "cmd_line_utils.h"
 #include <iostream>
-
+#include <iterator>
 
 #define VERSION_NUMBER "2.0.1"
 
