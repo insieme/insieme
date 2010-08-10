@@ -508,11 +508,11 @@ public:
 typedef const std::shared_ptr<ArrayType> ArrayTypeRef;
 
 class VectorType : public GenericType {
-	VectorType(TypePtr elementType, IntTypeParam size) : GenericType("vector", singleton(elementType), singleton(size)) {}
+	VectorType(TypePtr elementType, IntTypeParam size) : GenericType("vector", createSingleton(elementType), createSingleton(size)) {}
 };
 
 class ReferenceType : public GenericType {
-	ReferenceType(TypePtr elementType) : GenericType("ref", singleton(elementType), vector<IntTypeParam>()) {}
+	ReferenceType(TypePtr elementType) : GenericType("ref", createSingleton(elementType), vector<IntTypeParam>()) {}
 };
 
 class ChannelType : public Type {

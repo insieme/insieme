@@ -27,18 +27,18 @@ add_executable( main src/main.cpp )
 target_link_libraries( main insieme_core insieme_utils )
 
 
+# enable tests for this project
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
 
-# enable testing for this project
-find_package(CxxTest)
-if(CXXTEST_FOUND)
-	include_directories(${CXXTEST_INCLUDE_DIR})
-
-	# search for all test cases and register them
-	file(GLOB test_cases test/*.h)
-	foreach( case_file ${test_cases}) 
-		get_filename_component( case_name ${case_file} NAME_WE )
+file(GLOB test_cases test/*.cc)
+foreach ( case_file ${test_cases})
+	get_filename_component( case_name ${case_file} NAME_WE )
 	
-		cxxtest_add_test(ut_${case_name} ${case_name}.cc ${case_file})
-		target_link_libraries(ut_${case_name} insieme_utils insieme_core )	
-	endforeach(case_file)
-endif()
+	add_executable(ut_${case_name} ${case_file})
+	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(ut_${case_name} insieme_core)
+	target_link_libraries(ut_${case_name} insieme_utils)
+	
+	add_test(ut_${case_name} ut_${case_name})
+endforeach(case_file)
