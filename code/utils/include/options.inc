@@ -34,21 +34,8 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+FLAG("help,h", "help", Help, "produce help message")
+FLAG("version,v", "version", Version, "print version string")
 
-#include <vector>
-
-using std::vector;
-
-/**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
- */
-template<typename T>
-const vector<T> createSingleton(const T element) {
-	return vector<T> (1, element);
-}
+OPTION("input-file", "input-file", InputFiles, std::vector<std::string>, "input file(s)")
+OPTION("include-path,I", "include-path", IncludePaths, std::vector<std::string>, "Add directory to include search path")

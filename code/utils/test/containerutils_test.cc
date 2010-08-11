@@ -34,21 +34,23 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
 #include <vector>
 
-using std::vector;
+#include <gtest/gtest.h>
+#include "containerutils.h"
 
-/**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
- */
-template<typename T>
-const vector<T> createSingleton(const T element) {
-	return vector<T> (1, element);
+using std::vector;
+using std::string;
+
+TEST(ContainerUtils, Singleton) {
+	// Obtain two instances
+	vector<int> testInt = createSingleton(14);
+	vector<string> testString = createSingleton(string("Hello"));
+
+	EXPECT_EQ(testInt.size(), 1);
+	EXPECT_EQ(testString.size(), 1);
+
+	EXPECT_EQ ((*testInt.cbegin()), 14);
+	EXPECT_EQ ((*testString.cbegin()), "Hello");
 }
+
