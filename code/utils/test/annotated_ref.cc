@@ -34,31 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <vector>
 #include <string>
-#include <iterator>
 
-/**
- * The CommandLineOptions is a container for input arguments to the Insieme compiler.
- */
-struct CommandLineOptions {
-#define FLAG(opt_name, opt_id, var_name, var_help) \
-	static bool var_name;
-#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
-	static var_type var_name;
-#include "options.inc"
-#undef FLAG
-#undef OPTION
-	// avoid constructing instances of CommandLineOptions
-	CommandLineOptions() { }
-public:
-	/**
-	 * This method reads the input arguments from the command line and parses them. The values are then stored inside
-	 * the static references of the CommandLineOptions class.
-	 *
-	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
-	 */
-	static CommandLineOptions& Parse(int argc, char** argv, bool debug=false);
+#include <gtest/gtest.h>
+#include "annotated_ref.h"
+
+using std::string;
+
+// ------------- utility classes required for the test case --------------
+
+class A {
+	void f() {};
 };
+class B : public A { };
+
+
+// testing basic properties
+TEST(AnnotatedReference, Basic) {
+
+	int a = 10;
+	int b = 15;
+
+	// test simple creation
+	AnnotatedRef<int> refA(&a);
+	EXPECT_EQ (*refA, a);
+
+	// ... and for another element
+	AnnotatedRef<int> refB(&b);
+	EXPECT_EQ (*refB, b);
+
+	// test whether modifications are reflected
+	a++;
+	EXPECT_EQ (*refA, a);
+
+}
+
+TEST(AnnotatedReference, UpCast) {
+
+	// create two related instances
+	A a;
+	B b;
+
+	// create references
+	AnnotatedRef<A> refA(&a);
+	AnnotatedRef<B> refB(&b);
+
+	// make assignment (if it compiles, test passed!)
+//	refA = refB;
+}
+
+

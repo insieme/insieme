@@ -34,31 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <vector>
 #include <string>
-#include <iterator>
 
-/**
- * The CommandLineOptions is a container for input arguments to the Insieme compiler.
- */
-struct CommandLineOptions {
-#define FLAG(opt_name, opt_id, var_name, var_help) \
-	static bool var_name;
-#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
-	static var_type var_name;
-#include "options.inc"
-#undef FLAG
-#undef OPTION
-	// avoid constructing instances of CommandLineOptions
-	CommandLineOptions() { }
-public:
-	/**
-	 * This method reads the input arguments from the command line and parses them. The values are then stored inside
-	 * the static references of the CommandLineOptions class.
-	 *
-	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
-	 */
-	static CommandLineOptions& Parse(int argc, char** argv, bool debug=false);
-};
+#include <gtest/gtest.h>
+#include "instance_manager.h"
+
+
+using std::string;
+
+TEST(InstanceManager, Basic) {
+
+	InstanceManager<string> manager;
+
+	AnnotatedRef<string> ref = manager.get("Hello World");
+
+	//EXPECT_EQ (*ref, "Hello World");
+
+	AnnotatedRef<string> ref2 = manager.get("Hello World 2");
+
+	//EXPECT_EQ (*ref2, "Hello World 2");
+}
+

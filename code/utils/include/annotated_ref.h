@@ -36,29 +36,46 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
-#include <iterator>
+#include <set>
+#include <boost/type_traits/is_base_of.hpp>
 
-/**
- * The CommandLineOptions is a container for input arguments to the Insieme compiler.
- */
-struct CommandLineOptions {
-#define FLAG(opt_name, opt_id, var_name, var_help) \
-	static bool var_name;
-#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
-	static var_type var_name;
-#include "options.inc"
-#undef FLAG
-#undef OPTION
-	// avoid constructing instances of CommandLineOptions
-	CommandLineOptions() { }
+// ------------------------------- replace w/ boost / move
+template<bool> struct is_true;
+template<> struct is_true<true> {
+    typedef bool flag;
+};
+template<> struct is_true<false> {
+};
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ replace w/ boost / move
+
+
+class Annotation;
+
+class Annotatable {
+	std::set<Annotation> *annotations;
 public:
-	/**
-	 * This method reads the input arguments from the command line and parses them. The values are then stored inside
-	 * the static references of the CommandLineOptions class.
-	 *
-	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
-	 */
-	static CommandLineOptions& Parse(int argc, char** argv, bool debug=false);
+	void addAnnotation(const Annotation& a) {};
+};
+
+template<typename T>
+class AnnotatedRef : public Annotatable {
+public:
+	T* node;
+
+	AnnotatedRef(T* node) : node(node) { }
+	
+	template<typename B>
+	AnnotatedRef(const AnnotatedRef<B>& from, typename is_true<boost::is_base_of<T,B>::value>::flag = 0) : node(from.node) { }
+
+	const T& operator->() {
+		return node;
+	}
+
+	const T operator*() {
+		return *node;
+	}
+	
+	const T& operator->() const {
+		return node;
+	}
 };

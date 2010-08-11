@@ -35,40 +35,66 @@
  */
 
 #include "cmd_line_utils.h"
-#include <iostream>
-#include <iterator>
 
-#define VERSION_NUMBER "2.0.1"
+#include <iostream>
+
+#include <boost/program_options/cmdline.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/options_description.hpp>
 
 using namespace std;
-vector<string> CommandLineOptions::InputFiles;
-vector<string> CommandLineOptions::IncludePaths;
+namespace po = boost::program_options;
+
+// current version number of the compiler: todo put into a file or something else
+#define VERSION_NUMBER "2.0.1"
+
+// initialize the static references of the CommandLineOptions args
+#define FLAG(opt_name, opt_id, var_name, var_help) \
+	bool CommandLineOptions::var_name = false;
+#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
+	var_type CommandLineOptions::var_name;
+#include "options.inc"
+#undef FLAG
+#undef OPTION
 
 namespace {
 ostream& operator<<(ostream& out, const vector<string>& argList) {
 	std::copy( argList.begin(), argList.end(), std::ostream_iterator<std::string>(cout, ", ") );
 	return out;
 }
+
+void HandleImmediateArgs(po::options_description const& desc) {
+	if( CommandLineOptions::Help ) {
+		cout << desc << endl;
+		// we exit from the compiler
+		exit(1);
+	} if( CommandLineOptions::Version ) {
+		cout << "This is the Insieme (tm) compiler version: " << VERSION_NUMBER << endl <<
+				"Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2010, " <<
+				"University of Innsbruck\n";
+		exit(1);
+	}
+}
 }
 
 CommandLineOptions& CommandLineOptions::Parse(int argc, char** argv, bool debug) {
-
 	po::options_description cmdLineOpts("Insieme (tm) compiler:\nOptions");
 
 	po::positional_options_description posDesc;
 	posDesc.add("input-file", -1);
 
+	#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
+		(opt_name, po::value< var_type >(), var_help)
+	#define FLAG(opt_name, opt_id, var_name, var_help) \
+		(opt_name, var_help)
 	// Declare a group of options that will be allowed on the command line
 	cmdLineOpts.add_options()
-		("version,v", "print version string")
-		("help,h", "produce help message")
-		("include-path,I", po::value< vector<string> >(), "include path(s)")
-		("input-file", po::value< vector<string> >(), "input file(s)")
-		//======================//
-		// ADD NEW OPTIONS HERE //
-		//======================//
-		// ...
+		#include "options.inc"
 	;
+	#undef OPTION
+	#undef FLAG
+
 	po::variables_map varsMap;
 
 	try {
@@ -76,38 +102,29 @@ CommandLineOptions& CommandLineOptions::Parse(int argc, char** argv, bool debug)
 		po::store(po::command_line_parser(argc, argv).options(cmdLineOpts).positional(posDesc).run(), varsMap);
 		po::notify(varsMap);
 
+		// when the debug flag is enabled, the list of command line arguments are written to the std console
 		if( debug ) {
 			cout << "(DEBUG) Command line arguments: " << endl;
-			varsMap.count("help") && cout << "\t--help" << endl;
-			varsMap.count("version") && cout << "\t--version" << endl;
-			varsMap.count("include-path") && cout << "\tInclude path(s): " <<
-					varsMap["include-path"].as< vector<string> >() << endl;
-			varsMap.count("input-file") && cout << "\t"
-					"Input file(s): " <<
-					varsMap["input-file"].as< vector<string> >() << endl;
-			// ...
+			#define FLAG(opt_name, opt_id, var_name, var_help) \
+		varsMap.count(opt_id) && cout << "\t--" << opt_id << endl;
+			#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
+				varsMap.count(opt_id) && cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< var_type >() << endl;
+			#include "options.inc"
+			#undef OPTION
+			#undef FLAG
 		}
 
-		// Now we check if the user wants informations (--help or --version)
-		if( varsMap.count("help") ) {
-			cout << cmdLineOpts << endl;
-			// we exit from the compiler
-			exit(1);
-		} if (varsMap.count("version") ) {
-			cout << "This is the Insieme (tm) compiler version: " << VERSION_NUMBER << endl <<
-					"Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2010, " <<
-					"University of Innsbruck\n";
-			exit(1);
-		}
+		// assign the value to the class fields
+		#define FLAG(opt_name, opt_id, var_name, var_help) \
+			(varsMap.count(opt_id)) ? CommandLineOptions::var_name = true : CommandLineOptions::var_name = false;
+		#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
+			if(varsMap.count(opt_id)) CommandLineOptions::var_name = varsMap[opt_id].as< var_type >();
+		#include "options.inc"
+		#undef OPTION
+		#undef FLAG
 
-		// We parse the input arguments and populated the static fields of the CommandLineOptions class
-
-		// retrieves the list of include paths
-		if( varsMap.count("include-path") )
-			CommandLineOptions::IncludePaths = varsMap["include-path"].as< vector<string> >();
-
-		if( varsMap.count("input-file") )
-			CommandLineOptions::InputFiles = varsMap["input-file"].as< vector<string> >();
+		// Handle immediate flags (like --help or --version)
+		HandleImmediateArgs(cmdLineOpts);
 
 	} catch(boost::program_options::unknown_option& ex) {
 		cout << "Usage error: " << ex.what() << endl;

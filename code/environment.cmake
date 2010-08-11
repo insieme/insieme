@@ -20,6 +20,9 @@ find_package( Boost )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
+# lookup pthread library
+find_library(pthread_LIB pthread)
+
 # lookup perl
 find_package( Perl )
 
@@ -27,7 +30,6 @@ find_package( Perl )
 if(MSVC) 
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} /D "_CRT_SECURE_NO_WARNINGS")
 endif()
-
 
 # enable C++0x support within gcc (if supported)
 if (CMAKE_COMPILER_IS_GNUCXX)

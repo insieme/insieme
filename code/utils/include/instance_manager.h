@@ -36,29 +36,19 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
-#include <iterator>
+#include <unordered_set>
 
-/**
- * The CommandLineOptions is a container for input arguments to the Insieme compiler.
- */
-struct CommandLineOptions {
-#define FLAG(opt_name, opt_id, var_name, var_help) \
-	static bool var_name;
-#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
-	static var_type var_name;
-#include "options.inc"
-#undef FLAG
-#undef OPTION
-	// avoid constructing instances of CommandLineOptions
-	CommandLineOptions() { }
+#include "annotated_ref.h"
+
+template<typename T>
+class InstanceManager {
+	std::unordered_set<T> storage;
+	//std::unordered_map<T,T> storage;
 public:
-	/**
-	 * This method reads the input arguments from the command line and parses them. The values are then stored inside
-	 * the static references of the CommandLineOptions class.
-	 *
-	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
-	 */
-	static CommandLineOptions& Parse(int argc, char** argv, bool debug=false);
+	AnnotatedRef<T> get(const T& instance) {
+		//storage.instance
+		//return AnnotatedRef<T>(&(*(storage.insert(instance).first)));
+		return AnnotatedRef<T>(0);
+	}
 };
+
