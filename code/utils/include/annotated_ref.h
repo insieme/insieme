@@ -40,12 +40,12 @@
 #include <boost/type_traits/is_base_of.hpp>
 
 // ------------------------------- replace w/ boost / move
-template<bool> struct is_true;
-template<> struct is_true<true> {
-    typedef bool flag;
-};
-template<> struct is_true<false> {
-};
+//template<bool> struct is_true;
+//template<> struct is_true<true> {
+//    typedef bool flag;
+//};
+//template<> struct is_true<false> {
+//};
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ replace w/ boost / move
 
 
@@ -59,12 +59,20 @@ public:
 
 template<typename T>
 class AnnotatedRef : public Annotatable {
+public:
 	T& node;
+
+	template <typename B, bool IsBaseOf>
+	T& convert(B& b);
+
 public:
 	AnnotatedRef(const T& node) : node(node) { }
 	
-	template<typename B>
-	AnnotatedRef(const AnnotatedRef<B>& from, typename is_true<boost::is_base_of<T,B>::value>::flag = 0) : node(from.node) { }
+//	template<typename B>
+//	AnnotatedRef(const AnnotatedRef<B>& from, typename is_true<boost::is_base_of<T,B>::value>::flag = 0) : node(from.node) { }
+
+	template <class B>
+	AnnotatedRef(const AnnotatedRef<B>& from) : node( convert<B,boost::is_base_of<T,B>::value>(from.node) ) { }
 
 	T& operator->() {
 		return node;
@@ -74,3 +82,7 @@ public:
 		return node;
 	}
 };
+
+template <typename T>
+template <typename B>
+T& AnnotatedRef<T>::convert<B,true>(B& b) { return static_cast<T>(b); }

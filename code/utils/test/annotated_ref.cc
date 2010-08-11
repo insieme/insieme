@@ -80,7 +80,7 @@ TEST(AnnotatedReference, UpCast) {
 	AnnotatedRef<B> refB(&b);
 
 	// make assignment (if it compiles, test passed!)
-//	refA = refB;
+	refA = refB;
 }
 
 
