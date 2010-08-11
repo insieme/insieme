@@ -34,48 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <string>
 
-#include <set>
-#include <boost/type_traits/is_base_of.hpp>
-
-// ------------------------------- replace w/ boost / move
-template<bool> struct is_true;
-template<> struct is_true<true> {
-    typedef bool flag;
-};
-template<> struct is_true<false> {
-};
-// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ replace w/ boost / move
+#include <gtest/gtest.h>
+#include "instance_manager.h"
 
 
-class Annotation;
+using std::string;
 
-class Annotatable {
-	std::set<Annotation> *annotations;
-public:
-	void addAnnotation(const Annotation& a) {};
-};
+TEST(InstanceManager, Basic) {
 
-template<typename T>
-class AnnotatedRef : public Annotatable {
-public:
-	T* node;
+	InstanceManager<string> manager;
 
-	AnnotatedRef(T* node) : node(node) { }
-	
-	template<typename B>
-	AnnotatedRef(const AnnotatedRef<B>& from, typename is_true<boost::is_base_of<T,B>::value>::flag = 0) : node(from.node) { }
+	AnnotatedRef<string> ref = manager.get("Hello World");
 
-	const T& operator->() {
-		return node;
-	}
+	//EXPECT_EQ (*ref, "Hello World");
 
-	const T operator*() {
-		return *node;
-	}
-	
-	const T& operator->() const {
-		return node;
-	}
-};
+	AnnotatedRef<string> ref2 = manager.get("Hello World 2");
+
+	//EXPECT_EQ (*ref2, "Hello World 2");
+}
+

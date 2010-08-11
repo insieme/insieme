@@ -38,14 +38,17 @@
 
 #include <unordered_set>
 
-#include "annoted_ref.h"
+#include "annotated_ref.h"
 
 template<typename T>
 class InstanceManager {
 	std::unordered_set<T> storage;
+	//std::unordered_map<T,T> storage;
 public:
 	AnnotatedRef<T> get(const T& instance) {
-		return AnnotatedRef<T>(storage.insert(instance).first);
+		//storage.instance
+		//return AnnotatedRef<T>(&(*(storage.insert(instance).first)));
+		return AnnotatedRef<T>(0);
 	}
-}
+};
 
