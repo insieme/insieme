@@ -35,23 +35,50 @@
  */
 
 #include <string>
+#include <iostream>
 
 #include <gtest/gtest.h>
 #include "instance_manager.h"
 
 
 using std::string;
+using std::cout;
+using std::endl;
 
 TEST(InstanceManager, Basic) {
 
-	InstanceManager<string> manager;
+	// create a new instance manager
+	InstanceManager<const string> manager;
+	EXPECT_EQ (manager.size(), 0);
 
-	AnnotatedRef<string> ref = manager.get("Hello World");
+	// add and retrieve first element
+	string strA  = "Hello World";
+	AnnotatedRef<const string> refA = manager.get(&strA);
+	EXPECT_EQ (*refA, "Hello World");
+	EXPECT_EQ (manager.size(), 1);
 
-	//EXPECT_EQ (*ref, "Hello World");
+	// add and retrieve second element
+	string strB = "Hello World 2";
+	AnnotatedRef<const string> refB = manager.get(&strB);
+	EXPECT_EQ (*refB, "Hello World 2");
+	EXPECT_EQ (manager.size(), 2);
 
-	AnnotatedRef<string> ref2 = manager.get("Hello World 2");
+	// add and retrieve third element (which is equivalent to first element)
+	string strC = "Hello World";
+	AnnotatedRef<const string> refC = manager.get(&strC);
+	EXPECT_EQ (manager.size(), 2);
 
-	//EXPECT_EQ (*ref2, "Hello World 2");
+	// ensure compiler is not reusing identical strings
+	EXPECT_NE (&strA, &strC);
+
+	// check whether references are pointing to equivalent values
+	EXPECT_EQ (*refA, *refC);
+
+	// check whether references are pointing to same data location
+	EXPECT_TRUE (refA == refC);
+
+
+	// check whether -> operator is working ...
+	EXPECT_STREQ (refA->c_str(), refC->c_str());
 }
 

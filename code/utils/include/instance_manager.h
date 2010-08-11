@@ -37,18 +37,138 @@
 #pragma once
 
 #include <unordered_set>
+#include <functional>
+
+#include <boost/foreach.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "annotated_ref.h"
+#include "type_traits_utils.h"
 
+/**
+ * This utility struct definition defines a predicate comparing two pointers
+ * based on the value they are pointing to.
+ *
+ * @tparam Tp the type of pointer to be compared
+ */
+template<typename Tp>
+struct pointing_to_equal: public std::binary_function<Tp, Tp, bool> {
+	/**
+	 * Performs the actual comparison by using the operator== of the generic
+	 * type Tp.
+	 *
+	 * @param x the pointer to the first element to be compared
+	 * @param y the pointer to the second element to be compared
+	 */
+	bool operator()(const Tp& x, const Tp& y) const {
+		return *x == *y;
+	}
+};
+
+/**
+ * This utility struct defines the function used to compute hash codes for pointers.
+ * Thereby, the hash code is not computed using the pointer themselves. Instead, the
+ * target they are pointing to is used to compute the value. I case the pointer is null,
+ * 0 is returned as a hash value.
+ *
+ * @tparam T the type of element the used pointers are pointing to
+ */
 template<typename T>
+struct target_Hash: public std::unary_function<T, std::size_t> {
+	/**
+	 * This function is used to compute the hash of the actual target.
+	 */
+	const boost::hash<T> hasher;
+
+	/**
+	 * Computes the hash value of the given pointer based on the target it is pointing to.
+	 */
+	std::size_t operator()(const T* p) const {
+		if (p) {
+			return hasher(*p);
+		}
+		return 0;
+	}
+};
+
+/**
+ * An instance manager is capable of handling a set of instances of a generic type T. Instances
+ * representing the same value are shared. Hence, to avoid altering the instances referenced by
+ * others, the handled types have to be constant (which is enforced).
+ *
+ * @tparam T the type of elements managed by the concrete manager instance. The type has to
+ * 			 be a constant type.
+ */
+template<typename T, typename eval<boost::is_const<T>::value>::is_true = 0>
 class InstanceManager {
-	std::unordered_set<T> storage;
-	//std::unordered_map<T,T> storage;
+
+	/**
+	 * The storage used to maintain instances. It is based on a unordered set which
+	 * is modified to support operations based on pointers. All the elements stored
+	 * within this set will be automatically deleted when this instance manager instance
+	 * is destroyed.
+	 */
+	std::unordered_set<T*, target_Hash<T> , pointing_to_equal<T*>> storage;
+
 public:
-	AnnotatedRef<T> get(const T& instance) {
-		//storage.instance
-		//return AnnotatedRef<T>(&(*(storage.insert(instance).first)));
-		return AnnotatedRef<T>(0);
+
+	/**
+	 * The destructor of this instance manager freeing all elements within the store.
+	 */
+	~InstanceManager() {
+		BOOST_FOREACH(T* cur, storage) {
+			delete cur;
+		}
+	}
+
+	/**
+	 * Obtaines an instance managed by this instance manager referencing the master
+	 * copy of the given instance. If so such instance is present yet, a copy of the
+	 * handed in instance will be created and added to the internal store. The returned
+	 * reference will point to the new master copy.
+	 *
+	 * @param instance the instance to be looking for within this instance manager.
+	 * @return a reference to the new master copy of the handed in instance
+	 *
+	 * @see get(T&)
+	 */
+	AnnotatedRef<T> get(T* instance) {
+
+		// test whether there is already an identical element
+		auto res = storage.find(instance);
+		if (res != storage.end()) {
+			// use included element
+			return AnnotatedRef<T>(*res);
+		}
+
+		// copy element (to ensure private copy)
+		T* newElement = new T(*instance);
+		storage.insert(newElement);
+		return AnnotatedRef<T>(newElement);
+	}
+
+	/**
+	 * Obtaines an instance managed by this instance manager referencing the master
+	 * copy of the given instance. If so such instance is present yet, a copy of the
+	 * handed in instance will be created and added to the internal store. The returned
+	 * reference will point to the new master copy.
+	 *
+	 * @param instance the instance to be looking for within this instance manager.
+	 * @return a reference to the new master copy of the handed in instance
+	 *
+	 * @see get(T*)
+	 */
+	AnnotatedRef<T> get(T& instance) {
+		return this->get(&instance);
+	}
+
+	/**
+	 * Retrieves the number of elements handled by this instance manager.
+	 *
+	 * @return the total number of elements currently managed
+	 */
+	int size() {
+		return storage.size();
 	}
 };
 

@@ -39,15 +39,7 @@
 #include <set>
 #include <boost/type_traits/is_base_of.hpp>
 
-// ------------------------------- replace w/ boost / move
-template<bool> struct is_true;
-template<> struct is_true<true> {
-    typedef bool flag;
-};
-template<> struct is_true<false> {
-};
-// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ replace w/ boost / move
-
+#include "type_traits_utils.h"
 
 class Annotation;
 
@@ -65,17 +57,18 @@ public:
 	AnnotatedRef(T* node) : node(node) { }
 	
 	template<typename B>
-	AnnotatedRef(const AnnotatedRef<B>& from, typename is_true<boost::is_base_of<T,B>::value>::flag = 0) : node(from.node) { }
+	AnnotatedRef(const AnnotatedRef<B>& from, typename eval<boost::is_base_of<T,B>::value>::is_true = 0) : node(from.node) { }
 
-	const T& operator->() {
-		return node;
-	}
-
-	const T operator*() {
+	const T operator*() const {
 		return *node;
 	}
 	
-	const T& operator->() const {
+	const T* operator->() const {
 		return node;
+	}
+
+	template<typename S>
+	const bool operator==(const AnnotatedRef<S>& other) {
+		return node == other.node;
 	}
 };

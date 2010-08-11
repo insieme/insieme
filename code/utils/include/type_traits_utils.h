@@ -34,53 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+#pragma once
 
-#include <gtest/gtest.h>
-#include "annotated_ref.h"
+/**
+ *
+ */
+template<bool> struct eval;
 
-using std::string;
-
-// ------------- utility classes required for the test case --------------
-
-class A {
-	void f() {};
+template<> struct eval<true> {
+    typedef bool is_true;
 };
-class B : public A { };
 
-
-// testing basic properties
-TEST(AnnotatedReference, Basic) {
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedRef<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedRef<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
-}
-
-TEST(AnnotatedReference, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedRef<A> refA(&a);
-	AnnotatedRef<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
-
+template<> struct eval<false> {
+	typedef bool is_false;
+};
