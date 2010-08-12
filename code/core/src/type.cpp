@@ -36,7 +36,7 @@
 
 #include "types.h"
 
-AbstractTypePtr AbstractType::instance(new AbstractType());
+// -------------------------------- Integer Type Parameter ----------------------------
 
 IntTypeParam IntTypeParam::infinite(IntTypeParam::INFINITE);
 
@@ -115,4 +115,16 @@ string GenericType::buildNameString(const string& name, const vector<TypePtr>& t
 		res << "<" << boost::join(list, ",") << ">";
 	}
 	return res.str();
+}
+
+// ---------------------------------------------- Utility Functions ------------------------------------
+
+/**
+ * Allows to compute the hash value of a type.
+ *
+ * @param type the type for which a hash value should be computed
+ * @return the computed hash value
+ */
+std::size_t hash_value(const Type& type) {
+	return type.hash();
 }

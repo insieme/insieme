@@ -39,21 +39,93 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
-#include <memory>
 #include <set>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "string_utils.h"
+#include "annotated_ptr.h"
 #include "container_utils.h"
+#include "instance_manager.h"
+#include "string_utils.h"
+#include "visitor.h"
 
 using std::string;
 using std::vector;
 using std::map;
+
+enum {
+	TYPE_HASH_ABSTRACT
+};
+
+// ------------------------------ Forward Declarations ------------------------------------
+
+class Type;
+typedef AnnotatedPtr<const Type> TypePtr;
+
+class TypeVariable;
+typedef AnnotatedPtr<const TypeVariable> TypeVariablePtr;
+
+class FunctionType;
+typedef AnnotatedPtr<const FunctionType> FunctionTypePtr;
+
+class TupleType;
+typedef AnnotatedPtr<const TupleType> TupleTypePtr;
+
+class ArrayType;
+typedef AnnotatedPtr<const ArrayType> ArrayTypePtr;
+
+class VectorType;
+typedef AnnotatedPtr<const VectorType> VectorTypePtr;
+
+class RefType;
+typedef AnnotatedPtr<const RefType> RefTypePtr;
+
+class ChannelType;
+typedef AnnotatedPtr<const ChannelType> ChannelTypePtr;
+
+class GenericType;
+typedef AnnotatedPtr<const GenericType> GenericTypePtr;
+
+class NamedCompositeType;
+typedef AnnotatedPtr<const NamedCompositeType> NamedCompositeTypePtr;
+
+class StructType;
+typedef AnnotatedPtr<const StructType> StructTypePtr;
+
+class UnionType;
+typedef AnnotatedPtr<const UnionType> UnionTypePtr;
+
+// ---------------------------------- Type Manager ----------------------------------------
+
+
+class TypeManager: public InstanceManager<const Type, TypePtr> {
+
+	friend class Type;
+	friend class BreakStmt;
+
+protected:
+	TypePtr getTypePtr(const Type& stmt) {
+
+		// a static visitor used ensure that all sub-node are properly registered
+		static ChildVisitor<TypePtr> visitor([&](TypePtr cur) {this->getTypePtr(*cur);});
+
+		// get master copy
+		std::pair<TypePtr, bool> res = add(stmt);
+
+		// if new element has been added ...
+		if (res.second) {
+			// ... check whether sub-statements are present
+			visitor.visit(res.first);
+		}
+
+		// return newly added or present node
+		return res.first;
+	}
+
+};
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
@@ -67,7 +139,7 @@ using std::map;
  * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
  * both). Variable types can only be used as the input/output types of functions.
  */
-class Type {
+class Type: public Visitable<TypePtr> {
 
 	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types
@@ -82,12 +154,15 @@ public:
 	 *
 	 * @param name the unique name for this type
 	 */
-	Type(const std::string& name) : name(name) {}
+	Type(const std::string& name) :
+		name(name) {
+	}
 
 	/**
 	 * A simple, virtual destructor for this abstract class.
 	 */
-	virtual ~Type() {}
+	virtual ~Type() {
+	}
 
 	/**
 	 * Checks whether the represented type is a concrete type (hence, it does not have any unbound,
@@ -102,27 +177,47 @@ public:
 	 * Tests whether the represented type is a function type.
 	 * Since most types are not function types, the default implementation returns false.
 	 */
-	virtual bool isFunctionType() const { return false; }
+	virtual bool isFunctionType() const {
+		return false;
+	}
 
 	/**
 	 * Retrieves the unique name identifying this type.
 	 */
-	const string& getName() const { return name; }
+	const string& getName() const {
+		return name;
+	}
 
 	/**
 	 * Provides a string representation of this type, which is by default
 	 * the actual name of the type. Specific sub-types may override this method
 	 * to customize the representation.
 	 */
-	virtual string toString() const { return getName(); }
+	virtual string toString() const {
+		return getName();
+	}
+
+	bool operator==(const Type& other) const {
+		return name == other.name;
+	}
+
+	/**
+	 * Computes a hash code for this instance covering all constant fields making
+	 * the type unique.
+	 *
+	 * @return the hash code derived for this type.
+	 */
+	virtual std::size_t hash() const = 0;
+
+	/**
+	 * Retrieves a clone of this object (a newly allocated instance of this class)
+	 */
+	virtual Type* clone() const = 0;
+
+	virtual ChildList getChildren() const {
+		return newChildList();
+	}
 };
-
-/**
- * To safely handle type tokens, instances should be maintained via shared pointers. Hence,
- * their life cycle should be handled using the internal shared pointer mechanisms.
- */
-typedef std::shared_ptr<Type> TypePtr;
-
 
 // ---------------------------------------- A class for type variables  ------------------------------
 
@@ -130,14 +225,16 @@ typedef std::shared_ptr<Type> TypePtr;
  * Tokens of this type are used to represent type variables. Instances them-self represent types,
  * yet no concrete ones.
  */
-class VariableType : public Type {
+class VariableType: public Type {
 
 	/**
 	 * Creates a new type variable using the given name.
 	 *
 	 * @param name the name of the type variable to be created
 	 */
-	VariableType(const string& name) : Type(format("'%s",name.c_str())){}
+	VariableType(const string& name) :
+		Type(format("'%s", name.c_str())) {
+	}
 public:
 
 	/**
@@ -147,9 +244,10 @@ public:
 	 *
 	 * @see Type::isConcrete()
 	 */
-	virtual bool isConcrete() const { return false; }
+	virtual bool isConcrete() const {
+		return false;
+	}
 };
-
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
@@ -166,7 +264,7 @@ typedef std::shared_ptr<AbstractType> AbstractTypePtr;
  * in an abstract way. Hence, type definitions using this type as a base type have to be supported
  * by the code synthesizer.
  */
-class AbstractType : public Type {
+class AbstractType: public Type {
 
 	/**
 	 * The singleton instance of this type (shared among all type manager instances)
@@ -176,7 +274,9 @@ class AbstractType : public Type {
 	/**
 	 * The default constructor of this type, fixing the name to "abstract".
 	 */
-	AbstractType() : Type("abstract") {}
+	AbstractType() :
+		Type("abstract") {
+	}
 
 public:
 
@@ -186,15 +286,27 @@ public:
 	 * @return the singleton instance of this type (accessed via a shared pointer to
 	 * 		   be compatible with other type references).
 	 */
-	static AbstractTypePtr getInstance() { return instance; }
+	static AbstractTypePtr getInstance() {
+		static AbstractTypePtr instance(new AbstractType());
+		return instance;
+	}
 
 	/**
 	 * Overrides the implementation of this method within the parent class (where it is abstract).
 	 * The abstract type is always a concrete type.
 	 */
-	virtual bool isConcrete() const { return true; }
-};
+	virtual bool isConcrete() const {
+		return true;
+	}
 
+	virtual AbstractType* clone() const {
+		return new AbstractType();
+	}
+
+	virtual std::size_t hash() const {
+		return TYPE_HASH_ABSTRACT;
+	}
+};
 
 // ---------------------------------------- A tuple type ------------------------------
 
@@ -203,7 +315,7 @@ public:
  * (cross-product) of other types. It thereby forms the foundation for functions
  * accepting multiple input parameters.
  */
-class TupleType : public Type {
+class TupleType: public Type {
 	/**
 	 * The list of element types this tuple is consisting of.
 	 */
@@ -222,8 +334,9 @@ public:
 	 * Creates a new tuple type based on the given element types.
 	 */
 	TupleType(vector<TypePtr> elementTypes) :
-		Type(buildNameString(elementTypes)),
-		elementTypes(elementTypes) {};
+		Type(buildNameString(elementTypes)), elementTypes(elementTypes) {
+	}
+	;
 
 	/**
 	 * Tests whether this generic type instance represents a concrete or variable type.
@@ -237,21 +350,21 @@ public:
 	}
 };
 
-
 // ---------------------------------------- Function Type ------------------------------
 
 /**
  * This special type represents
  */
-class FunctionType : public Type {
+class FunctionType: public Type {
 	const TypePtr argumentType;
 	const TypePtr returnType;
 public:
 
-	FunctionType(TypePtr argumentType, TypePtr returnType)
-		: Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str())),
-		  argumentType(argumentType),
-		  returnType(returnType) {};
+	FunctionType(TypePtr argumentType, TypePtr returnType) :
+		Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str())), argumentType(
+				argumentType), returnType(returnType) {
+	}
+	;
 
 	/**
 	 * Ensures that a function type is considered to be concrete. Since
@@ -268,7 +381,9 @@ public:
 	/**
 	 * Ensures that this type is identifiable as a function type by returning true.
 	 */
-	virtual bool isFunctionType() const { return true; }
+	virtual bool isFunctionType() const {
+		return true;
+	}
 };
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
@@ -285,15 +400,13 @@ private:
 	 * An enumeration to determine the actual type of the integer parameter.
 	 */
 	typedef enum {
-		VARIABLE,
-		CONCRETE,
-		INFINITE
+		VARIABLE, CONCRETE, INFINITE
 	} Type;
 
 	/**
 	 * The type of the parameter represented by this instance.
 	 */
-	Type type : 2;
+	Type type :2;
 
 	union {
 		/**
@@ -313,7 +426,10 @@ private:
 	 *
 	 * @param symbol the symbol to be used for the integer type variable
 	 */
-	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {};
+	IntTypeParam(const char symbol) :
+		type(VARIABLE), symbol(symbol) {
+	}
+	;
 
 	/**
 	 * A private constructor to create a concrete integer type parameter.
@@ -321,14 +437,19 @@ private:
 	 *
 	 * @param value the value to be used for the concrete integer type parameter
 	 */
-	IntTypeParam(const unsigned short value) : type(CONCRETE), value(value)  {};
+	IntTypeParam(const unsigned short value) :
+		type(CONCRETE), value(value) {
+	}
+	;
 
 	/**
 	 * A private constructor to create a infinite integer type parameter.
 	 * The constructor is private to enforce the usage of static factory methods.
 	 */
-	IntTypeParam(const Type type) : type(INFINITE) {};
-
+	IntTypeParam(const Type type) :
+		type(INFINITE) {
+	}
+	;
 
 public:
 
@@ -343,11 +464,15 @@ public:
 	 * @return a string representation for this type.
 	 */
 	const string toString() const {
-		switch(type) {
-		case VARIABLE: return ::toString(symbol);
-		case CONCRETE: return ::toString(value);
-		case INFINITE: return ::toString("Inf");
-		default: throw std::runtime_error("Invalid parameter type discovered!");
+		switch (type) {
+		case VARIABLE:
+			return ::toString(symbol);
+		case CONCRETE:
+			return ::toString(value);
+		case INFINITE:
+			return ::toString("Inf");
+		default:
+			throw std::runtime_error("Invalid parameter type discovered!");
 		}
 	}
 
@@ -358,11 +483,10 @@ public:
 	 * @return false if variable, true otherwise
 	 */
 	bool isConcrete() const {
-		return type!=VARIABLE;
+		return type != VARIABLE;
 	}
 
 private:
-
 
 	/**
 	 * The singleton instance of the infinite integer type parameter. Since
@@ -412,7 +536,7 @@ public:
  * or derived types. Each generic type can be equipped with a number of generic type and integer
  * parameters. Those are represented using other types and IntTypeParam instances.
  */
-class GenericType : public Type {
+class GenericType: public Type {
 
 	/**
 	 * The list of type parameters being part of this type specification.
@@ -439,7 +563,8 @@ class GenericType : public Type {
 	 * @param intParams		the list of integer type parameters to be appended
 	 * @return a string representation of the type
 	 */
-	static string buildNameString(const string& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intParams);
+	static string buildNameString(const string& name, const vector<TypePtr>& typeParams,
+			const vector<IntTypeParam>& intParams);
 
 public:
 
@@ -451,15 +576,11 @@ public:
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 	 * @param baseType		the base type of this generic type
 	 */
-	GenericType(const string& name,
-			vector<TypePtr> typeParams = vector<TypePtr>(),
-			vector<IntTypeParam> intTypeParams = vector<IntTypeParam>(),
-			TypePtr baseType = AbstractType::getInstance())
-	   :
-		Type(buildNameString(name, typeParams, intTypeParams)),
-		typeParams(typeParams),
-		intParams(intTypeParams),
-		baseType(baseType) {}
+	GenericType(const string& name, vector<TypePtr> typeParams = vector<TypePtr> (),
+			vector<IntTypeParam> intTypeParams = vector<IntTypeParam> (), TypePtr baseType = NULL) :
+		Type(buildNameString(name, typeParams, intTypeParams)), typeParams(typeParams), intParams(intTypeParams),
+				baseType(baseType) {
+	}
 
 	/**
 	 * Tests whether this generic type instance represents a concrete or variable type.
@@ -471,55 +592,65 @@ public:
 		bool res = true;
 
 		// check whether there is a variable type within the type-parameter list
-		auto p = [](const TypePtr cur) { return cur->isConcrete(); };
+		auto p = [](const TypePtr cur) {return cur->isConcrete();};
 		res = res && (std::find_if(typeParams.cbegin(), typeParams.cend(), p) != typeParams.end());
 
 		// check whether there is a variable symbol within the integer-parameter list
-		auto q = [](const IntTypeParam cur) { return cur.isConcrete(); };
+		auto q = [](const IntTypeParam cur) {return cur.isConcrete();};
 		res = res && std::find_if(intParams.cbegin(), intParams.cend(), q) != intParams.end();
 
 		return res;
 	}
 };
 
-
-typedef std::shared_ptr<FunctionType> FunctionTypePtr;
-
-class NamedCompositeType : public Type {
+class NamedCompositeType: public Type {
 	const map<const string, const TypePtr> elements;
 };
-class StructType : public NamedCompositeType {
+class StructType: public NamedCompositeType {
 };
-class UnionType : public NamedCompositeType {
+class UnionType: public NamedCompositeType {
 };
 
-class ArrayType : public Type {
+class ArrayType: public Type {
 	friend class TypeManager;
 	const TypePtr elementType;
 	const unsigned dimensions;
 
-	ArrayType(const TypePtr elementType, const unsigned dim) : 
-		Type(format("array<%d,%s>", dim, elementType->getName().c_str())),
-			elementType(elementType), dimensions(dim)  { };
+	ArrayType(const TypePtr elementType, const unsigned dim) :
+		Type(format("array<%d,%s>", dim, elementType->getName().c_str())), elementType(elementType), dimensions(dim) {
+	}
+	;
 
 public:
-	virtual bool isConcrete() const { elementType->isConcrete(); }
+	virtual bool isConcrete() const {
+		return elementType->isConcrete();
+	}
 };
 typedef const std::shared_ptr<ArrayType> ArrayTypeRef;
 
-class VectorType : public GenericType {
-	VectorType(TypePtr elementType, IntTypeParam size) : GenericType("vector", toVector(elementType), toVector(size)) {}
+class VectorType: public GenericType {
+	VectorType(TypePtr elementType, IntTypeParam size) :
+		GenericType("vector", toVector(elementType), toVector(size)) {
+	}
 };
 
-class ReferenceType : public GenericType {
-	ReferenceType(TypePtr elementType) : GenericType("ref", toVector(elementType), vector<IntTypeParam>()) {}
+class ReferenceType: public GenericType {
+	ReferenceType(TypePtr elementType) :
+		GenericType("ref", toVector(elementType), vector<IntTypeParam> ()) {
+	}
 };
 
-class ChannelType : public Type {
+class ChannelType: public Type {
 	TypePtr type;
 	unsigned bufferLength;
 };
 
+// ---------------------------------------------- Utility Functions ------------------------------------
 
-
-
+/**
+ * Allows to compute the hash value of a type.
+ *
+ * @param type the type for which a hash value should be computed
+ * @return the computed hash value
+ */
+std::size_t hash_value(const Type& type);

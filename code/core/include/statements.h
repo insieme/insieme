@@ -52,9 +52,10 @@
 #include "container_utils.h"
 #include "expressions.h"
 #include "instance_manager.h"
+#include "types.h"
 #include "visitor.h"
 
-
+using std::string;
 using std::vector;
 
 enum {
@@ -104,7 +105,7 @@ class StatementManager;
 // Forward Declarations } -----------------------------------------------------
 
 class StatementManager: public InstanceManager<const Statement, StmtPtr> {
-//	TypeManager& typeManager;
+	const TypeManager& typeManager;
 
 friend class Statement;
 friend class BreakStmt;
@@ -124,10 +125,7 @@ protected:
 	}
 
 public:
-//	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
-
-
-	// TODO: support add/lookup
+	StatementManager(const TypeManager& typeManager) : typeManager(typeManager) { }
 };
 
 

@@ -37,7 +37,6 @@
 #include <iostream>
 #include "expressions.h"
 #include "types.h"
-#include "type_manager.h"
 #include "statements.h"
 
 #include "expressions.h"
@@ -52,17 +51,17 @@ int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv, true);
 
-	vector<TypePtr> types;
-	types.push_back(AbstractType::getInstance());
-	types.push_back(TypePtr(new GenericType("myType")));
-	types.push_back(AbstractType::getInstance());
-
-	TupleType tuple(types);
-
-	FunctionType fun(TypePtr(new TupleType(types)), AbstractType::getInstance());
-
-	cout << tuple.getName() << endl;
-
+//	vector<TypePtr> types;
+//	types.push_back(AbstractType::getInstance());
+//	types.push_back(TypePtr(new GenericType("myType")));
+//	types.push_back(AbstractType::getInstance());
+//
+//	TupleType tuple(types);
+//
+//	FunctionType fun(TypePtr(new TupleType(types)), AbstractType::getInstance());
+//
+//	cout << tuple.getName() << endl;
+//
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());
 //	list.push_back(IntTypeParam::getInfiniteIntParam());

@@ -34,55 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <string>
+#include <iostream>
 
-#include <cassert>
+#include <gtest/gtest.h>
+#include "instance_ptr.h"
 
-#include <boost/mpl/empty_base.hpp>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/utility/enable_if.hpp>
+using std::string;
+using std::cout;
+using std::endl;
 
 
-//template<typename T, typename S = boost::mpl::empty_base>
-//class InstancePtr : public S {
-template<typename T>
-class InstancePtr {
-public:
-	T* node;
 
-	InstancePtr(T* node) : node(node) { }
+TEST(InstancePtr, NullTest) {
 
-	template<typename B>
-	InstancePtr(const InstancePtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : node(from.node) { }
+	InstancePtr<int> null = InstancePtr<int>(NULL);
 
-	bool isNull() const {
-		return node == NULL;
-	}
+	InstancePtr<int> ptrA(0);
+	EXPECT_TRUE ( ptrA == null );
+	EXPECT_TRUE ( ptrA );
 
-	operator bool() const {
-		return isNull();
-	}
+	int a = 10;
+	InstancePtr<int> ptrB(&a);
+	EXPECT_FALSE ( ptrB == null );
+	EXPECT_FALSE ( ptrB );
 
-	const T& operator*() const {
-		assert(node != NULL);
-		return *node;
-	}
+	InstancePtr<int> ptrC(&a);
+	EXPECT_TRUE ( ptrB == ptrC );
 
-	const T* operator->() const {
-		return node;
-	}
-
-	template<typename A>
-	const bool operator==(const InstancePtr<A>& other) {
-		return node == other.node;
-	}
-};
-
-template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<InstancePtr<B>* >(&src));
-	}
-	return NULL;
 }
-

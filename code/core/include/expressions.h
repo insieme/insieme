@@ -38,18 +38,23 @@
 
 #include <memory>
 
+#include "statements.h"
 #include "types.h"
 
 using std::string;
 
+
+// oh my god :( - seuftz
 class Expression {
 	
 	/**
 	 * The type of the represented expression.
 	 */
-	TypePtr type;
+	const TypePtr type;
 
 public:
+
+	Expression(const TypePtr& type) : type(type) { };
 
 	/**
 	 * Retrieves the type of this expression.
@@ -69,37 +74,35 @@ typedef std::shared_ptr<Variable> VarExprPtr;
 
 
 template<typename T>
-class BaseLiteral : public Expression {
+class Literal : public Expression {
     const T value;
 public:
-	BaseLiteral(const T& val) : value(val) {
-	};
+	Literal(const TypePtr& type, const T& val) : Expression(type), value(val) { };
     const T getValue() const { return value; }
 };
 
-class IntegerLiteral : public BaseLiteral<int> {
+class IntegerLiteral : public Literal<int> {
 public:
-	IntegerLiteral(const int val) : BaseLiteral(val) {
-	};
+	IntegerLiteral(const int val) : Literal(NULL, val) { } // TODO: fix null type
 };
 
-class FloatLiteral : public BaseLiteral<double> {
+class FloatLiteral : public Literal<double> {
 	string originalString;
 public:
-	FloatLiteral(const double val, const string& originalString) : BaseLiteral(val), originalString(originalString) {
-	};
+	// TODO: fix null type
+	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
 };
 
-class BooleanLiteral : public BaseLiteral<bool> {
+class BooleanLiteral : public Literal<bool> {
 public:
-	BooleanLiteral(const bool val) : BaseLiteral(val) {
-	};
+	// TODO: fix null type
+	BooleanLiteral(const bool val) : Literal(NULL, val) { }
 };
 
-class StringLiteral : public BaseLiteral<string> {
+class StringLiteral : public Literal<string> {
 public:
-	StringLiteral(const string& val) : BaseLiteral(val) {
-	};
+	// TODO: fix null type
+	StringLiteral(const string& val) : Literal(NULL, val) { }
 };
 
 
@@ -116,7 +119,6 @@ class CastExpression : public Expression {
 };
 
 class LetExpression : public Expression {
-	const TypePtr type;
 	const string name;
 	const ExprPtr definingExpression;
 	const ExprPtr subExpression;

@@ -36,17 +36,15 @@
 
 #pragma once
 
-#include <algorithm>
-
 #include "statements.h"
 #include "types.h"
 
 class ASTManager {
 
-//	TypeManager typeManager;
-	StatementManager stmtManager;
+	const TypeManager typeManager;
+	const StatementManager stmtManager;
 
 public:
-//	ASTManager() : stmtManager(typeManager) {}
+	ASTManager() : typeManager(), stmtManager(typeManager) {}
 
 };
