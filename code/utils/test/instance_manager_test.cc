@@ -98,7 +98,8 @@ TEST(InstanceManager, Basic) {
 
 TEST(InstancePtr, Size) {
 
-	EXPECT_LE ( sizeof (InstancePtr<int>), 4 );
+	// just ensures
+	EXPECT_LE ( sizeof (InstancePtr<int>), sizeof(int*) );
 }
 
 typedef float real;

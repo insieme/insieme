@@ -52,7 +52,7 @@ class B : public A { };
 // testing basic properties
 TEST(AnnotatedPtr, Basic) {
 
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 8 );
+	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
 
 	int a = 10;
 	int b = 15;
