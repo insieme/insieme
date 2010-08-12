@@ -34,60 +34,60 @@
  * regarding third party software licenses.
  */
 
-/*
- * functions.h
- *
- *  Defines the class used to represent and manage functions within the IR.
- *
- *  Created on: Aug 5, 2010
- *      Author: Herbert Jordan
- */
-#pragma once
-
-#include <stdexcept>
-#include <string>
-#include <vector>
-
-#include "statements.h"
-#include "stringutils.h"
-#include "types.h"
-
-using std::string;
-using std::vector;
-
-
-class Function {
-
-	const FunctionTypePtr type;
-	const vector<string> parameterNames;
-
-	/**
-	 * A flag determining whether
-	 */
-	const bool external;
-
-	/**
-	 * The statement forming the body of the represented function.
-	 */
-	const StmtPtr body;
-
-	/**
-	 * A private constructor for this type requesting values for all member fields.
-	 *
-	 * @param type	the type of the new function
-	 * @param parameterNames	the names of the parameters. Those will be available within
-	 * 			the body as variables of the corresponding type. It has to be ensured that
-	 * 			the number of parameter names and input type parameters is equivalent.
-	 * @param external	should be set to true if this function is defined externally
-	 */
-	Function(FunctionTypePtr type, vector<string> parameterNames, bool external = true, StmtPtr body = NoOpStmt::getInstance()) :
-		type(type), parameterNames(parameterNames), external(external), body(body) {
-
-
-		// TODO: check whether parameter types are fitting
-
-		// TODO: check
-	}
-
-public:
-};
+///*
+// * functions.h
+// *
+// *  Defines the class used to represent and manage functions within the IR.
+// *
+// *  Created on: Aug 5, 2010
+// *      Author: Herbert Jordan
+// */
+//#pragma once
+//
+//#include <stdexcept>
+//#include <string>
+//#include <vector>
+//
+//#include "statements.h"
+//#include "string_utils.h"
+//#include "types.h"
+//
+//using std::string;
+//using std::vector;
+//
+//
+//class Function {
+//
+//	const FunctionTypePtr type;
+//	const vector<string> parameterNames;
+//
+//	/**
+//	 * A flag determining whether
+//	 */
+//	const bool external;
+//
+//	/**
+//	 * The statement forming the body of the represented function.
+//	 */
+//	const StmtPtr body;
+//
+//	/**
+//	 * A private constructor for this type requesting values for all member fields.
+//	 *
+//	 * @param type	the type of the new function
+//	 * @param parameterNames	the names of the parameters. Those will be available within
+//	 * 			the body as variables of the corresponding type. It has to be ensured that
+//	 * 			the number of parameter names and input type parameters is equivalent.
+//	 * @param external	should be set to true if this function is defined externally
+//	 */
+//	Function(FunctionTypePtr type, vector<string> parameterNames, bool external = true, StmtPtr body = NoOpStmt::getInstance()) :
+//		type(type), parameterNames(parameterNames), external(external), body(body) {
+//
+//
+//		// TODO: check whether parameter types are fitting
+//
+//		// TODO: check
+//	}
+//
+//public:
+//};

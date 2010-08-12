@@ -53,19 +53,19 @@ TEST(InstanceManager, Basic) {
 
 	// add and retrieve first element
 	string strA  = "Hello World";
-	InstanceRef<const string> refA = manager.get(&strA);
+	InstancePtr<const string> refA = manager.get(&strA);
 	EXPECT_EQ (*refA, "Hello World");
 	EXPECT_EQ (manager.size(), 1);
 
 	// add and retrieve second element
 	string strB = "Hello World 2";
-	InstanceRef<const string> refB = manager.get(&strB);
+	InstancePtr<const string> refB = manager.get(&strB);
 	EXPECT_EQ (*refB, "Hello World 2");
 	EXPECT_EQ (manager.size(), 2);
 
 	// add and retrieve third element (which is equivalent to first element)
 	string strC = "Hello World";
-	InstanceRef<const string> refC = manager.get(&strC);
+	InstancePtr<const string> refC = manager.get(&strC);
 	EXPECT_EQ (manager.size(), 2);
 
 	// ensure compiler is not reusing identical strings

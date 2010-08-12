@@ -37,8 +37,3 @@
 #include "statements.h"
 
 
-NoOpStmtPtr NoOpStmt::instance(new NoOpStmt());
-
-NoOpStmtPtr NoOpStmt::getInstance() {
-	return instance;
-}

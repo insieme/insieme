@@ -37,15 +37,15 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "containerutils.h"
+#include "container_utils.h"
 
 using std::vector;
 using std::string;
 
 TEST(ContainerUtils, Singleton) {
 	// Obtain two instances
-	vector<int> testInt = createSingleton(14);
-	vector<string> testString = createSingleton(string("Hello"));
+	vector<int> testInt = toVector(14);
+	vector<string> testString = toVector(string("Hello"));
 
 	EXPECT_EQ(testInt.size(), 1);
 	EXPECT_EQ(testString.size(), 1);

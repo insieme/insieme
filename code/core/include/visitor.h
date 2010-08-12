@@ -80,19 +80,15 @@ protected:
 
 
 public:
-	Visitor(const function<void(T)>& task, const function<bool(T)>& filter = trueFilter) : task(task), filter(filter) {};
+	Visitor(const function<void(T)>& task, const function<bool(T)>& filter = [](T){return true;}) : task(task), filter(filter) {};
 
 	virtual void visit(T cur) const = 0;
-
-	bool trueFilter(const T cur) {
-		return true;
-	}
 };
 
 template <typename T>
 class DepthFirstVisitor : public Visitor<T> {
 public:
-	DepthFirstVisitor(const function<void(T)>& task, const function<bool(T)>& filter = Visitor<T>::trueFilter) : Visitor<T>(task, filter) {};
+	DepthFirstVisitor(const function<void(T)>& task, const function<bool(T)>& filter = [](T){return true;}) : Visitor<T>(task, filter) {};
 
 	virtual void visit(T cur) const {
 		typename Visitable<T>::ChildList list = cur->getChildren();
@@ -107,7 +103,7 @@ public:
 template <typename T>
 class ChildVisitor : public Visitor<T> {
 public:
-	ChildVisitor(const function<void(T)>& task, const function<bool(T)>& filter = Visitor<T>::trueFilter) : Visitor<T>(task, filter) {};
+	ChildVisitor(const function<void(T)>& task, const function<bool(T)>& filter = &Visitor<T>::trueFilter) : Visitor<T>(task, filter) {};
 
 	virtual void visit(T cur) const {
 		typename Visitable<T>::ChildList list = cur->getChildren();

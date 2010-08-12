@@ -40,7 +40,7 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "stringutils.h"
+#include "string_utils.h"
  
  string format(const char* formatString, ...)
  {

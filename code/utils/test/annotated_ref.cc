@@ -37,7 +37,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include "annotated_ref.h"
+#include "annotated_ptr.h"
 
 using std::string;
 
@@ -50,17 +50,17 @@ class B : public A { };
 
 
 // testing basic properties
-TEST(AnnotatedReference, Basic) {
+TEST(AnnotatedPtrerence, Basic) {
 
 	int a = 10;
 	int b = 15;
 
 	// test simple creation
-	AnnotatedRef<int> refA(&a);
+	AnnotatedPtr<int> refA(&a);
 	EXPECT_EQ (*refA, a);
 
 	// ... and for another element
-	AnnotatedRef<int> refB(&b);
+	AnnotatedPtr<int> refB(&b);
 	EXPECT_EQ (*refB, b);
 
 	// test whether modifications are reflected
@@ -69,15 +69,15 @@ TEST(AnnotatedReference, Basic) {
 
 }
 
-TEST(AnnotatedReference, UpCast) {
+TEST(AnnotatedPtrerence, UpCast) {
 
 	// create two related instances
 	A a;
 	B b;
 
 	// create references
-	AnnotatedRef<A> refA(&a);
-	AnnotatedRef<B> refB(&b);
+	AnnotatedPtr<A> refA(&a);
+	AnnotatedPtr<B> refB(&b);
 
 	// make assignment (if it compiles, test passed!)
 	refA = refB;

@@ -49,89 +49,150 @@
 #include <boost/algorithm/string/join.hpp>
 
 #include "expressions.h"
+#include "annotated_ptr.h"
+#include "container_utils.h"
 
 using std::vector;
 
+// Forward Declarations { -----------------------------------------------------
+
+class Statement;
+typedef AnnotatedPtr<const Statement> StmtPtr;
+
+class NoOpStmt;
+typedef AnnotatedPtr<const NoOpStmt> NoOpStmtPtr;
+
+class BreakStmt;
+typedef AnnotatedPtr<const BreakStmt> BreakStmtPtr;
+
+class ContinueStmt;
+typedef AnnotatedPtr<const ContinueStmt> ContinueStmtPtr;
+
+class ExprStmt;
+typedef AnnotatedPtr<const ExprStmt> ExprStmtPtr;
+
+class DeclarationStmt;
+typedef AnnotatedPtr<const DeclarationStmt> DeclarationStmtPtr;
+
+class ReturnStmt;
+typedef AnnotatedPtr<const ReturnStmt> ReturnStmtPtr;
+
+class CompoundStmt;
+typedef AnnotatedPtr<const CompoundStmt> CompoundStmtPtr;
+
+class WhileStmt;
+typedef AnnotatedPtr<const WhileStmt> WhileStmtPtr;
+
+class ForStmt;
+typedef AnnotatedPtr<const ForStmt> ForStmtPtr;
+
+class IfStmt;
+typedef AnnotatedPtr<const IfStmt> IfStmtPtr;
+
+class SwitchStmt;
+typedef AnnotatedPtr<const SwitchStmt> SwitchStmtPtr;
+
+// Forward Declarations } -----------------------------------------------------
+
 class Statement {
 public:
-	virtual string toString() const { return ""; }
+	virtual string toString() const = 0;
 };
-typedef std::shared_ptr<Statement> StmtPtr;
+
+class NoOpStmt : public Statement {
+public:
+	virtual string toString() const { return "{ /* NoOp */ }"; }	
+	std::size_t hash_value() const { return 0; }
+	bool operator==(NoOpStmt const& other) const { return true; }
+
+	//static const NoOpStmtPtr get() {
+	//	//TODO
+	//}
+};
 
 class BreakStmt : public Statement {
 public:
 	virtual string toString() const { return "break"; }
 };
+
 class ContinueStmt : public Statement {
 public:
 	virtual string toString() const { return "continue"; }
 };
 
-class NoOpStmt;
-typedef std::shared_ptr<NoOpStmt> NoOpStmtPtr;
-
-class NoOpStmt : public Statement {
-	static NoOpStmtPtr instance;
-public:
-	virtual string toString() const { return "{ /* NoOp */ }"; }
-
-	static NoOpStmtPtr getInstance();
-};
-
-class ExpressionStmt : public Statement {
-protected:
+class ExprStmt : public Statement {
 	const ExprPtr expression;
 
 public:
-	ExpressionStmt(ExprPtr expression) : Statement(), expression(expression) {
+	ExprStmt(const ExprPtr& expression) : expression(expression) {
 	}
 	virtual string toString() const { return expression->toString(); }
 };
 
-class DeclarationStmt : public ExpressionStmt {
-	TypePtr type;
+class DeclarationStmt : public Statement {
+	const ExprPtr initExpression;
+	const TypePtr type;
 	
 public:
-	DeclarationStmt(TypePtr type, ExprPtr expression) : ExpressionStmt(expression), type(type) {
+	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) : initExpression(initExpression), type(type) {
 	}
-	virtual string toString() const { return type->toString() + expression->toString(); }
+	virtual string toString() const { return type->toString() + " " + initExpression->toString(); }
 };
 
-class ReturnStmt : public ExpressionStmt {
+class ReturnStmt : public Statement {
+	const ExprPtr returnExpression;
+
 public:
-	ReturnStmt(ExprPtr expression) : ExpressionStmt(expression) {
+	ReturnStmt(const ExprPtr& returnExpression) : returnExpression(returnExpression) {
 	}
-	virtual string toString() const { return string("return ") + expression->toString(); }
+	virtual string toString() const { return string("return ") + returnExpression->toString(); }
 };
 
 
 class CompoundStmt : public Statement {
-	vector<StmtPtr> statements;
+	const vector<const StmtPtr> statements;
 public:
-	CompoundStmt() : Statement() {
+	CompoundStmt() {
 	}
-	CompoundStmt(StmtPtr stmt) : Statement() {
-		statements.push_back(stmt);
+	CompoundStmt(const StmtPtr& stmt) : statements(toVector<const StmtPtr>(stmt)) {
 	}
-	CompoundStmt(vector<StmtPtr> stmts) : Statement(), statements(stmts) {
+	CompoundStmt(const vector<const StmtPtr>& stmts) : statements(stmts) {
 	}
 	virtual string toString() const { 
 		vector<string> list;
-		std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr cur) { return cur->toString(); });
+		std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr& cur) { return cur->toString(); });
 		return boost::join(list, ";\n");
 	}
 };
 
-class WhileStmt : public CompoundStmt {
+class WhileStmt : public Statement {
+	ExprPtr condition;
+	StmtPtr body;
+public:
+	WhileStmt(StmtPtr body, ExprPtr condition) : condition(condition), body(body) {
+	}
+	virtual string toString() const { 
+		return string("while(") + condition->toString() + ")\n" + body->toString();
+	}
 };
 
-class ForStmt : public CompoundStmt {
+class ForStmt : public Statement {
+	VarExprPtr variable;
+	ExprPtr start, end, step;
+	StmtPtr body;
+public:
+	ForStmt(StmtPtr body, VarExprPtr var, ExprPtr start, ExprPtr end, ExprPtr step) : variable(var), start(start), end(end), step(step), body(body) {
+	}
+	virtual string toString() const {
+		return string("for(") + variable->toString() + "=" + start->toString() + ".." + end->toString() + ":" + step->toString() + ")\n" + body->toString();
+	}
 };
 
-class IfStmt : public CompoundStmt {
-	StmtPtr thenStmt;
-	StmtPtr elseStmt;
+class IfStmt : public Statement {
+	ExprPtr condition;
+	StmtPtr body;
+	StmtPtr elseBody;
 };
 
-class SwitchStmt : public CompoundStmt {
+class SwitchStmt : public Statement {
 };

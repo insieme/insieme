@@ -36,29 +36,19 @@
 
 #pragma once
 
-#include <set>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <vector>
 
-#include "instance_ref.h"
-#include "type_traits_utils.h"
+using std::vector;
 
-class Annotation;
-
-class Annotatable {
-	std::set<Annotation> *annotations;
-public:
-	void addAnnotation(const Annotation& a) {};
-};
-
-
+/**
+ * Creates a vector containing (a copy of) the single element provided as an argument.
+ *
+ * @tparam the type of element to be contained within the singleton vector
+ * @param element the element to be included within the new vector
+ *
+ * @return a new vector instance containing a single element
+ */
 template<typename T>
-class AnnotatedRef : public InstanceRef<T>, Annotatable {
-public:
-	AnnotatedRef(T* node) : InstanceRef<T>(node) { }
-
-	template<typename B>
-	AnnotatedRef(const AnnotatedRef<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : InstanceRef<T>(from.node) { }
-
-
-};
+vector<T> toVector(T element) {
+	return vector<T> (1, element);
+}

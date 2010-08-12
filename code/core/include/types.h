@@ -48,8 +48,8 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "stringutils.h"
-#include "containerutils.h"
+#include "string_utils.h"
+#include "container_utils.h"
 
 using std::string;
 using std::vector;
@@ -508,11 +508,11 @@ public:
 typedef const std::shared_ptr<ArrayType> ArrayTypeRef;
 
 class VectorType : public GenericType {
-	VectorType(TypePtr elementType, IntTypeParam size) : GenericType("vector", createSingleton(elementType), createSingleton(size)) {}
+	VectorType(TypePtr elementType, IntTypeParam size) : GenericType("vector", toVector(elementType), toVector(size)) {}
 };
 
 class ReferenceType : public GenericType {
-	ReferenceType(TypePtr elementType) : GenericType("ref", createSingleton(elementType), vector<IntTypeParam>()) {}
+	ReferenceType(TypePtr elementType) : GenericType("ref", toVector(elementType), vector<IntTypeParam>()) {}
 };
 
 class ChannelType : public Type {

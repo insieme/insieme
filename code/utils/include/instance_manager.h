@@ -45,7 +45,7 @@
 #include <boost/type_traits/is_const.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "annotated_ref.h"
+#include "annotated_ptr.h"
 #include "instance_ref.h"
 
 /**
@@ -104,9 +104,9 @@ struct target_Hash: public std::unary_function<T, std::size_t> {
  */
 template<
 	typename T,
-	typename R = InstanceRef<T>,
+	typename R = InstancePtr<T>,
 	typename boost::enable_if<boost::is_const<T>,int>::type = 0,
-	typename boost::enable_if<boost::is_base_of<InstanceRef<T>, R>,int>::type = 0
+	typename boost::enable_if<boost::is_base_of<InstancePtr<T>, R>,int>::type = 0
 	>
 class InstanceManager {
 
@@ -167,7 +167,7 @@ public:
 	 *
 	 * @see get(T*)
 	 */
-	AnnotatedRef<T> get(T& instance) {
+	AnnotatedPtr<T> get(T& instance) {
 		return this->get(&instance);
 	}
 

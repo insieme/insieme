@@ -53,7 +53,7 @@ public:
 		value(value), first(first), second(second) {
 	}
 
-	typename Visitable<MNode*>::ChildList getChildren() const {
+	Visitable<MNode*>::ChildList getChildren() const {
 		std::cout << "Forming children ... " << std::endl;
 		auto res = newChildList();
 		if (first) {
@@ -84,8 +84,7 @@ TEST(Visitor, DepthFirstVisitor) {
 
 	std::stringstream res;
 	DepthFirstVisitor<MNode*> visitor(
-			[&res](MNode* cur) { std::cout << "Step" << std::endl; res << cur->value; },
-			[](MNode* cur) { std::cout << "Checking" << std::endl; return true; }
+			[&res](MNode* cur) { std::cout << "Step" << std::endl; res << cur->value; }
 			);
 	visitor.visit(&root);
 	EXPECT_EQ (res.str(), "452631");
@@ -106,7 +105,7 @@ public:
 		value(value), first(first), second(second) {
 	}
 
-	typename Visitable<const CNode*>::ChildList getChildren() const {
+	Visitable<const CNode*>::ChildList getChildren() const {
 		std::cout << "Forming children ... " << std::endl;
 		auto res = newChildList();
 		if (first) {
@@ -137,10 +136,9 @@ TEST(Visitor, ConstDepthFirstVisitor) {
 
 	std::stringstream res;
 
-	DepthFirstVisitor<const CNode*> visitor(
-			[&res](const CNode* cur) { std::cout << "Step" << std::endl; res << cur->value; },
-			[](const CNode* cur) { std::cout << "Checking" << std::endl; return true; }
-			);
+	DepthFirstVisitor<const CNode*> visitor( 
+		[&res](const CNode* cur) { std::cout << "Step" << std::endl; res << cur->value; }		
+		);
 	visitor.visit(&root);
 
 

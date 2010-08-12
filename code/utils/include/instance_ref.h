@@ -42,27 +42,27 @@
 
 
 //template<typename T, typename S = boost::mpl::empty_base>
-//class InstanceRef : public S {
+//class InstancePtr : public S {
 template<typename T>
-class InstanceRef {
+class InstancePtr {
 public:
 	T* node;
 
-	InstanceRef(T* node) : node(node) { }
+	InstancePtr(T* node) : node(node) { }
 
 	template<typename B>
-	InstanceRef(const InstanceRef<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : node(from.node) { }
+	InstancePtr(const InstancePtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : node(from.node) { }
 
-	const T operator*() const {
-		return *node;
-	}
+	//const T operator*() const {
+	//	return *node;
+	//}
 
 	const T* operator->() const {
 		return node;
 	}
 
 	template<typename A>
-	const bool operator==(const InstanceRef<A>& other) {
+	const bool operator==(const InstancePtr<A>& other) {
 		return node == other.node;
 	}
 };
