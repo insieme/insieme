@@ -47,7 +47,7 @@ class Expression {
 	/**
 	 * The type of the represented expression.
 	 */
-	const TypePtr type;
+	TypePtr type;
 
 public:
 
@@ -59,33 +59,47 @@ public:
 	virtual string toString() const { return ""; }
 
 };
-
 typedef std::shared_ptr<Expression> ExprPtr;
 
 
 class Variable : public Expression {
 	const string name;
 };
+typedef std::shared_ptr<Variable> VarExprPtr;
 
 
-class Literal : public Expression {
-};
-
-class IntegerLiteral : public Literal {
-	const int value;
+template<typename T>
+class BaseLiteral : public Expression {
+    const T value;
 public:
-	const int getValue() const { return value; }
+	BaseLiteral(const T& val) : value(val) {
+	};
+    const T getValue() const { return value; }
 };
 
-class BooleanLiteral : public Literal {
-	const bool value;
+class IntegerLiteral : public BaseLiteral<int> {
 public:
-	const bool getValue() const { return value; }
+	IntegerLiteral(const int val) : BaseLiteral(val) {
+	};
 };
 
-class StringLiteral : public Literal {
-	const string value;
-	const string getValue() const { return value; }
+class FloatLiteral : public BaseLiteral<double> {
+	string originalString;
+public:
+	FloatLiteral(const double val, const string& originalString) : BaseLiteral(val), originalString(originalString) {
+	};
+};
+
+class BooleanLiteral : public BaseLiteral<bool> {
+public:
+	BooleanLiteral(const bool val) : BaseLiteral(val) {
+	};
+};
+
+class StringLiteral : public BaseLiteral<string> {
+public:
+	StringLiteral(const string& val) : BaseLiteral(val) {
+	};
 };
 
 
