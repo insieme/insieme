@@ -46,7 +46,7 @@
 #include <boost/utility/enable_if.hpp>
 
 #include "annotated_ptr.h"
-#include "instance_ref.h"
+#include "instance_ptr.h"
 
 /**
  * This utility struct definition defines a predicate comparing two pointers
@@ -130,8 +130,30 @@ public:
 		);
 	}
 
+	// true if new, false otherwise ...
+	std::pair<R,bool> add(T* instance) {
+
+		// test whether there is already an identical element
+		auto res = storage.find(instance);
+		if (res != storage.end()) {
+			// use included element
+			return std::make_pair(R(*res), false);
+		}
+
+		// copy element (to ensure private copy)
+		T* newElement = instance->clone();
+		storage.insert(newElement);
+		return std::make_pair(R(newElement), true);
+
+	}
+
+	std::pair<R,bool> add(T& instance) {
+		return add(&instance);
+	}
+
+
 	/**
-	 * Obtaines an instance managed by this instance manager referencing the master
+	 * Obtains an instance managed by this instance manager referencing the master
 	 * copy of the given instance. If so such instance is present yet, a copy of the
 	 * handed in instance will be created and added to the internal store. The returned
 	 * reference will point to the new master copy.
@@ -142,22 +164,11 @@ public:
 	 * @see get(T&)
 	 */
 	R get(T* instance) {
-
-		// test whether there is already an identical element
-		auto res = storage.find(instance);
-		if (res != storage.end()) {
-			// use included element
-			return R(*res);
-		}
-
-		// copy element (to ensure private copy)
-		T* newElement = new T(*instance);
-		storage.insert(newElement);
-		return R(newElement);
+		return add(instance).first;
 	}
 
 	/**
-	 * Obtaines an instance managed by this instance manager referencing the master
+	 * Obtains an instance managed by this instance manager referencing the master
 	 * copy of the given instance. If so such instance is present yet, a copy of the
 	 * handed in instance will be created and added to the internal store. The returned
 	 * reference will point to the new master copy.
@@ -167,9 +178,18 @@ public:
 	 *
 	 * @see get(T*)
 	 */
-	AnnotatedPtr<T> get(T& instance) {
+	std::pair<R,bool> get(T& instance) {
 		return this->get(&instance);
 	}
+
+	bool contains(const T& instance) {
+		return (storage.find(instance) == storage.end());
+	}
+
+	bool contains(R ref) {
+		return contains(*ref);
+	}
+
 
 	/**
 	 * Retrieves the number of elements handled by this instance manager.

@@ -48,11 +48,18 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "expressions.h"
 #include "annotated_ptr.h"
 #include "container_utils.h"
+#include "expressions.h"
+#include "instance_manager.h"
+#include "visitor.h"
+
 
 using std::vector;
+
+enum {
+	STMT_HASH_NOOP, STMT_HASH_BREAK, STMT_HASH_CONTINUE
+};
 
 // Forward Declarations { -----------------------------------------------------
 
@@ -92,107 +99,223 @@ typedef AnnotatedPtr<const IfStmt> IfStmtPtr;
 class SwitchStmt;
 typedef AnnotatedPtr<const SwitchStmt> SwitchStmtPtr;
 
+class StatementManager;
+
 // Forward Declarations } -----------------------------------------------------
 
-class Statement {
+class StatementManager: public InstanceManager<const Statement, StmtPtr> {
+//	TypeManager& typeManager;
+
+friend class Statement;
+friend class BreakStmt;
+
+
+protected:
+	StmtPtr getStmtPtr(const Statement& stmt) {
+		// get master copy
+		std::pair<StmtPtr, bool > res = add(stmt);
+
+		// if new element has been added ...
+		if (res.second) {
+			// ... check whether sub-statements are present
+			ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) {getStmtPtr(*cur);});
+		}
+		return res.first;
+	}
+
+public:
+//	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
+
+
+	// TODO: support add/lookup
+};
+
+
+class Statement : public Visitable<StmtPtr> {
+
+protected:
+	virtual bool equals(const Statement& stmt) const = 0;
+
+
 public:
 	virtual string toString() const = 0;
+
+	virtual Statement* clone() const = 0;
+
+	virtual std::size_t hash() const = 0;
+
+
+	bool operator==(const Statement& stmt) const {
+		return (typeid(*this) == typeid(stmt)) && equals(stmt);
+	}
+
+	virtual ChildList getChildren() const {
+		return newChildList();
+	}
+
 };
 
-class NoOpStmt : public Statement {
+std::size_t hash_value(const Statement& stmt) {
+	return stmt.hash();
+}
+
+class NoOpStmt: public Statement {
 public:
-	virtual string toString() const { return "{ /* NoOp */ }"; }	
-	std::size_t hash_value() const { return 0; }
-	bool operator==(NoOpStmt const& other) const { return true; }
-
-	//static const NoOpStmtPtr get() {
-	//	//TODO
-	//}
-};
-
-class BreakStmt : public Statement {
-public:
-	virtual string toString() const { return "break"; }
-};
-
-class ContinueStmt : public Statement {
-public:
-	virtual string toString() const { return "continue"; }
-};
-
-class ExprStmt : public Statement {
-	const ExprPtr expression;
-
-public:
-	ExprStmt(const ExprPtr& expression) : expression(expression) {
-	}
-	virtual string toString() const { return expression->toString(); }
-};
-
-class DeclarationStmt : public Statement {
-	const ExprPtr initExpression;
-	const TypePtr type;
-	
-public:
-	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) : initExpression(initExpression), type(type) {
-	}
-	virtual string toString() const { return type->toString() + " " + initExpression->toString(); }
-};
-
-class ReturnStmt : public Statement {
-	const ExprPtr returnExpression;
-
-public:
-	ReturnStmt(const ExprPtr& returnExpression) : returnExpression(returnExpression) {
-	}
-	virtual string toString() const { return string("return ") + returnExpression->toString(); }
-};
-
-
-class CompoundStmt : public Statement {
-	const vector<const StmtPtr> statements;
-public:
-	CompoundStmt() {
-	}
-	CompoundStmt(const StmtPtr& stmt) : statements(toVector<const StmtPtr>(stmt)) {
-	}
-	CompoundStmt(const vector<const StmtPtr>& stmts) : statements(stmts) {
-	}
-	virtual string toString() const { 
-		vector<string> list;
-		std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr& cur) { return cur->toString(); });
-		return boost::join(list, ";\n");
-	}
-};
-
-class WhileStmt : public Statement {
-	ExprPtr condition;
-	StmtPtr body;
-public:
-	WhileStmt(StmtPtr body, ExprPtr condition) : condition(condition), body(body) {
-	}
-	virtual string toString() const { 
-		return string("while(") + condition->toString() + ")\n" + body->toString();
-	}
-};
-
-class ForStmt : public Statement {
-	VarExprPtr variable;
-	ExprPtr start, end, step;
-	StmtPtr body;
-public:
-	ForStmt(StmtPtr body, VarExprPtr var, ExprPtr start, ExprPtr end, ExprPtr step) : variable(var), start(start), end(end), step(step), body(body) {
-	}
 	virtual string toString() const {
-		return string("for(") + variable->toString() + "=" + start->toString() + ".." + end->toString() + ":" + step->toString() + ")\n" + body->toString();
+		return "{ /* NoOp */ }";
+	}
+	std::size_t hash_value() const {
+		return 0;
+	}
+
+	virtual bool equals(const Statement& stmt) const {
+		return true;
+	}
+
+	virtual std::size_t hash() const {
+		return STMT_HASH_NOOP;
+	}
+
+	virtual NoOpStmt* clone() const {
+		return new NoOpStmt();
+	}
+
+};
+
+class BreakStmt: public Statement {
+private:
+	BreakStmt() {};
+
+public:
+
+	virtual string toString() const {
+		return "break";
+	}
+
+	virtual bool equals(const Statement& stmt) const {
+		return true;
+	}
+
+	virtual std::size_t hash() const {
+		return STMT_HASH_BREAK;
+	}
+
+	virtual BreakStmt* clone() const {
+		return new BreakStmt();
+	}
+
+	BreakStmtPtr get(StatementManager& manager) {
+		return dynamic_pointer_cast<const BreakStmt>(manager.getStmtPtr(BreakStmt()));
 	}
 };
 
-class IfStmt : public Statement {
-	ExprPtr condition;
-	StmtPtr body;
-	StmtPtr elseBody;
+class ContinueStmt: public Statement {
+public:
+	virtual string toString() const {
+		return "continue";
+	}
+
+	virtual bool equals(const Statement& stmt) const {
+		return true;
+	}
+
+	virtual std::size_t hash() const {
+		return STMT_HASH_CONTINUE;
+	}
+
+	virtual ContinueStmt* clone() const {
+		return new ContinueStmt();
+	}
 };
 
-class SwitchStmt : public Statement {
-};
+//class ExprStmt: public Statement {
+//	const ExprPtr expression;
+//
+//public:
+//	ExprStmt(const ExprPtr& expression) :
+//		expression(expression) {
+//	}
+//	virtual string toString() const {
+//		return expression->toString();
+//	}
+//};
+//
+//class DeclarationStmt: public Statement {
+//	const ExprPtr initExpression;
+//	const TypePtr type;
+//
+//public:
+//	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) :
+//		initExpression(initExpression), type(type) {
+//	}
+//	virtual string toString() const {
+//		return type->toString() + " " + initExpression->toString();
+//	}
+//};
+//
+//class ReturnStmt: public Statement {
+//	const ExprPtr returnExpression;
+//
+//public:
+//	ReturnStmt(const ExprPtr& returnExpression) :
+//		returnExpression(returnExpression) {
+//	}
+//	virtual string toString() const {
+//		return string("return ") + returnExpression->toString();
+//	}
+//};
+//
+//class CompoundStmt: public Statement {
+//	const vector<StmtPtr> statements;
+//public:
+//	CompoundStmt() {
+//	}
+//	CompoundStmt(const StmtPtr& stmt) :
+//		statements(toVector<StmtPtr> (stmt)) {
+//	}
+//	CompoundStmt(const vector<StmtPtr>& stmts) :
+//		statements(stmts) {
+//	}
+//	virtual string toString() const {
+//		vector<string> list;
+//		std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr& cur) {return cur->toString();});
+//		return boost::join(list, ";\n");
+//	}
+//};
+//
+//class WhileStmt: public Statement {
+//	ExprPtr condition;
+//	StmtPtr body;
+//public:
+//	WhileStmt(StmtPtr body, ExprPtr condition) :
+//		condition(condition), body(body) {
+//	}
+//	virtual string toString() const {
+//		return string("while(") + condition->toString() + ")\n" + body->toString();
+//	}
+//};
+//
+//class ForStmt: public Statement {
+//	VarExprPtr variable;
+//	ExprPtr start, end, step;
+//	StmtPtr body;
+//public:
+//	ForStmt(StmtPtr body, VarExprPtr var, ExprPtr start, ExprPtr end, ExprPtr step) :
+//		variable(var), start(start), end(end), step(step), body(body) {
+//	}
+//	virtual string toString() const {
+//		return string("for(") + variable->toString() + "=" + start->toString() + ".." + end->toString() + ":"
+//				+ step->toString() + ")\n" + body->toString();
+//	}
+//};
+//
+//class IfStmt: public Statement {
+//	ExprPtr condition;
+//	StmtPtr body;
+//	StmtPtr elseBody;
+//};
+//
+//class SwitchStmt: public Statement {
+//};
+
+

@@ -50,6 +50,12 @@ using std::function;
 using std::for_each;
 
 
+template<typename T>
+bool visitorTrueFilter(T element) {
+	return true;
+}
+
+
 template <typename T> class Visitor;
 
 
@@ -80,7 +86,7 @@ protected:
 
 
 public:
-	Visitor(const function<void(T)>& task, const function<bool(T)>& filter = [](T){return true;}) : task(task), filter(filter) {};
+	Visitor(const function<void(T)>& task, const function<bool(T)>& filter = &visitorTrueFilter<T>) : task(task), filter(filter) {};
 
 	virtual void visit(T cur) const = 0;
 };
@@ -88,11 +94,15 @@ public:
 template <typename T>
 class DepthFirstVisitor : public Visitor<T> {
 public:
-	DepthFirstVisitor(const function<void(T)>& task, const function<bool(T)>& filter = [](T){return true;}) : Visitor<T>(task, filter) {};
+	DepthFirstVisitor(const function<void(T)>& task, const function<bool(T)>& filter = &visitorTrueFilter<T>) : Visitor<T>(task, filter) {};
 
 	virtual void visit(T cur) const {
 		typename Visitable<T>::ChildList list = cur->getChildren();
-		for_each(list->begin(), list->end(), [&](T cur) { this->visit(cur); });
+
+		for_each(list->begin(), list->end(),
+				[&](T cur) { this->visit(cur);
+		});
+
 		if (filter(cur)) {
 			task(cur);
 		}
@@ -103,13 +113,13 @@ public:
 template <typename T>
 class ChildVisitor : public Visitor<T> {
 public:
-	ChildVisitor(const function<void(T)>& task, const function<bool(T)>& filter = &Visitor<T>::trueFilter) : Visitor<T>(task, filter) {};
+	ChildVisitor(const function<void(T)>& task, const function<bool(T)>& filter = &visitorTrueFilter<T>) : Visitor<T>(task, filter) {};
 
 	virtual void visit(T cur) const {
 		typename Visitable<T>::ChildList list = cur->getChildren();
 		for_each(list->begin(), list->end(), [&](T cur) {
-			if (filter(cur)) {
-				task(cur);
+			if (this->filter(cur)) {
+				this->task(cur);
 			};
 		});
 	}

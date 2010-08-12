@@ -39,36 +39,50 @@
 
 #include <gtest/gtest.h>
 #include "instance_manager.h"
-#include "instance_ref.h"
+#include "instance_ptr.h"
 
 using std::string;
 using std::cout;
 using std::endl;
 
+
+class CloneableString : public string {
+public:
+	CloneableString(const char* c) : string(c) {};
+	CloneableString(const string& str) : string(str) {};
+//	CloneableString(const CloneableString& str) : string(str.c_str()) {};
+
+	CloneableString* clone() const {
+		return new CloneableString(*this);
+	}
+
+};
+
+
 TEST(InstanceManager, Basic) {
 
 	// create a new instance manager
-	InstanceManager<const string> manager;
+	InstanceManager<const CloneableString> manager;
 	EXPECT_EQ (manager.size(), 0);
 
 	// add and retrieve first element
-	string strA  = "Hello World";
-	InstancePtr<const string> refA = manager.get(&strA);
+	CloneableString strA  = "Hello World";
+	InstancePtr<const CloneableString> refA = manager.get(&strA);
 	EXPECT_EQ (*refA, "Hello World");
 	EXPECT_EQ (manager.size(), 1);
 
 	// add and retrieve second element
-	string strB = "Hello World 2";
-	InstancePtr<const string> refB = manager.get(&strB);
+	CloneableString strB = "Hello World 2";
+	InstancePtr<const CloneableString> refB = manager.get(&strB);
 	EXPECT_EQ (*refB, "Hello World 2");
 	EXPECT_EQ (manager.size(), 2);
 
 	// add and retrieve third element (which is equivalent to first element)
-	string strC = "Hello World";
-	InstancePtr<const string> refC = manager.get(&strC);
+	CloneableString strC = "Hello World";
+	InstancePtr<const CloneableString> refC = manager.get(&strC);
 	EXPECT_EQ (manager.size(), 2);
 
-	// ensure compiler is not reusing identical strings
+	// ensure compiler is not reusing identical CloneableStrings
 	EXPECT_NE (&strA, &strC);
 
 	// check whether references are pointing to equivalent values
@@ -82,3 +96,41 @@ TEST(InstanceManager, Basic) {
 	EXPECT_STREQ (refA->c_str(), refC->c_str());
 }
 
+TEST(InstancePtr, Size) {
+
+	EXPECT_LE ( sizeof (InstancePtr<int>), 4 );
+}
+
+typedef float real;
+
+class A {
+	// required to be polymorphic (dynamic cast)
+	virtual real hell() {};
+};
+class B : public A {};
+class C : public A {};
+
+
+TEST(InstancePtr, Casts) {
+
+	A a;
+	B b;
+	C c;
+
+	InstancePtr<const A> refA(&a);
+	InstancePtr<const B> refB(&b);
+	InstancePtr<const C> refC(&c);
+
+	refA = refB;
+	// refB = refA;
+	refB = dynamic_pointer_cast<const B >(refA);
+	EXPECT_FALSE( refB == InstancePtr<B>(NULL) );
+
+	// should not compile ...
+//	refC = dynamic_pointer_cast<const C >(refA);
+//	EXPECT_TRUE( refC == InstancePtr<C>(NULL) );
+
+	refA = refC;
+	refB = dynamic_pointer_cast<const B >(refA);
+	EXPECT_TRUE( refB == InstancePtr<B>(NULL) );
+}

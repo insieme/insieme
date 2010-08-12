@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include <boost/mpl/empty_base.hpp>
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -53,9 +55,10 @@ public:
 	template<typename B>
 	InstancePtr(const InstancePtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : node(from.node) { }
 
-	//const T operator*() const {
-	//	return *node;
-	//}
+	const T& operator*() const {
+		assert(node != NULL);
+		return *node;
+	}
 
 	const T* operator->() const {
 		return node;
@@ -66,3 +69,12 @@ public:
 		return node == other.node;
 	}
 };
+
+template<typename B, typename T>
+typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T> src) {
+	if (dynamic_cast<B*>(&(*src))) {
+		return *(reinterpret_cast<InstancePtr<B>* >(&src));
+	}
+	return NULL;
+}
+

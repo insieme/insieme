@@ -36,30 +36,17 @@
 
 #pragma once
 
-#include "instance_manager.h"
+#include <algorithm>
+
 #include "statements.h"
 #include "types.h"
 
-class TypeManager: public InstanceManager<const Type> {
-
-	// TODO: support add/lookup
-};
-
-class StatementManager: public InstanceManager<const Statement> {
-	TypeManager& typeManager;
-public:
-	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
-
-
-	// TODO: support add/lookup
-};
-
 class ASTManager {
 
-	TypeManager typeManager;
+//	TypeManager typeManager;
 	StatementManager stmtManager;
 
 public:
-	ASTManager() : stmtManager(typeManager) {}
+//	ASTManager() : stmtManager(typeManager) {}
 
 };

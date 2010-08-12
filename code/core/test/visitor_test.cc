@@ -84,11 +84,11 @@ TEST(Visitor, DepthFirstVisitor) {
 
 	std::stringstream res;
 	DepthFirstVisitor<MNode*> visitor(
-			[&res](MNode* cur) { std::cout << "Step" << std::endl; res << cur->value; }
+			[&res](MNode* cur) { std::cout << "Step" << std::endl; res << cur->value; },
+			[](MNode* cur){return true;}
 			);
 	visitor.visit(&root);
 	EXPECT_EQ (res.str(), "452631");
-
 }
 
 
@@ -137,7 +137,8 @@ TEST(Visitor, ConstDepthFirstVisitor) {
 	std::stringstream res;
 
 	DepthFirstVisitor<const CNode*> visitor( 
-		[&res](const CNode* cur) { std::cout << "Step" << std::endl; res << cur->value; }		
+		[&res](const CNode* cur) { std::cout << "Step" << std::endl; res << cur->value; },
+		[](const CNode* cur){return true;}
 		);
 	visitor.visit(&root);
 

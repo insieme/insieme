@@ -40,7 +40,7 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "instance_ref.h"
+#include "instance_ptr.h"
 #include "type_traits_utils.h"
 
 class Annotation;
@@ -60,5 +60,13 @@ public:
 	template<typename B>
 	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : InstancePtr<T>(from.node) { }
 
-
 };
+
+
+template<typename B, typename T>
+typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type dynamic_pointer_cast(AnnotatedPtr<T> src) {
+	if (dynamic_cast<B*>(&(*src))) {
+		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
+	}
+	return NULL;
+}

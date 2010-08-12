@@ -39,26 +39,9 @@
 #include "types.h"
 
 
-TEST(TypeManager, Basic) {
+TEST(StatementManager, Basic) {
 
-	int a = 10;
-	int b = 20;
-	int& c = a;
 
-	EXPECT_EQ (a, 10);
-	EXPECT_EQ (b , 20);
-	EXPECT_EQ (c , a);
-	a++;
-
-	EXPECT_EQ (a, 11);
-	EXPECT_EQ (b , 20);
-	EXPECT_EQ (c , a);
-
-	c = b;
-
-	EXPECT_EQ (a, 20);
-	EXPECT_EQ (b , 20);
-	EXPECT_EQ (c , a);
 
 
 //	// test size limitation
