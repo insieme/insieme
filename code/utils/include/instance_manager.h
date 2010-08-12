@@ -36,14 +36,17 @@
 
 #pragma once
 
+#include <algorithm>
 #include <unordered_set>
 #include <functional>
 
-#include <boost/foreach.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_const.hpp>
+#include <boost/utility/enable_if.hpp>
 
 #include "annotated_ref.h"
-#include "type_traits_utils.h"
+#include "instance_ref.h"
 
 /**
  * This utility struct definition defines a predicate comparing two pointers
@@ -99,7 +102,12 @@ struct target_Hash: public std::unary_function<T, std::size_t> {
  * @tparam T the type of elements managed by the concrete manager instance. The type has to
  * 			 be a constant type.
  */
-template<typename T, typename eval<boost::is_const<T>::value>::is_true = 0>
+template<
+	typename T,
+	typename R = InstanceRef<T>,
+	typename boost::enable_if<boost::is_const<T>,int>::type = 0,
+	typename boost::enable_if<boost::is_base_of<InstanceRef<T>, R>,int>::type = 0
+	>
 class InstanceManager {
 
 	/**
@@ -116,9 +124,10 @@ public:
 	 * The destructor of this instance manager freeing all elements within the store.
 	 */
 	~InstanceManager() {
-		BOOST_FOREACH(T* cur, storage) {
-			delete cur;
-		}
+		// delete all elements maintained by the manager
+		for_each(storage.begin(), storage.end(),
+				[](T* cur) { delete cur; }
+		);
 	}
 
 	/**
@@ -132,19 +141,19 @@ public:
 	 *
 	 * @see get(T&)
 	 */
-	AnnotatedRef<T> get(T* instance) {
+	R get(T* instance) {
 
 		// test whether there is already an identical element
 		auto res = storage.find(instance);
 		if (res != storage.end()) {
 			// use included element
-			return AnnotatedRef<T>(*res);
+			return R(*res);
 		}
 
 		// copy element (to ensure private copy)
 		T* newElement = new T(*instance);
 		storage.insert(newElement);
-		return AnnotatedRef<T>(newElement);
+		return R(newElement);
 	}
 
 	/**

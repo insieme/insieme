@@ -38,7 +38,9 @@
 
 #include <set>
 #include <boost/type_traits/is_base_of.hpp>
+#include <boost/utility/enable_if.hpp>
 
+#include "instance_ref.h"
 #include "type_traits_utils.h"
 
 class Annotation;
@@ -49,26 +51,14 @@ public:
 	void addAnnotation(const Annotation& a) {};
 };
 
+
 template<typename T>
-class AnnotatedRef : public Annotatable {
+class AnnotatedRef : public InstanceRef<T>, Annotatable {
 public:
-	T* node;
+	AnnotatedRef(T* node) : InstanceRef<T>(node) { }
 
-	AnnotatedRef(T* node) : node(node) { }
-	
 	template<typename B>
-	AnnotatedRef(const AnnotatedRef<B>& from, typename eval<boost::is_base_of<T,B>::value>::is_true = 0) : node(from.node) { }
+	AnnotatedRef(const AnnotatedRef<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : InstanceRef<T>(from.node) { }
 
-	const T operator*() const {
-		return *node;
-	}
-	
-	const T* operator->() const {
-		return node;
-	}
 
-	template<typename S>
-	const bool operator==(const AnnotatedRef<S>& other) {
-		return node == other.node;
-	}
 };

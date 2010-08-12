@@ -39,7 +39,7 @@
 
 #include <gtest/gtest.h>
 #include "instance_manager.h"
-
+#include "instance_ref.h"
 
 using std::string;
 using std::cout;
@@ -53,19 +53,19 @@ TEST(InstanceManager, Basic) {
 
 	// add and retrieve first element
 	string strA  = "Hello World";
-	AnnotatedRef<const string> refA = manager.get(&strA);
+	InstanceRef<const string> refA = manager.get(&strA);
 	EXPECT_EQ (*refA, "Hello World");
 	EXPECT_EQ (manager.size(), 1);
 
 	// add and retrieve second element
 	string strB = "Hello World 2";
-	AnnotatedRef<const string> refB = manager.get(&strB);
+	InstanceRef<const string> refB = manager.get(&strB);
 	EXPECT_EQ (*refB, "Hello World 2");
 	EXPECT_EQ (manager.size(), 2);
 
 	// add and retrieve third element (which is equivalent to first element)
 	string strC = "Hello World";
-	AnnotatedRef<const string> refC = manager.get(&strC);
+	InstanceRef<const string> refC = manager.get(&strC);
 	EXPECT_EQ (manager.size(), 2);
 
 	// ensure compiler is not reusing identical strings
