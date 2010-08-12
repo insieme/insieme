@@ -118,7 +118,7 @@ protected:
 		// if new element has been added ...
 		if (res.second) {
 			// ... check whether sub-statements are present
-			ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) {getStmtPtr(*cur);});
+			ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) { this->getStmtPtr(*cur);});
 		}
 		return res.first;
 	}

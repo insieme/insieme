@@ -28,7 +28,7 @@ find_package( Perl )
 
 # disable some warnings within visual studio
 if(MSVC) 
-	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} /D "_CRT_SECURE_NO_WARNINGS")
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} /D "_CRT_SECURE_NO_WARNINGS")
 endif()
 
 # enable C++0x support within gcc (if supported)
@@ -37,6 +37,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
 	if(CXX0X_Support)
 		add_definitions( -std=c++0x )
+		add_definitions( -Wall )
 	else()
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
