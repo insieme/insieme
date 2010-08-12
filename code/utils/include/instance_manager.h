@@ -125,7 +125,7 @@ public:
 	 */
 	~InstanceManager() {
 		// delete all elements maintained by the manager
-		for_each(storage.begin(), storage.end(),
+		std::for_each(storage.begin(), storage.end(),
 				[](T* cur) { delete cur; }
 		);
 	}
