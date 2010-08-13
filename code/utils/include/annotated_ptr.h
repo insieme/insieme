@@ -48,7 +48,7 @@ class Annotation;
 class Annotatable {
 	std::set<Annotation> *annotations;
 public:
-	void addAnnotation(const Annotation& a) {};
+	void addAnnotation(const Annotation&) {};
 };
 
 
@@ -63,8 +63,7 @@ public:
 
 
 template<typename B, typename T>
-//typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
-AnnotatedPtr<B>
+typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
 dynamic_pointer_cast(AnnotatedPtr<T> src) {
 	if (dynamic_cast<B*>(&(*src))) {
 		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));

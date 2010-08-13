@@ -36,43 +36,55 @@
 
 #pragma once
 
-#include <vector>
-#include <functional>
+#include <utility>
+#include <iterator>
 
-using std::vector;
-using std::function;
+template<typename ITypeA, typename ITypeB>
+class paired_iterator {
+	ITypeA a;
+	ITypeB b;
 
-/**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
- */
-template<typename T>
-vector<T> toVector(T element) {
-	return vector<T> (1, element);
-}
+public:
+	typedef std::pair<typename std::iterator_traits<ITypeA>::value_type,
+					  typename std::iterator_traits<ITypeB>::value_type> value_type;
 
-template<class InputIterator, class Function>
-bool all(InputIterator first, InputIterator last, Function predicate)
-{
-	bool ret = true;
-	while (first != last) {
-		ret = ret && predicate(*first);
-		++first;
+	typedef std::input_iterator_tag iterator_category;
+	typedef typename std::iterator_traits<ITypeA>::difference_type difference_type;
+	typedef value_type* pointer;
+	typedef value_type& reference;
+
+	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
+
+	value_type operator*() {
+		return std::make_pair(*a,*b);
 	}
-	return ret;
-}
 
-template<class InputIterator, class Function>
-bool any(InputIterator first, InputIterator last, Function predicate)
-{
-	bool ret = true;
-	while (first != last) {
-		ret = ret || predicate(*first);
-		++first;
+	value_type operator->() {
+		return std::make_pair(*a,*b);
 	}
-	return ret;
+
+	paired_iterator& operator++() {
+		++a;
+		++b;
+		return *this;
+	}
+
+	paired_iterator operator++(int) {
+		paired_iterator ret = *this;
+		++this;
+		return ret;
+	}
+
+	bool operator==(const paired_iterator& rhs) {
+		return (a == rhs.a) && (b == rhs.b);
+	}
+	
+	bool operator!=(const paired_iterator& rhs) {
+		return (a != rhs.a) || (b != rhs.b);
+	}
+};
+
+template<typename A, typename B>
+paired_iterator<A, B> make_paired_iterator(A a, B b) {
+	return paired_iterator<A,B>(a, b);
 }

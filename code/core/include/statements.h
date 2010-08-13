@@ -50,10 +50,10 @@
 
 #include "annotated_ptr.h"
 #include "container_utils.h"
-#include "expressions.h"
 #include "instance_manager.h"
 #include "types.h"
 #include "visitor.h"
+#include "expressions.h"
 
 using std::string;
 using std::vector;
@@ -71,9 +71,6 @@ typedef AnnotatedPtr<const BreakStmt> BreakStmtPtr;
 
 class ContinueStmt;
 typedef AnnotatedPtr<const ContinueStmt> ContinueStmtPtr;
-
-class ExprStmt;
-typedef AnnotatedPtr<const ExprStmt> ExprStmtPtr;
 
 class DeclarationStmt;
 typedef AnnotatedPtr<const DeclarationStmt> DeclarationStmtPtr;
@@ -106,8 +103,11 @@ class Statement : public Visitable<StmtPtr> {
 protected:
 	// Hash values for terminal statements
 	enum {
-		HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE
+		HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE, HASHVAL_DECLARATION, HASHVAL_RETURN,
+		HASHVAL_COMPOUND, HASHVAL_WHILE, HASHVAL_FOR, HASHVAL_IF, HASHVAL_SWITCH
 	};
+
+	Statement() {}
 
 	virtual bool equals(const Statement& stmt) const = 0;
 
@@ -122,7 +122,7 @@ std::size_t hash_value(const Statement& stmt);
 
 
 class NoOpStmt : public Statement {
-	NoOpStmt() {};
+	NoOpStmt() {}
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
@@ -134,7 +134,7 @@ public:
 
 
 class BreakStmt : public Statement {
-	BreakStmt() {};
+	BreakStmt() {}
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
@@ -144,80 +144,71 @@ public:
 	static BreakStmtPtr get(StatementManager& manager);
 };
 
-//class ContinueStmt: public Statement {
-//public:
-//	virtual string toString() const {
-//		return "continue";
-//	}
-//
-//	virtual bool equals(const Statement& stmt) const {
-//		return true;
-//	}
-//
-//	virtual std::size_t hash() const {
-//		return HASHVAL_CONTINUE;
-//	}
-//
-//	virtual ContinueStmt* clone() const {
-//		return new ContinueStmt();
-//	}
-//};
 
-//class ExprStmt: public Statement {
-//	const ExprPtr expression;
-//
-//public:
-//	ExprStmt(const ExprPtr& expression) :
-//		expression(expression) {
-//	}
-//	virtual string toString() const {
-//		return expression->toString();
-//	}
-//};
-//
-//class DeclarationStmt: public Statement {
-//	const ExprPtr initExpression;
-//	const TypePtr type;
-//
-//public:
-//	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) :
-//		initExpression(initExpression), type(type) {
-//	}
-//	virtual string toString() const {
-//		return type->toString() + " " + initExpression->toString();
-//	}
-//};
-//
-//class ReturnStmt: public Statement {
-//	const ExprPtr returnExpression;
-//
-//public:
-//	ReturnStmt(const ExprPtr& returnExpression) :
-//		returnExpression(returnExpression) {
-//	}
-//	virtual string toString() const {
-//		return string("return ") + returnExpression->toString();
-//	}
-//};
-//
-//class CompoundStmt: public Statement {
-//	const vector<StmtPtr> statements;
-//public:
-//	CompoundStmt() {
-//	}
-//	CompoundStmt(const StmtPtr& stmt) :
-//		statements(toVector<StmtPtr> (stmt)) {
-//	}
-//	CompoundStmt(const vector<StmtPtr>& stmts) :
-//		statements(stmts) {
-//	}
-//	virtual string toString() const {
-//		vector<string> list;
-//		std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr& cur) {return cur->toString();});
-//		return boost::join(list, ";\n");
-//	}
-//};
-//
+class ContinueStmt : public Statement {
+	ContinueStmt() {}
+public:
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ContinueStmt* clone() const;
+	
+	static ContinueStmtPtr get(StatementManager& manager);
+};
+
+
+class DeclarationStmt : public Statement {
+	const TypePtr type;
+	const ExprPtr initExpression;
+
+	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) :
+		initExpression(initExpression), type(type) { }
+
+public:
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual DeclarationStmt* clone() const;
+	
+	static DeclarationStmtPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression);
+};
+
+
+class ReturnStmt: public Statement {
+	const ExprPtr returnExpression;
+
+	ReturnStmt(const ExprPtr& returnExpression) :
+		returnExpression(returnExpression) { }
+
+public:
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ReturnStmt* clone() const;
+
+	static ReturnStmtPtr get(StatementManager& manager, const ExprPtr& returnExpression);
+};
+
+
+class CompoundStmt: public Statement {
+	const vector<StmtPtr> statements;
+
+	CompoundStmt() { }
+	CompoundStmt(const StmtPtr& stmt) :	statements(toVector<StmtPtr> (stmt)) { }
+	CompoundStmt(const vector<StmtPtr>& stmts) : statements(stmts) { }
+
+public:
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual CompoundStmt* clone() const;
+
+	static CompoundStmtPtr get(StatementManager& manager);
+	static CompoundStmtPtr get(StatementManager& manager, const StmtPtr& stmt);
+	static CompoundStmtPtr get(StatementManager& manager, const vector<StmtPtr>& stmts);
+};
+
+
 //class WhileStmt: public Statement {
 //	ExprPtr condition;
 //	StmtPtr body;
@@ -260,6 +251,12 @@ class StatementManager : public InstanceManager<const Statement, StmtPtr> {
 	
 	friend NoOpStmtPtr NoOpStmt::get(StatementManager&);
 	friend BreakStmtPtr BreakStmt::get(StatementManager&);
+	friend ContinueStmtPtr ContinueStmt::get(StatementManager&);
+	friend DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression);
+	friend ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression);
+	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager);
+	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt);
+	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts);
 	
 	StmtPtr getStmtPtrImpl(const Statement& stmt);
 
