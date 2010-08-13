@@ -126,7 +126,8 @@ CommandLineOptions& CommandLineOptions::Parse(int argc, char** argv, bool debug)
 		// Handle immediate flags (like --help or --version)
 		HandleImmediateArgs(cmdLineOpts);
 
-	} catch(boost::program_options::unknown_option& ex) {
+	} 
+	catch(boost::program_options::unknown_option& ex) {
 		cout << "Usage error: " << ex.what() << endl;
 		cout << cmdLineOpts << endl;
 		exit(1);

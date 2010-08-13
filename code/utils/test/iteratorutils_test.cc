@@ -34,45 +34,30 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
 #include <vector>
-#include <functional>
+#include <sstream>
+#include <algorithm>
 
-using std::vector;
-using std::function;
+#include <gtest/gtest.h>
+#include "iterator_utils.h"
 
-/**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
- */
-template<typename T>
-vector<T> toVector(T element) {
-	return vector<T> (1, element);
+using namespace std;
+
+TEST(IteratorUtils, PairedIterator) {
+
+	vector<int> testInt;
+	testInt.push_back(15);
+	testInt.push_back(26);
+	vector<string> testString;
+	testString.push_back("A");
+	testString.push_back("B");
+
+	auto start = make_paired_iterator(testInt.begin(), testString.begin());
+	auto end = make_paired_iterator(testInt.end(), testString.end());
+
+	stringstream ss;
+	for_each(start, end, [&ss](pair<int, string> elem) { ss << elem.first << ":" << elem.second << "--"; } );
+
+	EXPECT_EQ(ss.str(), "15:A--26:B--");
 }
 
-template<class InputIterator, class Function>
-bool all(InputIterator first, InputIterator last, Function predicate)
-{
-	bool ret = true;
-	while (first != last) {
-		ret = ret && predicate(*first);
-		++first;
-	}
-	return ret;
-}
-
-template<class InputIterator, class Function>
-bool any(InputIterator first, InputIterator last, Function predicate)
-{
-	bool ret = true;
-	while (first != last) {
-		ret = ret || predicate(*first);
-		++first;
-	}
-	return ret;
-}

@@ -38,11 +38,10 @@
 
 #include <memory>
 
-#include "statements.h"
+#include "annotated_ptr.h"
 #include "types.h"
 
 using std::string;
-
 
 // oh my god :( - seuftz
 class Expression {
@@ -63,8 +62,10 @@ public:
 
 	virtual string toString() const { return ""; }
 
+	virtual size_t hash() const { return -1; }
+
 };
-typedef std::shared_ptr<Expression> ExprPtr;
+typedef AnnotatedPtr<const Expression> ExprPtr;
 
 
 class Variable : public Expression {

@@ -49,6 +49,6 @@ TEST(StatementsTest, CreationAndIdentity) {
 	EXPECT_TRUE (!(*bS == *nS));
 }
 
-TEST(StatementsTest, AbstractType) {
+TEST(StatementsTest, CompoundStmt) {
 	
 }
