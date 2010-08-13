@@ -55,7 +55,6 @@ public:
 	CloneableString* clone() const {
 		return new CloneableString(*this);
 	}
-
 };
 
 

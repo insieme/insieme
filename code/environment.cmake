@@ -23,9 +23,18 @@ link_directories(${Boost_LIBRARY_DIRS})
 # lookup perl
 find_package( Perl )
 
-# disable some warnings within visual studio
+# Visual Studio customization
 if(MSVC) 
+	# disable some warnings
 	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
+	# statically link with runtime library (required for gtest)
+	foreach(flag_var
+		CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+		CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+		if(${flag_var} MATCHES "/MD")
+			string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+		endif(${flag_var} MATCHES "/MD")
+	endforeach(flag_var)
 endif()
 
 # enable C++0x support within gcc (if supported)
