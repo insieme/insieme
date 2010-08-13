@@ -45,6 +45,7 @@
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "annotated_ptr.h"
 #include "container_utils.h"
@@ -104,7 +105,7 @@ typedef AnnotatedPtr<const UnionType> UnionTypePtr;
 class TypeManager: public InstanceManager<const Type, TypePtr> {
 
 	friend class Type;
-	friend class BreakStmt;
+	friend class TypeVariable;
 
 protected:
 	TypePtr getTypePtr(const Type& stmt);
@@ -129,6 +130,18 @@ class Type: public Visitable<TypePtr> {
 	 * are generally immutable, the type name is marked to be constant.
 	 */
 	const string name;
+
+	const bool concrete;
+
+	const bool functionType;
+
+	/**
+	 * The hash value of this type derived once. This value will be required frequently,
+	 * hence evaluating it once and reusing it helps reducing computational overhead. Since
+	 * type tokens are immutable, the hash does not have to be altered after the creation of a type.
+	 */
+	const std::size_t hashCode;
+
 public:
 
 	/**
@@ -136,10 +149,12 @@ public:
 	 * this class is an abstract class, no actual instance can be created.
 	 *
 	 * @param name the unique name for this type
+	 * @param concrete a flag indicating whether this type is a concrete type or represents a family of types
+	 * 					due to type variables. Default: true
+	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
 	 */
-	Type(const std::string& name) :
-		name(name) {
-	}
+	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
+		: name(name), concrete(concrete), functionType(functionType), hashCode(boost::hash_value(name)) {}
 
 	/**
 	 * A simple, virtual destructor for this abstract class.
@@ -149,19 +164,20 @@ public:
 
 	/**
 	 * Checks whether the represented type is a concrete type (hence, it does not have any unbound,
-	 * variable type parameters). The method is marked abstract, hence the actual decision whether
-	 * a type is concrete or not is made by actual sub-classes.
+	 * variable type parameters).
 	 *
 	 * @return true if it is a concrete type, false otherwise
 	 */
-	virtual bool isConcrete() const = 0;
+	bool isConcrete() const {
+		return concrete;
+	}
 
 	/**
 	 * Tests whether the represented type is a function type.
 	 * Since most types are not function types, the default implementation returns false.
 	 */
-	virtual bool isFunctionType() const {
-		return false;
+	bool isFunctionType() const {
+		return functionType;
 	}
 
 	/**
@@ -180,7 +196,22 @@ public:
 		return getName();
 	}
 
+	/**
+	 * A default implementation of the equals operator comparing the actual
+	 * names of the types.
+	 */
 	bool operator==(const Type& other) const {
+		// test for identity
+		if (this == &other) {
+			return true;
+		}
+
+		// fast hash code test
+		if (hashCode != other.hashCode) {
+			return false;
+		}
+
+		// slow name comparison
 		return name == other.name;
 	}
 
@@ -188,15 +219,31 @@ public:
 	 * Computes a hash code for this instance covering all constant fields making
 	 * the type unique.
 	 *
+	 * Note: this function is not virtual, so it should not be overridden in sub-classes.
+	 * Since every type is uniquely identified by its name, there should not be a need
+	 * for doing so.
+	 *
 	 * @return the hash code derived for this type.
 	 */
-	virtual std::size_t hash() const = 0;
+	std::size_t hash() const {
+		// retrieve cached hash code
+		return hashCode;
+	}
 
 	/**
 	 * Retrieves a clone of this object (a newly allocated instance of this class)
 	 */
 	virtual Type* clone() const = 0;
 
+	/**
+	 * Retrieves references to types revered to by this type. The default implementation
+	 * returns and empty list. Sub-classes may override the method to return sub-types.
+	 *
+	 * The method is mainly used to ensure that all types referred to by one type are present
+	 * within the same type manager (to ensure their existence).
+	 *
+	 * @return a list containing all types this type is based on.
+	 */
 	virtual ChildList getChildren() const {
 		return newChildList();
 	}
@@ -208,88 +255,27 @@ public:
  * Tokens of this type are used to represent type variables. Instances them-self represent types,
  * yet no concrete ones.
  */
-class VariableType: public Type {
+class TypeVariable: public Type {
 
 	/**
 	 * Creates a new type variable using the given name.
 	 *
 	 * @param name the name of the type variable to be created
 	 */
-	VariableType(const string& name) :
-		Type(format("'%s", name.c_str())) {
-	}
-public:
-
-	/**
-	 * Simply returns the false since variable Types are never concrete.
-	 *
-	 * @return always false
-	 *
-	 * @see Type::isConcrete()
-	 */
-	virtual bool isConcrete() const {
-		return false;
-	}
-};
-
-// ---------------------------------------- A token for an abstract type ------------------------------
-
-// pre-definition of abstract type class
-class AbstractType;
-
-/**
- * A type definition for a shared reference on an abstract type.
- */
-typedef std::shared_ptr<AbstractType> AbstractTypePtr;
-
-/**
- * The abstract type is a special (singleton) token representing the base class for types defined
- * in an abstract way. Hence, type definitions using this type as a base type have to be supported
- * by the code synthesizer.
- */
-class AbstractType: public Type {
-
-	/**
-	 * The singleton instance of this type (shared among all type manager instances)
-	 */
-	static AbstractTypePtr instance;
-
-	/**
-	 * The default constructor of this type, fixing the name to "abstract".
-	 */
-	AbstractType() :
-		Type("abstract") {
-	}
+	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
 
 public:
 
-	/**
-	 * Obtains a reference to the singleton instance of this type.
-	 *
-	 * @return the singleton instance of this type (accessed via a shared pointer to
-	 * 		   be compatible with other type references).
-	 */
-	static AbstractTypePtr getInstance() {
-		static AbstractTypePtr instance(new AbstractType());
-		return instance;
+	static TypeVariablePtr get(TypeManager& manager, const string& name) {
+		return dynamic_pointer_cast<const TypeVariable>(manager.getTypePtr(TypeVariable(name)));
 	}
 
-	/**
-	 * Overrides the implementation of this method within the parent class (where it is abstract).
-	 * The abstract type is always a concrete type.
-	 */
-	virtual bool isConcrete() const {
-		return true;
+	virtual TypeVariable* clone() const {
+		return new TypeVariable(*this);
 	}
 
-	virtual AbstractType* clone() const {
-		return new AbstractType();
-	}
-
-	virtual std::size_t hash() const {
-		return TYPE_HASH_ABSTRACT;
-	}
 };
+
 
 // ---------------------------------------- A tuple type ------------------------------
 
