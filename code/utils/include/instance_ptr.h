@@ -73,16 +73,16 @@ public:
 	}
 
 	template<typename A>
-	const bool operator==(const InstancePtr<A>& other) {
+	const bool operator==(const InstancePtr<A>& other) const {
 		return node == other.node;
 	}
 };
 
-template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<InstancePtr<B>* >(&src));
-	}
-	return NULL;
-}
+//template<typename B, typename T>
+//typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T> src) {
+//	if (dynamic_cast<B*>(&(*src))) {
+//		return *(reinterpret_cast<InstancePtr<B>* >(&src));
+//	}
+//	return NULL;
+//}
 

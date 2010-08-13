@@ -38,15 +38,74 @@
 
 // ------------------------------------- Statement Manager ---------------------------------
 
-StmtPtr StatementManager::getStmtPtr(const Statement& stmt) {
+StmtPtr StatementManager::getStmtPtrImpl(const Statement& stmt) {
 	// get master copy
 	std::pair<StmtPtr, bool > res = add(stmt);
 
 	// if new element has been added ...
 	if (res.second) {
 		// ... check whether sub-statements are present
-		ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) { this->getStmtPtr(*cur);});
+		ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) { this->getStmtPtrImpl(*cur);});
 	}
 	return res.first;
 }
 
+
+// ------------------------------------- Statement ---------------------------------
+
+std::size_t hash_value(const Statement& stmt) {
+	return stmt.hash();
+}
+
+bool Statement::operator==(const Statement& stmt) const {
+	return (typeid(*this) == typeid(stmt)) && (hash() == stmt.hash()) && equals(stmt);
+}
+
+Statement::ChildList Statement::getChildren() const {
+	return newChildList(); //TODO
+}
+
+
+// ------------------------------------- NoOpStmt ---------------------------------
+
+string NoOpStmt::toString() const {
+	return "{ /* NoOp */ }";
+}
+
+bool NoOpStmt::equals(const Statement& stmt) const {
+	return true;
+}
+
+std::size_t NoOpStmt::hash() const {
+	return HASHVAL_NOOP;
+}
+
+NoOpStmt* NoOpStmt::clone() const {
+	return new NoOpStmt();
+}
+
+NoOpStmtPtr NoOpStmt::get(StatementManager& manager) {
+	return manager.getStmtPtr(NoOpStmt());
+}
+
+// ------------------------------------- BreakStmt ---------------------------------
+
+string BreakStmt::toString() const {
+	return "break";
+}
+
+bool BreakStmt::equals(const Statement& stmt) const {
+	return true;
+}
+
+std::size_t BreakStmt::hash() const {
+	return HASHVAL_BREAK;
+}
+
+BreakStmt* BreakStmt::clone() const {
+	return new BreakStmt();
+}
+
+BreakStmtPtr BreakStmt::get(StatementManager& manager) {
+	return manager.getStmtPtr(BreakStmt());
+}
