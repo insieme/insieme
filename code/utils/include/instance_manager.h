@@ -78,15 +78,16 @@ struct pointing_to_equal: public std::binary_function<Tp, Tp, bool> {
  */
 template<typename T>
 struct target_hash: public std::unary_function<T, std::size_t> {
-	/**
-	 * Explicit Default constructor required by VC.
-	 */
-	target_hash() {	}
 
 	/**
 	 * This function is used to compute the hash of the actual target.
 	 */
 	const boost::hash<T> hasher;
+
+	/**
+	 * Explicit Default constructor required by VC.
+	 */
+	target_hash() : hasher() {	}
 
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to.

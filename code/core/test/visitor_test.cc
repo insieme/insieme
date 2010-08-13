@@ -50,7 +50,7 @@ public:
 	int value;
 
 	MNode(int value = 0, MNode* first = NULL, MNode* second = NULL) :
-		value(value), first(first), second(second) {
+		first(first), second(second), value(value) {
 	}
 
 	Visitable<MNode*>::ChildList getChildren() const {
@@ -102,7 +102,7 @@ public:
 	int value;
 
 	CNode(int value = 0, const CNode* first = NULL, const CNode* second = NULL) :
-		value(value), first(first), second(second) {
+		first(first), second(second), value(value) {
 	}
 
 	Visitable<const CNode*>::ChildList getChildren() const {

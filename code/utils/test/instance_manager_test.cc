@@ -38,6 +38,9 @@
 #include <iostream>
 
 #include <gtest/gtest.h>
+
+#include <boost/functional/hash.hpp>
+
 #include "instance_manager.h"
 #include "instance_ptr.h"
 
@@ -56,8 +59,8 @@ public:
 		return new CloneableString(*this);
 	}
 };
-size_t hash_value(const CloneableString& str) {
-	return hash_value((string)str);
+std::size_t hash_value(const CloneableString& str) {
+	return boost::hash_value(str);
 }
 
 
