@@ -56,6 +56,9 @@ public:
 		return new CloneableString(*this);
 	}
 };
+size_t hash_value(const CloneableString& str) {
+	return hash_value((string)str);
+}
 
 
 TEST(InstanceManager, Basic) {
@@ -105,7 +108,7 @@ typedef float real;
 
 class A {
 	// required to be polymorphic (dynamic cast)
-	virtual real hell() {};
+	virtual real hell() { return 66.6; };
 };
 class B : public A {};
 class C : public A {};
