@@ -35,7 +35,36 @@
  */
 
 #include <gtest/gtest.h>
+#include <vector>
+
 #include "types.h"
+
+using std::vector;
+
+template<typename T, typename PT>
+void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>());
+
+testing::Message& operator<<(testing::Message& message, const Type& type) {
+	message << type.toString();
+	return message;
+}
+
+
+TEST(TypeTest, TypeVariable) {
+
+	TypeManager manager;
+	TypeVariablePtr varTypeA = TypeVariable::get(manager, "alpha");
+	TypeVariablePtr varTypeB = TypeVariable::get(manager, "beta");
+
+	// check name
+	EXPECT_EQ ( "'alpha", varTypeA->getName() );
+	EXPECT_EQ ( "'beta", varTypeB->getName() );
+
+	// perform basic type tests
+	basicTypeTests<TypeVariable, TypeVariablePtr>(varTypeA, false, false);
+
+
+}
 
 
 TEST(TypesTest, IntTypeParam) {
@@ -75,19 +104,59 @@ TEST(TypesTest, IntTypeParam) {
 	EXPECT_TRUE (inf == infb);
 }
 
-TEST(TypesTest, AbstractType) {
-	AbstractTypePtr ref = AbstractType::getInstance();
+template<typename T, typename PT>
+void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>()) {
 
-	// testing name ...
-	EXPECT_EQ (ref->getName(), "abstract");
-	EXPECT_EQ (ref->toString(), "abstract");
+	// ------------ Type Ptr based tests -------------
 
-	// testing singleton property
-	AbstractTypePtr ref2 = AbstractType::getInstance();
-	EXPECT_EQ (ref, ref2);
+	// check concrete flag
+	EXPECT_EQ( concrete, type->isConcrete() );
 
-	// check basic properties
-	EXPECT_TRUE (ref->isConcrete());
-	EXPECT_FALSE (ref->isFunctionType());
+	// check function type
+	EXPECT_EQ( functional, type->isFunctionType() );
+
+	// check children
+	EXPECT_TRUE ( children == *(type->getChildren()) );
+
+
+	// ------------ Type Token based tests -------------
+
+	// create a copy of the type
+	T copy = T(*type);
+	T clone = *(std::unique_ptr<T>(type->clone()));
+
+	// check whether all are equal
+	T all[] = { *type, copy, clone };
+	for (int i=0; i<3; i++) {
+		for (int j=0; j<3; j++) {
+
+			T a = all[i];
+			T b = all[j];
+
+			EXPECT_EQ ( a , b );
+			EXPECT_EQ ( a.hash(), b.hash() );
+			EXPECT_EQ ( a.getName(), b.getName() );
+			EXPECT_EQ ( a.toString(), b.toString() );
+
+		}
+	}
+
+	// check type properties
+	for (int i=0; i<3; i++) {
+
+		T cur = all[i];
+
+		// check concrete flag
+		EXPECT_EQ( concrete, cur.isConcrete() );
+
+		// check function type
+		EXPECT_EQ( functional, cur.isFunctionType() );
+
+		// check children
+		EXPECT_TRUE ( children == *(type->getChildren()) );
+
+	}
+
 }
+
 
