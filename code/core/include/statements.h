@@ -100,22 +100,9 @@ class StatementManager;
 
 // Forward Declarations } -----------------------------------------------------
 
-class StatementManager : public InstanceManager<const Statement, StmtPtr> {
-	const TypeManager& typeManager;
-
-	friend class Statement;
-	friend class BreakStmt;
-
-protected:
-	StmtPtr getStmtPtr(const Statement& stmt);
-
-public:
-	StatementManager(const TypeManager& typeManager) : typeManager(typeManager) { }
-};
-
+// ------------------------------------- Statements ---------------------------------
 
 class Statement : public Visitable<StmtPtr> {
-
 protected:
 	// Hash values for terminal statements
 	enum {
@@ -126,94 +113,55 @@ protected:
 
 public:
 	virtual string toString() const = 0;
-
 	virtual Statement* clone() const = 0;
-
 	virtual std::size_t hash() const = 0;
-
-
-	bool operator==(const Statement& stmt) const {
-		return (typeid(*this) == typeid(stmt)) && equals(stmt);
-	}
-
-	virtual ChildList getChildren() const {
-		return newChildList(); //TODO
-	}
+	bool operator==(const Statement& stmt) const;
+	virtual ChildList getChildren() const;
 };
-
-std::size_t hash_value(const Statement& stmt) {
-	return stmt.hash();
-}
+std::size_t hash_value(const Statement& stmt);
 
 
-class NoOpStmt: public Statement {
+class NoOpStmt : public Statement {
+	NoOpStmt() {};
 public:
-	virtual string toString() const {
-		return "{ /* NoOp */ }";
-	}
-	std::size_t hash_value() const {
-		return 0;
-	}
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual NoOpStmt* clone() const;
 
-	virtual bool equals(const Statement& stmt) const {
-		return true;
-	}
-
-	virtual std::size_t hash() const {
-		return HASHVAL_NOOP;
-	}
-
-	virtual NoOpStmt* clone() const {
-		return new NoOpStmt();
-	}
-
+	static NoOpStmtPtr get(StatementManager& manager);
 };
 
-class BreakStmt: public Statement {
-private:
+
+class BreakStmt : public Statement {
 	BreakStmt() {};
-
 public:
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual BreakStmt* clone() const;
 
-	virtual string toString() const {
-		return "break";
-	}
-
-	virtual bool equals(const Statement& stmt) const {
-		return true;
-	}
-
-	virtual std::size_t hash() const {
-		return HASHVAL_BREAK;
-	}
-
-	virtual BreakStmt* clone() const {
-		return new BreakStmt();
-	}
-
-	BreakStmtPtr get(StatementManager& manager) {
-		return dynamic_pointer_cast<const BreakStmt>(manager.getStmtPtr(BreakStmt()));
-	}
+	static BreakStmtPtr get(StatementManager& manager);
 };
 
-class ContinueStmt: public Statement {
-public:
-	virtual string toString() const {
-		return "continue";
-	}
-
-	virtual bool equals(const Statement& stmt) const {
-		return true;
-	}
-
-	virtual std::size_t hash() const {
-		return HASHVAL_CONTINUE;
-	}
-
-	virtual ContinueStmt* clone() const {
-		return new ContinueStmt();
-	}
-};
+//class ContinueStmt: public Statement {
+//public:
+//	virtual string toString() const {
+//		return "continue";
+//	}
+//
+//	virtual bool equals(const Statement& stmt) const {
+//		return true;
+//	}
+//
+//	virtual std::size_t hash() const {
+//		return HASHVAL_CONTINUE;
+//	}
+//
+//	virtual ContinueStmt* clone() const {
+//		return new ContinueStmt();
+//	}
+//};
 
 //class ExprStmt: public Statement {
 //	const ExprPtr expression;
@@ -305,4 +253,22 @@ public:
 //class SwitchStmt: public Statement {
 //};
 
+// ------------------------------------- Statement Manager ---------------------------------
 
+class StatementManager : public InstanceManager<const Statement, StmtPtr> {
+	const TypeManager& typeManager;
+	
+	friend NoOpStmtPtr NoOpStmt::get(StatementManager&);
+	friend BreakStmtPtr BreakStmt::get(StatementManager&);
+	
+	StmtPtr getStmtPtrImpl(const Statement& stmt);
+
+protected:
+	template<typename T>
+	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
+		return dynamic_pointer_cast<const T>(getStmtPtrImpl(stmt));
+	}
+
+public:
+	StatementManager(const TypeManager& typeManager) : typeManager(typeManager) { }
+};

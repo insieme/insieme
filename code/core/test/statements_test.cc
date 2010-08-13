@@ -34,40 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <set>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/utility/enable_if.hpp>
-
-#include "instance_ptr.h"
-#include "type_traits_utils.h"
-
-class Annotation;
-
-class Annotatable {
-	std::set<Annotation> *annotations;
-public:
-	void addAnnotation(const Annotation& a) {};
-};
+#include <gtest/gtest.h>
+#include "statements.h"
 
 
-template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, Annotatable {
-public:
-	AnnotatedPtr(T* node) : InstancePtr<T>(node) { }
+TEST(StatementsTest, CreationAndIdentity) {
+	TypeManager typeMan;
+	StatementManager stmtMan(typeMan);
 
-	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : InstancePtr<T>(from.node) { }
-};
+	BreakStmtPtr bS = BreakStmt::get(stmtMan);
+	EXPECT_TRUE (bS == BreakStmt::get(stmtMan));
 
+	NoOpStmtPtr nS = NoOpStmt::get(stmtMan);
+	EXPECT_TRUE (!(*bS == *nS));
+}
 
-template<typename B, typename T>
-//typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
-AnnotatedPtr<B>
-dynamic_pointer_cast(AnnotatedPtr<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
-	}
-	return NULL;
+TEST(StatementsTest, AbstractType) {
+	
 }
