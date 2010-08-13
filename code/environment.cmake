@@ -20,9 +20,6 @@ find_package( Boost )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
-# lookup pthread library
-find_library(pthread_LIB pthread)
-
 # lookup perl
 find_package( Perl )
 
@@ -37,8 +34,15 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
 	if(CXX0X_Support)
 		add_definitions( -std=c++0x )
-		add_definitions( -Wall )
 	else()
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
+endif()
+
+# enable warnings
+if(MSVC) 
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} /W4)
+endif()
+if (CMAKE_COMPILER_IS_GNUCXX)
+	add_definitions( -Wall )
 endif()
