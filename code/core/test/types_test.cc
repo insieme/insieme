@@ -39,8 +39,10 @@
 
 
 TEST(TypesTest, IntTypeParam) {
+#ifndef WIN32
 	// test size limitation
 	EXPECT_LE (sizeof(IntTypeParam), 4);
+#endif
 
 	// test toString format
 	IntTypeParam p12 = IntTypeParam::getConcreteIntParam(12);

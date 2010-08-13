@@ -388,8 +388,9 @@ private:
 
 	/**
 	 * The type of the parameter represented by this instance.
+	 * 3 bits for compilers with unsigned enum
 	 */
-	Type type :2;
+	Type type :3;
 
 	union {
 		/**
@@ -409,10 +410,8 @@ private:
 	 *
 	 * @param symbol the symbol to be used for the integer type variable
 	 */
-	IntTypeParam(const char symbol) :
-		type(VARIABLE), symbol(symbol) {
+	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {
 	}
-	;
 
 	/**
 	 * A private constructor to create a concrete integer type parameter.
@@ -420,19 +419,15 @@ private:
 	 *
 	 * @param value the value to be used for the concrete integer type parameter
 	 */
-	IntTypeParam(const unsigned short value) :
-		type(CONCRETE), value(value) {
+	IntTypeParam(const unsigned short value) : type(CONCRETE), value(value) {
 	}
-	;
 
 	/**
 	 * A private constructor to create a infinite integer type parameter.
 	 * The constructor is private to enforce the usage of static factory methods.
 	 */
-	IntTypeParam(const Type type) :
-		type(INFINITE) {
+	IntTypeParam(const Type type) :	type(INFINITE), value(0) {
 	}
-	;
 
 public:
 
@@ -469,17 +464,7 @@ public:
 		return type != VARIABLE;
 	}
 
-private:
-
-	/**
-	 * The singleton instance of the infinite integer type parameter. Since
-	 * there is no requirement to maintain multiple of those, this instance is shared
-	 * among all places where it is required.
-	 */
-	static IntTypeParam infinite;
-
 public:
-
 	/**
 	 * A factory method to obtain a integer type parameter variable.
 	 *
@@ -507,7 +492,7 @@ public:
 	 * @return an IntTypeParam representing a token for the infinite value.
 	 */
 	static IntTypeParam getInfiniteIntParam() {
-		return infinite;
+		return IntTypeParam(INFINITE);
 	}
 
 };

@@ -60,8 +60,6 @@ TypePtr TypeManager::getTypePtr(const Type& stmt) {
 
 // -------------------------------- Integer Type Parameter ----------------------------
 
-IntTypeParam IntTypeParam::infinite(IntTypeParam::INFINITE);
-
 bool IntTypeParam::operator==(const IntTypeParam& param) {
 	// quick check on reference
 	if (this == &param) {
