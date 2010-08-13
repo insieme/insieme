@@ -58,10 +58,6 @@
 using std::string;
 using std::vector;
 
-enum {
-	STMT_HASH_NOOP, STMT_HASH_BREAK, STMT_HASH_CONTINUE
-};
-
 // Forward Declarations { -----------------------------------------------------
 
 class Statement;
@@ -104,25 +100,14 @@ class StatementManager;
 
 // Forward Declarations } -----------------------------------------------------
 
-class StatementManager: public InstanceManager<const Statement, StmtPtr> {
+class StatementManager : public InstanceManager<const Statement, StmtPtr> {
 	const TypeManager& typeManager;
 
-friend class Statement;
-friend class BreakStmt;
-
+	friend class Statement;
+	friend class BreakStmt;
 
 protected:
-	StmtPtr getStmtPtr(const Statement& stmt) {
-		// get master copy
-		std::pair<StmtPtr, bool > res = add(stmt);
-
-		// if new element has been added ...
-		if (res.second) {
-			// ... check whether sub-statements are present
-			ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) { this->getStmtPtr(*cur);});
-		}
-		return res.first;
-	}
+	StmtPtr getStmtPtr(const Statement& stmt);
 
 public:
 	StatementManager(const TypeManager& typeManager) : typeManager(typeManager) { }
@@ -132,8 +117,12 @@ public:
 class Statement : public Visitable<StmtPtr> {
 
 protected:
-	virtual bool equals(const Statement& stmt) const = 0;
+	// Hash values for terminal statements
+	enum {
+		HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE
+	};
 
+	virtual bool equals(const Statement& stmt) const = 0;
 
 public:
 	virtual string toString() const = 0;
@@ -148,14 +137,14 @@ public:
 	}
 
 	virtual ChildList getChildren() const {
-		return newChildList();
+		return newChildList(); //TODO
 	}
-
 };
 
 std::size_t hash_value(const Statement& stmt) {
 	return stmt.hash();
 }
+
 
 class NoOpStmt: public Statement {
 public:
@@ -171,7 +160,7 @@ public:
 	}
 
 	virtual std::size_t hash() const {
-		return STMT_HASH_NOOP;
+		return HASHVAL_NOOP;
 	}
 
 	virtual NoOpStmt* clone() const {
@@ -195,7 +184,7 @@ public:
 	}
 
 	virtual std::size_t hash() const {
-		return STMT_HASH_BREAK;
+		return HASHVAL_BREAK;
 	}
 
 	virtual BreakStmt* clone() const {
@@ -218,7 +207,7 @@ public:
 	}
 
 	virtual std::size_t hash() const {
-		return STMT_HASH_CONTINUE;
+		return HASHVAL_CONTINUE;
 	}
 
 	virtual ContinueStmt* clone() const {

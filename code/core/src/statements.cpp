@@ -36,4 +36,17 @@
 
 #include "statements.h"
 
+// ------------------------------------- Statement Manager ---------------------------------
+
+StmtPtr StatementManager::getStmtPtr(const Statement& stmt) {
+	// get master copy
+	std::pair<StmtPtr, bool > res = add(stmt);
+
+	// if new element has been added ...
+	if (res.second) {
+		// ... check whether sub-statements are present
+		ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) { this->getStmtPtr(*cur);});
+	}
+	return res.first;
+}
 

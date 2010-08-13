@@ -107,24 +107,7 @@ class TypeManager: public InstanceManager<const Type, TypePtr> {
 	friend class BreakStmt;
 
 protected:
-	TypePtr getTypePtr(const Type& stmt) {
-
-		// a static visitor used ensure that all sub-node are properly registered
-		static ChildVisitor<TypePtr> visitor([&](TypePtr cur) {this->getTypePtr(*cur);});
-
-		// get master copy
-		std::pair<TypePtr, bool> res = add(stmt);
-
-		// if new element has been added ...
-		if (res.second) {
-			// ... check whether sub-statements are present
-			visitor.visit(res.first);
-		}
-
-		// return newly added or present node
-		return res.first;
-	}
-
+	TypePtr getTypePtr(const Type& stmt);
 };
 
 // ---------------------------------------- A token for an abstract type ------------------------------

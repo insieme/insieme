@@ -71,13 +71,18 @@ struct pointing_to_equal: public std::binary_function<Tp, Tp, bool> {
 /**
  * This utility struct defines the function used to compute hash codes for pointers.
  * Thereby, the hash code is not computed using the pointer themselves. Instead, the
- * target they are pointing to is used to compute the value. I case the pointer is null,
+ * target they are pointing to is used to compute the value. In case the pointer is null,
  * 0 is returned as a hash value.
  *
  * @tparam T the type of element the used pointers are pointing to
  */
 template<typename T>
-struct target_Hash: public std::unary_function<T, std::size_t> {
+struct target_hash: public std::unary_function<T, std::size_t> {
+	/**
+	 * Explicit Default constructor required by VC.
+	 */
+	target_hash() {	}
+
 	/**
 	 * This function is used to compute the hash of the actual target.
 	 */
@@ -116,7 +121,7 @@ class InstanceManager {
 	 * within this set will be automatically deleted when this instance manager instance
 	 * is destroyed.
 	 */
-	std::unordered_set<T*, target_Hash<T> , pointing_to_equal<T*>> storage;
+	std::unordered_set<T*, target_hash<T>, pointing_to_equal<T*>> storage;
 
 public:
 

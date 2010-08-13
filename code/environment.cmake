@@ -25,7 +25,7 @@ find_package( Perl )
 
 # disable some warnings within visual studio
 if(MSVC) 
-	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} /D "_CRT_SECURE_NO_WARNINGS")
+	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
 endif()
 
 # enable C++0x support within gcc (if supported)
@@ -41,7 +41,7 @@ endif()
 
 # enable warnings
 if(MSVC) 
-	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} /W4)
+	add_definitions( /W4 )
 endif()
 if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -Wall )
