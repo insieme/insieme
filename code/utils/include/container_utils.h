@@ -78,6 +78,12 @@ typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, co
 }
 
 
+/** Checks whether a condition is true for all elements of the supplied iteration range.
+ *
+ *  @param first iterator designating the start of the iteration range
+ *  @param last iterator designating the end of the iteration range
+ *  @param predicate function to be called for each element, returns bool
+ */
 template<class InputIterator, class Function>
 bool all(InputIterator first, InputIterator last, const Function& predicate)
 {
@@ -90,11 +96,22 @@ bool all(InputIterator first, InputIterator last, const Function& predicate)
 	return true;
 }
 
-template<class T, class Function>
-bool all(const vector<T>& list, const Function& predicate) {
+/** Checks whether a condition is true for all elements of the supplied container.
+ *
+ *  @param list container that is forward iteratable
+ *  @param predicate function to be called for each element, returns bool
+ */
+template<class ContainerType, class Function>
+bool all(const ContainerType& list, const Function& predicate) {
 	return all(list.cbegin(), list.cend(), predicate);
 }
 
+/** Checks whether a condition is true for any element of the supplied iteration range.
+ *
+ *  @param first iterator designating the start of the iteration range
+ *  @param last iterator designating the end of the iteration range
+ *  @param predicate function to be called for each element, returns bool
+ */
 template<class InputIterator, class Function>
 bool any(InputIterator first, InputIterator last, const Function& predicate)
 {
@@ -107,7 +124,12 @@ bool any(InputIterator first, InputIterator last, const Function& predicate)
 	return false;
 }
 
-template<class T, class Function>
-bool any(const vector<T>& list, const Function& predicate) {
+/** Checks whether a condition is true for any element of the supplied container.
+ *
+ *  @param list container that is forward iteratable
+ *  @param predicate function to be called for each element, returns bool
+ */
+template<class ContainerType, class Function>
+bool any(const ContainerType& list, const Function& predicate) {
 	return any(list.cbegin(), list.cend(), predicate);
 }
