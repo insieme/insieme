@@ -34,15 +34,17 @@
  * regarding third party software licenses.
  */
 
+#include "container_utils.h"
 #include "types.h"
+
 
 
 // ------------------------------------- Type Manager ---------------------------------
 
-TypePtr TypeManager::getTypePtr(const Type& stmt) {
+TypePtr TypeManager::getTypePtrInternal(const Type& stmt) {
 
 	// a static visitor used ensure that all sub-node are properly registered
-	static ChildVisitor<TypePtr> visitor([&](TypePtr cur) {this->getTypePtr(*cur);});
+	static ChildVisitor<TypePtr> visitor([&](const TypePtr& cur) {this->getTypePtr(*cur);});
 
 	// get master copy
 	std::pair<TypePtr, bool> res = add(stmt);
@@ -83,6 +85,31 @@ bool IntTypeParam::operator==(const IntTypeParam& param) {
 	return false;
 }
 
+/**
+ * Tests whether all of the given integer type parameter are concrete.
+ *
+ * @param intTypeParams the list of parameters to be tested
+ * @return true if all are concrete, false otherwise
+ */
+bool IntTypeParam::allConcrete(const vector<IntTypeParam>& intTypeParams) {
+	// just use all-functionality of container utils
+	return all(intTypeParams, [](const IntTypeParam& param) { return param.isConcrete(); });
+}
+
+
+// ---------------------------------------- Type --------------------------------
+
+/**
+ * Tests whether all of the type pointer within the given vector are concrete types.
+ *
+ * @param elementTypes the types to be tested
+ * @return true if all are concrete types, false otherwise.
+ */
+bool Type::allConcrete(const vector<TypePtr>& elementTypes) {
+	// just use all-functionality of container utils
+	return all(elementTypes, [](const TypePtr& param) { return param->isConcrete(); });
+}
+
 // ---------------------------------------- Tuple Type --------------------------------
 
 /**
@@ -98,7 +125,7 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
 	res << "(";
 
 	vector<string> list;
-	std::transform(elementTypes.cbegin(), elementTypes.cend(), back_inserter(list), [](const TypePtr cur) {return cur->getName();});
+	std::transform(elementTypes.cbegin(), elementTypes.cend(), back_inserter(list), [](const TypePtr& cur) {return cur->getName();});
 
 	res << boost::join(list, ",");
 
@@ -129,8 +156,8 @@ string GenericType::buildNameString(const string& name, const vector<TypePtr>& t
 
 		// convert type parameters to strings ...
 		vector<string> list;
-		std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypePtr cur) {return cur->getName();});
-		std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam cur) {return cur.toString();});
+		std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypePtr& cur) {return cur->getName();});
+		std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam& cur) {return cur.toString();});
 
 		res << "<" << boost::join(list, ",") << ">";
 	}
@@ -147,4 +174,13 @@ string GenericType::buildNameString(const string& name, const vector<TypePtr>& t
  */
 std::size_t hash_value(const Type& type) {
 	return type.hash();
+}
+
+/**
+ * Allows this type to be printed to a stream (especially useful during debugging and
+ * within test cases where equals values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const Type& type) {
+	out << type.toString();
+	return out;
 }

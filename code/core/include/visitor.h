@@ -68,8 +68,8 @@ public:
 	virtual ChildList getChildren() const = 0;
 
 protected:
-	static ChildList newChildList() {
-		return ChildList(new vector<T>());
+	static ChildList newChildList(const vector<T>& initial = vector<T>()) {
+		return ChildList(new vector<T>(initial));
 	}
 };
 

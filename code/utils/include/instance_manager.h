@@ -45,7 +45,6 @@
 #include <boost/type_traits/is_const.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "annotated_ptr.h"
 #include "instance_ptr.h"
 
 /**

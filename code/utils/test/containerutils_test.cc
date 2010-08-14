@@ -54,3 +54,55 @@ TEST(ContainerUtils, Singleton) {
 	EXPECT_EQ ((*testString.cbegin()), "Hello");
 }
 
+TEST(ContainerUtils, addAll) {
+
+	vector<int> listA;
+	vector<int> listB;
+
+	for (int i=0; i<5; i++) {
+		listA.push_back(i);
+		listB.push_back(i*10);
+	}
+
+	EXPECT_EQ ( 5, listA.size() );
+	EXPECT_EQ ( 5, listB.size() );
+
+	addAll<int>(listA, listB);
+
+	EXPECT_EQ ( 10, listA.size() );
+	EXPECT_EQ ( 5, listB.size() );
+
+	for (int i=0; i<5; i++) {
+		EXPECT_EQ ( i, listA[i] );
+		EXPECT_EQ ( i*10 , listB[i] );
+		EXPECT_EQ ( i*10 , listA[i+5] );
+	}
+}
+
+TEST(ContainerUtils, AnyAll) {
+
+	// create list of integers
+	vector<int> list;
+
+	// simple property: even
+	auto even = [](int x) { return x%2==0; };
+
+	// check empty lists
+	EXPECT_FALSE ( any(list, even) );
+	EXPECT_TRUE ( all(list, even) );
+
+	// check remaining cases
+	list.push_back(1);
+	EXPECT_FALSE ( any(list, even) );
+	EXPECT_FALSE ( all(list, even) );
+
+	list.push_back(2);
+	EXPECT_TRUE ( any(list, even) );
+	EXPECT_FALSE ( all(list, even) );
+
+	list.clear();
+	list.push_back(2);
+	EXPECT_TRUE ( any(list, even) );
+	EXPECT_TRUE( all(list, even) );
+
+}

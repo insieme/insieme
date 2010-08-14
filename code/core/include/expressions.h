@@ -111,16 +111,16 @@ class LambdaExpression : public Expression {
 };
 
 class CallExpression : public Expression {
-	const ExprPtr function;
-	const ExprPtr argument;
+//	const ExprPtr function;
+//	const ExprPtr argument;
 };
 
 class CastExpression : public Expression {
-	const ExprPtr subExpression;
+//	const ExprPtr subExpression;
 };
 
 class LetExpression : public Expression {
-	const string name;
-	const ExprPtr definingExpression;
-	const ExprPtr subExpression;
+//	const string name;
+//	const ExprPtr definingExpression;
+//	const ExprPtr subExpression;
 };

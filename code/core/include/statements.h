@@ -162,7 +162,7 @@ class DeclarationStmt : public Statement {
 	const ExprPtr initExpression;
 
 	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) :
-		initExpression(initExpression), type(type) { }
+		type(type), initExpression(initExpression) { }
 
 public:
 	virtual string toString() const;

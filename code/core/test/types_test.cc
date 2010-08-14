@@ -35,18 +35,207 @@
  */
 
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <vector>
 
 #include "types.h"
+#include "container_utils.h"
 
 using std::vector;
 
 template<typename T, typename PT>
 void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>());
 
-testing::Message& operator<<(testing::Message& message, const Type& type) {
-	message << type.toString();
-	return message;
+
+TEST(TypeTest, Type_AllConcrete) {
+
+	// create a type manager for this test
+	TypeManager manager;
+
+	// create some variable types
+	TypeVariablePtr varA = TypeVariable::get(manager, "'alpha");
+	EXPECT_FALSE ( varA->isConcrete() );
+	EXPECT_FALSE ( Type::allConcrete(toVector<TypePtr>(varA)));
+	TypeVariablePtr varB = TypeVariable::get(manager, "'beta");
+	EXPECT_FALSE ( varB->isConcrete() );
+	EXPECT_FALSE ( Type::allConcrete(toVector<TypePtr>(varB)));
+
+	// create some concrete types
+	GenericTypePtr typeA = GenericType::get(manager, "A");
+	EXPECT_TRUE ( typeA->isConcrete() );
+	EXPECT_TRUE ( Type::allConcrete(toVector<TypePtr>(typeA)));
+	GenericTypePtr typeB = GenericType::get(manager, "B");
+	EXPECT_TRUE ( typeB->isConcrete() );
+	EXPECT_TRUE ( Type::allConcrete(toVector<TypePtr>(typeB)));
+
+	// create a type list
+	vector<TypePtr> types;
+
+	// first var, then concrete
+	types.clear();
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(varA);
+	EXPECT_FALSE (Type::allConcrete(types));
+	types.push_back(typeA);
+	EXPECT_FALSE (Type::allConcrete(types));
+
+	// first concrete, then var
+	types.clear();
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(typeB);
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(varA);
+	EXPECT_FALSE (Type::allConcrete(types));
+
+	// multiple concrete
+	types.clear();
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(typeA);
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(typeB);
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(varA);
+	EXPECT_FALSE (Type::allConcrete(types));
+
+	// multiple variable
+	types.clear();
+	EXPECT_TRUE (Type::allConcrete(types));
+	types.push_back(varA);
+	EXPECT_FALSE (Type::allConcrete(types));
+	types.push_back(varB);
+	EXPECT_FALSE (Type::allConcrete(types));
+	types.push_back(typeA);
+	EXPECT_FALSE (Type::allConcrete(types));
+
+}
+
+
+TEST(TypeTest, GenericType_AllConcrete) {
+
+	// create some integer type parameter
+	IntTypeParam var = IntTypeParam::getVariableIntParam('p');
+	IntTypeParam con = IntTypeParam::getConcreteIntParam(12);
+	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
+
+	// check basic
+	EXPECT_FALSE ( var.isConcrete() );
+	EXPECT_TRUE ( con.isConcrete() );
+	EXPECT_TRUE ( inf.isConcrete() );
+
+	// check vectors if entries
+	vector<IntTypeParam> params;
+	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
+	params.push_back(var);
+	EXPECT_FALSE ( IntTypeParam::allConcrete(params) );
+
+	params.clear();
+	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
+	params.push_back(con);
+	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
+	params.push_back(inf);
+	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
+	params.push_back(var);
+	EXPECT_FALSE ( IntTypeParam::allConcrete(params) );
+	params.push_back(con);
+	EXPECT_FALSE ( IntTypeParam::allConcrete(params) );
+}
+
+TEST(TypeTest, GenericType) {
+
+	// create a type manager for this test
+	TypeManager manager;
+
+	// some empty lists (required as arguments)
+	vector<TypePtr> emptyPtr;
+	vector<IntTypeParam> emptyPar;
+
+	// create some variable types
+	TypeVariablePtr varA = TypeVariable::get(manager, "alpha");
+	EXPECT_FALSE ( varA->isConcrete() );
+	TypeVariablePtr varB = TypeVariable::get(manager, "beta");
+	EXPECT_FALSE ( varB->isConcrete() );
+
+	// create some concrete types
+	GenericTypePtr typeA = GenericType::get(manager, "A");
+	EXPECT_TRUE ( typeA->isConcrete() );
+	EXPECT_EQ ( "A" , typeA->getName() );
+	GenericTypePtr typeB = GenericType::get(manager, "B");
+	EXPECT_TRUE ( typeB->isConcrete() );
+	EXPECT_EQ ( "B" , typeB->getName() );
+
+	// create complex types
+	GenericTypePtr typeC = GenericType::get(manager, "C", toVector<TypePtr>(varA));
+	EXPECT_FALSE ( typeC->isConcrete() );
+	EXPECT_EQ ( "C<'alpha>" , typeC->getName() );
+	GenericTypePtr typeD = GenericType::get(manager, "D", emptyPtr, toVector(IntTypeParam::getVariableIntParam('a')));
+	EXPECT_FALSE ( typeD->isConcrete() );
+	EXPECT_EQ ( "D<a>" , typeD->getName() );
+
+	// create complex type with multiple parameter
+	vector<TypePtr> typeListA;
+	typeListA.push_back(typeA);
+	typeListA.push_back(typeB);
+	GenericTypePtr typeE = GenericType::get(manager, "E", typeListA);
+	EXPECT_TRUE ( typeE->isConcrete() );
+	EXPECT_EQ ( "E<A,B>" , typeE->getName() );
+
+	// create type with base type
+	GenericTypePtr typeF = GenericType::get(manager, "F", emptyPtr, emptyPar, typeA );
+	EXPECT_TRUE ( typeF->isConcrete() );
+	EXPECT_EQ ( "F" , typeF->getName() );
+
+	GenericTypePtr typeG = GenericType::get(manager, "G", typeListA, toVector(IntTypeParam::getConcreteIntParam(12)), typeA );
+	EXPECT_TRUE ( typeG->isConcrete() );
+	EXPECT_EQ ( "G<A,B,12>" , typeG->getName() );
+
+	// perform general test cases
+	{
+		SCOPED_TRACE ( "typeA" );
+		basicTypeTests<GenericType>(typeA, true, false);
+	}{
+		SCOPED_TRACE ( "typeB" );
+		basicTypeTests<GenericType>(typeB, true, false);
+	}{
+		SCOPED_TRACE ( "typeC" );
+		basicTypeTests<GenericType>(typeC, false, false, toVector<TypePtr>(varA));
+	}{
+		SCOPED_TRACE ( "typeD" );
+		basicTypeTests<GenericType>(typeD, false, false);
+	}{
+		SCOPED_TRACE ( "typeE" );
+		basicTypeTests<GenericType>(typeE, true, false, typeListA);
+	}{
+		SCOPED_TRACE ( "typeF" );
+		basicTypeTests<GenericType>(typeF, true, false, toVector<TypePtr>(typeA));
+	}{
+		SCOPED_TRACE ( "typeG" );
+		vector<TypePtr> list(typeListA);
+		list.push_back(typeA);
+		basicTypeTests<GenericType>(typeG, true, false, list);
+	}
+
+	// selected equality checks (not after copy)
+	EXPECT_FALSE ( varA == varB );
+	EXPECT_FALSE ( typeA == typeB );
+	EXPECT_FALSE ( varA == typeB );
+	EXPECT_TRUE ( varA == varA );
+	EXPECT_TRUE ( typeA == typeA );
+
+	// create list of all types
+	vector<TypePtr> types;
+	types.push_back(typeA);
+	types.push_back(typeB);
+	types.push_back(typeC);
+	types.push_back(typeD);
+	types.push_back(typeE);
+	types.push_back(typeF);
+
+	// check whether equality is working properly
+	for (unsigned i=0; i<types.size(); i++) {
+		for (unsigned j=0; j<types.size(); j++) {
+			EXPECT_EQ ( i == j , types[i] == types[j]);
+		}
+	}
 }
 
 
@@ -59,10 +248,26 @@ TEST(TypeTest, TypeVariable) {
 	// check name
 	EXPECT_EQ ( "'alpha", varTypeA->getName() );
 	EXPECT_EQ ( "'beta", varTypeB->getName() );
+	EXPECT_EQ ( "'alpha", varTypeA->toString() );
+	EXPECT_EQ ( "'beta", varTypeB->toString() );
 
 	// perform basic type tests
-	basicTypeTests<TypeVariable, TypeVariablePtr>(varTypeA, false, false);
+	basicTypeTests<TypeVariable>(varTypeA, false, false);
+}
 
+TEST(TypeTest, TupleType) {
+
+	TypeManager manager;
+
+	vector<TypePtr> subTypesA;
+	vector<TypePtr> subTypesB;
+
+	TupleTypePtr typeA = TupleType::get(manager, subTypesA);
+	TupleTypePtr typeB = TupleType::get(manager, subTypesB);
+
+
+	// perform basic type tests
+	basicTypeTests<TupleType>(typeA, true, false, subTypesA);
 
 }
 
@@ -106,7 +311,7 @@ TEST(TypesTest, IntTypeParam) {
 	EXPECT_TRUE (inf == infb);
 }
 
-template<typename T, typename PT>
+template<typename T, typename PT = AnnotatedPtr<const T>>
 void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>()) {
 
 	// ------------ Type Ptr based tests -------------

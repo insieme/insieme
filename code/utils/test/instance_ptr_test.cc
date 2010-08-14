@@ -52,12 +52,12 @@ TEST(InstancePtr, NullTest) {
 
 	InstancePtr<int> ptrA(0);
 	EXPECT_TRUE ( ptrA == null );
-	EXPECT_TRUE ( ptrA );
+	EXPECT_FALSE ( ptrA );
 
 	int a = 10;
 	InstancePtr<int> ptrB(&a);
 	EXPECT_FALSE ( ptrB == null );
-	EXPECT_FALSE ( ptrB );
+	EXPECT_TRUE ( ptrB );
 
 	InstancePtr<int> ptrC(&a);
 	EXPECT_TRUE ( ptrB == ptrC );

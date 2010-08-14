@@ -137,7 +137,7 @@ ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
 // ------------------------------------- DeclarationStmt ---------------------------------
 
 string DeclarationStmt::toString() const {
-	return format("%s %s;", type->toString(), initExpression->toString());
+	return format("%s %s;", type->toString().c_str(), initExpression->toString().c_str());
 }
 
 bool DeclarationStmt::equals(const Statement& stmt) const {
@@ -164,7 +164,7 @@ DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr
 // ------------------------------------- ReturnStmt ---------------------------------
 
 string ReturnStmt::toString() const {
-	return format("return %s;", returnExpression->toString());
+	return format("return %s;", returnExpression->toString().c_str());
 }
 
 bool ReturnStmt::equals(const Statement& stmt) const {

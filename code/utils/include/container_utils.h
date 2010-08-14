@@ -39,8 +39,16 @@
 #include <vector>
 #include <functional>
 
+#include <boost/type_traits/is_convertible.hpp>
+#include <boost/utility/enable_if.hpp>
+
+
 using std::vector;
 using std::function;
+
+using boost::is_convertible;
+using boost::enable_if;
+
 
 /**
  * Creates a vector containing (a copy of) the single element provided as an argument.
@@ -55,24 +63,51 @@ vector<T> toVector(T element) {
 	return vector<T> (1, element);
 }
 
+/**
+ * A small utility function capable of appending all elements of one vector to another.
+ *
+ * @tparam T the element type of the target vector
+ * @tparam B the element type of the source vector, needs to be a sub-type of T
+ * @param target the vector to which elements should be appended
+ * @param source the vector from which the element should be taken
+ */
+template<typename T, typename B>
+typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, const vector<B>& source) {
+	// add all elements of the source to the end of the target
+	copy(source.cbegin(), source.cend(), back_inserter(target));
+}
+
+
 template<class InputIterator, class Function>
-bool all(InputIterator first, InputIterator last, Function predicate)
+bool all(InputIterator first, InputIterator last, const Function& predicate)
 {
-	bool ret = true;
 	while (first != last) {
-		ret = ret && predicate(*first);
+		if (!predicate(*first)) {
+			return false;
+		}
 		++first;
 	}
-	return ret;
+	return true;
+}
+
+template<class T, class Function>
+bool all(const vector<T>& list, const Function& predicate) {
+	return all(list.cbegin(), list.cend(), predicate);
 }
 
 template<class InputIterator, class Function>
-bool any(InputIterator first, InputIterator last, Function predicate)
+bool any(InputIterator first, InputIterator last, const Function& predicate)
 {
-	bool ret = true;
 	while (first != last) {
-		ret = ret || predicate(*first);
+		if (predicate(*first)) {
+			return true;
+		}
 		++first;
 	}
-	return ret;
+	return false;
+}
+
+template<class T, class Function>
+bool any(const vector<T>& list, const Function& predicate) {
+	return any(list.cbegin(), list.cend(), predicate);
 }
