@@ -597,8 +597,8 @@ class GenericType: public Type {
 	 * @param baseType		the base type of this generic type
 	 */
 	GenericType(const string& name,
-			vector<TypePtr> typeParams = vector<TypePtr> (),
-			vector<IntTypeParam> intTypeParams = vector<IntTypeParam> (),
+			const vector<TypePtr>& typeParams = vector<TypePtr> (),
+			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL)
 		:
 			Type(buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
@@ -620,12 +620,9 @@ public:
 	 */
 	static GenericTypePtr get(TypeManager& manager,
 			const string& name,
-			vector<TypePtr> typeParams = vector<TypePtr> (),
-			vector<IntTypeParam> intTypeParams = vector<IntTypeParam> (),
-			const TypePtr baseType = NULL) {
-
-		return manager.getTypePtr(GenericType(name, typeParams, intTypeParams, baseType));
-	}
+			const vector<TypePtr>& typeParams = vector<TypePtr> (),
+			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const TypePtr& baseType = NULL);
 
 	/**
 	 * Creates a clone of this node.

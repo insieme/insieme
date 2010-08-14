@@ -34,6 +34,9 @@
  * regarding third party software licenses.
  */
 
+#include <algorithm>
+#include <cassert>
+
 #include "container_utils.h"
 #include "types.h"
 
@@ -49,11 +52,8 @@ TypePtr TypeManager::getTypePtrInternal(const Type& type) {
 	// get master copy
 	std::pair<TypePtr, bool> res = add(type);
 
-	// if new element has been added ...
-	if (res.second) {
-		// ... check whether sub-statements are present
-		visitor.visit(res.first);
-	}
+	// check whether all child-nodes are within this manager
+	assert( !res.second || containsAll(*(res.first->getChildren())));
 
 	// return newly added or present node
 	return res.first;
@@ -162,6 +162,36 @@ string GenericType::buildNameString(const string& name, const vector<TypePtr>& t
 		res << "<" << boost::join(list, ",") << ">";
 	}
 	return res.str();
+}
+
+/**
+ * This method provides a static factory method for this type of node. It will return
+ * a generic type pointer pointing toward a variable with the given name maintained by the
+ * given manager.
+ *
+ * @param name 			the name of the new type (only the prefix)
+ * @param typeParams	the type parameters of this type, concrete or variable
+ * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+ * @param baseType		the base type of this generic type
+ */
+GenericTypePtr GenericType::get(TypeManager& manager,
+			const string& name,
+			const vector<TypePtr>& typeParams,
+			const vector<IntTypeParam>& intTypeParams,
+			const TypePtr& baseType) {
+
+	// get all type-parameter references from the manager
+	vector<TypePtr> localTypeParams;
+	transform(typeParams.cbegin(), typeParams.cend(), back_inserter(localTypeParams),
+			[&manager](const TypePtr& cur) {
+				return manager.getTypePtr(*cur);
+	});
+
+	// get base type reference (if necessary) ...
+	TypePtr localBaseType = (baseType)?manager.getTypePtr(*baseType):baseType;
+
+	// create resulting data element
+	return manager.getTypePtr(GenericType(name, localTypeParams, intTypeParams, localBaseType));
 }
 
 // ---------------------------------------------- Utility Functions ------------------------------------
