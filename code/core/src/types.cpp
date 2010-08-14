@@ -182,7 +182,7 @@ GenericTypePtr GenericType::get(TypeManager& manager,
 
 	// get all type-parameter references from the manager
 	vector<TypePtr> localTypeParams;
-	transform(typeParams.cbegin(), typeParams.cend(), back_inserter(localTypeParams),
+	std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(localTypeParams),
 			[&manager](const TypePtr& cur) {
 				return manager.getTypePtr(*cur);
 	});

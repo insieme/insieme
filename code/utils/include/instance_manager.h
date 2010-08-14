@@ -44,6 +44,7 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_const.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <boost/utility.hpp>
 
 #include "instance_ptr.h"
 #include "container_utils.h"
@@ -114,7 +115,7 @@ template<
 	typename boost::enable_if<boost::is_const<T>,int>::type = 0,
 	typename boost::enable_if<boost::is_base_of<InstancePtr<T>, R>,int>::type = 0
 	>
-class InstanceManager {
+class InstanceManager : boost::noncopyable {
 
 	/**
 	 * The storage used to maintain instances. It is based on a unordered set which

@@ -51,7 +51,7 @@ using std::for_each;
 
 
 template<typename T>
-bool visitorTrueFilter(T element) {
+bool visitorTrueFilter(T) {
 	return true;
 }
 
@@ -77,7 +77,7 @@ protected:
 
 
 template <typename T>
-class Visitor {
+class Visitor : boost::noncopyable {
 
 protected:
 	const function<void(T)> task;

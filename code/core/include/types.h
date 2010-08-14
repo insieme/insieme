@@ -159,7 +159,7 @@ private:
 	 * A private constructor to create a infinite integer type parameter.
 	 * The constructor is private to enforce the usage of static factory methods.
 	 */
-	IntTypeParam(const Type type) :	type(INFINITE), value(0) {
+	IntTypeParam(const Type) :	type(INFINITE), value(0) {
 	}
 
 public:
@@ -285,6 +285,11 @@ public:
  * both). Variable types can only be used as the input/output types of functions.
  */
 class Type: public Visitable<TypePtr> {
+
+	/**
+	 * Types are not assignable
+	 */
+	Type& operator=(const Type&) { }
 
 	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types

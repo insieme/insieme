@@ -100,6 +100,12 @@ class StatementManager;
 // ------------------------------------- Statements ---------------------------------
 
 class Statement : public Visitable<StmtPtr> {
+
+	/**
+	 * Statements are not assignable
+	 */
+	Statement& operator=(const Statement&) { }
+
 protected:
 	// Hash values for terminal statements
 	enum {

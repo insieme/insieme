@@ -45,6 +45,11 @@ using std::string;
 
 // oh my god :( - seuftz
 class Expression {
+
+	/**
+	 * Expressions are not assignable
+	 */
+	Expression& operator=(const Expression&) { }
 	
 	/**
 	 * The type of the represented expression.
@@ -62,16 +67,16 @@ public:
 
 	virtual string toString() const { return ""; }
 
-	virtual size_t hash() const { return -1; }
+	virtual size_t hash() const { return 0; }
 
 };
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
 
-class Variable : public Expression {
+class VariableExpr : public Expression {
 	const string name;
 };
-typedef std::shared_ptr<Variable> VarExprPtr;
+typedef std::shared_ptr<VariableExpr> VarExprPtr;
 
 
 template<typename T>

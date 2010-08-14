@@ -74,7 +74,7 @@ string NoOpStmt::toString() const {
 	return "{ /* NoOp */ };";
 }
 
-bool NoOpStmt::equals(const Statement& stmt) const {
+bool NoOpStmt::equals(const Statement&) const {
 	return true;
 }
 
@@ -96,7 +96,7 @@ string BreakStmt::toString() const {
 	return "break;";
 }
 
-bool BreakStmt::equals(const Statement& stmt) const {
+bool BreakStmt::equals(const Statement&) const {
 	return true;
 }
 
@@ -118,7 +118,7 @@ string ContinueStmt::toString() const {
 	return "continue;";
 }
 
-bool ContinueStmt::equals(const Statement& stmt) const {
+bool ContinueStmt::equals(const Statement&) const {
 	return true;
 }
 
