@@ -41,13 +41,13 @@
 
 // ------------------------------------- Type Manager ---------------------------------
 
-TypePtr TypeManager::getTypePtrInternal(const Type& stmt) {
+TypePtr TypeManager::getTypePtrInternal(const Type& type) {
 
 	// a static visitor used ensure that all sub-node are properly registered
-	static ChildVisitor<TypePtr> visitor([&](const TypePtr& cur) {this->getTypePtr(*cur);});
+	static ChildVisitor<TypePtr> visitor([&](const TypePtr& cur) {this->getTypePtrInternal(*cur);});
 
 	// get master copy
-	std::pair<TypePtr, bool> res = add(stmt);
+	std::pair<TypePtr, bool> res = add(type);
 
 	// if new element has been added ...
 	if (res.second) {
