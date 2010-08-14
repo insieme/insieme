@@ -50,16 +50,32 @@ TEST(InstancePtr, NullTest) {
 
 	InstancePtr<int> null = InstancePtr<int>(NULL);
 
-	InstancePtr<int> ptrA(0);
-	EXPECT_TRUE ( ptrA == null );
-	EXPECT_FALSE ( ptrA );
+	InstancePtr<int> ptrN(0);
+	EXPECT_TRUE ( ptrN == null );
+	EXPECT_TRUE ( ptrN == ptrN );
+	EXPECT_FALSE ( ptrN );
 
 	int a = 10;
-	InstancePtr<int> ptrB(&a);
+	InstancePtr<int> ptrA(&a);
+	EXPECT_FALSE ( ptrA == null );
+	EXPECT_FALSE ( null == ptrA );
+	EXPECT_FALSE ( ptrA == ptrN );
+	EXPECT_FALSE ( ptrN == ptrA );
+	EXPECT_TRUE ( ptrA );
+
+	InstancePtr<int> ptrA2(&a);
+	EXPECT_TRUE ( ptrA == ptrA2 );
+	EXPECT_TRUE ( ptrA2 == ptrA );
+
+	int b = 12;
+	InstancePtr<int> ptrB(&b);
 	EXPECT_FALSE ( ptrB == null );
+	EXPECT_FALSE ( null == ptrB );
+	EXPECT_FALSE ( ptrB == ptrN );
+	EXPECT_FALSE ( ptrN == ptrB );
 	EXPECT_TRUE ( ptrB );
 
-	InstancePtr<int> ptrC(&a);
-	EXPECT_TRUE ( ptrB == ptrC );
+	EXPECT_FALSE ( ptrA == ptrB );
+	EXPECT_FALSE ( ptrB == ptrA );
 
 }
