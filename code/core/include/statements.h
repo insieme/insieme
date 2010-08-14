@@ -53,10 +53,12 @@
 #include "instance_manager.h"
 #include "types.h"
 #include "visitor.h"
-#include "expressions.h"
 
 using std::string;
 using std::vector;
+
+class Expression;
+typedef AnnotatedPtr<const Expression> ExprPtr;
 
 // Forward Declarations { -----------------------------------------------------
 
@@ -121,8 +123,8 @@ public:
 	virtual string toString() const = 0;
 	virtual Statement* clone() const = 0;
 	virtual std::size_t hash() const = 0;
-	bool operator==(const Statement& stmt) const;
 	virtual ChildList getChildren() const;
+	bool operator==(const Statement& stmt) const;
 };
 std::size_t hash_value(const Statement& stmt);
 
@@ -167,14 +169,14 @@ class DeclarationStmt : public Statement {
 	const TypePtr type;
 	const ExprPtr initExpression;
 
-	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) :
-		type(type), initExpression(initExpression) { }
+	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression);
 
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual DeclarationStmt* clone() const;
+	virtual ChildList getChildren() const;
 	
 	static DeclarationStmtPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression);
 };
@@ -183,14 +185,14 @@ public:
 class ReturnStmt: public Statement {
 	const ExprPtr returnExpression;
 
-	ReturnStmt(const ExprPtr& returnExpression) :
-		returnExpression(returnExpression) { }
+	ReturnStmt(const ExprPtr& returnExpression);
 
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual ReturnStmt* clone() const;
+	virtual ChildList getChildren() const;
 
 	static ReturnStmtPtr get(StatementManager& manager, const ExprPtr& returnExpression);
 };
@@ -208,6 +210,9 @@ public:
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual CompoundStmt* clone() const;
+	virtual ChildList getChildren() const;
+
+	const StmtPtr& operator[](unsigned index) const;
 
 	static CompoundStmtPtr get(StatementManager& manager);
 	static CompoundStmtPtr get(StatementManager& manager, const StmtPtr& stmt);
@@ -215,22 +220,29 @@ public:
 };
 
 
-//class WhileStmt: public Statement {
-//	ExprPtr condition;
-//	StmtPtr body;
-//public:
-//	WhileStmt(StmtPtr body, ExprPtr condition) :
-//		condition(condition), body(body) {
-//	}
-//	virtual string toString() const {
-//		return string("while(") + condition->toString() + ")\n" + body->toString();
-//	}
-//};
-//
+class WhileStmt: public Statement {
+	ExprPtr condition;
+	StmtPtr body;
+
+	WhileStmt(ExprPtr condition, StmtPtr body);
+
+public:
+	virtual string toString() const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual WhileStmt* clone() const;
+	virtual ChildList getChildren() const;
+
+	static WhileStmtPtr get(StatementManager& manager, ExprPtr condition, StmtPtr body);
+};
+
 //class ForStmt: public Statement {
 //	VarExprPtr variable;
 //	ExprPtr start, end, step;
 //	StmtPtr body;
+//
+//
+//
 //public:
 //	ForStmt(StmtPtr body, VarExprPtr var, ExprPtr start, ExprPtr end, ExprPtr step) :
 //		variable(var), start(start), end(end), step(step), body(body) {
@@ -240,7 +252,7 @@ public:
 //				+ step->toString() + ")\n" + body->toString();
 //	}
 //};
-//
+
 //class IfStmt: public Statement {
 //	ExprPtr condition;
 //	StmtPtr body;
@@ -263,6 +275,7 @@ class StatementManager : public InstanceManager<const Statement, StmtPtr> {
 	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager);
 	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt);
 	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts);
+	friend WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body);
 	
 	StmtPtr getStmtPtrImpl(const Statement& stmt);
 

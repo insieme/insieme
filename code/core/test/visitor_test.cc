@@ -55,7 +55,7 @@ public:
 
 	Visitable<MNode*>::ChildList getChildren() const {
 		std::cout << "Forming children ... " << std::endl;
-		auto res = newChildList();
+		auto res = makeChildList();
 		if (first) {
 			res->push_back(first);
 		}
@@ -107,7 +107,7 @@ public:
 
 	Visitable<const CNode*>::ChildList getChildren() const {
 		std::cout << "Forming children ... " << std::endl;
-		auto res = newChildList();
+		auto res = makeChildList();
 		if (first) {
 			res->push_back(first);
 		}

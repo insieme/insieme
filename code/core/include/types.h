@@ -420,7 +420,7 @@ public:
 	 * @return a list containing all types this type is based on.
 	 */
 	virtual ChildList getChildren() const {
-		return newChildList();
+		return makeChildList();
 	}
 
 
@@ -642,7 +642,7 @@ public:
 	 * @return the
 	 */
 	virtual ChildList getChildren() const {
-		auto res = newChildList(typeParams);
+		auto res = makeChildList(typeParams);
 
 		// further add base types
 		if (baseType) {

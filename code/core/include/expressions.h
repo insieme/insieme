@@ -40,11 +40,12 @@
 
 #include "annotated_ptr.h"
 #include "types.h"
+#include "statements.h"
 
 using std::string;
 
 // oh my god :( - seuftz
-class Expression {
+class Expression : public Statement {
 
 	/**
 	 * Expressions are not assignable

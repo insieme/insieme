@@ -46,9 +46,26 @@ TEST(StatementsTest, CreationAndIdentity) {
 	EXPECT_TRUE (bS == BreakStmt::get(stmtMan));
 
 	NoOpStmtPtr nS = NoOpStmt::get(stmtMan);
-	EXPECT_TRUE (!(*bS == *nS));
+	EXPECT_FALSE (*bS == *nS);
 }
 
 TEST(StatementsTest, CompoundStmt) {
+	TypeManager typeMan;
+	StatementManager stmtMan(typeMan);
+	BreakStmtPtr bS = BreakStmt::get(stmtMan);
+	ContinueStmtPtr cS = ContinueStmt::get(stmtMan);
 	
+	CompoundStmtPtr empty = CompoundStmt::get(stmtMan);
+	CompoundStmtPtr bSC = CompoundStmt::get(stmtMan, bS);
+	vector<StmtPtr> stmtVec;
+	stmtVec.push_back(bS);
+	CompoundStmtPtr bSCVec = CompoundStmt::get(stmtMan, stmtVec);
+	EXPECT_TRUE (bSC == bSCVec);
+	EXPECT_TRUE (*bSC == *bSCVec);
+	stmtVec.push_back(cS);
+	CompoundStmtPtr bScSCVec = CompoundStmt::get(stmtMan, stmtVec);
+	EXPECT_FALSE (bSC == bScSCVec);
+	EXPECT_FALSE (bSC->hash() == bScSCVec->hash());
+	EXPECT_TRUE ((*bSC)[0] == (*bScSCVec)[0]);
+	EXPECT_TRUE (bScSCVec->toString() == "{\nbreak;\ncontinue;\n}");
 }

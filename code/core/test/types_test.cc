@@ -326,8 +326,8 @@ TEST(TypesTest, IntTypeParam) {
 	EXPECT_TRUE (inf == infb);
 }
 
-template<typename T, typename PT = AnnotatedPtr<const T>>
-void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>()) {
+template<typename T, typename PT>
+void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children) {
 
 	// ------------ Type Ptr based tests -------------
 

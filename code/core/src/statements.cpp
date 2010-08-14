@@ -35,6 +35,7 @@
  */
 
 #include "statements.h"
+#include "expressions.h"
 
 #include "iterator_utils.h"
 
@@ -64,7 +65,7 @@ bool Statement::operator==(const Statement& stmt) const {
 }
 
 Statement::ChildList Statement::getChildren() const {
-	return newChildList(); //TODO
+	return makeChildList();
 }
 
 
@@ -136,6 +137,10 @@ ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
+DeclarationStmt::DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) 
+	: type(type), initExpression(initExpression) { 
+}
+
 string DeclarationStmt::toString() const {
 	return format("%s %s;", type->toString().c_str(), initExpression->toString().c_str());
 }
@@ -157,11 +162,19 @@ DeclarationStmt* DeclarationStmt::clone() const {
 	return new DeclarationStmt(type, initExpression);
 }
 
+DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
+	return makeChildList(initExpression);
+}
+
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression) {
 	return manager.getStmtPtr(DeclarationStmt(type, initExpression));
 }
 
 // ------------------------------------- ReturnStmt ---------------------------------
+
+ReturnStmt::ReturnStmt(const ExprPtr& returnExpression)
+	: returnExpression(returnExpression) { 
+}
 
 string ReturnStmt::toString() const {
 	return format("return %s;", returnExpression->toString().c_str());
@@ -183,6 +196,10 @@ ReturnStmt* ReturnStmt::clone() const {
 	return new ReturnStmt(returnExpression);
 }
 
+ReturnStmt::ChildList ReturnStmt::getChildren() const {
+	return makeChildList(returnExpression);
+}
+
 ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression) {
 	return manager.getStmtPtr(ReturnStmt(returnExpression));
 }
@@ -192,7 +209,7 @@ ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnEx
 string CompoundStmt::toString() const {
 	vector<string> list;
 	std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr& cur) {return cur->toString();});
-	return boost::join(list, "\n");
+	return format("{\n%s\n}", boost::join(list, "\n").c_str());
 }
 
 bool CompoundStmt::equals(const Statement& stmt) const {
@@ -215,6 +232,14 @@ CompoundStmt* CompoundStmt::clone() const {
 	return new CompoundStmt(statements);
 }
 
+CompoundStmt::ChildList CompoundStmt::getChildren() const {
+	return makeChildList(statements);
+}
+
+const StmtPtr&  CompoundStmt::operator[](unsigned index) const {
+	return statements[index];
+}
+
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager) {
 	return manager.getStmtPtr(CompoundStmt());
 }
@@ -225,3 +250,39 @@ CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPt
 	return manager.getStmtPtr(CompoundStmt(stmts));
 }
 
+// ------------------------------------- WhileStmt ---------------------------------
+
+WhileStmt::WhileStmt(ExprPtr condition, StmtPtr body)
+	: condition(condition), body(body) {	
+}
+
+string WhileStmt::toString() const {
+	return format("while(%s)\n%s", condition->toString().c_str(), body->toString().c_str());
+}
+	
+bool WhileStmt::equals(const Statement& stmt) const {
+	// conversion is guaranteed by base operator==
+	const WhileStmt& rhs = dynamic_cast<const WhileStmt&>(stmt);
+	return (condition == rhs.condition) && (body == rhs.body);
+}
+
+std::size_t WhileStmt::hash() const {
+	std::size_t seed = HASHVAL_WHILE;
+	boost::hash_combine(seed, condition->hash());
+	boost::hash_combine(seed, body->hash());
+	return seed;
+}
+
+WhileStmt* WhileStmt::clone() const {
+	return new WhileStmt(condition, body);
+}
+
+WhileStmt::ChildList WhileStmt::getChildren() const {
+	auto ret = makeChildList(condition);
+	ret->push_back(body);
+	return ret;
+}
+
+WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body) {
+	return manager.getStmtPtr(WhileStmt(condition, body));
+}
