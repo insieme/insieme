@@ -46,6 +46,7 @@
 #include <boost/utility/enable_if.hpp>
 
 #include "instance_ptr.h"
+#include "container_utils.h"
 
 /**
  * This utility struct definition defines a predicate comparing two pointers
@@ -187,15 +188,6 @@ public:
 		return this->get(&instance);
 	}
 
-	bool contains(const T& instance) {
-		return (storage.find(instance) == storage.end());
-	}
-
-	bool contains(R ref) {
-		return contains(*ref);
-	}
-
-
 	/**
 	 * Retrieves the number of elements handled by this instance manager.
 	 *
@@ -203,6 +195,31 @@ public:
 	 */
 	int size() {
 		return storage.size();
+	}
+
+	/**
+	 * Checks whether all the instance pointer within the given vector are pointing
+	 * to elements maintained by this manager. This method is mainly intended for assertions
+	 * and test cases and should not be required within release code.
+	 *
+	 * @param pointers the list of pointers to be checked
+	 * @return true if all are referencing to elements within this manager, false otherwise
+	 */
+	bool containsAll(const vector<R>& pointers) const {
+		return all(pointers, [&](const R& cur)->bool {
+
+			// search for entry (based on value)
+			auto entry = this->storage.find(&*cur);
+
+			// check whether something has been found
+			if (entry == this->storage.cend()) {
+				// not contained
+				return false;
+			}
+
+			// check whether entry is pointing to same location as cur
+			return &*cur == *entry;
+		});
 	}
 };
 

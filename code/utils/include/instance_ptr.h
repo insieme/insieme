@@ -47,10 +47,8 @@
 
 using boost::mpl::and_;
 using boost::mpl::or_;
-using boost::mpl::not_;
 using boost::is_base_of;
 using boost::is_convertible;
-using boost::is_same;
 using boost::enable_if;
 using boost::disable_if;
 
