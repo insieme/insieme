@@ -275,7 +275,7 @@ TEST(TypeTest, TupleType) {
 TEST(TypesTest, IntTypeParam) {
 #ifndef WIN32
 	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), 4);
+	EXPECT_LE (sizeof(IntTypeParam), (std::size_t) 4);
 #endif
 
 	// test toString format

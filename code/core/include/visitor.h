@@ -44,7 +44,7 @@
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/utility/enable_if.hpp>
 
-using std::unique_ptr;
+using std::shared_ptr;
 using std::vector;
 using std::function;
 using std::for_each;
@@ -63,7 +63,7 @@ template <typename T> class Visitor;
 template<typename T>
 class Visitable {
 public:
-	typedef unique_ptr<vector<T> > ChildList;
+	typedef shared_ptr<vector<T> > ChildList;
 
 	virtual ChildList getChildren() const = 0;
 

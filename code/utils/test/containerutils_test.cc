@@ -47,8 +47,8 @@ TEST(ContainerUtils, Singleton) {
 	vector<int> testInt = toVector(14);
 	vector<string> testString = toVector(string("Hello"));
 
-	EXPECT_EQ(testInt.size(), 1);
-	EXPECT_EQ(testString.size(), 1);
+	EXPECT_EQ( (std::size_t)1, testInt.size());
+	EXPECT_EQ( (std::size_t)1, testString.size() );
 
 	EXPECT_EQ ((*testInt.cbegin()), 14);
 	EXPECT_EQ ((*testString.cbegin()), "Hello");
@@ -64,13 +64,13 @@ TEST(ContainerUtils, addAll) {
 		listB.push_back(i*10);
 	}
 
-	EXPECT_EQ ( 5, listA.size() );
-	EXPECT_EQ ( 5, listB.size() );
+	EXPECT_EQ ( (std::size_t)5 , listA.size() );
+	EXPECT_EQ ( (std::size_t)5 , listB.size() );
 
 	addAll<int>(listA, listB);
 
-	EXPECT_EQ ( 10, listA.size() );
-	EXPECT_EQ ( 5, listB.size() );
+	EXPECT_EQ ( (std::size_t)10, listA.size() );
+	EXPECT_EQ ( (std::size_t)5, listB.size() );
 
 	for (int i=0; i<5; i++) {
 		EXPECT_EQ ( i, listA[i] );
