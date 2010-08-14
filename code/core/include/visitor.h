@@ -43,6 +43,7 @@
 
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <boost/noncopyable.hpp>
 
 using std::shared_ptr;
 using std::vector;
@@ -68,8 +69,13 @@ public:
 	virtual ChildList getChildren() const = 0;
 
 protected:
-	static ChildList newChildList(const vector<T>& initial = vector<T>()) {
+	static ChildList makeChildList(const vector<T>& initial = vector<T>()) {
 		return ChildList(new vector<T>(initial));
+	}
+	static ChildList makeChildList(const T& initialElement) {
+		ChildList ret = makeChildList();
+		ret->push_back(initialElement);
+		return ret;
 	}
 };
 
