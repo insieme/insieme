@@ -46,6 +46,21 @@ using std::vector;
 template<typename T, typename PT>
 void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>());
 
+TEST(TypeTest, TypeManager ) {
+
+	// create type manager
+	TypeManager manager;
+
+	// get a type
+	GenericTypePtr typeA1 = GenericType::get(manager, "A");
+	GenericTypePtr typeA2 = GenericType::get(manager, "A");
+	GenericTypePtr typeB = GenericType::get(manager, "B");
+
+	EXPECT_TRUE ( typeA1 == typeA2 );
+	EXPECT_FALSE ( typeA1 == typeB );
+
+}
+
 
 TEST(TypeTest, Type_AllConcrete) {
 
