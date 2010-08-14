@@ -39,6 +39,7 @@
 #include <cassert>
 
 #include <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 #include <boost/utility/enable_if.hpp>
 
 #include <boost/mpl/logical.hpp>
@@ -48,6 +49,7 @@ using boost::mpl::and_;
 using boost::mpl::or_;
 using boost::mpl::not_;
 using boost::is_base_of;
+using boost::is_convertible;
 using boost::is_same;
 using boost::enable_if;
 using boost::disable_if;
@@ -94,7 +96,7 @@ public:
 	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
-	const typename enable_if<is_base_of<T, A>, bool>::type operator==(const InstancePtr<A>& other) const {
+	const typename enable_if<is_convertible<T*, A*>, bool>::type operator==(const InstancePtr<A>& other) const {
 		return ptr == other.ptr;
 	}
 
@@ -112,7 +114,7 @@ public:
 	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
-	const typename enable_if< and_< is_base_of<A, T>,not_<is_base_of<T, A>>> , bool >::type operator==(const InstancePtr<A>& other) const {
+	const typename enable_if< and_< is_convertible<A*, T*>,not_<is_convertible<T*, A*>>> , bool >::type operator==(const InstancePtr<A>& other) const {
 		return ptr == other.ptr;
 	}
 
@@ -132,7 +134,7 @@ public:
 	 * @return true if both are null, false otherwise
 	 */
 	template<typename A>
-	const typename disable_if<or_<is_base_of<T, A>,is_base_of<A, T>>, bool>::type operator==(const InstancePtr<A>& other) const {
+	const typename disable_if<or_<is_convertible<T*, A*>,is_convertible<A*, T*>>, bool>::type operator==(const InstancePtr<A>& other) const {
 		// NOTE: if pointer are pointing toward the same location (yet are of different types)
 		//       the result will still be false!!
 		return ptr == NULL && other.ptr == NULL;
