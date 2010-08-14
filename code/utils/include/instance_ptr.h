@@ -83,55 +83,37 @@ public:
 	}
 
 	/**
-	 * Equality is implemented using three different, generic version of the == operator. The first
-	 * two are considered whenever the two referenced types are related (sub-type of each other, in
-	 * the one or the other direction). The last version is used if the two pointers are not related at
-	 * all.
+	 * Equality is implemented using two different, generic version of the == operator. The first
+	 * is considered whenever the two referenced types are pointing to convertible types, the second
+	 * version is used if the two pointers are not related.
 	 *
-	 * This version is used if the type pointed to by the local pointer is a base type for the given type
-	 * or both referenced types are equivalent.
-	 *
-	 * @tparam A the type the given pointer is pointing to
-	 * @param other the other pointer (pointing to this or a sub-type) to be compared to
-	 * @return true if both point to the same location (regardless of the actual type)
-	 */
-	template<typename A>
-	const typename enable_if<is_convertible<T*, A*>, bool>::type operator==(const InstancePtr<A>& other) const {
-		return ptr == other.ptr;
-	}
-
-	/**
-	 * Equality is implemented using three different, generic version of the == operator. The first
-	 * two are considered whenever the two referenced types are related (sub-type of each other, in
-	 * the one or the other direction). The last version is used if the two pointers are not related at
-	 * all.
-	 *
-	 * This version is used if the type pointed to by the local pointer is a super type for the given type
-	 * and both referenced types are not equivalent.
-	 *
-	 * @tparam A the type the given pointer is pointing to
-	 * @param other the other pointer (pointing to this or a pure super-type) to be compared to
-	 * @return true if both point to the same location (regardless of the actual type)
-	 */
-	template<typename A>
-	const typename enable_if< and_< is_convertible<A*, T*>,not_<is_convertible<T*, A*>>> , bool >::type operator==(const InstancePtr<A>& other) const {
-		return ptr == other.ptr;
-	}
-
-	/**
-	 * Equality is implemented using three different, generic version of the == operator. The first
-	 * two are considered whenever the two referenced types are related (sub-type of each other, in
-	 * the one or the other direction). The last version is used if the two pointers are not related at
-	 * all.
-	 *
-	 * This version is used if the type pointed to are not related within the sub-type relation.
+	 * This version is used if the given pointers can be converted into each other.
 	 *
 	 * NOTE: if the pointer are pointing toward the same location (yet are of of non-related types)
      * 		 the result will still be false!!
+     *
+	 * @tparam A the type the given pointer is pointing to
+	 * @param other the other pointer to be compared to
+	 * @return true if both point to the same location (regardless of the actual type)
+	 */
+	template<typename A>
+	const typename enable_if< or_<is_convertible<T*, A*>,is_convertible<A*, T*>> , bool >::type operator==(const InstancePtr<A>& other) const {
+		return ptr == other.ptr;
+	}
+
+	/**
+	 * Equality is implemented using two different, generic version of the == operator. The first
+	 * is considered whenever the two referenced types are pointing to convertible types, the second
+	 * version is used if the two pointers are not related.
+	 *
+	 * This version is used if the given pointers are not related.
+	 *
+	 * NOTE: if the pointer are pointing toward the same location (yet are of of non-related types)
+	 * 		 the result will still be false!!
 	 *
 	 * @tparam A the type the given pointer is pointing to
-	 * @param other the other pointer (pointing to a non-related type) to be compared to
-	 * @return true if both are null, false otherwise
+	 * @param other the other pointer to be compared to
+	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
 	const typename disable_if<or_<is_convertible<T*, A*>,is_convertible<A*, T*>>, bool>::type operator==(const InstancePtr<A>& other) const {
