@@ -101,11 +101,6 @@ TEST(InstanceManager, Basic) {
 	EXPECT_STREQ (refA->c_str(), refC->c_str());
 }
 
-TEST(InstancePtr, Size) {
-
-	// just ensures
-	EXPECT_LE ( sizeof (InstancePtr<int>), sizeof(int*) );
-}
 
 typedef float real;
 

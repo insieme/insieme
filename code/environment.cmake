@@ -23,6 +23,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 # lookup perl
 find_package( Perl )
 
+
 # Visual Studio customization
 if(MSVC) 
 	# disable some warnings
@@ -57,3 +58,56 @@ endif()
 if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -Wall )
 endif()
+
+# avoid multiple import
+if (NOT MEMORY_CHECK_SETUP)
+	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
+
+	# add -all-valgrind target
+	if(NOT CONDUCT_MEMORY_CHECKS)
+		add_custom_target(valgrind)
+	endif(NOT CONDUCT_MEMORY_CHECKS)
+
+	# define macro for adding tests
+	macro ( add_unit_test case_name )
+		# add normal test
+		add_test(ut_${case_name} ut_${case_name})
+		
+		if(CONDUCT_MEMORY_CHECKS)
+			# add valgrind as a test
+			add_test(NAME valgrind_${case_name} 
+				COMMAND valgrind
+					--leak-check=full
+					--show-reachable=yes
+					--track-fds=yes
+					--error-exitcode=1
+					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+					${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+				WORKING_DIRECTORY
+					${CMAKE_CURRENT_BINARY_DIR}
+			)
+		else(CONDUCT_MEMORY_CHECKS)
+			# add valgrind as seperated target
+			add_custom_target(valgrind_${case_name})
+			add_custom_command(TARGET valgrind_${case_name} 
+				COMMAND valgrind
+					--leak-check=full
+					--show-reachable=yes
+					--track-fds=yes
+					--error-exitcode=1
+					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+					${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+				WORKING_DIRECTORY
+					${CMAKE_CURRENT_BINARY_DIR}
+			)
+			add_dependencies(valgrind valgrind_${case_name})
+		endif(CONDUCT_MEMORY_CHECKS)
+	endmacro(add_unit_test)
+
+
+endif (NOT MEMORY_CHECK_SETUP)
+
+# mark as defined
+set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
+
+

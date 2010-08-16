@@ -79,3 +79,9 @@ TEST(InstancePtr, NullTest) {
 	EXPECT_FALSE ( ptrB == ptrA );
 
 }
+
+
+TEST(InstancePtr, Size) {
+	// just ensures
+	EXPECT_LE ( sizeof (InstancePtr<int>), 2*sizeof(int*) );
+}

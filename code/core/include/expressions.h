@@ -46,11 +46,6 @@ using std::string;
 
 // oh my god :( - seuftz
 class Expression : public Statement {
-
-	/**
-	 * Expressions are not assignable
-	 */
-	Expression& operator=(const Expression&) { }
 	
 	/**
 	 * The type of the represented expression.

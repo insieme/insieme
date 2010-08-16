@@ -276,6 +276,8 @@ TEST(TypeTest, TupleType) {
 
 	vector<TypePtr> subTypesA;
 	vector<TypePtr> subTypesB;
+	subTypesB.push_back(GenericType::get(manager, "dummy1"));
+	subTypesB.push_back(GenericType::get(manager, "dummy2"));
 
 	TupleTypePtr typeA = TupleType::get(manager, subTypesA);
 	TupleTypePtr typeB = TupleType::get(manager, subTypesB);
@@ -283,6 +285,7 @@ TEST(TypeTest, TupleType) {
 
 	// perform basic type tests
 	basicTypeTests<TupleType>(typeA, true, false, subTypesA);
+	basicTypeTests<TupleType>(typeB, true, false, subTypesB);
 
 }
 

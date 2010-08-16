@@ -107,10 +107,6 @@ class Statement : public Visitable<StmtPtr> {
 	
 	friend class InstanceManager<const Statement, StmtPtr>;
 
-	/**
-	 * Statements are not assignable
-	 */
-	Statement& operator=(const Statement&) { }
 	virtual Statement* clone() const = 0;
 
 

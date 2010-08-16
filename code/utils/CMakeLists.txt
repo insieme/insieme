@@ -31,6 +31,5 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_utils)
 	
-	add_test(ut_${case_name} ut_${case_name})
+	add_unit_test(${case_name})
 endforeach(case_file)
- 

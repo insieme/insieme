@@ -269,6 +269,27 @@ public:
 	AnnotatedPtr<const T> getTypePtr(const T& type) {
 		return dynamic_pointer_cast<const T>(getTypePtrInternal(type));
 	}
+
+
+	/**
+	 * Obtains a list of pointer referencing the same elements as the given list
+	 * of type pointers, however, those the referenced once will be managed by the
+	 * this manager.
+	 *
+	 * @param pointer the list of type references to be covered
+	 * @return  the same list of types referencing elements within the local manager
+	 */
+	vector<TypePtr> getTypePtr(const vector<TypePtr>&);
+
+	/**
+	 * Obtains a type pointer pointing to an identical element as the given pointer,
+	 * however, the referenced element will be maintained by this manager.
+	 *
+	 * @param pointer for which a local reference should be obtained
+	 * @return a pointer pointing to a local copy of the given pointer
+	 */
+	TypePtr getTypePtr(const TypePtr&);
+
 };
 
 
@@ -285,11 +306,6 @@ public:
  * both). Variable types can only be used as the input/output types of functions.
  */
 class Type: public Visitable<TypePtr> {
-
-	/**
-	 * Types are not assignable
-	 */
-	Type& operator=(const Type&) { }
 
 	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types
@@ -497,7 +513,7 @@ class TupleType: public Type {
 	/**
 	 * Creates a new tuple type based on the given element types.
 	 */
-	TupleType(vector<TypePtr> elementTypes) :
+	TupleType(const vector<TypePtr>& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
 
 public:
@@ -506,10 +522,11 @@ public:
 	 * This method provides a static factory method for this type of node. It will return
 	 * a tuple type pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
+	 *
+	 * @param manager the manager to obtain the new type reference from
+	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
-	static TupleTypePtr get(TypeManager& manager, vector<TypePtr> elementTypes) {
-		return manager.getTypePtr(TupleType(elementTypes));
-	}
+	static TupleTypePtr get(TypeManager& manager, const vector<TypePtr>& elementTypes);
 
 	/**
 	 * Creates a clone of this node.
@@ -517,42 +534,75 @@ public:
 	virtual TupleType* clone() const {
 		return new TupleType(*this);
 	}
+
+	/**
+	 * Obtains a list of all types referenced by this tuple type.
+	 */
+	virtual ChildList getChildren() const {
+		return makeChildList(elementTypes);
+	}
 };
 
 // ---------------------------------------- Function Type ------------------------------
-// FIXME: to new mode ...
+
 /**
- * This special type represents
+ * This type corresponds to the type of a function. It specifies the argument types and the
+ * value returned by the members of this type.
  */
 class FunctionType: public Type {
-	const TypePtr argumentType;
-	const TypePtr returnType;
-public:
 
-	FunctionType(TypePtr argumentType, TypePtr returnType) :
-		Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str())), argumentType(
+	/**
+	 * The type of element accepted as an argument by this function type.
+	 */
+	const TypePtr argumentType;
+
+	/**
+	 * The type of value produced by this function type.
+	 */
+	const TypePtr returnType;
+
+	/**
+	 * Creates a new instance of this type based on the given in and output types.
+	 *
+	 * @param argumentType a reference to the type used as argument
+	 * @param returnType a reference to the type used as return type
+	 */
+	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
+		Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true), argumentType(
 				argumentType), returnType(returnType) {
 	}
-	;
+
+public:
 
 	/**
-	 * Ensures that a function type is considered to be concrete. Since
-	 * generic functions are supported within the IR, type variables are
-	 * not preventing an element from having a generic function type.
+	 * This method provides a static factory method for this type of node. It will return
+	 * a function type pointer pointing toward a variable with the given name maintained by the
+	 * given manager.
 	 *
-	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
+	 * @param manager the manager to be used for handling the obtained type pointer
+	 * @param argumentType the argument type of the type to be obtained
+	 * @param returnType the type of value to be returned by the obtained function type
+	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
-	virtual bool isConcrete() const {
-		// all function types are inhabited
-		return true;
+	static FunctionTypePtr get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual FunctionType* clone() const {
+		return new FunctionType(*this);
 	}
 
 	/**
-	 * Ensures that this type is identifiable as a function type by returning true.
+	 * Obtains a list of all types referenced by this function type.
 	 */
-	virtual bool isFunctionType() const {
-		return true;
+	virtual ChildList getChildren() const {
+		ChildList res = makeChildList();
+		res->push_back(argumentType);
+		res->push_back(returnType);
+		return res;
 	}
+
 };
 
 
