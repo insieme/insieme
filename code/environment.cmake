@@ -27,6 +27,8 @@ find_package( Perl )
 if(MSVC) 
 	# disable some warnings
 	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
+	# disable warning "assignment operator could not be generated"
+	add_definitions( /wd"4512" )
 	# statically link with runtime library (required for gtest)
 	foreach(flag_var
 		CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE

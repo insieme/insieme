@@ -45,6 +45,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -53,6 +54,7 @@
 #include "instance_manager.h"
 #include "types.h"
 #include "visitor.h"
+#include "identifiers.h"
 
 using std::string;
 using std::vector;
@@ -102,11 +104,15 @@ class StatementManager;
 // ------------------------------------- Statements ---------------------------------
 
 class Statement : public Visitable<StmtPtr> {
+	
+	friend class InstanceManager<const Statement, StmtPtr>;
 
 	/**
 	 * Statements are not assignable
 	 */
 	Statement& operator=(const Statement&) { }
+	virtual Statement* clone() const = 0;
+
 
 protected:
 	// Hash values for terminal statements
@@ -119,9 +125,9 @@ protected:
 
 	virtual bool equals(const Statement& stmt) const = 0;
 
+
 public:
 	virtual string toString() const = 0;
-	virtual Statement* clone() const = 0;
 	virtual std::size_t hash() const = 0;
 	virtual ChildList getChildren() const;
 	bool operator==(const Statement& stmt) const;
@@ -131,11 +137,12 @@ std::size_t hash_value(const Statement& stmt);
 
 class NoOpStmt : public Statement {
 	NoOpStmt() {}
+	virtual NoOpStmt* clone() const;
+
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual NoOpStmt* clone() const;
 
 	static NoOpStmtPtr get(StatementManager& manager);
 };
@@ -143,11 +150,12 @@ public:
 
 class BreakStmt : public Statement {
 	BreakStmt() {}
+	virtual BreakStmt* clone() const;
+
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual BreakStmt* clone() const;
 
 	static BreakStmtPtr get(StatementManager& manager);
 };
@@ -155,11 +163,12 @@ public:
 
 class ContinueStmt : public Statement {
 	ContinueStmt() {}
+	virtual ContinueStmt* clone() const;
+
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual ContinueStmt* clone() const;
 	
 	static ContinueStmtPtr get(StatementManager& manager);
 };
@@ -167,18 +176,19 @@ public:
 
 class DeclarationStmt : public Statement {
 	const TypePtr type;
+	const Identifier id;
 	const ExprPtr initExpression;
 
-	DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression);
+	DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
+	virtual DeclarationStmt* clone() const;
 
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual DeclarationStmt* clone() const;
 	virtual ChildList getChildren() const;
 	
-	static DeclarationStmtPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression);
+	static DeclarationStmtPtr get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
 };
 
 
@@ -186,12 +196,12 @@ class ReturnStmt: public Statement {
 	const ExprPtr returnExpression;
 
 	ReturnStmt(const ExprPtr& returnExpression);
+	virtual ReturnStmt* clone() const;
 
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual ReturnStmt* clone() const;
 	virtual ChildList getChildren() const;
 
 	static ReturnStmtPtr get(StatementManager& manager, const ExprPtr& returnExpression);
@@ -204,12 +214,12 @@ class CompoundStmt: public Statement {
 	CompoundStmt() { }
 	CompoundStmt(const StmtPtr& stmt) :	statements(toVector<StmtPtr> (stmt)) { }
 	CompoundStmt(const vector<StmtPtr>& stmts) : statements(stmts) { }
+	virtual CompoundStmt* clone() const;
 
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual CompoundStmt* clone() const;
 	virtual ChildList getChildren() const;
 
 	const StmtPtr& operator[](unsigned index) const;
@@ -225,32 +235,31 @@ class WhileStmt: public Statement {
 	StmtPtr body;
 
 	WhileStmt(ExprPtr condition, StmtPtr body);
+	virtual WhileStmt* clone() const;
 
 public:
 	virtual string toString() const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
-	virtual WhileStmt* clone() const;
 	virtual ChildList getChildren() const;
 
 	static WhileStmtPtr get(StatementManager& manager, ExprPtr condition, StmtPtr body);
 };
 
 //class ForStmt: public Statement {
-//	VarExprPtr variable;
-//	ExprPtr start, end, step;
+//	DeclarationStmtPtr declaration;
+//	ExprPtr end, step;
 //	StmtPtr body;
 //
-//
+//	ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step);
+//	virtual ForStmt* clone() const;
 //
 //public:
-//	ForStmt(StmtPtr body, VarExprPtr var, ExprPtr start, ExprPtr end, ExprPtr step) :
-//		variable(var), start(start), end(end), step(step), body(body) {
-//	}
-//	virtual string toString() const {
-//		return string("for(") + variable->toString() + "=" + start->toString() + ".." + end->toString() + ":"
-//				+ step->toString() + ")\n" + body->toString();
-//	}
+//	virtual string toString() const;
+//	virtual bool equals(const Statement& stmt) const;
+//	virtual std::size_t hash() const;
+//	virtual ChildList getChildren() const;
+//	
 //};
 
 //class IfStmt: public Statement {
@@ -270,7 +279,7 @@ class StatementManager : public InstanceManager<const Statement, StmtPtr> {
 	friend NoOpStmtPtr NoOpStmt::get(StatementManager&);
 	friend BreakStmtPtr BreakStmt::get(StatementManager&);
 	friend ContinueStmtPtr ContinueStmt::get(StatementManager&);
-	friend DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression);
+	friend DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
 	friend ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression);
 	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager);
 	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt);

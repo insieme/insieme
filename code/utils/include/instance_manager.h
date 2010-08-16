@@ -115,7 +115,7 @@ template<
 	typename boost::enable_if<boost::is_const<T>,int>::type = 0,
 	typename boost::enable_if<boost::is_base_of<InstancePtr<T>, R>,int>::type = 0
 	>
-class InstanceManager : boost::noncopyable {
+class InstanceManager : private boost::noncopyable {
 
 	/**
 	 * The storage used to maintain instances. It is based on a unordered set which

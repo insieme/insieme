@@ -137,8 +137,8 @@ ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
-DeclarationStmt::DeclarationStmt(const TypePtr& type, const ExprPtr& initExpression) 
-	: type(type), initExpression(initExpression) { 
+DeclarationStmt::DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) 
+	: type(type), id(id), initExpression(initExpression) { 
 }
 
 string DeclarationStmt::toString() const {
@@ -159,15 +159,15 @@ std::size_t DeclarationStmt::hash() const {
 }
 
 DeclarationStmt* DeclarationStmt::clone() const {
-	return new DeclarationStmt(type, initExpression);
+	return new DeclarationStmt(type, id, initExpression);
 }
 
 DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
 	return makeChildList(initExpression);
 }
 
-DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const ExprPtr& initExpression) {
-	return manager.getStmtPtr(DeclarationStmt(type, initExpression));
+DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
+	return manager.getStmtPtr(DeclarationStmt(type, id, initExpression));
 }
 
 // ------------------------------------- ReturnStmt ---------------------------------
@@ -286,3 +286,15 @@ WhileStmt::ChildList WhileStmt::getChildren() const {
 WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body) {
 	return manager.getStmtPtr(WhileStmt(condition, body));
 }
+
+// ------------------------------------- ForStmt ---------------------------------
+
+//ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) :
+//	declaration(declaration), body(body), end(end), step(step) {
+//}
+//
+//	
+//string ForStmt::toString() const {
+//	return string("for(") + variable->toString() + "=" + start->toString() + ".." + end->toString() + ":"
+//			+ step->toString() + ")\n" + body->toString();
+//}
