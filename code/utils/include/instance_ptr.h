@@ -62,13 +62,9 @@ public:
 
 	template<typename B>
 	InstancePtr(const InstancePtr<B>& from, typename enable_if<is_base_of<T,B>,int>::type = 0) : ptr(from.ptr) { }
-
-	bool isNull() const {
-		return ptr == NULL;
-	}
-
-	operator bool() const {
-		return !isNull();
+	
+	bool operator!() const {
+		return ptr==NULL;
 	}
 
 	const T& operator*() const {
@@ -115,9 +111,12 @@ public:
 	 */
 	template<typename A>
 	const typename disable_if<or_<is_convertible<T*, A*>,is_convertible<A*, T*>>, bool>::type operator==(const InstancePtr<A>& other) const {
-		// NOTE: if pointer are pointing toward the same location (yet are of different types)
-		//       the result will still be false!!
 		return ptr == NULL && other.ptr == NULL;
+	}
+	
+	template<typename A>
+	bool operator!=(const InstancePtr<A>& other) const {
+		return !(*this == other);
 	}
 
 };

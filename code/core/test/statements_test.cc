@@ -34,19 +34,41 @@
  * regarding third party software licenses.
  */
 
+#include <sstream>
+
 #include <gtest/gtest.h>
 #include "statements.h"
 
+TEST(StatementsTest, Management) {
+	TypeManager typeMan;
+	StatementManager stmtMan(typeMan);
+	StatementManager stmtMan2(typeMan);
+	
+	BreakStmtPtr bS = BreakStmt::get(stmtMan);
+	NoOpStmtPtr nS = NoOpStmt::get(stmtMan);
+	
+	CompoundStmtPtr bSC = CompoundStmt::get(stmtMan, bS);
+	CompoundStmtPtr nSC = CompoundStmt::get(stmtMan, nS);
+
+	vector<StmtPtr> stmtVec;
+	stmtVec.push_back(bS);
+	stmtVec.push_back(nSC);
+	stmtVec.push_back(nS);
+	stmtVec.push_back(bSC);
+	CompoundStmtPtr bSCVec = CompoundStmt::get(stmtMan, stmtVec);
+
+	EXPECT_EQ (5, stmtMan.size());
+}
 
 TEST(StatementsTest, CreationAndIdentity) {
 	TypeManager typeMan;
 	StatementManager stmtMan(typeMan);
 
 	BreakStmtPtr bS = BreakStmt::get(stmtMan);
-	EXPECT_TRUE (bS == BreakStmt::get(stmtMan));
+	EXPECT_EQ(bS, BreakStmt::get(stmtMan));
 
 	NoOpStmtPtr nS = NoOpStmt::get(stmtMan);
-	EXPECT_FALSE (*bS == *nS);
+	EXPECT_NE(*bS, *nS);
 }
 
 TEST(StatementsTest, CompoundStmt) {
@@ -60,12 +82,14 @@ TEST(StatementsTest, CompoundStmt) {
 	vector<StmtPtr> stmtVec;
 	stmtVec.push_back(bS);
 	CompoundStmtPtr bSCVec = CompoundStmt::get(stmtMan, stmtVec);
-	EXPECT_TRUE (bSC == bSCVec);
-	EXPECT_TRUE (*bSC == *bSCVec);
+	EXPECT_EQ(bSC , bSCVec);
+	EXPECT_EQ(*bSC , *bSCVec);
 	stmtVec.push_back(cS);
 	CompoundStmtPtr bScSCVec = CompoundStmt::get(stmtMan, stmtVec);
-	EXPECT_FALSE (bSC == bScSCVec);
-	EXPECT_FALSE (bSC->hash() == bScSCVec->hash());
-	EXPECT_TRUE ((*bSC)[0] == (*bScSCVec)[0]);
-	EXPECT_TRUE (bScSCVec->toString() == "{\nbreak;\ncontinue;\n}");
+	EXPECT_NE(bSC , bScSCVec);
+	EXPECT_NE(bSC->hash() , bScSCVec->hash());
+	EXPECT_EQ((*bSC)[0], (*bScSCVec)[0]);
+	std::stringstream ss;
+	ss << bScSCVec;
+	EXPECT_EQ("{\nbreak;\ncontinue;\n}", ss.str());
 }

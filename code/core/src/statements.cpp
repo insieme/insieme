@@ -42,23 +42,38 @@
 
 // ------------------------------------- Statement ---------------------------------
 
-std::size_t hash_value(const Statement& stmt) {
-	return stmt.hash();
-}
-
 bool Statement::operator==(const Statement& stmt) const {
 	return (typeid(*this) == typeid(stmt)) && (hash() == stmt.hash()) && equals(stmt);
+}
+
+bool Statement::operator!=(const Statement& stmt) const {
+	return !(*this == stmt);
 }
 
 Statement::ChildList Statement::getChildren() const {
 	return makeChildList();
 }
 
+std::size_t hash_value(const Statement& stmt) {
+	return stmt.hash();
+}
+
+std::ostream& operator<<(std::ostream& out, const Statement& stmt) {
+	stmt.printTo(out);
+	return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const StmtPtr& stmtPtr) {
+	//out << "/* StmtPtr " << &stmtPtr << " */";
+	stmtPtr->printTo(out);
+	return out;
+}
+
 
 // ------------------------------------- NoOpStmt ---------------------------------
 
-string NoOpStmt::toString() const {
-	return "{ /* NoOp */ };";
+void NoOpStmt::printTo(std::ostream& out) const {
+	out << "{ /* NoOp */ };";
 }
 
 bool NoOpStmt::equals(const Statement&) const {
@@ -79,8 +94,8 @@ NoOpStmtPtr NoOpStmt::get(StatementManager& manager) {
 
 // ------------------------------------- BreakStmt ---------------------------------
 
-string BreakStmt::toString() const {
-	return "break;";
+void BreakStmt::printTo(std::ostream& out) const {
+	out << "break;";
 }
 
 bool BreakStmt::equals(const Statement&) const {
@@ -101,8 +116,8 @@ BreakStmtPtr BreakStmt::get(StatementManager& manager) {
 
 // ------------------------------------- ContinueStmt ---------------------------------
 
-string ContinueStmt::toString() const {
-	return "continue;";
+void ContinueStmt::printTo(std::ostream& out) const {
+	out << "continue;";
 }
 
 bool ContinueStmt::equals(const Statement&) const {
@@ -127,8 +142,8 @@ DeclarationStmt::DeclarationStmt(const TypePtr& type, const Identifier& id, cons
 	: type(type), id(id), initExpression(initExpression) { 
 }
 
-string DeclarationStmt::toString() const {
-	return format("%s %s;", type->toString().c_str(), initExpression->toString().c_str());
+void DeclarationStmt::printTo(std::ostream& out) const {
+	out << type << " = " << initExpression << ";";
 }
 
 bool DeclarationStmt::equals(const Statement& stmt) const {
@@ -153,10 +168,8 @@ DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
 }
 
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
-
 	TypePtr localType = manager.getTypeManager().getPointer(type);
 	ExprPtr localExpr = manager.getStmtPtr(*initExpression);
-
 	return manager.getStmtPtr(DeclarationStmt(localType, id, localExpr));
 }
 
@@ -166,8 +179,8 @@ ReturnStmt::ReturnStmt(const ExprPtr& returnExpression)
 	: returnExpression(returnExpression) { 
 }
 
-string ReturnStmt::toString() const {
-	return format("return %s;", returnExpression->toString().c_str());
+void ReturnStmt::printTo(std::ostream& out) const {
+	out << "return " << returnExpression << ";";
 }
 
 bool ReturnStmt::equals(const Statement& stmt) const {
@@ -191,15 +204,16 @@ ReturnStmt::ChildList ReturnStmt::getChildren() const {
 }
 
 ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression) {
-	return manager.getStmtPtr(ReturnStmt(returnExpression));
+	ExprPtr localReturn = manager.getStmtPtr(*returnExpression);
+	return manager.getStmtPtr(ReturnStmt(localReturn));
 }
 
 // ------------------------------------- CompoundStmt ---------------------------------
 
-string CompoundStmt::toString() const {
-	vector<string> list;
-	std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr& cur) {return cur->toString();});
-	return format("{\n%s\n}", boost::join(list, "\n").c_str());
+void CompoundStmt::printTo(std::ostream& out) const {
+	out << "{\n";
+	std::for_each(statements.cbegin(), statements.cend(), [&out](const StmtPtr& cur) { out << cur << "\n";});
+	out << "}\n";
 }
 
 bool CompoundStmt::equals(const Statement& stmt) const {
@@ -234,10 +248,12 @@ CompoundStmtPtr CompoundStmt::get(StatementManager& manager) {
 	return manager.getStmtPtr(CompoundStmt());
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt) {
-	return manager.getStmtPtr(CompoundStmt(stmt));
+	StmtPtr localStmt = manager.getPointer(*stmt);
+	return manager.getStmtPtr(CompoundStmt(localStmt));
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts) {
-	return manager.getStmtPtr(CompoundStmt(stmts));
+	auto localStmts = manager.getPointer(stmts);
+	return manager.getStmtPtr(CompoundStmt(localStmts));
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
@@ -246,8 +262,8 @@ WhileStmt::WhileStmt(ExprPtr condition, StmtPtr body)
 	: condition(condition), body(body) {	
 }
 
-string WhileStmt::toString() const {
-	return format("while(%s)\n%s", condition->toString().c_str(), body->toString().c_str());
+void WhileStmt::printTo(std::ostream& out) const {
+	out << "while(" << condition << ") " << body << ";";
 }
 	
 bool WhileStmt::equals(const Statement& stmt) const {
@@ -274,17 +290,98 @@ WhileStmt::ChildList WhileStmt::getChildren() const {
 }
 
 WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body) {
-	return manager.getStmtPtr(WhileStmt(condition, body));
+	ExprPtr localCond = manager.getStmtPtr(*condition);
+	StmtPtr localBody = manager.getStmtPtr(*body);
+	return manager.getStmtPtr(WhileStmt(localCond, localBody));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
 
-//ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) :
-//	declaration(declaration), body(body), end(end), step(step) {
-//}
-//
-//	
-//string ForStmt::toString() const {
-//	return string("for(") + variable->toString() + "=" + start->toString() + ".." + end->toString() + ":"
-//			+ step->toString() + ")\n" + body->toString();
-//}
+ForStmt::ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) :
+	declaration(declaration), body(body), end(end), step(step) {
+}
+	
+void ForStmt::printTo(std::ostream& out) const {
+	out << "for(" << declaration << ".." << end << ":" << step << ") " << body;
+}
+
+bool ForStmt::equals(const Statement& stmt) const {
+	// conversion is guaranteed by base operator==
+	const ForStmt& rhs = dynamic_cast<const ForStmt&>(stmt);
+	return (declaration == rhs.declaration) && (body == rhs.body) 
+		&& (end == rhs.end) && (step == rhs.step);
+}
+
+std::size_t ForStmt::hash() const {
+	std::size_t seed = HASHVAL_FOR;
+	boost::hash_combine(seed, declaration->hash());
+	boost::hash_combine(seed, body->hash());
+	boost::hash_combine(seed, end->hash());
+	boost::hash_combine(seed, step->hash());
+	return seed;
+}
+
+ForStmt* ForStmt::clone() const {
+	return new ForStmt(declaration, body, end, step);
+}
+
+ForStmt::ChildList ForStmt::getChildren() const {
+	auto ret = makeChildList(declaration);
+	ret->push_back(end);
+	ret->push_back(step);
+	ret->push_back(body);
+	return ret;
+}
+
+ForStmtPtr ForStmt::get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step /* TODO PT default 1 */) {
+	DeclarationStmtPtr localDecl = manager.getStmtPtr(*declaration);
+	StmtPtr localBody = manager.getStmtPtr(*body);
+	ExprPtr localEnd = manager.getStmtPtr(*end);
+	ExprPtr localStep = manager.getStmtPtr(*step);
+	return manager.getStmtPtr(ForStmt(localDecl, localBody, localEnd, localStep));
+}
+
+// ------------------------------------- IfStmt ---------------------------------
+
+IfStmt::IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody) :
+	condition(condition), body(body), elseBody(elseBody) {
+}
+
+IfStmt* IfStmt::clone() const {
+	return new IfStmt(condition, body, elseBody);
+}
+
+void IfStmt::printTo(std::ostream& out) const {
+	out << "if(" << condition << ") " << body << "else " << elseBody << ";";
+}
+
+bool IfStmt::equals(const Statement& stmt) const {
+	// conversion is guaranteed by base operator==
+	const IfStmt& rhs = dynamic_cast<const IfStmt&>(stmt);
+	return (condition == rhs.condition) && (body == rhs.body) && (elseBody == rhs.elseBody);
+}
+
+std::size_t IfStmt::hash() const {
+	std::size_t seed = HASHVAL_IF;
+	boost::hash_combine(seed, condition->hash());
+	boost::hash_combine(seed, body->hash());
+	boost::hash_combine(seed, elseBody->hash());
+	return seed;
+}
+
+IfStmt::ChildList IfStmt::getChildren() const {
+	auto ret = makeChildList(condition);
+	ret->push_back(body);
+	ret->push_back(elseBody);
+	return ret;
+}
+	
+IfStmtPtr IfStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody) {
+	// default to empty else block
+	if(!elseBody) elseBody = CompoundStmt::get(manager);
+
+	ExprPtr localCondition = manager.getStmtPtr(*condition);
+	StmtPtr localBody = manager.getStmtPtr(*body);
+	StmtPtr localElseBody = manager.getStmtPtr(*elseBody);
+	return manager.getStmtPtr(IfStmt(localCondition, localBody, localElseBody));
+}

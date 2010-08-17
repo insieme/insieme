@@ -44,7 +44,6 @@
 
 using std::string;
 
-// oh my god :( - seuftz
 class Expression : public Statement {
 	
 	/**
@@ -73,6 +72,18 @@ class VariableExpr : public Expression {
 	const string name;
 };
 typedef std::shared_ptr<VariableExpr> VarExprPtr;
+
+class LambdaExpression : public Expression {
+};
+
+class CallExpression : public Expression {
+//	const ExprPtr function;
+//	const ExprPtr argument;
+};
+
+class CastExpression : public Expression {
+//	const ExprPtr subExpression;
+};
 
 
 template<typename T>
@@ -105,23 +116,4 @@ class StringLiteral : public Literal<string> {
 public:
 	// TODO: fix null type
 	StringLiteral(const string& val) : Literal(NULL, val) { }
-};
-
-
-class LambdaExpression : public Expression {
-};
-
-class CallExpression : public Expression {
-//	const ExprPtr function;
-//	const ExprPtr argument;
-};
-
-class CastExpression : public Expression {
-//	const ExprPtr subExpression;
-};
-
-class LetExpression : public Expression {
-//	const string name;
-//	const ExprPtr definingExpression;
-//	const ExprPtr subExpression;
 };

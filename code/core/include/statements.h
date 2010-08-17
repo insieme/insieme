@@ -124,12 +124,15 @@ protected:
 
 
 public:
-	virtual string toString() const = 0;
+	virtual void printTo(std::ostream& out) const = 0;
 	virtual std::size_t hash() const = 0;
 	virtual ChildList getChildren() const;
 	bool operator==(const Statement& stmt) const;
+	bool operator!=(const Statement& stmt) const;
 };
 std::size_t hash_value(const Statement& stmt);
+std::ostream& operator<<(std::ostream& out, const Statement& stmt);
+std::ostream& operator<<(std::ostream& out, const StmtPtr& stmtPtr);
 
 
 class NoOpStmt : public Statement {
@@ -137,7 +140,7 @@ class NoOpStmt : public Statement {
 	virtual NoOpStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 
@@ -150,7 +153,7 @@ class BreakStmt : public Statement {
 	virtual BreakStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 
@@ -163,7 +166,7 @@ class ContinueStmt : public Statement {
 	virtual ContinueStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	
@@ -180,7 +183,7 @@ class DeclarationStmt : public Statement {
 	virtual DeclarationStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
@@ -196,7 +199,7 @@ class ReturnStmt: public Statement {
 	virtual ReturnStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
@@ -214,7 +217,7 @@ class CompoundStmt: public Statement {
 	virtual CompoundStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
@@ -235,7 +238,7 @@ class WhileStmt: public Statement {
 	virtual WhileStmt* clone() const;
 
 public:
-	virtual string toString() const;
+	virtual void printTo(std::ostream& out) const;
 	virtual bool equals(const Statement& stmt) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
@@ -243,55 +246,57 @@ public:
 	static WhileStmtPtr get(StatementManager& manager, ExprPtr condition, StmtPtr body);
 };
 
-//class ForStmt: public Statement {
-//	DeclarationStmtPtr declaration;
-//	ExprPtr end, step;
-//	StmtPtr body;
-//
-//	ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step);
-//	virtual ForStmt* clone() const;
-//
-//public:
-//	virtual string toString() const;
-//	virtual bool equals(const Statement& stmt) const;
-//	virtual std::size_t hash() const;
-//	virtual ChildList getChildren() const;
-//	
-//};
+class ForStmt: public Statement {
+	DeclarationStmtPtr declaration;
+	ExprPtr end, step;
+	StmtPtr body;
 
-//class IfStmt: public Statement {
-//	ExprPtr condition;
-//	StmtPtr body;
-//	StmtPtr elseBody;
-//};
-//
-//class SwitchStmt: public Statement {
-//};
+	ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step);
+	virtual ForStmt* clone() const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step /* TODO PT default 1 */);
+};
+
+class IfStmt: public Statement {
+	ExprPtr condition;
+	StmtPtr body;
+	StmtPtr elseBody;
+	
+	IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody);
+	virtual IfStmt* clone() const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	IfStmtPtr IfStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody = NULL);
+};
+
+class SwitchStmt: public Statement {
+	const vector<std::pair<ExprPtr, StmtPtr>> conditions;
+};
 
 // ------------------------------------- Statement Manager ---------------------------------
 
 class StatementManager : public TreeManager<const Statement, StmtPtr> {
-	TypeManager& typeManager;
-	
-	friend NoOpStmtPtr NoOpStmt::get(StatementManager&);
-	friend BreakStmtPtr BreakStmt::get(StatementManager&);
-	friend ContinueStmtPtr ContinueStmt::get(StatementManager&);
-	friend DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
-	friend ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression);
-	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager);
-	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt);
-	friend CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts);
-	friend WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body);
-	
+	TypeManager& typeManager;	
 
-protected:
+public:
+	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
+
+	// I never wanted this to be public - PT
 	template<typename T>
 	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
 		return dynamic_pointer_cast<const T>(getPointer(stmt));
 	}
-
-public:
-	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
 
 	TypeManager& getTypeManager() {
 		return typeManager;

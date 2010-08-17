@@ -98,7 +98,7 @@ public:
 	 * @return a pointer pointing to a local copy of the given pointer
 	 */
 	PtrType getPointer(const PtrType& pointer) {
-		if (pointer.isNull()) {
+		if (!pointer) {
 			return pointer;
 		}
 		return this->getPointer(*pointer);
@@ -119,9 +119,9 @@ public:
 		res.reserve(pointers.size());
 
 		// ... and look up all elements of the input list
-		transform(pointers.cbegin(), pointers.cend(), back_inserter(res),
-				[&](const PtrType& cur) {
-					return this->getPointer(*cur);
+		std::transform(pointers.cbegin(), pointers.cend(), back_inserter(res),
+			[&](const PtrType& cur) {
+				return this->getPointer(*cur);
 		});
 
 		return res;

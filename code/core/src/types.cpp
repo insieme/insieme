@@ -108,9 +108,9 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
 	res << "(";
 
 	vector<string> list;
-	transform(elementTypes.cbegin(), elementTypes.cend(), back_inserter(list),
-			[](const TypePtr& cur) {
-				return cur->getName();
+	std::transform(elementTypes.cbegin(), elementTypes.cend(), back_inserter(list),
+		[](const TypePtr& cur) {
+			return cur->getName();
 	});
 
 	res << boost::join(list, ",");
@@ -228,5 +228,9 @@ std::size_t hash_value(const Type& type) {
  */
 std::ostream& operator<<(std::ostream& out, const Type& type) {
 	out << type.toString();
+	return out;
+}
+std::ostream& operator<<(std::ostream& out, const TypePtr& type) {
+	out << type->toString();
 	return out;
 }

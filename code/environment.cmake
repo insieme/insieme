@@ -72,36 +72,38 @@ if (NOT MEMORY_CHECK_SETUP)
 	macro ( add_unit_test case_name )
 		# add normal test
 		add_test(ut_${case_name} ut_${case_name})
-		
-		if(CONDUCT_MEMORY_CHECKS)
-			# add valgrind as a test
-			add_test(NAME valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=yes
-					--track-fds=yes
-					--error-exitcode=1
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
-			)
-		else(CONDUCT_MEMORY_CHECKS)
-			# add valgrind as seperated target
-			add_custom_target(valgrind_${case_name})
-			add_custom_command(TARGET valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=yes
-					--track-fds=yes
-					--error-exitcode=1
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
-			)
-			add_dependencies(valgrind valgrind_${case_name})
-		endif(CONDUCT_MEMORY_CHECKS)
+		# no valgrind support 
+		if(NOT MSVC)
+			if(CONDUCT_MEMORY_CHECKS)
+				# add valgrind as a test
+				add_test(NAME valgrind_${case_name} 
+					COMMAND valgrind
+						--leak-check=full
+						--show-reachable=yes
+						--track-fds=yes
+						--error-exitcode=1
+						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+					WORKING_DIRECTORY
+						${CMAKE_CURRENT_BINARY_DIR}
+				)
+			else(CONDUCT_MEMORY_CHECKS)
+				# add valgrind as seperated target
+				add_custom_target(valgrind_${case_name})
+				add_custom_command(TARGET valgrind_${case_name} 
+					COMMAND valgrind
+						--leak-check=full
+						--show-reachable=yes
+						--track-fds=yes
+						--error-exitcode=1
+						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+					WORKING_DIRECTORY
+						${CMAKE_CURRENT_BINARY_DIR}
+				)
+				add_dependencies(valgrind valgrind_${case_name})
+			endif(CONDUCT_MEMORY_CHECKS)
+		endif(NOT MSVC)
 	endmacro(add_unit_test)
 
 

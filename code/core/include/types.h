@@ -665,7 +665,7 @@ public:
 		auto res = makeChildList(typeParams);
 
 		// further add base types
-		if (baseType) {
+		if (!!baseType) {
 			res->push_back(baseType);
 		}
 
@@ -730,9 +730,10 @@ std::size_t hash_value(const Type& type);
 
 /**
  * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
+ * within test cases where equals expects values to be printable).
  */
 std::ostream& operator<<(std::ostream& out, const Type& type);
+std::ostream& operator<<(std::ostream& out, const TypePtr& type);
 
 
 
