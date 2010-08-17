@@ -46,6 +46,7 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/utility.hpp>
 
+#include "functional_utils.h"
 #include "instance_ptr.h"
 #include "container_utils.h"
 
@@ -148,7 +149,7 @@ public:
 		}
 
 		// copy element (to ensure private copy)
-		T* newElement = instance->clone();
+		T* newElement = instance->clone(*this);
 		storage.insert(newElement);
 		return std::make_pair(R(newElement), true);
 
@@ -185,8 +186,27 @@ public:
 	 *
 	 * @see get(T*)
 	 */
-	std::pair<R,bool> get(T& instance) {
+	R get(T& instance) {
 		return this->get(&instance);
+	}
+
+	R get(const R& pointer) {
+		return this->get(*pointer);
+	}
+
+	template<typename InIter, typename OutIter, typename Extracter, typename Packer>
+	void getAll(InIter start, InIter end, OutIter out, Extracter extract = &id, Packer packer = &id) {
+		std::transform(start, end, out,
+			[&](typename std::iterator_traits<InIter>::value_type cur) {
+				return pack(this->get(extract(*cur)));
+		});
+	}
+
+	template<typename Container>
+	Container getAll(const Container& container) {
+		Container res;
+		getAll(container.cbegin(), container.cend(), back_inserter(res));
+		return res;
 	}
 
 	/**
