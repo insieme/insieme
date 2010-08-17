@@ -55,7 +55,7 @@ public:
 	CloneableString(const string& str) : string(str) {};
 //	CloneableString(const CloneableString& str) : string(str.c_str()) {};
 
-	CloneableString* clone() const {
+	CloneableString* cloneToManager(InstanceManager& manager) const {
 		return new CloneableString(*this);
 	}
 };

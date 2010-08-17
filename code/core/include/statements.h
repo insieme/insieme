@@ -52,7 +52,6 @@
 #include "annotated_ptr.h"
 #include "container_utils.h"
 #include "instance_manager.h"
-#include "tree_manager.h"
 #include "types.h"
 #include "visitor.h"
 #include "identifiers.h"
@@ -295,7 +294,7 @@ public:
 	// I never wanted this to be public - PT
 	template<typename T>
 	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
-		return dynamic_pointer_cast<const T>(getPointer(stmt));
+		return dynamic_pointer_cast<const T>(get(stmt));
 	}
 
 	TypeManager& getTypeManager() {

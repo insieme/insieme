@@ -61,6 +61,38 @@ TEST(TypeTest, TypeManager ) {
 
 }
 
+TEST(TypeTest, MultipleTypeManager ) {
+
+	// create type manager
+	TypeManager managerA;
+	TypeManager managerB;
+
+	// create a complex type in manager A
+	GenericTypePtr baseA = GenericType::get(managerA, "A");
+	GenericTypePtr baseB = GenericType::get(managerA, "B");
+
+	vector<TypePtr> typesA;
+	typesA.push_back(baseA);
+	typesA.push_back(baseB);
+	GenericTypePtr complexA = GenericType::get(managerA, "C", typesA);
+
+	vector<TypePtr> typesB;
+	typesB.push_back(complexA);
+	typesB.push_back(baseB);
+	GenericTypePtr rootA = GenericType::get(managerA, "R", typesB);
+
+	EXPECT_EQ ( 4, managerA.size() );
+	EXPECT_EQ ( 0, managerB.size() );
+
+	// try to obtain the same type from the other manager
+	GenericTypePtr rootB = GenericType::get(managerB, "R", typesB);
+	EXPECT_EQ ( 4, managerA.size() );
+	EXPECT_EQ ( 4, managerB.size() );
+
+	EXPECT_EQ ( rootA, rootB );
+}
+
+
 
 TEST(TypeTest, Type_AllConcrete) {
 
@@ -288,6 +320,56 @@ TEST(TypeTest, TupleType) {
 	basicTypeTests<TupleType>(typeB, true, false, subTypesB);
 
 }
+
+TEST(TypeTest, FunctionType) {
+
+	TypeManager manager;
+
+	TypePtr argumentA = GenericType::get(manager, "dummyA");
+	TypePtr argumentB = TypeVariable::get(manager, "alpha");
+	TypePtr resultA = GenericType::get(manager, "returnA");
+	TypePtr resultB = GenericType::get(manager, "returnB");
+
+	FunctionTypePtr funTypeA = FunctionType::get(manager, argumentA, resultA);
+	FunctionTypePtr funTypeB = FunctionType::get(manager, argumentB, resultB);
+
+	EXPECT_EQ ( "(dummyA -> returnA)" , funTypeA->getName() );
+	EXPECT_EQ ( "('alpha -> returnB)" , funTypeB->getName() );
+
+	vector<TypePtr> subTypesA;
+	subTypesA.push_back(argumentA);
+	subTypesA.push_back(resultA);
+
+	vector<TypePtr> subTypesB;
+	subTypesB.push_back(argumentB);
+	subTypesB.push_back(resultB);
+
+	// perform basic type tests
+	basicTypeTests<FunctionType>(funTypeA, true, true, subTypesA);
+	basicTypeTests<FunctionType>(funTypeB, true, true, subTypesB);
+}
+
+//TEST(TypeTest, StructType) {
+//
+//	IdentifierManager manager;
+//	TypeManager manager;
+//
+//	IdentifierPtr identA = Identifier::get(manager, "a");
+//	IdentifierPtr identB = Identifier::get(manager, "a");
+//
+//	StructType::Entries entriesA;
+//	entriesA.push_back(std::make_pair(identA, GenericType::get(manager, "A")));
+//	entriesA.push_back(std::make_pair(identB, GenericType::get(manager, "B")));
+//
+//	StructTypePtr structA = StructType::get(manager, entriesA);
+//
+//	EXPECT_EQ ( "", structA.getName() );
+//
+//	// perform basic type tests
+//	basicTypeTests<FunctionType>(structA, true, true, entriesA);
+//	basicTypeTests<FunctionType>(funTypeB, true, true, subTypesB);
+//}
+
 
 
 TEST(TypesTest, IntTypeParam) {
