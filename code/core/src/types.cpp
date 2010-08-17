@@ -42,58 +42,6 @@
 
 
 
-// ------------------------------------- Type Manager ---------------------------------
-
-TypePtr TypeManager::getTypePtrInternal(const Type& type) {
-
-	// get master copy
-	std::pair<TypePtr, bool> res = add(type);
-
-	// check whether all child-nodes are within this manager
-	assert( !res.second || containsAll(*(res.first->getChildren())));
-
-	// return newly added or present node
-	return res.first;
-}
-
-/**
- * Obtains a list of pointer referencing the same elements as the given list
- * of type pointers, however, those the referenced once will be managed by the
- * this manager.
- *
- * @param pointer the list of type references to be covered
- * @return  the same list of types referencing elements within the local manager
- */
-vector<TypePtr> TypeManager::getTypePtr(const vector<TypePtr>& pointer) {
-
-	// just create resulting list ...
-	vector<TypePtr> res;
-	res.reserve(pointer.size());
-
-	// ... and look up all elements of the input list
-	transform(pointer.cbegin(), pointer.cend(), back_inserter(res),
-			[&](const TypePtr& cur) {
-				return this->getTypePtr(*cur);
-	});
-
-	return res;
-}
-
-
-/**
- * Obtains a type pointer pointing to an identical element as the given pointer,
- * however, the referenced element will be maintained by this manager.
- *
- * @param pointer for which a local reference should be obtained
- * @return a pointer pointing to a local copy of the given pointer
- */
-TypePtr TypeManager::getTypePtr(const TypePtr& pointer) {
-	if (pointer.isNull()) {
-		return pointer;
-	}
-	return this->getTypePtr(*pointer);
-}
-
 
 // -------------------------------- Integer Type Parameter ----------------------------
 
@@ -180,7 +128,7 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& elementTypes) {
-	return manager.getTypePtr(TupleType(manager.getTypePtr(elementTypes)));
+	return manager.getTypePointer(TupleType(manager.getPointer(elementTypes)));
 }
 
 // ---------------------------------------- Function Type ------------------------------
@@ -199,11 +147,11 @@ TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& element
 FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 
 	// obtain local references for referenced types
-	TypePtr localArgumentType = manager.getTypePtr(argumentType);
-	TypePtr localReturnType = manager.getTypePtr(returnType);
+	TypePtr localArgumentType = manager.getPointer(argumentType);
+	TypePtr localReturnType = manager.getPointer(returnType);
 
 	// obtain reference to new element
-	return manager.getTypePtr(FunctionType(localArgumentType, localReturnType));
+	return manager.getTypePointer(FunctionType(localArgumentType, localReturnType));
 }
 
 // ---------------------------------------- Generic Type ------------------------------
@@ -253,13 +201,13 @@ GenericTypePtr GenericType::get(TypeManager& manager,
 			const TypePtr& baseType) {
 
 	// get all type-parameter references from the manager
-	vector<TypePtr> localTypeParams = manager.getTypePtr(typeParams);
+	vector<TypePtr> localTypeParams = manager.getPointer(typeParams);
 
 	// get base type reference (if necessary) ...
-	TypePtr localBaseType = manager.getTypePtr(baseType);
+	TypePtr localBaseType = manager.getPointer(baseType);
 
 	// create resulting data element
-	return manager.getTypePtr(GenericType(name, localTypeParams, intTypeParams, localBaseType));
+	return manager.getTypePointer(GenericType(name, localTypeParams, intTypeParams, localBaseType));
 }
 
 // ---------------------------------------------- Utility Functions ------------------------------------

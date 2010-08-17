@@ -41,8 +41,8 @@
 
 class ASTManager {
 
-	const TypeManager typeManager;
-	const StatementManager stmtManager;
+	TypeManager typeManager;
+	StatementManager stmtManager;
 
 public:
 	ASTManager() : typeManager(), stmtManager(typeManager) {}

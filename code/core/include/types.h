@@ -52,6 +52,7 @@
 #include "container_utils.h"
 #include "instance_manager.h"
 #include "string_utils.h"
+#include "tree_manager.h"
 #include "visitor.h"
 
 using std::string;
@@ -240,59 +241,6 @@ public:
 
 };
 
-// ---------------------------------- Type Manager ----------------------------------------
-
-class TypeManager: public InstanceManager<const Type, TypePtr> {
-
-	/**
-	 * The internal implementation of the actual lookup method. The method
-	 * is trying to look up the given type within the internal store. If the same
-	 * data element is already present, a pointer to the present copy is returned. Otherwise,
-	 * the given copy is cloned and added to the store. A pointer to the new element is
-	 * then returned.
-	 *
-	 * @param type the type node for which a master copy should be obtained
-	 * @return the pointer to the obtained element
-	 */
-	TypePtr getTypePtrInternal(const Type& type);
-
-public:
-
-	/**
-	 * A generic wrapper enclosing the internal implementation of the lookup method.
-	 *
-	 * @param type the type node for which a master copy should be obtained
-	 * @return the pointer to the obtained element
-	 * @see TypeManager::getTypePtrInternal(const Type&)
-	 */
-	template<typename T>
-	AnnotatedPtr<const T> getTypePtr(const T& type) {
-		return dynamic_pointer_cast<const T>(getTypePtrInternal(type));
-	}
-
-
-	/**
-	 * Obtains a list of pointer referencing the same elements as the given list
-	 * of type pointers, however, those the referenced once will be managed by the
-	 * this manager.
-	 *
-	 * @param pointer the list of type references to be covered
-	 * @return  the same list of types referencing elements within the local manager
-	 */
-	vector<TypePtr> getTypePtr(const vector<TypePtr>&);
-
-	/**
-	 * Obtains a type pointer pointing to an identical element as the given pointer,
-	 * however, the referenced element will be maintained by this manager.
-	 *
-	 * @param pointer for which a local reference should be obtained
-	 * @return a pointer pointing to a local copy of the given pointer
-	 */
-	TypePtr getTypePtr(const TypePtr&);
-
-};
-
-
 // ---------------------------------------- A token for an abstract type ------------------------------
 
 /**
@@ -453,6 +401,28 @@ public:
 
 };
 
+
+// ---------------------------------- Type Manager ----------------------------------------
+
+class TypeManager: public TreeManager<const Type, TypePtr> {
+
+public:
+
+	/**
+	 * A generic wrapper enclosing the internal implementation of the lookup method.
+	 *
+	 * @param type the type node for which a master copy should be obtained
+	 * @return the pointer to the obtained element
+	 * @see TypeManager::getTypePtrInternal(const Type&)
+	 */
+	template<typename T>
+	AnnotatedPtr<const T> getTypePointer(const T& node) {
+		return dynamic_pointer_cast<const T>(getPointer(node));
+	}
+
+};
+
+
 // ---------------------------------------- A class for type variables  ------------------------------
 
 /**
@@ -476,7 +446,7 @@ public:
 	 * given manager.
 	 */
 	static TypeVariablePtr get(TypeManager& manager, const string& name) {
-		return manager.getTypePtr(TypeVariable(name));
+		return manager.getTypePointer(TypeVariable(name));
 	}
 
 	/**

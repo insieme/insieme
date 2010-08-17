@@ -39,20 +39,6 @@
 
 #include "iterator_utils.h"
 
-// ------------------------------------- Statement Manager ---------------------------------
-
-StmtPtr StatementManager::getStmtPtrImpl(const Statement& stmt) {
-	// get master copy
-	std::pair<StmtPtr, bool > res = add(stmt);
-
-	// if new element has been added ...
-	if (res.second) {
-		// ... check whether sub-statements are present
-		ChildVisitor<StmtPtr> visitor([&](StmtPtr cur) { this->getStmtPtrImpl(*cur);});
-	}
-	return res.first;
-}
-
 
 // ------------------------------------- Statement ---------------------------------
 
@@ -167,7 +153,11 @@ DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
 }
 
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
-	return manager.getStmtPtr(DeclarationStmt(type, id, initExpression));
+
+	TypePtr localType = manager.getTypeManager().getPointer(type);
+	ExprPtr localExpr = manager.getStmtPtr(*initExpression);
+
+	return manager.getStmtPtr(DeclarationStmt(localType, id, localExpr));
 }
 
 // ------------------------------------- ReturnStmt ---------------------------------
