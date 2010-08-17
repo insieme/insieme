@@ -56,6 +56,10 @@ TEST(TypeTest, TypeManager ) {
 	GenericTypePtr typeA2 = GenericType::get(manager, "A");
 	GenericTypePtr typeB = GenericType::get(manager, "B");
 
+	EXPECT_TRUE (!!typeA1);
+	EXPECT_TRUE (!!typeA2);
+	EXPECT_TRUE (!!typeB);
+
 	EXPECT_TRUE ( typeA1 == typeA2 );
 	EXPECT_FALSE ( typeA1 == typeB );
 
@@ -89,7 +93,8 @@ TEST(TypeTest, MultipleTypeManager ) {
 	EXPECT_EQ ( 4, managerA.size() );
 	EXPECT_EQ ( 4, managerB.size() );
 
-	EXPECT_EQ ( rootA, rootB );
+	EXPECT_NE ( rootA, rootB );
+	EXPECT_EQ ( *rootA, *rootB );
 }
 
 
@@ -349,26 +354,55 @@ TEST(TypeTest, FunctionType) {
 	basicTypeTests<FunctionType>(funTypeB, true, true, subTypesB);
 }
 
-//TEST(TypeTest, StructType) {
-//
-//	IdentifierManager manager;
-//	TypeManager manager;
-//
-//	IdentifierPtr identA = Identifier::get(manager, "a");
-//	IdentifierPtr identB = Identifier::get(manager, "a");
-//
-//	StructType::Entries entriesA;
-//	entriesA.push_back(std::make_pair(identA, GenericType::get(manager, "A")));
-//	entriesA.push_back(std::make_pair(identB, GenericType::get(manager, "B")));
-//
-//	StructTypePtr structA = StructType::get(manager, entriesA);
-//
-//	EXPECT_EQ ( "", structA.getName() );
-//
-//	// perform basic type tests
-//	basicTypeTests<FunctionType>(structA, true, true, entriesA);
-//	basicTypeTests<FunctionType>(funTypeB, true, true, subTypesB);
-//}
+TEST(TypeTest, StructType) {
+
+
+	TypeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	StructType::Entries entriesA;
+	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(StructType::Entry(identB, GenericType::get(manager, "B")));
+
+	StructTypePtr structA = StructType::get(manager, entriesA);
+	EXPECT_EQ ( "struct<a:A,b:B>", structA->getName() );
+
+	StructType::Entries entriesB;
+	StructTypePtr structB = StructType::get(manager, entriesB);
+	EXPECT_EQ ( "struct<>", structB->getName() );
+
+	StructType::Entries entriesC;
+	entriesC.push_back(StructType::Entry(identA, TypeVariable::get(manager,"alpha")));
+	entriesC.push_back(StructType::Entry(identB, GenericType::get(manager, "B")));
+	StructTypePtr structC = StructType::get(manager, entriesC);
+	EXPECT_EQ ( "struct<a:'alpha,b:B>", structC->getName() );
+
+
+	// perform basic type tests
+	vector<TypePtr> typeListA;
+	std::transform(entriesA.cbegin(), entriesA.cend(), back_inserter(typeListA),
+		[](const StructType::Entry& cur) {
+			return cur.second;
+	});
+
+	vector<TypePtr> typeListB;
+	std::transform(entriesB.cbegin(), entriesB.cend(), back_inserter(typeListB),
+		[](const StructType::Entry& cur) {
+			return cur.second;
+	});
+
+	vector<TypePtr> typeListC;
+	std::transform(entriesC.cbegin(), entriesC.cend(), back_inserter(typeListC),
+		[](const StructType::Entry& cur) {
+			return cur.second;
+	});
+
+	basicTypeTests<StructType>(structA, true, false, typeListA);
+	basicTypeTests<StructType>(structB, true, false, typeListB);
+	basicTypeTests<StructType>(structC, false, false, typeListC);
+}
 
 
 
@@ -430,12 +464,11 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 
 	// create a copy of the type
 	T copy = T(*type);
-	T clone = *(std::unique_ptr<T>(type->clone()));
 
 	// check whether all are equal
-	T all[] = { *type, copy, clone };
-	for (int i=0; i<3; i++) {
-		for (int j=0; j<3; j++) {
+	T all[] = { *type, copy };
+	for (int i=0; i<2; i++) {
+		for (int j=0; j<2; j++) {
 
 			T a = all[i];
 			T b = all[j];
@@ -449,7 +482,7 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	}
 
 	// check type properties
-	for (int i=0; i<3; i++) {
+	for (int i=0; i<2; i++) {
 
 		T cur = all[i];
 

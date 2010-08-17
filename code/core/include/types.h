@@ -274,6 +274,8 @@ public:
  */
 class Type: public Visitable<TypePtr> {
 
+	friend class InstanceManager<TypeManager, const Type, TypePtr>;
+
 	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types
 	 * are generally immutable, the type name is marked to be constant.
@@ -391,11 +393,6 @@ public:
 	}
 
 	/**
-	 * Retrieves a clone of this object (a newly allocated instance of this class)
-	 */
-	virtual Type* clone(TypeManager& manager) const = 0;
-
-	/**
 	 * Retrieves references to types revered to by this type. The default implementation
 	 * returns and empty list. Sub-classes may override the method to return sub-types.
 	 *
@@ -420,6 +417,14 @@ public:
 	 */
 	static bool allConcrete(const vector<TypePtr>& elementTypes);
 
+private:
+
+	/**
+	 * Retrieves a clone of this object (a newly allocated instance of this class)
+	 */
+	virtual Type* clone(TypeManager& manager) const = 0;
+
+
 };
 
 
@@ -438,6 +443,13 @@ class TypeVariable: public Type {
 	 */
 	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
 
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual TypeVariable* clone(TypeManager& manager) const {
+		return new TypeVariable(*this);
+	}
+
 public:
 
 	/**
@@ -447,13 +459,6 @@ public:
 	 */
 	static TypeVariablePtr get(TypeManager& manager, const string& name) {
 		return manager.getTypePointer(TypeVariable(name));
-	}
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual TypeVariable* clone(TypeManager& manager) const {
-		return new TypeVariable(*this);
 	}
 
 };
@@ -486,6 +491,13 @@ class TupleType: public Type {
 	TupleType(const vector<TypePtr>& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
 
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual TupleType* clone(TypeManager& manager) const {
+		return new TupleType(manager.getAll(elementTypes));
+	}
+
 public:
 
 	/**
@@ -497,13 +509,6 @@ public:
 	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
 	static TupleTypePtr get(TypeManager& manager, const vector<TypePtr>& elementTypes);
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual TupleType* clone(TypeManager& manager) const {
-		return new TupleType(manager.getAll(elementTypes));
-	}
 
 	/**
 	 * Obtains a list of all types referenced by this tuple type.
@@ -542,6 +547,13 @@ class FunctionType: public Type {
 				argumentType), returnType(returnType) {
 	}
 
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual FunctionType* clone(TypeManager& manager) const {
+		return new FunctionType(manager.get(argumentType), manager.get(returnType));
+	}
+
 public:
 
 	/**
@@ -555,13 +567,6 @@ public:
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
 	static FunctionTypePtr get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual FunctionType* clone(TypeManager& manager) const {
-		return new FunctionType(manager.get(argumentType), manager.get(returnType));
-	}
 
 	/**
 	 * Obtains a list of all types referenced by this function type.
@@ -584,6 +589,9 @@ public:
  * parameters. Those are represented using other types and IntTypeParam instances.
  */
 class GenericType: public Type {
+
+	// FIXME: should not be necessary
+	const string familyName;
 
 	/**
 	 * The list of type parameters being part of this type specification.
@@ -629,9 +637,17 @@ protected:
 			const TypePtr& baseType = NULL)
 		:
 			Type(buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
+			familyName(name),
 			typeParams(typeParams),
 			intParams(intTypeParams),
 			baseType(baseType) { }
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual GenericType* clone(TypeManager& manager) const {
+		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
+	}
 
 public:
 
@@ -650,13 +666,6 @@ public:
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual GenericType* clone(TypeManager& manager) const {
-		return new GenericType(getName(), manager.getAll(typeParams), intParams, manager.get(baseType));
-	}
 
 	/**
 	 * Retrieves the child types referenced by this generic type.
@@ -679,11 +688,11 @@ public:
 class NamedCompositeType: public Type {
 
 public:
-	typedef std::pair<const Identifier, const TypePtr> Entry;
+	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
 
 private:
-	const Entries elements;
+	const Entries entries;
 
 	static string buildNameString(const string&, const Entries&);
 
@@ -691,10 +700,39 @@ private:
 
 protected:
 
-	NamedCompositeType(const string& prefix, const Entries& elements)
+	NamedCompositeType(const string& prefix, const Entries& entries)
 		:
-			Type(buildNameString(prefix, elements), allConcrete(elements)),
-			elements(elements) { }
+			Type(buildNameString(prefix, entries), allConcrete(entries)),
+			entries(entries) {
+
+		// TODO: ensure that identifiers are not used more than once!
+
+	}
+
+	static Entries getEntriesFromManager(TypeManager& manager, Entries entries) {
+		Entries res;
+
+//		// with get all
+//		Identifier identifier("bla");
+//		manager.getAll(entries.cbegin(), entries.cend(), back_inserter(res),
+//			[&identifier](const Entry& cur) { identifier = cur.first; return cur.second; },
+//			[&identifier](const TypePtr& cur) { return Entry(identifier, cur); }
+//		);
+
+		// with transform
+		std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
+			[&manager](const Entry& cur) {
+				return Entry(cur.first, manager.get(cur.second));
+		});
+
+		return res;
+	}
+
+public:
+
+	const Entries getEntries() const {
+		return entries;
+	}
 
 	/**
 	 * Retrieves the child types referenced by this generic type.
@@ -705,7 +743,7 @@ protected:
 		auto res = makeChildList();
 
 		// add all referenced types
-		std::transform(elements.cbegin(), elements.cend(), back_inserter(*res),
+		std::transform(entries.cbegin(), entries.cend(), back_inserter(*res),
 			[](const Entry& cur) {
 				return cur.second;
 		});
@@ -715,37 +753,46 @@ protected:
 	}
 };
 
-//class StructType: public NamedCompositeType {
-//
-//	StructType(const Entries& elements) : NamedCompositeType("struct", elements) {}
-//
-//public:
-//
-//	static StructTypePtr get(TypeManager& manager, const Entries& entries);
-//
-//	/**
-//	 * Creates a clone of this node.
-//	 */
-//	virtual StructType* clone() const {
-//		return new StructType(*this);
-//	}
-//};
-//
-//class UnionType: public NamedCompositeType {
-//
-//	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
-//
-//public:
-//
-//	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
-//
-//	/**
-//	 * Creates a clone of this node.
-//	 */
-//	virtual UnionType* clone() const {
-//		return new UnionType(*this);
-//	}
-//};
+class StructType: public NamedCompositeType {
+
+	StructType(const Entries& elements) : NamedCompositeType("struct", elements) {}
+
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual StructType* clone(TypeManager& manager) const {
+		return new StructType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
+	}
+
+public:
+
+	static StructTypePtr get(TypeManager& manager, const Entries& entries);
+
+};
+
+class UnionType: public NamedCompositeType {
+
+	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual UnionType* clone(TypeManager& manager) const {
+		return new UnionType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
+	}
+
+public:
+
+	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual UnionType* clone() const {
+		return new UnionType(*this);
+	}
+};
 //
 //class ArrayType: public Type {
 //	friend class TypeManager;

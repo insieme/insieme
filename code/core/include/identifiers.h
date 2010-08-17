@@ -38,7 +38,6 @@
 
 #include <string>
 
-#include <boost/flyweight.hpp>
 
 #include "annotated_ptr.h"
 #include "instance_manager.h"
@@ -48,7 +47,7 @@ using std::string;
 
 class Identifier {
 
-	boost::flyweight<string> name;
+	string name;
 
 public:
 

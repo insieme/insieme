@@ -192,7 +192,10 @@ public:
 	}
 
 	R get(const R& pointer) {
-		return this->get(*pointer);
+		if (!!pointer) {
+			return this->get(*pointer);
+		}
+		return pointer;
 	}
 
 	template<typename InIter, typename OutIter, typename Extracter, typename Packer>

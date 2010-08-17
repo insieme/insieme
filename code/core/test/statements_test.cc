@@ -91,5 +91,5 @@ TEST(StatementsTest, CompoundStmt) {
 	EXPECT_EQ((*bSC)[0], (*bScSCVec)[0]);
 	std::stringstream ss;
 	ss << bScSCVec;
-	EXPECT_EQ("{\nbreak;\ncontinue;\n}", ss.str());
+	EXPECT_EQ("{\nbreak;\ncontinue;\n}\n", ss.str());
 }

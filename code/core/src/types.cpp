@@ -246,34 +246,18 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 // ------------------------------------ Struct Type ---------------------------
 
 
-//StructTypePtr StructType::get(TypeManager& manager, const Entries& elements) {
-//
-//	// get all type-parameter references from the manager
-//	Entries localEntries;
-//	std::transform(elements.cbegin(), elements.cend(), back_inserter(localEntries),
-//		[&manager](const Entry& cur) {
-//			return std::make_pair(cur.first, manager.getPointer(cur.second));
-//	});
-//
-//	// create resulting data element
-//	return manager.getTypePointer(StructType(localEntries));
-//}
-//
-//// ------------------------------------ Union Type ---------------------------
-//
-//
-//UnionTypePtr UnionType::get(TypeManager& manager, const Entries& elements) {
-//
-//	// get all type-parameter references from the manager
-//	Entries localEntries;
-//	std::transform(elements.cbegin(), elements.cend(), back_inserter(localEntries),
-//		[&manager](const Entry& cur) {
-//			return std::make_pair(cur.first, manager.getPointer(cur.second));
-//	});
-//
-//	// create resulting data element
-//	return manager.getTypePointer(UnionType(localEntries));
-//}
+StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
+	// just ask manager for new pointer
+	return manager.getTypePointer(StructType(NamedCompositeType::getEntriesFromManager(manager, entries)));
+}
+
+// ------------------------------------ Union Type ---------------------------
+
+
+UnionTypePtr UnionType::get(TypeManager& manager, const Entries& entries) {
+	// just ask manager for new pointer
+	return manager.getTypePointer(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
+}
 
 // ---------------------------------------------- Utility Functions ------------------------------------
 
@@ -296,6 +280,6 @@ std::ostream& operator<<(std::ostream& out, const Type& type) {
 	return out;
 }
 std::ostream& operator<<(std::ostream& out, const TypePtr& type) {
-	out << type->toString();
+	out << "PtrOn(" << type->toString() << ")";
 	return out;
 }

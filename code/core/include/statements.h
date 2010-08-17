@@ -244,8 +244,8 @@ public:
 
 class ForStmt: public Statement {
 	DeclarationStmtPtr declaration;
-	ExprPtr end, step;
 	StmtPtr body;
+	ExprPtr end, step;
 
 	ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step);
 	virtual ForStmt* clone(StatementManager& manager) const;
@@ -273,7 +273,7 @@ public:
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
 	
-	IfStmtPtr IfStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody = NULL);
+	IfStmtPtr get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody = NULL);
 };
 
 class SwitchStmt: public Statement {

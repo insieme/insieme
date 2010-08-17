@@ -48,6 +48,9 @@ using std::string;
 using std::cout;
 using std::endl;
 
+class CloneableString;
+
+class CloneableStringManager : public InstanceManager<CloneableStringManager, const CloneableString> {};
 
 class CloneableString : public string {
 public:
@@ -55,7 +58,7 @@ public:
 	CloneableString(const string& str) : string(str) {};
 //	CloneableString(const CloneableString& str) : string(str.c_str()) {};
 
-	CloneableString* cloneToManager(InstanceManager& manager) const {
+	CloneableString* clone(CloneableStringManager& manager) const {
 		return new CloneableString(*this);
 	}
 };
@@ -67,7 +70,7 @@ std::size_t hash_value(const CloneableString& str) {
 TEST(InstanceManager, Basic) {
 
 	// create a new instance manager
-	InstanceManager<const CloneableString> manager;
+	CloneableStringManager manager;
 	EXPECT_EQ (manager.size(), 0);
 
 	// add and retrieve first element

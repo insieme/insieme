@@ -61,7 +61,7 @@ TEST(InstancePtr, NullTest) {
 	EXPECT_FALSE ( null == ptrA );
 	EXPECT_FALSE ( ptrA == ptrN );
 	EXPECT_FALSE ( ptrN == ptrA );
-	EXPECT_TRUE ( ptrA );
+	EXPECT_TRUE ( !!ptrA );
 
 	InstancePtr<int> ptrA2(&a);
 	EXPECT_TRUE ( ptrA == ptrA2 );
@@ -73,7 +73,7 @@ TEST(InstancePtr, NullTest) {
 	EXPECT_FALSE ( null == ptrB );
 	EXPECT_FALSE ( ptrB == ptrN );
 	EXPECT_FALSE ( ptrN == ptrB );
-	EXPECT_TRUE ( ptrB );
+	EXPECT_TRUE ( !!ptrB );
 
 	EXPECT_FALSE ( ptrA == ptrB );
 	EXPECT_FALSE ( ptrB == ptrA );
