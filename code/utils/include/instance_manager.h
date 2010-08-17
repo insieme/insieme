@@ -111,6 +111,7 @@ struct target_hash: public std::unary_function<T, std::size_t> {
  * 			 be a constant type.
  */
 template<
+	typename Derived,
 	typename T,
 	typename R = InstancePtr<T>,
 	typename boost::enable_if<boost::is_const<T>,int>::type = 0,
@@ -131,7 +132,7 @@ public:
 	/**
 	 * The destructor of this instance manager freeing all elements within the store.
 	 */
-	~InstanceManager() {
+	virtual ~InstanceManager() {
 		// delete all elements maintained by the manager
 		std::for_each(storage.begin(), storage.end(),
 				[](T* cur) { delete cur; }
@@ -149,7 +150,7 @@ public:
 		}
 
 		// copy element (to ensure private copy)
-		T* newElement = instance->clone(*this);
+		T* newElement = instance->clone(*static_cast<Derived*>(this));
 		storage.insert(newElement);
 		return std::make_pair(R(newElement), true);
 
@@ -195,11 +196,21 @@ public:
 	}
 
 	template<typename InIter, typename OutIter, typename Extracter, typename Packer>
-	void getAll(InIter start, InIter end, OutIter out, Extracter extract = &id, Packer packer = &id) {
+	void getAll(InIter start, InIter end, OutIter out, Extracter extract, Packer packer) {
 		std::transform(start, end, out,
 			[&](typename std::iterator_traits<InIter>::value_type cur) {
-				return pack(this->get(extract(*cur)));
+				return packer(this->get(extract(cur)));
 		});
+	}
+
+	template<typename InIter, typename OutIter, typename Extracter>
+	void getAll(InIter start, InIter end, OutIter out, Extracter extract) {
+		getAll(start, end, out, extract, [](const R& r){ return r; });
+	}
+
+	template<typename InIter, typename OutIter>
+	void getAll(InIter start, InIter end, OutIter out) {
+		getAll(start, end, out, [](const R& r){ return r; });
 	}
 
 	template<typename Container>

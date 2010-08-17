@@ -242,7 +242,7 @@ public:
 
 // ---------------------------------- Type Manager ----------------------------------------
 
-class TypeManager: public InstanceManager<const Type, TypePtr> {
+class TypeManager: public InstanceManager<TypeManager, const Type, TypePtr> {
 
 public:
 

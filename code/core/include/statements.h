@@ -104,11 +104,9 @@ class StatementManager;
 // ------------------------------------- Statements ---------------------------------
 
 class Statement : public Visitable<StmtPtr> {
-	
-	friend class InstanceManager<const Statement, StmtPtr>;
-
-	virtual Statement* clone() const = 0;
-
+	// needs InstanceManager not StatementManager since base type calls clone
+	friend class InstanceManager<StatementManager, const Statement, StmtPtr>;
+	virtual Statement* clone(StatementManager& manager) const = 0;
 
 protected:
 	// Hash values for terminal statements
@@ -120,7 +118,6 @@ protected:
 	Statement() {}
 
 	virtual bool equals(const Statement& stmt) const = 0;
-
 
 public:
 	virtual void printTo(std::ostream& out) const = 0;
@@ -136,7 +133,7 @@ std::ostream& operator<<(std::ostream& out, const StmtPtr& stmtPtr);
 
 class NoOpStmt : public Statement {
 	NoOpStmt() {}
-	virtual NoOpStmt* clone() const;
+	virtual NoOpStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -149,7 +146,7 @@ public:
 
 class BreakStmt : public Statement {
 	BreakStmt() {}
-	virtual BreakStmt* clone() const;
+	virtual BreakStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -162,7 +159,7 @@ public:
 
 class ContinueStmt : public Statement {
 	ContinueStmt() {}
-	virtual ContinueStmt* clone() const;
+	virtual ContinueStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -179,7 +176,7 @@ class DeclarationStmt : public Statement {
 	const ExprPtr initExpression;
 
 	DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
-	virtual DeclarationStmt* clone() const;
+	virtual DeclarationStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -195,7 +192,7 @@ class ReturnStmt: public Statement {
 	const ExprPtr returnExpression;
 
 	ReturnStmt(const ExprPtr& returnExpression);
-	virtual ReturnStmt* clone() const;
+	virtual ReturnStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -213,7 +210,7 @@ class CompoundStmt: public Statement {
 	CompoundStmt() { }
 	CompoundStmt(const StmtPtr& stmt) :	statements(toVector<StmtPtr> (stmt)) { }
 	CompoundStmt(const vector<StmtPtr>& stmts) : statements(stmts) { }
-	virtual CompoundStmt* clone() const;
+	virtual CompoundStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -234,7 +231,7 @@ class WhileStmt: public Statement {
 	StmtPtr body;
 
 	WhileStmt(ExprPtr condition, StmtPtr body);
-	virtual WhileStmt* clone() const;
+	virtual WhileStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -251,7 +248,7 @@ class ForStmt: public Statement {
 	StmtPtr body;
 
 	ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step);
-	virtual ForStmt* clone() const;
+	virtual ForStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -268,7 +265,7 @@ class IfStmt: public Statement {
 	StmtPtr elseBody;
 	
 	IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody);
-	virtual IfStmt* clone() const;
+	virtual IfStmt* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -285,7 +282,7 @@ class SwitchStmt: public Statement {
 
 // ------------------------------------- Statement Manager ---------------------------------
 
-class StatementManager : public TreeManager<const Statement, StmtPtr> {
+class StatementManager : public InstanceManager<StatementManager, const Statement, StmtPtr> {
 	TypeManager& typeManager;	
 
 public:

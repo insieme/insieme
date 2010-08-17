@@ -226,7 +226,7 @@ string NamedCompositeType::buildNameString(const string& prefix, const Entries& 
 		vector<string> list;
 		std::transform(elements.cbegin(), elements.cend(), back_inserter(list),
 			[](const Entry& cur) {
-				return format("%s:%s", cur.first->getName().c_str(), cur.second->toString().c_str());
+				return format("%s:%s", cur.first.getName().c_str(), cur.second->toString().c_str());
 		});
 
 		res << boost::join(list, ",");

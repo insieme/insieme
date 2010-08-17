@@ -84,7 +84,7 @@ std::size_t NoOpStmt::hash() const {
 	return HASHVAL_NOOP;
 }
 
-NoOpStmt* NoOpStmt::clone() const {
+NoOpStmt* NoOpStmt::clone(StatementManager& manager) const {
 	return new NoOpStmt();
 }
 
@@ -106,7 +106,7 @@ std::size_t BreakStmt::hash() const {
 	return HASHVAL_BREAK;
 }
 
-BreakStmt* BreakStmt::clone() const {
+BreakStmt* BreakStmt::clone(StatementManager& manager) const {
 	return new BreakStmt();
 }
 
@@ -128,7 +128,7 @@ std::size_t ContinueStmt::hash() const {
 	return HASHVAL_CONTINUE;
 }
 
-ContinueStmt* ContinueStmt::clone() const {
+ContinueStmt* ContinueStmt::clone(StatementManager& manager) const {
 	return new ContinueStmt();
 }
 
@@ -159,7 +159,7 @@ std::size_t DeclarationStmt::hash() const {
 	return seed;
 }
 
-DeclarationStmt* DeclarationStmt::clone() const {
+DeclarationStmt* DeclarationStmt::clone(StatementManager& manager) const {
 	return new DeclarationStmt(type, id, initExpression);
 }
 
@@ -195,7 +195,7 @@ std::size_t ReturnStmt::hash() const {
 	return seed;
 }
 
-ReturnStmt* ReturnStmt::clone() const {
+ReturnStmt* ReturnStmt::clone(StatementManager& manager) const {
 	return new ReturnStmt(returnExpression);
 }
 
@@ -232,7 +232,7 @@ std::size_t CompoundStmt::hash() const {
 	return seed;
 }
 
-CompoundStmt* CompoundStmt::clone() const {
+CompoundStmt* CompoundStmt::clone(StatementManager& manager) const {
 	return new CompoundStmt(statements);
 }
 
@@ -248,11 +248,11 @@ CompoundStmtPtr CompoundStmt::get(StatementManager& manager) {
 	return manager.getStmtPtr(CompoundStmt());
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt) {
-	StmtPtr localStmt = manager.getPointer(*stmt);
+	StmtPtr localStmt = manager.getStmtPtr(*stmt);
 	return manager.getStmtPtr(CompoundStmt(localStmt));
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts) {
-	auto localStmts = manager.getPointer(stmts);
+	auto localStmts = manager.getAll(stmts);
 	return manager.getStmtPtr(CompoundStmt(localStmts));
 }
 
@@ -279,7 +279,7 @@ std::size_t WhileStmt::hash() const {
 	return seed;
 }
 
-WhileStmt* WhileStmt::clone() const {
+WhileStmt* WhileStmt::clone(StatementManager& manager) const {
 	return new WhileStmt(condition, body);
 }
 
@@ -321,7 +321,7 @@ std::size_t ForStmt::hash() const {
 	return seed;
 }
 
-ForStmt* ForStmt::clone() const {
+ForStmt* ForStmt::clone(StatementManager& manager) const {
 	return new ForStmt(declaration, body, end, step);
 }
 
@@ -347,7 +347,7 @@ IfStmt::IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody) :
 	condition(condition), body(body), elseBody(elseBody) {
 }
 
-IfStmt* IfStmt::clone() const {
+IfStmt* IfStmt::clone(StatementManager& manager) const {
 	return new IfStmt(condition, body, elseBody);
 }
 
