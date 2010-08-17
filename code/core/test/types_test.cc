@@ -356,7 +356,6 @@ TEST(TypeTest, FunctionType) {
 
 TEST(TypeTest, StructType) {
 
-
 	TypeManager manager;
 
 	Identifier identA("a");
@@ -404,7 +403,162 @@ TEST(TypeTest, StructType) {
 	basicTypeTests<StructType>(structC, false, false, typeListC);
 }
 
+TEST(TypeTest, UnionType) {
 
+	TypeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	UnionType::Entries entriesA;
+	entriesA.push_back(UnionType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(UnionType::Entry(identB, GenericType::get(manager, "B")));
+
+	UnionTypePtr unionA = UnionType::get(manager, entriesA);
+	EXPECT_EQ ( "union<a:A,b:B>", unionA->getName() );
+
+	UnionType::Entries entriesB;
+	UnionTypePtr unionB = UnionType::get(manager, entriesB);
+	EXPECT_EQ ( "union<>", unionB->getName() );
+
+	UnionType::Entries entriesC;
+	entriesC.push_back(UnionType::Entry(identA, TypeVariable::get(manager,"alpha")));
+	entriesC.push_back(UnionType::Entry(identB, GenericType::get(manager, "B")));
+	UnionTypePtr unionC = UnionType::get(manager, entriesC);
+	EXPECT_EQ ( "union<a:'alpha,b:B>", unionC->getName() );
+
+
+	// perform basic type tests
+	vector<TypePtr> typeListA;
+	std::transform(entriesA.cbegin(), entriesA.cend(), back_inserter(typeListA),
+		[](const UnionType::Entry& cur) {
+			return cur.second;
+	});
+
+	vector<TypePtr> typeListB;
+	std::transform(entriesB.cbegin(), entriesB.cend(), back_inserter(typeListB),
+		[](const UnionType::Entry& cur) {
+			return cur.second;
+	});
+
+	vector<TypePtr> typeListC;
+	std::transform(entriesC.cbegin(), entriesC.cend(), back_inserter(typeListC),
+		[](const UnionType::Entry& cur) {
+			return cur.second;
+	});
+
+	basicTypeTests<UnionType>(unionA, true, false, typeListA);
+	basicTypeTests<UnionType>(unionB, true, false, typeListB);
+	basicTypeTests<UnionType>(unionC, false, false, typeListC);
+}
+
+TEST(TypeTest, ArrayType) {
+
+	// create type manager and element types
+	TypeManager manager;
+	TypePtr elementTypeA = GenericType::get(manager,"A");
+	TypePtr elementTypeB = TypeVariable::get(manager,"a");
+
+	// obtain array types
+	ArrayTypePtr arrayTypeA = ArrayType::get(manager, elementTypeA);
+	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, 3);
+
+	// check names
+	EXPECT_EQ ( "array<A,1>", arrayTypeA->getName() );
+	EXPECT_EQ ( "array<'a,3>", arrayTypeB->getName() );
+
+	// check element types
+	EXPECT_EQ ( elementTypeA, arrayTypeA->getElementType() );
+	EXPECT_EQ ( elementTypeB, arrayTypeB->getElementType() );
+
+	// check dimensions
+	EXPECT_EQ ( 1, arrayTypeA->getDimension());
+	EXPECT_EQ ( 3, arrayTypeB->getDimension());
+
+	// check remaining type properties
+	basicTypeTests<ArrayType>(arrayTypeA, true, false, toVector(elementTypeA));
+	basicTypeTests<ArrayType>(arrayTypeB, false, false, toVector(elementTypeB));
+}
+
+TEST(TypeTest, VectorType) {
+
+	// create type manager and element types
+	TypeManager manager;
+	TypePtr elementTypeA = GenericType::get(manager,"A");
+	TypePtr elementTypeB = TypeVariable::get(manager,"a");
+
+	// obtain array types
+	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, 1);
+	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, 3);
+
+	// check names
+	EXPECT_EQ ( "vector<A,1>", vectorTypeA->getName() );
+	EXPECT_EQ ( "vector<'a,3>", vectorTypeB->getName() );
+
+	// check element types
+	EXPECT_EQ ( elementTypeA, vectorTypeA->getElementType() );
+	EXPECT_EQ ( elementTypeB, vectorTypeB->getElementType() );
+
+	// check dimensions
+	EXPECT_EQ ( 1, vectorTypeA->getSize());
+	EXPECT_EQ ( 3, vectorTypeB->getSize());
+
+	// check remaining type properties
+	basicTypeTests<VectorType>(vectorTypeA, true, false, toVector(elementTypeA));
+	basicTypeTests<VectorType>(vectorTypeB, false, false, toVector(elementTypeB));
+}
+
+TEST(TypeTest, ChannelType) {
+
+	// create type manager and element types
+	TypeManager manager;
+	TypePtr elementTypeA = GenericType::get(manager,"A");
+	TypePtr elementTypeB = TypeVariable::get(manager,"a");
+
+	// obtain array types
+	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, 1);
+	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, 3);
+
+	// check names
+	EXPECT_EQ ( "channel<A,1>", channelTypeA->getName() );
+	EXPECT_EQ ( "channel<'a,3>", channelTypeB->getName() );
+
+	// check element types
+	EXPECT_EQ ( elementTypeA, channelTypeA->getElementType() );
+	EXPECT_EQ ( elementTypeB, channelTypeB->getElementType() );
+
+	// check dimensions
+	EXPECT_EQ ( 1, channelTypeA->getSize());
+	EXPECT_EQ ( 3, channelTypeB->getSize());
+
+	// check remaining type properties
+	basicTypeTests<ChannelType>(channelTypeA, true, false, toVector(elementTypeA));
+	basicTypeTests<ChannelType>(channelTypeB, false, false, toVector(elementTypeB));
+}
+
+TEST(TypeTest, RefType) {
+
+	// create type manager and element types
+	TypeManager manager;
+	TypePtr elementTypeA = GenericType::get(manager,"A");
+	TypePtr elementTypeB = TypeVariable::get(manager,"a");
+
+	// obtain array types
+	RefTypePtr refTypeA = RefType::get(manager, elementTypeA);
+	RefTypePtr refTypeB = RefType::get(manager, elementTypeB);
+
+	// check names
+	EXPECT_EQ ( "ref<A>", refTypeA->getName() );
+	EXPECT_EQ ( "ref<'a>", refTypeB->getName() );
+
+	// check element types
+	EXPECT_EQ ( elementTypeA, refTypeA->getElementType() );
+	EXPECT_EQ ( elementTypeB, refTypeB->getElementType() );
+
+	// check remaining type properties
+	basicTypeTests<RefType>(refTypeA, true, false, toVector(elementTypeA));
+	basicTypeTests<RefType>(refTypeB, false, false, toVector(elementTypeB));
+}
 
 TEST(TypesTest, IntTypeParam) {
 #ifndef WIN32
@@ -463,10 +617,12 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	// ------------ Type Token based tests -------------
 
 	// create a copy of the type
+	TypeManager manager;
 	T copy = T(*type);
+	T* clone = type->clone(manager);
 
 	// check whether all are equal
-	T all[] = { *type, copy };
+	T all[] = { *type, copy, *clone };
 	for (int i=0; i<2; i++) {
 		for (int j=0; j<2; j++) {
 
@@ -497,6 +653,7 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 
 	}
 
+	delete clone;
 }
 
 

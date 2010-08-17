@@ -60,6 +60,7 @@ using std::vector;
 using std::map;
 
 enum {
+	// TODO: improve hash function (seperate from name)
 	TYPE_HASH_ABSTRACT
 };
 
@@ -237,6 +238,16 @@ public:
 	 * @return true if all are concrete, false otherwise
 	 */
 	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
+
+	/**
+	 * Obtains the value of a concrete int-type parameter. The value is only
+	 * properly defined in case the type is CONCRETE. Otherwise an assertion
+	 * violation will be caused.
+	 */
+	unsigned short getValue() const {
+		assert( type == CONCRETE );
+		return value;
+	}
 
 };
 
@@ -417,7 +428,7 @@ public:
 	 */
 	static bool allConcrete(const vector<TypePtr>& elementTypes);
 
-private:
+//private:
 
 	/**
 	 * Retrieves a clone of this object (a newly allocated instance of this class)
@@ -443,14 +454,14 @@ class TypeVariable: public Type {
 	 */
 	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
 
+public:
+
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual TypeVariable* clone(TypeManager& manager) const {
 		return new TypeVariable(*this);
 	}
-
-public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -491,14 +502,14 @@ class TupleType: public Type {
 	TupleType(const vector<TypePtr>& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
 
+public:
+
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual TupleType* clone(TypeManager& manager) const {
 		return new TupleType(manager.getAll(elementTypes));
 	}
-
-public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -547,14 +558,14 @@ class FunctionType: public Type {
 				argumentType), returnType(returnType) {
 	}
 
+public:
+
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual FunctionType* clone(TypeManager& manager) const {
 		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
-
-public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -642,14 +653,14 @@ protected:
 			intParams(intTypeParams),
 			baseType(baseType) { }
 
+public:
+
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual GenericType* clone(TypeManager& manager) const {
 		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
-
-public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -683,6 +694,17 @@ public:
 		return res;
 	}
 
+	const vector<TypePtr>& getTypeParameter() const {
+		return typeParams;
+	}
+
+	const vector<IntTypeParam>& getIntTypeParameter() const {
+		return intParams;
+	}
+
+	const TypePtr& getBaseType() const {
+		return baseType;
+	}
 };
 
 class NamedCompositeType: public Type {
@@ -757,15 +779,14 @@ class StructType: public NamedCompositeType {
 
 	StructType(const Entries& elements) : NamedCompositeType("struct", elements) {}
 
+public:
 
 	/**
-	 * Creates a clone of this node.
+	 * Creates a clone of this type.
 	 */
 	virtual StructType* clone(TypeManager& manager) const {
 		return new StructType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
-
-public:
 
 	static StructTypePtr get(TypeManager& manager, const Entries& entries);
 
@@ -775,57 +796,132 @@ class UnionType: public NamedCompositeType {
 
 	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
 
+public:
+
 	/**
-	 * Creates a clone of this node.
+	 * Creates a clone of this type.
 	 */
 	virtual UnionType* clone(TypeManager& manager) const {
 		return new UnionType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
-public:
-
 	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
 
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual UnionType* clone() const {
-		return new UnionType(*this);
+};
+
+
+class SingleElementType : public GenericType {
+protected:
+
+	SingleElementType(const string& name,
+			const TypePtr& elementType,
+			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ()) :
+		GenericType(name, toVector(elementType), intTypeParams) {};
+
+public:
+
+	const TypePtr& getElementType() const {
+		return getTypeParameter()[0];
 	}
 };
-//
-//class ArrayType: public Type {
-//	friend class TypeManager;
-//	const TypePtr elementType;
-//	const unsigned dimensions;
-//
-//	ArrayType(const TypePtr elementType, const unsigned dim) :
-//		Type(format("array<%d,%s>", dim, elementType->getName().c_str())), elementType(elementType), dimensions(dim) {
-//	}
-//	;
-//
-//public:
-//	virtual bool isConcrete() const {
-//		return elementType->isConcrete();
-//	}
-//};
-//
-//class VectorType: public GenericType {
-//	VectorType(TypePtr elementType, IntTypeParam size) :
-//		GenericType("vector", toVector(elementType), toVector(size)) {
-//	}
-//};
-//
-//class ReferenceType: public GenericType {
-//	ReferenceType(TypePtr elementType) :
-//		GenericType("ref", toVector(elementType), vector<IntTypeParam> ()) {
-//	}
-//};
-//
-//class ChannelType: public Type {
-//	TypePtr type;
-//	unsigned bufferLength;
-//};
+
+
+class ArrayType: public SingleElementType {
+
+public:
+	const unsigned getDimension() const {
+		return getIntTypeParameter()[0].getValue();
+	}
+
+private:
+
+	ArrayType(const TypePtr elementType, const unsigned dim) :
+		SingleElementType("array", elementType, toVector(IntTypeParam::getConcreteIntParam(dim))) {}
+
+public:
+
+	/**
+	 * Creates a clone of this type.
+	 */
+	virtual ArrayType* clone(TypeManager& manager) const {
+		return new ArrayType(manager.get(getElementType()), getDimension());
+	}
+
+	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned dim = 1) {
+		return manager.getTypePointer(ArrayType(manager.get(elementType), dim));
+	}
+};
+
+class VectorType : public SingleElementType {
+
+public:
+	const unsigned getSize() const {
+		return getIntTypeParameter()[0].getValue();
+	}
+
+private:
+
+	VectorType(const TypePtr elementType, const unsigned size) :
+		SingleElementType("vector", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+
+public:
+
+	/**
+	 * Creates a clone of this type.
+	 */
+	virtual VectorType* clone(TypeManager& manager) const {
+		return new VectorType(manager.get(getElementType()), getSize());
+	}
+
+	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
+		return manager.getTypePointer(VectorType(manager.get(elementType), size));
+	}
+};
+
+class RefType: public SingleElementType {
+
+	RefType(const TypePtr elementType) :
+		SingleElementType("ref", elementType) {}
+
+public:
+
+	/**
+	 * Creates a clone of this type.
+	 */
+	virtual RefType* clone(TypeManager& manager) const {
+		return new RefType(manager.get(getElementType()));
+	}
+
+	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
+		return manager.getTypePointer(RefType(manager.get(elementType)));
+	}
+};
+
+class ChannelType: public SingleElementType {
+
+public:
+	const unsigned getSize() const {
+		return getIntTypeParameter()[0].getValue();
+	}
+
+private:
+
+	ChannelType(const TypePtr elementType, const unsigned size) :
+		SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+
+public:
+
+	/**
+	 * Creates a clone of this type.
+	 */
+	virtual ChannelType* clone(TypeManager& manager) const {
+		return new ChannelType(manager.get(getElementType()), getSize());
+	}
+
+	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
+		return manager.getTypePointer(ChannelType(manager.get(elementType), size));
+	}
+};
 
 
 // ---------------------------------------------- Utility Functions ------------------------------------
