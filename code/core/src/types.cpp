@@ -128,8 +128,9 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& elementTypes) {
-	return manager.getTypePointer(TupleType(manager.getPointer(elementTypes)));
+	return manager.getTypePointer(TupleType(manager.getAll(elementTypes)));
 }
+
 
 // ---------------------------------------- Function Type ------------------------------
 
@@ -147,8 +148,8 @@ TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& element
 FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 
 	// obtain local references for referenced types
-	TypePtr localArgumentType = manager.getPointer(argumentType);
-	TypePtr localReturnType = manager.getPointer(returnType);
+	TypePtr localArgumentType = manager.get(argumentType);
+	TypePtr localReturnType = manager.get(returnType);
 
 	// obtain reference to new element
 	return manager.getTypePointer(FunctionType(localArgumentType, localReturnType));
@@ -201,14 +202,78 @@ GenericTypePtr GenericType::get(TypeManager& manager,
 			const TypePtr& baseType) {
 
 	// get all type-parameter references from the manager
-	vector<TypePtr> localTypeParams = manager.getPointer(typeParams);
+	vector<TypePtr> localTypeParams = manager.getAll(typeParams);
 
 	// get base type reference (if necessary) ...
-	TypePtr localBaseType = manager.getPointer(baseType);
+	TypePtr localBaseType = manager.get(baseType);
 
 	// create resulting data element
 	return manager.getTypePointer(GenericType(name, localTypeParams, intTypeParams, localBaseType));
 }
+
+
+// ------------------------------------ Named Composite Type ---------------------------
+
+string NamedCompositeType::buildNameString(const string& prefix, const Entries& elements) {
+	// create output buffer
+	std::stringstream res;
+	res << prefix << "<";
+
+	// check whether there are type parameters
+	if (!elements.empty()) {
+
+		// convert type parameters to strings ...
+		vector<string> list;
+		std::transform(elements.cbegin(), elements.cend(), back_inserter(list),
+			[](const Entry& cur) {
+				return format("%s:%s", cur.first->getName().c_str(), cur.second->toString().c_str());
+		});
+
+		res << boost::join(list, ",");
+	}
+	res << ">";
+	return res.str();
+}
+
+bool NamedCompositeType::allConcrete(const Entries& elements) {
+	return all(elements,
+		[](const Entry& cur) {
+			return cur.second->isConcrete();
+	});
+}
+
+
+// ------------------------------------ Struct Type ---------------------------
+
+
+//StructTypePtr StructType::get(TypeManager& manager, const Entries& elements) {
+//
+//	// get all type-parameter references from the manager
+//	Entries localEntries;
+//	std::transform(elements.cbegin(), elements.cend(), back_inserter(localEntries),
+//		[&manager](const Entry& cur) {
+//			return std::make_pair(cur.first, manager.getPointer(cur.second));
+//	});
+//
+//	// create resulting data element
+//	return manager.getTypePointer(StructType(localEntries));
+//}
+//
+//// ------------------------------------ Union Type ---------------------------
+//
+//
+//UnionTypePtr UnionType::get(TypeManager& manager, const Entries& elements) {
+//
+//	// get all type-parameter references from the manager
+//	Entries localEntries;
+//	std::transform(elements.cbegin(), elements.cend(), back_inserter(localEntries),
+//		[&manager](const Entry& cur) {
+//			return std::make_pair(cur.first, manager.getPointer(cur.second));
+//	});
+//
+//	// create resulting data element
+//	return manager.getTypePointer(UnionType(localEntries));
+//}
 
 // ---------------------------------------------- Utility Functions ------------------------------------
 

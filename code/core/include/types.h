@@ -50,9 +50,9 @@
 
 #include "annotated_ptr.h"
 #include "container_utils.h"
+#include "identifiers.h"
 #include "instance_manager.h"
 #include "string_utils.h"
-#include "tree_manager.h"
 #include "visitor.h"
 
 using std::string;
@@ -101,7 +101,7 @@ typedef AnnotatedPtr<const StructType> StructTypePtr;
 class UnionType;
 typedef AnnotatedPtr<const UnionType> UnionTypePtr;
 
-// ---------------------------------------- Integer Type Parameters ------------------------------
+class TypeManager;
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
@@ -238,6 +238,25 @@ public:
 	 */
 	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
 
+};
+
+// ---------------------------------- Type Manager ----------------------------------------
+
+class TypeManager: public InstanceManager<const Type, TypePtr> {
+
+public:
+
+	/**
+	 * A generic wrapper enclosing the internal implementation of the lookup method.
+	 *
+	 * @param type the type node for which a master copy should be obtained
+	 * @return the pointer to the obtained element
+	 * @see TypeManager::getTypePtrInternal(const Type&)
+	 */
+	template<typename T>
+	AnnotatedPtr<const T> getTypePointer(const T& node) {
+		return dynamic_pointer_cast<const T>(get(node));
+	}
 
 };
 
@@ -281,7 +300,7 @@ class Type: public Visitable<TypePtr> {
 	 */
 	const std::size_t hashCode;
 
-public:
+protected:
 
 	/**
 	 * Creates a new type using the given name. The constructor is public, however, since
@@ -294,6 +313,8 @@ public:
 	 */
 	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
 		: name(name), concrete(concrete), functionType(functionType), hashCode(boost::hash_value(name)) {}
+
+public:
 
 	/**
 	 * A simple, virtual destructor for this abstract class.
@@ -372,7 +393,7 @@ public:
 	/**
 	 * Retrieves a clone of this object (a newly allocated instance of this class)
 	 */
-	virtual Type* clone() const = 0;
+	virtual Type* clone(TypeManager& manager) const = 0;
 
 	/**
 	 * Retrieves references to types revered to by this type. The default implementation
@@ -398,27 +419,6 @@ public:
 	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
 	 */
 	static bool allConcrete(const vector<TypePtr>& elementTypes);
-
-};
-
-
-// ---------------------------------- Type Manager ----------------------------------------
-
-class TypeManager: public TreeManager<const Type, TypePtr> {
-
-public:
-
-	/**
-	 * A generic wrapper enclosing the internal implementation of the lookup method.
-	 *
-	 * @param type the type node for which a master copy should be obtained
-	 * @return the pointer to the obtained element
-	 * @see TypeManager::getTypePtrInternal(const Type&)
-	 */
-	template<typename T>
-	AnnotatedPtr<const T> getTypePointer(const T& node) {
-		return dynamic_pointer_cast<const T>(getPointer(node));
-	}
 
 };
 
@@ -452,7 +452,7 @@ public:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TypeVariable* clone() const {
+	virtual TypeVariable* clone(TypeManager& manager) const {
 		return new TypeVariable(*this);
 	}
 
@@ -501,8 +501,8 @@ public:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TupleType* clone() const {
-		return new TupleType(*this);
+	virtual TupleType* clone(TypeManager& manager) const {
+		return new TupleType(manager.getAll(elementTypes));
 	}
 
 	/**
@@ -559,8 +559,8 @@ public:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual FunctionType* clone() const {
-		return new FunctionType(*this);
+	virtual FunctionType* clone(TypeManager& manager) const {
+		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
 
 	/**
@@ -613,6 +613,8 @@ class GenericType: public Type {
 	static string buildNameString(const string& name, const vector<TypePtr>& typeParams,
 			const vector<IntTypeParam>& intParams);
 
+protected:
+
 	/**
 	 * Creates an new generic type instance based on the given parameters.
 	 *
@@ -652,8 +654,8 @@ public:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual GenericType* clone() const {
-		return new GenericType(*this);
+	virtual GenericType* clone(TypeManager& manager) const {
+		return new GenericType(getName(), manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
 
 	/**
@@ -674,12 +676,75 @@ public:
 
 };
 
-//class NamedCompositeType: public Type {
-//	const map<const string, const TypePtr> elements;
-//};
+class NamedCompositeType: public Type {
+
+public:
+	typedef std::pair<const Identifier, const TypePtr> Entry;
+	typedef vector<Entry> Entries;
+
+private:
+	const Entries elements;
+
+	static string buildNameString(const string&, const Entries&);
+
+	static bool allConcrete(const Entries&);
+
+protected:
+
+	NamedCompositeType(const string& prefix, const Entries& elements)
+		:
+			Type(buildNameString(prefix, elements), allConcrete(elements)),
+			elements(elements) { }
+
+	/**
+	 * Retrieves the child types referenced by this generic type.
+	 *
+	 * @return the
+	 */
+	virtual ChildList getChildren() const {
+		auto res = makeChildList();
+
+		// add all referenced types
+		std::transform(elements.cbegin(), elements.cend(), back_inserter(*res),
+			[](const Entry& cur) {
+				return cur.second;
+		});
+
+		// return resulting type
+		return res;
+	}
+};
+
 //class StructType: public NamedCompositeType {
+//
+//	StructType(const Entries& elements) : NamedCompositeType("struct", elements) {}
+//
+//public:
+//
+//	static StructTypePtr get(TypeManager& manager, const Entries& entries);
+//
+//	/**
+//	 * Creates a clone of this node.
+//	 */
+//	virtual StructType* clone() const {
+//		return new StructType(*this);
+//	}
 //};
+//
 //class UnionType: public NamedCompositeType {
+//
+//	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
+//
+//public:
+//
+//	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
+//
+//	/**
+//	 * Creates a clone of this node.
+//	 */
+//	virtual UnionType* clone() const {
+//		return new UnionType(*this);
+//	}
 //};
 //
 //class ArrayType: public Type {
@@ -714,7 +779,6 @@ public:
 //	TypePtr type;
 //	unsigned bufferLength;
 //};
-
 
 
 // ---------------------------------------------- Utility Functions ------------------------------------

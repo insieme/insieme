@@ -154,7 +154,7 @@ DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
 
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
 
-	TypePtr localType = manager.getTypeManager().getPointer(type);
+	TypePtr localType = manager.getTypeManager().get(type);
 	ExprPtr localExpr = manager.getStmtPtr(*initExpression);
 
 	return manager.getStmtPtr(DeclarationStmt(localType, id, localExpr));

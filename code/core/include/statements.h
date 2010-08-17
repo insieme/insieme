@@ -52,7 +52,6 @@
 #include "annotated_ptr.h"
 #include "container_utils.h"
 #include "instance_manager.h"
-#include "tree_manager.h"
 #include "types.h"
 #include "visitor.h"
 #include "identifiers.h"
@@ -270,7 +269,7 @@ public:
 
 // ------------------------------------- Statement Manager ---------------------------------
 
-class StatementManager : public TreeManager<const Statement, StmtPtr> {
+class StatementManager : public InstanceManager<const Statement, StmtPtr> {
 	TypeManager& typeManager;
 	
 	friend NoOpStmtPtr NoOpStmt::get(StatementManager&);
@@ -287,7 +286,7 @@ class StatementManager : public TreeManager<const Statement, StmtPtr> {
 protected:
 	template<typename T>
 	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
-		return dynamic_pointer_cast<const T>(getPointer(stmt));
+		return dynamic_pointer_cast<const T>(get(stmt));
 	}
 
 public:

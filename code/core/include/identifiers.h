@@ -38,17 +38,43 @@
 
 #include <string>
 
+#include <boost/flyweight.hpp>
+
+#include "annotated_ptr.h"
+#include "instance_manager.h"
 
 using std::string;
 
+
 class Identifier {
 
-	const string name;
+	boost::flyweight<string> name;
 
 public:
+
 	Identifier(const string& name) : name(name) { }
 
-	const string& getName() { return name; }
+	const string& getName() const { return name; }
+
+	bool operator==(const Identifier& other) const {
+		// test for identity
+		if (this == &other) {
+			return true;
+		}
+
+		// slow name comparison
+		return name == other.name;
+	}
 
 };
+
+
+// ---------------------------------------------- Utility Functions ------------------------------------
+
+/**
+ * Allows this type to be printed to a stream (especially useful during debugging and
+ * within test cases where equals values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const Identifier& type);
+
 
