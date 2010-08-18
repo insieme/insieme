@@ -198,22 +198,12 @@ public:
 		return pointer;
 	}
 
-	template<typename InIter, typename OutIter, typename Extracter, typename Packer>
-	void getAll(InIter start, InIter end, OutIter out, Extracter extract, Packer packer) {
-		std::transform(start, end, out,
-			[&](typename std::iterator_traits<InIter>::value_type cur) {
-				return packer(this->get(extract(cur)));
-		});
-	}
-
-	template<typename InIter, typename OutIter, typename Extracter>
-	void getAll(InIter start, InIter end, OutIter out, Extracter extract) {
-		getAll(start, end, out, extract, [](const R& r){ return r; });
-	}
-
 	template<typename InIter, typename OutIter>
 	void getAll(InIter start, InIter end, OutIter out) {
-		getAll(start, end, out, [](const R& r){ return r; });
+		std::transform(start, end, out,
+			[&](typename std::iterator_traits<InIter>::value_type cur) {
+				return this->get(cur);
+		});
 	}
 
 	template<typename Container>

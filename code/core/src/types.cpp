@@ -36,6 +36,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <stdexcept>
+
+#include <boost/iterator/transform_iterator.hpp>
 
 #include "container_utils.h"
 #include "types.h"
@@ -93,6 +96,10 @@ bool Type::allConcrete(const vector<TypePtr>& elementTypes) {
 	return all(elementTypes, [](const TypePtr& param) { return param->isConcrete(); });
 }
 
+// -------------------------------------- Type Variable -------------------------------
+
+
+
 // ---------------------------------------- Tuple Type --------------------------------
 
 /**
@@ -128,7 +135,7 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& elementTypes) {
-	return manager.getTypePointer(TupleType(manager.getAll(elementTypes)));
+	return manager.getTypePointer(TupleType(elementTypes));
 }
 
 
@@ -146,13 +153,8 @@ TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& element
  * @return a pointer to a instance of the required type maintained by the given manager
  */
 FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
-
-	// obtain local references for referenced types
-	TypePtr localArgumentType = manager.get(argumentType);
-	TypePtr localReturnType = manager.get(returnType);
-
 	// obtain reference to new element
-	return manager.getTypePointer(FunctionType(localArgumentType, localReturnType));
+	return manager.getTypePointer(FunctionType(argumentType, returnType));
 }
 
 // ---------------------------------------- Generic Type ------------------------------
@@ -211,9 +213,85 @@ GenericTypePtr GenericType::get(TypeManager& manager,
 	return manager.getTypePointer(GenericType(name, localTypeParams, intTypeParams, localBaseType));
 }
 
+/**
+ * Retrieves the child types referenced by this generic type.
+ *
+ * @return the
+ */
+GenericType::ChildList GenericType::getChildren() const {
+	auto res = makeChildList(typeParams);
+
+	// further add base types
+	if (!!baseType) {
+		res->push_back(baseType);
+	}
+
+	return res;
+}
+
 
 // ------------------------------------ Named Composite Type ---------------------------
 
+/**
+ * Creates a new named composite type having the given name and set of entries.
+ *
+ * @param prefix the prefix to be used for the new type (union or struct)
+ * @param entries the entries of the new type
+ *
+ * @throws std::invalid_argument if the same identifier is used more than once within the type
+ */
+NamedCompositeType::NamedCompositeType(const string& prefix, const Entries& entries) :
+	Type(buildNameString(prefix, entries), allConcrete(entries)), entries(entries) {
+
+	// ensure that names are not used multiple times
+	// NOTE: projecting to input list would be nice, but GCC 4.5 crashes with an internal error
+	// TODO: find alternative way to circumvent GCC bug
+
+	// get projection to first element
+	auto projection = [](const Entry& cur) { return cur.first; };
+//	auto start = boost::make_transform_iterator(entries.cbegin(), projection);
+//	auto end = boost::make_transform_iterator(entries.cend(), projection);
+
+	// copy list (instead of using a projection)
+	vector<Identifier> identifier;
+	std::transform(entries.cbegin(), entries.cend(), back_inserter(identifier), projection);
+
+//	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
+	if (hasDuplicates(identifier)) {
+		throw std::invalid_argument("No duplicates within identifiers are allowed!");
+	}
+}
+
+/**
+ * Obtains a copy of the given entry list referencing identical elements within the
+ * given manager.
+ *
+ * @param manager the manager to which the resulting references should point to
+ * @param entries the list of entries to be looked up
+ * @return a list of entries referencing identical types within the given manager
+ */
+NamedCompositeType::Entries NamedCompositeType::getEntriesFromManager(TypeManager& manager, Entries entries) {
+
+	// quick check ..
+	if (entries.empty()) {
+		return entries;
+	}
+
+	// obtain elements by looking up one after another ...
+	Entries res;
+	std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
+		[&manager](const Entry& cur) {
+			return Entry(cur.first, manager.get(cur.second));
+	});
+	return res;
+}
+
+/**
+ * A static utility function composing the name of this type.
+ *
+ * @param prefix the prefix of the type name (union or struct)
+ * @param entries the list of entries forming the content of this type
+ */
 string NamedCompositeType::buildNameString(const string& prefix, const Entries& elements) {
 	// create output buffer
 	std::stringstream res;
@@ -235,6 +313,13 @@ string NamedCompositeType::buildNameString(const string& prefix, const Entries& 
 	return res.str();
 }
 
+/**
+ * Checks whether all types within the given list of entries are concrete types. If so, true
+ * is returned, false otherwise.
+ *
+ * @param elements the list of elements which's types should be checked
+ * @return true if all are concrete, false otherwise
+ */
 bool NamedCompositeType::allConcrete(const Entries& elements) {
 	return all(elements,
 		[](const Entry& cur) {

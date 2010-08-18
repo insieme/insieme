@@ -245,6 +245,7 @@ public:
 	 * violation will be caused.
 	 */
 	unsigned short getValue() const {
+		// TODO: replace with an exception
 		assert( type == CONCRETE );
 		return value;
 	}
@@ -428,7 +429,7 @@ public:
 	 */
 	static bool allConcrete(const vector<TypePtr>& elementTypes);
 
-//private:
+private:
 
 	/**
 	 * Retrieves a clone of this object (a newly allocated instance of this class)
@@ -454,14 +455,14 @@ class TypeVariable: public Type {
 	 */
 	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
 
-public:
-
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual TypeVariable* clone(TypeManager& manager) const {
 		return new TypeVariable(*this);
 	}
+
+public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -502,14 +503,14 @@ class TupleType: public Type {
 	TupleType(const vector<TypePtr>& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
 
-public:
-
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual TupleType* clone(TypeManager& manager) const {
 		return new TupleType(manager.getAll(elementTypes));
 	}
+
+public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -554,11 +555,9 @@ class FunctionType: public Type {
 	 * @param returnType a reference to the type used as return type
 	 */
 	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
-		Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true), argumentType(
-				argumentType), returnType(returnType) {
+		Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
+		argumentType(argumentType), returnType(returnType) {
 	}
-
-public:
 
 	/**
 	 * Creates a clone of this node.
@@ -566,6 +565,8 @@ public:
 	virtual FunctionType* clone(TypeManager& manager) const {
 		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
+
+public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -653,14 +654,14 @@ protected:
 			intParams(intTypeParams),
 			baseType(baseType) { }
 
-public:
-
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual GenericType* clone(TypeManager& manager) const {
 		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
+
+public:
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -679,80 +680,90 @@ public:
 			const TypePtr& baseType = NULL);
 
 	/**
-	 * Retrieves the child types referenced by this generic type.
+	 * Retrieves a list of all types referenced by this generic type. This
+	 * list includes the all type parameters and the base type.
 	 *
-	 * @return the
+	 * @return the set of all referenced types.
 	 */
-	virtual ChildList getChildren() const {
-		auto res = makeChildList(typeParams);
+	virtual ChildList getChildren() const;
 
-		// further add base types
-		if (!!baseType) {
-			res->push_back(baseType);
-		}
-
-		return res;
-	}
-
+	/**
+	 * Retrieves all type parameter associated to this generic type.
+	 *
+	 * @return a const reference to the internally maintained type parameter list.
+	 */
 	const vector<TypePtr>& getTypeParameter() const {
 		return typeParams;
 	}
 
+	/**
+	 * Retrieves a list of all integer type parameters associated to this type.
+	 *
+	 * @return a const reference to the internally maintained integer type parameter list.
+	 */
 	const vector<IntTypeParam>& getIntTypeParameter() const {
 		return intParams;
 	}
 
+	/**
+	 * Retrieves a reference to the base type associated with this type.
+	 *
+	 * @return a reference to the base type of this type.
+	 */
 	const TypePtr& getBaseType() const {
 		return baseType;
 	}
 };
 
+// --------------------------------- Named Composite Type ----------------------------
+
+/**
+ * This abstract type is used to form a common basis for the struct and union types which
+ * both consist of a list of typed elements.
+ */
 class NamedCompositeType: public Type {
 
 public:
+
+	/**
+	 * Defines the type used for representing a element entry.
+	 */
 	typedef std::pair<Identifier, TypePtr> Entry;
+
+	/**
+	 * The type used to represent a list of element entries.
+	 */
 	typedef vector<Entry> Entries;
 
 private:
+
+	/**
+	 * The type entries this composed type is based on.
+	 */
 	const Entries entries;
-
-	static string buildNameString(const string&, const Entries&);
-
-	static bool allConcrete(const Entries&);
 
 protected:
 
-	NamedCompositeType(const string& prefix, const Entries& entries)
-		:
-			Type(buildNameString(prefix, entries), allConcrete(entries)),
-			entries(entries) {
+	/**
+	 * Creates a new named composite type having the given name and set of entries.
+	 *
+	 * @param prefix the prefix to be used for the new type (union or struct)
+	 * @param entries the entries of the new type
+	 *
+	 * @throws std::invalid_argument if the same identifier is used more than once within the type
+	 */
+	NamedCompositeType(const string& prefix, const Entries& entries);
 
-		// TODO: ensure that identifiers are not used more than once!
-
-	}
-
-	static Entries getEntriesFromManager(TypeManager& manager, Entries entries) {
-		Entries res;
-
-//		// with get all
-//		Identifier identifier("bla");
-//		manager.getAll(entries.cbegin(), entries.cend(), back_inserter(res),
-//			[&identifier](const Entry& cur) { identifier = cur.first; return cur.second; },
-//			[&identifier](const TypePtr& cur) { return Entry(identifier, cur); }
-//		);
-
-		// with transform
-		std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
-			[&manager](const Entry& cur) {
-				return Entry(cur.first, manager.get(cur.second));
-		});
-
-		return res;
-	}
+	static Entries getEntriesFromManager(TypeManager& manager, Entries entries);
 
 public:
 
-	const Entries getEntries() const {
+	/**
+	 * Retrieves the set of entries this composed type is based on.
+	 *
+	 * @return a reference to the internally maintained list of entries.
+	 */
+	const Entries& getEntries() const {
 		return entries;
 	}
 
@@ -773,46 +784,125 @@ public:
 		// return resulting type
 		return res;
 	}
-};
 
-class StructType: public NamedCompositeType {
+private:
 
-	StructType(const Entries& elements) : NamedCompositeType("struct", elements) {}
-
-public:
 
 	/**
-	 * Creates a clone of this type.
+	 * A static utility function composing the name of this type.
+	 *
+	 * @param prefix the prefix of the type name (union or struct)
+	 * @param entries the list of entries forming the content of this type
+	 */
+	static string buildNameString(const string& prefix, const Entries& entries);
+
+	/**
+	 * Checks whether all types within the given list of entries are concrete types. If so, true
+	 * is returned, false otherwise.
+	 *
+	 * @param elements the list of elements which's types should be checked
+	 * @return true if all are concrete, false otherwise
+	 */
+	static bool allConcrete(const Entries&);
+
+};
+
+// --------------------------------- Struct Type ----------------------------
+
+/**
+ * The type used to represent structs / records.
+ */
+class StructType: public NamedCompositeType {
+
+	/**
+	 * Creates a new instance of this type based on the given entries.
+	 *
+	 * @param entries the entries the new type should consist of
+	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
+	 */
+	StructType(const Entries& entries) : NamedCompositeType("struct", entries) {}
+
+	/**
+	 * Creates a clone of this type within the given manager.
 	 */
 	virtual StructType* clone(TypeManager& manager) const {
 		return new StructType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
+public:
+
+	/**
+	 * A factory method allowing to obtain a pointer to a struct type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager the manager which should be responsible for maintaining the new
+	 * 				  type instance and all its referenced elements.
+	 * @param entries the set of entries the new type should consist of
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
 	static StructTypePtr get(TypeManager& manager, const Entries& entries);
 
 };
 
+
+// --------------------------------- Union Type ----------------------------
+
+/**
+ * The type used to represent unions.
+ */
 class UnionType: public NamedCompositeType {
 
+	/**
+	 * Creates a new instance of this type based on the given entries.
+	 *
+	 * @param entries the entries the new type should consist of
+	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
+	 */
 	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
 
-public:
-
 	/**
-	 * Creates a clone of this type.
+	 * Creates a clone of this type within the given manager.
 	 */
 	virtual UnionType* clone(TypeManager& manager) const {
 		return new UnionType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
+public:
+
+	/**
+	 * A factory method allowing to obtain a pointer to a union type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager the manager which should be responsible for maintaining the new
+	 * 				  type instance and all its referenced elements.
+	 * @param entries the set of entries the new type should consist of
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
 	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
 
 };
 
+// --------------------------------- Single Element Type ----------------------------
 
+/**
+ * This abstract type is used as a common base class for a serious of intrinsic types
+ * which all require a single element type. It thereby represents a specialized version
+ * of a generic type.
+ */
 class SingleElementType : public GenericType {
 protected:
 
+	/**
+	 * Creates a new instance of this class using the given name, element type and
+	 * integer parameters.
+	 *
+	 * @param name the (prefix) of the name of the new type
+	 * @param elementType its single type parameter
+	 * @param intTypeParams additional integer type parameters. By default this parameters
+	 * 						will be set to an empty set.
+	 */
 	SingleElementType(const string& name,
 			const TypePtr& elementType,
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ()) :
@@ -820,106 +910,206 @@ protected:
 
 public:
 
+	/**
+	 * Retrieves the one element type associated with this type.
+	 *
+	 * @return the element type associated with this type
+	 */
 	const TypePtr& getElementType() const {
 		return getTypeParameter()[0];
 	}
 };
 
+// --------------------------------- Array Type ----------------------------
 
+/**
+ * This intrinsic array type used to represent multidimensional rectangular arrays
+ * within the type system.
+ */
 class ArrayType: public SingleElementType {
 
-public:
-	const unsigned getDimension() const {
-		return getIntTypeParameter()[0].getValue();
-	}
-
-private:
-
-	ArrayType(const TypePtr elementType, const unsigned dim) :
+	/**
+	 * Creates a new instance of this class using the given parameters.
+	 *
+	 * @param elementType the element type of this array
+	 * @param dim the dimension of the represented array
+	 */
+	ArrayType(const TypePtr elementType, const unsigned short dim) :
 		SingleElementType("array", elementType, toVector(IntTypeParam::getConcreteIntParam(dim))) {}
 
-public:
-
 	/**
-	 * Creates a clone of this type.
+	 * Creates a clone of this type within the given manager.
 	 */
 	virtual ArrayType* clone(TypeManager& manager) const {
 		return new ArrayType(manager.get(getElementType()), getDimension());
 	}
 
-	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned dim = 1) {
-		return manager.getTypePointer(ArrayType(manager.get(elementType), dim));
-	}
-};
-
-class VectorType : public SingleElementType {
-
-public:
-	const unsigned getSize() const {
-		return getIntTypeParameter()[0].getValue();
-	}
-
-private:
-
-	VectorType(const TypePtr elementType, const unsigned size) :
-		SingleElementType("vector", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
-
 public:
 
 	/**
-	 * Creates a clone of this type.
+	 * A factory method allowing to obtain a pointer to a array type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager 		the manager which should be responsible for maintaining the new
+	 * 				  		type instance and all its referenced elements.
+	 * @param elementType 	the type of element to be maintained within the array
+	 * @param dim 			the dimension of the requested array (default is set to 1)
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
+	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
+		return manager.getTypePointer(ArrayType(elementType, dim));
+	}
+
+	/**
+	 * Retrieves the dimension of the represented array.
+	 *
+	 * @return the dimension of the represented array type
+	 */
+	const unsigned getDimension() const {
+		return getIntTypeParameter()[0].getValue();
+	}
+};
+
+// --------------------------------- Vector Type ----------------------------
+
+/**
+ * This intrinsic vector type used to represent fixed sized arrays (=vectors).
+ */
+class VectorType : public SingleElementType {
+
+	/**
+	 * Creates a new instance of this class using the given parameters.
+	 *
+	 * @param elementType the element type of this vector
+	 * @param size the size of the new vector type
+	 */
+	VectorType(const TypePtr elementType, const unsigned short size) :
+		SingleElementType("vector", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+
+	/**
+	 * Creates a clone of this type within the given manager.
 	 */
 	virtual VectorType* clone(TypeManager& manager) const {
 		return new VectorType(manager.get(getElementType()), getSize());
 	}
 
-	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
-		return manager.getTypePointer(VectorType(manager.get(elementType), size));
-	}
-};
-
-class RefType: public SingleElementType {
-
-	RefType(const TypePtr elementType) :
-		SingleElementType("ref", elementType) {}
-
 public:
 
 	/**
-	 * Creates a clone of this type.
+	 * A factory method allowing to obtain a pointer to a vector type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager 		the manager which should be responsible for maintaining the new
+	 * 				  		type instance and all its referenced elements.
+	 * @param elementType 	the type of element to be maintained within the vector
+	 * @param dim 			the size of the requested vector
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
+	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
+		return manager.getTypePointer(VectorType(elementType, size));
+	}
+
+	/**
+	 * Retrieves the size (=number of elements) of the represented vector type.
+	 *
+	 * @return the size of the represented array type
+	 */
+	const unsigned getSize() const {
+		return getIntTypeParameter()[0].getValue();
+	}
+};
+
+
+// --------------------------------- Reference Type ----------------------------
+
+/**
+ * This intrinsic reference type used to represent mutable memory locations.
+ */
+class RefType: public SingleElementType {
+
+	/**
+	 * A private constructor to create a new instance of this type class based on the
+	 * given element type.
+	 *
+	 * @param elementType the type the new type should reference to.
+	 */
+	RefType(const TypePtr elementType) :
+		SingleElementType("ref", elementType) {}
+
+	/**
+	 * Creates a clone of this type within the given manager.
 	 */
 	virtual RefType* clone(TypeManager& manager) const {
 		return new RefType(manager.get(getElementType()));
 	}
 
-	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
-		return manager.getTypePointer(RefType(manager.get(elementType)));
-	}
-};
-
-class ChannelType: public SingleElementType {
-
-public:
-	const unsigned getSize() const {
-		return getIntTypeParameter()[0].getValue();
-	}
-
-private:
-
-	ChannelType(const TypePtr elementType, const unsigned size) :
-		SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
-
 public:
 
 	/**
-	 * Creates a clone of this type.
+	 * A factory method allowing to obtain a pointer to a reference type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager 		the manager which should be responsible for maintaining the new
+	 * 				  		type instance and all its referenced elements.
+	 * @param elementType 	the type of element the requested reference is addressing
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
+	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
+		return manager.getTypePointer(RefType(elementType));
+	}
+};
+
+// --------------------------------- Reference Type ----------------------------
+
+/**
+ * This intrinsic reference type used to represent communication channels.
+ */
+class ChannelType: public SingleElementType {
+
+	/**
+	 * Creates a new channel.
+	 *
+	 * @param elementType	the type of data to be communicated through this channel
+	 * @param size			the buffer size of this channel, hence the number of elements which can be
+	 * 						obtained within this channel until it starts blocking writte operations. If
+	 * 						set to 0, the channel will represent a handshake channel.
+	 */
+	ChannelType(const TypePtr elementType, const unsigned size) :
+		SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+
+	/**
+	 * Creates a clone of this type within the given manager.
 	 */
 	virtual ChannelType* clone(TypeManager& manager) const {
 		return new ChannelType(manager.get(getElementType()), getSize());
 	}
 
+public:
+
+	/**
+	 * A factory method allowing to obtain a pointer to a reference type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager 		the manager which should be responsible for maintaining the new
+	 * 				  		type instance and all its referenced elements.
+	 * @param elementType 	the type of element the requested reference is addressing
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
 	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
-		return manager.getTypePointer(ChannelType(manager.get(elementType), size));
+		return manager.getTypePointer(ChannelType(elementType, size));
+	}
+
+	/**
+	 * Retrieves the (buffer) size of this channel.
+	 *
+	 * @return the buffer size of the channel
+	 */
+	const unsigned getSize() const {
+		return getIntTypeParameter()[0].getValue();
 	}
 };
 

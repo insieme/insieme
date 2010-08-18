@@ -38,7 +38,9 @@
 
 #include <vector>
 #include <functional>
+#include <unordered_set>
 
+#include <boost/functional/hash.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/utility/enable_if.hpp>
 
@@ -132,4 +134,48 @@ bool any(InputIterator first, InputIterator last, const Function& predicate)
 template<class ContainerType, class Function>
 bool any(const ContainerType& list, const Function& predicate) {
 	return any(list.cbegin(), list.cend(), predicate);
+}
+
+/**
+ * Checks whether the given range includes duplicated values.
+ * The complexity of this operation is at most O(n). It aborts as soon
+ * as two equivalent elements have been discovered.
+ *
+ * WARNING: The element type of the container has to implement the operator== and
+ * has to be boost-hash-able so that they can be used within unordered sets.
+ *
+ * @param first the iterator pointing to the first element of the range
+ * @param last the iterator pointing to the end of the range
+ * @return true if duplicates could be found, false otherwise.
+ */
+template<class InputIterator>
+bool hasDuplicates(InputIterator first, InputIterator last) {
+	typedef typename std::iterator_traits<InputIterator>::value_type Element;
+
+	// NOTE: uses the boost hasher instead of the default hasher!
+	// see: http://stackoverflow.com/questions/647967/how-to-extend-stdtr1hash-for-custom-types
+	std::unordered_set<Element, boost::hash<Element>> set(std::distance(first,last));
+	return any(first, last, [&set](const Element& cur) {
+		// check whether the current element is a new element
+		//  - if it is new, insert will return true => fine
+		//  - if it is not, insert will return false => duplicate found
+		return !set.insert(cur).second;
+	});
+}
+
+
+/**
+ * Checks whether the given container includes duplicated values.
+ * The complexity of this operation is at most O(n). It aborts as soon
+ * as two equivalent elements have been discovered.
+ *
+ * WARNING: The element type of the container has to implement the operator== and
+ * has to be boost-hash-able so that they can be used within unordered sets.
+ *
+ * @param list the list to be checked for duplicates
+ * @return true if duplicates could be found, false otherwise.
+ */
+template<class ContainerType>
+bool hasDuplicates(const ContainerType& list) {
+	return hasDuplicates(list.cbegin(), list.cend());
 }

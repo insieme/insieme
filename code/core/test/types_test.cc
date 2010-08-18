@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 #include "types.h"
@@ -378,6 +379,16 @@ TEST(TypeTest, StructType) {
 	StructTypePtr structC = StructType::get(manager, entriesC);
 	EXPECT_EQ ( "struct<a:'alpha,b:B>", structC->getName() );
 
+	// test for elements with same name
+	StructType::Entries entriesD;
+	entriesD.push_back(StructType::Entry(identA, GenericType::get(manager,"A")));
+	entriesD.push_back(StructType::Entry(identB, GenericType::get(manager,"A")));
+	entriesD.push_back(StructType::Entry(identA, GenericType::get(manager,"A")));
+	EXPECT_THROW ( StructType::get(manager, entriesD), std::invalid_argument );
+
+	// .. same type should not be a problem
+	entriesD.pop_back();
+	EXPECT_NO_THROW ( StructType::get(manager, entriesD) );
 
 	// perform basic type tests
 	vector<TypePtr> typeListA;
@@ -560,7 +571,8 @@ TEST(TypeTest, RefType) {
 	basicTypeTests<RefType>(refTypeB, false, false, toVector(elementTypeB));
 }
 
-TEST(TypesTest, IntTypeParam) {
+
+TEST(TypeTest, IntTypeParam) {
 #ifndef WIN32
 	// test size limitation
 	EXPECT_LE (sizeof(IntTypeParam), (std::size_t) 4);
@@ -619,10 +631,9 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	// create a copy of the type
 	TypeManager manager;
 	T copy = T(*type);
-	T* clone = type->clone(manager);
 
 	// check whether all are equal
-	T all[] = { *type, copy, *clone };
+	T all[] = { *type, copy };
 	for (int i=0; i<2; i++) {
 		for (int j=0; j<2; j++) {
 
@@ -652,8 +663,6 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 		EXPECT_TRUE ( children == *(type->getChildren()) );
 
 	}
-
-	delete clone;
 }
 
 

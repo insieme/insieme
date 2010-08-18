@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
+#include <gtest/gtest.h>
 #include <vector>
 
-#include <gtest/gtest.h>
 #include "container_utils.h"
 
 using std::vector;
@@ -105,4 +105,37 @@ TEST(ContainerUtils, AnyAll) {
 	EXPECT_TRUE ( any(list, even) );
 	EXPECT_TRUE( all(list, even) );
 
+}
+
+TEST(ContainerUtils, Duplicates) {
+
+	// check some basic properties
+	vector<int> list;
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(2);
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(4);
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(4);
+	EXPECT_TRUE ( hasDuplicates(list) );
+
+	list.pop_back();
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(2);
+	EXPECT_TRUE ( hasDuplicates(list) );
+
+	// check a large list
+	int N = 10000;
+	list.clear();
+	for (int i=0; i<N; i++) {
+		list.push_back(i);
+	}
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(N/2);
+	EXPECT_TRUE ( hasDuplicates(list) );
 }

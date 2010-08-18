@@ -34,64 +34,59 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <string>
 #include <boost/functional/hash.hpp>
 
-#include "annotated_ptr.h"
-#include "instance_manager.h"
-
-using std::string;
+#include "identifiers.h"
+#include "container_utils.h"
 
 
-class Identifier {
+TEST(TypeTest, DuplicateTest) {
 
-	string name;
+	// check names
+	Identifier identA("A");
+	EXPECT_EQ ("A" , identA.getName());
 
-	std::size_t hashCode;
+	Identifier identB("B");
+	EXPECT_EQ ("B" , identB.getName());
 
-public:
+	Identifier identA2("A");
+	EXPECT_EQ ("A" , identA2.getName());
 
-	Identifier(const string& name) : name(name), hashCode(boost::hash_value(name)) { }
+	// check equality operator
+	EXPECT_NE ( identA, identB );
+	EXPECT_EQ ( identA, identA2 );
+	EXPECT_NE ( identB, identA2 );
 
-	const string& getName() const { return name; }
+	EXPECT_NE ( identB, identA );
+	EXPECT_EQ ( identA2, identA );
+	EXPECT_NE ( identA2, identB );
 
-	bool operator==(const Identifier& other) const {
-		// test for identity
-		if (this == &other) {
-			return true;
+	// check hash
+	boost::hash<Identifier> hasher;
+	Identifier all[] = {identA, identB, identA2};
+	for (int i=0; i<3; i++) {
+		for (int j=0; j<3; j++) {
+			Identifier a = all[i];
+			Identifier b = all[j];
+			EXPECT_EQ ( a == b, hasher(a) == hasher(b));
 		}
-
-		// slow name comparison
-		return name == other.name;
 	}
 
-	bool operator!=(const Identifier& other) const {
-		return !(*this==other);
-	}
-
-	std::size_t hash() const {
-		return hashCode;
-	}
-
-};
 
 
-// ---------------------------------------------- Utility Functions ------------------------------------
+	// Tests whether hash function for identifiers is properly working
 
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Identifier& type);
+	// create list of identifiers
+	vector<Identifier> identifier;
+	identifier.push_back(Identifier("A"));
+	identifier.push_back(Identifier("B"));
+	EXPECT_FALSE ( hasDuplicates(identifier) );
 
-/**
- * Allows to compute the hash value of an identifier.
- *
- * @param identifier the identifier for which a hash value should be computed
- * @return the computed hash value
- */
-std::size_t hash_value(const Identifier& identifier);
+	identifier.push_back(Identifier("A"));
+	EXPECT_TRUE ( hasDuplicates(identifier) );
+
+}
 
 
