@@ -458,7 +458,7 @@ class TypeVariable: public Type {
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TypeVariable* clone(TypeManager& manager) const {
+	virtual TypeVariable* clone(TypeManager&) const {
 		return new TypeVariable(*this);
 	}
 
