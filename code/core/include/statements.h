@@ -256,7 +256,7 @@ public:
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
 	
-	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step /* TODO PT default 1 */);
+	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step = NULL);
 };
 
 class IfStmt: public Statement {
@@ -277,7 +277,23 @@ public:
 };
 
 class SwitchStmt: public Statement {
-	const vector<std::pair<ExprPtr, StmtPtr>> conditions;
+public:
+	typedef std::pair<ExprPtr, StmtPtr> Case;
+
+private:
+	const ExprPtr switchExpr;
+	const vector<Case> cases;
+
+	SwitchStmt(ExprPtr switchExpr, const vector<Case>& cases);
+	virtual SwitchStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	SwitchStmtPtr get(StatementManager& manager, ExprPtr switchExpr, const vector<Case>& cases);
 };
 
 // ------------------------------------- Statement Manager ---------------------------------

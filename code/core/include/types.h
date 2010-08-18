@@ -459,7 +459,7 @@ public:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TypeVariable* clone(TypeManager& manager) const {
+	virtual TypeVariable* clone(TypeManager&) const {
 		return new TypeVariable(*this);
 	}
 
@@ -744,7 +744,7 @@ protected:
 		// with transform
 		std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
 			[&manager](const Entry& cur) {
-				return Entry(cur.first, manager.get(cur.second));
+				return NamedCompositeType::Entry(cur.first, manager.get(cur.second));
 		});
 
 		return res;
@@ -829,13 +829,13 @@ public:
 class ArrayType: public SingleElementType {
 
 public:
-	const unsigned getDimension() const {
+	const unsigned short getDimension() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 
 private:
 
-	ArrayType(const TypePtr elementType, const unsigned dim) :
+	ArrayType(const TypePtr elementType, const unsigned short dim) :
 		SingleElementType("array", elementType, toVector(IntTypeParam::getConcreteIntParam(dim))) {}
 
 public:
@@ -847,7 +847,7 @@ public:
 		return new ArrayType(manager.get(getElementType()), getDimension());
 	}
 
-	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned dim = 1) {
+	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
 		return manager.getTypePointer(ArrayType(manager.get(elementType), dim));
 	}
 };
@@ -855,13 +855,13 @@ public:
 class VectorType : public SingleElementType {
 
 public:
-	const unsigned getSize() const {
+	const unsigned short getSize() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 
 private:
 
-	VectorType(const TypePtr elementType, const unsigned size) :
+	VectorType(const TypePtr elementType, const unsigned short size) :
 		SingleElementType("vector", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
 
 public:
@@ -873,7 +873,7 @@ public:
 		return new VectorType(manager.get(getElementType()), getSize());
 	}
 
-	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
+	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
 		return manager.getTypePointer(VectorType(manager.get(elementType), size));
 	}
 };
@@ -900,13 +900,13 @@ public:
 class ChannelType: public SingleElementType {
 
 public:
-	const unsigned getSize() const {
+	const unsigned short getSize() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 
 private:
 
-	ChannelType(const TypePtr elementType, const unsigned size) :
+	ChannelType(const TypePtr elementType, const unsigned short size) :
 		SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
 
 public:
@@ -918,7 +918,7 @@ public:
 		return new ChannelType(manager.get(getElementType()), getSize());
 	}
 
-	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
+	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
 		return manager.getTypePointer(ChannelType(manager.get(elementType), size));
 	}
 };

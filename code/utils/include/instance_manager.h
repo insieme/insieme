@@ -256,5 +256,10 @@ public:
 			return &*cur == *entry;
 		});
 	}
+
+	bool contains(const R& elem) {
+		auto entry = storage.find(&*elem);
+		return entry != storage.cend();
+	}
 };
 
