@@ -40,44 +40,8 @@
 
 
 TEST(StatementManager, Basic) {
-
-
-
-
-//	// test size limitation
-//	EXPECT_LE (sizeof(IntTypeParam), 4);
-//
-//	// test toString format
-//	IntTypeParam p12 = IntTypeParam::getConcreteIntParam(12);
-//	EXPECT_EQ (p12.toString(), "12");
-//
-//	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
-//	EXPECT_EQ (inf.toString(), "Inf");
-//
-//	IntTypeParam pvp = IntTypeParam::getVariableIntParam('p');
-//	EXPECT_EQ (pvp.toString(), "p");
-//
-//	// test isConcrete()
-//	EXPECT_EQ (p12.isConcrete(), true);
-//	EXPECT_EQ (inf.isConcrete(), true);
-//	EXPECT_EQ (pvp.isConcrete(), false);
-//
-//	// test == operator
-//	IntTypeParam params[] = {p12, inf, pvp};
-//	for (int i=0; i<3; i++) {
-//		for (int j=0; j<3; j++) {
-//			EXPECT_EQ(params[i]==params[j], i==j);
-//		}
-//	}
-//
-//	IntTypeParam p12b = IntTypeParam::getConcreteIntParam(12);
-//	EXPECT_TRUE (p12 == p12b);
-//
-//	IntTypeParam pvpb = IntTypeParam::getVariableIntParam('p');
-//	EXPECT_TRUE (pvp == pvpb);
-//
-//	IntTypeParam infb = IntTypeParam::getInfiniteIntParam();
-//	EXPECT_TRUE (inf == infb);
+	// test size limitation
+	EXPECT_LE (sizeof(IntTypeParam), 4);
 }
 
 
