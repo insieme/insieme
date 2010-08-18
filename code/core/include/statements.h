@@ -116,6 +116,7 @@ protected:
 	};
 
 	Statement() {}
+	virtual ~Statement() {}
 
 	virtual bool equals(const Statement& stmt) const = 0;
 
