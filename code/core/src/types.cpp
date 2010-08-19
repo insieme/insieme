@@ -243,21 +243,11 @@ GenericType::ChildList GenericType::getChildren() const {
 NamedCompositeType::NamedCompositeType(const string& prefix, const Entries& entries) :
 	Type(buildNameString(prefix, entries), allConcrete(entries)), entries(entries) {
 
-	// ensure that names are not used multiple times
-	// NOTE: projecting to input list would be nice, but GCC 4.5 crashes with an internal error
-	// TODO: find alternative way to circumvent GCC bug
-
 	// get projection to first element
-	//auto projection = [](const Entry& cur) -> const Identifier& { return cur.first; };
 	auto start = boost::make_transform_iterator(entries.cbegin(), extractFirst<Entry>());
 	auto end = boost::make_transform_iterator(entries.cend(), extractFirst<Entry>());
 
-	// copy list (instead of using a projection)
-//	vector<Identifier> identifier;
-//	std::transform(entries.cbegin(), entries.cend(), back_inserter(identifier), projection);
-
 	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
-//	if (hasDuplicates(identifier)) {
 		throw std::invalid_argument("No duplicates within identifiers are allowed!");
 	}
 }
