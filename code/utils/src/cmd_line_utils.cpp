@@ -78,7 +78,7 @@ void HandleImmediateArgs(po::options_description const& desc) {
 }
 }
 
-CommandLineOptions& CommandLineOptions::Parse(int argc, char** argv, bool debug) {
+void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 	po::options_description cmdLineOpts("Insieme (tm) compiler:\nOptions");
 
 	po::positional_options_description posDesc;

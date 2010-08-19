@@ -24,6 +24,8 @@ link_directories(${Boost_LIBRARY_DIRS})
 # lookup perl
 find_package( Perl )
 
+# lookup pthread library
+find_library(pthread_LIB pthread)
 
 # Visual Studio customization
 if(MSVC) 
