@@ -42,78 +42,107 @@
 #include "types.h"
 #include "statements.h"
 
-using std::string;
+// Forward Declarations { -----------------------------------------------------
+
+class Expression;
+typedef AnnotatedPtr<const Expression> ExprPtr;
+
+class IntLiteral;
+typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
+
+// Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
-	
-	/**
-	 * The type of the represented expression.
-	 */
+protected:	
+	enum {
+		HASHVAL_INTLITERAL
+	};
+
+	/** The type of the represented expression. */
 	const TypePtr type;
+	
+	Expression(const TypePtr& type) : type(type) { };
+	virtual ~Expression() {}
+
+	virtual bool equals(const Statement& stmt) const;
+	virtual bool equalsExpr(const Expression& expr) const = 0;
 
 public:
-
-	Expression(const TypePtr& type) : type(type) { };
-
-	/**
-	 * Retrieves the type of this expression.
-	 */
+	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
-
-	virtual string toString() const { return ""; }
-
-	virtual size_t hash() const { return 0; }
-
 };
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
 
-class VariableExpr : public Expression {
-	const string name;
-};
-typedef std::shared_ptr<VariableExpr> VarExprPtr;
-
-class LambdaExpression : public Expression {
-};
-
-class CallExpression : public Expression {
-//	const ExprPtr function;
-//	const ExprPtr argument;
-};
-
-class CastExpression : public Expression {
-//	const ExprPtr subExpression;
-};
-
-
 template<typename T>
 class Literal : public Expression {
+protected:
     const T value;
-public:
+	
 	Literal(const TypePtr& type, const T& val) : Expression(type), value(val) { };
+	virtual ~Literal() {}
+
+	bool equalsExpr(const Expression& expr) const {
+		// conversion is guaranteed by base operator==
+		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr); 
+		return (value == rhs.value);
+	}
+
+public:
+	virtual void printTo(std::ostream& out) const {
+		out << value;
+	}
+
     const T getValue() const { return value; }
 };
 
-class IntegerLiteral : public Literal<int> {
+class IntLiteral : public Literal<int> {
+	unsigned short bytes;
+
+	IntLiteral(const TypePtr& type, int val, unsigned short bytes) : Literal<int>(type, val), bytes(bytes) { }
+	virtual IntLiteral* clone(StatementManager& manager) const;
+	
 public:
-	IntegerLiteral(const int val) : Literal(NULL, val) { } // TODO: fix null type
+	virtual std::size_t hash() const;
+
+	static IntLiteralPtr get(StatementManager& manager, int value, unsigned short bytes = 4);
+	static IntLiteralPtr one(StatementManager& manager) { return get(manager, 1); }
+	static IntLiteralPtr zero(StatementManager& manager) { return get(manager, 0); }
 };
 
-class FloatLiteral : public Literal<double> {
-	string originalString;
-public:
-	// TODO: fix null type
-	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
-};
+//class FloatLiteral : public Literal<double> {
+//	string originalString;
+//public:
+//	// TODO: fix null type
+//	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
+//};
+//
+//class BooleanLiteral : public Literal<bool> {
+//public:
+//	// TODO: fix null type
+//	BooleanLiteral(const bool val) : Literal(NULL, val) { }
+//};
+//
+//class StringLiteral : public Literal<string> {
+//public:
+//	// TODO: fix null type
+//	StringLiteral(const string& val) : Literal(NULL, val) { }
+//};
 
-class BooleanLiteral : public Literal<bool> {
-public:
-	// TODO: fix null type
-	BooleanLiteral(const bool val) : Literal(NULL, val) { }
-};
 
-class StringLiteral : public Literal<string> {
-public:
-	// TODO: fix null type
-	StringLiteral(const string& val) : Literal(NULL, val) { }
-};
+//class VariableExpr : public Expression {
+//	const string name;
+//};
+//typedef std::shared_ptr<VariableExpr> VarExprPtr;
+//
+//class LambdaExpression : public Expression {
+//};
+//
+//class CallExpression : public Expression {
+////	const ExprPtr function;
+////	const ExprPtr argument;
+//};
+//
+//class CastExpression : public Expression {
+////	const ExprPtr subExpression;
+//};

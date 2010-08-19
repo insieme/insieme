@@ -97,12 +97,12 @@ public:
 	virtual void visit(T cur) const = 0;
 };
 
-template <typename T>
+template <typename T, typename RetT = void>
 class DepthFirstVisitor : public Visitor<T> {
 public:
-	DepthFirstVisitor(const function<void(T)>& task, const function<bool(T)>& filter = &visitorTrueFilter<T>) : Visitor<T>(task, filter) {};
+	DepthFirstVisitor(const function<RetT(T)>& task, const function<bool(T)>& filter = &visitorTrueFilter<T>) : Visitor<T>(task, filter) {};
 
-	virtual void visit(T cur) const {
+	virtual RetT visit(T cur) const {
 		typename Visitable<T>::ChildList list = cur->getChildren();
 
 		for_each(list->begin(), list->end(),
@@ -116,12 +116,12 @@ public:
 };
 
 
-template <typename T>
+template <typename T, typename RetT = void>
 class ChildVisitor : public Visitor<T> {
 public:
-	ChildVisitor(const function<void(T)>& task, const function<bool(T)>& filter = &visitorTrueFilter<T>) : Visitor<T>(task, filter) {};
+	ChildVisitor(const function<void(T)>& task, const function<RetT(T)>& filter = &visitorTrueFilter<T>) : Visitor<T>(task, filter) {};
 
-	virtual void visit(T cur) const {
+	virtual RetT visit(T cur) const {
 		typename Visitable<T>::ChildList list = cur->getChildren();
 		for_each(list->begin(), list->end(), [&](T cur) {
 			if (this->filter(cur)) {

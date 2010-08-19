@@ -39,6 +39,7 @@
 #include <utility>
 #include <iterator>
 
+// todo inherit from iterator traits
 template<typename ITypeA, typename ITypeB>
 class paired_iterator {
 	ITypeA a;

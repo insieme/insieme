@@ -266,7 +266,7 @@ public:
 	 * @see TypeManager::getTypePtrInternal(const Type&)
 	 */
 	template<typename T>
-	AnnotatedPtr<const T> getTypePointer(const T& node) {
+	AnnotatedPtr<const T> getTypePtr(const T& node) {
 		return dynamic_pointer_cast<const T>(get(node));
 	}
 
@@ -470,7 +470,7 @@ public:
 	 * given manager.
 	 */
 	static TypeVariablePtr get(TypeManager& manager, const string& name) {
-		return manager.getTypePointer(TypeVariable(name));
+		return manager.getTypePtr(TypeVariable(name));
 	}
 
 };
@@ -958,7 +958,7 @@ public:
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
-		return manager.getTypePointer(ArrayType(elementType, dim));
+		return manager.getTypePtr(ArrayType(elementType, dim));
 	}
 
 	/**
@@ -966,7 +966,7 @@ public:
 	 *
 	 * @return the dimension of the represented array type
 	 */
-	const unsigned getDimension() const {
+	const unsigned short getDimension() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 };
@@ -1007,8 +1007,8 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
-		return manager.getTypePointer(VectorType(elementType, size));
+	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
+		return manager.getTypePtr(VectorType(elementType, size));
 	}
 
 	/**
@@ -1016,7 +1016,7 @@ public:
 	 *
 	 * @return the size of the represented array type
 	 */
-	const unsigned getSize() const {
+	const unsigned short getSize() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 };
@@ -1058,7 +1058,7 @@ public:
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
-		return manager.getTypePointer(RefType(elementType));
+		return manager.getTypePtr(RefType(elementType));
 	}
 };
 
@@ -1077,7 +1077,7 @@ class ChannelType: public SingleElementType {
 	 * 						obtained within this channel until it starts blocking writte operations. If
 	 * 						set to 0, the channel will represent a handshake channel.
 	 */
-	ChannelType(const TypePtr elementType, const unsigned size) :
+	ChannelType(const TypePtr elementType, const unsigned short size) :
 		SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
 
 	/**
@@ -1099,8 +1099,8 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned size) {
-		return manager.getTypePointer(ChannelType(elementType, size));
+	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
+		return manager.getTypePtr(ChannelType(elementType, size));
 	}
 
 	/**
@@ -1108,7 +1108,7 @@ public:
 	 *
 	 * @return the buffer size of the channel
 	 */
-	const unsigned getSize() const {
+	const unsigned short getSize() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 };

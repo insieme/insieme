@@ -135,7 +135,7 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& elementTypes) {
-	return manager.getTypePointer(TupleType(elementTypes));
+	return manager.getTypePtr(TupleType(elementTypes));
 }
 
 
@@ -154,7 +154,7 @@ TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& element
  */
 FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 	// obtain reference to new element
-	return manager.getTypePointer(FunctionType(argumentType, returnType));
+	return manager.getTypePtr(FunctionType(argumentType, returnType));
 }
 
 // ---------------------------------------- Generic Type ------------------------------
@@ -210,7 +210,7 @@ GenericTypePtr GenericType::get(TypeManager& manager,
 	TypePtr localBaseType = manager.get(baseType);
 
 	// create resulting data element
-	return manager.getTypePointer(GenericType(name, localTypeParams, intTypeParams, localBaseType));
+	return manager.getTypePtr(GenericType(name, localTypeParams, intTypeParams, localBaseType));
 }
 
 /**
@@ -323,7 +323,7 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 
 StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
-	return manager.getTypePointer(StructType(NamedCompositeType::getEntriesFromManager(manager, entries)));
+	return manager.getTypePtr(StructType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
 
 // ------------------------------------ Union Type ---------------------------
@@ -331,7 +331,7 @@ StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
 
 UnionTypePtr UnionType::get(TypeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
-	return manager.getTypePointer(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
+	return manager.getTypePtr(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
 
 // ---------------------------------------------- Utility Functions ------------------------------------

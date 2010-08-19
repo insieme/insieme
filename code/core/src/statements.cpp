@@ -330,7 +330,7 @@ ForStmt::ChildList ForStmt::getChildren() const {
 }
 
 ForStmtPtr ForStmt::get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) {
-	if(!step) /* TODO PT */;
+	if(!step) step = IntLiteral::one(manager);
 	return manager.getStmtPtr(ForStmt(declaration, body, end, step));
 }
 
