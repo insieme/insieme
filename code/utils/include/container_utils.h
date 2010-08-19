@@ -187,7 +187,7 @@ bool hasDuplicates(const ContainerType& list) {
  */
 template<class Pair>
 struct extractFirst {
-	typedef typename const Pair::first_type& result_type;
+	typedef const typename Pair::first_type & result_type;
 	result_type operator()(const Pair& p) const { return p.first; }
 };
 
@@ -198,6 +198,6 @@ struct extractFirst {
  */
 template<class Pair>
 struct extractSecond {
-	typedef typename const Pair::second_type& result_type;
+	typedef const typename Pair::second_type & result_type;
 	result_type operator()(const Pair& p) const { return p.second; }
 };

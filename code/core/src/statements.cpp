@@ -154,6 +154,7 @@ bool DeclarationStmt::equals(const Statement& stmt) const {
 
 std::size_t DeclarationStmt::hash() const {
 	std::size_t seed = HASHVAL_DECLARATION;
+	boost::hash_combine(seed, id.hash());
     boost::hash_combine(seed, type->hash());
     boost::hash_combine(seed, initExpression->hash());
 	return seed;
