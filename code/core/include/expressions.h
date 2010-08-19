@@ -54,12 +54,15 @@ typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
 class VariableExpr;
 typedef AnnotatedPtr<const VariableExpr> VarExprPtr;
 
+class CallExpr;
+typedef AnnotatedPtr<const CallExpr> CallExprPtr;
+
 // Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
 protected:	
 	enum {
-		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_VAREXPR
+		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_VAREXPR, HASHVAL_CALLEXPR
 	};
 
 	/** The type of the represented expression. */
@@ -75,7 +78,6 @@ public:
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
 };
-typedef AnnotatedPtr<const Expression> ExprPtr;
 
 
 template<typename T>
@@ -153,11 +155,25 @@ public:
 //class LambdaExpression : public Expression {
 //};
 //
-//class CallExpression : public Expression {
-////	const ExprPtr function;
-////	const ExprPtr argument;
-//};
-//
+
+class CallExpr : public Expression {
+	const ExprPtr functionExpr;
+	const vector<const ExprPtr> arguments;
+
+	CallExpr(const TypePtr& type, const ExprPtr& functionExpr, const vector<const ExprPtr> arguments) 
+		: Expression(type), functionExpr(functionExpr), arguments(arguments) { }
+	virtual CallExpr* clone(StatementManager& manager) const;
+	
+protected:
+	bool equalsExpr(const Expression& expr) const;
+	
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static CallExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<const ExprPtr> arguments);
+};
+
 //class CastExpression : public Expression {
 ////	const ExprPtr subExpression;
 //};

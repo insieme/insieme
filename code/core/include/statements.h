@@ -47,8 +47,6 @@
 #include <vector>
 #include <utility>
 
-#include <boost/algorithm/string/join.hpp>
-
 #include "annotated_ptr.h"
 #include "container_utils.h"
 #include "instance_manager.h"
