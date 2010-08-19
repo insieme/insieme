@@ -248,16 +248,16 @@ NamedCompositeType::NamedCompositeType(const string& prefix, const Entries& entr
 	// TODO: find alternative way to circumvent GCC bug
 
 	// get projection to first element
-	auto projection = [](const Entry& cur) { return cur.first; };
-//	auto start = boost::make_transform_iterator(entries.cbegin(), projection);
-//	auto end = boost::make_transform_iterator(entries.cend(), projection);
+	//auto projection = [](const Entry& cur) -> const Identifier& { return cur.first; };
+	auto start = boost::make_transform_iterator(entries.cbegin(), extractFirst<Entry>());
+	auto end = boost::make_transform_iterator(entries.cend(), extractFirst<Entry>());
 
 	// copy list (instead of using a projection)
-	vector<Identifier> identifier;
-	std::transform(entries.cbegin(), entries.cend(), back_inserter(identifier), projection);
+//	vector<Identifier> identifier;
+//	std::transform(entries.cbegin(), entries.cend(), back_inserter(identifier), projection);
 
-//	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
-	if (hasDuplicates(identifier)) {
+	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
+//	if (hasDuplicates(identifier)) {
 		throw std::invalid_argument("No duplicates within identifiers are allowed!");
 	}
 }
@@ -281,7 +281,7 @@ NamedCompositeType::Entries NamedCompositeType::getEntriesFromManager(TypeManage
 	Entries res;
 	std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
 		[&manager](const Entry& cur) {
-			return Entry(cur.first, manager.get(cur.second));
+			return NamedCompositeType::Entry(cur.first, manager.get(cur.second));
 	});
 	return res;
 }
