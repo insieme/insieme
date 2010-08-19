@@ -45,6 +45,8 @@
 #include "stringutils.h"
 #include "cmd_line_utils.h"
 
+#include "clang_compiler.h"
+
 using namespace std;
 
 
@@ -62,6 +64,7 @@ int main(int argc, char** argv) {
 	FunctionType fun(TypePtr(new TupleType(types)), AbstractType::getInstance());
 
 	cout << tuple.getName() << endl;
+	ParseSourceFile("ciao.cpp");
 
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());

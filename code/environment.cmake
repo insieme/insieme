@@ -12,6 +12,7 @@ set ( insieme_core_include_dir 	${insieme_code_dir}/core/include )
 
 set ( insieme_utils_src_dir 	${insieme_code_dir}/utils/src )
 set ( insieme_utils_include_dir ${insieme_code_dir}/utils/include )
+set ( insieme_frontend_include_dir ${insieme_code_dir}/frontend/include )
 
 set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 

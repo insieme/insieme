@@ -34,21 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <string>
 
-#include <unordered_set>
+#include <gtest/gtest.h>
+#include "instance_manager.h"
 
-#include "annotated_ref.h"
 
-template<typename T>
-class InstanceManager {
-	std::unordered_set<T> storage;
-	//std::unordered_map<T,T> storage;
-public:
-	AnnotatedRef<T> get(const T& instance) {
-		//storage.instance
-		//return AnnotatedRef<T>(&(*(storage.insert(instance).first)));
-		return AnnotatedRef<T>(0);
-	}
-};
+using std::string;
+
+TEST(InstanceManager, Basic) {
+
+	InstanceManager<string> manager;
+
+	AnnotatedRef<string> ref = manager.get("Hello World");
+
+	//EXPECT_EQ (*ref, "Hello World");
+
+	AnnotatedRef<string> ref2 = manager.get("Hello World 2");
+
+	//EXPECT_EQ (*ref2, "Hello World 2");
+}
 

@@ -38,6 +38,7 @@
 
 #include <vector>
 #include <string>
+#include <iterator>
 
 /**
  * The CommandLineOptions is a container for input arguments to the Insieme compiler.

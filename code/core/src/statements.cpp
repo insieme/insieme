@@ -34,21 +34,11 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "statements.h"
 
-#include <unordered_set>
 
-#include "annotated_ref.h"
+NoOpStmtPtr NoOpStmt::instance(new NoOpStmt());
 
-template<typename T>
-class InstanceManager {
-	std::unordered_set<T> storage;
-	//std::unordered_map<T,T> storage;
-public:
-	AnnotatedRef<T> get(const T& instance) {
-		//storage.instance
-		//return AnnotatedRef<T>(&(*(storage.insert(instance).first)));
-		return AnnotatedRef<T>(0);
-	}
-};
-
+NoOpStmtPtr NoOpStmt::getInstance() {
+	return instance;
+}
