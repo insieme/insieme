@@ -179,3 +179,25 @@ template<class ContainerType>
 bool hasDuplicates(const ContainerType& list) {
 	return hasDuplicates(list.cbegin(), list.cend());
 }
+
+/**
+ * Functor extracting the first element of a std::pair
+ *
+ * @tparam type of element pair
+ */
+template<class Pair>
+struct extractFirst {
+	typedef const typename Pair::first_type & result_type;
+	result_type operator()(const Pair& p) const { return p.first; }
+};
+
+/**
+ * Functor extracting the second element of a std::pair
+ *
+ * @tparam type of element pair
+ */
+template<class Pair>
+struct extractSecond {
+	typedef const typename Pair::second_type & result_type;
+	result_type operator()(const Pair& p) const { return p.second; }
+};

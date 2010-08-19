@@ -34,58 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <stdexcept>
+#include <vector>
 
-#include <utility>
-#include <iterator>
+#include "types_utils.h"
+#include "container_utils.h"
 
-// todo inherit from iterator traits
-template<typename ITypeA, typename ITypeB>
-class paired_iterator {
-	ITypeA a;
-	ITypeB b;
+using std::vector;
 
-public:
-	typedef std::pair<typename std::iterator_traits<ITypeA>::value_type,
-					  typename std::iterator_traits<ITypeB>::value_type> value_type;
+TEST(TypeTest, IntType) {
 
-	typedef std::input_iterator_tag iterator_category;
-	typedef typename std::iterator_traits<ITypeA>::difference_type difference_type;
-	typedef value_type* pointer;
-	typedef value_type& reference;
+	// create type manager and element types
+	TypeManager manager;
+	IntTypePtr intType = IntType::get();
+//	IntTypePtr intType = IntType::get(2);
 
-	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
-
-	value_type operator*() {
-		return std::make_pair(*a,*b);
-	}
-
-	value_type operator->() {
-		return std::make_pair(*a,*b);
-	}
-
-	paired_iterator& operator++() {
-		++a;
-		++b;
-		return *this;
-	}
-
-	paired_iterator operator++(int) {
-		paired_iterator ret = *this;
-		++this;
-		return ret;
-	}
-
-	bool operator==(const paired_iterator& rhs) {
-		return (a == rhs.a) && (b == rhs.b);
-	}
-	
-	bool operator!=(const paired_iterator& rhs) {
-		return (a != rhs.a) || (b != rhs.b);
-	}
-};
-
-template<typename A, typename B>
-paired_iterator<A, B> make_paired_iterator(A a, B b) {
-	return paired_iterator<A,B>(a, b);
+	EXPECT_EQ ( 4 , intType.getNumBytes());
 }
+
+

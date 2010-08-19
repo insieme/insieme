@@ -135,7 +135,7 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& elementTypes) {
-	return manager.getTypePointer(TupleType(elementTypes));
+	return manager.getTypePtr(TupleType(elementTypes));
 }
 
 
@@ -154,7 +154,7 @@ TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& element
  */
 FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 	// obtain reference to new element
-	return manager.getTypePointer(FunctionType(argumentType, returnType));
+	return manager.getTypePtr(FunctionType(argumentType, returnType));
 }
 
 // ---------------------------------------- Generic Type ------------------------------
@@ -210,7 +210,7 @@ GenericTypePtr GenericType::get(TypeManager& manager,
 	TypePtr localBaseType = manager.get(baseType);
 
 	// create resulting data element
-	return manager.getTypePointer(GenericType(name, localTypeParams, intTypeParams, localBaseType));
+	return manager.getTypePtr(GenericType(name, localTypeParams, intTypeParams, localBaseType));
 }
 
 /**
@@ -243,21 +243,11 @@ GenericType::ChildList GenericType::getChildren() const {
 NamedCompositeType::NamedCompositeType(const string& prefix, const Entries& entries) :
 	Type(buildNameString(prefix, entries), allConcrete(entries)), entries(entries) {
 
-	// ensure that names are not used multiple times
-	// NOTE: projecting to input list would be nice, but GCC 4.5 crashes with an internal error
-	// TODO: find alternative way to circumvent GCC bug
-
 	// get projection to first element
-	auto projection = [](const Entry& cur) { return cur.first; };
-//	auto start = boost::make_transform_iterator(entries.cbegin(), projection);
-//	auto end = boost::make_transform_iterator(entries.cend(), projection);
+	auto start = boost::make_transform_iterator(entries.cbegin(), extractFirst<Entry>());
+	auto end = boost::make_transform_iterator(entries.cend(), extractFirst<Entry>());
 
-	// copy list (instead of using a projection)
-	vector<Identifier> identifier;
-	std::transform(entries.cbegin(), entries.cend(), back_inserter(identifier), projection);
-
-//	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
-	if (hasDuplicates(identifier)) {
+	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
 		throw std::invalid_argument("No duplicates within identifiers are allowed!");
 	}
 }
@@ -281,7 +271,7 @@ NamedCompositeType::Entries NamedCompositeType::getEntriesFromManager(TypeManage
 	Entries res;
 	std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
 		[&manager](const Entry& cur) {
-			return Entry(cur.first, manager.get(cur.second));
+			return NamedCompositeType::Entry(cur.first, manager.get(cur.second));
 	});
 	return res;
 }
@@ -333,7 +323,7 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 
 StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
-	return manager.getTypePointer(StructType(NamedCompositeType::getEntriesFromManager(manager, entries)));
+	return manager.getTypePtr(StructType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
 
 // ------------------------------------ Union Type ---------------------------
@@ -341,7 +331,7 @@ StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
 
 UnionTypePtr UnionType::get(TypeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
-	return manager.getTypePointer(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
+	return manager.getTypePtr(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
 
 // ---------------------------------------------- Utility Functions ------------------------------------

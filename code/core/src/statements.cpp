@@ -154,6 +154,7 @@ bool DeclarationStmt::equals(const Statement& stmt) const {
 
 std::size_t DeclarationStmt::hash() const {
 	std::size_t seed = HASHVAL_DECLARATION;
+	boost::hash_combine(seed, id.hash());
     boost::hash_combine(seed, type->hash());
     boost::hash_combine(seed, initExpression->hash());
 	return seed;
@@ -216,9 +217,10 @@ void CompoundStmt::printTo(std::ostream& out) const {
 bool CompoundStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const CompoundStmt& rhs = dynamic_cast<const CompoundStmt&>(stmt);
-	auto start = make_paired_iterator(statements.begin(), rhs.statements.begin());
-	auto end = make_paired_iterator(statements.end(), rhs.statements.end());
-	return all(start, end, [](std::pair<StmtPtr,StmtPtr> elems) { return elems.first == elems.second; } );
+	//auto start = make_paired_iterator(statements.begin(), rhs.statements.begin());
+	//auto end = make_paired_iterator(statements.end(), rhs.statements.end());
+	//return all(start, end, [](std::pair<StmtPtr,StmtPtr> elems) { return elems.first == elems.second; } );
+	return statements == rhs.statements;
 }
 
 std::size_t CompoundStmt::hash() const {
@@ -328,7 +330,7 @@ ForStmt::ChildList ForStmt::getChildren() const {
 }
 
 ForStmtPtr ForStmt::get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) {
-	if(!step) /* TODO PT */;
+	if(!step) step = IntLiteral::one(manager);
 	return manager.getStmtPtr(ForStmt(declaration, body, end, step));
 }
 
@@ -397,11 +399,6 @@ void SwitchStmt::printTo(std::ostream& out) const {
 bool SwitchStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const SwitchStmt& rhs = dynamic_cast<const SwitchStmt&>(stmt);
-	//auto start = make_paired_iterator(cases.begin(), rhs.cases.begin());
-	//auto end = make_paired_iterator(cases.end(), rhs.cases.end());
-	//return all(start, end, [](std::pair<Case,Case> elems) { 
-	//	return (elems.first.first == elems.second.first) && (elems.first.second == elems.second.second); 
-	//});
 	return cases == rhs.cases;
 }
 

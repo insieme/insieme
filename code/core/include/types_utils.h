@@ -36,56 +36,33 @@
 
 #pragma once
 
-#include <utility>
-#include <iterator>
+#include "types.h"
 
-// todo inherit from iterator traits
-template<typename ITypeA, typename ITypeB>
-class paired_iterator {
-	ITypeA a;
-	ITypeB b;
+class IntType;
+typedef AnnotatedPtr<const IntType> IntTypePtr;
 
+
+
+class IntType : public GenericType {
+
+	IntType(const unsigned short& numBytes = 4) 
+		: GenericType("int", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes))) {
+	}
+
+	/**
+	 * Creates a clone of this type within the given manager.
+	 */
+	virtual IntType* clone(TypeManager&) const {
+		return new IntType(getNumBytes());
+	}
 public:
-	typedef std::pair<typename std::iterator_traits<ITypeA>::value_type,
-					  typename std::iterator_traits<ITypeB>::value_type> value_type;
 
-	typedef std::input_iterator_tag iterator_category;
-	typedef typename std::iterator_traits<ITypeA>::difference_type difference_type;
-	typedef value_type* pointer;
-	typedef value_type& reference;
-
-	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
-
-	value_type operator*() {
-		return std::make_pair(*a,*b);
+	static IntTypePtr get(TypeManager& manager, const unsigned short numBytes) {
+		return manager.getTypePtr(IntType(numBytes));
 	}
 
-	value_type operator->() {
-		return std::make_pair(*a,*b);
+	const unsigned short getNumBytes() const {
+		return getIntTypeParameter()[0].getValue();
 	}
 
-	paired_iterator& operator++() {
-		++a;
-		++b;
-		return *this;
-	}
-
-	paired_iterator operator++(int) {
-		paired_iterator ret = *this;
-		++this;
-		return ret;
-	}
-
-	bool operator==(const paired_iterator& rhs) {
-		return (a == rhs.a) && (b == rhs.b);
-	}
-	
-	bool operator!=(const paired_iterator& rhs) {
-		return (a != rhs.a) || (b != rhs.b);
-	}
 };
-
-template<typename A, typename B>
-paired_iterator<A, B> make_paired_iterator(A a, B b) {
-	return paired_iterator<A,B>(a, b);
-}
