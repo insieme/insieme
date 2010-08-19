@@ -41,6 +41,7 @@
 #include "annotated_ptr.h"
 #include "types.h"
 #include "statements.h"
+#include "identifiers.h"
 
 // Forward Declarations { -----------------------------------------------------
 
@@ -50,12 +51,15 @@ typedef AnnotatedPtr<const Expression> ExprPtr;
 class IntLiteral;
 typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
 
+class VariableExpr;
+typedef AnnotatedPtr<const VariableExpr> VarExprPtr;
+
 // Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
 protected:	
 	enum {
-		HASHVAL_INTLITERAL
+		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_VAREXPR
 	};
 
 	/** The type of the represented expression. */
@@ -130,11 +134,22 @@ public:
 //};
 
 
-//class VariableExpr : public Expression {
-//	const string name;
-//};
-//typedef std::shared_ptr<VariableExpr> VarExprPtr;
-//
+class VariableExpr : public Expression {
+	const Identifier id;
+	
+    VariableExpr(const TypePtr& type, const Identifier& id) : Expression(type), id(id) { };
+	virtual VariableExpr* clone(StatementManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static VarExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
+};
+
 //class LambdaExpression : public Expression {
 //};
 //
