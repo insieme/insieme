@@ -41,19 +41,12 @@
 
 // todo inherit from iterator traits
 template<typename ITypeA, typename ITypeB>
-class paired_iterator {
+class paired_iterator : std::iterator<std::input_iterator_tag, 
+	std::pair<typename std::iterator_traits<ITypeA>::value_type, typename std::iterator_traits<ITypeB>::value_type> > {
 	ITypeA a;
 	ITypeB b;
 
 public:
-	typedef std::pair<typename std::iterator_traits<ITypeA>::value_type,
-					  typename std::iterator_traits<ITypeB>::value_type> value_type;
-
-	typedef std::input_iterator_tag iterator_category;
-	typedef typename std::iterator_traits<ITypeA>::difference_type difference_type;
-	typedef value_type* pointer;
-	typedef value_type& reference;
-
 	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
 
 	value_type operator*() {
