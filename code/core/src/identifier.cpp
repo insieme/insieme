@@ -34,55 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+#include "identifiers.h"
 
-#include <gtest/gtest.h>
-#include "annotated_ptr.h"
+// ---------------------------------------------- Utility Functions ------------------------------------
 
-using std::string;
-
-// ------------- utility classes required for the test case --------------
-
-class A {
-	void f() {};
-};
-class B : public A { };
-
-
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
-
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+/**
+ * Allows identifiers to be printed to a stream (especially useful during debugging and
+ * within test cases where equals values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const Identifier& identifier) {
+	out << identifier.getName();
+	return out;
 }
 
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
+/**
+ * Allows to compute the hash value of an identifier.
+ *
+ * @param identifier the identifier for which a hash value should be computed
+ * @return the computed hash value
+ */
+std::size_t hash_value(const Identifier& identifier) {
+	return identifier.hash();
 }
-
-

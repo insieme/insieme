@@ -35,23 +35,106 @@
  */
 
 #include <string>
+#include <iostream>
 
 #include <gtest/gtest.h>
-#include "instance_manager.h"
 
+#include <boost/functional/hash.hpp>
+
+#include "instance_manager.h"
+#include "instance_ptr.h"
 
 using std::string;
+using std::cout;
+using std::endl;
+
+class CloneableString;
+
+class CloneableStringManager : public InstanceManager<CloneableStringManager, const CloneableString> {};
+
+class CloneableString : public string {
+public:
+	CloneableString(const char* c) : string(c) {};
+	CloneableString(const string& str) : string(str) {};
+//	CloneableString(const CloneableString& str) : string(str.c_str()) {};
+
+	CloneableString* clone(CloneableStringManager& manager) const {
+		return new CloneableString(*this);
+	}
+};
+std::size_t hash_value(const CloneableString& str) {
+	return boost::hash_value(str);
+}
+
 
 TEST(InstanceManager, Basic) {
 
-	InstanceManager<string> manager;
+	// create a new instance manager
+	CloneableStringManager manager;
+	EXPECT_EQ (manager.size(), 0);
 
-	AnnotatedRef<string> ref = manager.get("Hello World");
+	// add and retrieve first element
+	CloneableString strA  = "Hello World";
+	InstancePtr<const CloneableString> refA = manager.get(&strA);
+	EXPECT_EQ (*refA, "Hello World");
+	EXPECT_EQ (manager.size(), 1);
 
-	//EXPECT_EQ (*ref, "Hello World");
+	// add and retrieve second element
+	CloneableString strB = "Hello World 2";
+	InstancePtr<const CloneableString> refB = manager.get(&strB);
+	EXPECT_EQ (*refB, "Hello World 2");
+	EXPECT_EQ (manager.size(), 2);
 
-	AnnotatedRef<string> ref2 = manager.get("Hello World 2");
+	// add and retrieve third element (which is equivalent to first element)
+	CloneableString strC = "Hello World";
+	InstancePtr<const CloneableString> refC = manager.get(&strC);
+	EXPECT_EQ (manager.size(), 2);
 
-	//EXPECT_EQ (*ref2, "Hello World 2");
+	// ensure compiler is not reusing identical CloneableStrings
+	EXPECT_NE (&strA, &strC);
+
+	// check whether references are pointing to equivalent values
+	EXPECT_EQ (*refA, *refC);
+
+	// check whether references are pointing to same data location
+	EXPECT_TRUE (refA == refC);
+
+
+	// check whether -> operator is working ...
+	EXPECT_STREQ (refA->c_str(), refC->c_str());
 }
 
+
+typedef float real;
+
+class A {
+	// required to be polymorphic (dynamic cast)
+	virtual real hell() { return 66.6; };
+};
+class B : public A {};
+class C : public A {};
+
+
+TEST(InstancePtr, Casts) {
+
+	A a;
+	B b;
+	C c;
+
+	InstancePtr<const A> refA(&a);
+	InstancePtr<const B> refB(&b);
+	InstancePtr<const C> refC(&c);
+
+	refA = refB;
+	// refB = refA;
+	refB = dynamic_pointer_cast<const B >(refA);
+	EXPECT_FALSE( refB == InstancePtr<B>(NULL) );
+
+	// should not compile ...
+//	refC = dynamic_pointer_cast<const C >(refA);
+//	EXPECT_TRUE( refC == InstancePtr<C>(NULL) );
+
+	refA = refC;
+	refB = dynamic_pointer_cast<const B >(refA);
+	EXPECT_TRUE( refB == InstancePtr<B>(NULL) );
+}

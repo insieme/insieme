@@ -35,54 +35,53 @@
  */
 
 #include <string>
+#include <iostream>
 
 #include <gtest/gtest.h>
-#include "annotated_ptr.h"
+#include "instance_ptr.h"
 
 using std::string;
-
-// ------------- utility classes required for the test case --------------
-
-class A {
-	void f() {};
-};
-class B : public A { };
+using std::cout;
+using std::endl;
 
 
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
 
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
+TEST(InstancePtr, NullTest) {
+
+	InstancePtr<int> null = InstancePtr<int>(NULL);
+
+	InstancePtr<int> ptrN(0);
+	EXPECT_TRUE ( ptrN == null );
+	EXPECT_TRUE ( ptrN == ptrN );
+	EXPECT_FALSE ( ptrN );
 
 	int a = 10;
-	int b = 15;
+	InstancePtr<int> ptrA(&a);
+	EXPECT_FALSE ( ptrA == null );
+	EXPECT_FALSE ( null == ptrA );
+	EXPECT_FALSE ( ptrA == ptrN );
+	EXPECT_FALSE ( ptrN == ptrA );
+	EXPECT_TRUE ( !!ptrA );
 
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
+	InstancePtr<int> ptrA2(&a);
+	EXPECT_TRUE ( ptrA == ptrA2 );
+	EXPECT_TRUE ( ptrA2 == ptrA );
 
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
+	int b = 12;
+	InstancePtr<int> ptrB(&b);
+	EXPECT_FALSE ( ptrB == null );
+	EXPECT_FALSE ( null == ptrB );
+	EXPECT_FALSE ( ptrB == ptrN );
+	EXPECT_FALSE ( ptrN == ptrB );
+	EXPECT_TRUE ( !!ptrB );
 
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
+	EXPECT_FALSE ( ptrA == ptrB );
+	EXPECT_FALSE ( ptrB == ptrA );
 
 }
 
-TEST(AnnotatedPtrerence, UpCast) {
 
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
+TEST(InstancePtr, Size) {
+	// just ensures
+	EXPECT_LE ( sizeof (InstancePtr<int>), 2*sizeof(int*) );
 }
-
-

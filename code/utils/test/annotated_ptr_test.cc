@@ -34,51 +34,55 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <string>
 
-#include <set>
-#include <boost/type_traits/is_base_of.hpp>
+#include <gtest/gtest.h>
+#include "annotated_ptr.h"
 
-// ------------------------------- replace w/ boost / move
-template<bool> struct is_true;
-template<> struct is_true<true> {
-    typedef bool flag;
+using std::string;
+
+// ------------- utility classes required for the test case --------------
+
+class A {
+	void f() {};
 };
-template<> struct is_true<false> {
-};
-// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ replace w/ boost / move
+class B : public A { };
 
 
-class Annotation;
+// testing basic properties
+TEST(AnnotatedPtr, Basic) {
 
-class Annotatable {
-	std::set<Annotation> *annotations;
-public:
-	void addAnnotation(const Annotation& a) {};
-};
+	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 3*sizeof(int*) );
 
-template<typename T>
-class AnnotatedRef : public Annotatable {
-public:
-	T* node;
+	int a = 10;
+	int b = 15;
 
-	AnnotatedRef(T* node) : node(node) { }
+	// test simple creation
+	AnnotatedPtr<int> refA(&a);
+	EXPECT_EQ (*refA, a);
 
-	template<typename B>
-	AnnotatedRef(const AnnotatedRef<B>& from, typename is_true<boost::is_base_of<T,B>::value>::flag = 0) : node(from.node) { }
+	// ... and for another element
+	AnnotatedPtr<int> refB(&b);
+	EXPECT_EQ (*refB, b);
 
-//	template <class B>
-//	AnnotatedRef(const AnnotatedRef<B>& from) : node( convert<boost::is_base_of<T,B>::value>::doIt(from.node) ) { }
+	// test whether modifications are reflected
+	a++;
+	EXPECT_EQ (*refA, a);
 
-	const T& operator->() {
-		return node;
-	}
+}
 
-	const T operator*() {
-		return *node;
-	}
+TEST(AnnotatedPtrerence, UpCast) {
 
-	const T& operator->() const {
-		return node;
-	}
-};
+	// create two related instances
+	A a;
+	B b;
+
+	// create references
+	AnnotatedPtr<A> refA(&a);
+	AnnotatedPtr<B> refB(&b);
+
+	// make assignment (if it compiles, test passed!)
+	refA = refB;
+}
+
+

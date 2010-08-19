@@ -36,19 +36,62 @@
 
 #pragma once
 
-#include <vector>
+#include <string>
+#include <boost/functional/hash.hpp>
 
-using std::vector;
+#include "annotated_ptr.h"
+#include "instance_manager.h"
+
+using std::string;
+
+
+class Identifier {
+
+	string name;
+
+	std::size_t hashCode;
+
+public:
+
+	Identifier(const string& name) : name(name), hashCode(boost::hash_value(name)) { }
+
+	const string& getName() const { return name; }
+
+	bool operator==(const Identifier& other) const {
+		// test for identity
+		if (this == &other) {
+			return true;
+		}
+
+		// slow name comparison
+		return name == other.name;
+	}
+
+	bool operator!=(const Identifier& other) const {
+		return !(*this==other);
+	}
+
+	std::size_t hash() const {
+		return hashCode;
+	}
+
+};
+
+
+// ---------------------------------------------- Utility Functions ------------------------------------
 
 /**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
+ * Allows this type to be printed to a stream (especially useful during debugging and
+ * within test cases where equals values to be printable).
  */
-template<typename T>
-const vector<T> createSingleton(const T element) {
-	return vector<T> (1, element);
-}
+std::ostream& operator<<(std::ostream& out, const Identifier& type);
+
+/**
+ * Allows to compute the hash value of an identifier.
+ *
+ * @param identifier the identifier for which a hash value should be computed
+ * @return the computed hash value
+ */
+std::size_t hash_value(const Identifier& identifier);
+
+

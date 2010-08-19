@@ -34,55 +34,57 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+#pragma once
 
-#include <gtest/gtest.h>
-#include "annotated_ptr.h"
+#include <utility>
+#include <iterator>
 
-using std::string;
+template<typename ITypeA, typename ITypeB>
+class paired_iterator {
+	ITypeA a;
+	ITypeB b;
 
-// ------------- utility classes required for the test case --------------
+public:
+	typedef std::pair<typename std::iterator_traits<ITypeA>::value_type,
+					  typename std::iterator_traits<ITypeB>::value_type> value_type;
 
-class A {
-	void f() {};
+	typedef std::input_iterator_tag iterator_category;
+	typedef typename std::iterator_traits<ITypeA>::difference_type difference_type;
+	typedef value_type* pointer;
+	typedef value_type& reference;
+
+	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
+
+	value_type operator*() {
+		return std::make_pair(*a,*b);
+	}
+
+	value_type operator->() {
+		return std::make_pair(*a,*b);
+	}
+
+	paired_iterator& operator++() {
+		++a;
+		++b;
+		return *this;
+	}
+
+	paired_iterator operator++(int) {
+		paired_iterator ret = *this;
+		++this;
+		return ret;
+	}
+
+	bool operator==(const paired_iterator& rhs) {
+		return (a == rhs.a) && (b == rhs.b);
+	}
+	
+	bool operator!=(const paired_iterator& rhs) {
+		return (a != rhs.a) || (b != rhs.b);
+	}
 };
-class B : public A { };
 
-
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
-
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+template<typename A, typename B>
+paired_iterator<A, B> make_paired_iterator(A a, B b) {
+	return paired_iterator<A,B>(a, b);
 }
-
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
-

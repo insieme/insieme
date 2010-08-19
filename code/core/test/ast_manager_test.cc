@@ -34,55 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include <string>
-
 #include <gtest/gtest.h>
-#include "annotated_ptr.h"
-
-using std::string;
-
-// ------------- utility classes required for the test case --------------
-
-class A {
-	void f() {};
-};
-class B : public A { };
+#include "ast_manager.h"
+#include "types.h"
 
 
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
-
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
-}
-
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
+TEST(StatementManager, Basic) {
+	// test size limitation
+	EXPECT_LE (sizeof(IntTypeParam), 4);
 }
 
 

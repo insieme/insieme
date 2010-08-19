@@ -45,93 +45,273 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "expressions.h"
+#include "annotated_ptr.h"
+#include "container_utils.h"
+#include "instance_manager.h"
+#include "types.h"
+#include "visitor.h"
+#include "identifiers.h"
 
+using std::string;
 using std::vector;
 
-class Statement {
-public:
-	virtual string toString() const { return ""; }
-};
-typedef std::shared_ptr<Statement> StmtPtr;
+class Expression;
+typedef AnnotatedPtr<const Expression> ExprPtr;
 
-class BreakStmt : public Statement {
-public:
-	virtual string toString() const { return "break"; }
-};
-class ContinueStmt : public Statement {
-public:
-	virtual string toString() const { return "continue"; }
-};
+// Forward Declarations { -----------------------------------------------------
+
+class Statement;
+typedef AnnotatedPtr<const Statement> StmtPtr;
 
 class NoOpStmt;
-typedef std::shared_ptr<NoOpStmt> NoOpStmtPtr;
+typedef AnnotatedPtr<const NoOpStmt> NoOpStmtPtr;
+
+class BreakStmt;
+typedef AnnotatedPtr<const BreakStmt> BreakStmtPtr;
+
+class ContinueStmt;
+typedef AnnotatedPtr<const ContinueStmt> ContinueStmtPtr;
+
+class DeclarationStmt;
+typedef AnnotatedPtr<const DeclarationStmt> DeclarationStmtPtr;
+
+class ReturnStmt;
+typedef AnnotatedPtr<const ReturnStmt> ReturnStmtPtr;
+
+class CompoundStmt;
+typedef AnnotatedPtr<const CompoundStmt> CompoundStmtPtr;
+
+class WhileStmt;
+typedef AnnotatedPtr<const WhileStmt> WhileStmtPtr;
+
+class ForStmt;
+typedef AnnotatedPtr<const ForStmt> ForStmtPtr;
+
+class IfStmt;
+typedef AnnotatedPtr<const IfStmt> IfStmtPtr;
+
+class SwitchStmt;
+typedef AnnotatedPtr<const SwitchStmt> SwitchStmtPtr;
+
+class StatementManager;
+
+// Forward Declarations } -----------------------------------------------------
+
+// ------------------------------------- Statements ---------------------------------
+
+class Statement : public Visitable<StmtPtr> {
+	// needs InstanceManager not StatementManager since base type calls clone
+	friend class InstanceManager<StatementManager, const Statement, StmtPtr>;
+	virtual Statement* clone(StatementManager& manager) const = 0;
+
+protected:
+	// Hash values for terminal statements
+	enum {
+		HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE, HASHVAL_DECLARATION, HASHVAL_RETURN,
+		HASHVAL_COMPOUND, HASHVAL_WHILE, HASHVAL_FOR, HASHVAL_IF, HASHVAL_SWITCH
+	};
+
+	Statement() {}
+	virtual ~Statement() {}
+
+	virtual bool equals(const Statement& stmt) const = 0;
+
+public:
+	virtual void printTo(std::ostream& out) const = 0;
+	virtual std::size_t hash() const = 0;
+	virtual ChildList getChildren() const;
+	bool operator==(const Statement& stmt) const;
+	bool operator!=(const Statement& stmt) const;
+};
+std::size_t hash_value(const Statement& stmt);
+std::ostream& operator<<(std::ostream& out, const Statement& stmt);
+std::ostream& operator<<(std::ostream& out, const StmtPtr& stmtPtr);
+
 
 class NoOpStmt : public Statement {
-	static NoOpStmtPtr instance;
-public:
-	virtual string toString() const { return "{ /* NoOp */ }"; }
-
-	static NoOpStmtPtr getInstance();
-};
-
-class ExpressionStmt : public Statement {
-protected:
-	const ExprPtr expression;
+	NoOpStmt() {}
+	virtual NoOpStmt* clone(StatementManager& manager) const;
 
 public:
-	ExpressionStmt(ExprPtr expression) : Statement(), expression(expression) {
-	}
-	virtual string toString() const { return expression->toString(); }
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+
+	static NoOpStmtPtr get(StatementManager& manager);
 };
 
-class DeclarationStmt : public ExpressionStmt {
-	TypePtr type;
+
+class BreakStmt : public Statement {
+	BreakStmt() {}
+	virtual BreakStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+
+	static BreakStmtPtr get(StatementManager& manager);
+};
+
+
+class ContinueStmt : public Statement {
+	ContinueStmt() {}
+	virtual ContinueStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
 	
+	static ContinueStmtPtr get(StatementManager& manager);
+};
+
+
+class DeclarationStmt : public Statement {
+	const TypePtr type;
+	const Identifier id;
+	const ExprPtr initExpression;
+
+	DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
+	virtual DeclarationStmt* clone(StatementManager& manager) const;
+
 public:
-	DeclarationStmt(TypePtr type, ExprPtr expression) : ExpressionStmt(expression), type(type) {
-	}
-	virtual string toString() const { return type->toString() + expression->toString(); }
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	static DeclarationStmtPtr get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
 };
 
-class ReturnStmt : public ExpressionStmt {
+
+class ReturnStmt: public Statement {
+	const ExprPtr returnExpression;
+
+	ReturnStmt(const ExprPtr& returnExpression);
+	virtual ReturnStmt* clone(StatementManager& manager) const;
+
 public:
-	ReturnStmt(ExprPtr expression) : ExpressionStmt(expression) {
-	}
-	virtual string toString() const { return string("return ") + expression->toString(); }
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+
+	static ReturnStmtPtr get(StatementManager& manager, const ExprPtr& returnExpression);
 };
 
 
-class CompoundStmt : public Statement {
-	vector<StmtPtr> statements;
+class CompoundStmt: public Statement {
+	const vector<StmtPtr> statements;
+
+	CompoundStmt() { }
+	CompoundStmt(const StmtPtr& stmt) :	statements(toVector<StmtPtr> (stmt)) { }
+	CompoundStmt(const vector<StmtPtr>& stmts) : statements(stmts) { }
+	virtual CompoundStmt* clone(StatementManager& manager) const;
+
 public:
-	CompoundStmt() : Statement() {
-	}
-	CompoundStmt(StmtPtr stmt) : Statement() {
-		statements.push_back(stmt);
-	}
-	CompoundStmt(vector<StmtPtr> stmts) : Statement(), statements(stmts) {
-	}
-	virtual string toString() const { 
-		vector<string> list;
-		std::transform(statements.cbegin(), statements.cend(), back_inserter(list), [](const StmtPtr cur) { return cur->toString(); });
-		return boost::join(list, ";\n");
-	}
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+
+	const StmtPtr& operator[](unsigned index) const;
+
+	static CompoundStmtPtr get(StatementManager& manager);
+	static CompoundStmtPtr get(StatementManager& manager, const StmtPtr& stmt);
+	static CompoundStmtPtr get(StatementManager& manager, const vector<StmtPtr>& stmts);
 };
 
-class WhileStmt : public CompoundStmt {
+
+class WhileStmt: public Statement {
+	ExprPtr condition;
+	StmtPtr body;
+
+	WhileStmt(ExprPtr condition, StmtPtr body);
+	virtual WhileStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+
+	static WhileStmtPtr get(StatementManager& manager, ExprPtr condition, StmtPtr body);
 };
 
-class ForStmt : public CompoundStmt {
+class ForStmt: public Statement {
+	DeclarationStmtPtr declaration;
+	StmtPtr body;
+	ExprPtr end, step;
+
+	ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step);
+	virtual ForStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step = NULL);
 };
 
-class IfStmt : public CompoundStmt {
-	StmtPtr thenStmt;
-	StmtPtr elseStmt;
+class IfStmt: public Statement {
+	ExprPtr condition;
+	StmtPtr body;
+	StmtPtr elseBody;
+	
+	IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody);
+	virtual IfStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	IfStmtPtr get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody = NULL);
 };
 
-class SwitchStmt : public CompoundStmt {
+class SwitchStmt: public Statement {
+public:
+	typedef std::pair<ExprPtr, StmtPtr> Case;
+
+private:
+	const ExprPtr switchExpr;
+	const vector<Case> cases;
+
+	SwitchStmt(ExprPtr switchExpr, const vector<Case>& cases);
+	virtual SwitchStmt* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual bool equals(const Statement& stmt) const;
+	virtual std::size_t hash() const;
+	virtual ChildList getChildren() const;
+	
+	SwitchStmtPtr get(StatementManager& manager, ExprPtr switchExpr, const vector<Case>& cases);
+};
+
+// ------------------------------------- Statement Manager ---------------------------------
+
+class StatementManager : public InstanceManager<StatementManager, const Statement, StmtPtr> {
+	TypeManager& typeManager;	
+
+public:
+	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
+
+	// I never wanted this to be public - PT
+	template<typename T>
+	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
+		return dynamic_pointer_cast<const T>(get(stmt));
+	}
+
+	TypeManager& getTypeManager() {
+		return typeManager;
+	}
 };

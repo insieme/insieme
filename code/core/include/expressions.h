@@ -38,11 +38,13 @@
 
 #include <memory>
 
+#include "annotated_ptr.h"
 #include "types.h"
+#include "statements.h"
 
 using std::string;
 
-class Expression {
+class Expression : public Statement {
 	
 	/**
 	 * The type of the represented expression.
@@ -51,6 +53,8 @@ class Expression {
 
 public:
 
+	Expression(const TypePtr& type) : type(type) { };
+
 	/**
 	 * Retrieves the type of this expression.
 	 */
@@ -58,52 +62,58 @@ public:
 
 	virtual string toString() const { return ""; }
 
+	virtual size_t hash() const { return 0; }
+
 };
+typedef AnnotatedPtr<const Expression> ExprPtr;
 
-typedef std::shared_ptr<Expression> ExprPtr;
 
-
-class Variable : public Expression {
+class VariableExpr : public Expression {
 	const string name;
 };
-
-
-class Literal : public Expression {
-};
-
-class IntegerLiteral : public Literal {
-	const int value;
-public:
-	const int getValue() const { return value; }
-};
-
-class BooleanLiteral : public Literal {
-	const bool value;
-public:
-	const bool getValue() const { return value; }
-};
-
-class StringLiteral : public Literal {
-	const string value;
-	const string getValue() const { return value; }
-};
-
+typedef std::shared_ptr<VariableExpr> VarExprPtr;
 
 class LambdaExpression : public Expression {
 };
 
 class CallExpression : public Expression {
-	const ExprPtr function;
-	const ExprPtr argument;
+//	const ExprPtr function;
+//	const ExprPtr argument;
 };
 
 class CastExpression : public Expression {
-	const ExprPtr subExpression;
+//	const ExprPtr subExpression;
 };
 
-class LetExpression : public Expression {
-	const TypePtr type;
-	const string name;
-	const ExprPtr definingExpression;
-	const ExprPtr subExpression;
+
+template<typename T>
+class Literal : public Expression {
+    const T value;
+public:
+	Literal(const TypePtr& type, const T& val) : Expression(type), value(val) { };
+    const T getValue() const { return value; }
+};
+
+class IntegerLiteral : public Literal<int> {
+public:
+	IntegerLiteral(const int val) : Literal(NULL, val) { } // TODO: fix null type
+};
+
+class FloatLiteral : public Literal<double> {
+	string originalString;
+public:
+	// TODO: fix null type
+	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
+};
+
+class BooleanLiteral : public Literal<bool> {
+public:
+	// TODO: fix null type
+	BooleanLiteral(const bool val) : Literal(NULL, val) { }
+};
+
+class StringLiteral : public Literal<string> {
+public:
+	// TODO: fix null type
+	StringLiteral(const string& val) : Literal(NULL, val) { }
 };

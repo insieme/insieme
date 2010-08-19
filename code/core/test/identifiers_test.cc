@@ -34,22 +34,59 @@
  * regarding third party software licenses.
  */
 
-#include <stdarg.h>
+#include <gtest/gtest.h>
 
-#include <algorithm>
+#include <boost/functional/hash.hpp>
 
-#include <boost/algorithm/string/join.hpp>
+#include "identifiers.h"
+#include "container_utils.h"
 
-#include "stringutils.h"
- 
- string format(const char* formatString, ...)
- {
-	va_list arglist;
-	va_start(arglist, formatString);
-	const unsigned BUFFER_SIZE = 2048;
-	char buffer[BUFFER_SIZE];
-	vsnprintf(buffer, BUFFER_SIZE, formatString, arglist);
-	va_end(arglist);
-	return string(buffer);
+
+TEST(TypeTest, DuplicateTest) {
+
+	// check names
+	Identifier identA("A");
+	EXPECT_EQ ("A" , identA.getName());
+
+	Identifier identB("B");
+	EXPECT_EQ ("B" , identB.getName());
+
+	Identifier identA2("A");
+	EXPECT_EQ ("A" , identA2.getName());
+
+	// check equality operator
+	EXPECT_NE ( identA, identB );
+	EXPECT_EQ ( identA, identA2 );
+	EXPECT_NE ( identB, identA2 );
+
+	EXPECT_NE ( identB, identA );
+	EXPECT_EQ ( identA2, identA );
+	EXPECT_NE ( identA2, identB );
+
+	// check hash
+	boost::hash<Identifier> hasher;
+	Identifier all[] = {identA, identB, identA2};
+	for (int i=0; i<3; i++) {
+		for (int j=0; j<3; j++) {
+			Identifier a = all[i];
+			Identifier b = all[j];
+			EXPECT_EQ ( a == b, hasher(a) == hasher(b));
+		}
+	}
+
+
+
+	// Tests whether hash function for identifiers is properly working
+
+	// create list of identifiers
+	vector<Identifier> identifier;
+	identifier.push_back(Identifier("A"));
+	identifier.push_back(Identifier("B"));
+	EXPECT_FALSE ( hasDuplicates(identifier) );
+
+	identifier.push_back(Identifier("A"));
+	EXPECT_TRUE ( hasDuplicates(identifier) );
+
 }
+
 

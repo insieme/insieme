@@ -34,55 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+#include <stdarg.h>
 
-#include <gtest/gtest.h>
-#include "annotated_ptr.h"
+#include <algorithm>
 
-using std::string;
+#include <boost/algorithm/string/join.hpp>
 
-// ------------- utility classes required for the test case --------------
-
-class A {
-	void f() {};
-};
-class B : public A { };
-
-
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
-
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+#include "string_utils.h"
+ 
+ string format(const char* formatString, ...)
+ {
+	va_list arglist;
+	va_start(arglist, formatString);
+	const unsigned BUFFER_SIZE = 2048;
+	char buffer[BUFFER_SIZE];
+	vsnprintf(buffer, BUFFER_SIZE, formatString, arglist);
+	va_end(arglist);
+	return string(buffer);
 }
-
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
 

@@ -37,12 +37,11 @@
 #include <iostream>
 #include "expressions.h"
 #include "types.h"
-#include "type_manager.h"
 #include "statements.h"
 
 #include "expressions.h"
 #include "functions.h"
-#include "stringutils.h"
+#include "string_utils.h"
 #include "cmd_line_utils.h"
 
 #include "clang_compiler.h"
@@ -54,6 +53,7 @@ int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv, true);
 
+<<<<<<< HEAD
 	vector<TypePtr> types;
 	types.push_back(AbstractType::getInstance());
 	types.push_back(TypePtr(new GenericType("myType")));
@@ -66,6 +66,19 @@ int main(int argc, char** argv) {
 	cout << tuple.getName() << endl;
 	ParseSourceFile("ciao.cpp");
 
+=======
+//	vector<TypePtr> types;
+//	types.push_back(AbstractType::getInstance());
+//	types.push_back(TypePtr(new GenericType("myType")));
+//	types.push_back(AbstractType::getInstance());
+//
+//	TupleType tuple(types);
+//
+//	FunctionType fun(TypePtr(new TupleType(types)), AbstractType::getInstance());
+//
+//	cout << tuple.getName() << endl;
+//
+>>>>>>> 374a2fee958adc8b3dc484f101db58da2d44207e
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());
 //	list.push_back(IntTypeParam::getInfiniteIntParam());

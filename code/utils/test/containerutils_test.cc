@@ -34,23 +34,108 @@
  * regarding third party software licenses.
  */
 
+#include <gtest/gtest.h>
 #include <vector>
 
-#include <gtest/gtest.h>
-#include "containerutils.h"
+#include "container_utils.h"
 
 using std::vector;
 using std::string;
 
 TEST(ContainerUtils, Singleton) {
 	// Obtain two instances
-	vector<int> testInt = createSingleton(14);
-	vector<string> testString = createSingleton(string("Hello"));
+	vector<int> testInt = toVector(14);
+	vector<string> testString = toVector(string("Hello"));
 
-	EXPECT_EQ(testInt.size(), 1);
-	EXPECT_EQ(testString.size(), 1);
+	EXPECT_EQ( (std::size_t)1, testInt.size());
+	EXPECT_EQ( (std::size_t)1, testString.size() );
 
 	EXPECT_EQ ((*testInt.cbegin()), 14);
 	EXPECT_EQ ((*testString.cbegin()), "Hello");
 }
 
+TEST(ContainerUtils, addAll) {
+
+	vector<int> listA;
+	vector<int> listB;
+
+	for (int i=0; i<5; i++) {
+		listA.push_back(i);
+		listB.push_back(i*10);
+	}
+
+	EXPECT_EQ ( (std::size_t)5 , listA.size() );
+	EXPECT_EQ ( (std::size_t)5 , listB.size() );
+
+	addAll<int>(listA, listB);
+
+	EXPECT_EQ ( (std::size_t)10, listA.size() );
+	EXPECT_EQ ( (std::size_t)5, listB.size() );
+
+	for (int i=0; i<5; i++) {
+		EXPECT_EQ ( i, listA[i] );
+		EXPECT_EQ ( i*10 , listB[i] );
+		EXPECT_EQ ( i*10 , listA[i+5] );
+	}
+}
+
+TEST(ContainerUtils, AnyAll) {
+
+	// create list of integers
+	vector<int> list;
+
+	// simple property: even
+	auto even = [](int x) { return x%2==0; };
+
+	// check empty lists
+	EXPECT_FALSE ( any(list, even) );
+	EXPECT_TRUE ( all(list, even) );
+
+	// check remaining cases
+	list.push_back(1);
+	EXPECT_FALSE ( any(list, even) );
+	EXPECT_FALSE ( all(list, even) );
+
+	list.push_back(2);
+	EXPECT_TRUE ( any(list, even) );
+	EXPECT_FALSE ( all(list, even) );
+
+	list.clear();
+	list.push_back(2);
+	EXPECT_TRUE ( any(list, even) );
+	EXPECT_TRUE( all(list, even) );
+
+}
+
+TEST(ContainerUtils, Duplicates) {
+
+	// check some basic properties
+	vector<int> list;
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(2);
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(4);
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(4);
+	EXPECT_TRUE ( hasDuplicates(list) );
+
+	list.pop_back();
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(2);
+	EXPECT_TRUE ( hasDuplicates(list) );
+
+	// check a large list
+	int N = 10000;
+	list.clear();
+	for (int i=0; i<N; i++) {
+		list.push_back(i);
+	}
+	EXPECT_FALSE ( hasDuplicates(list) );
+
+	list.push_back(N/2);
+	EXPECT_TRUE ( hasDuplicates(list) );
+}

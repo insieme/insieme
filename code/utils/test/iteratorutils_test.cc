@@ -34,55 +34,30 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+#include <vector>
+#include <sstream>
+#include <algorithm>
 
 #include <gtest/gtest.h>
-#include "annotated_ptr.h"
+#include "iterator_utils.h"
 
-using std::string;
+using namespace std;
 
-// ------------- utility classes required for the test case --------------
+TEST(IteratorUtils, PairedIterator) {
 
-class A {
-	void f() {};
-};
-class B : public A { };
+	vector<int> testInt;
+	testInt.push_back(15);
+	testInt.push_back(26);
+	vector<string> testString;
+	testString.push_back("A");
+	testString.push_back("B");
 
+	auto start = make_paired_iterator(testInt.begin(), testString.begin());
+	auto end = make_paired_iterator(testInt.end(), testString.end());
 
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
+	stringstream ss;
+	for_each(start, end, [&ss](pair<int, string> elem) { ss << elem.first << ":" << elem.second << "--"; } );
 
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+	EXPECT_EQ(ss.str(), "15:A--26:B--");
 }
-
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
 

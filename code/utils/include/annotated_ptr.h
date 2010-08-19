@@ -34,55 +34,39 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+#pragma once
 
-#include <gtest/gtest.h>
-#include "annotated_ptr.h"
+#include <set>
+#include <boost/type_traits/is_base_of.hpp>
+#include <boost/utility/enable_if.hpp>
 
-using std::string;
+#include "instance_ptr.h"
+#include "type_traits_utils.h"
 
-// ------------- utility classes required for the test case --------------
+class Annotation;
 
-class A {
-	void f() {};
+class Annotatable {
+	std::set<Annotation> *annotations;
+public:
+	void addAnnotation(const Annotation&) {};
 };
-class B : public A { };
 
 
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
+template<typename T>
+class AnnotatedPtr : public InstancePtr<T>, Annotatable {
+public:
+	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
 
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
+	template<typename B>
+	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : InstancePtr<T>(from.ptr) { }
+};
 
-	int a = 10;
-	int b = 15;
 
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+template<typename B, typename T>
+typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
+dynamic_pointer_cast(AnnotatedPtr<T> src) {
+	if (dynamic_cast<B*>(&(*src))) {
+		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
+	}
+	return NULL;
 }
-
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
-
