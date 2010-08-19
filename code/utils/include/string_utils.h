@@ -50,3 +50,13 @@ string toString(T value) {
 	res << value;
 	return res.str();
 }
+
+template<typename Container>
+void joinTo(std::ostream& out, const string& seperator, Container container) {
+	if(container.size() > 0) {
+		out << *container.cbegin();
+		std::for_each(container.cbegin()+1, container.cend(), [&](const Container::value_type cur) {
+			out << seperator << cur;
+		});
+	}
+}
