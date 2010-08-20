@@ -42,6 +42,9 @@ endif()
 
 # enable C++0x support within gcc (if supported)
 if (CMAKE_COMPILER_IS_GNUCXX)
+
+	add_definitions( -fshow-column )
+
 	include(CheckCXXCompilerFlag)
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
 	if(CXX0X_Support)

@@ -36,14 +36,18 @@
 
 #pragma once
 
-#include <vector>
+#include <algorithm>
 #include <functional>
 #include <unordered_set>
+#include <vector>
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/iterator/transform_iterator.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include "string_utils.h"
 
 using std::vector;
 using std::function;
@@ -201,3 +205,71 @@ struct extractSecond {
 	typedef const typename Pair::second_type & result_type;
 	result_type operator()(const Pair& p) const { return p.second; }
 };
+
+template<typename InputIterator, typename OutputIterator>
+void projectToFirst(InputIterator start, InputIterator end, OutputIterator out) {
+	typedef typename std::iterator_traits<InputIterator>::value_type Element;
+	std::transform(start, end, out, extractFirst<Element>());
+}
+
+template<typename InputIterator, typename OutputIterator>
+void projectToSecond(InputIterator start, InputIterator end, OutputIterator out) {
+	typedef typename std::iterator_traits<InputIterator>::value_type Element;
+	std::transform(start, end, out, extractSecond<Element>());
+}
+
+template<typename PairContainer, typename ResultContainer>
+void projectToFirst(const PairContainer& input, ResultContainer& result) {
+	projectToFirst(input.cbegin(), input.cend(), std::back_inserter(result));
+}
+
+template<typename PairContainer, typename ResultContainer>
+void projectToSecond(const PairContainer& input, ResultContainer& result) {
+	projectToSecond(input.cbegin(), input.cend(), std::back_inserter(result));
+}
+
+template<typename PairContainer>
+vector<typename PairContainer::value_type::first_type> projectToFirst(const PairContainer& input) {
+	vector<typename PairContainer::value_type::first_type> res;
+	projectToFirst(input, res);
+	return res;
+}
+
+template<typename PairContainer>
+vector<typename PairContainer::value_type::second_type> projectToSecond(const PairContainer& input) {
+	vector<typename PairContainer::value_type::second_type> res;
+	projectToSecond(input, res);
+	return res;
+}
+
+/**
+ * Allows to print vectors including printable elements.
+ *
+ * @param out the stream to which the given vector should be printed to
+ * @param container the vector to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename Element>
+std::ostream& operator<<(std::ostream& out, const vector<Element>& container) {
+
+	// convert elements into strings
+	vector<string> list;
+	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
+
+	// print and done
+	return out << "[" << boost::join(list, ",") << "]";
+}
+
+/**
+ * Enables user to print pairs whenever the element types are printable.
+ *
+ * @param out the stream to which the given pair should be printed
+ * @param pair the pair to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename First, typename Second>
+std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair) {
+	out << "(" << pair.first << "," << pair.second << ")";
+	return out;
+}
+

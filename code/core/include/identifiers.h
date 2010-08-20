@@ -47,13 +47,15 @@ using std::string;
 
 class Identifier {
 
+	// TODO: replace with flyweight!
 	string name;
 
 	std::size_t hashCode;
 
 public:
 
-	Identifier(const string& name) : name(name), hashCode(boost::hash_value(name)) { }
+	Identifier(const char* name) : name(string(name)), hashCode(boost::hash_value(name)) {}
+	Identifier(const string& name) : name(name), hashCode(boost::hash_value(name)) {}
 
 	const string& getName() const { return name; }
 
@@ -93,5 +95,4 @@ std::ostream& operator<<(std::ostream& out, const Identifier& type);
  * @return the computed hash value
  */
 std::size_t hash_value(const Identifier& identifier);
-
 

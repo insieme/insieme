@@ -48,10 +48,25 @@ TEST(TypeTest, IntType) {
 
 	// create type manager and element types
 	TypeManager manager;
-	IntTypePtr intType = IntType::get();
-//	IntTypePtr intType = IntType::get(2);
+	IntTypePtr intType = IntType::get(manager, 4);
+	EXPECT_EQ ( 4 , intType->getNumBytes());
+	EXPECT_EQ ( "int<4>", intType->getName() );
+	EXPECT_TRUE ( intType->getTypeParameter().empty() );
+	EXPECT_TRUE ( toVector(IntTypeParam::getConcreteIntParam(4)) == intType->getIntTypeParameter());
+	EXPECT_EQ ( TypePtr(NULL), intType->getBaseType() );
 
-	EXPECT_EQ ( 4 , intType.getNumBytes());
+	IntTypePtr intType2 = IntType::get(manager, 2);
+	EXPECT_EQ ( 2 , intType2->getNumBytes());
+	EXPECT_TRUE ( intType2->getTypeParameter().empty() );
+	EXPECT_EQ ( "int<2>", intType2->getName() );
+	EXPECT_TRUE ( intType2->getTypeParameter().empty() );
+	EXPECT_TRUE ( toVector(IntTypeParam::getConcreteIntParam(2)) == intType2->getIntTypeParameter());
+	EXPECT_EQ ( TypePtr(NULL), intType2->getBaseType() );
+
+	IntTypePtr intType3 = IntType::get(manager, 4);
+	EXPECT_NE (intType, intType2);
+	EXPECT_EQ (intType, intType3);
+
 }
 
 

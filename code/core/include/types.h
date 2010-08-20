@@ -45,7 +45,7 @@
 #include <ostream>
 #include <vector>
 
-#include <boost/algorithm/string/join.hpp>
+
 #include <boost/functional/hash.hpp>
 
 #include "annotated_ptr.h"
@@ -169,7 +169,7 @@ public:
 	/**
 	 * Implements the equality operator for the IntTypeParam type.
 	 */
-	bool operator==(const IntTypeParam&);
+	bool operator==(const IntTypeParam&) const;
 
 	/**
 	 * Provides a string representation for this token type.
@@ -484,10 +484,20 @@ public:
  * accepting multiple input parameters.
  */
 class TupleType: public Type {
+
+public:
+
+	/**
+	 * The type used to represent list of tuple elements.
+	 */
+	typedef vector<TypePtr> ElementTypeList;
+
+private:
+
 	/**
 	 * The list of element types this tuple is consisting of.
 	 */
-	const vector<TypePtr> elementTypes;
+	const ElementTypeList elementTypes;
 
 	/**
 	 * A private utility method building the name of a tuple type.
@@ -495,12 +505,12 @@ class TupleType: public Type {
 	 * @param elementTypes	the list of element types
 	 * @return a string representation of the resulting tuple type
 	 */
-	static string buildNameString(const vector<TypePtr>& elementTypes);
+	static string buildNameString(const ElementTypeList& elementTypes);
 
 	/**
 	 * Creates a new tuple type based on the given element types.
 	 */
-	TupleType(const vector<TypePtr>& elementTypes) :
+	TupleType(const ElementTypeList& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
 
 	/**
@@ -520,7 +530,7 @@ public:
 	 * @param manager the manager to obtain the new type reference from
 	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
-	static TupleTypePtr get(TypeManager& manager, const vector<TypePtr>& elementTypes);
+	static TupleTypePtr get(TypeManager& manager, const ElementTypeList& elementTypes);
 
 	/**
 	 * Obtains a list of all types referenced by this tuple type.
@@ -1130,7 +1140,6 @@ std::size_t hash_value(const Type& type);
  * within test cases where equals expects values to be printable).
  */
 std::ostream& operator<<(std::ostream& out, const Type& type);
-std::ostream& operator<<(std::ostream& out, const TypePtr& type);
 
 
 

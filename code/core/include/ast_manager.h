@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "expressions.h"
 #include "statements.h"
 #include "types.h"
 
@@ -44,7 +45,34 @@ class ASTManager {
 	TypeManager typeManager;
 	StatementManager stmtManager;
 
+	// TODO: add list of entry expressions
+	// TODO: add list of functions (function manager)
+
+	// TODO: add lookup table for variables!!
+
+	// TODO: Implement AST Manager and actual AST (the data structure passed on)
+	// => reference using shared pointer
+	// modification is copying data block and adapting lists
+
+
 public:
 	ASTManager() : typeManager(), stmtManager(typeManager) {}
+
+};
+
+
+
+class AST {
+
+	typedef shared_ptr<ASTManager> SharedASTManager;
+
+	SharedASTManager manager;
+
+
+public:
+
+	AST(SharedASTManager& manager) : manager(manager) {}
+
+	AST() : manager(SharedASTManager(new ASTManager())) {}
 
 };

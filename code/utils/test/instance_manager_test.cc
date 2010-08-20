@@ -66,6 +66,7 @@ std::size_t hash_value(const CloneableString& str) {
 	return boost::hash_value(str);
 }
 
+typedef InstancePtr<const CloneableString> Ptr;
 
 TEST(InstanceManager, Basic) {
 
@@ -105,36 +106,36 @@ TEST(InstanceManager, Basic) {
 }
 
 
-typedef float real;
+TEST(InstanceManager, GetTests) {
 
-class A {
-	// required to be polymorphic (dynamic cast)
-	virtual real hell() { return 66.6; };
-};
-class B : public A {};
-class C : public A {};
+	// create a new instance manager
+	CloneableStringManager manager;
+	EXPECT_EQ (manager.size(), 0);
 
+	Ptr a = manager.get("A");
+	Ptr b = manager.get("B");
+	Ptr c = manager.get("C");
+	Ptr d = manager.get(b);
 
-TEST(InstancePtr, Casts) {
+	EXPECT_EQ ( *a , "A" );
+	EXPECT_EQ ( *b , "B" );
+	EXPECT_EQ ( *c , "C" );
+	EXPECT_EQ ( *d , "B" );
 
-	A a;
-	B b;
-	C c;
+	EXPECT_EQ ( 3, manager.size());
 
-	InstancePtr<const A> refA(&a);
-	InstancePtr<const B> refB(&b);
-	InstancePtr<const C> refC(&c);
+	vector<Ptr> list;
+	list.push_back(a);
+	list.push_back(b);
+	list.push_back(c);
+	list.push_back(d);
 
-	refA = refB;
-	// refB = refA;
-	refB = dynamic_pointer_cast<const B >(refA);
-	EXPECT_FALSE( refB == InstancePtr<B>(NULL) );
+	vector<Ptr> listA = manager.getAll(list);
+	EXPECT_EQ ( list , listA );
 
-	// should not compile ...
-//	refC = dynamic_pointer_cast<const C >(refA);
-//	EXPECT_TRUE( refC == InstancePtr<C>(NULL) );
-
-	refA = refC;
-	refB = dynamic_pointer_cast<const B >(refA);
-	EXPECT_TRUE( refB == InstancePtr<B>(NULL) );
+	CloneableStringManager manager2;
+	EXPECT_EQ ( 0, manager2.size() );
+	vector<Ptr> listB = manager2.getAll(list);
+	EXPECT_EQ ( 3, manager2.size() );
+	EXPECT_NE ( list , listB );
 }

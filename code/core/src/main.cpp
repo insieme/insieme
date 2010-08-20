@@ -40,7 +40,6 @@
 #include "statements.h"
 
 #include "expressions.h"
-#include "functions.h"
 #include "string_utils.h"
 #include "cmd_line_utils.h"
 

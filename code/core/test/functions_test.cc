@@ -34,55 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include <string>
-
 #include <gtest/gtest.h>
-#include "annotated_ptr.h"
 
-using std::string;
+#include "container_utils.h"
+#include "functions.h"
 
-// ------------- utility classes required for the test case --------------
+TEST(Functions, Basic) {
 
-class A {
-	void f() {};
-};
-class B : public A { };
+	TypeManager typeManager;
+	StatementManager statementManager(typeManager);
+	FunctionManager manager(statementManager);
 
+	TypePtr typeA = GenericType::get(typeManager, "A");
+	TypePtr typeB = GenericType::get(typeManager, "B");
+	TypePtr typeR = GenericType::get(typeManager, "R");
 
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
+	Identifier ident = "funA";
+	Function::ParameterList list;
+	list.push_back(Function::Parameter("a", typeA));
+	list.push_back(Function::Parameter("b", typeB));
+	FunctionPtr funA = Function::get(manager, ident, list, typeR);
 
-	EXPECT_LE ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
+	TupleType::ElementTypeList elements;
+	elements.push_back(typeA);
+	elements.push_back(typeB);
+	TupleTypePtr argumentA = TupleType::get(typeManager, elements);
+	FunctionTypePtr funAType = FunctionType::get(typeManager, argumentA, typeR);
 
-	int a = 10;
-	int b = 15;
+	EXPECT_EQ ( funAType, funA->getType() );
 
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
+	FunctionPtr funB = Function::get(manager, ident, list);
+	FunctionTypePtr funBType = FunctionType::get(typeManager, argumentA, UnitType::get(typeManager));
 
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
+	EXPECT_EQ ( funBType, funB->getType() );
 
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
-}
-
-TEST(AnnotatedPtrerence, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
 }
 
 

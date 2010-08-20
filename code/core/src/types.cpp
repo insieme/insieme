@@ -38,6 +38,7 @@
 #include <cassert>
 #include <stdexcept>
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "container_utils.h"
@@ -48,7 +49,7 @@
 
 // -------------------------------- Integer Type Parameter ----------------------------
 
-bool IntTypeParam::operator==(const IntTypeParam& param) {
+bool IntTypeParam::operator==(const IntTypeParam& param) const {
 	// quick check on reference
 	if (this == &param) {
 		return true;
@@ -108,7 +109,7 @@ bool Type::allConcrete(const vector<TypePtr>& elementTypes) {
  * @param elementTypes	the list of element types
  * @return a string representation of the resulting tuple type
  */
-string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
+string TupleType::buildNameString(const ElementTypeList& elementTypes) {
 
 	// create output buffer
 	std::stringstream res;
@@ -134,7 +135,7 @@ string TupleType::buildNameString(const vector<TypePtr>& elementTypes) {
  * @param manager the manager to obtain the new type reference from
  * @param elementTypes the list of element types to be used to form the tuple
  */
-TupleTypePtr TupleType::get(TypeManager& manager, const vector<TypePtr>& elementTypes) {
+TupleTypePtr TupleType::get(TypeManager& manager, const ElementTypeList& elementTypes) {
 	return manager.getTypePointer(TupleType(elementTypes));
 }
 
@@ -352,9 +353,5 @@ std::size_t hash_value(const Type& type) {
  */
 std::ostream& operator<<(std::ostream& out, const Type& type) {
 	out << type.toString();
-	return out;
-}
-std::ostream& operator<<(std::ostream& out, const TypePtr& type) {
-	out << "PtrOn(" << type->toString() << ")";
 	return out;
 }

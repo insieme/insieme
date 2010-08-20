@@ -36,27 +36,35 @@
 
 #pragma once
 
+#include <vector>
+
+#include "container_utils.h"
 #include "types.h"
 
 class IntType;
 typedef AnnotatedPtr<const IntType> IntTypePtr;
 
+class UnitType;
+typedef AnnotatedPtr<const UnitType> UnitTypePtr;
 
 
 class IntType : public GenericType {
 
-	IntType(const unsigned short& numBytes = 4) : GenericType("int", vector<TypePtr>, toVector(IntTypeParam::getConcreteIntParam(numBytes)));
+	IntType(const unsigned short& numBytes = 4) :
+		GenericType("int", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes)))
+	{};
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
 	virtual IntType* clone(TypeManager& manager) const {
-		return new IntType(getSize());
+		return new IntType(getNumBytes());
 	}
+
 public:
 
-	static IntTypePtr get(TypeManager manager&, const unsigned short& numBytes) {
-		return manager.getTypPtr(IntType(numBytes));
+	static IntTypePtr get(TypeManager& manager, const unsigned short& numBytes) {
+		return manager.getTypePointer(IntType(numBytes));
 	}
 
 	/**
@@ -66,6 +74,25 @@ public:
 	 */
 	const unsigned getNumBytes() const {
 		return getIntTypeParameter()[0].getValue();
+	}
+
+};
+
+class UnitType : public GenericType {
+
+	UnitType() : GenericType("unit") {};
+
+	/**
+	 * Creates a clone of this type within the given manager.
+	 */
+	virtual UnitType* clone(TypeManager& manager) const {
+		return new UnitType();
+	}
+
+public:
+
+	static UnitTypePtr get(TypeManager& manager) {
+		return manager.getTypePointer(UnitType());
 	}
 
 };

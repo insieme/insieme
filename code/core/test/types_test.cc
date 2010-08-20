@@ -66,6 +66,23 @@ TEST(TypeTest, TypeManager ) {
 
 }
 
+TEST(TypeTest, TypeManagerGetAllBug ) {
+
+	TypeManager manager;
+
+	TypePtr typeA = GenericType::get(manager, "A");
+	TypePtr typeB = GenericType::get(manager, "B");
+	TypePtr typeR = GenericType::get(manager, "R");
+
+	Identifier ident = "funA";
+	TupleType::ElementTypeList list;
+	list.push_back(typeA);
+	list.push_back(typeB);
+	TypePtr tuple = TupleType::get(manager, list);
+
+	FunctionTypePtr funType = FunctionType::get(manager, tuple, typeR);
+}
+
 TEST(TypeTest, MultipleTypeManager ) {
 
 	// create type manager

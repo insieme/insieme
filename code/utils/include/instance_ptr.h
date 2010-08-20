@@ -63,6 +63,8 @@ public:
 	template<typename B>
 	InstancePtr(const InstancePtr<B>& from, typename enable_if<is_base_of<T,B>,int>::type = 0) : ptr(from.ptr) { }
 	
+	virtual ~InstancePtr() {};
+
 	bool operator!() const {
 		return ptr==NULL;
 	}
@@ -135,5 +137,17 @@ typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_
 		return *(reinterpret_cast<InstancePtr<B>* >(&src));
 	}
 	return NULL;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const InstancePtr<T>& ptr) {
+	out << "IP(";
+	if (!!ptr) {
+		out << *ptr;
+	} else {
+		out << "NULL";
+	}
+	out << ")";
+	return out;
 }
 

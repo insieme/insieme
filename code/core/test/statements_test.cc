@@ -38,6 +38,7 @@
 
 #include <gtest/gtest.h>
 #include "statements.h"
+#include "string_utils.h"
 
 TEST(StatementsTest, Management) {
 	TypeManager typeMan;
@@ -97,7 +98,5 @@ TEST(StatementsTest, CompoundStmt) {
 	EXPECT_NE(bSC , bScSCVec);
 	EXPECT_NE(bSC->hash() , bScSCVec->hash());
 	EXPECT_EQ((*bSC)[0], (*bScSCVec)[0]);
-	std::stringstream ss;
-	ss << bScSCVec;
-	EXPECT_EQ("{\nbreak;\ncontinue;\n}\n", ss.str());
+	EXPECT_EQ("{\nbreak;\ncontinue;\n}\n", toString(*bScSCVec));
 }

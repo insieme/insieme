@@ -141,7 +141,6 @@ public:
 
 	// true if new, false otherwise ...
 	std::pair<R,bool> add(T* instance) {
-
 		// test whether there is already an identical element
 		auto res = storage.find(instance);
 		if (res != storage.end()) {
@@ -153,7 +152,6 @@ public:
 		T* newElement = instance->clone(*static_cast<Derived*>(this));
 		storage.insert(newElement);
 		return std::make_pair(R(newElement), true);
-
 	}
 
 	std::pair<R,bool> add(T& instance) {
@@ -200,10 +198,17 @@ public:
 
 	template<typename InIter, typename OutIter>
 	void getAll(InIter start, InIter end, OutIter out) {
-		std::transform(start, end, out,
-			[&](typename std::iterator_traits<InIter>::value_type cur) {
-				return this->get(cur);
-		});
+		// NOTE: by any reason, std::transform is not working (functions_test.h)
+		// FIXME: figure out why this is not working
+		for (; start != end; ++start) {
+			const typename std::iterator_traits<InIter>::value_type& cur = *start;
+			*out = this->get(cur);
+		}
+
+//		std::transform(start, end, out,
+//			[&](const typename std::iterator_traits<InIter>::value_type& cur) {
+//				return this->get(cur);
+//		});
 	}
 
 	template<typename Container>

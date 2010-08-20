@@ -34,60 +34,173 @@
  * regarding third party software licenses.
  */
 
-///*
-// * functions.h
-// *
-// *  Defines the class used to represent and manage functions within the IR.
-// *
-// *  Created on: Aug 5, 2010
-// *      Author: Herbert Jordan
-// */
-//#pragma once
-//
-//#include <stdexcept>
-//#include <string>
-//#include <vector>
-//
-//#include "statements.h"
-//#include "string_utils.h"
-//#include "types.h"
-//
-//using std::string;
-//using std::vector;
-//
-//
-//class Function {
-//
-//	const FunctionTypePtr type;
-//	const vector<string> parameterNames;
-//
-//	/**
-//	 * A flag determining whether
-//	 */
-//	const bool external;
-//
-//	/**
-//	 * The statement forming the body of the represented function.
-//	 */
-//	const StmtPtr body;
-//
-//	/**
-//	 * A private constructor for this type requesting values for all member fields.
-//	 *
-//	 * @param type	the type of the new function
-//	 * @param parameterNames	the names of the parameters. Those will be available within
-//	 * 			the body as variables of the corresponding type. It has to be ensured that
-//	 * 			the number of parameter names and input type parameters is equivalent.
-//	 * @param external	should be set to true if this function is defined externally
-//	 */
-//	Function(FunctionTypePtr type, vector<string> parameterNames, bool external = true, StmtPtr body = NoOpStmt::getInstance()) :
-//		type(type), parameterNames(parameterNames), external(external), body(body) {
-//
-//
-//		// TODO: check whether parameter types are fitting
-//
-//		// TODO: check
-//	}
-//
-//public:
-//};
+/*
+ * functions.h
+ *
+ *  Defines the class used to represent and manage functions within the IR.
+ *
+ *  Created on: Aug 5, 2010
+ *      Author: Herbert Jordan
+ */
+#pragma once
+
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "instance_manager.h"
+#include "statements.h"
+#include "string_utils.h"
+#include "types.h"
+#include "types_utils.h"
+
+using std::string;
+using std::vector;
+
+
+
+class Function;
+typedef AnnotatedPtr<const Function> FunctionPtr;
+
+class FunctionManager : public InstanceManager<FunctionManager, const Function, FunctionPtr> {
+
+	StatementManager& statementManager;
+	TypeManager& typeManager;
+
+public:
+
+	FunctionManager(StatementManager& statementManager) :
+		statementManager(statementManager),
+		typeManager(statementManager.getTypeManager())
+	{};
+
+
+	TypeManager& getTypeManager() const {
+		return typeManager;
+	}
+
+	StatementManager& getStatementManager() const {
+		return statementManager;
+	}
+};
+
+
+class Function {
+
+	friend class InstanceManager<FunctionManager, const Function, FunctionPtr>;
+
+public:
+
+	/**
+	 * The type used to represent a function parameter.
+	 */
+	typedef std::pair<Identifier, TypePtr> Parameter;
+
+	/**
+	 * The type used to represent an entire parameter list.
+	 */
+	typedef vector<Parameter> ParameterList;
+
+private:
+
+	/**
+	 * The name of this function.
+	 */
+	const Identifier name;
+
+	/**
+	 * The type of this function, derived from the list of parameters and the return type.
+	 */
+	const FunctionTypePtr type;
+
+	/**
+	 * The list of parameters accepted by this function
+	 */
+	const vector<Identifier> parameters;
+
+	/**
+	 * A flag determining whether this function is defined externally.
+	 */
+	const bool external;
+
+	/**
+	 * The statement forming the body of the represented function. If the function is external,
+	 * the body might be NULL. The body of a function being marked as an external should not be altered.
+	 */
+	const StmtPtr body;
+
+	/**
+	 * The hash code of this immutable data element, evaluated during construction.
+	 */
+	const std::size_t hashCode;
+
+
+	Function(const Identifier& name, const FunctionTypePtr& type, const vector<Identifier>& parameter,
+			bool external=true, const StmtPtr& body=NULL);
+
+	Function(FunctionManager& manager, const Function& function);
+
+	Function* clone(FunctionManager& manager) const {
+		return new Function(manager, *this);
+	}
+
+public:
+
+
+	static FunctionPtr get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList, const TypePtr& returnType);
+
+	static FunctionPtr get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList = ParameterList()) {
+		return get(manager, name, paramList, UnitType::get(manager.getTypeManager()));
+	}
+
+	const Identifier& getName() const {
+		return name;
+	}
+
+	const FunctionTypePtr& getType() const {
+		return type;
+	}
+
+	const StmtPtr& getBody() const {
+		return body;
+	}
+
+	bool isExternal() const {
+		return external;
+	}
+
+	bool operator==(const Function& other) const {
+		// shortcut for identical entries
+		if (this == &other) {
+			return true;
+		}
+
+		// shortcut for not-matching entries
+		if (hashCode != other.hashCode) {
+			return false;
+		}
+
+		// compare type and name - which makes a function unique
+		return type == other.type && name == other.name;
+	}
+
+	const std::size_t& hash() const {
+		return hashCode;
+	}
+};
+
+// ---------------------------------------------- Utilities ------------------------------------
+
+/**
+ * Integrates the hash code computation into the boost hash code framework.
+ *
+ * @param function the function for which a hash code should be computed.
+ * @return the hash code of the given function
+ */
+std::size_t hash_value(const Function& function);
+
+/**
+ * Allows this type to be printed to a stream (especially useful during debugging and
+ * within test cases where equals expects values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const Function& type);

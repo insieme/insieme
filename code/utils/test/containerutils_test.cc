@@ -39,8 +39,9 @@
 
 #include "container_utils.h"
 
-using std::vector;
+using std::pair;
 using std::string;
+using std::vector;
 
 TEST(ContainerUtils, Singleton) {
 	// Obtain two instances
@@ -139,3 +140,32 @@ TEST(ContainerUtils, Duplicates) {
 	list.push_back(N/2);
 	EXPECT_TRUE ( hasDuplicates(list) );
 }
+
+
+TEST(ContainerUtils, Projection) {
+
+	vector<int> listA;
+	listA.push_back(1);
+	listA.push_back(2);
+	listA.push_back(3);
+
+	vector<char> listB;
+	listB.push_back('a');
+	listB.push_back('b');
+	listB.push_back('c');
+
+	vector<pair<int, char>> list;
+	list.push_back(std::make_pair(1,'a'));
+	list.push_back(std::make_pair(2,'b'));
+	list.push_back(std::make_pair(3,'c'));
+
+	EXPECT_EQ ( listA, projectToFirst(list) );
+	EXPECT_EQ ( listB, projectToSecond(list) );
+
+	vector<pair<int,char> > emptyList;
+
+	EXPECT_EQ ( vector<int>(), projectToFirst(emptyList) );
+	EXPECT_EQ ( vector<char>(), projectToSecond(emptyList) );
+
+}
+

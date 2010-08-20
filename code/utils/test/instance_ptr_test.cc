@@ -39,6 +39,7 @@
 
 #include <gtest/gtest.h>
 #include "instance_ptr.h"
+#include "string_utils.h"
 
 using std::string;
 using std::cout;
@@ -84,4 +85,48 @@ TEST(InstancePtr, NullTest) {
 TEST(InstancePtr, Size) {
 	// just ensures
 	EXPECT_LE ( sizeof (InstancePtr<int>), 2*sizeof(int*) );
+}
+
+TEST(InstancePtr, Print) {
+	// just ensures
+	int a = 10;
+	InstancePtr<int> ptrA(&a);
+	EXPECT_EQ( "IP(10)", toString(ptrA) );
+
+	InstancePtr<int> ptrN = InstancePtr<int>(NULL);
+	EXPECT_EQ( "IP(NULL)", toString(ptrN) );
+}
+
+typedef float real;
+
+class A {
+	// required to be polymorphic (dynamic cast)
+	virtual real hell() { return 66.6; };
+};
+class B : public A {};
+class C : public A {};
+
+
+TEST(InstancePtr, Casts) {
+
+	A a;
+	B b;
+	C c;
+
+	InstancePtr<const A> refA(&a);
+	InstancePtr<const B> refB(&b);
+	InstancePtr<const C> refC(&c);
+
+	refA = refB;
+	// refB = refA;
+	refB = dynamic_pointer_cast<const B >(refA);
+	EXPECT_FALSE( refB == InstancePtr<B>(NULL) );
+
+	// should not compile ...
+//	refC = dynamic_pointer_cast<const C >(refA);
+//	EXPECT_TRUE( refC == InstancePtr<C>(NULL) );
+
+	refA = refC;
+	refB = dynamic_pointer_cast<const B >(refA);
+	EXPECT_TRUE( refB == InstancePtr<B>(NULL) );
 }

@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <set>
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -69,4 +70,16 @@ dynamic_pointer_cast(AnnotatedPtr<T> src) {
 		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
 	}
 	return NULL;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const AnnotatedPtr<T>& ptr) {
+	out << "AP(";
+	if (!!ptr) {
+		out << *ptr;
+	} else {
+		out << "NULL";
+	}
+	out << ")";
+	return out;
 }
