@@ -8,9 +8,9 @@ def rename(d):
 			 if file.endswith('.h'):
 					code = open(root + "/" + file).read()
 					code = code.replace('alignof', 'llvm_alignof')
-					open(root + "/" + file, 'w').write(code)
+					open(os.path.join(root, file), 'w').write(code)
 		for dir in dirs:
-				rename(dir)
+				rename(os.path.join(root, dir))
 
 print "Starting code substitution, root directory is: " + sys.argv[1]
 rename(sys.argv[1])
