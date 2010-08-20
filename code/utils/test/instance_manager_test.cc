@@ -50,7 +50,7 @@ using std::endl;
 
 class CloneableString;
 
-class CloneableStringManager : public InstanceManager<CloneableStringManager, const CloneableString> {};
+class CloneableStringManager : public InstanceManager<CloneableStringManager, CloneableString> {};
 
 class CloneableString : public string {
 public:
@@ -112,9 +112,9 @@ TEST(InstanceManager, GetTests) {
 	CloneableStringManager manager;
 	EXPECT_EQ (manager.size(), 0);
 
-	Ptr a = manager.get("A");
-	Ptr b = manager.get("B");
-	Ptr c = manager.get("C");
+	Ptr a = manager.get(CloneableString("A"));
+	Ptr b = manager.get(CloneableString("B"));
+	Ptr c = manager.get(CloneableString("C"));
 	Ptr d = manager.get(b);
 
 	EXPECT_EQ ( *a , "A" );
@@ -138,4 +138,89 @@ TEST(InstanceManager, GetTests) {
 	vector<Ptr> listB = manager2.getAll(list);
 	EXPECT_EQ ( 3, manager2.size() );
 	EXPECT_NE ( list , listB );
+}
+
+
+TEST(InstanceManager, ContainsTests) {
+
+	// create a new instance manager
+	CloneableStringManager manager;
+	EXPECT_EQ (manager.size(), 0);
+
+	// check null pointer
+	Ptr nPtr(NULL);
+	EXPECT_TRUE( manager.contains(nPtr) );
+	EXPECT_TRUE( manager.addressesLocal(nPtr));
+
+	CloneableString strA("A");
+	CloneableString strB("B");
+
+	Ptr strPtrA(&strA);
+	Ptr strPtrB(&strB);
+
+	vector<Ptr> list;
+	list.push_back(strPtrA);
+	list.push_back(strPtrB);
+
+	EXPECT_FALSE( manager.contains(strA) );
+	EXPECT_FALSE( manager.contains(strB) );
+	EXPECT_FALSE( manager.contains(strPtrA) );
+	EXPECT_FALSE( manager.contains(strPtrB) );
+	EXPECT_FALSE( manager.containsAll(list) );
+	EXPECT_FALSE( manager.addressesLocal(strPtrA) );
+	EXPECT_FALSE( manager.addressesLocal(strPtrB) );
+	EXPECT_FALSE( manager.addressesLocalAll(list) );
+
+	Ptr a = manager.get(&strA);
+
+	EXPECT_TRUE( manager.contains(strA) );
+	EXPECT_FALSE( manager.contains(strB) );
+	EXPECT_TRUE( manager.contains(strPtrA) );
+	EXPECT_FALSE( manager.contains(strPtrB) );
+	EXPECT_FALSE( manager.containsAll(list) );
+	EXPECT_FALSE( manager.addressesLocal(strPtrA) );
+	EXPECT_FALSE( manager.addressesLocal(strPtrB) );
+	EXPECT_FALSE( manager.addressesLocalAll(list) );
+
+	Ptr b = manager.get(&strB);
+
+	EXPECT_TRUE( manager.contains(strA) );
+	EXPECT_TRUE( manager.contains(strB) );
+	EXPECT_TRUE( manager.contains(strPtrA) );
+	EXPECT_TRUE( manager.contains(strPtrB) );
+	EXPECT_TRUE( manager.containsAll(list) );
+	EXPECT_FALSE( manager.addressesLocal(strPtrA) );
+	EXPECT_FALSE( manager.addressesLocal(strPtrB) );
+	EXPECT_FALSE( manager.addressesLocalAll(list) );
+
+	vector<Ptr> ptrList1;
+	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
+	ptrList1.push_back(nPtr);
+	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
+	ptrList1.push_back(a);
+	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
+	ptrList1.push_back(b);
+	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
+	ptrList1.push_back(strPtrA);
+	EXPECT_FALSE( manager.addressesLocalAll(ptrList1) );
+	ptrList1.pop_back();
+	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
+
+	// create new manager
+	CloneableStringManager manager2;
+	vector<Ptr> ptrList2;
+	ptrList2.push_back(manager2.get(nPtr));
+	ptrList2.push_back(manager2.get(a));
+	ptrList2.push_back(manager2.get(b));
+
+	EXPECT_TRUE ( manager.containsAll(ptrList1));
+	EXPECT_TRUE ( manager.containsAll(ptrList2));
+	EXPECT_TRUE ( manager2.containsAll(ptrList1));
+	EXPECT_TRUE ( manager2.containsAll(ptrList2));
+
+	EXPECT_TRUE ( manager.addressesLocalAll(ptrList1));
+	EXPECT_FALSE ( manager.addressesLocalAll(ptrList2));
+	EXPECT_FALSE ( manager2.addressesLocalAll(ptrList1));
+	EXPECT_TRUE ( manager2.addressesLocalAll(ptrList2));
+
 }

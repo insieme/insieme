@@ -60,7 +60,7 @@ std::size_t IntLiteral::hash() const {
 }
 
 IntLiteralPtr IntLiteral::get(StatementManager& manager, int value, unsigned short bytes) {
-	return manager.getStmtPtr(IntLiteral(IntType::get(manager.getTypeManager(), bytes), value, bytes));
+	return manager.get(IntLiteral(IntType::get(manager.getTypeManager(), bytes), value, bytes));
 }
 
 // ------------------------------------- VariableExpr ---------------------------------
@@ -87,17 +87,13 @@ std::size_t VariableExpr::hash() const {
 }
 
 VarExprPtr VariableExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.getStmtPtr(VariableExpr(type, id));
+	return manager.get(VariableExpr(type, id));
 }
 
 // ------------------------------------- CallExpr ---------------------------------
 
 CallExpr* CallExpr::clone(StatementManager& manager) const {
-	vector<ExprPtr> localArguments;
-	std::for_each(arguments.cbegin(), arguments.cend(), [&](const ExprPtr& cur) { 
-		localArguments.push_back(manager.getStmtPtr(*cur)); 
-	});
-	return new CallExpr(manager.getTypeManager().get(type), manager.getStmtPtr(*functionExpr), localArguments);
+	return new CallExpr(manager.getTypeManager().get(type), manager.get(*functionExpr), manager.getAll(arguments));
 }
 	
 bool CallExpr::equalsExpr(const Expression& expr) const {
@@ -123,5 +119,11 @@ std::size_t CallExpr::hash() const {
 }
 
 CallExprPtr CallExpr::get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments) {
-	return manager.getStmtPtr(CallExpr(type, functionExpr, arguments));
+	return manager.get(CallExpr(type, functionExpr, arguments));
+}
+
+
+std::ostream& operator<<(std::ostream& out, const Expression& expression) {
+	expression.printTo(out);
+	return out;
 }

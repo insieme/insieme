@@ -89,7 +89,7 @@ NoOpStmt* NoOpStmt::clone(StatementManager&) const {
 }
 
 NoOpStmtPtr NoOpStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(NoOpStmt());
+	return manager.get(NoOpStmt());
 }
 
 // ------------------------------------- BreakStmt ---------------------------------
@@ -111,7 +111,7 @@ BreakStmt* BreakStmt::clone(StatementManager&) const {
 }
 
 BreakStmtPtr BreakStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(BreakStmt());
+	return manager.get(BreakStmt());
 }
 
 // ------------------------------------- ContinueStmt ---------------------------------
@@ -133,7 +133,7 @@ ContinueStmt* ContinueStmt::clone(StatementManager&) const {
 }
 
 ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(ContinueStmt());
+	return manager.get(ContinueStmt());
 }
 
 // ------------------------------------- DeclarationStmt ---------------------------------
@@ -161,7 +161,7 @@ std::size_t DeclarationStmt::hash() const {
 }
 
 DeclarationStmt* DeclarationStmt::clone(StatementManager& manager) const {
-	return new DeclarationStmt(manager.getTypeManager().get(type), id, manager.getStmtPtr(*initExpression));
+	return new DeclarationStmt(manager.getTypeManager().get(type), id, manager.get(*initExpression));
 }
 
 DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
@@ -169,7 +169,7 @@ DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
 }
 
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
-	return manager.getStmtPtr(DeclarationStmt(type, id, initExpression));
+	return manager.get(DeclarationStmt(type, id, initExpression));
 }
 
 // ------------------------------------- ReturnStmt ---------------------------------
@@ -195,7 +195,7 @@ std::size_t ReturnStmt::hash() const {
 }
 
 ReturnStmt* ReturnStmt::clone(StatementManager& manager) const {
-	return new ReturnStmt(manager.getStmtPtr(*returnExpression));
+	return new ReturnStmt(manager.get(*returnExpression));
 }
 
 ReturnStmt::ChildList ReturnStmt::getChildren() const {
@@ -203,7 +203,7 @@ ReturnStmt::ChildList ReturnStmt::getChildren() const {
 }
 
 ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression) {
-	return manager.getStmtPtr(ReturnStmt(returnExpression));
+	return manager.get(ReturnStmt(returnExpression));
 }
 
 // ------------------------------------- CompoundStmt ---------------------------------
@@ -244,13 +244,13 @@ const StmtPtr&  CompoundStmt::operator[](unsigned index) const {
 }
 
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(CompoundStmt());
+	return manager.get(CompoundStmt());
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt) {
-	return manager.getStmtPtr(CompoundStmt(stmt));
+	return manager.get(CompoundStmt(stmt));
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts) {
-	return manager.getStmtPtr(CompoundStmt(stmts));
+	return manager.get(CompoundStmt(stmts));
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
@@ -277,7 +277,7 @@ std::size_t WhileStmt::hash() const {
 }
 
 WhileStmt* WhileStmt::clone(StatementManager& manager) const {
-	return new WhileStmt(manager.getStmtPtr(*condition), manager.getStmtPtr(*body));
+	return new WhileStmt(manager.get(*condition), manager.get(*body));
 }
 
 WhileStmt::ChildList WhileStmt::getChildren() const {
@@ -287,7 +287,7 @@ WhileStmt::ChildList WhileStmt::getChildren() const {
 }
 
 WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body) {
-	return manager.getStmtPtr(WhileStmt(condition, body));
+	return manager.get(WhileStmt(condition, body));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
@@ -317,8 +317,8 @@ std::size_t ForStmt::hash() const {
 }
 
 ForStmt* ForStmt::clone(StatementManager& manager) const {
-	return new ForStmt(manager.getStmtPtr(*declaration), manager.getStmtPtr(*body), 
-		manager.getStmtPtr(*end), manager.getStmtPtr(*step));
+	return new ForStmt(manager.get(*declaration), manager.get(*body),
+		manager.get(*end), manager.get(*step));
 }
 
 ForStmt::ChildList ForStmt::getChildren() const {
@@ -331,7 +331,7 @@ ForStmt::ChildList ForStmt::getChildren() const {
 
 ForStmtPtr ForStmt::get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) {
 	if(!step) step = IntLiteral::one(manager);
-	return manager.getStmtPtr(ForStmt(declaration, body, end, step));
+	return manager.get(ForStmt(declaration, body, end, step));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
@@ -341,7 +341,7 @@ IfStmt::IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody) :
 }
 
 IfStmt* IfStmt::clone(StatementManager& manager) const {
-	return new IfStmt(manager.getStmtPtr(*condition), manager.getStmtPtr(*body), manager.getStmtPtr(*elseBody));
+	return new IfStmt(manager.get(*condition), manager.get(*body), manager.get(*elseBody));
 }
 
 void IfStmt::printTo(std::ostream& out) const {
@@ -372,7 +372,7 @@ IfStmt::ChildList IfStmt::getChildren() const {
 IfStmtPtr IfStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody) {
 	// default to empty else block
 	if(!elseBody) elseBody = CompoundStmt::get(manager);
-	return manager.getStmtPtr(IfStmt(condition, body, elseBody));
+	return manager.get(IfStmt(condition, body, elseBody));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
@@ -384,9 +384,9 @@ SwitchStmt::SwitchStmt(ExprPtr switchExpr, const vector<Case>& cases) :
 SwitchStmt* SwitchStmt::clone(StatementManager& manager) const {
 	vector<Case> localCases;
 	std::for_each(cases.cbegin(), cases.cend(), [&](const Case& cur) {
-		localCases.push_back(SwitchStmt::Case(manager.getStmtPtr(*cur.first), manager.getStmtPtr(*cur.second)));
+		localCases.push_back(SwitchStmt::Case(manager.get(*cur.first), manager.get(*cur.second)));
 	});
-	return new SwitchStmt(manager.getStmtPtr(*switchExpr), localCases);
+	return new SwitchStmt(manager.get(*switchExpr), localCases);
 }
 
 void SwitchStmt::printTo(std::ostream& out) const {
@@ -422,5 +422,5 @@ SwitchStmt::ChildList SwitchStmt::getChildren() const {
 }
 
 SwitchStmtPtr SwitchStmt::get(StatementManager& manager, ExprPtr switchExpr, const vector<Case>& cases) {
-	return manager.getStmtPtr(SwitchStmt(switchExpr, cases));
+	return manager.get(SwitchStmt(switchExpr, cases));
 }

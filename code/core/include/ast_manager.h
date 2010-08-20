@@ -37,26 +37,33 @@
 #pragma once
 
 #include "expressions.h"
+#include "definitions.h"
 #include "statements.h"
 #include "types.h"
 
-class ASTManager {
+class ASTData {
 
 	TypeManager typeManager;
 	StatementManager stmtManager;
-
-	// TODO: add list of entry expressions
-	// TODO: add list of functions (function manager)
+	DefinitionManager definitionManager;
 
 	// TODO: add lookup table for variables!!
 
-	// TODO: Implement AST Manager and actual AST (the data structure passed on)
-	// => reference using shared pointer
-	// modification is copying data block and adapting lists
-
-
 public:
-	ASTManager() : typeManager(), stmtManager(typeManager) {}
+	ASTData() : typeManager(), stmtManager(typeManager), definitionManager(stmtManager) {}
+
+
+	TypeManager& getTypeManager() {
+		return typeManager;
+	}
+
+	StatementManager& getStatementManager() {
+		return stmtManager;
+	}
+
+	DefinitionManager& getDefinitionManager() {
+		return definitionManager;
+	}
 
 };
 
@@ -64,15 +71,59 @@ public:
 
 class AST {
 
-	typedef shared_ptr<ASTManager> SharedASTManager;
+	/**
+	 * The type used to share AST nodes and information among multiple
+	 * AST versions.
+	 */
+	typedef shared_ptr<ASTData> SharedASTData;
 
-	SharedASTManager manager;
+	/**
+	 * The type used to represent the list of top level definitions.
+	 */
+	typedef vector<DefinitionPtr> DefinitionList;
 
+	/**
+	 * The type used to represent the list of entry points.
+	 */
+	typedef vector<ExprPtr> EntryPointList;
+
+	/**
+	 * The manager used to maintain nodes within this AST.
+	 */
+	const SharedASTData manager;
+
+	/**
+	 * The list of definitions represented by this AST. Each definition
+	 * represents a root node of a tree within this AST (which is actually
+	 * a forest).
+	 */
+	DefinitionList definitionList;
+
+	/**
+	 * This set contains the list of expressions to be exported to the context
+	 * program. Hence, the code which can be reached starting from those points
+	 * has to be considered. In case elements of this list represent functions,
+	 * the signature of the corresponding structure may not be changed.
+	 */
+	EntryPointList entryPoints;
 
 public:
 
-	AST(SharedASTManager& manager) : manager(manager) {}
+	/**
+	 * Creates a new AST based on the given data.
+	 *
+	 * @param manager shared data manager to be used to maintain definitions, AST nodes and types.
+	 * @param definitions the list of top-level definitions the program to be represented should consist of
+	 * @param entryPoints the list of entry points the program is supporting.
+	 */
+	AST(SharedASTData& manager, const DefinitionList& definitions, const EntryPointList& entryPoints) :
+		manager(manager),
+		definitionList(manager->getDefinitionManager().getAll(definitions)),
+		entryPoints(manager->getStatementManager().getAll(entryPoints)) {}
 
-	AST() : manager(SharedASTManager(new ASTManager())) {}
+	/**
+	 * Creates a new AST using a fresh AST data instance.
+	 */
+	AST() : manager(SharedASTData(new ASTData())) {}
 
 };

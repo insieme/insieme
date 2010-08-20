@@ -103,7 +103,7 @@ class StatementManager;
 
 class Statement : public Visitable<StmtPtr> {
 	// needs InstanceManager not StatementManager since base type calls clone
-	friend class InstanceManager<StatementManager, const Statement, StmtPtr>;
+	friend class InstanceManager<StatementManager, Statement, AnnotatedPtr>;
 	virtual Statement* clone(StatementManager& manager) const = 0;
 
 protected:
@@ -114,11 +114,11 @@ protected:
 	};
 
 	Statement() {}
-	virtual ~Statement() {}
 
 	virtual bool equals(const Statement& stmt) const = 0;
 
 public:
+	virtual ~Statement() {}
 	virtual void printTo(std::ostream& out) const = 0;
 	virtual std::size_t hash() const = 0;
 	virtual ChildList getChildren() const;
@@ -317,17 +317,11 @@ public:
 
 // ------------------------------------- Statement Manager ---------------------------------
 
-class StatementManager : public InstanceManager<StatementManager, const Statement, StmtPtr> {
+class StatementManager : public InstanceManager<StatementManager, Statement, AnnotatedPtr> {
 	TypeManager& typeManager;	
 
 public:
 	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
-
-	// I never wanted this to be public - PT
-	template<typename T>
-	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
-		return dynamic_pointer_cast<const T>(get(stmt));
-	}
 
 	TypeManager& getTypeManager() {
 		return typeManager;

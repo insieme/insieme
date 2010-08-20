@@ -356,8 +356,8 @@ TEST(TypeTest, FunctionType) {
 	FunctionTypePtr funTypeA = FunctionType::get(manager, argumentA, resultA);
 	FunctionTypePtr funTypeB = FunctionType::get(manager, argumentB, resultB);
 
-	EXPECT_EQ ( "(dummyA -> returnA)" , funTypeA->getName() );
-	EXPECT_EQ ( "('alpha -> returnB)" , funTypeB->getName() );
+	EXPECT_EQ ( "(dummyA->returnA)" , funTypeA->getName() );
+	EXPECT_EQ ( "('alpha->returnB)" , funTypeB->getName() );
 
 	vector<TypePtr> subTypesA;
 	subTypesA.push_back(argumentA);

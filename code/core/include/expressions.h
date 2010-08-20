@@ -177,3 +177,10 @@ public:
 //class CastExpression : public Expression {
 ////	const ExprPtr subExpression;
 //};
+
+
+/**
+ * Allows expressions to be printed to a stream (especially useful during debugging and
+ * within test cases where equals expects values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const Expression& expression);

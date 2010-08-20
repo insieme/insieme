@@ -57,9 +57,14 @@ TEST(StatementsTest, Management) {
 	stmtVec.push_back(nS);
 	stmtVec.push_back(bSC);
 	CompoundStmtPtr bSCVec = CompoundStmt::get(stmtMan, stmtVec);
+
+	EXPECT_EQ (5, stmtMan.size());
+	EXPECT_EQ (0, stmtMan2.size());
+
 	CompoundStmtPtr bSCVec2 = CompoundStmt::get(stmtMan2, stmtVec);
 
 	EXPECT_EQ (5, stmtMan.size());
+	EXPECT_EQ (5, stmtMan2.size());
 
 	DepthFirstVisitor<StmtPtr> stmt2check([&](StmtPtr cur) {
 		EXPECT_TRUE(stmtMan2.contains(cur));

@@ -254,23 +254,7 @@ public:
 
 // ---------------------------------- Type Manager ----------------------------------------
 
-class TypeManager: public InstanceManager<TypeManager, const Type, TypePtr> {
-
-public:
-
-	/**
-	 * A generic wrapper enclosing the internal implementation of the lookup method.
-	 *
-	 * @param type the type node for which a master copy should be obtained
-	 * @return the pointer to the obtained element
-	 * @see TypeManager::getTypePtrInternal(const Type&)
-	 */
-	template<typename T>
-	AnnotatedPtr<const T> getTypePtr(const T& node) {
-		return dynamic_pointer_cast<const T>(get(node));
-	}
-
-};
+class TypeManager: public InstanceManager<TypeManager, Type, AnnotatedPtr> { };
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
@@ -286,7 +270,7 @@ public:
  */
 class Type: public Visitable<TypePtr> {
 
-	friend class InstanceManager<TypeManager, const Type, TypePtr>;
+	friend class InstanceManager<TypeManager, Type, AnnotatedPtr>;
 
 	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types
@@ -470,7 +454,7 @@ public:
 	 * given manager.
 	 */
 	static TypeVariablePtr get(TypeManager& manager, const string& name) {
-		return manager.getTypePtr(TypeVariable(name));
+		return manager.get(TypeVariable(name));
 	}
 
 };
@@ -565,7 +549,7 @@ class FunctionType: public Type {
 	 * @param returnType a reference to the type used as return type
 	 */
 	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
-		Type(format("(%s -> %s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
+		Type(format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
 		argumentType(argumentType), returnType(returnType) {
 	}
 
@@ -968,7 +952,7 @@ public:
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
-		return manager.getTypePtr(ArrayType(elementType, dim));
+		return manager.get(ArrayType(elementType, dim));
 	}
 
 	/**
@@ -1018,7 +1002,7 @@ public:
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
-		return manager.getTypePtr(VectorType(elementType, size));
+		return manager.get(VectorType(elementType, size));
 	}
 
 	/**
@@ -1068,7 +1052,7 @@ public:
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
-		return manager.getTypePtr(RefType(elementType));
+		return manager.get(RefType(elementType));
 	}
 };
 
@@ -1110,7 +1094,7 @@ public:
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
-		return manager.getTypePtr(ChannelType(elementType, size));
+		return manager.get(ChannelType(elementType, size));
 	}
 
 	/**

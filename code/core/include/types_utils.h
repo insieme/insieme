@@ -63,7 +63,7 @@ class IntType : public GenericType {
 public:
 
 	static IntTypePtr get(TypeManager& manager, const unsigned short numBytes) {
-		return manager.getTypePtr(IntType(numBytes));
+		return manager.get(IntType(numBytes));
 	}
 
 	const unsigned short getNumBytes() const {
@@ -86,7 +86,7 @@ class UnitType : public GenericType {
 public:
 
 	static UnitTypePtr get(TypeManager& manager) {
-		return manager.getTypePtr(UnitType());
+		return manager.get(UnitType());
 	}
 
 };
