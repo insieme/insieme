@@ -35,51 +35,23 @@
  */
 
 #pragma once
-
-#include <memory>
-#include <string>
-
-#include <exception>
-#include <stdexcept>
-
-// defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
+#include <string>
+
 namespace clang {
-class ASTContext;
-class ASTConsumer;
-class Preprocessor;
-class Parser;
+class SourceLocation;
+class SourceRange;
+class SourceManager;
 }
 
-struct ClangParsingError: public std::logic_error {
-	ClangParsingError(): std::logic_error(NULL) { }
-};
-
-class ClangCompiler {
-	struct ClangCompilerImpl;
-
-	ClangCompilerImpl* pimpl;
-public:
-	ClangCompiler(const std::string& file_name);
-	clang::ASTContext& getASTContext() const;
-	clang::Preprocessor& getPreprocessor() const;
-	~ClangCompiler();
-};
-
-class InsiemeTransUnit;
-typedef std::shared_ptr<InsiemeTransUnit> InsiemeTransUnitPtr;
-
-class InsiemeTransUnit {
-	ClangCompiler mClang;
-	clang::Parser* mParser;
-
-	InsiemeTransUnit(const std::string& file_name);
-public:
-
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name) {
-		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name));
-	}
+namespace sloc {
+	std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	std::string FileId(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	unsigned Line(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, clang::SourceManager const& sm);
+	unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
 };
 

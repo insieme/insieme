@@ -52,8 +52,6 @@ int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv, true);
 
-	ParseSourceFile("/home/motonacciu/workspace/insieme/tests/polyhedral.c");
-
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());
 //	list.push_back(IntTypeParam::getInfiniteIntParam());

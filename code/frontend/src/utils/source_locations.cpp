@@ -34,52 +34,49 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "utils/source_locations.h"
 
-#include <memory>
-#include <string>
+#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/SourceManager.h>
 
-#include <exception>
-#include <stdexcept>
+using namespace std;
+using namespace clang;
 
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
-namespace clang {
-class ASTContext;
-class ASTConsumer;
-class Preprocessor;
-class Parser;
-}
-
-struct ClangParsingError: public std::logic_error {
-	ClangParsingError(): std::logic_error(NULL) { }
-};
-
-class ClangCompiler {
-	struct ClangCompilerImpl;
-
-	ClangCompilerImpl* pimpl;
-public:
-	ClangCompiler(const std::string& file_name);
-	clang::ASTContext& getASTContext() const;
-	clang::Preprocessor& getPreprocessor() const;
-	~ClangCompiler();
-};
-
-class InsiemeTransUnit;
-typedef std::shared_ptr<InsiemeTransUnit> InsiemeTransUnitPtr;
-
-class InsiemeTransUnit {
-	ClangCompiler mClang;
-	clang::Parser* mParser;
-
-	InsiemeTransUnit(const std::string& file_name);
-public:
-
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name) {
-		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name));
+namespace sloc {
+	string FileName(SourceLocation const& l, SourceManager const& sm) {
+		PresumedLoc pl = sm.getPresumedLoc(l);
+		return string(pl.getFilename());
 	}
-};
 
+	string FileId(SourceLocation const& l, SourceManager const& sm) {
+		string fn = FileName(l, sm);
+		for(size_t i=0; i<fn.length(); ++i)
+			switch(fn[i]) {
+				case '/':
+				case '\\':
+				case '>':
+				case '.':
+					fn[i] = '_';
+			}
+		return fn;
+	}
+
+	unsigned Line(SourceLocation const& l, SourceManager const& sm) {
+		PresumedLoc pl = sm.getPresumedLoc(l);
+		return pl.getLine();
+	}
+
+	std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, SourceManager const& sm){
+		return std::make_pair(Line(r.getBegin(), sm), Line(r.getEnd(), sm));
+	}
+
+	unsigned Column(SourceLocation const& l, SourceManager const& sm) {
+		PresumedLoc pl = sm.getPresumedLoc(l);
+		return pl.getColumn();
+	}
+	
+	std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager const& sm){
+		return std::make_pair(Column(r.getBegin(), sm), Column(r.getEnd(), sm));
+	}
+
+};

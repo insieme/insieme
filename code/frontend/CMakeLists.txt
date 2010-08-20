@@ -5,14 +5,14 @@ project(insieme_frontend CXX)
 
 include(../environment.cmake)
 
-set(CMAKE_CXX_FLAGS "-g -Wall -fmessage-length=0")
+set(CMAKE_CXX_FLAGS "-g -Wall -fmessage-length=0 -fno-rtti")
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
 # collect source files 
-file(GLOB insieme_frontend_srcs 	src/*.cpp )
-file(GLOB insieme_frontend_incs	include/*.h )
+file(GLOB insieme_frontend_srcs 	src/*.cpp src/utils/*.cpp)
+file(GLOB insieme_frontend_incs	include/*.h include/utils/*.h)
 
 # add include directory
 include_directories( 

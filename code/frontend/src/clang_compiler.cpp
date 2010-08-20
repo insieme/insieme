@@ -36,6 +36,8 @@
 
 #include "clang_compiler.h"
 #include "cmd_line_utils.h"
+#include "conversion.h"
+#include "insieme.h"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -48,13 +50,10 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Stmt.h"
 
 #include "llvm/LLVMContext.h"
 #include "llvm/System/Host.h"
 #include "llvm/System/Path.h"
-
-#include <iostream>
 
 //#include "pragma_handler.hpp"
 //#include "mpi/mpi_pragma_handler.hpp"
@@ -63,8 +62,6 @@
 
 #include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/System/Signals.h"
-#include "llvm/Support/Timer.h"
 
 #include "clang/Parse/Parser.h"
 
@@ -137,11 +134,9 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	TargetOptions TO;
 	TO.Triple = llvm::sys::getHostTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
-//
-//	string nameStr(File->getName());
-//	string extension(nameStr.substr(nameStr.rfind('.'), string::npos));
-//	bool enableCpp = extension == "cpp" || extension == "cxx" || extension == "hpp" || extension == "hxx";
-//	if(CommandLineOptions::CPP) enableCpp = true;
+
+	std::string extension(file_name.substr(file_name.rfind('.'), std::string::npos));
+	bool enableCpp = extension == "cpp" || extension == "cxx" || extension == "hpp" || extension == "hxx";
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
 	LO.GNUMode = 1;
@@ -149,14 +144,14 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	LO.POSIXThreads = 1;
 
 //	if(CommandLineOptions::C99) LO.C99 = 1; 		// set c99
-//
-//	if(enableCpp) {
-//		LO.CPlusPlus = 1; 	// set C++ 98 support
-//		LO.CXXOperatorNames = 1;
-//		if(Flags::CppX) LO.CPlusPlus0x = 1; // set C++0x support
-//		LO.RTTI = 1;
-//		LO.Exceptions = 1;
-//	}
+
+	if(enableCpp) {
+		LO.CPlusPlus = 1; 	// set C++ 98 support
+		LO.CXXOperatorNames = 1;
+		// if(Flags::CppX) LO.CPlusPlus0x = 1; // set C++0x support
+		LO.RTTI = 1;
+		LO.Exceptions = 1;
+	}
 
 //	if(Flags::OpenCl) {
 //		// OpenCL has some additional defaults.
@@ -177,20 +172,22 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 }
 
-void ClangCompiler::parse(clang::ASTConsumer& c) {
-	InsiemeParseAST(pimpl->clang.getPreprocessor(), &c, pimpl->clang.getASTContext(), true);
-	if( pimpl->clang.getDiagnostics().hasFatalErrorOccurred() ) {
-		throw ClangParsingError();
-	}
-}
+//void ClangCompiler::toInsiemeIR() {
+//	InsiemeParseAST(pimpl->clang.getPreprocessor(), &c, pimpl->clang.getASTContext(), true);
+//	if( pimpl->clang.getDiagnostics().hasFatalErrorOccurred() ) {
+//		throw ClangParsingError();
+//	}
+//}
+
+ASTContext& ClangCompiler::getASTContext() const { return pimpl->clang.getASTContext(); }
+Preprocessor& ClangCompiler::getPreprocessor() const { return pimpl->clang.getPreprocessor(); }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
 	delete pimpl;
 }
 
-InsiemeTransUnitPtr ParseSourceFile(const std::string& file_name) {
-	ClangCompiler cl(file_name);
-	ASTConsumer c;
-	cl.parse(c);
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_name), mParser(NULL) {
+	InsiemeIRConsumer cons;
+	// InsiemeParseAST(clang.getPreprocessor(), &cons, clang.getASTContext(), true);
 }
