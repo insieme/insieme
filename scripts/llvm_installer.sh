@@ -25,9 +25,9 @@ cd ..
 rm -R llvm_build
 
 cd $SRC_DIR
-./configure --prefix=$PREFIX_DIR --enable-shared
-make clang-only -j4
-make install clang-only
+LD_LIBRARY_PATH=/software/gcc450/lib64:/software/lib-gcc450/ CXX=/software/gcc450/bin/g++ CC=/software/gcc450/bin/gcc ./configure --prefix=$PREFIX_DIR --enable-shared
+LD_LIBRARY_PATH=/software/gcc450/lib64:/software/lib-gcc450/ make clang-only -j8
+LD_LIBRARY_PATH=/software/gcc450/lib64:/software/lib-gcc450/ make install clang-only
 
 # change alignof method defined in llvm in llvm_alignof for compatibility with C++0x
 python $HOME/scripts/llvm_alignof.py $PREFIX_DIR/include/
