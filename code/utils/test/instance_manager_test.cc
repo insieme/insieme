@@ -50,15 +50,18 @@ using std::endl;
 
 class CloneableString;
 
-class CloneableStringManager : public InstanceManager<CloneableStringManager, CloneableString> {};
+class CloneableStringManager : public InstanceManager<CloneableString> {};
 
 class CloneableString : public string {
 public:
+
+	typedef InstanceManager<CloneableString> Manager;
+
 	CloneableString(const char* c) : string(c) {};
 	CloneableString(const string& str) : string(str) {};
 //	CloneableString(const CloneableString& str) : string(str.c_str()) {};
 
-	CloneableString* clone(CloneableStringManager& manager) const {
+	CloneableString* clone(InstanceManager<CloneableString>& manager) const {
 		return new CloneableString(*this);
 	}
 };

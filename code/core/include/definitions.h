@@ -54,7 +54,7 @@ using std::vector;
 class Definition;
 typedef AnnotatedPtr<const Definition> DefinitionPtr;
 
-class DefinitionManager : public InstanceManager<DefinitionManager, Definition, AnnotatedPtr> {
+class DefinitionManager : public InstanceManager<Definition, AnnotatedPtr> {
 
 	StatementManager& statementManager;
 	TypeManager& typeManager;
@@ -79,7 +79,17 @@ public:
 
 class Definition {
 
-	friend class InstanceManager<DefinitionManager, Definition, AnnotatedPtr>;
+	/**
+	 * Allow the instance manager to access the private clone method.
+	 */
+	friend class InstanceManager<Definition, AnnotatedPtr>;
+
+public:
+
+	/**
+	 * The type of instance manager to be used with this type.
+	 */
+	typedef DefinitionManager Manager;
 
 	/**
 	 * The name to be defined.

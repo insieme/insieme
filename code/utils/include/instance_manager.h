@@ -111,7 +111,6 @@ struct target_hash: public std::unary_function<T, std::size_t> {
  * 			 be a constant type.
  */
 template<
-	typename Derived,
 	typename T,
 	template<class C> class R = InstancePtr,
 	typename boost::enable_if<boost::is_base_of<InstancePtr<T>, R<T> >,int>::type = 0
@@ -139,7 +138,7 @@ class InstanceManager : private boost::noncopyable {
 		//  step 1 - cast to base type (since only this one allows us to clone it)
 		const T* orig = instance;
 		//  step 2 - clone
-		T* clone = orig->clone(*static_cast<Derived*>(this));
+		T* clone = orig->clone(*static_cast<typename S::Manager*>(this));
 		// step 2 - cast back to original type
 		return dynamic_cast<S*>(clone);
 	}

@@ -254,7 +254,7 @@ public:
 
 // ---------------------------------- Type Manager ----------------------------------------
 
-class TypeManager: public InstanceManager<TypeManager, Type, AnnotatedPtr> { };
+class TypeManager: public InstanceManager<Type, AnnotatedPtr> { };
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
@@ -270,7 +270,19 @@ class TypeManager: public InstanceManager<TypeManager, Type, AnnotatedPtr> { };
  */
 class Type: public Visitable<TypePtr> {
 
-	friend class InstanceManager<TypeManager, Type, AnnotatedPtr>;
+	/**
+	 * Allow the instance manager to access the private clone method.
+	 */
+	friend class InstanceManager<Type, AnnotatedPtr>;
+
+public:
+
+	/**
+	 * The type of instance manager to be used with this type.
+	 */
+	typedef TypeManager Manager;
+
+private:
 
 	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types

@@ -103,7 +103,7 @@ class StatementManager;
 
 class Statement : public Visitable<StmtPtr> {
 	// needs InstanceManager not StatementManager since base type calls clone
-	friend class InstanceManager<StatementManager, Statement, AnnotatedPtr>;
+	friend class InstanceManager<Statement, AnnotatedPtr>;
 	virtual Statement* clone(StatementManager& manager) const = 0;
 
 protected:
@@ -118,6 +118,9 @@ protected:
 	virtual bool equals(const Statement& stmt) const = 0;
 
 public:
+
+	typedef StatementManager Manager;
+
 	virtual ~Statement() {}
 	virtual void printTo(std::ostream& out) const = 0;
 	virtual std::size_t hash() const = 0;
@@ -317,7 +320,7 @@ public:
 
 // ------------------------------------- Statement Manager ---------------------------------
 
-class StatementManager : public InstanceManager<StatementManager, Statement, AnnotatedPtr> {
+class StatementManager : public InstanceManager<Statement, AnnotatedPtr> {
 	TypeManager& typeManager;	
 
 public:
