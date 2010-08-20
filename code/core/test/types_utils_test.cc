@@ -51,7 +51,7 @@ TEST(TypeTest, IntType) {
 	IntTypePtr intType = IntType::get();
 //	IntTypePtr intType = IntType::get(2);
 
-	EXPECT_EQ ( 4 , intType.getNumBytes());
+	EXPECT_EQ ( 4 , intType->getNumBytes());
 }
 
 

@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -55,7 +56,7 @@ template<typename Container>
 void joinTo(std::ostream& out, const string& seperator, Container container) {
 	if(container.size() > 0) {
 		out << *container.cbegin();
-		std::for_each(container.cbegin()+1, container.cend(), [&](const Container::value_type cur) {
+		std::for_each(container.cbegin()+1, container.cend(), [&](const typename Container::value_type cur) {
 			out << seperator << cur;
 		});
 	}

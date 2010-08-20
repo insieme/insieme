@@ -111,7 +111,9 @@ class IntLiteral : public Literal<int> {
 public:
 	virtual std::size_t hash() const;
 
-	static IntLiteralPtr get(StatementManager& manager, int value, unsigned short bytes = 4);
+	static IntLiteralPtr get(StatementManager& manager, int value, unsigned short bytes = 4) {
+		return IntLiteralPtr(NULL);
+	};
 	static IntLiteralPtr one(StatementManager& manager) { return get(manager, 1); }
 	static IntLiteralPtr zero(StatementManager& manager) { return get(manager, 0); }
 };
@@ -158,9 +160,9 @@ public:
 
 class CallExpr : public Expression {
 	const ExprPtr functionExpr;
-	const vector<const ExprPtr> arguments;
+	const vector<ExprPtr> arguments;
 
-	CallExpr(const TypePtr& type, const ExprPtr& functionExpr, const vector<const ExprPtr> arguments) 
+	CallExpr(const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments) 
 		: Expression(type), functionExpr(functionExpr), arguments(arguments) { }
 	virtual CallExpr* clone(StatementManager& manager) const;
 	
@@ -171,7 +173,9 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 
-	static CallExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<const ExprPtr> arguments);
+	static CallExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments) {
+		return CallExprPtr(NULL);
+	}
 };
 
 //class CastExpression : public Expression {
