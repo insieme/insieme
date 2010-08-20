@@ -9,9 +9,10 @@ enable_testing()
 # include modules
 add_subdirectory( core )
 add_subdirectory( utils )
+add_subdirectory( frontend )
 
 # add dependencies
-add_dependencies( insieme_core insieme_utils )
+add_dependencies( insieme_core insieme_utils insieme_frontend )
 
 
 #-- Add an Option to toggle the generation of the API documentation

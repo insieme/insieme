@@ -51,28 +51,22 @@ typedef AnnotatedPtr<const UnitType> UnitTypePtr;
 class IntType : public GenericType {
 
 	IntType(const unsigned short& numBytes = 4) :
-		GenericType("int", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes)))
-	{};
+		GenericType("int", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes))) {};
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual IntType* clone(TypeManager& manager) const {
+	virtual IntType* clone(TypeManager&) const {
 		return new IntType(getNumBytes());
 	}
 
 public:
 
-	static IntTypePtr get(TypeManager& manager, const unsigned short& numBytes) {
-		return manager.getTypePointer(IntType(numBytes));
+	static IntTypePtr get(TypeManager& manager, const unsigned short numBytes) {
+		return manager.getTypePtr(IntType(numBytes));
 	}
 
-	/**
-	 * Retrieves the (buffer) size of this channel.
-	 *
-	 * @return the buffer size of the channel
-	 */
-	const unsigned getNumBytes() const {
+	const unsigned short getNumBytes() const {
 		return getIntTypeParameter()[0].getValue();
 	}
 
@@ -92,7 +86,7 @@ class UnitType : public GenericType {
 public:
 
 	static UnitTypePtr get(TypeManager& manager) {
-		return manager.getTypePointer(UnitType());
+		return manager.getTypePtr(UnitType());
 	}
 
 };

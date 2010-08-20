@@ -68,7 +68,7 @@ std::size_t hash(const Identifier& name, const FunctionTypePtr& type) {
 }
 
 Function::Function(const Identifier& name, const FunctionTypePtr& type,
-		const vector<Identifier>& parameters, bool external, const StmtPtr& body)
+		const vector<Identifier>& parameters, const StmtPtr& body, bool external)
 	:
 		name(name), type(type), parameters(parameters), external(external),
 		body(body), hashCode(::hash(name, type)) { }
@@ -76,20 +76,20 @@ Function::Function(const Identifier& name, const FunctionTypePtr& type,
 Function::Function(FunctionManager& manager, const Function& function)
 	:
 		name(function.name),
-		type(manager.getTypeManager().getTypePointer(*function.type)),
+		type(manager.getTypeManager().getTypePtr(*function.type)),
 		parameters(function.parameters),
 		external(external),
 		body(manager.getStatementManager().get(function.body)),
 		hashCode(function.hashCode) { }
 
-FunctionPtr Function::get(FunctionManager& manager, const Identifier& name,
-		const ParameterList& paramList, const TypePtr& returnType) {
+FunctionPtr Function::get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList,
+		const TypePtr& returnType, const StmtPtr& body, bool external) {
 
 	// obtain the type from the parameters
 	FunctionTypePtr type = ::getType(manager.getTypeManager(), paramList, returnType);
 	auto parameters = projectToFirst(paramList);
 
-	return manager.get(Function(name, type, parameters));
+	return manager.get(Function(name, type, parameters, body, external));
 }
 
 

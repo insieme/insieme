@@ -66,7 +66,6 @@ TEST(TypeTest, IntType) {
 	IntTypePtr intType3 = IntType::get(manager, 4);
 	EXPECT_NE (intType, intType2);
 	EXPECT_EQ (intType, intType3);
-
 }
 
 

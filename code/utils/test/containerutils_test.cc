@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 #include <vector>
+#include <algorithm>
 
 #include "container_utils.h"
 
@@ -141,7 +142,6 @@ TEST(ContainerUtils, Duplicates) {
 	EXPECT_TRUE ( hasDuplicates(list) );
 }
 
-
 TEST(ContainerUtils, Projection) {
 
 	vector<int> listA;
@@ -169,3 +169,19 @@ TEST(ContainerUtils, Projection) {
 
 }
 
+TEST(ContainerUtils, ExtractFirstSecond) {
+	typedef std::pair<int,string> Entry;
+	vector<Entry> list;
+	list.push_back(std::make_pair(1, "one"));
+	list.push_back(std::make_pair(2, "two"));
+
+	vector<int> firstVec;
+	std::transform(list.cbegin(), list.cend(), back_inserter(firstVec), extractFirst<Entry>());
+	EXPECT_EQ(firstVec[0], 1);
+	EXPECT_EQ(firstVec[1], 2);
+	
+	vector<string> secondVec;
+	std::transform(list.cbegin(), list.cend(), back_inserter(secondVec), extractSecond<Entry>());
+	EXPECT_EQ(secondVec[0], "one");
+	EXPECT_EQ(secondVec[1], "two");
+}

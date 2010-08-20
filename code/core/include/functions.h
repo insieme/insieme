@@ -136,7 +136,7 @@ private:
 
 
 	Function(const Identifier& name, const FunctionTypePtr& type, const vector<Identifier>& parameter,
-			bool external=true, const StmtPtr& body=NULL);
+			const StmtPtr& body=NULL, bool external=true);
 
 	Function(FunctionManager& manager, const Function& function);
 
@@ -146,8 +146,12 @@ private:
 
 public:
 
+	static FunctionPtr get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList,
+			const TypePtr& returnType, const StmtPtr& body, bool external = false);
 
-	static FunctionPtr get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList, const TypePtr& returnType);
+	static FunctionPtr get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList, const TypePtr& returnType) {
+		return get(manager, name, paramList, returnType, StmtPtr(NULL), true);
+	}
 
 	static FunctionPtr get(FunctionManager& manager, const Identifier& name, const ParameterList& paramList = ParameterList()) {
 		return get(manager, name, paramList, UnitType::get(manager.getTypeManager()));

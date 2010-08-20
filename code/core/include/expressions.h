@@ -41,79 +41,139 @@
 #include "annotated_ptr.h"
 #include "types.h"
 #include "statements.h"
+#include "identifiers.h"
 
-using std::string;
+// Forward Declarations { -----------------------------------------------------
 
-class Expression : public Statement {
-	
-	/**
-	 * The type of the represented expression.
-	 */
-	const TypePtr type;
-
-public:
-
-	Expression(const TypePtr& type) : type(type) { };
-
-	/**
-	 * Retrieves the type of this expression.
-	 */
-	TypePtr getType() const { return type; }
-
-	virtual string toString() const { return ""; }
-
-	virtual size_t hash() const { return 0; }
-
-};
+class Expression;
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
+class IntLiteral;
+typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
 
-class VariableExpr : public Expression {
-	const string name;
-};
-typedef std::shared_ptr<VariableExpr> VarExprPtr;
+class VariableExpr;
+typedef AnnotatedPtr<const VariableExpr> VarExprPtr;
 
-class LambdaExpression : public Expression {
-};
+class CallExpr;
+typedef AnnotatedPtr<const CallExpr> CallExprPtr;
 
-class CallExpression : public Expression {
-//	const ExprPtr function;
-//	const ExprPtr argument;
-};
+// Forward Declarations } -----------------------------------------------------
 
-class CastExpression : public Expression {
-//	const ExprPtr subExpression;
+class Expression : public Statement {
+protected:	
+	enum {
+		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_VAREXPR, HASHVAL_CALLEXPR
+	};
+
+	/** The type of the represented expression. */
+	const TypePtr type;
+	
+	Expression(const TypePtr& type) : type(type) { };
+	virtual ~Expression() {}
+
+	virtual bool equals(const Statement& stmt) const;
+	virtual bool equalsExpr(const Expression& expr) const = 0;
+
+public:
+	/** Retrieves the type of this expression. */
+	TypePtr getType() const { return type; }
 };
 
 
 template<typename T>
 class Literal : public Expression {
+protected:
     const T value;
-public:
+	
 	Literal(const TypePtr& type, const T& val) : Expression(type), value(val) { };
+	virtual ~Literal() {}
+
+	bool equalsExpr(const Expression& expr) const {
+		// conversion is guaranteed by base operator==
+		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr); 
+		return (value == rhs.value);
+	}
+
+public:
+	virtual void printTo(std::ostream& out) const {
+		out << value;
+	}
+
     const T getValue() const { return value; }
 };
 
-class IntegerLiteral : public Literal<int> {
+class IntLiteral : public Literal<int> {
+	unsigned short bytes;
+
+	IntLiteral(const TypePtr& type, int val, unsigned short bytes) : Literal<int>(type, val), bytes(bytes) { }
+	virtual IntLiteral* clone(StatementManager& manager) const;
+	
 public:
-	IntegerLiteral(const int val) : Literal(NULL, val) { } // TODO: fix null type
+	virtual std::size_t hash() const;
+
+	static IntLiteralPtr get(StatementManager& manager, int value, unsigned short bytes = 4);
+	static IntLiteralPtr one(StatementManager& manager) { return get(manager, 1); }
+	static IntLiteralPtr zero(StatementManager& manager) { return get(manager, 0); }
 };
 
-class FloatLiteral : public Literal<double> {
-	string originalString;
+//class FloatLiteral : public Literal<double> {
+//	string originalString;
+//public:
+//	// TODO: fix null type
+//	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
+//};
+//
+//class BooleanLiteral : public Literal<bool> {
+//public:
+//	// TODO: fix null type
+//	BooleanLiteral(const bool val) : Literal(NULL, val) { }
+//};
+//
+//class StringLiteral : public Literal<string> {
+//public:
+//	// TODO: fix null type
+//	StringLiteral(const string& val) : Literal(NULL, val) { }
+//};
+
+
+class VariableExpr : public Expression {
+	const Identifier id;
+	
+    VariableExpr(const TypePtr& type, const Identifier& id) : Expression(type), id(id) { };
+	virtual VariableExpr* clone(StatementManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
 public:
-	// TODO: fix null type
-	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static VarExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
 };
 
-class BooleanLiteral : public Literal<bool> {
+//class LambdaExpression : public Expression {
+//};
+//
+
+class CallExpr : public Expression {
+	const ExprPtr functionExpr;
+	const vector<ExprPtr> arguments;
+
+	CallExpr(const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments) 
+		: Expression(type), functionExpr(functionExpr), arguments(arguments) { }
+	virtual CallExpr* clone(StatementManager& manager) const;
+	
+protected:
+	bool equalsExpr(const Expression& expr) const;
+	
 public:
-	// TODO: fix null type
-	BooleanLiteral(const bool val) : Literal(NULL, val) { }
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static CallExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments);
 };
 
-class StringLiteral : public Literal<string> {
-public:
-	// TODO: fix null type
-	StringLiteral(const string& val) : Literal(NULL, val) { }
-};
+//class CastExpression : public Expression {
+////	const ExprPtr subExpression;
+//};

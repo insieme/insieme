@@ -60,5 +60,5 @@ public:
 	 *
 	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
 	 */
-	static CommandLineOptions& Parse(int argc, char** argv, bool debug=false);
+	static void Parse(int argc, char** argv, bool debug=false);
 };

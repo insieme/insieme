@@ -34,62 +34,42 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include "expressions.h"
-#include "types.h"
-#include "statements.h"
+#pragma once
 
-#include "expressions.h"
-#include "string_utils.h"
-#include "cmd_line_utils.h"
+#include <memory>
+#include <string>
 
-#include "clang_compiler.h"
+#include <exception>
+#include <stdexcept>
 
-using namespace std;
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 
-
-int main(int argc, char** argv) {
-
-	CommandLineOptions::Parse(argc, argv, true);
-
-	ParseSourceFile("/home/motonacciu/workspace/insieme/tests/polyhedral.c");
-
-//	vector<IntTypeParam> list;
-//	list.push_back(IntTypeParam::getInfiniteIntParam());
-//	list.push_back(IntTypeParam::getInfiniteIntParam());
-//	list.push_back(IntTypeParam::getVariableIntParam('a'));
-//
-//	list[0] = list[2];
-
-//	cout << sizeof(IntTypeParam);
-
-
-//   cout << "Insieme (tm) compiler." << endl;
-//
-//
-//   std::vector<TypeRef> emptyRefs;
-//   std::vector<IntTypeParam> emptyInts;
-//
-//   TypeRef simple(new UserType("simple"));
-//
-//   cout << simple->toString()  << endl;
-//
-//   vector<TypeRef> v;
-//   v.push_back(simple);
-//   v.push_back(simple);
-//
-//   vector<IntTypeParam> p;
-//   p.push_back(IntTypeParam::getConcreteIntParam(12));
-//   p.push_back(IntTypeParam::getVariableIntParam('a'));
-//
-//   // works if construct is not private:
-////	p.push_back((IntTypeParam){IntTypeParam::CONCRETE, 12 });
-////	p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'a' });
-//
-//   UserType complex("complex", v, p, simple);
-//   cout << complex.toString() << endl;
-//
-//   UserType medium("medium", std::vector<TypeRef>(), p);
-//   cout << medium.toString() << endl;
+namespace clang {
+class ASTConsumer;
 }
 
+struct ClangParsingError: public std::logic_error {
+	ClangParsingError(): std::logic_error(NULL) { }
+};
+
+class ClangCompiler {
+	struct ClangCompilerImpl;
+
+	ClangCompilerImpl* pimpl;
+public:
+	ClangCompiler(const std::string& file_name);
+
+	void parse(clang::ASTConsumer& c);
+	~ClangCompiler();
+};
+
+class InsiemeTransUnit {
+
+public:
+	InsiemeTransUnit() { }
+};
+
+typedef InsiemeTransUnit* InsiemeTransUnitPtr;
+
+InsiemeTransUnitPtr ParseSourceFile(const std::string& file_name);
