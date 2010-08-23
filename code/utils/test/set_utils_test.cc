@@ -35,13 +35,63 @@
  */
 
 #include <gtest/gtest.h>
-#include "ast_manager.h"
-#include "types.h"
 
+#include "set_utils.h"
 
-TEST(StatementManager, Basic) {
-	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), 4);
+using std::unordered_set;
+
+TEST(SetUtilsTest, Merge) {
+
+	unordered_set<int> setA;
+	setA.insert(1);
+	setA.insert(2);
+
+	unordered_set<int> setB;
+	setB.insert(3);
+
+	unordered_set<int> merged = *merge(setA,setB);
+
+	unordered_set<int> setRef;
+	setRef.insert(1);
+	setRef.insert(2);
+	setRef.insert(3);
+
+	// NOTE: assumes that == is implemented (optional in std)
+	EXPECT_EQ ( setRef, merged );
 }
 
+TEST(SetUtilsTest, Intersect) {
 
+	unordered_set<int> setA;
+	setA.insert(1);
+	setA.insert(2);
+
+	unordered_set<int> setB;
+	setB.insert(1);
+
+	unordered_set<int> res = *intersect(setA,setB);
+
+	unordered_set<int> setRef;
+	setRef.insert(1);
+
+	// NOTE: assumes that == is implemented (optional in std)
+	EXPECT_EQ ( setRef, res );
+}
+
+TEST(SetUtilsTest, Difference) {
+
+	unordered_set<int> setA;
+	setA.insert(1);
+	setA.insert(2);
+
+	unordered_set<int> setB;
+	setB.insert(1);
+
+	unordered_set<int> res = *difference(setA,setB);
+
+	unordered_set<int> setRef;
+	setRef.insert(2);
+
+	// NOTE: assumes that == is implemented (optional in std)
+	EXPECT_EQ ( setRef, res );
+}

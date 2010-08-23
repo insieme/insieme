@@ -57,7 +57,16 @@
 //	// construct final result
 //	return DefinitionType::get(manager, argumentType, manager.get(returnType));
 //}
-//
+
+
+/**
+ * Computes a hash for a definition based on its name and type. Since a definition
+ * is uniquely defined by its name and type, the hash is only covering those values.
+ *
+ * @param name the name of an identifier
+ * @param type the type of the element defined
+ * @return a hash value for the corresponding definition
+ */
 std::size_t hash(const Identifier& name, const TypePtr& type) {
 	std::size_t seed = 0;
 	boost::hash_combine(seed, name.hash());
@@ -65,26 +74,26 @@ std::size_t hash(const Identifier& name, const TypePtr& type) {
 	return seed;
 }
 
-
 Definition::Definition(const Identifier& name, const TypePtr& type, const bool& external,
 		const ExprPtr& definition, const std::size_t& hashCode)
 	:
 		name(name), type(type), external(external), definition(definition), hashCode(hashCode) { }
-
-DefinitionPtr Definition::get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition, bool external) {
-//	return manager.get(Definition(name, type, external, definition, ::hash(name, type)));
-	return DefinitionPtr(NULL);
-}
-
-DefinitionPtr Definition::get(DefinitionManager& manager, const Identifier& name, const TypePtr& type) {
-	return get(manager, name, type, ExprPtr(NULL), true);
-}
 
 Definition* Definition::clone(DefinitionManager& manager) const {
 	return new Definition(name,
 			manager.getTypeManager().get(type), external,
 			manager.getStatementManager().get(*definition), hashCode);
 }
+
+DefinitionPtr Definition::get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition, bool external) {
+	return manager.get(Definition(name, type, external, definition, ::hash(name, type)));
+
+}
+
+DefinitionPtr Definition::lookup(DefinitionManager& manager, const Identifier& name, const TypePtr& type) {
+	return manager.lookup(Definition(name, type, false, NULL, ::hash(name, type)));
+}
+
 
 bool Definition::operator==(const Definition& other) const {
 	// shortcut for identical entries

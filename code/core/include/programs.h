@@ -36,12 +36,20 @@
 
 #pragma once
 
+#include <memory>
+#include <unordered_set>
+
+#include "container_utils.h"
 #include "expressions.h"
 #include "definitions.h"
 #include "statements.h"
 #include "types.h"
 
-class ASTData {
+
+class Program;
+typedef std::shared_ptr<Program> ProgramPtr;
+
+class ProgramData {
 
 	TypeManager typeManager;
 	StatementManager stmtManager;
@@ -50,7 +58,7 @@ class ASTData {
 	// TODO: add lookup table for variables!!
 
 public:
-	ASTData() : typeManager(), stmtManager(typeManager), definitionManager(stmtManager) {}
+	ProgramData() : typeManager(), stmtManager(typeManager), definitionManager(stmtManager) {}
 
 
 	TypeManager& getTypeManager() {
@@ -69,35 +77,35 @@ public:
 
 
 
-class AST {
+class Program {
 
 	/**
-	 * The type used to share AST nodes and information among multiple
-	 * AST versions.
+	 * The type used to share statement/type nodes and information among multiple
+	 * program versions.
 	 */
-	typedef shared_ptr<ASTData> SharedASTData;
+	typedef std::shared_ptr<ProgramData> SharedProgramData;
 
 	/**
 	 * The type used to represent the list of top level definitions.
 	 */
-	typedef vector<DefinitionPtr> DefinitionList;
+	typedef std::unordered_set<DefinitionPtr> DefinitionList;
 
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef vector<ExprPtr> EntryPointList;
+	typedef std::unordered_set<ExprPtr> EntryPointList;
 
 	/**
 	 * The manager used to maintain nodes within this AST.
 	 */
-	const SharedASTData manager;
+	const SharedProgramData manager;
 
 	/**
 	 * The list of definitions represented by this AST. Each definition
 	 * represents a root node of a tree within this AST (which is actually
 	 * a forest).
 	 */
-	DefinitionList definitionList;
+	const DefinitionList definitionList;
 
 	/**
 	 * This set contains the list of expressions to be exported to the context
@@ -105,9 +113,7 @@ class AST {
 	 * has to be considered. In case elements of this list represent functions,
 	 * the signature of the corresponding structure may not be changed.
 	 */
-	EntryPointList entryPoints;
-
-public:
+	const EntryPointList entryPoints;
 
 	/**
 	 * Creates a new AST based on the given data.
@@ -116,14 +122,52 @@ public:
 	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	AST(SharedASTData& manager, const DefinitionList& definitions, const EntryPointList& entryPoints) :
-		manager(manager),
-		definitionList(manager->getDefinitionManager().getAll(definitions)),
-		entryPoints(manager->getStatementManager().getAll(entryPoints)) {}
+	Program(SharedProgramData& manager, const DefinitionList& definitions, const EntryPointList& entryPoints);
 
 	/**
 	 * Creates a new AST using a fresh AST data instance.
 	 */
-	AST() : manager(SharedASTData(new ASTData())) {}
+	Program() : manager(SharedProgramData(new ProgramData())) {}
+
+public:
+
+
+//	static ProgramPtr createProgram(const DefinitionList& definitions = DefinitionList(), const EntryPointList& entryPoints = EntryPointList());
+//
+//	static ProgramPtr addDefinition(const ProgramPtr& program, const Definition& definition) {
+//		return addDefintions(program, toVector(definition));
+//	}
+//
+//	static ProgramPtr addDefinitions(const ProgramPtr& program, const DefinitionList& definitions);
+//
+//	static ProgramPtr remDefinition(const ProgramPtr& program, const Definition& definiton) {
+//
+//	}
+//
+//	ProgramPtr addDefinition(const Definition& definition) const {
+//		addDefinition(toVector(definition));
+//	}
+//
+//	ProgramPtr addDefinitions(const DefinitionList& definitions) const;
+//
+//	const DefinitionList& getDefinitions() const {
+//		return definitions;
+//	}
+//
+//	ProgramPtr remDefinition(const Definition& definition) const {
+//		remDefinition(toVector(definition));
+//	}
+//
+//	ProgramPtr remDefinitions(const DefinitionList& definitions) const;
+//
+//
+//	template<typename Transformation>
+//	static ProgramPtr transform(const ProgramPtr& program, Transformation transformation);
+
+
+	// TODO: add consistency check routine!!
+	//   - check: all names defined in scope
+	//   - no duplicates in switch
+	//   - no duplicates in names composite types
 
 };

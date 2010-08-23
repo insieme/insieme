@@ -76,7 +76,13 @@ public:
 	}
 };
 
-
+/**
+ * Definitions are top-level elements within an IR program. Each definition is defining
+ * an element by specifying its name and type. Further, a defining expression as well as
+ * a flag indicating whether it is externally defined / used may be added optionally.
+ *
+ * NOTE: definitions are uniquely identified by their name and type.
+ */
 class Definition {
 
 	/**
@@ -90,6 +96,8 @@ public:
 	 * The type of instance manager to be used with this type.
 	 */
 	typedef DefinitionManager Manager;
+
+private:
 
 	/**
 	 * The name to be defined.
@@ -119,18 +127,56 @@ public:
 	 */
 	const std::size_t hashCode;
 
+	/**
+	 * A private constructor for this type creating a new element based on the given
+	 * properties.
+	 *
+	 * @param name the name of the element to be defined by this definition
+	 * @param type the type of the newly defined element.
+	 * @param external a flag indicating whether this definition is externally defined / used.
+	 * @param definition the actual value assigned. It has to be an expression of the specified type.
+	 * @param hashCode the hash code of the new element (which will be cached). The value is accepted from
+	 * 				   an external source since this constructor is private.
+	 */
 	Definition(const Identifier& name, const TypePtr& type, const bool& external,
 			const ExprPtr& definition, const std::size_t& hashCode);
 
+	/**
+	 * Creates a clone of this definition within the given definition manager.
+	 *
+	 * @param manager the manager to create a clone within.
+	 */
 	Definition* clone(DefinitionManager& manager) const;
 
 public:
 
+	/**
+	 * A static factory method obtaining a pointer to a definition within the given manager.
+	 *
+	 * NOTE: definitions are uniquely identified by their name and type.
+	 *
+	 * @param name the name of the element to be defined by the obtained definition.
+	 * @param type the type of the element to be defined by the obtained definition.
+	 * @param definition the expression providing a definition of the value, may be NULL if external.
+	 * @param external a flag indicating whether the definition to be looking for is externally defined / used.
+	 */
 	static DefinitionPtr get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition, bool external);
 
-	static DefinitionPtr get(DefinitionManager& manager, const Identifier& name, const TypePtr& type);
+	/**
+	 * A static factory method which will only look up a definition. The given name and type will be taken to obtain
+	 * a pointer to a corresponding element within the given manager. If there is no such element, a NULL-pointer will
+	 * be returned.
+	 *
+	 * @param manager the manager within which the element should be searched.
+	 * @param type the type of element to be looking for.
+	 */
+	static DefinitionPtr lookup(DefinitionManager& manager, const Identifier& name, const TypePtr& type);
 
-
+	/**
+	 * Obtain the name of the element defined by this definition.
+	 *
+	 * @return the name of the defined element.
+	 */
 	const Identifier& getName() const {
 		return name;
 	}
