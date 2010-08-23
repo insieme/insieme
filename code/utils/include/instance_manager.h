@@ -193,6 +193,14 @@ public:
 		return add(&instance);
 	}
 
+	template<class S>
+	typename enable_if<is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const R<const S>& pointer) {
+		if (!!pointer) {
+			return this->add(*pointer);
+		}
+		// create null instance (potentially erasing annotations)
+		return std::make_pair(R<const S>(NULL), false);
+	}
 
 	/**
 	 * Obtains an instance managed by this instance manager referencing the master
@@ -245,7 +253,8 @@ public:
 		if (!!pointer) {
 			return this->get(*pointer);
 		}
-		return pointer;
+		// create null instance (potentially erasing annotations)
+		return R<const S>(NULL);
 	}
 
 	template<typename InIter, typename OutIter>
@@ -263,11 +272,108 @@ public:
 //		});
 	}
 
-	//template<typename Container>
+	/**
+	 * Obtains references to all the elements within the given container and returns
+	 * the resulting list within a new container of the same type. The order of elements
+	 * is thereby preserved. In case elements a not present within this container, the
+	 * corresponding instances will be added.
+	 *
+	 * @param container the container of references to be added.
+	 * @return a container of the same size including references to the master copies
+	 * 		   of the handed in elements.
+	 */
 	template<typename Container>
 	Container getAll(const Container& container) {
 		Container res;
 		getAll(container.cbegin(), container.cend(), back_inserter(res));
+		return res;
+	}
+
+	/**
+	 * Looks up the given instance within this manager. If found, a corresponding
+	 * pointer will be returned. Otherwise, the retrieved pointer will point to NULL.
+	 * Unlike the get methods, lookups will never change the content of the instance manager.
+	 *
+	 * @tparam S the type of the instance to be looked up (has to be a sub-type of the managed type)
+	 * @param instance the instance to be looked up
+	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
+	 */
+	template<class S>
+	typename enable_if<is_base_of<T,S>, R<const S>>::type lookup(const S* instance) const {
+		// test whether there is already an identical element
+		auto res = storage.find(instance);
+		if (res != storage.end()) {
+			// use included element
+			return R<const S>(dynamic_cast<const S*>(*res));
+		}
+
+		// not found => return null
+		return R<const S>(NULL);
+	}
+
+	/**
+	 * Looks up the given instance within this manager. If found, a corresponding
+	 * pointer will be returned. Otherwise, the retrieved pointer will point to NULL.
+	 * Unlike the get methods, lookups will never change the content of the instance manager.
+	 *
+	 * @tparam S the type of the instance to be looked up (has to be a sub-type of the managed type)
+	 * @param instance the instance to be looked up
+	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
+	 */
+	template<class S>
+	typename enable_if<is_base_of<T,S>, R<const S>>::type lookup(const S& instance) const {
+		return lookup(&instance);
+	}
+
+	/**
+	 * Looks up the element referenced by the given pointer within this manager. If found, a corresponding
+	 * pointer will be returned. Otherwise, the retrieved pointer will point to NULL.
+	 * Unlike the get methods, lookups will never change the content of the instance manager.
+	 *
+	 * @tparam S the type of the instance to be looked up (has to be a sub-type of the managed type)
+	 * @param instance the instance to be looked up
+	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
+	 */
+	template<class S>
+	typename enable_if<is_base_of<T,S>, R<const S>>::type lookup(const R<const S>& pointer) const {
+		if (!!pointer) {
+			return this->lookup(*pointer);
+		}
+		// create null instance (potentially erasing annotations)
+		return R<const S>(NULL);
+	}
+
+	/**
+	 * Looks up all the references within the given range and writs the results to the given
+	 * output iterator.
+	 *
+	 * @param start the iterator pointing to the start of the range
+	 * @param end the iterator pointing to the end of the range
+	 * @param out the output iterator used to output results
+	 */
+	template<typename InIter, typename OutIter>
+	void lookupAll(InIter start, InIter end, OutIter out) const {
+		// NOTE: by any reason, std::transform is not working (functions_test.h)
+		// FIXME: figure out why std::transform is not working
+		for (; start != end; ++start) {
+			const typename std::iterator_traits<InIter>::value_type& cur = *start;
+			*out = this->lookup(cur);
+		}
+	}
+
+	/**
+	 * Obtains references to all the elements within the given container and returns
+	 * the resulting list within a new container of the same type. The order of elements
+	 * is thereby preserved.
+	 *
+	 * @param container the container of references to be looked up.
+	 * @return a container of the same size including references to the master copies
+	 * 		   of the handed in elements.
+	 */
+	template<typename Container>
+	Container lookupAll(const Container& container) const {
+		Container res;
+		lookupAll(container.cbegin(), container.cend(), back_inserter(res));
 		return res;
 	}
 

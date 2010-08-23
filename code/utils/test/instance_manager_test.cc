@@ -225,5 +225,44 @@ TEST(InstanceManager, ContainsTests) {
 	EXPECT_FALSE ( manager.addressesLocalAll(ptrList2));
 	EXPECT_FALSE ( manager2.addressesLocalAll(ptrList1));
 	EXPECT_TRUE ( manager2.addressesLocalAll(ptrList2));
+}
 
+
+TEST(InstanceManager, LookupTests) {
+
+	CloneableStringManager manager;
+
+	CloneableString strA = "Hello";
+	Ptr strPtr(&strA);
+	Ptr nulPtr(NULL);
+
+
+	EXPECT_EQ ( nulPtr, manager.lookup(strA) );
+	EXPECT_EQ ( nulPtr, manager.lookup(strPtr) );
+
+	std::pair<Ptr, bool> addRes = manager.add(strA);
+	EXPECT_TRUE (addRes.second);
+	EXPECT_EQ ( strA, *addRes.first );
+
+	EXPECT_NE ( strPtr, manager.lookup(strA) );
+	EXPECT_NE ( strPtr, manager.lookup(strPtr) );
+
+	EXPECT_EQ ( *strPtr, *manager.lookup(strA) );
+	EXPECT_EQ ( *strPtr, *manager.lookup(strPtr) );
+
+	CloneableString strB = "World";
+	Ptr strPtrB(&strB);
+	EXPECT_EQ ( nulPtr, manager.lookup(strB) );
+
+	vector<Ptr> list;
+	list.push_back(strPtr);
+	list.push_back(strPtrB);
+	list.push_back(nulPtr);
+
+	EXPECT_EQ ( 1 , manager.size() );
+	vector<Ptr> res = manager.lookupAll(list);
+	EXPECT_EQ ( 1 , manager.size() );
+	EXPECT_EQ ( *strPtr, *res[0] );
+	EXPECT_EQ ( nulPtr, res[1] );
+	EXPECT_EQ ( nulPtr, res[2] );
 }
