@@ -94,8 +94,8 @@ bool compareEntryPoints(const ExprPtr& exprA, const ExprPtr& exprB) {
 
 std::ostream& operator<<(std::ostream& out, const Program& program) {
 
-	typedef typename std::vector<DefinitionPtr> DefinitionList;
-	typedef typename std::vector<ExprPtr> EntryPointList;
+	typedef std::vector<DefinitionPtr> DefinitionList;
+	typedef std::vector<ExprPtr> EntryPointList;
 
 	out << "PROGRAM { \n";
 
