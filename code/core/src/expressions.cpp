@@ -46,6 +46,11 @@ bool Expression::equals(const Statement& stmt) const {
 	return (type == rhs.type) && equalsExpr(rhs);
 }
 
+std::ostream& operator<<(std::ostream& out, const Expression& expression) {
+	expression.printTo(out);
+	return out;
+}
+
 // ------------------------------------- IntLiteral ---------------------------------
 
 IntLiteral* IntLiteral::clone(StatementManager& manager) const {
@@ -122,8 +127,29 @@ CallExprPtr CallExpr::get(StatementManager& manager, const TypePtr& type, const 
 	return manager.get(CallExpr(type, functionExpr, arguments));
 }
 
+// ------------------------------------- CastExpr ---------------------------------
 
-std::ostream& operator<<(std::ostream& out, const Expression& expression) {
-	expression.printTo(out);
-	return out;
+CastExpr* CastExpr::clone(StatementManager& manager) const {
+	return new CastExpr(manager.getTypeManager().get(type), manager.get(*subExpression));
+}
+	
+bool CastExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const CastExpr& rhs = dynamic_cast<const CastExpr&>(expr);
+	return (rhs.subExpression == subExpression);
+}
+	
+void CastExpr::printTo(std::ostream& out) const {
+	out << "(" << type << ")" << "(" << subExpression <<")";
+}
+
+std::size_t CastExpr::hash() const {
+	size_t seed = HASHVAL_CASTEXPR;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, subExpression->hash());
+	return seed;
+}
+
+CastExprPtr CastExpr::get(StatementManager& manager, const TypePtr& type, const ExprPtr& subExpr) {
+	return manager.get(CastExpr(type, subExpr));
 }
