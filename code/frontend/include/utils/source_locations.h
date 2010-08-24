@@ -46,12 +46,23 @@ class SourceRange;
 class SourceManager;
 }
 
-namespace sloc {
-	std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
-	std::string FileId(clang::SourceLocation const& l, clang::SourceManager const& sm);
-	unsigned Line(clang::SourceLocation const& l, clang::SourceManager const& sm);
-	std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, clang::SourceManager const& sm);
-	unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
-	std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
-};
+namespace insieme {
+namespace frontend {
+namespace util {
+
+std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
+
+std::string FileId(clang::SourceLocation const& l, clang::SourceManager const& sm);
+
+unsigned Line(clang::SourceLocation const& l, clang::SourceManager const& sm);
+
+std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, clang::SourceManager const& sm);
+
+unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
+
+std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
+
+}
+}
+}
 

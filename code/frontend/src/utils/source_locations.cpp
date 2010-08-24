@@ -42,41 +42,46 @@
 using namespace std;
 using namespace clang;
 
-namespace sloc {
-	string FileName(SourceLocation const& l, SourceManager const& sm) {
-		PresumedLoc pl = sm.getPresumedLoc(l);
-		return string(pl.getFilename());
-	}
+namespace insieme {
+namespace frontend {
+namespace util {
 
-	string FileId(SourceLocation const& l, SourceManager const& sm) {
-		string fn = FileName(l, sm);
-		for(size_t i=0; i<fn.length(); ++i)
-			switch(fn[i]) {
-				case '/':
-				case '\\':
-				case '>':
-				case '.':
-					fn[i] = '_';
-			}
-		return fn;
-	}
+string FileName(SourceLocation const& l, SourceManager const& sm) {
+	PresumedLoc pl = sm.getPresumedLoc(l);
+	return string(pl.getFilename());
+}
 
-	unsigned Line(SourceLocation const& l, SourceManager const& sm) {
-		PresumedLoc pl = sm.getPresumedLoc(l);
-		return pl.getLine();
-	}
+string FileId(SourceLocation const& l, SourceManager const& sm) {
+	string fn = FileName(l, sm);
+	for(size_t i=0; i<fn.length(); ++i)
+		switch(fn[i]) {
+			case '/':
+			case '\\':
+			case '>':
+			case '.':
+				fn[i] = '_';
+		}
+	return fn;
+}
 
-	std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, SourceManager const& sm){
-		return std::make_pair(Line(r.getBegin(), sm), Line(r.getEnd(), sm));
-	}
+unsigned Line(SourceLocation const& l, SourceManager const& sm) {
+	PresumedLoc pl = sm.getPresumedLoc(l);
+	return pl.getLine();
+}
 
-	unsigned Column(SourceLocation const& l, SourceManager const& sm) {
-		PresumedLoc pl = sm.getPresumedLoc(l);
-		return pl.getColumn();
-	}
-	
-	std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager const& sm){
-		return std::make_pair(Column(r.getBegin(), sm), Column(r.getEnd(), sm));
-	}
+std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, SourceManager const& sm){
+	return std::make_pair(Line(r.getBegin(), sm), Line(r.getEnd(), sm));
+}
 
-};
+unsigned Column(SourceLocation const& l, SourceManager const& sm) {
+	PresumedLoc pl = sm.getPresumedLoc(l);
+	return pl.getColumn();
+}
+
+std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager const& sm){
+	return std::make_pair(Column(r.getBegin(), sm), Column(r.getEnd(), sm));
+}
+
+} // End util namespace
+} // End frontend namespace
+} // End insieme namespace

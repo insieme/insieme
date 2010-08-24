@@ -37,7 +37,10 @@
 #include "clang_compiler.h"
 #include "cmd_line_utils.h"
 #include "conversion.h"
-#include "insieme.h"
+#include "insieme_sema.h"
+#include "pragma_handler.h"
+
+#include "clang_config.h"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -55,13 +58,7 @@
 #include "llvm/System/Host.h"
 #include "llvm/System/Path.h"
 
-//#include "pragma_handler.hpp"
-//#include "mpi/mpi_pragma_handler.hpp"
-//#include "analysis/mpi/comm_stmt_matcher.hpp"
-//#include "transformations/transformation_factory.hpp"
-
 #include "llvm/Config/config.h"
-#include "llvm/Support/CommandLine.h"
 
 #include "clang/Parse/Parser.h"
 
@@ -70,20 +67,28 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/ExternalSemaSource.h"
 
+#include <iostream>
+
 using namespace clang;
+using namespace insieme::frontend;
+
+ParserProxy* ParserProxy::currParser = NULL;
+
+namespace insieme {
+namespace frontend {
 
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
+	DiagnosticOptions diagOpts;
 };
 
-void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer,
-					 ASTContext &Ctx, bool CompleteTranslationUnit) {
-
-	Sema S(PP, Ctx, *Consumer, CompleteTranslationUnit);
+void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, bool CompleteTranslationUnit, PragmaList& PL) {
+	InsiemeSema S(PL, PP, Ctx, *Consumer, CompleteTranslationUnit);
 	Parser P(PP, S);
 	PP.EnterMainSourceFile();
 
 	P.Initialize();
+	ParserProxy::init(&P);
 	Consumer->Initialize(Ctx);
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
 		SC->InitializeSema(S);
@@ -99,19 +104,26 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer,
 		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
 
 	Consumer->HandleTranslationUnit(Ctx);
-	// S.dump();
+	ParserProxy::discard();
 
+	S.dump();
 }
+
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
 	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
 
+	// set diagnostic options for the error reporting
+	pimpl->diagOpts.ShowLocation = 1;
+	pimpl->diagOpts.ShowCarets = 1;
+	pimpl->diagOpts.ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
+	pimpl->diagOpts.TabStop = 4;
+
 	// Create diagnostic client
-	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), DiagnosticOptions());
-	// diagClient->setPrefix( "insieme" );
+	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
 	Diagnostic* diags = new Diagnostic(diagClient);
 	pimpl->clang.setDiagnostics(diags);
-	pimpl->clang.setDiagnosticClient(diagClient);
+	pimpl->clang.setDiagnosticClient(diagClient); // takes ownership of the diagClient pointer (no need for explicit delete)
 
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager();
@@ -122,14 +134,13 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
 	pimpl->clang.setInvocation(CI);
 
-	// Add the default clang system headers
-	pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes;
-	pimpl->clang.getHeaderSearchOpts().AddPath( "/home/motonacciu/software/llvm-2.7/lib/clang/1.1/include/",
-			clang::frontend::System, true, false );
-	// add user headers
-	for (size_t i = 0; i < CommandLineOptions::IncludePaths.size(); ++i)
-		pimpl->clang.getHeaderSearchOpts().AddPath( CommandLineOptions::IncludePaths[i],
-				clang::frontend::Angled, true, false);
+	// Add default header
+	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false);
+	// add headers
+	for (std::vector<std::string>::const_iterator i = CommandLineOptions::IncludePaths.begin(),
+												  e = CommandLineOptions::IncludePaths.end(); i != e; ++i) {
+		pimpl->clang.getHeaderSearchOpts().AddPath( *i, clang::frontend::System, true, false);
+	}
 
 	TargetOptions TO;
 	TO.Triple = llvm::sys::getHostTriple();
@@ -143,12 +154,12 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	LO.Bool = 1;
 	LO.POSIXThreads = 1;
 
-//	if(CommandLineOptions::C99) LO.C99 = 1; 		// set c99
+	if(CommandLineOptions::STD == "c99") LO.C99 = 1; 		// set c99
 
 	if(enableCpp) {
 		LO.CPlusPlus = 1; 	// set C++ 98 support
 		LO.CXXOperatorNames = 1;
-		// if(Flags::CppX) LO.CPlusPlus0x = 1; // set C++0x support
+		if(CommandLineOptions::STD == "c++0x") LO.CPlusPlus0x = 1; // set C++0x support
 		LO.RTTI = 1;
 		LO.Exceptions = 1;
 	}
@@ -159,10 +170,12 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 //		LO.AltiVec = 1;
 //		LO.LaxVectorConversions = 1;
 //	}
-//
-//	// set -D macros
-//	for (size_t i = 0; i < Flags::D_macros.size(); ++i)
-//		Clang.getPreprocessorOpts().addMacroDef(Flags::D_macros[i]);
+
+	// set -D macros
+	for (std::vector<std::string>::const_iterator i = CommandLineOptions::Defs.begin(),
+												  e = CommandLineOptions::Defs.end(); i != e; ++i) {
+		pimpl->clang.getPreprocessorOpts().addMacroDef(*i);
+	}
 
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
@@ -172,22 +185,34 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 }
 
-//void ClangCompiler::toInsiemeIR() {
-//	InsiemeParseAST(pimpl->clang.getPreprocessor(), &c, pimpl->clang.getASTContext(), true);
-//	if( pimpl->clang.getDiagnostics().hasFatalErrorOccurred() ) {
-//		throw ClangParsingError();
-//	}
-//}
-
-ASTContext& ClangCompiler::getASTContext() const { return pimpl->clang.getASTContext(); }
-Preprocessor& ClangCompiler::getPreprocessor() const { return pimpl->clang.getPreprocessor(); }
+ASTContext& 	ClangCompiler::getASTContext() const { return pimpl->clang.getASTContext(); }
+Preprocessor& 	ClangCompiler::getPreprocessor() const { return pimpl->clang.getPreprocessor(); }
+Diagnostic& 	ClangCompiler::getDiagnostics() const { return pimpl->clang.getDiagnostics(); }
+SourceManager& 	ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_name), mParser(NULL) {
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_name) {
 	InsiemeIRConsumer cons;
-	// InsiemeParseAST(clang.getPreprocessor(), &cons, clang.getASTContext(), true);
+	PragmaList PL;
+
+	mClang.getPreprocessor().AddPragmaHandler("insieme", PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>(
+		"insieme", mClang.getPreprocessor().getIdentifierInfo("inline"),
+		!(tok::l_paren >>								// 	'('
+		tok::numeric_constant("LEVEL") >> 				//	LEVEL
+		tok::r_paren) >> tok::eom						//	')' eom
+	));
+
+	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, PL);
+
+	if( mClang.getDiagnostics().hasErrorOccurred() ) {
+		// errors are always fatal!
+		throw ClangParsingError(file_name);
+	}
 }
+
+} // End fronend namespace
+} // End insieme namespace
