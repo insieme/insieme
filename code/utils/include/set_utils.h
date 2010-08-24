@@ -46,7 +46,15 @@
 
 #include "string_utils.h"
 
+
 // TODO: add hash function to arguments ...
+
+template<typename E>
+const std::unordered_set<E> toSet(const E& element) {
+	std::unordered_set<E> res;
+	res.insert(element);
+	return res;
+}
 
 template<typename E>
 std::unique_ptr<std::unordered_set<E>> merge(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
@@ -57,13 +65,22 @@ std::unique_ptr<std::unordered_set<E>> merge(const std::unordered_set<E>& setA, 
 	return res;
 }
 
+template<typename E>
+std::shared_ptr<std::unordered_set<E>> merge_SP(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
+	// merging by simply adding all elements to one set ...
+	std::shared_ptr<std::unordered_set<E>> res(new std::unordered_set<E>());
+	res->insert(setA.cbegin(), setA.cend());
+	res->insert(setB.cbegin(), setB.cend());
+	return res;
+}
+
 // ------------- BEGIN: just for experimenting with return type - will be removed -----------------------------------
 template<typename E>
 std::unordered_set<E> merge_V(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
 	// merging by simply adding all elements to one set ...
-	std::unique_ptr<std::unordered_set<E>> res(new std::unordered_set<E>());
-	res->insert(setA.cbegin(), setA.cend());
-	res->insert(setB.cbegin(), setB.cend());
+	std::unordered_set<E> res;
+	res.insert(setA.cbegin(), setA.cend());
+	res.insert(setB.cbegin(), setB.cend());
 	return res;
 }
 
@@ -71,9 +88,22 @@ template<typename E>
 void merge_R(std::unordered_set<E>& res, const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
 	// merging by simply adding all elements to one set ...
 	res.clear();
-	res->insert(setA.cbegin(), setA.cend());
-	res->insert(setB.cbegin(), setB.cend());
-	return res;
+	res.insert(setA.cbegin(), setA.cend());
+	res.insert(setB.cbegin(), setB.cend());
+}
+
+template<typename E>
+void merge_R2(std::unordered_set<E>& res, const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
+	// merging by simply adding all elements to one set ...
+	if (&res != &setA && &res!=&setB) {
+		res.clear();
+	}
+	if (&res !=&setA) {
+		res.insert(setA.cbegin(), setA.cend());
+	}
+	if (&res != &setB) {
+		res.insert(setB.cbegin(), setB.cend());
+	}
 }
 // ------------- END: just for experimenting with return type - will be removed -----------------------------------
 
