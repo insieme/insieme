@@ -90,7 +90,7 @@ struct target_hash: public std::unary_function<T, std::size_t> {
 	 * Explicit Default constructor required by VC.
 	 */
 	target_hash() : hasher() {	}
-	
+
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to.
 	 */
@@ -285,7 +285,7 @@ public:
 	template<typename Container>
 	Container getAll(const Container& container) {
 		Container res;
-		getAll(container.cbegin(), container.cend(), back_inserter(res));
+		getAll(container.cbegin(), container.cend(), inserter(res, res.end()));
 		return res;
 	}
 
@@ -373,7 +373,7 @@ public:
 	template<typename Container>
 	Container lookupAll(const Container& container) const {
 		Container res;
-		lookupAll(container.cbegin(), container.cend(), back_inserter(res));
+		lookupAll(container.cbegin(), container.cend(), inserter(res, res.end()));
 		return res;
 	}
 

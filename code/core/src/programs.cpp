@@ -37,30 +37,13 @@
 #include "programs.h"
 
 #include <algorithm>
+#include <vector>
+
+#include "container_utils.h"
 #include "set_utils.h"
 
+using namespace std;
 using namespace insieme::utils::set;
-
-
-Program::DefinitionSet getAll(ProgramData& data, const Program::DefinitionSet& definitions) {
-	Program::DefinitionSet res;
-	DefinitionManager& manager = data.getDefinitionManager();
-	std::for_each(definitions.cbegin(), definitions.cend(),
-		[&res, &manager](const DefinitionPtr& cur) {
-			res.insert(manager.get(cur));
-	});
-	return res;
-}
-
-Program::EntryPointSet getAll(ProgramData& data, const Program::EntryPointSet& entryPoints) {
-	Program::EntryPointSet res;
-	StatementManager& manager = data.getStatementManager();
-	std::for_each(entryPoints.cbegin(), entryPoints.cend(),
-		[&res, &manager](const ExprPtr& cur) {
-			res.insert(manager.get(cur));
-	});
-	return res;
-}
 
 
 ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
@@ -72,7 +55,7 @@ ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::addDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(sharedData, merge(this->definitions, getAll(*sharedData, definitions)), entryPoints));
+	return ProgramPtr(new Program(sharedData, merge(this->definitions, sharedData->getDefinitionManager().getAll(definitions)), entryPoints));
 }
 
 ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
@@ -80,7 +63,7 @@ ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::remDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(sharedData, difference(this->definitions, getAll(*sharedData, definitions)), entryPoints));
+	return ProgramPtr(new Program(sharedData, difference(this->definitions, definitions), entryPoints));
 }
 
 
@@ -89,7 +72,7 @@ ProgramPtr Program::addEntryPoint(const ExprPtr& entryPoint) const {
 }
 
 ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(sharedData, definitions, merge(this->entryPoints, getAll(*sharedData, entryPoints))));
+	return ProgramPtr(new Program(sharedData, definitions, merge(this->entryPoints, sharedData->getStatementManager().getAll(entryPoints))));
 }
 
 ProgramPtr Program::remEntryPoint(const ExprPtr& entryPoint) const {
@@ -97,16 +80,57 @@ ProgramPtr Program::remEntryPoint(const ExprPtr& entryPoint) const {
 }
 
 ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(sharedData, definitions, difference(this->entryPoints, getAll(*sharedData, entryPoints))));
+	return ProgramPtr(new Program(sharedData, definitions, difference(this->entryPoints, entryPoints)));
 }
 
 
+bool compareDefinitions(const DefinitionPtr& defA, const DefinitionPtr& defB) {
+	return defA->getName() < defB->getName();
+}
+
+bool compareEntryPoints(const ExprPtr& exprA, const ExprPtr& exprB) {
+	return toString(exprA) < toString(exprB);
+}
+
 std::ostream& operator<<(std::ostream& out, const Program& program) {
 
+	typedef typename std::vector<DefinitionPtr> DefinitionList;
+	typedef typename std::vector<ExprPtr> EntryPointList;
+
+	out << "PROGRAM { \n";
+
 	// print generic type definitions
+	out << "// Generic Types: \n";
+
+	// TODO: filter generic types and print them in alphabetical order
 
 	// print definitions
+	const Program::DefinitionSet& defSet = program.getDefinitions();
+	DefinitionList defList;
+	defList.insert(defList.end(),defSet.cbegin(), defSet.cend());
+	sort(defList.begin(), defList.end(), compareDefinitions);
+
+	out << "// Definitions: \n";
+	for_each(defList.cbegin(), defList.cend(),
+		[&out](const DefinitionPtr& cur) {
+			out << *cur;
+	});
+	out << "\n";
 
 	// print entry points
+	const Program::EntryPointSet& entryPoints = program.getEntryPoints();
+	EntryPointList entryList;
+	entryList.insert(entryList.end(), entryPoints.cbegin(), entryPoints.cend());
+	sort(entryList.begin(), entryList.end(), compareEntryPoints);
 
+	out << "// Entry Points: \n";
+	for_each(entryList.cbegin(), entryList.cend(),
+		[&out](const ExprPtr& cur) {
+			out << *cur;
+	});
+	out << "\n";
+
+	out << "}\n";
+
+	return out;
 }

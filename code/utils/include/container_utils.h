@@ -70,18 +70,6 @@ vector<T> toVector(T element) {
 }
 
 /**
- * Converts one container into another by copying all elements.
- *
- * @tparam ContainerA
- */
-template<typename SrcContainer, typename TargetContainer>
-const TargetContainer convert(const SrcContainer& container) {
-	TargetContainer res;
-	res.insert(container.cbegin(), container.cend());
-	return res;
-}
-
-/**
  * A small utility function capable of appending all elements of one vector to another.
  *
  * @tparam T the element type of the target vector

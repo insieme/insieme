@@ -56,6 +56,12 @@ using boost::disable_if;
 template<typename T>
 class InstancePtr {
 public:
+
+	/**
+	 * Defines a type corresponding to the type this pointer is pointing to.
+	 */
+	typedef T element_type;
+
 	T* ptr;
 
 	InstancePtr(T* ptr) : ptr(ptr) { }
