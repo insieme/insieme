@@ -43,92 +43,116 @@
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "string_utils.h"
 
 
-// TODO: add hash function to arguments ...
+namespace insieme {
+namespace utils {
+namespace set {
 
-template<typename E>
-const std::unordered_set<E> toSet(const E& element) {
-	std::unordered_set<E> res;
+/**
+ * A factory method to obtain a set containing a single element. The type of set to be generated
+ * has to be specified using a template parameter.
+ *
+ * @tparam Set the type of set to be created (has to be manually specified)
+ * @tparam Element the type of element to be contained (should be automatically derived)
+ * @param element the element to be present within the resulting set
+ * @return a set containing the given element
+ */
+template<typename Set, typename Element>
+const Set toSet(const Element& element) {
+	Set res;
 	res.insert(element);
 	return res;
 }
 
-template<typename E>
-std::unique_ptr<std::unordered_set<E>> merge(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
+/**
+ * Computes the set-union (merge) of the given sets.
+ *
+ * NOTE: this function should not be used to add elements to an existing set.
+ *
+ * @tparam set the type of set to be handled
+ * @param setA the first set
+ * @param setB the second set
+ * @return the union of setA and setB
+ */
+template<typename Set>
+Set merge(const Set& setA, const Set& setB) {
 	// merging by simply adding all elements to one set ...
-	std::unique_ptr<std::unordered_set<E>> res(new std::unordered_set<E>());
-	res->insert(setA.cbegin(), setA.cend());
-	res->insert(setB.cbegin(), setB.cend());
-	return res;
-}
-
-template<typename E>
-std::shared_ptr<std::unordered_set<E>> merge_SP(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
-	// merging by simply adding all elements to one set ...
-	std::shared_ptr<std::unordered_set<E>> res(new std::unordered_set<E>());
-	res->insert(setA.cbegin(), setA.cend());
-	res->insert(setB.cbegin(), setB.cend());
-	return res;
-}
-
-// ------------- BEGIN: just for experimenting with return type - will be removed -----------------------------------
-template<typename E>
-std::unordered_set<E> merge_V(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
-	// merging by simply adding all elements to one set ...
-	std::unordered_set<E> res;
+	Set res;
 	res.insert(setA.cbegin(), setA.cend());
 	res.insert(setB.cbegin(), setB.cend());
 	return res;
 }
 
-template<typename E>
-void merge_R(std::unordered_set<E>& res, const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
-	// merging by simply adding all elements to one set ...
-	res.clear();
-	res.insert(setA.cbegin(), setA.cend());
-	res.insert(setB.cbegin(), setB.cend());
-}
+/**
+ * Computes the set-intersection of the given sets.
+ *
+ * @tparam set the type of set to be handled
+ * @param setA the first set
+ * @param setB the second set
+ * @return the intersection of setA and setB
+ */
+template<typename Set>
+Set intersect(const Set& setA, const Set& setB) {
+	typedef typename Set::value_type Element;
 
-template<typename E>
-void merge_R2(std::unordered_set<E>& res, const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
-	// merging by simply adding all elements to one set ...
-	if (&res != &setA && &res!=&setB) {
-		res.clear();
-	}
-	if (&res !=&setA) {
-		res.insert(setA.cbegin(), setA.cend());
-	}
-	if (&res != &setB) {
-		res.insert(setB.cbegin(), setB.cend());
-	}
-}
-// ------------- END: just for experimenting with return type - will be removed -----------------------------------
-
-template<typename E>
-std::unique_ptr<std::unordered_set<E>> intersect(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
 	// intersection by iterating through one set and checking membership within the other
-	std::unique_ptr<std::unordered_set<E>> res(new std::unordered_set<E>());
-	std::for_each(setA.cbegin(), setA.cend(), [&res,&setB](const E& cur) {
+	Set res;
+	std::for_each(setA.cbegin(), setA.cend(), [&res,&setB](const Element& cur) {
 		if (setB.find(cur) != setB.cend()) {
-			res->insert(cur);
+			res.insert(cur);
 		}
 	});
 	return res;
 }
 
-template<typename E>
-std::unique_ptr<std::unordered_set<E>> difference(const std::unordered_set<E>& setA, const std::unordered_set<E>& setB) {
+/**
+ * Computes the set-difference of two sets.
+ *
+ * NOTE: this function should not be used to remove elements from an existing set.
+ *
+ * @tparam set the type of set to be handled
+ * @param setA the first set
+ * @param setB the second set
+ * @return a set containing all elements of the first set which are not members of the second set.
+ */
+template<typename Set>
+Set difference(const Set& setA, const Set& setB) {
+	typedef typename Set::value_type Element;
+
 	// intersection by iterating through one set and checking membership within the other
-	std::unique_ptr<std::unordered_set<E>> res(new std::unordered_set<E>());
-	std::for_each(setA.cbegin(), setA.cend(), [&res,&setB](const E& cur) {
+	Set res;
+	std::for_each(setA.cbegin(), setA.cend(), [&res,&setB](const Element& cur) {
 		if (setB.find(cur) == setB.cend()) {
-			res->insert(cur);
+			res.insert(cur);
 		}
 	});
 	return res;
+}
+
+} // end namespace: set
+} // end namespace: utils
+} // end namespace: insieme
+
+/**
+ * Allows to print unoredered sets including printable elements.
+ *
+ * @param out the stream to which the given vector should be printed to
+ * @param container the vector to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename Element, typename Hash, typename Pred, typename Alloc>
+std::ostream& operator<<(std::ostream& out, const std::unordered_set<Element, Hash, Pred, Alloc>& container) {
+
+	// convert elements into strings
+	std::vector<std::string> list;
+	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
+
+	// print and done
+	return out << "{" << boost::join(list, ",") << "}";
 }
 
 /**
@@ -138,8 +162,8 @@ std::unique_ptr<std::unordered_set<E>> difference(const std::unordered_set<E>& s
  * @param container the vector to be printed
  * @return the handed in ostream to chain operation invocations.
  */
-template<typename Element>
-std::ostream& operator<<(std::ostream& out, const std::unordered_set<Element>& container) {
+template<typename Element, typename Hash, typename Pred, typename Alloc>
+std::ostream& operator<<(std::ostream& out, const boost::unordered_set<Element, Hash, Pred, Alloc>& container) {
 
 	// convert elements into strings
 	std::vector<std::string> list;
