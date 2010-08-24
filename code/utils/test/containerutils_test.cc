@@ -35,14 +35,17 @@
  */
 
 #include <gtest/gtest.h>
-#include <vector>
+
 #include <algorithm>
+#include <list>
+#include <vector>
 
 #include "container_utils.h"
 
 using std::pair;
 using std::string;
 using std::vector;
+using std::list;
 
 TEST(ContainerUtils, Singleton) {
 	// Obtain two instances

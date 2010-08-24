@@ -38,10 +38,17 @@
 #include "programs.h"
 #include "types.h"
 
+#include <iostream>
 
-TEST(StatementManager, Basic) {
-	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), 4);
+using namespace std;
+
+TEST(StatementManager, ProgramData) {
+
+	// start with empty program
+	ProgramPtr program = Program::createProgram();
+
+	cout << program << endl;
+
 }
 
 

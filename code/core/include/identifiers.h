@@ -73,6 +73,10 @@ public:
 		return !(*this==other);
 	}
 
+	bool operator<(const Identifier& other) const {
+		return name < other.name;
+	}
+
 	std::size_t hash() const {
 		return hashCode;
 	}

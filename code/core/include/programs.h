@@ -42,6 +42,7 @@
 
 #include "container_utils.h"
 #include "expressions.h"
+#include "functional_utils.h"
 #include "definitions.h"
 #include "set_utils.h"
 #include "statements.h"
@@ -92,12 +93,12 @@ public:
 	/**
 	 * The type used to represent the list of top level definitions.
 	 */
-	typedef std::unordered_set<DefinitionPtr> DefinitionSet;
+	typedef std::unordered_set<DefinitionPtr, hash_target<DefinitionPtr>, equal_target<DefinitionPtr>> DefinitionSet;
 
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef std::unordered_set<ExprPtr> EntryPointSet;
+	typedef std::unordered_set<ExprPtr, hash_target<ExprPtr>, equal_target<ExprPtr>> EntryPointSet;
 
 private:
 
@@ -178,6 +179,8 @@ public:
 
 /**
  * Allows programs to be printed to an output stream.
+ *
+ * NOTE: this mechanism should not be used to dump / pretty print a program.
  *
  * @param out the stream to be printed to
  * @param program the program to be printed
