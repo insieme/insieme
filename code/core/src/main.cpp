@@ -46,11 +46,20 @@
 #include "clang_compiler.h"
 
 using namespace std;
-
+namespace fe = insieme::frontend;
 
 int main(int argc, char** argv) {
 
-	CommandLineOptions::Parse(argc, argv, true);
+	CommandLineOptions::Parse(argc, argv);
+
+	try {
+		for(std::vector<std::string>::const_iterator i = CommandLineOptions::InputFiles.begin(),
+													 e = CommandLineOptions::InputFiles.end(); i != e; ++i) {
+			fe::InsiemeTransUnit::ParseFile(*i);
+		}
+	} catch (fe::ClangParsingError& e) {
+		cerr << "Error wile parsing input file: " << e.what() << endl;
+	}
 
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());

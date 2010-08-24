@@ -14,6 +14,8 @@ cmake_minimum_required(VERSION 2.6)
 file(GLOB insieme_frontend_srcs 	src/*.cpp src/utils/*.cpp)
 file(GLOB insieme_frontend_incs	include/*.h include/utils/*.h)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/clang_config.h)
+
 # add include directory
 include_directories( 
 	${CMAKE_CURRENT_SOURCE_DIR}/include

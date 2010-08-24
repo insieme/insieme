@@ -36,3 +36,77 @@
 
 #include "programs.h"
 
+#include <algorithm>
+#include "set_utils.h"
+
+using namespace insieme::utils::set;
+
+
+Program::DefinitionSet getAll(ProgramData& data, const Program::DefinitionSet& definitions) {
+	Program::DefinitionSet res;
+	DefinitionManager& manager = data.getDefinitionManager();
+	std::for_each(definitions.cbegin(), definitions.cend(),
+		[&res, &manager](const DefinitionPtr& cur) {
+			res.insert(manager.get(cur));
+	});
+	return res;
+}
+
+Program::EntryPointSet getAll(ProgramData& data, const Program::EntryPointSet& entryPoints) {
+	Program::EntryPointSet res;
+	StatementManager& manager = data.getStatementManager();
+	std::for_each(entryPoints.cbegin(), entryPoints.cend(),
+		[&res, &manager](const ExprPtr& cur) {
+			res.insert(manager.get(cur));
+	});
+	return res;
+}
+
+
+ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
+	return ProgramPtr(new Program(SharedProgramData(new ProgramData()), definitions, entryPoints));
+}
+
+ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
+	return addDefinitions(toSet<DefinitionSet>(definition));
+}
+
+ProgramPtr Program::addDefinitions(const DefinitionSet& definitions) const {
+	return ProgramPtr(new Program(sharedData, merge(this->definitions, getAll(*sharedData, definitions)), entryPoints));
+}
+
+ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
+	return remDefinitions(toSet<DefinitionSet>(definition));
+}
+
+ProgramPtr Program::remDefinitions(const DefinitionSet& definitions) const {
+	return ProgramPtr(new Program(sharedData, difference(this->definitions, getAll(*sharedData, definitions)), entryPoints));
+}
+
+
+ProgramPtr Program::addEntryPoint(const ExprPtr& entryPoint) const {
+	return addEntryPoints(toSet<EntryPointSet>(entryPoint));
+}
+
+ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
+	return ProgramPtr(new Program(sharedData, definitions, merge(this->entryPoints, getAll(*sharedData, entryPoints))));
+}
+
+ProgramPtr Program::remEntryPoint(const ExprPtr& entryPoint) const {
+	return remEntryPoints(toSet<EntryPointSet>(entryPoint));
+}
+
+ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
+	return ProgramPtr(new Program(sharedData, definitions, difference(this->entryPoints, getAll(*sharedData, entryPoints))));
+}
+
+
+std::ostream& operator<<(std::ostream& out, const Program& program) {
+
+	// print generic type definitions
+
+	// print definitions
+
+	// print entry points
+
+}

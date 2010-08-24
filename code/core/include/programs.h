@@ -37,11 +37,13 @@
 #pragma once
 
 #include <memory>
+#include <ostream>
 #include <unordered_set>
 
 #include "container_utils.h"
 #include "expressions.h"
 #include "definitions.h"
+#include "set_utils.h"
 #include "statements.h"
 #include "types.h"
 
@@ -79,6 +81,8 @@ public:
 
 class Program {
 
+public:
+
 	/**
 	 * The type used to share statement/type nodes and information among multiple
 	 * program versions.
@@ -88,24 +92,26 @@ class Program {
 	/**
 	 * The type used to represent the list of top level definitions.
 	 */
-	typedef std::unordered_set<DefinitionPtr> DefinitionList;
+	typedef std::unordered_set<DefinitionPtr> DefinitionSet;
 
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef std::unordered_set<ExprPtr> EntryPointList;
+	typedef std::unordered_set<ExprPtr> EntryPointSet;
+
+private:
 
 	/**
-	 * The manager used to maintain nodes within this AST.
+	 * The shared data manager used to maintain nodes within this AST.
 	 */
-	const SharedProgramData manager;
+	const SharedProgramData sharedData;
 
 	/**
-	 * The list of definitions represented by this AST. Each definition
+	 * The set of definitions represented by this AST. Each definition
 	 * represents a root node of a tree within this AST (which is actually
 	 * a forest).
 	 */
-	const DefinitionList definitionList;
+	const DefinitionSet definitions;
 
 	/**
 	 * This set contains the list of expressions to be exported to the context
@@ -113,56 +119,53 @@ class Program {
 	 * has to be considered. In case elements of this list represent functions,
 	 * the signature of the corresponding structure may not be changed.
 	 */
-	const EntryPointList entryPoints;
+	const EntryPointSet entryPoints;
 
 	/**
 	 * Creates a new AST based on the given data.
 	 *
-	 * @param manager shared data manager to be used to maintain definitions, AST nodes and types.
+	 * @param sharedData shared data manager to be used to maintain definitions, AST nodes and types.
 	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedProgramData& manager, const DefinitionList& definitions, const EntryPointList& entryPoints);
+	Program(SharedProgramData sharedData, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
+		sharedData(sharedData), definitions(definitions), entryPoints(entryPoints) { };
 
 	/**
 	 * Creates a new AST using a fresh AST data instance.
 	 */
-	Program() : manager(SharedProgramData(new ProgramData())) {}
+	Program() : sharedData(SharedProgramData(new ProgramData())) {}
 
 public:
 
 
-//	static ProgramPtr createProgram(const DefinitionList& definitions = DefinitionList(), const EntryPointList& entryPoints = EntryPointList());
-//
-//	static ProgramPtr addDefinition(const ProgramPtr& program, const Definition& definition) {
-//		return addDefintions(program, toVector(definition));
-//	}
-//
-//	static ProgramPtr addDefinitions(const ProgramPtr& program, const DefinitionList& definitions);
-//
-//	static ProgramPtr remDefinition(const ProgramPtr& program, const Definition& definiton) {
-//
-//	}
-//
-//	ProgramPtr addDefinition(const Definition& definition) const {
-//		addDefinition(toVector(definition));
-//	}
-//
-//	ProgramPtr addDefinitions(const DefinitionList& definitions) const;
-//
-//	const DefinitionList& getDefinitions() const {
-//		return definitions;
-//	}
-//
-//	ProgramPtr remDefinition(const Definition& definition) const {
-//		remDefinition(toVector(definition));
-//	}
-//
-//	ProgramPtr remDefinitions(const DefinitionList& definitions) const;
-//
-//
-//	template<typename Transformation>
-//	static ProgramPtr transform(const ProgramPtr& program, Transformation transformation);
+	static ProgramPtr createProgram(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
+
+	ProgramPtr addDefinition(const DefinitionPtr& definition) const;
+
+	ProgramPtr addDefinitions(const DefinitionSet& definitions) const;
+
+	const DefinitionSet& getDefinitions() const {
+		return definitions;
+	}
+
+	ProgramPtr remDefinition(const DefinitionPtr& definition) const;
+
+	ProgramPtr remDefinitions(const DefinitionSet& definitions) const;
+
+
+	ProgramPtr addEntryPoint(const ExprPtr& definition) const;
+
+	ProgramPtr addEntryPoints(const EntryPointSet& definitions) const;
+
+	const EntryPointSet& getEntryPoints() const {
+		return entryPoints;
+	}
+
+	ProgramPtr remEntryPoint(const ExprPtr& definition) const;
+
+	ProgramPtr remEntryPoints(const EntryPointSet& definitions) const;
+
 
 
 	// TODO: add consistency check routine!!
@@ -171,3 +174,14 @@ public:
 	//   - no duplicates in names composite types
 
 };
+
+
+/**
+ * Allows programs to be printed to an output stream.
+ *
+ * @param out the stream to be printed to
+ * @param program the program to be printed
+ * @return the given output stream
+ */
+std::ostream& operator<<(std::ostream& out, const Program& program);
+

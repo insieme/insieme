@@ -34,10 +34,32 @@
  * regarding third party software licenses.
  */
 
-FLAG("help,h", "help", Help, "produce help message")
-FLAG("version,v", "version", Version, "print version string")
+#include "conversion.h"
 
-OPTION("input-file", "input-file", InputFiles, std::vector<std::string>, "input file(s)")
-OPTION("include-path,I", "include-path", IncludePaths, std::vector<std::string>, "Add directory to include search path")
-OPTION("std,std", "std-compatibility", STD, std::string, "Set compatibility mode")
-OPTION("definitions,D", "definitions", Defs, std::vector<std::string>, "Add a preprocessor definition")
+#include <iostream>
+
+using namespace clang;
+using namespace insieme;
+namespace fe = insieme::frontend;
+
+namespace insieme {
+
+void RegisterPragmaHandlers(Preprocessor& pp) {
+	pp.AddPragmaHandler("insieme", fe::PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>("insieme",
+			pp.getIdentifierInfo("inline"), !(fe::tok::l_paren >> // 	'!('
+					fe::tok::numeric_constant("LEVEL") >> //	LEVEL
+					fe::tok::r_paren) >> fe::tok::eom //	')' eom
+			));
+}
+
+InlinePragma::InlinePragma(const SourceLocation& startLoc, const SourceLocation& endLoc, const std::string& name, const frontend::MatchMap& mmap) :
+	Pragma(startLoc, endLoc, name, mmap) {
+	frontend::MatchMap::const_iterator it = mmap.find("LEVEL");
+	if (it != mmap.end()) {
+		llvm::APInt level = dyn_cast<IntegerLiteral> (it->second.back()->take<Stmt*> ())->getValue();
+		mLevel = (unsigned) *level.getRawData();
+	} else
+		mLevel = 0;
+}
+
+} // End insieme namespace
