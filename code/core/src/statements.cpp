@@ -149,7 +149,7 @@ void DeclarationStmt::printTo(std::ostream& out) const {
 bool DeclarationStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const DeclarationStmt& rhs = dynamic_cast<const DeclarationStmt&>(stmt); 
-	return (type == rhs.type) && (initExpression == rhs.initExpression);
+	return (*type == *rhs.type) && (*initExpression == *rhs.initExpression);
 }
 
 std::size_t DeclarationStmt::hash() const {
@@ -185,7 +185,7 @@ void ReturnStmt::printTo(std::ostream& out) const {
 bool ReturnStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const ReturnStmt& rhs = dynamic_cast<const ReturnStmt&>(stmt); 
-	return (returnExpression == rhs.returnExpression);
+	return (*returnExpression == *rhs.returnExpression);
 }
 
 std::size_t ReturnStmt::hash() const {
@@ -220,7 +220,7 @@ bool CompoundStmt::equals(const Statement& stmt) const {
 	//auto start = make_paired_iterator(statements.begin(), rhs.statements.begin());
 	//auto end = make_paired_iterator(statements.end(), rhs.statements.end());
 	//return all(start, end, [](std::pair<StmtPtr,StmtPtr> elems) { return elems.first == elems.second; } );
-	return statements == rhs.statements;
+	return equal(statements.cbegin(), statements.cend(), rhs.statements.cbegin(), equal_target<StmtPtr>());
 }
 
 std::size_t CompoundStmt::hash() const {
@@ -266,7 +266,7 @@ void WhileStmt::printTo(std::ostream& out) const {
 bool WhileStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const WhileStmt& rhs = dynamic_cast<const WhileStmt&>(stmt);
-	return (condition == rhs.condition) && (body == rhs.body);
+	return (*condition == *rhs.condition) && (*body == *rhs.body);
 }
 
 std::size_t WhileStmt::hash() const {
@@ -303,8 +303,8 @@ void ForStmt::printTo(std::ostream& out) const {
 bool ForStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const ForStmt& rhs = dynamic_cast<const ForStmt&>(stmt);
-	return (declaration == rhs.declaration) && (body == rhs.body) 
-		&& (end == rhs.end) && (step == rhs.step);
+	return (*declaration == *rhs.declaration) && (*body == *rhs.body) 
+		&& (*end == *rhs.end) && (*step == *rhs.step);
 }
 
 std::size_t ForStmt::hash() const {
@@ -351,7 +351,7 @@ void IfStmt::printTo(std::ostream& out) const {
 bool IfStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const IfStmt& rhs = dynamic_cast<const IfStmt&>(stmt);
-	return (condition == rhs.condition) && (body == rhs.body) && (elseBody == rhs.elseBody);
+	return (*condition == *rhs.condition) && (*body == *rhs.body) && (*elseBody == *rhs.elseBody);
 }
 
 std::size_t IfStmt::hash() const {
@@ -399,7 +399,8 @@ void SwitchStmt::printTo(std::ostream& out) const {
 bool SwitchStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const SwitchStmt& rhs = dynamic_cast<const SwitchStmt&>(stmt);
-	return cases == rhs.cases;
+	return equal(cases.cbegin(), cases.cend(), rhs.cases.cbegin(), 
+		[](const Case& l, const Case& r) { return *l.first == *r.first && *l.second == *r.second; });
 }
 
 std::size_t SwitchStmt::hash() const {

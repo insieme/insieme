@@ -104,7 +104,9 @@ CallExpr* CallExpr::clone(StatementManager& manager) const {
 bool CallExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CallExpr& rhs = dynamic_cast<const CallExpr&>(expr);
-	return (rhs.functionExpr == functionExpr) && (rhs.arguments == arguments);
+	return (*rhs.functionExpr == *functionExpr) && 
+		equal(arguments.cbegin(), arguments.cend(), rhs.arguments.cbegin(), equal_target<ExprPtr>());
+
 }
 	
 void CallExpr::printTo(std::ostream& out) const {
@@ -136,7 +138,7 @@ CastExpr* CastExpr::clone(StatementManager& manager) const {
 bool CastExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CastExpr& rhs = dynamic_cast<const CastExpr&>(expr);
-	return (rhs.subExpression == subExpression);
+	return (*rhs.subExpression == *subExpression);
 }
 	
 void CastExpr::printTo(std::ostream& out) const {
