@@ -225,9 +225,10 @@ bool CompoundStmt::equals(const Statement& stmt) const {
 
 std::size_t CompoundStmt::hash() const {
 	std::size_t seed = HASHVAL_COMPOUND;
-	std::for_each(statements.begin(), statements.end(), [&seed](StmtPtr cur) { 
-		boost::hash_combine(seed, cur->hash());
-	} );
+	//std::for_each(statements.begin(), statements.end(), [&seed](StmtPtr cur) { 
+	//	boost::hash_combine(seed, cur->hash());
+	//} );
+	hashPtrRange(seed, statements);
 	return seed;
 }
 
