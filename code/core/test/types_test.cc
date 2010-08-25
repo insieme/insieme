@@ -683,6 +683,8 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 //		EXPECT_TRUE ( equal(children, *(cur->getChildren())));
 //		EXPECT_EQ ( children, *(cur->getChildren()) );
 	}
+
+	delete clone;
 }
 
 
