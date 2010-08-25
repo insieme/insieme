@@ -74,6 +74,7 @@ dynamic_pointer_cast(AnnotatedPtr<T> src) {
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const AnnotatedPtr<T>& ptr) {
+//	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
 	out << "AP(";
 	if (!!ptr) {
 		out << *ptr;

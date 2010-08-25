@@ -83,6 +83,11 @@ TEST(InstanceManager, Basic) {
 	EXPECT_EQ (*refA, "Hello World");
 	EXPECT_EQ (manager.size(), 1);
 
+	InstancePtr<const CloneableString> refA2 = manager.get(&strA);
+	EXPECT_EQ (*refA2, "Hello World");
+	EXPECT_EQ (manager.size(), 1);
+	EXPECT_EQ (refA, refA2);
+
 	// add and retrieve second element
 	CloneableString strB = "Hello World 2";
 	InstancePtr<const CloneableString> refB = manager.get(&strB);

@@ -50,6 +50,8 @@
 #include "instance_ptr.h"
 #include "container_utils.h"
 
+#include <iostream>
+
 /**
  * This utility struct definition defines a predicate comparing two pointers
  * based on the value they are pointing to.
@@ -139,6 +141,11 @@ class InstanceManager : private boost::noncopyable {
 		const T* orig = instance;
 		//  step 2 - clone
 		T* clone = orig->clone(*static_cast<typename S::Manager*>(this));
+
+		// make sure clone is valid
+		assert( hash_value(*instance) == hash_value(*clone) );
+		assert( *orig == *clone );
+
 		// step 2 - cast back to original type
 		return dynamic_cast<S*>(clone);
 	}
@@ -175,7 +182,35 @@ public:
 
 		// clone element (to ensure private copy)
 		S* newElement = clone(instance);
-		storage.insert(newElement);
+		auto check = storage.insert(newElement);
+
+		// ensure the element has really been added (hash and equals is properly implemented)
+		assert ( check.second );
+
+		// ensure the element can be found again
+		assert ( check.first == storage.find(instance) );
+
+//if (!check.second) {
+//
+//	target_hash<const T> hasher;
+//
+//	std::cout << "ERROR adding \"" << *instance << "\" failed!" << std::endl;
+//	std::cout << "   Hash Instance:  " << hasher(instance) << std::endl;
+//	std::cout << "   Hash Clone:     " << hasher(newElement) << std::endl;
+//	std::cout << "   Equals:         " << (bool)(*instance == *newElement) << std::endl;
+//	std::cout << "   Found Instance: " << (bool)(storage.find(instance) != storage.end()) << std::endl;
+//	std::cout << "   Found Clone:    " << (bool)(storage.find(newElement) != storage.end()) << std::endl;
+//
+//	std::for_each(storage.cbegin(), storage.cend(),
+//			[&instance, &hasher, &newElement](const T* cur) {
+//				std::cout << "     - " << *cur << " - hash: " << hasher(cur) << " - " << (bool)(*cur == *newElement) << std::endl;
+//	});
+//	std::cout << "   Found Instance: " << (bool)(storage.find(instance) != storage.end()) << std::endl;
+//	std::cout << "   Found Clone:    " << (bool)(storage.find(newElement) != storage.end()) << std::endl;
+//
+//	std::cout << std::endl;
+//}
+
 		return std::make_pair(R<const S>(newElement), true);
 	}
 

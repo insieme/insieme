@@ -82,7 +82,7 @@ Definition::Definition(const Identifier& name, const TypePtr& type, const bool& 
 Definition* Definition::clone(DefinitionManager& manager) const {
 	return new Definition(name,
 			manager.getTypeManager().get(type), external,
-			manager.getStatementManager().get(*definition), hashCode);
+			manager.getStatementManager().get(definition), hashCode);
 }
 
 DefinitionPtr Definition::get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition, bool external) {
@@ -107,7 +107,7 @@ bool Definition::operator==(const Definition& other) const {
 	}
 
 	// compare type and name - which makes a function unique
-	return type == other.type && name == other.name;
+	return *type == *other.type && name == other.name;
 }
 
 // ---------------------------------------------- Utilities ------------------------------------

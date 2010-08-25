@@ -43,7 +43,7 @@
 bool Expression::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const Expression& rhs = dynamic_cast<const Expression&>(stmt); 
-	return (type == rhs.type) && equalsExpr(rhs);
+	return (*type == *rhs.type) && equalsExpr(rhs);
 }
 
 std::ostream& operator<<(std::ostream& out, const Expression& expression) {
