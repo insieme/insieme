@@ -41,6 +41,7 @@
 
 #include "types.h"
 #include "container_utils.h"
+#include "functional_utils.h"
 
 using std::vector;
 
@@ -679,9 +680,8 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 		// check function type
 		EXPECT_EQ( functional, cur->isFunctionType() );
 
-//		// check children
-//		EXPECT_TRUE ( equal(children, *(cur->getChildren())));
-//		EXPECT_EQ ( children, *(cur->getChildren()) );
+		// check children
+		EXPECT_TRUE ( equals(children, *(cur->getChildren()), equal_target<TypePtr>()));
 	}
 
 	delete clone;

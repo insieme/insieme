@@ -46,7 +46,7 @@ template<typename T> T id(T t) { return t; };
  * @tparam PointerType the type of pointer to be compared
  */
 template<typename PointerType>
-struct equal_target: public std::binary_function<const PointerType, const PointerType, bool> {
+struct equal_target: public std::binary_function<const PointerType&, const PointerType&, bool> {
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
 	 * pointer type.
@@ -54,7 +54,7 @@ struct equal_target: public std::binary_function<const PointerType, const Pointe
 	 * @param x the pointer to the first element to be compared
 	 * @param y the pointer to the second element to be compared
 	 */
-	bool operator()(const PointerType x, const PointerType y) const {
+	bool operator()(const PointerType& x, const PointerType& y) const {
 		return *x == *y;
 	}
 };

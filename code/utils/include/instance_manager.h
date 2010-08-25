@@ -143,11 +143,11 @@ class InstanceManager : private boost::noncopyable {
 		T* clone = orig->clone(*static_cast<typename S::Manager*>(this));
 
 		// make sure clone is valid
-		assert( hash_value(*instance) == hash_value(*clone) );
-		assert( *orig == *clone );
+		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
+		assert( *orig == *clone && "Clone not equivalent to original!" );
 
 		// step 2 - cast back to original type
-		return dynamic_cast<S*>(clone);
+		return static_cast<S*>(clone);
 	}
 
 public:
@@ -188,7 +188,7 @@ public:
 		assert ( check.second );
 
 		// ensure the element can be found again
-		assert ( check.first == storage.find(instance) );
+		assert ( check.first == storage.find(instance) && "Unable to add clone - value already present!" );
 
 //if (!check.second) {
 //

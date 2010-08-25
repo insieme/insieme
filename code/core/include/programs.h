@@ -38,9 +38,9 @@
 
 #include <memory>
 #include <ostream>
-//#include <unordered_set>
+#include <unordered_set>
 
-#include <boost/unordered_set.hpp>
+//#include <boost/unordered_set.hpp>
 
 #include "container_utils.h"
 #include "expressions.h"
@@ -107,12 +107,12 @@ public:
 	/**
 	 * The type used to represent the list of top level definitions.
 	 */
-	typedef boost::unordered_set<DefinitionPtr, hash_target<DefinitionPtr>, equal_target<DefinitionPtr>> DefinitionSet;
+	typedef std::unordered_set<DefinitionPtr, hash_target<DefinitionPtr>, equal_target<DefinitionPtr>> DefinitionSet;
 
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef boost::unordered_set<ExprPtr, hash_target<ExprPtr>, equal_target<ExprPtr>> EntryPointSet;
+	typedef std::unordered_set<ExprPtr, hash_target<ExprPtr>, equal_target<ExprPtr>> EntryPointSet;
 
 private:
 

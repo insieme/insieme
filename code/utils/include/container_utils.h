@@ -84,18 +84,39 @@ typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, co
 	copy(source.cbegin(), source.cend(), back_inserter(target));
 }
 
-template<typename List>
-bool equal(List a, List b) {
-	typedef typename List::const_iterator iter;
-	typedef std::pair<typename iter::value_type, typename iter::value_type> valuePair;
 
+/**
+ * Compares the given list (and their content) and determines whether both represent
+ * the an identical sequence of elements.
+ *
+ * @param a the first list
+ * @param b the second list
+ * @param comparator the comparator used to compare the elements within the given lists
+ * @return true if the list have the same size and contain an equivalent sequence of elements
+ * 			(according to the given comparator), false otherwise.
+ */
+template<typename ListA, typename ListB, typename Comparator>
+inline bool equals(const ListA& a, const ListB& b, const Comparator& comparator) {
+
+	// ensure same size
 	if (a.size() != b.size()) {
 		return false;
 	}
 
-	auto start = paired_iterator<iter,iter>(a.cbegin(), b.cbegin());
-	auto end = paired_iterator<iter,iter>(a.cend(), b.cend());
-	return all(start, end, [](const valuePair& cur) { return cur.first == cur.second; });
+	// compare values using std equal ...
+	return std::equal(a.cbegin(), a.cend(), b.cbegin(), comparator);
+}
+
+/**
+ * Compares the given list (and their content) and determines whether both represent
+ * the an identical sequence of elements.
+ *
+ * @param a the first list
+ * @param b the second list
+ */
+template<typename ListA, typename ListB>
+inline bool equals(const ListA& a, const ListB& b) {
+	return equals(a, b, std::equal_to<const typename ListA::value_type&>());
 }
 
 

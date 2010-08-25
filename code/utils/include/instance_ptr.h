@@ -67,7 +67,7 @@ public:
 	}
 
 	const T& operator*() const {
-		assert(ptr != NULL);
+		assert(ptr != NULL && "Illegal: dereferencing a NULL pointer!" );
 		return *ptr;
 	}
 

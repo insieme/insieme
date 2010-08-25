@@ -40,7 +40,10 @@
 #include <list>
 #include <vector>
 
+#include <iostream>
+
 #include "container_utils.h"
+#include "functional_utils.h"
 
 using std::pair;
 using std::string;
@@ -188,3 +191,22 @@ TEST(ContainerUtils, ExtractFirstSecond) {
 	EXPECT_EQ(secondVec[0], "one");
 	EXPECT_EQ(secondVec[1], "two");
 }
+
+TEST(ContainerUtils, equals) {
+
+	vector<int> vectorA;
+	vectorA.push_back(1);
+	vectorA.push_back(2);
+	vectorA.push_back(3);
+
+	vector<int> vectorB;
+	vectorB.push_back(1);
+	vectorB.push_back(2);
+
+	EXPECT_FALSE (equals(vectorA, vectorB));
+	vectorB.push_back(3);
+	EXPECT_TRUE (equals(vectorA, vectorB));
+	vectorB.push_back(4);
+	EXPECT_FALSE (equals(vectorA, vectorB));
+}
+
