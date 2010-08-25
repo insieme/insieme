@@ -42,7 +42,10 @@
 #include <iostream>
 
 using namespace std;
-using namespace insieme::frontend;
+
+namespace insieme {
+namespace frontend {
+namespace omp {
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
 	Pragma(startLoc, endLoc, name, mmap) {
@@ -107,3 +110,7 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 
 
 }
+
+} // End omp namespace
+} // End frontend namespace
+} // End insieme namespace
