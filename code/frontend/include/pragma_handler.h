@@ -53,6 +53,7 @@
 #include <sstream>
 #include <map>
 
+// forward declaration
 namespace clang {
 class Stmt;
 class Decl;
@@ -66,25 +67,42 @@ namespace frontend {
  * Defines a generic pragma which contains the location (start,end), and the target node
  */
 class Pragma {
+	/**
+	 * Attach the pragma to a statement. If the pragma is already bound to a statement or location, a call to this method will produce an error.
+	 */
+	void setStatement(clang::Stmt const* stmt);
+
+	/**
+	 * Attach the pragma to a declaration. If the pragma is already bound to a statement or location, a call to this method will produce an error.
+	 */
+	void setDecl(clang::Decl const* decl);
+
+	friend class InsiemeSema;
 public:
 	typedef llvm::PointerUnion<clang::Stmt const*, clang::Decl const*> PragmaTarget;
 
-	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name) :
-		mStartLoc(startLoc), mEndLoc(endLoc), mName(name) { }
+	/**
+	 * Creates an empty pragma starting from source location startLoc and ending ad endLoc.
+	 */
+	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type) :
+		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
 
-	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name,
+	/**
+	 * Creates a pragma starting from source location startLoc and ending ad endLoc by passing the content of the map which associates, for each
+	 * key defined in the pragma_matcher, the relative parsed list of values
+	 *
+	 */
+	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type,
 			MatchMap const& mmap) :
-		mStartLoc(startLoc), mEndLoc(endLoc), mName(name) { }
+		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
 
 	const clang::SourceLocation& getStartLocation() const { return mStartLoc; }
 	const clang::SourceLocation& getEndLocation() const { return mEndLoc; }
 	/**
-	 * Returns the name which identifies the pragma
+	 * Returns a string which identifies the pragma
 	 */
-	const std::string& getType() const { return mName; }
+	const std::string& getType() const { return mType; }
 
-	void setStatement(clang::Stmt const* stmt);
-	void setDecl(clang::Decl const* decl);
 	clang::Stmt const* getStatement() const;
 	clang::Decl const* getDecl() const;
 
@@ -98,7 +116,7 @@ public:
 
 private:
 	clang::SourceLocation mStartLoc, mEndLoc;
-	std::string mName;
+	std::string mType;
 	PragmaTarget mTargetNode;
 };
 
@@ -133,8 +151,8 @@ public:
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
 			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), MR.second, startLoc, endLoc);
 		} else {
-			//			DEBUG("MATCHING FAILED!");
-			//			PP.DiscardUntilEndOfDirective();
+			// REPORT ERROR
+			PP.DiscardUntilEndOfDirective();
 		}
 	}
 

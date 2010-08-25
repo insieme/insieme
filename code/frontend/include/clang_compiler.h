@@ -43,9 +43,7 @@
 #include <stdexcept>
 #include <cassert>
 
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
+#include <boost/utility.hpp>
 
 // forward declarations
 namespace clang {
@@ -126,7 +124,7 @@ typedef std::shared_ptr<InsiemeTransUnit> InsiemeTransUnitPtr;
  * ClangCompiler is a wrapper class for the Clang compiler main interfaces. The main goal is to hide implementation
  * details to the client.
  */
-class ClangCompiler {
+class ClangCompiler: boost::noncopyable {
 	struct ClangCompilerImpl;
 
 	ClangCompilerImpl* pimpl;
@@ -144,12 +142,11 @@ public:
  * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
  * and the insieme IR which has been generated from the source file.
  */
-class InsiemeTransUnit {
+class InsiemeTransUnit: public boost::noncopyable {
 	ClangCompiler mClang;
 
 	InsiemeTransUnit(const std::string& file_name);
 public:
-
 	/**
 	 * Main entry method, it creates a translation unit starting from an input file
 	 */

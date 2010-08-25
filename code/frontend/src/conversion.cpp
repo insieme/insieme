@@ -62,4 +62,9 @@ InlinePragma::InlinePragma(const SourceLocation& startLoc, const SourceLocation&
 		mLevel = 0;
 }
 
+void InlinePragma::dump() const {
+	llvm::outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << "|-> Pragma: " << getType() << " : "
+			<< mLevel << " " << toString() << "\n";
+}
+
 } // End insieme namespace

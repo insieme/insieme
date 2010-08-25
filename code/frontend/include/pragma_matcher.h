@@ -43,6 +43,10 @@
 #include <vector>
 #include <map>
 
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
 #include <clang/Lex/Token.h>
 
 #include <llvm/ADT/PointerUnion.h>
@@ -51,6 +55,7 @@
 namespace clang {
 class Preprocessor;
 class Stmt;
+class ASTContext;
 }
 
 using clang::tok::TokenKind;
@@ -66,13 +71,14 @@ class option;
 
 class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*> {
 	bool ptrOwner;
+	clang::ASTContext* clangCtx;
 
 public:
-	ValueUnion(clang::Stmt* stmt) :
-		llvm::PointerUnion<clang::Stmt*, std::string*>(stmt), ptrOwner(true) { }
+	ValueUnion(clang::Stmt* stmt, clang::ASTContext* ctx) :
+		llvm::PointerUnion<clang::Stmt*, std::string*>(stmt), ptrOwner(true), clangCtx(ctx) { }
 
 	ValueUnion(std::string const& str) :
-		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)), ptrOwner(true) { }
+		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)), ptrOwner(true), clangCtx(NULL) { }
 
 	template<class T>
 	T take() {
@@ -81,18 +87,18 @@ public:
 		return ret;
 	}
 
-	~ValueUnion() {
-//		if(ptrOwner && is<clang::Stmt*>())
-//			ClangContext::get().getASTContext().Deallocate(get<Stmt*>());
-//		if(ptrOwner && is<std::string*>())
-//			delete get<std::string*>();
-	}
+	void dump() const;
+	~ValueUnion();
 };
 
 typedef std::shared_ptr<ValueUnion> ValueUnionPtr;
 typedef std::vector<ValueUnionPtr> ValueList;
 
 class MatchMap: public std::map<std::string, ValueList> {
+public:
+	typedef std::map<std::string, ValueList>::value_type value_type;
+
+	typedef std::map<std::string, ValueList>::key_type key_type;
 };
 typedef std::pair<bool, MatchMap> MatcherResult;
 
@@ -108,6 +114,7 @@ struct node {
 	choice operator|(node const& n) const;
 	option operator!() const;
 
+	virtual node& operator()(const std::string& map_name) = 0;
 	MatcherResult match(clang::Preprocessor& PP);
 
 	virtual ~node() { }
@@ -118,6 +125,13 @@ struct val_pair: public node, public std::pair<node*, node*> {
 	val_pair(node* n1, node* n2) : std::pair<node*, node*>(n1, n2) { }
 
 	node* copy() const { return new T(*first, *second);	}
+
+	node& operator()(const std::string& map_name) {
+		(*first)(map_name);
+		(*second)(map_name);
+		return *this;
+	}
+
 	~val_pair() {
 		delete first;
 		delete second;
@@ -141,6 +155,12 @@ struct option: public node {
 	option(node const& n) : n(n.copy()) { }
 
 	node* copy() const { return new option(*n); }
+
+	node& operator()(const std::string& map_name) {
+		(*n)(map_name);
+		return *this;
+	}
+
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 	~option() { delete n; }
 };
@@ -152,18 +172,28 @@ struct star: public node {
 	star(T const& n) :	n(n.copy()) { }
 
 	node* copy() const { return new star(*n); }
+
+	node& operator()(const std::string& map_name) {
+		(*n)(map_name);
+		return *this;
+	}
+
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 	~star() { delete n;	}
 };
 
-struct expr: public node {
+struct expr_p: public node {
 	std::string map_str;
 
-	expr() { }
-	expr(std::string const& map_str) : 	map_str(map_str) { }
+	expr_p() { }
+	expr_p(std::string const& map_str) : 	map_str(map_str) { }
 
-	node* copy() const { return new expr(map_str); }
-	expr operator()(std::string const& str) { return expr(str);	}
+	node* copy() const { return new expr_p(map_str); }
+	node& operator()(const std::string& str) {
+		map_str = str;
+		return *this;
+	}
+
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 };
 
@@ -172,17 +202,20 @@ void AddToMap(TokenKind tok, clang::Token const& token, std::string const& map_s
 template<TokenKind T>
 struct t: public node {
 	std::string map_str;
+	bool addToMap;
 
-	t() : map_str() { }
-	t(std::string const& map_str) :	map_str(map_str) { }
+	t(bool addToMap = true) : map_str(), addToMap(addToMap) { }
+	t(std::string const& map_str, bool addToMap = true) : map_str(map_str), addToMap(addToMap) { }
 
 	node& operator()(std::string const& str) { map_str = str; return *this; }
-	node* copy() const { return new t<T> (map_str); }
+
+	node* copy() const { return new t<T> (map_str, addToMap); }
+	t<T> operator~() const { return t<T>(map_str, false); }
 
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
-			AddToMap(T, token, map_str, mmap);
+			if(addToMap) AddToMap(T, token, map_str, mmap);
 			return true;
 		}
 		return false;
@@ -191,10 +224,14 @@ struct t: public node {
 
 struct kwd: public t<clang::tok::identifier> {
 	std::string kw;
+	std::string map_str;
 
-	kwd(std::string const& kw) : t<clang::tok::identifier>::t(), kw(kw) { }
+	kwd(std::string const& kw) : t<clang::tok::identifier>::t(), kw(kw), map_str(kw) { }
+	kwd(std::string const& kw, std::string const& map_str) : t<clang::tok::identifier>::t(), kw(kw), map_str(map_str) { }
 
-	node* copy() const { return new kwd(kw); }
+	node* copy() const { return new kwd(kw, map_str); }
+
+	node& operator()(std::string const& str) { map_str = str; return *this; }
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 };
 
@@ -207,7 +244,7 @@ namespace tok {
 #include <clang/Basic/TokenKinds.def>
 #undef PUNCTUATOR
 #undef TOK
-static expr expr_p = expr();
+static expr_p expr = expr_p();
 
 } // End tok namespace
 } // End frontend namespace

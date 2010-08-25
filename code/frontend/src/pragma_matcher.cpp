@@ -39,12 +39,29 @@
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
 #include <clang/AST/Expr.h>
+#include "lib/Sema/Sema.h"
 
 using namespace clang;
 using namespace insieme::frontend;
 
 namespace insieme {
 namespace frontend {
+
+ValueUnion::~ValueUnion() {
+	if(ptrOwner && is<clang::Stmt*>()) {
+		assert(clangCtx && "Invalid ASTContext associated with this element.");
+		clangCtx->Deallocate(get<Stmt*>());
+	}
+	if(ptrOwner && is<std::string*>())
+		delete get<std::string*>();
+}
+
+void ValueUnion::dump() const {
+		if(is<Stmt*>())
+			get<Stmt*>()->dumpPretty(*clangCtx);
+		else
+			llvm::outs() << *get<std::string*>();
+	}
 
 MatcherResult node::match(Preprocessor& PP) {
 	MatchMap mmap;
@@ -101,7 +118,7 @@ bool option::match(Preprocessor& PP, MatchMap& mmap) const {
 	return true;
 }
 
-bool expr::match(Preprocessor& PP, MatchMap& mmap) const {
+bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
 	// ClangContext::get().getParser()->Tok.setKind(*firstTok);
 	PP.EnableBacktrackAtThisPos();
 	Expr* result = ParserProxy::get().ParseExpression(PP);
@@ -111,7 +128,9 @@ bool expr::match(Preprocessor& PP, MatchMap& mmap) const {
 		ParserProxy::get().EnterTokenStream(PP);
 		PP.LookAhead(1); // THIS IS CRAZY BUT IT WORKS
 		if (map_str.size())
-			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(result)) );
+			mmap[map_str].push_back(
+					ValueUnionPtr(new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context))
+			);
 		return true;
 	}
 	PP.Backtrack();
@@ -120,7 +139,10 @@ bool expr::match(Preprocessor& PP, MatchMap& mmap) const {
 
 bool kwd::match(Preprocessor& PP, MatchMap& mmap) const {
 	if (t<clang::tok::identifier>::match(PP, mmap) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
-		mmap[kw];
+		if(map_str == kw)
+			mmap[kw];
+		else
+			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion( kw )) );
 		return true;
 	}
 	return false;
@@ -132,7 +154,8 @@ void AddToMap(TokenKind tok, Token const& token, std::string const& map_str, Mat
 	Action& A = ParserProxy::get().getParser()->getActions();
 	switch (tok) {
 	case clang::tok::numeric_constant:
-		mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).takeAs<IntegerLiteral>())) );
+		mmap[map_str].push_back(
+				ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).takeAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)) );
 		break;
 	case clang::tok::identifier: {
 		UnqualifiedId Name;
@@ -140,14 +163,20 @@ void AddToMap(TokenKind tok, Token const& token, std::string const& map_str, Mat
 		Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
 
 		mmap[map_str].push_back(
-				ValueUnionPtr(new ValueUnion(A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>()))	);
+				ValueUnionPtr(new ValueUnion(A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+						&static_cast<clang::Sema&>(A).Context))
+				);
 		break;
 	}
 	default: {
 		if (token.isLiteral()) {
 			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(token.getLiteralData(), token.getLiteralData() + token.getLength()))) );
 		} else {
-			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(clang::tok::getTokenSimpleSpelling(tok)))) );
+			const char *name = clang::tok::getTokenSimpleSpelling(tok);
+			if(name)
+				mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(name))) );
+			else
+				mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(clang::tok::getTokenName(tok)))) );
 		}
 		break;
 	}

@@ -11,8 +11,8 @@ set(CMAKE_CXX_FLAGS "-g -Wall -fmessage-length=0 -fno-rtti")
 cmake_minimum_required(VERSION 2.6)
 
 # collect source files 
-file(GLOB insieme_frontend_srcs 	src/*.cpp src/utils/*.cpp)
-file(GLOB insieme_frontend_incs	include/*.h include/utils/*.h)
+file(GLOB insieme_frontend_srcs 	src/*.cpp src/omp/*.cpp src/utils/*.cpp)
+file(GLOB insieme_frontend_incs	include/*.h)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/clang_config.h)
 

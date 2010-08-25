@@ -42,6 +42,10 @@
 
 #include "clang_config.h"
 
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/DiagnosticOptions.h"
@@ -73,6 +77,37 @@ using namespace clang;
 using namespace insieme::frontend;
 
 ParserProxy* ParserProxy::currParser = NULL;
+
+Expr* ParserProxy::ParseExpression(Preprocessor& PP) {
+	PP.Lex(mParser->Tok);
+
+	Parser::OwningExprResult ownedResult = mParser->ParseExpression();
+	Expr* result = ownedResult.takeAs<Expr> ();
+	return result;
+}
+
+void ParserProxy::EnterTokenStream(Preprocessor& PP) {
+	// DEBUG(ClangContext::get().getParser()->Tok.getName());
+	PP.EnterTokenStream(&(CurrentToken()), 1, true, false);
+}
+
+Token& ParserProxy::ConsumeToken() {
+	mParser->ConsumeAnyToken();
+	// Token token = PP.LookAhead(0);
+	// DEBUG(token.getName());
+	// if(token.isLiteral())
+	//	DEBUG( std::string(token.getLiteralData(),
+	//		token.getLiteralData()+token.getLength()) );
+	return CurrentToken();
+}
+
+clang::Scope* ParserProxy::CurrentScope() {
+	return mParser->CurScope;
+}
+
+Token& ParserProxy::CurrentToken() {
+	return mParser->Tok;
+}
 
 namespace insieme {
 namespace frontend {
@@ -195,16 +230,21 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
+#include "omp/omp_pragma.h"
+
 InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_name) {
 	InsiemeIRConsumer cons;
 	PragmaList PL;
 
-	mClang.getPreprocessor().AddPragmaHandler("insieme", PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>(
-		"insieme", mClang.getPreprocessor().getIdentifierInfo("inline"),
-		!(tok::l_paren >>								// 	'('
-		tok::numeric_constant("LEVEL") >> 				//	LEVEL
-		tok::r_paren) >> tok::eom						//	')' eom
-	));
+	// register omp pragmas
+	OmpPragma::RegisterPragmaHandlers(mClang.getPreprocessor());
+
+//	mClang.getPreprocessor().AddPragmaHandler("insieme", PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>(
+//		"insieme", mClang.getPreprocessor().getIdentifierInfo("inline"),
+//		!(tok::l_paren >>								// 	'('
+//		tok::numeric_constant("LEVEL") >> 				//	LEVEL
+//		tok::r_paren) >> tok::eom						//	')' eom
+//	));
 
 	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, PL);
 

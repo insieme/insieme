@@ -36,6 +36,9 @@
 
 #include "utils/source_locations.h"
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/SourceManager.h>
 
