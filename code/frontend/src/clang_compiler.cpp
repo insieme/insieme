@@ -40,6 +40,8 @@
 #include "insieme_sema.h"
 #include "pragma_handler.h"
 
+#include "omp/omp_pragma.h"
+
 #include "clang_config.h"
 
 // defines which are needed by LLVM
@@ -230,14 +232,12 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-#include "omp/omp_pragma.h"
-
 InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_name) {
 	InsiemeIRConsumer cons;
 	PragmaList PL;
 
 	// register omp pragmas
-	OmpPragma::RegisterPragmaHandlers(mClang.getPreprocessor());
+	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );
 
 //	mClang.getPreprocessor().AddPragmaHandler("insieme", PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>(
 //		"insieme", mClang.getPreprocessor().getIdentifierInfo("inline"),
