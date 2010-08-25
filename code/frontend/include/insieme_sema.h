@@ -59,6 +59,9 @@ class InsiemeSema: public clang::Sema{
 	InsiemeSemaImpl* pimpl;
 
 	bool isInsideFunctionDef;
+
+	void matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm, PragmaList& matched);
+
 public:
 	InsiemeSema (PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer, bool CompleteTranslationUnit = true,
 				 clang::CodeCompleteConsumer* CompletionConsumer = 0);
@@ -70,7 +73,7 @@ public:
 	OwningStmtResult ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, DeclPtrTy CondVar, StmtArg ThenVal, SourceLocation ElseLoc, StmtArg ElseVal);
 
 	OwningStmtResult ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, StmtArg First, FullExprArg Second, DeclPtrTy SecondVar, FullExprArg Third,
-								SourceLocation 	RParenLoc, StmtArg Body);
+						  		  SourceLocation RParenLoc, StmtArg Body);
 								  
 	DeclPtrTy ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D);
 	

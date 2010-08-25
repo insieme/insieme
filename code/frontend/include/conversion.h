@@ -39,27 +39,19 @@
 #include "pragma_handler.h"
 #include "clang/AST/ASTConsumer.h"
 
-class InsiemeIRConsumer: public clang::ASTConsumer{ };
+class InsiemeIRConsumer: public clang::ASTConsumer { };
 
-namespace insieme{
+namespace insieme {
 
-class InlinePragma: public frontend::Pragma{
-    unsigned mLevel;
-
+class InlinePragma: public frontend::Pragma {
+	unsigned mLevel;
 public:
-    InlinePragma(clang::SourceLocation const& startLoc,
-    		clang::SourceLocation const& endLoc,
-			std::string const& 	  name,
-			frontend::MatchMap const& 	  mmap);
+	InlinePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name,
+			const frontend::MatchMap& mmap);
 
-	void dump() const {
-			llvm::outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
-							"|-> Pragma: " << getType() << " : " << mLevel << " " << toString() << "\n";
-	}
-
+	void dump() const;
 	unsigned const& level() const { return mLevel; }
-
-	~InlinePragma(){ }
+	~InlinePragma() { }
 };
 
 void RegisterPragmaHandlers(clang::Preprocessor& pp);

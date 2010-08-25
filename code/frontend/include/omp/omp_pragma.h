@@ -35,32 +35,11 @@
  */
 
 #pragma once
+#include "pragma_handler.h"
 
-#include <string>
+class OmpPragma: public insieme::frontend::Pragma {
+public:
+	OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name, const insieme::frontend::MatchMap& mmap);
 
-namespace clang {
-class SourceLocation;
-class SourceRange;
-class SourceManager;
-}
-
-namespace insieme {
-namespace frontend {
-namespace util {
-
-std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
-
-std::string FileId(clang::SourceLocation const& l, clang::SourceManager const& sm);
-
-unsigned Line(clang::SourceLocation const& l, clang::SourceManager const& sm);
-
-std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, clang::SourceManager const& sm);
-
-unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
-
-std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
-
-} // End util namespace
-} // End frontend namespace
-} // End insieme namespace
-
+	static void RegisterPragmaHandlers(clang::Preprocessor& pp);
+};

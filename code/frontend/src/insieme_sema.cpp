@@ -49,37 +49,6 @@ using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::util;
 
-Expr* ParserProxy::ParseExpression(Preprocessor& PP) {
-	PP.Lex(mParser->Tok);
-
-	Parser::OwningExprResult ownedResult = mParser->ParseExpression();
-	Expr* result = ownedResult.takeAs<Expr> ();
-	return result;
-}
-
-void ParserProxy::EnterTokenStream(Preprocessor& PP) {
-	// DEBUG(ClangContext::get().getParser()->Tok.getName());
-	PP.EnterTokenStream(&(CurrentToken()), 1, true, false);
-}
-
-Token& ParserProxy::ConsumeToken() {
-	mParser->ConsumeAnyToken();
-	// Token token = PP.LookAhead(0);
-	// DEBUG(token.getName());
-	// if(token.isLiteral())
-	//	DEBUG( std::string(token.getLiteralData(),
-	//		token.getLiteralData()+token.getLength()) );
-	return CurrentToken();
-}
-
-clang::Scope* ParserProxy::CurrentScope() {
-	return mParser->CurScope;
-}
-
-Token& ParserProxy::CurrentToken() {
-	return mParser->Tok;
-}
-
 namespace insieme {
 namespace frontend {
 
@@ -92,14 +61,11 @@ struct InsiemeSema::InsiemeSemaImpl {
 	}
 };
 
-InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt,
-		clang::ASTConsumer& consumer, bool CompleteTranslationUnit, clang::CodeCompleteConsumer* CompletionConsumer) :
+InsiemeSema::InsiemeSema(PragmaList& pragma_list, Preprocessor& pp, ASTContext& ctxt, ASTConsumer& consumer, bool CompleteTranslationUnit,
+						 CodeCompleteConsumer* CompletionConsumer) :
+	Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
 
-	Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer),
-			pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) {
-}
-
-bool isInsideRange(clang::SourceRange SR, clang::SourceLocation SL, clang::SourceManager const& sm) {
+bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
 	// DEBUG("(" << sloc::Line(SR).first << ", " << sloc::Line(SR).second << ") <- " << sloc::Line(SL));
 	return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 }
@@ -130,13 +96,9 @@ class PragmaFilter {
 
 public:
 	PragmaFilter(SourceRange const& bounds, SourceManager const& sm, std::list<PragmaPtr>& pragma_list) :
-		bounds(bounds), sm(sm), I(pragma_list.rbegin()), E(pragma_list.rend()) {
-		inc(true);
-	}
+		bounds(bounds), sm(sm), I(pragma_list.rbegin()), E(pragma_list.rend()) { inc(true); }
 
-	void operator++() {
-		inc(false);
-	}
+	void operator++() {	inc(false); }
 
 	PragmaPtr operator*() const {
 		if (I == E)
@@ -146,13 +108,10 @@ public:
 		return PragmaPtr();
 	}
 
-	bool operator!=(PragmaFilter const& other) const {
-		return I == other.I;
-	}
+	bool operator!=(PragmaFilter const& other) const { return I == other.I; }
 };
 
-clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-		clang::Sema::MultiStmtArg Elts, bool isStmtExpr) {
+clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R, Sema::MultiStmtArg Elts, bool isStmtExpr) {
 	// DEBUG("{InsiemeSema}: ActOnCompoundStmt()");
 	clang::Sema::OwningStmtResult ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
 	CompoundStmt* CS = (CompoundStmt*) ret.get();
@@ -172,11 +131,11 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 					P->setStatement(Prev);
 					matched.push_back(P);
 				} else {
-					// add a ';'
+					// add a ';' (NullStmt) before the end of the block in order to associate the pragma
 					Stmt** stmts = new Stmt*[CS->size() + 1];
 
-					CompoundStmt* newCS = new (Context) CompoundStmt(Context, stmts, CS->size() + 1,
-							CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
+					CompoundStmt* newCS =
+							new (Context) CompoundStmt(Context, stmts, CS->size() + 1, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
 
 					std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
 					CompoundStmt::body_iterator it = newCS->body_begin();
@@ -211,9 +170,9 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 	return clang::move(ret);
 }
 
-void MatchStmt(Stmt* S, SourceRange bounds, SourceManager const& sm, std::list<PragmaPtr>& pending, PragmaList& matched) {
+void InsiemeSema::matchStmt(Stmt* S, const SourceRange& bounds, const SourceManager& sm, PragmaList& matched) {
 
-	for (PragmaFilter filter = PragmaFilter(bounds, sm, pending); *filter; ++filter) {
+	for (PragmaFilter filter = PragmaFilter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter) {
 		PragmaPtr P = *filter;
 
 		P->setStatement(S);
@@ -221,43 +180,40 @@ void MatchStmt(Stmt* S, SourceRange bounds, SourceManager const& sm, std::list<P
 	}
 }
 
-clang::Sema::OwningStmtResult InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal,
-		clang::Sema::DeclPtrTy CondVar, clang::Sema::StmtArg ThenVal, SourceLocation ElseLoc,
-		clang::Sema::StmtArg ElseVal) {
+clang::Sema::OwningStmtResult
+InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, Sema::DeclPtrTy CondVar, Sema::StmtArg ThenVal, SourceLocation ElseLoc,
+	Sema::StmtArg ElseVal) {
 	// DEBUG("{InsiemeSema}: ActOnIfStmt()");
-	clang::Sema::OwningStmtResult ret = Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc,
-			clang::move(ElseVal));
+	clang::Sema::OwningStmtResult ret = Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
 
 	IfStmt* ifStmt = (IfStmt*) ret.get();
 	PragmaList matched;
 
 	// is there any pragmas to be associated with the 'then' statement of this if?
 	if (!isa<CompoundStmt> (ifStmt->getThen()))
-		MatchStmt(ifStmt->getThen(), SourceRange(IfLoc, ElseLoc), SourceMgr, pimpl->pending_pragma, matched);
+		matchStmt(ifStmt->getThen(), SourceRange(IfLoc, ElseLoc), SourceMgr, matched);
 
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();
 
 	// is there any pragmas to be associated with the 'else' statement of this if?
 	if (ifStmt->getElse() && !isa<CompoundStmt> (ifStmt->getElse()))
-		MatchStmt(ifStmt->getElse(), SourceRange(ElseLoc, ifStmt->getSourceRange().getEnd()), SourceMgr,
-				pimpl->pending_pragma, matched);
+		matchStmt(ifStmt->getElse(), SourceRange(ElseLoc, ifStmt->getSourceRange().getEnd()), SourceMgr, matched);
 
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	return clang::move(ret);
 }
 
-clang::Sema::OwningStmtResult InsiemeSema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
-		clang::Sema::StmtArg First, clang::Sema::FullExprArg Second, clang::Sema::DeclPtrTy SecondVar,
-		clang::Sema::FullExprArg Third, SourceLocation RParenLoc, clang::Sema::StmtArg Body) {
+clang::Sema::OwningStmtResult
+InsiemeSema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, Sema::StmtArg First, Sema::FullExprArg Second, Sema::DeclPtrTy SecondVar,
+	Sema::FullExprArg Third, SourceLocation RParenLoc, Sema::StmtArg Body) {
 	// DEBUG("{InsiemeSema}: ActOnForStmt()");
-	clang::Sema::OwningStmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar,
-			Third, RParenLoc, clang::move(Body));
+	Sema::OwningStmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
 
 	ForStmt* forStmt = (ForStmt*) ret.get();
 	PragmaList matched;
 	if (!isa<CompoundStmt> (forStmt->getBody()))
-		MatchStmt(forStmt->getBody(), forStmt->getSourceRange(), SourceMgr, pimpl->pending_pragma, matched);
+		matchStmt(forStmt->getBody(), forStmt->getSourceRange(), SourceMgr, matched);
 
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();
@@ -275,7 +231,7 @@ clang::Sema::DeclPtrTy InsiemeSema::ActOnStartOfFunctionDef(Scope *FnBodyScope, 
 	return Sema::ActOnStartOfFunctionDef(FnBodyScope, D);
 }
 
-clang::Sema::DeclPtrTy InsiemeSema::ActOnFinishFunctionBody(clang::Sema::DeclPtrTy Decl, clang::Sema::StmtArg Body) {
+clang::Sema::DeclPtrTy InsiemeSema::ActOnFinishFunctionBody(Sema::DeclPtrTy Decl, Sema::StmtArg Body) {
 	// DEBUG("{InsiemeSema}: ActOnFinishFunctionBody()");
 	DeclPtrTy ret = Sema::ActOnFinishFunctionBody(Decl, clang::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
