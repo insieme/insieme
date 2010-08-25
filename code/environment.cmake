@@ -76,11 +76,9 @@ if (NOT MEMORY_CHECK_SETUP)
 
 	# define macro for adding tests
 	macro ( add_unit_test case_name )
-		# add normal test
-		add_test(ut_${case_name} ut_${case_name})
-		# no valgrind support 
-		if(NOT MSVC)
-			if(CONDUCT_MEMORY_CHECKS)
+		if(CONDUCT_MEMORY_CHECKS)
+			# no valgrind support in MSVC 
+			if(NOT MSVC)
 				# add valgrind as a test
 				add_test(NAME valgrind_${case_name} 
 					COMMAND valgrind
@@ -93,7 +91,13 @@ if (NOT MEMORY_CHECK_SETUP)
 					WORKING_DIRECTORY
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
-			else(CONDUCT_MEMORY_CHECKS)
+			endif(NOT MSVC)
+		else(CONDUCT_MEMORY_CHECKS)
+			# add normal test
+			add_test(ut_${case_name} ut_${case_name})
+
+			# no valgrind support in MSVC
+			if(NOT MSVC)
 				# add valgrind as seperated target
 				add_custom_target(valgrind_${case_name})
 				add_custom_command(TARGET valgrind_${case_name} 
@@ -108,8 +112,8 @@ if (NOT MEMORY_CHECK_SETUP)
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
 				add_dependencies(valgrind valgrind_${case_name})
-			endif(CONDUCT_MEMORY_CHECKS)
-		endif(NOT MSVC)
+			endif(NOT MSVC)
+		endif(CONDUCT_MEMORY_CHECKS)
 	endmacro(add_unit_test)
 
 
