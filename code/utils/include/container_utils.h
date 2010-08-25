@@ -155,6 +155,30 @@ bool any(const ContainerType& list, const Function& predicate) {
 	return any(list.cbegin(), list.cend(), predicate);
 }
 
+/** Combines the hash value of each value element in the supplied range of pointers with seed.
+ *
+ *  @param seed hash value (MODIFIED)
+ *  @param first range start
+ *  @param last range end
+ */
+template<class InputIterator>
+void hashPtrRange(size_t& seed, InputIterator first, InputIterator last) {
+	while (first != last) {
+		boost::hash_combine(seed, hash_value(**first));
+		++first;
+	}
+}
+
+/** Combines the hash value of each value element in the supplied list of pointers with seed.
+ *
+ *  @param seed hash value (MODIFIED)
+ *  @param container iteratable container filled with pointers to value elements
+ */
+template<class ContainerType>
+void hashPtrRange(size_t& seed, const ContainerType& container) {
+	hashPtrRange(seed, container.cbegin(), container.cend());
+}
+
 /**
  * Checks whether the given range includes duplicated values.
  * The complexity of this operation is at most O(n). It aborts as soon

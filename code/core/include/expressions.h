@@ -51,8 +51,20 @@ typedef AnnotatedPtr<const Expression> ExprPtr;
 class IntLiteral;
 typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
 
+class FloatLiteral;
+typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
+
+class BoolLiteral;
+typedef AnnotatedPtr<const BoolLiteral> BoolLiteralPtr;
+
 class VariableExpr;
 typedef AnnotatedPtr<const VariableExpr> VarExprPtr;
+
+class ParameterExpr;
+typedef AnnotatedPtr<const ParameterExpr> ParamExprPtr;
+
+class LambdaExpr;
+typedef AnnotatedPtr<const LambdaExpr> LambdaExprPtr;
 
 class CallExpr;
 typedef AnnotatedPtr<const CallExpr> CallExprPtr;
@@ -65,7 +77,8 @@ typedef AnnotatedPtr<const CastExpr> CastExprPtr;
 class Expression : public Statement {
 protected:	
 	enum {
-		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR
+		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
+		HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR
 	};
 
 	/** The type of the represented expression. */
@@ -106,9 +119,7 @@ public:
 };
 
 class IntLiteral : public Literal<int> {
-	unsigned short bytes;
-
-	IntLiteral(const TypePtr& type, int val, unsigned short bytes) : Literal<int>(type, val), bytes(bytes) { }
+	IntLiteral(const TypePtr& type, int val) : Literal<int>(type, val) { }
 	virtual IntLiteral* clone(StatementManager& manager) const;
 	
 public:
@@ -119,33 +130,42 @@ public:
 	static IntLiteralPtr zero(StatementManager& manager) { return get(manager, 0); }
 };
 
-//class FloatLiteral : public Literal<double> {
-//	string originalString;
-//public:
-//	// TODO: fix null type
-//	FloatLiteral(const double val, const string& originalString) : Literal(NULL, val), originalString(originalString) { }
-//};
-//
-//class BooleanLiteral : public Literal<bool> {
-//public:
-//	// TODO: fix null type
-//	BooleanLiteral(const bool val) : Literal(NULL, val) { }
-//};
-//
+class FloatLiteral : public Literal<double> {
+	const string originalString;
+
+	FloatLiteral(const TypePtr& type, double val, const string& originalString)
+		: Literal<double>(type, val), originalString(originalString) { }
+	virtual FloatLiteral* clone(StatementManager& manager) const;
+
+public:
+	virtual std::size_t hash() const;
+
+	static FloatLiteralPtr get(StatementManager& manager, double value, unsigned short bytes = 8);
+	static FloatLiteralPtr get(StatementManager& manager, const string& from, unsigned short bytes = 8);
+};
+
+class BoolLiteral : public Literal<bool> {
+	BoolLiteral(const TypePtr& type, bool val) : Literal<bool>(type, val) { }
+	virtual BoolLiteral* clone(StatementManager& manager) const;
+	
+public:
+	virtual std::size_t hash() const;
+
+	static BoolLiteralPtr get(StatementManager& manager, bool value);
+};
+
 //class StringLiteral : public Literal<string> {
 //public:
 //	// TODO: fix null type
 //	StringLiteral(const string& val) : Literal(NULL, val) { }
 //};
 
-
 class VariableExpr : public Expression {
+protected:
 	const Identifier id;
 	
     VariableExpr(const TypePtr& type, const Identifier& id) : Expression(type), id(id) { };
 	virtual VariableExpr* clone(StatementManager& manager) const;
-
-protected:
 	bool equalsExpr(const Expression& expr) const;
 
 public:
@@ -155,9 +175,40 @@ public:
 	static VarExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
 };
 
-//class LambdaExpression : public Expression {
-//
-//};
+
+class ParameterExpr : public VariableExpr {
+	ParameterExpr(const TypePtr& type, const Identifier& id) : VariableExpr(type, id) { };
+	virtual ParameterExpr* clone(StatementManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static ParamExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
+};
+
+
+class LambdaExpr : public Expression {
+public:
+	typedef vector<ParamExprPtr> ParamList;
+
+private:
+	const StmtPtr body;
+	const ParamList params;
+
+	LambdaExpr(const TypePtr& type, const ParamList& params, const StmtPtr& body) 
+		: Expression(type), body(body), params(params) { };
+	virtual LambdaExpr* clone(StatementManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static LambdaExprPtr get(StatementManager& manager, const TypePtr& type, const ParamList& params, const StmtPtr& body);
+};
 
 
 class CallExpr : public Expression {

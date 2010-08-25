@@ -54,7 +54,7 @@ std::ostream& operator<<(std::ostream& out, const Expression& expression) {
 // ------------------------------------- IntLiteral ---------------------------------
 
 IntLiteral* IntLiteral::clone(StatementManager& manager) const {
-	return new IntLiteral(manager.getTypeManager().get(type), value, bytes);
+	return new IntLiteral(manager.getTypeManager().get(type), value);
 }
 
 std::size_t IntLiteral::hash() const {
@@ -65,7 +65,47 @@ std::size_t IntLiteral::hash() const {
 }
 
 IntLiteralPtr IntLiteral::get(StatementManager& manager, int value, unsigned short bytes) {
-	return manager.get(IntLiteral(IntType::get(manager.getTypeManager(), bytes), value, bytes));
+	return manager.get(IntLiteral(IntType::get(manager.getTypeManager(), bytes), value));
+}
+
+// ------------------------------------- FloatLiteral ---------------------------------
+
+FloatLiteral* FloatLiteral::clone(StatementManager& manager) const {
+	return new FloatLiteral(manager.getTypeManager().get(type), value, originalString);
+}
+
+std::size_t FloatLiteral::hash() const {
+	size_t seed = HASHVAL_FLOATLITERAL;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, boost::hash_value(value));
+	boost::hash_combine(seed, boost::hash_value(originalString));
+	return seed;
+}
+
+FloatLiteralPtr FloatLiteral::get(StatementManager& manager, double value, unsigned short bytes) {
+	return manager.get(FloatLiteral(FloatType::get(manager.getTypeManager(), bytes), value, toString(value)));
+}
+
+FloatLiteralPtr FloatLiteral::get(StatementManager& manager, const string& from, unsigned short bytes) {
+	// TODO atof good idea? What about hex/octal/etc
+	return manager.get(FloatLiteral(FloatType::get(manager.getTypeManager(), bytes), atof(from.c_str()), from));
+}
+
+// ------------------------------------- BoolLiteral ---------------------------------
+
+BoolLiteral* BoolLiteral::clone(StatementManager& manager) const {
+	return new BoolLiteral(manager.getTypeManager().get(type), value);
+}
+	
+std::size_t BoolLiteral::hash() const {
+	size_t seed = HASHVAL_BOOLLITERAL;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, boost::hash_value(value));
+	return seed;
+}
+
+BoolLiteralPtr BoolLiteral::get(StatementManager& manager, bool value) {
+	return manager.get(BoolLiteral(BoolType::get(manager.getTypeManager()), value));
 }
 
 // ------------------------------------- VariableExpr ---------------------------------
@@ -93,6 +133,55 @@ std::size_t VariableExpr::hash() const {
 
 VarExprPtr VariableExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
 	return manager.get(VariableExpr(type, id));
+}
+
+// ------------------------------------- ParameterExpr ---------------------------------
+
+ParameterExpr* ParameterExpr::clone(StatementManager& manager) const {
+	return new ParameterExpr(manager.getTypeManager().get(type), id);
+}
+
+void ParameterExpr::printTo(std::ostream& out) const {
+	out << *type << id;
+}
+	
+std::size_t ParameterExpr::hash() const {
+	size_t seed = HASHVAL_PARAMEXPR;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, id.hash());
+	return seed;
+}
+
+ParamExprPtr ParameterExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+	return manager.get(ParameterExpr(type, id));
+}
+
+// ------------------------------------- LambdaExpr ---------------------------------
+
+LambdaExpr* LambdaExpr::clone(StatementManager& manager) const {
+	return new LambdaExpr(manager.getTypeManager().get(type), manager.getAll(params), manager.get(body));
+}
+
+bool LambdaExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const LambdaExpr& rhs = dynamic_cast<const LambdaExpr&>(expr);
+	return (*body == *rhs.body) && std::equal(params.cbegin(), params.cend(), rhs.params.cbegin(), equal_target<ExprPtr>());
+}
+
+void LambdaExpr::printTo(std::ostream& out) const {
+	out << "lambda(";
+	joinTo(out, ", ", params);
+	out << ") { " << body << " }";
+}
+
+std::size_t LambdaExpr::hash() const {
+	size_t seed = HASHVAL_LAMBDAEXPR;
+	hashPtrRange(seed, params);
+	return seed;
+}
+
+LambdaExprPtr LambdaExpr::get(StatementManager& manager, const TypePtr& type, const ParamList& params, const StmtPtr& body) {
+	return manager.get(LambdaExpr(type, params, body));
 }
 
 // ------------------------------------- CallExpr ---------------------------------
