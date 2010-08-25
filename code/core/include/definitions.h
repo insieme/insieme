@@ -160,7 +160,7 @@ public:
 	 * @param definition the expression providing a definition of the value, may be NULL if external.
 	 * @param external a flag indicating whether the definition to be looking for is externally defined / used.
 	 */
-	static DefinitionPtr get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition, bool external);
+	static DefinitionPtr get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition = NULL, bool external = false);
 
 	/**
 	 * A static factory method which will only look up a definition. The given name and type will be taken to obtain

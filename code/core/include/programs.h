@@ -38,7 +38,9 @@
 
 #include <memory>
 #include <ostream>
-#include <unordered_set>
+//#include <unordered_set>
+
+#include <boost/unordered_set.hpp>
 
 #include "container_utils.h"
 #include "expressions.h"
@@ -52,7 +54,7 @@
 class Program;
 typedef std::shared_ptr<Program> ProgramPtr;
 
-class ProgramData {
+class ProgramDataManager {
 
 	TypeManager typeManager;
 	StatementManager stmtManager;
@@ -61,8 +63,20 @@ class ProgramData {
 	// TODO: add lookup table for variables!!
 
 public:
-	ProgramData() : typeManager(), stmtManager(typeManager), definitionManager(stmtManager) {}
+	ProgramDataManager() : typeManager(), stmtManager(typeManager), definitionManager(stmtManager) {}
 
+
+	operator TypeManager&() {
+		return typeManager;
+	}
+
+	operator StatementManager&() {
+		return stmtManager;
+	}
+
+	operator DefinitionManager&() {
+		return definitionManager;
+	}
 
 	TypeManager& getTypeManager() {
 		return typeManager;
@@ -88,24 +102,24 @@ public:
 	 * The type used to share statement/type nodes and information among multiple
 	 * program versions.
 	 */
-	typedef std::shared_ptr<ProgramData> SharedProgramData;
+	typedef std::shared_ptr<ProgramDataManager> SharedDataManager;
 
 	/**
 	 * The type used to represent the list of top level definitions.
 	 */
-	typedef std::unordered_set<DefinitionPtr, hash_target<DefinitionPtr>, equal_target<DefinitionPtr>> DefinitionSet;
+	typedef boost::unordered_set<DefinitionPtr, hash_target<DefinitionPtr>, equal_target<DefinitionPtr>> DefinitionSet;
 
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef std::unordered_set<ExprPtr, hash_target<ExprPtr>, equal_target<ExprPtr>> EntryPointSet;
+	typedef boost::unordered_set<ExprPtr, hash_target<ExprPtr>, equal_target<ExprPtr>> EntryPointSet;
 
 private:
 
 	/**
 	 * The shared data manager used to maintain nodes within this AST.
 	 */
-	const SharedProgramData sharedData;
+	const SharedDataManager dataManager;
 
 	/**
 	 * The set of definitions represented by this AST. Each definition
@@ -125,17 +139,17 @@ private:
 	/**
 	 * Creates a new AST based on the given data.
 	 *
-	 * @param sharedData shared data manager to be used to maintain definitions, AST nodes and types.
+	 * @param dataManager shared data manager to be used to maintain definitions, AST nodes and types.
 	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedProgramData sharedData, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
-		sharedData(sharedData), definitions(definitions), entryPoints(entryPoints) { };
+	Program(SharedDataManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
+		dataManager(dataManager), definitions(definitions), entryPoints(entryPoints) { };
 
 	/**
 	 * Creates a new AST using a fresh AST data instance.
 	 */
-	Program() : sharedData(SharedProgramData(new ProgramData())) {}
+	Program() : dataManager(SharedDataManager(new ProgramDataManager())) {}
 
 public:
 
@@ -167,7 +181,9 @@ public:
 
 	ProgramPtr remEntryPoints(const EntryPointSet& definitions) const;
 
-
+	SharedDataManager getDataManager() {
+		return dataManager;
+	}
 
 	// TODO: add consistency check routine!!
 	//   - check: all names defined in scope

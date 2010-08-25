@@ -47,7 +47,7 @@ using namespace insieme::utils::set;
 
 
 ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(SharedProgramData(new ProgramData()), definitions, entryPoints));
+	return ProgramPtr(new Program(SharedDataManager(new ProgramDataManager()), definitions, entryPoints));
 }
 
 ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
@@ -55,7 +55,7 @@ ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::addDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(sharedData, merge(this->definitions, sharedData->getDefinitionManager().getAll(definitions)), entryPoints));
+	return ProgramPtr(new Program(dataManager, merge(this->definitions, dataManager->getDefinitionManager().getAll(definitions)), entryPoints));
 }
 
 ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
@@ -63,7 +63,7 @@ ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::remDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(sharedData, difference(this->definitions, definitions), entryPoints));
+	return ProgramPtr(new Program(dataManager, difference(this->definitions, definitions), entryPoints));
 }
 
 
@@ -72,7 +72,7 @@ ProgramPtr Program::addEntryPoint(const ExprPtr& entryPoint) const {
 }
 
 ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(sharedData, definitions, merge(this->entryPoints, sharedData->getStatementManager().getAll(entryPoints))));
+	return ProgramPtr(new Program(dataManager, definitions, merge(this->entryPoints, dataManager->getStatementManager().getAll(entryPoints))));
 }
 
 ProgramPtr Program::remEntryPoint(const ExprPtr& entryPoint) const {
@@ -80,7 +80,7 @@ ProgramPtr Program::remEntryPoint(const ExprPtr& entryPoint) const {
 }
 
 ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(sharedData, definitions, difference(this->entryPoints, entryPoints)));
+	return ProgramPtr(new Program(dataManager, definitions, difference(this->entryPoints, entryPoints)));
 }
 
 
@@ -92,6 +92,12 @@ bool compareEntryPoints(const ExprPtr& exprA, const ExprPtr& exprB) {
 	return toString(exprA) < toString(exprB);
 }
 
+bool compareTypes(const TypePtr& typeA, const TypePtr& typeB) {
+	return toString(typeA) < toString(typeB);
+}
+
+std::vector<GenericTypePtr> getAllGenericTypes(const Program& program);
+
 std::ostream& operator<<(std::ostream& out, const Program& program) {
 
 	typedef std::vector<DefinitionPtr> DefinitionList;
@@ -100,7 +106,8 @@ std::ostream& operator<<(std::ostream& out, const Program& program) {
 	out << "PROGRAM { \n";
 
 	// print generic type definitions
-	out << "// Generic Types: \n";
+	out << "// Types: \n";
+	out << "\n";
 
 	// TODO: filter generic types and print them in alphabetical order
 
@@ -110,12 +117,12 @@ std::ostream& operator<<(std::ostream& out, const Program& program) {
 	defList.insert(defList.end(),defSet.cbegin(), defSet.cend());
 	sort(defList.begin(), defList.end(), compareDefinitions);
 
-	out << "// Definitions: \n";
+	out << "// Definitions:" << endl;
 	for_each(defList.cbegin(), defList.cend(),
 		[&out](const DefinitionPtr& cur) {
-			out << *cur;
+			out << *cur << endl;
 	});
-	out << "\n";
+	out << endl;
 
 	// print entry points
 	const Program::EntryPointSet& entryPoints = program.getEntryPoints();
@@ -123,14 +130,25 @@ std::ostream& operator<<(std::ostream& out, const Program& program) {
 	entryList.insert(entryList.end(), entryPoints.cbegin(), entryPoints.cend());
 	sort(entryList.begin(), entryList.end(), compareEntryPoints);
 
-	out << "// Entry Points: \n";
+	out << "// Entry Points:" << endl;
 	for_each(entryList.cbegin(), entryList.cend(),
 		[&out](const ExprPtr& cur) {
-			out << *cur;
+			out << *cur << endl;
 	});
-	out << "\n";
+	out << endl;
 
-	out << "}\n";
+	out << "}" << endl;
 
 	return out;
+}
+
+
+
+std::vector<GenericTypePtr> getAllGenericTypes(const Program& program) {
+
+	std::vector<GenericTypePtr> res;
+
+
+
+	return res;
 }

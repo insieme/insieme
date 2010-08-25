@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
 #include <boost/functional/hash.hpp>
 
 #include "identifiers.h"
@@ -89,4 +90,11 @@ TEST(TypeTest, DuplicateTest) {
 
 }
 
+TEST(TypeTest, HashCodeTest) {
 
+	Identifier identA("a");
+	Identifier identB(std::string("a"));
+
+	EXPECT_EQ (identA.hash(), identB.hash());
+
+}

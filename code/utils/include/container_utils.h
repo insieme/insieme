@@ -48,6 +48,7 @@
 #include <boost/utility/enable_if.hpp>
 
 #include "string_utils.h"
+#include "iterator_utils.h"
 
 using std::vector;
 using std::function;
@@ -81,6 +82,20 @@ template<typename T, typename B>
 typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, const vector<B>& source) {
 	// add all elements of the source to the end of the target
 	copy(source.cbegin(), source.cend(), back_inserter(target));
+}
+
+template<typename List>
+bool equal(List a, List b) {
+	typedef typename List::const_iterator iter;
+	typedef std::pair<typename iter::value_type, typename iter::value_type> valuePair;
+
+	if (a.size() != b.size()) {
+		return false;
+	}
+
+	auto start = paired_iterator<iter,iter>(a.cbegin(), b.cbegin());
+	auto end = paired_iterator<iter,iter>(a.cend(), b.cend());
+	return all(start, end, [](const valuePair& cur) { return cur.first == cur.second; });
 }
 
 

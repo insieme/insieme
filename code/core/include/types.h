@@ -275,6 +275,12 @@ class Type: public Visitable<TypePtr> {
 	 */
 	friend class InstanceManager<Type, AnnotatedPtr>;
 
+	/**
+	 * Allow the test case to access private methods.
+	 */
+	template<typename PT>
+	friend void basicTypeTests(PT, bool, bool, vector<TypePtr> children = vector<TypePtr>());
+
 public:
 
 	/**
