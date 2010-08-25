@@ -67,11 +67,12 @@ TEST(StatementsTest, Management) {
 	EXPECT_EQ (5, stmtMan2.size());
 
 	DepthFirstVisitor<StmtPtr> stmt2check([&](StmtPtr cur) {
-		EXPECT_TRUE(stmtMan2.contains(cur));
+		EXPECT_TRUE(stmtMan2.addressesLocal(cur));
 	});
 	stmt2check.visit(bSCVec2);
-
-	EXPECT_FALSE(stmtMan.contains(bSCVec2));
+	
+	EXPECT_FALSE(stmtMan.addressesLocal(bSCVec2));
+	EXPECT_TRUE(stmtMan.contains(bSCVec2));
 }
 
 TEST(StatementsTest, CreationAndIdentity) {

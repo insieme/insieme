@@ -136,7 +136,7 @@ class InstanceManager : private boost::noncopyable {
 	 * @return a pointer to a clone of the given instance of the same type
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>,S*>::type clone(const S* instance) {
+	typename boost::enable_if<boost::is_base_of<T,S>,S*>::type clone(const S* instance) {
 		//  step 1 - cast to base type (since only this one allows us to clone it)
 		const T* orig = instance;
 		//  step 2 - clone
@@ -172,7 +172,7 @@ public:
 	 *			and added, if false a identical element was already present.
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S* instance) {
+	typename boost::enable_if<boost::is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S* instance) {
 		// test whether there is already an identical element
 		auto res = storage.find(instance);
 		if (res != storage.end()) {
@@ -224,12 +224,12 @@ public:
 	 *			and added, if false a identical element was already present.
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S& instance) {
+	typename boost::enable_if<boost::is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S& instance) {
 		return add(&instance);
 	}
 
 	template<class S>
-	typename enable_if<is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const R<const S>& pointer) {
+	typename boost::enable_if<boost::is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const R<const S>& pointer) {
 		if (!!pointer) {
 			return this->add(*pointer);
 		}
@@ -250,7 +250,7 @@ public:
 	 * @see get(T&)
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, R<const S>>::type get(const S* instance) {
+	typename boost::enable_if<boost::is_base_of<T,S>, R<const S>>::type get(const S* instance) {
 		return add(instance).first;
 	}
 
@@ -267,7 +267,7 @@ public:
 	 * @see get(T*)
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, R<const S>>::type get(const S& instance) {
+	typename boost::enable_if<boost::is_base_of<T,S>, R<const S>>::type get(const S& instance) {
 		return this->get(&instance);
 	}
 
@@ -334,7 +334,7 @@ public:
 	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, R<const S>>::type lookup(const S* instance) const {
+	typename boost::enable_if<boost::is_base_of<T,S>, R<const S>>::type lookup(const S* instance) const {
 		// test whether there is already an identical element
 		auto res = storage.find(instance);
 		if (res != storage.end()) {
@@ -356,7 +356,7 @@ public:
 	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, R<const S>>::type lookup(const S& instance) const {
+	typename boost::enable_if<boost::is_base_of<T,S>, R<const S>>::type lookup(const S& instance) const {
 		return lookup(&instance);
 	}
 
@@ -370,7 +370,7 @@ public:
 	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
 	 */
 	template<class S>
-	typename enable_if<is_base_of<T,S>, R<const S>>::type lookup(const R<const S>& pointer) const {
+	typename boost::enable_if<boost::is_base_of<T,S>, R<const S>>::type lookup(const R<const S>& pointer) const {
 		if (!!pointer) {
 			return this->lookup(*pointer);
 		}
