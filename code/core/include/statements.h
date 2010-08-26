@@ -275,8 +275,10 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
+
+	const ExprPtr& getStep() const { return step; }
 	
-	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step = NULL);
+	static ForStmtPtr get(StatementManager& manager, const DeclarationStmtPtr& declaration, const StmtPtr& body, const ExprPtr& end, const ExprPtr& step = NULL);
 };
 
 class IfStmt: public Statement {
