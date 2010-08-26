@@ -41,12 +41,17 @@
 #include <clang/AST/Expr.h>
 #include "lib/Sema/Sema.h"
 
+#include <llvm/Support/raw_ostream.h>
+
 using namespace clang;
 using namespace insieme::frontend;
+
+#include <iostream>
 
 namespace insieme {
 namespace frontend {
 
+// ------------------------------------ ValueUnion ---------------------------
 ValueUnion::~ValueUnion() {
 	if(ptrOwner && is<clang::Stmt*>()) {
 		assert(clangCtx && "Invalid ASTContext associated with this element.");
@@ -56,12 +61,17 @@ ValueUnion::~ValueUnion() {
 		delete get<std::string*>();
 }
 
-void ValueUnion::dump() const {
-		if(is<Stmt*>())
-			get<Stmt*>()->dumpPretty(*clangCtx);
-		else
-			llvm::outs() << *get<std::string*>();
-	}
+std::string ValueUnion::toStr() const {
+	std::string ret;
+	llvm::raw_string_ostream rs(ret);
+	if(is<Stmt*>())
+		get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
+	else
+		rs << *get<std::string*>();
+	return rs.str();
+}
+
+// ------------------------------------ node ---------------------------
 
 MatcherResult node::match(Preprocessor& PP) {
 	MatchMap mmap;
@@ -86,7 +96,7 @@ bool concat::match(Preprocessor& PP, MatchMap& mmap) const {
 }
 
 bool star::match(Preprocessor& PP, MatchMap& mmap) const {
-	while (n->match(PP, mmap))
+	while (getNode()->match(PP, mmap))
 		;
 	return true;
 }
@@ -110,7 +120,7 @@ bool choice::match(Preprocessor& PP, MatchMap& mmap) const {
 
 bool option::match(Preprocessor& PP, MatchMap& mmap) const {
 	PP.EnableBacktrackAtThisPos();
-	if (n->match(PP, mmap)) {
+	if (getNode()->match(PP, mmap)) {
 		PP.CommitBacktrackedTokens();
 		return true;
 	}
@@ -127,8 +137,8 @@ bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
 		PP.CommitBacktrackedTokens();
 		ParserProxy::get().EnterTokenStream(PP);
 		PP.LookAhead(1); // THIS IS CRAZY BUT IT WORKS
-		if (map_str.size())
-			mmap[map_str].push_back(
+		if (getMapName().size())
+			mmap[getMapName()].push_back(
 					ValueUnionPtr(new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context))
 			);
 		return true;
@@ -138,17 +148,18 @@ bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
 }
 
 bool kwd::match(Preprocessor& PP, MatchMap& mmap) const {
-	if (t<clang::tok::identifier>::match(PP, mmap) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
-		if(map_str == kw)
+	clang::Token& token = ParserProxy::get().ConsumeToken();
+	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
+		if(isAddToMap() && getMapName().empty())
 			mmap[kw];
-		else
-			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion( kw )) );
+		else if(isAddToMap())
+			mmap[getMapName()].push_back( ValueUnionPtr(new ValueUnion( kw )) );
 		return true;
 	}
 	return false;
 }
 
-void AddToMap(TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
+void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
 	if (!map_str.size())
 		return;
 	Action& A = ParserProxy::get().getParser()->getActions();

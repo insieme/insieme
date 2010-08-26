@@ -10,6 +10,7 @@ enable_testing()
 add_subdirectory( core )
 add_subdirectory( utils )
 add_subdirectory( frontend )
+add_subdirectory( driver )
 
 # add dependencies
 add_dependencies( insieme_core insieme_utils insieme_frontend )
