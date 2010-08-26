@@ -57,11 +57,11 @@ typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
 class BoolLiteral;
 typedef AnnotatedPtr<const BoolLiteral> BoolLiteralPtr;
 
-class VariableExpr;
-typedef AnnotatedPtr<const VariableExpr> VarExprPtr;
+class VarExpr;
+typedef AnnotatedPtr<const VarExpr> VarExprPtr;
 
-class ParameterExpr;
-typedef AnnotatedPtr<const ParameterExpr> ParamExprPtr;
+class ParamExpr;
+typedef AnnotatedPtr<const ParamExpr> ParamExprPtr;
 
 class LambdaExpr;
 typedef AnnotatedPtr<const LambdaExpr> LambdaExprPtr;
@@ -72,16 +72,19 @@ typedef AnnotatedPtr<const CallExpr> CallExprPtr;
 class CastExpr;
 typedef AnnotatedPtr<const CastExpr> CastExprPtr;
 
+class ParenExpr;
+typedef AnnotatedPtr<const ParenExpr> ParenExprPtr;
+
 // Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
 protected:	
 	enum {
 		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
-		HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR
+		HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR, HASHVAL_PARENEXPR
 	};
 
-	/** The type of the represented expression. */
+	/** The type of the expression. */
 	const TypePtr type;
 	
 	Expression(const TypePtr& type) : type(type) { };
@@ -94,6 +97,11 @@ public:
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
 };
+
+/// Allows expressions to be printed to a stream (especially useful during debugging and
+/// within test cases where equals expects values to be printable).
+std::ostream& operator<<(std::ostream& out, const Expression& expression);
+
 
 
 template<typename T>
@@ -138,6 +146,7 @@ class FloatLiteral : public Literal<double> {
 	virtual FloatLiteral* clone(StatementManager& manager) const;
 
 public:
+	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 
 	static FloatLiteralPtr get(StatementManager& manager, double value, unsigned short bytes = 8);
@@ -160,12 +169,12 @@ public:
 //	StringLiteral(const string& val) : Literal(NULL, val) { }
 //};
 
-class VariableExpr : public Expression {
+class VarExpr : public Expression {
 protected:
 	const Identifier id;
 	
-    VariableExpr(const TypePtr& type, const Identifier& id) : Expression(type), id(id) { };
-	virtual VariableExpr* clone(StatementManager& manager) const;
+    VarExpr(const TypePtr& type, const Identifier& id) : Expression(type), id(id) { };
+	virtual VarExpr* clone(StatementManager& manager) const;
 	bool equalsExpr(const Expression& expr) const;
 
 public:
@@ -176,9 +185,9 @@ public:
 };
 
 
-class ParameterExpr : public VariableExpr {
-	ParameterExpr(const TypePtr& type, const Identifier& id) : VariableExpr(type, id) { };
-	virtual ParameterExpr* clone(StatementManager& manager) const;
+class ParamExpr : public VarExpr {
+	ParamExpr(const TypePtr& type, const Identifier& id) : VarExpr(type, id) { };
+	virtual ParamExpr* clone(StatementManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -246,9 +255,21 @@ public:
 	static CastExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& subExpression);
 };
 
+//class ParenExpr : public Expression {
+//	const ExprPtr subExpression;
+//
+//	ParenExpr(const ExprPtr& subExp)
+//		: Expression(subExp->getType()), subExpression(subExp) { }
+//	
+//	virtual ParenExpr* clone(StatementManager& manager) const;
+//
+//protected:
+//	bool equalsExpr(const Expression& expr) const;
+//	
+//public:
+//	virtual void printTo(std::ostream& out) const;
+//	virtual std::size_t hash() const;
+//
+//	static ParenExprPtr ParenExpr::get(StatementManager& manager, const ExprPtr& subExpr);
+//};
 
-/**
- * Allows expressions to be printed to a stream (especially useful during debugging and
- * within test cases where equals expects values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Expression& expression);

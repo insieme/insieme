@@ -74,6 +74,10 @@ FloatLiteral* FloatLiteral::clone(StatementManager& manager) const {
 	return new FloatLiteral(manager.getTypeManager().get(type), value, originalString);
 }
 
+void FloatLiteral::printTo(std::ostream& out) const {
+	out << originalString;
+}
+
 std::size_t FloatLiteral::hash() const {
 	size_t seed = HASHVAL_FLOATLITERAL;
 	boost::hash_combine(seed, type->hash());
@@ -108,52 +112,52 @@ BoolLiteralPtr BoolLiteral::get(StatementManager& manager, bool value) {
 	return manager.get(BoolLiteral(BoolType::get(manager.getTypeManager()), value));
 }
 
-// ------------------------------------- VariableExpr ---------------------------------
+// ------------------------------------- VarExpr ---------------------------------
 
-VariableExpr* VariableExpr::clone(StatementManager& manager) const {
-	return new VariableExpr(manager.getTypeManager().get(type), id);
+VarExpr* VarExpr::clone(StatementManager& manager) const {
+	return new VarExpr(manager.getTypeManager().get(type), id);
 }
 
-bool VariableExpr::equalsExpr(const Expression& expr) const {
+bool VarExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const VariableExpr& rhs = dynamic_cast<const VariableExpr&>(expr);
+	const VarExpr& rhs = dynamic_cast<const VarExpr&>(expr);
 	return rhs.id == id;
 }
 
-void VariableExpr::printTo(std::ostream& out) const {
+void VarExpr::printTo(std::ostream& out) const {
 	out << id;
 }
 	
-std::size_t VariableExpr::hash() const {
+std::size_t VarExpr::hash() const {
 	size_t seed = HASHVAL_VAREXPR;
 	boost::hash_combine(seed, type->hash());
 	boost::hash_combine(seed, id.hash());
 	return seed;
 }
 
-VarExprPtr VariableExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.get(VariableExpr(type, id));
+VarExprPtr VarExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+	return manager.get(VarExpr(type, id));
 }
 
-// ------------------------------------- ParameterExpr ---------------------------------
+// ------------------------------------- ParamExpr ---------------------------------
 
-ParameterExpr* ParameterExpr::clone(StatementManager& manager) const {
-	return new ParameterExpr(manager.getTypeManager().get(type), id);
+ParamExpr* ParamExpr::clone(StatementManager& manager) const {
+	return new ParamExpr(manager.getTypeManager().get(type), id);
 }
 
-void ParameterExpr::printTo(std::ostream& out) const {
+void ParamExpr::printTo(std::ostream& out) const {
 	out << *type << id;
 }
 	
-std::size_t ParameterExpr::hash() const {
+std::size_t ParamExpr::hash() const {
 	size_t seed = HASHVAL_PARAMEXPR;
 	boost::hash_combine(seed, type->hash());
 	boost::hash_combine(seed, id.hash());
 	return seed;
 }
 
-ParamExprPtr ParameterExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.get(ParameterExpr(type, id));
+ParamExprPtr ParamExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+	return manager.get(ParamExpr(type, id));
 }
 
 // ------------------------------------- LambdaExpr ---------------------------------
@@ -244,3 +248,30 @@ std::size_t CastExpr::hash() const {
 CastExprPtr CastExpr::get(StatementManager& manager, const TypePtr& type, const ExprPtr& subExpr) {
 	return manager.get(CastExpr(type, subExpr));
 }
+
+// ------------------------------------- ParenExpr ---------------------------------
+
+//ParenExpr* ParenExpr::clone(StatementManager& manager) const {
+//	return new ParenExpr(manager.get(*subExpression));
+//}
+//	
+//bool ParenExpr::equalsExpr(const Expression& expr) const {
+//	// conversion is guaranteed by base operator==
+//	const ParenExpr& rhs = dynamic_cast<const ParenExpr&>(expr);
+//	return (*rhs.subExpression == *subExpression);
+//}
+//	
+//void ParenExpr::printTo(std::ostream& out) const {
+//	out << "(" << subExpression <<")";
+//}
+//
+//std::size_t ParenExpr::hash() const {
+//	size_t seed = HASHVAL_PARENEXPR;
+//	boost::hash_combine(seed, type->hash());
+//	boost::hash_combine(seed, subExpression->hash());
+//	return seed;
+//}
+//
+//ParenExprPtr ParenExpr::get(StatementManager& manager, const ExprPtr& subExpr) {
+//	return manager.get(ParenExpr(subExpr));
+//}

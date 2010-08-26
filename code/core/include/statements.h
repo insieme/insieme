@@ -60,6 +60,9 @@ using std::vector;
 class Expression;
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
+class VarExpr;
+typedef AnnotatedPtr<const VarExpr> VarExprPtr;
+
 // Forward Declarations { -----------------------------------------------------
 
 class Statement;
@@ -179,11 +182,10 @@ public:
 
 
 class DeclarationStmt : public Statement {
-	const TypePtr type;
-	const Identifier id;
+	const VarExprPtr varExpression;
 	const ExprPtr initExpression;
 
-	DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
+	DeclarationStmt(const VarExprPtr& varExpression, const ExprPtr& initExpression);
 	virtual DeclarationStmt* clone(StatementManager& manager) const;
 	
 protected:

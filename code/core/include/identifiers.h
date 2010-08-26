@@ -54,8 +54,8 @@ class Identifier {
 
 public:
 
-	Identifier(const char* name) : name(string(name)), hashCode(boost::hash_value(this->name)) {}
-	Identifier(const string& name) : name(name), hashCode(boost::hash_value(this->name)) {}
+	Identifier(const char* name_) : name(string(name_)), hashCode(boost::hash_value(name)) {}
+	Identifier(const string& name_) : name(name_), hashCode(boost::hash_value(name)) {}
 
 	const string& getName() const { return name; }
 

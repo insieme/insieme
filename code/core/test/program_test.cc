@@ -78,7 +78,7 @@ TEST(StatementManager, ProgramData) {
 	program = program->addDefinition(defA);
 
 	const Program::DefinitionSet& definitions = program->getDefinitions();
-	EXPECT_EQ ( 1 , definitions.size() );
+	EXPECT_EQ ( (std::size_t)1 , definitions.size() );
 	EXPECT_TRUE ( programManager.getDefinitionManager().addressesLocal(*definitions.cbegin()));
 	EXPECT_EQ ( toSet<Program::DefinitionSet>(programManager.getDefinitionManager().get(defA)), program->getDefinitions());
 
@@ -101,9 +101,9 @@ TEST(StatementManager, ProgramData) {
 
 
 	// ------------- Entry Points ------------
-	ExprPtr entryA = VariableExpr::get(manager, typeInt, "a");
-	ExprPtr entryB = VariableExpr::get(manager, typeInt, "b");
-	ExprPtr entryC = VariableExpr::get(manager, typeDouble, "c");
+	ExprPtr entryA = VarExpr::get(manager, typeInt, "a");
+	ExprPtr entryB = VarExpr::get(manager, typeInt, "b");
+	ExprPtr entryC = VarExpr::get(manager, typeDouble, "c");
 
 	program = program->addEntryPoint(entryA);
 	EXPECT_NE (entryA , *program->getEntryPoints().begin());
@@ -115,7 +115,7 @@ TEST(StatementManager, ProgramData) {
 	entrySet.insert(entryC);
 
 	program = program->addEntryPoints(entrySet);
-	EXPECT_EQ(3, program->getEntryPoints().size());
+	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
 
 	const Program::EntryPointSet& points = program->getEntryPoints();
 	std::for_each(points.cbegin(), points.cend(),

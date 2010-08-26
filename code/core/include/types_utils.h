@@ -114,7 +114,7 @@ class UnitType : public GenericType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnitType* clone(TypeManager& manager) const {
+	virtual UnitType* clone(TypeManager&) const {
 		return new UnitType();
 	}
 

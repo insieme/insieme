@@ -138,38 +138,39 @@ ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
-DeclarationStmt::DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) 
-	: type(type), id(id), initExpression(initExpression) { 
+DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExprPtr& initExpression)
+	: varExpression(varExpression), initExpression(initExpression) { 
 }
 
 void DeclarationStmt::printTo(std::ostream& out) const {
-	out << type << " = " << initExpression << ";";
+	out << varExpression->getType() << " " << varExpression << " = " << initExpression << ";";
 }
 
 bool DeclarationStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const DeclarationStmt& rhs = dynamic_cast<const DeclarationStmt&>(stmt); 
-	return (*type == *rhs.type) && (*initExpression == *rhs.initExpression);
+	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
 }
 
 std::size_t DeclarationStmt::hash() const {
 	std::size_t seed = HASHVAL_DECLARATION;
-	boost::hash_combine(seed, id.hash());
-    boost::hash_combine(seed, type->hash());
+    boost::hash_combine(seed, varExpression->hash());
     boost::hash_combine(seed, initExpression->hash());
 	return seed;
 }
 
 DeclarationStmt* DeclarationStmt::clone(StatementManager& manager) const {
-	return new DeclarationStmt(manager.getTypeManager().get(type), id, manager.get(*initExpression));
+	return new DeclarationStmt(manager.get(*varExpression), manager.get(*initExpression));
 }
 
 DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
-	return makeChildList(initExpression);
+	auto list = makeChildList(varExpression);
+	list->push_back(initExpression);
+	return list;
 }
 
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
-	return manager.get(DeclarationStmt(type, id, initExpression));
+	return manager.get(DeclarationStmt(VarExpr::get(manager, type, id), initExpression));
 }
 
 // ------------------------------------- ReturnStmt ---------------------------------
@@ -400,7 +401,7 @@ void SwitchStmt::printTo(std::ostream& out) const {
 bool SwitchStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const SwitchStmt& rhs = dynamic_cast<const SwitchStmt&>(stmt);
-	return equal(cases.cbegin(), cases.cend(), rhs.cases.cbegin(), 
+	return ::equals(cases, rhs.cases, 
 		[](const Case& l, const Case& r) { return *l.first == *r.first && *l.second == *r.second; });
 }
 
