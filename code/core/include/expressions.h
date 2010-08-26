@@ -58,10 +58,10 @@ class BoolLiteral;
 typedef AnnotatedPtr<const BoolLiteral> BoolLiteralPtr;
 
 class VariableExpr;
-typedef AnnotatedPtr<const VariableExpr> VarExprPtr;
+typedef AnnotatedPtr<const VariableExpr> VariableExprPtr;
 
 class ParameterExpr;
-typedef AnnotatedPtr<const ParameterExpr> ParamExprPtr;
+typedef AnnotatedPtr<const ParameterExpr> ParameterExprPtr;
 
 class LambdaExpr;
 typedef AnnotatedPtr<const LambdaExpr> LambdaExprPtr;
@@ -172,7 +172,7 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 
-	static VarExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
+	static VariableExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
 };
 
 
@@ -184,13 +184,13 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 
-	static ParamExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
+	static ParameterExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
 };
 
 
 class LambdaExpr : public Expression {
 public:
-	typedef vector<ParamExprPtr> ParamList;
+	typedef vector<ParameterExprPtr> ParamList;
 
 private:
 	const StmtPtr body;

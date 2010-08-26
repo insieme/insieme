@@ -131,7 +131,7 @@ std::size_t VariableExpr::hash() const {
 	return seed;
 }
 
-VarExprPtr VariableExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+VariableExprPtr VariableExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
 	return manager.get(VariableExpr(type, id));
 }
 
@@ -152,7 +152,7 @@ std::size_t ParameterExpr::hash() const {
 	return seed;
 }
 
-ParamExprPtr ParameterExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+ParameterExprPtr ParameterExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
 	return manager.get(ParameterExpr(type, id));
 }
 
