@@ -47,7 +47,7 @@ namespace insieme {
 void RegisterPragmaHandlers(Preprocessor& pp) {
 	pp.AddPragmaHandler("insieme", fe::PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>("insieme",
 			pp.getIdentifierInfo("inline"), !(fe::tok::l_paren >> // 	'!('
-					fe::tok::numeric_constant("LEVEL") >> //	LEVEL
+					fe::tok::numeric_constant["LEVEL"] >> //	LEVEL
 					fe::tok::r_paren) >> fe::tok::eom //	')' eom
 			));
 }
@@ -62,9 +62,9 @@ InlinePragma::InlinePragma(const SourceLocation& startLoc, const SourceLocation&
 		mLevel = 0;
 }
 
-void InlinePragma::dump() const {
-	llvm::outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << "|-> Pragma: " << getType() << " : "
-			<< mLevel << " " << toString() << "\n";
+void InlinePragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
+	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << "|-> Pragma: " << getType() << " : "
+			<< mLevel << " " << toStr(sm) << "\n";
 }
 
 } // End insieme namespace

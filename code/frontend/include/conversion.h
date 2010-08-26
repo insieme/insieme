@@ -49,7 +49,7 @@ public:
 	InlinePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name,
 			const frontend::MatchMap& mmap);
 
-	void dump() const;
+	void dump(std::ostream& out, const clang::SourceManager& sm) const;
 	unsigned const& level() const { return mLevel; }
 	~InlinePragma() { }
 };

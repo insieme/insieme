@@ -58,8 +58,6 @@ class Stmt;
 class ASTContext;
 }
 
-using clang::tok::TokenKind;
-
 namespace insieme {
 namespace frontend {
 
@@ -69,6 +67,9 @@ class star;
 class choice;
 class option;
 
+/**
+ * This class is used to keep the
+ */
 class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*> {
 	bool ptrOwner;
 	clang::ASTContext* clangCtx;
@@ -87,23 +88,23 @@ public:
 		return ret;
 	}
 
-	void dump() const;
+	std::string toStr() const;
 	~ValueUnion();
 };
 
 typedef std::shared_ptr<ValueUnion> ValueUnionPtr;
 typedef std::vector<ValueUnionPtr> ValueList;
 
+
 class MatchMap: public std::map<std::string, ValueList> {
 public:
 	typedef std::map<std::string, ValueList>::value_type value_type;
-
 	typedef std::map<std::string, ValueList>::key_type key_type;
 };
 typedef std::pair<bool, MatchMap> MatcherResult;
 
 template<clang::tok::TokenKind T>
-struct t;
+struct tol;
 
 struct node {
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const = 0;
@@ -114,10 +115,28 @@ struct node {
 	choice operator|(node const& n) const;
 	option operator!() const;
 
-	virtual node& operator()(const std::string& map_name) = 0;
+	virtual node& operator[](const std::string& map_name) = 0;
 	MatcherResult match(clang::Preprocessor& PP);
 
 	virtual ~node() { }
+};
+
+template<class T>
+class val_single: public node {
+	node* n;
+public:
+	val_single(node* n) : n(n) { }
+
+	node* copy() const { return new T(*n); }
+
+	node& operator[](const std::string& map_name) {
+		(*n)[map_name];
+		return *this;
+	}
+
+	node* getNode() const { return n; }
+
+	~val_single() { delete n; }
 };
 
 template<class T>
@@ -126,9 +145,9 @@ struct val_pair: public node, public std::pair<node*, node*> {
 
 	node* copy() const { return new T(*first, *second);	}
 
-	node& operator()(const std::string& map_name) {
-		(*first)(map_name);
-		(*second)(map_name);
+	node& operator[](const std::string& map_name) {
+		(*first)[map_name];
+		(*second)[map_name];
 		return *this;
 	}
 
@@ -150,97 +169,79 @@ struct choice: public val_pair<choice> {
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 };
 
-struct option: public node {
-	node* n;
-	option(node const& n) : n(n.copy()) { }
-
-	node* copy() const { return new option(*n); }
-
-	node& operator()(const std::string& map_name) {
-		(*n)(map_name);
-		return *this;
-	}
-
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-	~option() { delete n; }
-};
-
-struct star: public node {
-	node* n;
-
-	template<class T>
-	star(T const& n) :	n(n.copy()) { }
-
-	node* copy() const { return new star(*n); }
-
-	node& operator()(const std::string& map_name) {
-		(*n)(map_name);
-		return *this;
-	}
-
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-	~star() { delete n;	}
-};
-
-struct expr_p: public node {
-	std::string map_str;
-
-	expr_p() { }
-	expr_p(std::string const& map_str) : 	map_str(map_str) { }
-
-	node* copy() const { return new expr_p(map_str); }
-	node& operator()(const std::string& str) {
-		map_str = str;
-		return *this;
-	}
+struct option: public val_single<option> {
+	option(node const& n): val_single<option>(n.copy()) { }
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 };
 
-void AddToMap(TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
+struct star: public val_single<star> {
+	star(node const& n) : val_single<star>(n.copy()) { }
 
-template<TokenKind T>
-struct t: public node {
-	std::string map_str;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+};
+
+template <class T>
+class MappableNode: public node {
+	std::string mapName;
 	bool addToMap;
 
-	t(bool addToMap = true) : map_str(), addToMap(addToMap) { }
-	t(std::string const& map_str, bool addToMap = true) : map_str(map_str), addToMap(addToMap) { }
+public:
+	MappableNode(std::string const& str=std::string(), bool addToMap=true) : mapName(str), addToMap(addToMap) { }
 
-	node& operator()(std::string const& str) { map_str = str; return *this; }
+	node& operator[](const std::string& str) {
+		mapName = str;
+		return *this;
+	}
 
-	node* copy() const { return new t<T> (map_str, addToMap); }
-	t<T> operator~() const { return t<T>(map_str, false); }
+	node* copy() const { return new T( getMapName(), addToMap ); }
+	T operator~() const { return T( getMapName(), false); }
+
+	const std::string& getMapName() const { return mapName; }
+	bool isAddToMap() const { return addToMap; }
+};
+
+struct expr_p: public MappableNode<expr_p> {
+	expr_p() { }
+	expr_p(std::string const& map_str, bool addToMap=true) : MappableNode<expr_p>(map_str, addToMap) { }
+
+	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+};
+
+void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
+
+template<clang::tok::TokenKind T>
+struct Tok: public MappableNode<Tok<T>> {
+	Tok() { }
+	Tok(std::string const& str, bool addToMap = true) : MappableNode<Tok<T>>(str, addToMap) { }
 
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
-			if(addToMap) AddToMap(T, token, map_str, mmap);
+			if(MappableNode<Tok<T>>::isAddToMap()) AddToMap(T, token, MappableNode<Tok<T>>::getMapName(), mmap);
 			return true;
 		}
 		return false;
 	}
 };
 
-struct kwd: public t<clang::tok::identifier> {
+struct kwd: public Tok<clang::tok::identifier> {
 	std::string kw;
-	std::string map_str;
 
-	kwd(std::string const& kw) : t<clang::tok::identifier>::t(), kw(kw), map_str(kw) { }
-	kwd(std::string const& kw, std::string const& map_str) : t<clang::tok::identifier>::t(), kw(kw), map_str(map_str) { }
+	kwd(std::string const& kw) : Tok<clang::tok::identifier>(), kw(kw) { }
+	kwd(std::string const& kw, std::string const& map_str, bool addToMap=true) : Tok<clang::tok::identifier>(map_str, addToMap), kw(kw) { }
 
-	node* copy() const { return new kwd(kw, map_str); }
-
-	node& operator()(std::string const& str) { map_str = str; return *this; }
+	node* copy() const { return new kwd(kw, getMapName(), isAddToMap()); }
+	kwd operator~() const { return kwd(kw, getMapName(), false); }
 	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
 };
 
 // import token definitions from clang
 namespace tok {
 #define PUNCTUATOR(name, _) \
-	static t<clang::tok::name>  name = t<clang::tok::name>();
+	static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
 #define TOK(name) \
-	static t<clang::tok::name>  name = t<clang::tok::name>();
+	static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
 #include <clang/Basic/TokenKinds.def>
 #undef PUNCTUATOR
 #undef TOK
