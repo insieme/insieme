@@ -60,6 +60,9 @@ using std::vector;
 class Expression;
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
+class VarExpr;
+typedef AnnotatedPtr<const VarExpr> VarExprPtr;
+
 // Forward Declarations { -----------------------------------------------------
 
 class Statement;
@@ -179,11 +182,10 @@ public:
 
 
 class DeclarationStmt : public Statement {
-	const TypePtr type;
-	const Identifier id;
+	const VarExprPtr varExpression;
 	const ExprPtr initExpression;
 
-	DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
+	DeclarationStmt(const VarExprPtr& varExpression, const ExprPtr& initExpression);
 	virtual DeclarationStmt* clone(StatementManager& manager) const;
 	
 protected:
@@ -273,8 +275,10 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
+
+	const ExprPtr& getStep() const { return step; }
 	
-	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step = NULL);
+	static ForStmtPtr get(StatementManager& manager, const DeclarationStmtPtr& declaration, const StmtPtr& body, const ExprPtr& end, const ExprPtr& step = NULL);
 };
 
 class IfStmt: public Statement {

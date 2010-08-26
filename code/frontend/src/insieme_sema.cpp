@@ -49,21 +49,7 @@ using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::util;
 
-namespace insieme {
-namespace frontend {
-
-struct InsiemeSema::InsiemeSemaImpl {
-	PragmaList& pragma_list;
-	std::list<PragmaPtr> pending_pragma;
-
-	InsiemeSemaImpl(PragmaList& pragma_list) :
-		pragma_list(pragma_list) {
-	}
-};
-
-InsiemeSema::InsiemeSema(PragmaList& pragma_list, Preprocessor& pp, ASTContext& ctxt, ASTConsumer& consumer, bool CompleteTranslationUnit,
-						 CodeCompleteConsumer* CompletionConsumer) :
-	Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
+namespace {
 
 bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
 	// DEBUG("(" << sloc::Line(SR).first << ", " << sloc::Line(SR).second << ") <- " << sloc::Line(SL));
@@ -75,11 +61,13 @@ bool isAfterRange(SourceRange SR, SourceLocation SL, clang::SourceManager const&
 }
 
 void EraseMatchedPragmas(std::list<PragmaPtr>& pending, PragmaList& matched) {
+
 	for (PragmaList::iterator I = matched.begin(), E = matched.end(); I != E; ++I) {
 		std::list<PragmaPtr>::iterator it = std::find(pending.begin(), pending.end(), *I);
 		assert(it != pending.end());
 		pending.erase(it);
 	}
+
 }
 
 class PragmaFilter {
@@ -111,8 +99,61 @@ public:
 	bool operator!=(PragmaFilter const& other) const { return I == other.I; }
 };
 
+} // End empty namespace
+
+namespace insieme {
+namespace frontend {
+
+struct InsiemeSema::InsiemeSemaImpl {
+	PragmaList& pragma_list;
+	std::list<PragmaPtr> pending_pragma;
+
+	InsiemeSemaImpl(PragmaList& pragma_list) :	pragma_list(pragma_list) {	}
+};
+
+InsiemeSema::InsiemeSema(PragmaList& pragma_list, Preprocessor& pp, ASTContext& ctxt, ASTConsumer& consumer, bool CompleteTranslationUnit,
+						 CodeCompleteConsumer* CompletionConsumer) :
+	Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
+
+
+/*
+ * The function search for the character c in the input stream backwards.
+ * The assumption is the character will be in the input stream so no
+ * termination condition is needed.
+ */
+const char* strbchr(const char* stream, char c) {
+	while(*stream != c) // soon or later we are going to find the char we are looking for, no need for further termination condition
+		stream--;
+	return stream;
+}
+
 clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R, Sema::MultiStmtArg Elts, bool isStmtExpr) {
-	// DEBUG("{InsiemeSema}: ActOnCompoundStmt()");
+//	std::cout << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+
+	/*
+	 * when pragmas are just after the beginning of a compound stmt, example:
+	 * {
+	 * 		#pragma xxx
+	 * 		...
+	 * }
+	 * the location of the opening bracket is wrong because of a bug in the clang parser.
+	 *
+	 * We solve the problem by searching for the bracket in the input stream and overwrite
+	 * the value of L (which contains the wrong location) with the correct value.
+	 *
+	 */
+	SourceLocation leftBracketLoc = SourceMgr.getInstantiationLoc(L);
+	std::pair<FileID, unsigned> locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
+	std::pair<const char*, const char*> buffer = SourceMgr.getBufferData(locInfo.first);
+	const char *strData = buffer.first + locInfo.second;
+	char const* lBracePos = strbchr(strData, '{');
+
+	// We know the location of the left bracket, we overwrite the value of L with the correct location
+	L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+
+//	std::cout << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
+//			util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+
 	clang::Sema::OwningStmtResult ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
 	CompoundStmt* CS = (CompoundStmt*) ret.get();
 	Stmt* Prev = NULL;
@@ -318,7 +359,7 @@ void InsiemeSema::dump() {
 	//	DEBUG_RUN(
 	std::cout << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
-		(*I)->dump();
+		(*I)->dump(std::cerr, SourceMgr);
 	//	);
 }
 

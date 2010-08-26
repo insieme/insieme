@@ -100,8 +100,8 @@ protected:
 		TRY_DISPATCH(expression, IntLiteral);
 		TRY_DISPATCH(expression, FloatLiteral);
 		TRY_DISPATCH(expression, BoolLiteral);
-		TRY_DISPATCH(expression, VariableExpr);
-		TRY_DISPATCH(expression, ParameterExpr);
+		TRY_DISPATCH(expression, VarExpr);
+		TRY_DISPATCH(expression, ParamExpr);
 		TRY_DISPATCH(expression, LambdaExpr);
 		TRY_DISPATCH(expression, CallExpr);
 		TRY_DISPATCH(expression, CastExpr);
@@ -141,14 +141,14 @@ protected:
 		return VISIT(GenericType, type);
 	}
 
-	ReturnType dispatchVariableExpr(const VariableExprPtr& expression) {
+	ReturnType dispatchVarExpr(const VarExprPtr& expression) {
 			assert ( expression && "Cannot dispatch NULL pointer!");
 
 			// try only sub-type
-			TRY_DISPATCH(expression, ParameterExpr);
+			TRY_DISPATCH(expression, ParamExpr);
 
 			// just forward visit generic type
-			return VISIT(VariableExpr, expression);
+			return VISIT(VarExpr, expression);
 		}
 
 
@@ -202,7 +202,7 @@ protected:
 	DISPATCH_TERMINAL(IntLiteral);
 	DISPATCH_TERMINAL(FloatLiteral);
 	DISPATCH_TERMINAL(BoolLiteral);
-	DISPATCH_TERMINAL(ParameterExpr);
+	DISPATCH_TERMINAL(ParamExpr);
 	DISPATCH_TERMINAL(LambdaExpr);
 	DISPATCH_TERMINAL(CallExpr);
 	DISPATCH_TERMINAL(CastExpr);
@@ -269,8 +269,8 @@ protected:
 	VISIT_NODE(IntLiteral, Expr);
 	VISIT_NODE(FloatLiteral, Expr);
 	VISIT_NODE(BoolLiteral, Expr);
-	VISIT_NODE(VariableExpr, Expr);
-	VISIT_NODE(ParameterExpr, VariableExpr);
+	VISIT_NODE(VarExpr, Expr);
+	VISIT_NODE(ParamExpr, VarExpr);
 	VISIT_NODE(LambdaExpr, Expr);
 	VISIT_NODE(CallExpr, Expr);
 	VISIT_NODE(CastExpr, Expr);

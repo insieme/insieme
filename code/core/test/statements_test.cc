@@ -38,6 +38,8 @@
 
 #include <gtest/gtest.h>
 #include "statements.h"
+#include "expressions.h"
+#include "types_utils.h"
 #include "string_utils.h"
 
 TEST(StatementsTest, Management) {
@@ -105,4 +107,16 @@ TEST(StatementsTest, CompoundStmt) {
 	EXPECT_NE(bSC->hash() , bScSCVec->hash());
 	EXPECT_EQ((*bSC)[0], (*bScSCVec)[0]);
 	EXPECT_EQ("{\nbreak;\ncontinue;\n}\n", toString(*bScSCVec));
+}
+
+TEST(StatementsTest, DefaultParams) {
+	TypeManager typeMan;
+	StatementManager stmtMan(typeMan);
+
+	IntLiteralPtr one = IntLiteral::get(stmtMan, 1);
+	DeclarationStmtPtr decl = DeclarationStmt::get(stmtMan, IntType::get(typeMan), Identifier("bla"), one);
+	ForStmtPtr forStmt = ForStmt::get(stmtMan, decl, decl, one);
+	
+	EXPECT_EQ(one, forStmt->getStep());
+
 }

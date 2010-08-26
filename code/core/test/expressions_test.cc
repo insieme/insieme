@@ -34,26 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <sstream>
 
-#include "pragma_handler.h"
-#include "clang/AST/ASTConsumer.h"
+#include <gtest/gtest.h>
+#include "statements.h"
+#include "expressions.h"
 
-class InsiemeIRConsumer: public clang::ASTConsumer { };
-
-namespace insieme {
-
-class InlinePragma: public frontend::Pragma {
-	unsigned mLevel;
-public:
-	InlinePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name,
-			const frontend::MatchMap& mmap);
-
-	void dump(std::ostream& out, const clang::SourceManager& sm) const;
-	unsigned const& level() const { return mLevel; }
-	~InlinePragma() { }
-};
-
-void RegisterPragmaHandlers(clang::Preprocessor& pp);
+TEST(ExpressionsTest, IntLiterals) {
+	TypeManager typeMan;
+	StatementManager manager(typeMan);
+	IntLiteralPtr i5 = IntLiteral::get(manager, 5);
+	IntLiteralPtr i7 = IntLiteral::get(manager, 7);
+	IntLiteralPtr i5long = IntLiteral::get(manager, 5, 8);
+	
+	EXPECT_EQ( *i5, *IntLiteral::get(manager, 5) );
+	EXPECT_NE( *i5, *i5long );
+	EXPECT_NE( *i5, *i7 );
+	EXPECT_EQ( i5->getValue(), 5 );
 }
 
+TEST(ExpressionsTest, FloatLiterals) {
+	TypeManager typeMan;
+	StatementManager manager(typeMan);
+	FloatLiteralPtr f5_s = FloatLiteral::get(manager, "5.0");
+	FloatLiteralPtr f5 = FloatLiteral::get(manager, 5.0);
+	
+	// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
+	std::stringstream ss;
+	ss << *f5_s;
+	EXPECT_EQ( ss.str(), "5.0" );
+	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
+}

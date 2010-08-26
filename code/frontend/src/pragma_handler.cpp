@@ -36,8 +36,21 @@
 
 #include "pragma_handler.h"
 
+#include <llvm/Support/raw_ostream.h>
+
 using namespace clang;
 using namespace insieme::frontend;
+
+#include <iostream>
+namespace {
+
+std::string loc2string(const clang::SourceLocation& loc, const clang::SourceManager& sm) {
+	std::string str;
+	llvm::raw_string_ostream ss(str);
+	loc.print(ss,sm);
+	return ss.str();
+}
+}
 
 namespace insieme {
 namespace frontend {
@@ -54,41 +67,39 @@ void Pragma::setDecl(clang::Decl const* decl) {
 
 clang::Stmt const* Pragma::getStatement() const {
 	assert(!mTargetNode.isNull() && isStatement());
-	return mTargetNode.get<clang::Stmt*> ();
+	return mTargetNode.get<clang::Stmt const*> ();
 }
 
 clang::Decl const* Pragma::getDecl() const {
 	assert(!mTargetNode.isNull() && isDecl());
-	return mTargetNode.get<clang::Decl*> ();
+	return mTargetNode.get<clang::Decl const*> ();
 }
 
-std::string Pragma::toString() const {
+std::string Pragma::toStr(const clang::SourceManager& sm) const {
 	std::ostringstream ss;
-//	ss << "(" << LOC2S(getStartLocation()) << ", " <<
-//				 LOC2S(getEndLocation()) <<
-//		  "),\n\t";
-//	if(isStatement())
-//		ss << "Stmt -> ";
-//	else
-//		ss << "Decl -> ";
-//	ss << "(";
-//	if(isStatement() && getStatement())
-//		ss << LOC2S(getStatement()->getLocStart()) << ", " <<
-//				 LOC2S(getStatement()->getLocEnd());
-//	else if(isDecl() && getDecl())
-//		ss << LOC2S(getDecl()->getLocStart()) << ", " <<
-//				 LOC2S(getDecl()->getLocEnd());
-//	ss << ")";
-		// << "\n" << PrintClangStmt(getStatement())
+	ss << "(" << loc2string(getStartLocation(), sm) << ", " <<
+				 loc2string(getEndLocation(), sm) <<
+		  "),\n\t";
+	if(isStatement())
+		ss << "Stmt -> ";
+	else
+		ss << "Decl -> ";
+	ss << "(";
+	if(isStatement() && getStatement())
+		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
+			  loc2string(getStatement()->getLocEnd(), sm);
+	else if(isDecl() && getDecl())
+		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
+			  loc2string(getDecl()->getLocEnd(), sm);
+	ss << ")";
+//		 << "\n" << PrintClangStmt(getStatement())
 	;
 	return ss.str();
 }
 
-void Pragma::dump() const {
-//	DEBUG_RUN(
-//		llvm::outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
-//						"|~> Pragma: " << getType() << " -> " << toString() << "\n";
-//	);
+void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
+	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
+		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
 
 } // End frontend namespace

@@ -106,11 +106,25 @@ public:
 	clang::Stmt const* getStatement() const;
 	clang::Decl const* getDecl() const;
 
-	bool isStatement() const { return mTargetNode.is<clang::Stmt*> ();	}
-	bool isDecl() const { return mTargetNode.is<clang::Decl*> (); }
+	/**
+	 * Returns true if the AST node associated to this pragma is a statement (clang::Stmt)
+	 */
+	bool isStatement() const { return mTargetNode.is<clang::Stmt const*> ();	}
 
-	virtual void dump() const;
-	std::string toString() const;
+	/**
+	 * Returns true if the AST node associated to this pragma is a declaration (clang::Decl)
+	 */
+	bool isDecl() const { return mTargetNode.is<clang::Decl const*> (); }
+
+	/**
+	 * Writes the content of the pragma to standard output
+	 */
+	virtual void dump(std::ostream& out, const clang::SourceManager& sm) const;
+
+	/**
+	 * Returns a string representation of the pragma
+	 */
+	std::string toStr(const clang::SourceManager& sm) const;
 
 	virtual ~Pragma() {	}
 
@@ -132,10 +146,11 @@ public:
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
 		// DEBUG("PRAGMA HANDLER: " << 
-		// 		std::string(getName()->getNameStart(), 
-		//					getName()->getNameStart()+getName()->getLength()) );
+		// std::string(getName()->getNameStart(),
+		//	   		   getName()->getNameStart()+getName()->getLength()) );
 		// ParserProxy::CurrentToken().getName().setKind(FirstToken);
 
+		clang::Token saveTok = ParserProxy::get().CurrentToken();
 		// '#' symbol is 1 position before
 		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 
@@ -151,14 +166,12 @@ public:
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
 			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), MR.second, startLoc, endLoc);
 		} else {
-			// REPORT ERROR
+			// TODO: REPORT ERROR
 			PP.DiscardUntilEndOfDirective();
 		}
 	}
 
-	~BasicPragmaHandler() {
-		delete reg_exp;
-	}
+	~BasicPragmaHandler() {	delete reg_exp;	}
 };
 
 struct PragmaHandlerFactory {
