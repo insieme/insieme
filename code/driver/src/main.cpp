@@ -45,14 +45,10 @@
 
 #include "clang_compiler.h"
 
-#include "logger.h"
-
 using namespace std;
 namespace fe = insieme::frontend;
 
 int main(int argc, char** argv) {
-
-	INFO("Insieme compiler");
 
 	CommandLineOptions::Parse(argc, argv);
 

@@ -42,9 +42,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 
-// TODO: remove
-#include <iostream>
-
 using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::util;
@@ -356,11 +353,10 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 }
 
 void InsiemeSema::dump() {
-	//	DEBUG_RUN(
-	std::cout << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
-	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
-		(*I)->dump(std::cerr, SourceMgr);
-	//	);
+//	utils::log::Wrapper dw = utils::log::Logger::get().writer<utils::log::Debug>();
+//	DEBUG("{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size());
+//	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
+//		(*I)->dump(dw, SourceMgr);
 }
 
 } // End frontend namespace
