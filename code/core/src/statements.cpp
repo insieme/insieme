@@ -221,7 +221,7 @@ bool CompoundStmt::equals(const Statement& stmt) const {
 	//auto start = make_paired_iterator(statements.begin(), rhs.statements.begin());
 	//auto end = make_paired_iterator(statements.end(), rhs.statements.end());
 	//return all(start, end, [](std::pair<StmtPtr,StmtPtr> elems) { return elems.first == elems.second; } );
-	return equal(statements.cbegin(), statements.cend(), rhs.statements.cbegin(), equal_target<StmtPtr>());
+	return ::equals(statements, rhs.statements, equal_target<StmtPtr>());
 }
 
 std::size_t CompoundStmt::hash() const {
@@ -331,8 +331,8 @@ ForStmt::ChildList ForStmt::getChildren() const {
 	return ret;
 }
 
-ForStmtPtr ForStmt::get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) {
-	if(!step) step = IntLiteral::one(manager);
+ForStmtPtr ForStmt::get(StatementManager& manager, const DeclarationStmtPtr& declaration, const StmtPtr& body, const ExprPtr& end, const ExprPtr& step) {
+	if(!step) return manager.get(ForStmt(declaration, body, end, IntLiteral::one(manager)));
 	return manager.get(ForStmt(declaration, body, end, step));
 }
 

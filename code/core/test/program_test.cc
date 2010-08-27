@@ -45,7 +45,7 @@
 using namespace std;
 using namespace insieme::utils::set;
 
-TEST(StatementManager, ProgramData) {
+TEST(Program, ProgramData) {
 
 	// a local manager for temporary types
 	ProgramDataManager manager;

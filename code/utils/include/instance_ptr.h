@@ -62,6 +62,10 @@ public:
 	
 	virtual ~InstancePtr() {};
 
+	operator bool() const {
+		return ptr!=NULL;
+	}
+
 	bool operator!() const {
 		return ptr==NULL;
 	}

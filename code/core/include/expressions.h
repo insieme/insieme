@@ -132,7 +132,7 @@ class IntLiteral : public Literal<int> {
 	
 public:
 	virtual std::size_t hash() const;
-
+	
 	static IntLiteralPtr get(StatementManager& manager, int value, unsigned short bytes = 4);
 	static IntLiteralPtr one(StatementManager& manager) { return get(manager, 1); }
 	static IntLiteralPtr zero(StatementManager& manager) { return get(manager, 0); }
