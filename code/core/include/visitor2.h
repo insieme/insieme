@@ -57,6 +57,8 @@ class ProgramVisitor {
 
 public:
 
+	typedef ReturnType return_type;
+
 	ReturnType visit(const ProgramPtr& program) {
 		assert( program && "Cannot visit NULL program!");
 		return DISPATCH(Program, program);
