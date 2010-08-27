@@ -147,14 +147,13 @@ public:
 	}
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
-		clang::Token saveTok = ParserProxy::get().CurrentToken();
 		// '#' symbol is 1 position before
 		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 
+		MatchMap mmap;
 		ErrorStack errStack;
 
-		MatcherResult MR = reg_exp->MatchPragma(PP, errStack);
-		if (MR.first) {
+		if (reg_exp->MatchPragma(PP, mmap, errStack)) {
 			// act on pragma
 			std::ostringstream pragma_name;
 			pragma_name << base_name;
@@ -162,13 +161,10 @@ public:
 				pragma_name << "::" << std::string(getName()->getNameStart(), getName()->getNameStart() + getName()->getLength());
 
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
-			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), MR.second, startLoc, endLoc);
+			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), mmap, startLoc, endLoc);
 		} else {
 			// TODO: REPORT ERROR
-
-			DLOG(INFO) << "Parsing stack size: " << errStack.size() << std::endl;
-			for(ErrorStack::const_iterator i = errStack.begin(), e = errStack.end(); i!=e; ++i)
-				DLOG(INFO) << "\tExpecting:" << i->expected << std::endl;
+			ErrorReport(PP, startLoc, errStack);
 			PP.DiscardUntilEndOfDirective();
 		}
 	}
