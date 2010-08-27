@@ -239,13 +239,6 @@ InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_na
 	// register omp pragmas
 	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );
 
-//	mClang.getPreprocessor().AddPragmaHandler("insieme", PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>(
-//		"insieme", mClang.getPreprocessor().getIdentifierInfo("inline"),
-//		!(tok::l_paren >>								// 	'('
-//		tok::numeric_constant("LEVEL") >> 				//	LEVEL
-//		tok::r_paren) >> tok::eom						//	')' eom
-//	));
-
 	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, PL);
 
 	if( mClang.getDiagnostics().hasErrorOccurred() ) {

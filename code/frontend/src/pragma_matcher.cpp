@@ -73,10 +73,11 @@ std::string ValueUnion::toStr() const {
 
 // ------------------------------------ node ---------------------------
 
-MatcherResult node::match(Preprocessor& PP) {
+MatcherResult node::MatchPragma(Preprocessor& PP, ErrorStack& errStack) {
 	MatchMap mmap;
 
-	bool ret = match(PP, mmap);
+	bool ret = match(PP, mmap, errStack);
+
 	return std::make_pair(ret, mmap);
 }
 
@@ -85,9 +86,9 @@ star node::operator*() const { return star(*this); }
 choice node::operator|(node const& n) const { return choice(*this, n); }
 option node::operator!() const { return option(*this); }
 
-bool concat::match(Preprocessor& PP, MatchMap& mmap) const {
+bool concat::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
 	PP.EnableBacktrackAtThisPos();
-	if (first->match(PP, mmap) && second->match(PP, mmap)) {
+	if (first->match(PP, mmap, errStack) && second->match(PP, mmap, errStack)) {
 		PP.CommitBacktrackedTokens();
 		return true;
 	}
@@ -95,21 +96,21 @@ bool concat::match(Preprocessor& PP, MatchMap& mmap) const {
 	return false;
 }
 
-bool star::match(Preprocessor& PP, MatchMap& mmap) const {
-	while (getNode()->match(PP, mmap))
+bool star::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
+	while (getNode()->match(PP, mmap, errStack))
 		;
 	return true;
 }
 
-bool choice::match(Preprocessor& PP, MatchMap& mmap) const {
+bool choice::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
 	PP.EnableBacktrackAtThisPos();
-	if (first->match(PP, mmap)) {
+	if (first->match(PP, mmap, errStack)) {
 		PP.CommitBacktrackedTokens();
 		return true;
 	}
 	PP.Backtrack();
 	PP.EnableBacktrackAtThisPos();
-	if (second->match(PP, mmap)) {
+	if (second->match(PP, mmap, errStack)) {
 		PP.CommitBacktrackedTokens();
 		return true;
 	}
@@ -118,9 +119,9 @@ bool choice::match(Preprocessor& PP, MatchMap& mmap) const {
 	return false;
 }
 
-bool option::match(Preprocessor& PP, MatchMap& mmap) const {
+bool option::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
 	PP.EnableBacktrackAtThisPos();
-	if (getNode()->match(PP, mmap)) {
+	if (getNode()->match(PP, mmap, errStack)) {
 		PP.CommitBacktrackedTokens();
 		return true;
 	}
@@ -128,7 +129,7 @@ bool option::match(Preprocessor& PP, MatchMap& mmap) const {
 	return true;
 }
 
-bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
+bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
 	// ClangContext::get().getParser()->Tok.setKind(*firstTok);
 	PP.EnableBacktrackAtThisPos();
 	Expr* result = ParserProxy::get().ParseExpression(PP);
@@ -141,22 +142,48 @@ bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
 			mmap[getMapName()].push_back(
 					ValueUnionPtr(new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context))
 			);
+		errStack.clear();
 		return true;
 	}
 	PP.Backtrack();
+	ParsingError pe;
+	pe.expected = "expr";
+	pe.loc = ParserProxy::get().CurrentToken().getLocation();
+	errStack.push_back(pe);
 	return false;
 }
 
-bool kwd::match(Preprocessor& PP, MatchMap& mmap) const {
+bool kwd::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
 	clang::Token& token = ParserProxy::get().ConsumeToken();
 	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
 		if(isAddToMap() && getMapName().empty())
 			mmap[kw];
 		else if(isAddToMap())
 			mmap[getMapName()].push_back( ValueUnionPtr(new ValueUnion( kw )) );
+		errStack.clear();
 		return true;
 	}
+	ParsingError pe;
+	pe.expected = kw;
+	pe.loc = ParserProxy::get().CurrentToken().getLocation();
+	errStack.push_back(pe);
 	return false;
+}
+
+std::string TokenToStr(clang::tok::TokenKind token) {
+	const char *name = clang::tok::getTokenSimpleSpelling(token);
+	if(name)
+		return std::string(name);
+	else
+		return std::string(clang::tok::getTokenName(token));
+}
+
+std::string TokenToStr(const clang::Token& token) {
+	if (token.isLiteral()) {
+		return std::string(token.getLiteralData(), token.getLiteralData() + token.getLength());
+	} else {
+		return TokenToStr(token);
+	}
 }
 
 void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
@@ -180,15 +207,7 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& 
 		break;
 	}
 	default: {
-		if (token.isLiteral()) {
-			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(token.getLiteralData(), token.getLiteralData() + token.getLength()))) );
-		} else {
-			const char *name = clang::tok::getTokenSimpleSpelling(tok);
-			if(name)
-				mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(name))) );
-			else
-				mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(clang::tok::getTokenName(tok)))) );
-		}
+		mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(TokenToStr(token))) );
 		break;
 	}
 	}
