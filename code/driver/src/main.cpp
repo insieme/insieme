@@ -52,6 +52,9 @@ using namespace google;
 namespace fe = insieme::frontend;
 
 int main(int argc, char** argv) {
+
+	CommandLineOptions::Parse(argc, argv);
+
 	InitGoogleLogging(argv[0]);
 
 	// force logging to stderr
@@ -62,7 +65,7 @@ int main(int argc, char** argv) {
 
 	LOG(INFO) << "Insieme compiler";
 
-	CommandLineOptions::Parse(argc, argv);
+
 
 	try {
 		for(std::vector<std::string>::const_iterator i = CommandLineOptions::InputFiles.begin(),
@@ -73,7 +76,7 @@ int main(int argc, char** argv) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;
 	}
 
-	google::ShutdownGoogleLogging();
+	ShutdownGoogleLogging();
 
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());
