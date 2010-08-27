@@ -39,6 +39,8 @@
 #include "pragma_handler.h"
 #include "pragma_matcher.h"
 
+#include <glog/logging.h>
+
 #include <iostream>
 
 using namespace std;
@@ -50,13 +52,13 @@ namespace omp {
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
 	Pragma(startLoc, endLoc, name, mmap) {
 
-	std::cout << "~~~PRAGMA~~~" << std::endl;
-	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
-		std::cout << "KEYWORD: " << i->first << ":" << std::endl;
-		for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
-			std::cout << (*i2)->toStr() << ", ";
-		std::cout << std::endl;
-	}
+//	LOG(INFO) << "~~~PRAGMA~~~" << std::endl;
+//	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
+//		LOG(INFO) << "KEYWORD: " << i->first << ":" << std::endl;
+//		for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
+//			LOG(INFO) << (*i2)->toStr() << ", ";
+//		LOG(INFO) << std::endl;
+//	}
 }
 
 void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {

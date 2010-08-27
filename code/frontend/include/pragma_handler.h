@@ -53,6 +53,8 @@
 #include <sstream>
 #include <map>
 
+#include <glog/logging.h>
+
 // forward declaration
 namespace clang {
 class Stmt;
@@ -145,19 +147,15 @@ public:
 	}
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
-		// DEBUG("PRAGMA HANDLER: " << 
-		// std::string(getName()->getNameStart(),
-		//	   		   getName()->getNameStart()+getName()->getLength()) );
-		// ParserProxy::CurrentToken().getName().setKind(FirstToken);
-
 		clang::Token saveTok = ParserProxy::get().CurrentToken();
 		// '#' symbol is 1 position before
 		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 
-		MatcherResult MR = reg_exp->match(PP);
+		ErrorStack errStack;
+
+		MatcherResult MR = reg_exp->MatchPragma(PP, errStack);
 		if (MR.first) {
 			// act on pragma
-			// DEBUG(ParserProxy::CurrentToken().getName());
 			std::ostringstream pragma_name;
 			pragma_name << base_name;
 			if (getName())
@@ -167,6 +165,10 @@ public:
 			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), MR.second, startLoc, endLoc);
 		} else {
 			// TODO: REPORT ERROR
+
+			DLOG(INFO) << "Parsing stack size: " << errStack.size() << std::endl;
+			for(ErrorStack::const_iterator i = errStack.begin(), e = errStack.end(); i!=e; ++i)
+				DLOG(INFO) << "\tExpecting:" << i->expected << std::endl;
 			PP.DiscardUntilEndOfDirective();
 		}
 	}

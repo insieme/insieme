@@ -21,6 +21,10 @@ find_package( Boost )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
+# glog
+include_directories( $ENV{GLOG_HOME}/include )
+find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
+
 # lookup perl
 find_package( Perl )
 

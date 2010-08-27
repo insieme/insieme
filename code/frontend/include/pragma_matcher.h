@@ -42,12 +42,14 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stack>
 
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
 #include <clang/Lex/Token.h>
+#include <clang/Basic/SourceLocation.h>
 
 #include <llvm/ADT/PointerUnion.h>
 
@@ -56,10 +58,19 @@ namespace clang {
 class Preprocessor;
 class Stmt;
 class ASTContext;
+class SourceLocation;
 }
 
 namespace insieme {
 namespace frontend {
+
+struct ParsingError {
+	std::string 			expected;
+	std::string 			found;
+	clang::SourceLocation	loc;
+};
+
+class ErrorStack: public std::vector<ParsingError> { };
 
 // forward declarations
 class concat;
@@ -107,7 +118,7 @@ template<clang::tok::TokenKind T>
 struct tol;
 
 struct node {
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const = 0;
+	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const = 0;
 	virtual node* copy() const = 0;
 
 	concat operator>>(node const& n) const;
@@ -116,7 +127,7 @@ struct node {
 	option operator!() const;
 
 	virtual node& operator[](const std::string& map_name) = 0;
-	MatcherResult match(clang::Preprocessor& PP);
+	MatcherResult MatchPragma(clang::Preprocessor& PP, ErrorStack& errStack);
 
 	virtual ~node() { }
 };
@@ -160,25 +171,25 @@ struct val_pair: public node, public std::pair<node*, node*> {
 struct concat: public val_pair<concat> {
 	concat(node const& n1, node const& n2) : val_pair<concat>::val_pair(n1.copy(), n2.copy()) {	}
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const;
 };
 
 struct choice: public val_pair<choice> {
 	choice(node const& n1, node const& n2) : val_pair<choice>::val_pair(n1.copy(), n2.copy()) {	}
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const;
 };
 
 struct option: public val_single<option> {
 	option(node const& n): val_single<option>(n.copy()) { }
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const;
 };
 
 struct star: public val_single<star> {
 	star(node const& n) : val_single<star>(n.copy()) { }
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const;
 };
 
 template <class T>
@@ -205,22 +216,29 @@ struct expr_p: public MappableNode<expr_p> {
 	expr_p() { }
 	expr_p(std::string const& map_str, bool addToMap=true) : MappableNode<expr_p>(map_str, addToMap) { }
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const;
 };
 
 void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
+std::string TokenToStr(clang::tok::TokenKind tok);
+std::string TokenToStr(const clang::Token& token);
 
 template<clang::tok::TokenKind T>
 struct Tok: public MappableNode<Tok<T>> {
 	Tok() { }
 	Tok(std::string const& str, bool addToMap = true) : MappableNode<Tok<T>>(str, addToMap) { }
 
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const {
+	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
 			if(MappableNode<Tok<T>>::isAddToMap()) AddToMap(T, token, MappableNode<Tok<T>>::getMapName(), mmap);
+			errStack.clear();
 			return true;
 		}
+		ParsingError pe;
+		pe.expected = TokenToStr(T);
+		pe.loc = token.getLocation();
+		errStack.push_back(pe);
 		return false;
 	}
 };
@@ -233,7 +251,7 @@ struct kwd: public Tok<clang::tok::identifier> {
 
 	node* copy() const { return new kwd(kw, getMapName(), isAddToMap()); }
 	kwd operator~() const { return kwd(kw, getMapName(), false); }
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) const;
 };
 
 // import token definitions from clang

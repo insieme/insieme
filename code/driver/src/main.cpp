@@ -45,14 +45,22 @@
 
 #include "clang_compiler.h"
 
-#include "logger.h"
+#include <glog/logging.h>
 
 using namespace std;
+using namespace google;
 namespace fe = insieme::frontend;
 
 int main(int argc, char** argv) {
+	InitGoogleLogging(argv[0]);
 
-	INFO("Insieme compiler");
+	// force logging to stderr
+	LogToStderr();
+
+	// Set severity level
+	SetStderrLogging(INFO);
+
+	LOG(INFO) << "Insieme compiler";
 
 	CommandLineOptions::Parse(argc, argv);
 
@@ -64,6 +72,8 @@ int main(int argc, char** argv) {
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;
 	}
+
+	google::ShutdownGoogleLogging();
 
 //	vector<IntTypeParam> list;
 //	list.push_back(IntTypeParam::getInfiniteIntParam());
