@@ -78,7 +78,7 @@ public:
 	}
 
 	ReturnType visit(const TypePtr& type) {
-		assert( !!type && "Cannot visit NULL type!");
+		assert( type && "Cannot visit NULL type!");
 		return DISPATCH(Type, type);
 	}
 
@@ -94,6 +94,22 @@ protected:
 	ReturnType dispatchStmt(const StmtPtr& statement) {
 		assert ( statement && "Cannot dispatch NULL statement!");
 
+		TRY_DISPATCH(statement, NoOpStmt);
+
+		TRY_DISPATCH(statement, BreakStmt);
+		TRY_DISPATCH(statement, ContinueStmt);
+		TRY_DISPATCH(statement, ReturnStmt);
+
+		TRY_DISPATCH(statement, DeclarationStmt);
+		TRY_DISPATCH(statement, CompoundStmt);
+
+		TRY_DISPATCH(statement, WhileStmt);
+		TRY_DISPATCH(statement, ForStmt);
+		TRY_DISPATCH(statement, IfStmt);
+		TRY_DISPATCH(statement, SwitchStmt);
+
+		assert ( false && "Cannot dispatch unknown statement pointer type." );
+		return ReturnType();
 	}
 
 	ReturnType dispatchExpr(const ExprPtr& expression) {
@@ -289,7 +305,25 @@ protected:
 	}
 
 #undef VISIT_NODE
+};
+
+
+
+/**
+ * A visitor which by default is descending into all types.
+ */
+template<typename ReturnType>
+class RecursiveProgramVisitor : public ProgramVisitor<RecursiveProgramVisitor<ReturnType>, ReturnType> {
+
+
+public:
+
+	ReturnType visitProgram(const ProgramPtr& program) {
+
+	}
+
 
 };
+
 
 
