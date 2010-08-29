@@ -50,6 +50,8 @@ using std::vector;
 using std::function;
 using std::for_each;
 
+namespace insieme {
+namespace core {
 
 template<typename T>
 bool visitorTrueFilter(T) {
@@ -130,4 +132,7 @@ public:
 		});
 	}
 };
+
+} // end namespace core
+} // end namespace insieme
 

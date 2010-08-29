@@ -44,6 +44,8 @@
 
 using std::string;
 
+namespace insieme {
+namespace core {
 
 class Identifier {
 
@@ -83,14 +85,7 @@ public:
 
 };
 
-
 // ---------------------------------------------- Utility Functions ------------------------------------
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Identifier& type);
 
 /**
  * Allows to compute the hash value of an identifier.
@@ -98,5 +93,18 @@ std::ostream& operator<<(std::ostream& out, const Identifier& type);
  * @param identifier the identifier for which a hash value should be computed
  * @return the computed hash value
  */
-std::size_t hash_value(const Identifier& identifier);
+inline std::size_t hash_value(const Identifier& identifier) {
+	return identifier.hash();
+}
+
+} // end namespace core
+} // end namespace insieme
+
+
+/**
+ * Allows this type to be printed to a stream (especially useful during debugging and
+ * within test cases where equals values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& type);
+
 

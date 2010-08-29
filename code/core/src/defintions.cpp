@@ -41,22 +41,9 @@
 
 #include "definitions.h"
 
+using namespace insieme::core;
 
 // ---------------------------------------------- Function ------------------------------------
-
-
-//DefinitionTypePtr getType(TypeManager& manager, const Definition::ParameterList& paramList, const TypePtr& returnType) {
-//
-//	// compose argument type as tuple
-//	TupleType::ElementTypeList elementTypes;
-//	projectToSecond(paramList, elementTypes);
-//
-//	// obtain argument type
-//	TupleTypePtr argumentType = TupleType::get(manager, elementTypes);
-//
-//	// construct final result
-//	return DefinitionType::get(manager, argumentType, manager.get(returnType));
-//}
 
 
 /**
@@ -77,7 +64,7 @@ std::size_t hash(const Identifier& name, const TypePtr& type) {
 Definition::Definition(const Identifier& name, const TypePtr& type, const bool& external,
 		const ExprPtr& definition, const std::size_t& hashCode)
 	:
-		name(name), type(type), external(external), definition(definition), hashCode(hashCode) { }
+		Node(NodeType::DEFINITION, hashCode), name(name), type(type), external(external), definition(definition) { }
 
 Definition* Definition::clone(DefinitionManager& manager) const {
 	return new Definition(name,
@@ -95,26 +82,19 @@ DefinitionPtr Definition::lookup(DefinitionManager& manager, const Identifier& n
 }
 
 
-bool Definition::operator==(const Definition& other) const {
-	// shortcut for identical entries
-	if (this == &other) {
-		return true;
-	}
+bool Definition::equals(const Node& other) const {
+	// precondition: other must be a type
+	assert( dynamic_cast<const Definition*>(&other) && "Type violation by base class!" );
 
-	// shortcut for not-matching entries
-	if (hashCode != other.hashCode) {
-		return false;
-	}
+	// convert (statically) and check the definition properties
+	const Definition& ref = static_cast<const Definition&>(other);
 
-	// compare type and name - which makes a function unique
-	return *type == *other.type && name == other.name;
+	// compare type and name - which makes a definition unique
+	return *type == *ref.type && name == ref.name;
 }
 
 // ---------------------------------------------- Utilities ------------------------------------
 
-std::size_t hash_value(const Definition& definition) {
-	return definition.hash();
-}
 
 std::ostream& operator<<(std::ostream& out, const Definition& definition) {
 

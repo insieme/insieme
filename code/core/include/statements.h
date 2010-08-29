@@ -57,6 +57,9 @@
 using std::string;
 using std::vector;
 
+namespace insieme {
+namespace core {
+
 class Expression;
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
@@ -131,10 +134,6 @@ public:
 	bool operator==(const Statement& stmt) const;
 	bool operator!=(const Statement& stmt) const;
 };
-std::size_t hash_value(const Statement& stmt);
-std::ostream& operator<<(std::ostream& out, const Statement& stmt);
-std::ostream& operator<<(std::ostream& out, const StmtPtr& stmtPtr);
-
 
 class NoOpStmt : public Statement {
 	NoOpStmt() {}
@@ -334,3 +333,11 @@ public:
 		return typeManager;
 	}
 };
+
+
+std::size_t hash_value(const insieme::core::Statement& stmt);
+
+} // end namespace core
+} // end namespace insieme
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::Statement& stmt);

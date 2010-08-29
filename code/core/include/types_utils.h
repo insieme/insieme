@@ -42,17 +42,13 @@
 #include "annotated_ptr.h"
 #include "types.h"
 
-class IntType;
-typedef AnnotatedPtr<const IntType> IntTypePtr;
+namespace insieme {
+namespace core {
 
-class FloatType;
-typedef AnnotatedPtr<const FloatType> FloatTypePtr;
-
-class BoolType;
-typedef AnnotatedPtr<const BoolType> BoolTypePtr;
-
-class UnitType;
-typedef AnnotatedPtr<const UnitType> UnitTypePtr;
+DECLARE_NODE_TYPE(IntType);
+DECLARE_NODE_TYPE(FloatType);
+DECLARE_NODE_TYPE(BoolType);
+DECLARE_NODE_TYPE(UnitType);
 
 
 class IntType : public GenericType {
@@ -125,3 +121,6 @@ public:
 	}
 
 };
+
+} // end namespace core
+} // end namespace insieme

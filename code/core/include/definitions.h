@@ -40,6 +40,7 @@
 #include <string>
 #include <vector>
 
+#include "ast_node.h"
 #include "instance_manager.h"
 #include "expressions.h"
 #include "statements.h"
@@ -50,9 +51,11 @@
 using std::string;
 using std::vector;
 
+namespace insieme {
+namespace core {
 
-class Definition;
-typedef AnnotatedPtr<const Definition> DefinitionPtr;
+DECLARE_NODE_TYPE(Definition);
+
 
 class DefinitionManager : public InstanceManager<Definition, AnnotatedPtr> {
 
@@ -83,7 +86,7 @@ public:
  *
  * NOTE: definitions are uniquely identified by their name and type.
  */
-class Definition {
+class Definition : public Node {
 
 	/**
 	 * Allow the instance manager to access the private clone method.
@@ -120,12 +123,6 @@ private:
 	 * the definition is external, this pointer may be NULL.
 	 */
 	const ExprPtr definition;
-
-	/**
-	 * The hash code of this immutable data element. It is evaluated during construction and based
-	 * on the name and the type, since those two elements make a defined element unique.
-	 */
-	const std::size_t hashCode;
 
 	/**
 	 * A private constructor for this type creating a new element based on the given
@@ -197,27 +194,18 @@ public:
 		return !definition;
 	}
 
-	bool operator==(const Definition& other) const;
-
-	const std::size_t& hash() const {
-		return hashCode;
-	}
+	bool equals(const Node& other) const;
 
 };
+
+} // end namespace core
+} // end namespace insieme
 
 
 // ---------------------------------------------- Utilities ------------------------------------
 
 /**
- * Integrates the hash code computation into the boost hash code framework.
- *
- * @param definition the definition for which a hash code should be computed.
- * @return the hash code of the given definition
- */
-std::size_t hash_value(const Definition& definition);
-
-/**
  * Allows this definition to be printed to a stream (especially useful during debugging and
  * within test cases where equals expects values to be printable).
  */
-std::ostream& operator<<(std::ostream& out, const Definition& type);
+std::ostream& operator<<(std::ostream& out, const insieme::core::Definition& type);

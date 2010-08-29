@@ -45,6 +45,9 @@
 
 using std::vector;
 
+namespace insieme {
+namespace core {
+
 template<typename PT>
 void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>());
 
@@ -687,4 +690,6 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	delete clone;
 }
 
+} // end namespace core
+} // end namespace insieme
 

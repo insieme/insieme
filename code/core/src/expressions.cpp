@@ -38,6 +38,8 @@
 
 #include "types_utils.h"
 
+using namespace insieme::core;
+
 // ------------------------------------- Expression ---------------------------------
 
 bool Expression::equals(const Statement& stmt) const {

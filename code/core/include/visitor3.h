@@ -46,6 +46,8 @@
 #include "statements.h"
 #include "types.h"
 
+namespace insieme {
+namespace core {
 
 template<typename ReturnType = void>
 class Visitor3 {
@@ -134,4 +136,5 @@ public:
 
 };
 
-
+} // end namespace core
+} // end namespace insieme

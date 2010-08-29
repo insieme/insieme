@@ -45,6 +45,7 @@
 #include "types.h"
 
 
+using namespace insieme::core;
 
 
 // -------------------------------- Integer Type Parameter ----------------------------
@@ -168,7 +169,7 @@ FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentT
  * @param intParams		the list of integer type parameters to be appended
  * @return a string representation of the type
  */
-string GenericType::buildNameString(const string& name, const vector<TypePtr>& typeParams,
+string buildNameString(const string& name, const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intParams) {
 
 	// create output buffer
@@ -187,6 +188,20 @@ string GenericType::buildNameString(const string& name, const vector<TypePtr>& t
 	}
 	return res.str();
 }
+
+/**
+ * Creates an new generic type instance based on the given parameters.
+ */
+GenericType::GenericType(const string& name,
+		const vector<TypePtr>& typeParams,
+		const vector<IntTypeParam>& intTypeParams,
+		const TypePtr& baseType)
+	:
+		Type(::buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
+		familyName(name),
+		typeParams(typeParams),
+		intParams(intTypeParams),
+		baseType(baseType) { }
 
 /**
  * This method provides a static factory method for this type of node. It will return

@@ -39,6 +39,7 @@
 #include "programs.h"
 #include "visitor3.h"
 
+using namespace insieme::core;
 
 class SimpleVisitor : public Visitor3<void> {
 

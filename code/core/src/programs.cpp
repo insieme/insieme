@@ -43,6 +43,7 @@
 #include "set_utils.h"
 
 using namespace std;
+using namespace insieme::core;
 using namespace insieme::utils::set;
 
 

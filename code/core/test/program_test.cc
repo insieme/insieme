@@ -43,6 +43,7 @@
 #include "types.h"
 
 using namespace std;
+using namespace insieme::core;
 using namespace insieme::utils::set;
 
 TEST(Program, ProgramData) {

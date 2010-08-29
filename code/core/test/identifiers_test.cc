@@ -42,6 +42,7 @@
 #include "identifiers.h"
 #include "container_utils.h"
 
+using namespace insieme::core;
 
 TEST(TypeTest, DuplicateTest) {
 

@@ -39,6 +39,8 @@
 #include "container_utils.h"
 #include "definitions.h"
 
+using namespace insieme::core;
+
 TEST(Definitions, Basic) {
 
 	TypeManager typeManager;

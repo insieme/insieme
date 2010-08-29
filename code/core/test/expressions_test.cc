@@ -40,6 +40,8 @@
 #include "statements.h"
 #include "expressions.h"
 
+using namespace insieme::core;
+
 TEST(ExpressionsTest, IntLiterals) {
 	TypeManager typeMan;
 	StatementManager manager(typeMan);

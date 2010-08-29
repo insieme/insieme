@@ -51,6 +51,10 @@
 #include "types.h"
 
 
+namespace insieme {
+namespace core {
+
+
 class Program;
 typedef std::shared_ptr<Program> ProgramPtr;
 
@@ -192,6 +196,9 @@ public:
 
 };
 
+} // end namespace core
+} // end namespace insieme
+
 
 /**
  * Allows programs to be printed to an output stream.
@@ -202,5 +209,5 @@ public:
  * @param program the program to be printed
  * @return the given output stream
  */
-std::ostream& operator<<(std::ostream& out, const Program& program);
+std::ostream& operator<<(std::ostream& out, const insieme::core::Program& program);
 

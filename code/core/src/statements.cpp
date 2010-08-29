@@ -40,6 +40,9 @@
 #include "iterator_utils.h"
 
 
+namespace insieme {
+namespace core {
+
 // ------------------------------------- Statement ---------------------------------
 
 bool Statement::operator==(const Statement& stmt) const {
@@ -57,18 +60,6 @@ Statement::ChildList Statement::getChildren() const {
 std::size_t hash_value(const Statement& stmt) {
 	return stmt.hash();
 }
-
-std::ostream& operator<<(std::ostream& out, const Statement& stmt) {
-	stmt.printTo(out);
-	return out;
-}
-
-std::ostream& operator<<(std::ostream& out, const StmtPtr& stmtPtr) {
-	//out << "/* StmtPtr " << &stmtPtr << " */";
-	stmtPtr->printTo(out);
-	return out;
-}
-
 
 // ------------------------------------- NoOpStmt ---------------------------------
 
@@ -211,7 +202,7 @@ ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnEx
 
 void CompoundStmt::printTo(std::ostream& out) const {
 	out << "{\n";
-	std::for_each(statements.cbegin(), statements.cend(), [&out](const StmtPtr& cur) { out << cur << "\n";});
+	std::for_each(statements.cbegin(), statements.cend(), [&out](const StmtPtr& cur) { out << *cur << "\n";});
 	out << "}\n";
 }
 
@@ -426,4 +417,13 @@ SwitchStmt::ChildList SwitchStmt::getChildren() const {
 
 SwitchStmtPtr SwitchStmt::get(StatementManager& manager, ExprPtr switchExpr, const vector<Case>& cases) {
 	return manager.get(SwitchStmt(switchExpr, cases));
+}
+
+} // end namespace core
+} // end namespace insieme
+
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::Statement& stmt) {
+	stmt.printTo(out);
+	return out;
 }

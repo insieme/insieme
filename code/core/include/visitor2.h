@@ -46,6 +46,9 @@
 #include "statements.h"
 #include "types.h"
 
+namespace insieme {
+namespace core {
+
 template<typename Derived, typename ReturnType = void>
 class ProgramVisitor {
 
@@ -85,8 +88,8 @@ public:
 protected:
 
 #define TRY_DISPATCH(PTR, CLASS) \
-		if (const CLASS ## Ptr& ptr = dynamic_pointer_cast<const CLASS>(PTR)) \
-			return DISPATCH(CLASS, ptr)
+		if (dynamic_cast<const CLASS*>(&*PTR)) \
+			return DISPATCH(CLASS, dynamic_pointer_cast<const CLASS>(PTR))
 
 
 	// ---------------- Dispatcher ---------------------------------
@@ -324,6 +327,9 @@ public:
 
 
 };
+
+} // end namespace core
+} // end namespace insieme
 
 
 

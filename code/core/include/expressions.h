@@ -43,6 +43,9 @@
 #include "statements.h"
 #include "identifiers.h"
 
+namespace insieme {
+namespace core {
+
 // Forward Declarations { -----------------------------------------------------
 
 class Expression;
@@ -97,11 +100,6 @@ public:
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
 };
-
-/// Allows expressions to be printed to a stream (especially useful during debugging and
-/// within test cases where equals expects values to be printable).
-std::ostream& operator<<(std::ostream& out, const Expression& expression);
-
 
 
 template<typename T>
@@ -254,6 +252,15 @@ public:
 
 	static CastExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& subExpression);
 };
+
+} // end namespace core
+} // end namespace insieme
+
+/// Allows expressions to be printed to a stream (especially useful during debugging and
+/// within test cases where equals expects values to be printable).
+std::ostream& operator<<(std::ostream& out, const insieme::core::Expression& expression);
+
+
 
 //class ParenExpr : public Expression {
 //	const ExprPtr subExpression;

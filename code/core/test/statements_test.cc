@@ -42,6 +42,8 @@
 #include "types_utils.h"
 #include "string_utils.h"
 
+using namespace insieme::core;
+
 TEST(StatementsTest, Management) {
 	TypeManager typeMan;
 	StatementManager stmtMan(typeMan);

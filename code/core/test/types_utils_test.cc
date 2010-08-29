@@ -44,6 +44,8 @@
 
 using std::vector;
 
+using namespace insieme::core;
+
 TEST(TypeTest, IntType) {
 
 	// create type manager and element types
