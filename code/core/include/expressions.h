@@ -112,7 +112,7 @@ protected:
 
 	bool equalsExpr(const Expression& expr) const {
 		// conversion is guaranteed by base operator==
-		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr); 
+		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr);
 		return (value == rhs.value);
 	}
 

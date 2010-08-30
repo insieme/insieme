@@ -37,8 +37,11 @@
 #pragma once
 
 #include "pragma_handler.h"
+// #include "programs.h"
+
 #include "clang/AST/ASTConsumer.h"
 
+// Forward declarations
 namespace clang {
 class ASTContext;
 class DeclGroupRef;
@@ -46,11 +49,14 @@ class DeclGroupRef;
 
 namespace insieme {
 
+// ------------------------------------ InsiemeIRConsumer ---------------------------
+
 class InsiemeIRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
+	// insieme::core::Program::SharedDataManager mDataMgr;
 
 public:
-	InsiemeIRConsumer() : mCtx(NULL) { }
+	InsiemeIRConsumer(/*insieme::core::Program::SharedDataManager dataMgr*/) : mCtx(NULL)/*, mDataMgr(dataMgr)*/{ }
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);

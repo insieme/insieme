@@ -54,6 +54,8 @@ typedef std::vector<PragmaPtr> 	PragmaList;
 
 class MatchMap;
 
+// ------------------------------------ InsiemeSema ---------------------------
+
 class InsiemeSema: public clang::Sema{
 	class InsiemeSemaImpl;
 	InsiemeSemaImpl* pimpl;

@@ -58,6 +58,8 @@ class Scope;
 class Expr;
 }
 
+// ------------------------------------ ParserProxy ---------------------------
+
 /**
  * This is a proxy class which enables the access to internal clang features, i.e. Parser.
  * The main scope of this class is to handle the parsing of #pragma(s) of the input file
@@ -109,7 +111,13 @@ public:
 };
 
 namespace insieme {
+
+namespace core {
+class Program;
+}
+
 namespace frontend {
+
 /**
  * Used to report a parsing error occurred during the parsing of the input file
  */
@@ -119,6 +127,8 @@ struct ClangParsingError: public std::logic_error {
 
 class InsiemeTransUnit;
 typedef std::shared_ptr<InsiemeTransUnit> InsiemeTransUnitPtr;
+
+// ------------------------------------ ClangCompiler ---------------------------
 
 /**
  * ClangCompiler is a wrapper class for the Clang compiler main interfaces. The main goal is to hide implementation
@@ -145,13 +155,13 @@ public:
 class InsiemeTransUnit: public boost::noncopyable {
 	ClangCompiler mClang;
 
-	InsiemeTransUnit(const std::string& file_name);
+	InsiemeTransUnit(const std::string& file_name /*, insieme::core::Program& prog*/);
 public:
 	/**
 	 * Main entry method, it creates a translation unit starting from an input file
 	 */
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name) {
-		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name));
+	static InsiemeTransUnitPtr ParseFile(const std::string& file_name /*, insieme::core::Program& prog*/) {
+		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name/*, prog*/));
 	}
 };
 
