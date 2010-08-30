@@ -139,11 +139,11 @@ private:
 template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
 	std::string base_name;
-	node* reg_exp;
+	node* pragma_matcher;
 
 public:
-	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& reg_exp) :
-		PragmaHandler(name), base_name(base_name), reg_exp(reg_exp.copy()) {
+	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& pragma_matcher) :
+		PragmaHandler(name), base_name(base_name), pragma_matcher(pragma_matcher.copy()) {
 	}
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
@@ -151,9 +151,9 @@ public:
 		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 
 		MatchMap mmap;
-		ErrorStack errStack;
+		ParserStack errStack;
 
-		if (reg_exp->MatchPragma(PP, mmap, errStack)) {
+		if (pragma_matcher->MatchPragma(PP, mmap, errStack)) {
 			// act on pragma
 			std::ostringstream pragma_name;
 			pragma_name << base_name;
@@ -169,7 +169,7 @@ public:
 		}
 	}
 
-	~BasicPragmaHandler() {	delete reg_exp;	}
+	~BasicPragmaHandler() {	delete pragma_matcher;	}
 };
 
 struct PragmaHandlerFactory {

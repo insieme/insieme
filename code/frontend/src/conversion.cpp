@@ -36,7 +36,9 @@
 
 #include "conversion.h"
 
-#include <iostream>
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/StmtVisitor.h"
 
 using namespace clang;
 using namespace insieme;
@@ -44,27 +46,15 @@ namespace fe = insieme::frontend;
 
 namespace insieme {
 
-void RegisterPragmaHandlers(Preprocessor& pp) {
-	pp.AddPragmaHandler("insieme", fe::PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>("insieme",
-			pp.getIdentifierInfo("inline"), !(fe::tok::l_paren >> // 	'!('
-					fe::tok::numeric_constant["LEVEL"] >> //	LEVEL
-					fe::tok::r_paren) >> fe::tok::eom //	')' eom
-			));
+void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
+
 }
 
-InlinePragma::InlinePragma(const SourceLocation& startLoc, const SourceLocation& endLoc, const std::string& name, const frontend::MatchMap& mmap) :
-	Pragma(startLoc, endLoc, name, mmap) {
-	frontend::MatchMap::const_iterator it = mmap.find("LEVEL");
-	if (it != mmap.end()) {
-		llvm::APInt level = dyn_cast<IntegerLiteral> (it->second.back()->take<Stmt*> ())->getValue();
-		mLevel = (unsigned) *level.getRawData();
-	} else
-		mLevel = 0;
+void InsiemeIRConsumer::HandleTranslationUnit (ASTContext &Ctx) {
+
+
+
 }
 
-void InlinePragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
-	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << "|-> Pragma: " << getType() << " : "
-			<< mLevel << " " << toStr(sm) << "\n";
-}
 
 } // End insieme namespace

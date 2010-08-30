@@ -39,21 +39,23 @@
 #include "pragma_handler.h"
 #include "clang/AST/ASTConsumer.h"
 
-class InsiemeIRConsumer: public clang::ASTConsumer { };
+namespace clang {
+class ASTContext;
+class DeclGroupRef;
+}
 
 namespace insieme {
 
-class InlinePragma: public frontend::Pragma {
-	unsigned mLevel;
-public:
-	InlinePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name,
-			const frontend::MatchMap& mmap);
+class InsiemeIRConsumer: public clang::ASTConsumer {
+	clang::ASTContext* mCtx;
 
-	void dump(std::ostream& out, const clang::SourceManager& sm) const;
-	unsigned const& level() const { return mLevel; }
-	~InlinePragma() { }
+public:
+	InsiemeIRConsumer() : mCtx(NULL) { }
+
+	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
+	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
+	virtual void HandleTranslationUnit(clang::ASTContext &Ctx);
 };
 
-void RegisterPragmaHandlers(clang::Preprocessor& pp);
 }
 

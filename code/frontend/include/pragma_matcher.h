@@ -65,41 +65,40 @@ class SourceLocation;
 namespace insieme {
 namespace frontend {
 
-struct ParsingError {
-	std::string expected;
-	clang::SourceLocation loc;
-};
-
-class ErrorStack {
+/**
+ *
+ */
+class ParserStack {
 public:
-	int recordId;
-	std::vector<std::vector<ParsingError>> errs;
+	/**
+	 * Contains a parsing error encountered during the evaluation of pragmas.
+	 * It has a string representing the expecting tokens and the location at which the error was encountered.
+	 */
+	struct Error {
+		std::string 			expected;
+		clang::SourceLocation loc;
 
-	ErrorStack(): recordId(0) { }
+		Error(const std::string& exp, const clang::SourceLocation& loc): expected(exp), loc(loc) { }
+	};
 
-	int openRecord() {
-		errs.push_back( std::vector<ParsingError>() );
-		return recordId++;
-	}
+	typedef std::vector<Error> LocErrorList;
 
-	void addExpected(int recordId, ParsingError pe) { errs[recordId].push_back(pe); }
+	ParserStack(): mRecordId(0) { }
 
-	void discardRecord(int recordId) { errs[recordId] =  std::vector<ParsingError>(); }
+	size_t openRecord();
+	void addExpected(size_t recordId, const Error& pe);
+	void discardRecord(size_t recordId);
+	size_t getFirstValidRecord();
+	void discardPrevRecords(size_t recordId);
 
-	size_t getFirstRecord() {
-		for(size_t i=0; i<errs.size(); ++i)
-			if(!errs[i].empty()) return i;
-	}
-
-	void discardPrevRecords(int recordId) {
-		std::for_each(errs.begin(), errs.begin()+recordId, [](std::vector<ParsingError>& cur) {
-			cur = std::vector<ParsingError>();
-		} );
-	}
-
+	const LocErrorList& getRecord(size_t recordId) const;
+	size_t stackSize() const { return mRecords.size(); }
+private:
+	size_t mRecordId;
+	std::vector<LocErrorList> mRecords;
 };
 
-void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ErrorStack& errStack);
+void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
 // forward declarations
 class concat;
 class star;
@@ -146,7 +145,7 @@ template<clang::tok::TokenKind T>
 struct tol;
 
 struct node {
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const = 0;
+	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const = 0;
 	virtual node* copy() const = 0;
 
 	concat operator>>(node const& n) const;
@@ -155,7 +154,7 @@ struct node {
 	option operator!() const;
 
 	virtual node& operator[](const std::string& map_name) = 0;
-	bool MatchPragma(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack) {
+	bool MatchPragma(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack) {
 		return match(PP, mmap, errStack, errStack.openRecord());
 	}
 
@@ -201,25 +200,25 @@ struct val_pair: public node, public std::pair<node*, node*> {
 struct concat: public val_pair<concat> {
 	concat(node const& n1, node const& n2) : val_pair<concat>::val_pair(n1.copy(), n2.copy()) {	}
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
 struct choice: public val_pair<choice> {
 	choice(node const& n1, node const& n2) : val_pair<choice>::val_pair(n1.copy(), n2.copy()) {	}
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
 struct option: public val_single<option> {
 	option(node const& n): val_single<option>(n.copy()) { }
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
 struct star: public val_single<star> {
 	star(node const& n) : val_single<star>(n.copy()) { }
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
 template <class T>
@@ -246,7 +245,7 @@ struct expr_p: public MappableNode<expr_p> {
 	expr_p() { }
 	expr_p(std::string const& map_str, bool addToMap=true) : MappableNode<expr_p>(map_str, addToMap) { }
 
-	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
 void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
@@ -258,16 +257,13 @@ struct Tok: public MappableNode<Tok<T>> {
 	Tok() { }
 	Tok(std::string const& str, bool addToMap = true) : MappableNode<Tok<T>>(str, addToMap) { }
 
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
 			if(MappableNode<Tok<T>>::isAddToMap()) AddToMap(T, token, MappableNode<Tok<T>>::getMapName(), mmap);
 			return true;
 		}
-		ParsingError pe;
-		pe.expected = "\'" + TokenToStr(T) + "\'";
-		pe.loc = token.getLocation();
-		errStack.addExpected(recID, pe);
+		errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(T) + "\'", token.getLocation()));
 		return false;
 	}
 };
@@ -280,7 +276,7 @@ struct kwd: public Tok<clang::tok::identifier> {
 
 	node* copy() const { return new kwd(kw, getMapName(), isAddToMap()); }
 	kwd operator~() const { return kwd(kw, getMapName(), false); }
-	bool match(clang::Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const;
+	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
 // import token definitions from clang
