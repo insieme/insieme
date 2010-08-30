@@ -57,9 +57,6 @@ ENUM(testInt, ZERO, ONE)
 //Long word and underscore
 ENUM(testLongElement,    VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal,     _KILLEM)
 
-//Two enums with same element
-/*ENUM(testCols, RED, YELLOW, BLUE)
-ENUM(testYellow, YELLOW, BLUE, RED)*/
 
 
 TEST(Enums, LongString) {
@@ -115,17 +112,17 @@ TEST(Enums, TwoElements) {
     EXPECT_EQ(name(u2), "UNO");
     EXPECT_EQ(ord(u2),  0);
 
-    EXPECT_EQ(u1, u2);
+    EXPECT_EQ(u1, u2);"_KILLEM"
 }*/
 
 TEST(Enums, LongWord) {
     testLongElement t = (testLongElement) 0;
-    EXPECT_EQ(name(t), "VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal");
+    EXPECT_EQ("VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal", name(t));
 }
 
 TEST(Enums, UnderScore) {
     testLongElement t = _KILLEM;
-    EXPECT_EQ(name(t), "_KILLEM");
+    EXPECT_EQ("_KILLEM", name(t));
 }
 
 TEST(Enums, ForLoopPP) {
@@ -133,7 +130,7 @@ TEST(Enums, ForLoopPP) {
     for(testCard tc = min(tc); tc != max(tc); tc++) {
         j++;
     }
-    EXPECT_EQ(j, 13);
+    EXPECT_EQ(14, j);
 }
 
 TEST(Enums, PPForLoop) {
@@ -141,7 +138,7 @@ TEST(Enums, PPForLoop) {
     for(testCard tc = min(tc); tc != max(tc); ++tc) {
         j++;
     }
-    EXPECT_EQ(j, 13);
+    EXPECT_EQ(14, j);
 }
 
 /* Das wird wohl eher nicht funktionieren (max(tc) - 1)
@@ -150,19 +147,14 @@ TEST(Enums, ForLoopMM) {
     for(testCard tc = max(tc) - 1; tc-- != min(tc); ) {
         j++;
     }
-    EXPECT_EQ(j, 13);
+    EXPECT_EQ(14, j);
 }*/
 
 TEST(Enums, MMForLoop) {
     std::size_t j = 0;
-    for(testCard tc = min(tc); --tc != max(tc); ++tc) {
+    for(testCard tc = max(tc); --tc >= min(tc); ) {
         j++;
     }
-    EXPECT_EQ(j, 13);
+    EXPECT_EQ(14, j);
 }
-/*
-TEST(Enums, Twice) {
-    testCols tc = YELLOW;
-    testYellow ty = YELLOW;
-    EXPECT_NE(ord(tc), ord(ty));
-}*/
+
