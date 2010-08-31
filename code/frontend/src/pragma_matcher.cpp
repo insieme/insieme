@@ -76,20 +76,41 @@ std::string ValueUnion::toStr() const {
 	return rs.str();
 }
 
-void reportRecord(std::ostream& ss, std::vector<ParsingError>& errs, clang::SourceManager& srcMgr) {
+// ------------------------------------ ErrorStack ---------------------------
 
+size_t ParserStack::openRecord() {
+	mRecords.push_back( LocErrorList() );
+	return mRecordId++;
+}
+
+void ParserStack::addExpected(size_t recordId, const Error& pe) { mRecords[recordId].push_back(pe); }
+
+void ParserStack::discardRecord(size_t recordId) { mRecords[recordId] = LocErrorList(); }
+
+size_t ParserStack::getFirstValidRecord() {
+	for(size_t i=0; i<mRecords.size(); ++i)
+		if(!mRecords[i].empty()) return i;
+	assert(false);
+}
+
+void ParserStack::discardPrevRecords(size_t recordId) {
+	std::for_each(mRecords.begin(), mRecords.begin()+recordId, [](LocErrorList& cur) {
+		cur = LocErrorList();
+	} );
+}
+
+const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const { return mRecords[recordId]; }
+
+void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
 	std::vector<std::string> list;
-	std::transform(errs.begin(), errs.end(), back_inserter(list),
-		[](const ParsingError& pe) { return pe.expected; });
+	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
 
 	ss << boost::join(list, " | ");
-
-	ss << " @ (" << frontend::util::Line(errs[0].loc, srcMgr) << ":" << frontend::util::Column(errs[0].loc, srcMgr) << ")";
 
 	ss << std::endl;
 }
 
-void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ErrorStack& errStack) {
+void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 	TextDiagnosticPrinter &tdc = (TextDiagnosticPrinter&) *pp.getDiagnostics().getClient();
 
 	std::string str;
@@ -99,22 +120,22 @@ void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Erro
 	ss << sstr.str() << ": ";
 	ss << "error: expected ";
 
-	size_t err, ferr = errStack.getFirstRecord();
+	size_t err, ferr = errStack.getFirstValidRecord();
 	err = ferr;
+	SourceLocation errLoc = errStack.getRecord(err).front().loc;
+	ss << "at location (" << frontend::util::Line(errLoc, pp.getSourceManager()) << ":" << frontend::util::Column(errLoc, pp.getSourceManager()) << ") ";
 	bool first = true;
 	do {
-		if(!errStack.errs[err].empty()) {
-			if(!first)
-				ss << "\tor: ";
-			reportRecord(ss, errStack.errs[err], pp.getSourceManager());
-			if(first) {
-				first = false;
-			}
+		if(!errStack.getRecord(err).empty() && errStack.getRecord(err).front().loc == errLoc) {
+			!first && ss << "\t";
+
+			reportRecord(ss, errStack.getRecord(err), pp.getSourceManager());
+			first = false;
 		}
 		err++;
-	} while(err < errStack.errs.size());
+	} while(err < errStack.stackSize());
 	llvm::errs() << ss.str();
-	tdc.EmitCaretDiagnostic(errStack.errs[ferr].begin()->loc, NULL, 0, pp.getSourceManager(), 0, 0, 80);
+	tdc.EmitCaretDiagnostic(errLoc, NULL, 0, pp.getSourceManager(), 0, 0, 80);
 }
 
 // ------------------------------------ node ---------------------------
@@ -124,7 +145,7 @@ star node::operator*() const { return star(*this); }
 choice node::operator|(node const& n) const { return choice(*this, n); }
 option node::operator!() const { return option(*this); }
 
-bool concat::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+bool concat::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
 	if (first->match(PP, mmap, errStack, id)) {
@@ -140,13 +161,13 @@ bool concat::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_
 	return false;
 }
 
-bool star::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+bool star::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	while (getNode()->match(PP, mmap, errStack, recID))
 		;
 	return true;
 }
 
-bool choice::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+bool choice::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
 	if (first->match(PP, mmap, errStack, id)) {
@@ -165,7 +186,7 @@ bool choice::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_
 	return false;
 }
 
-bool option::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+bool option::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	PP.EnableBacktrackAtThisPos();
 	if (getNode()->match(PP, mmap, errStack, recID)) {
 		PP.CommitBacktrackedTokens();
@@ -175,7 +196,7 @@ bool option::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_
 	return true;
 }
 
-bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	// ClangContext::get().getParser()->Tok.setKind(*firstTok);
 	PP.EnableBacktrackAtThisPos();
 	Expr* result = ParserProxy::get().ParseExpression(PP);
@@ -191,14 +212,11 @@ bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_
 		return true;
 	}
 	PP.Backtrack();
-	ParsingError pe;
-	pe.expected = "expr";
-	pe.loc = ParserProxy::get().CurrentToken().getLocation();
-	errStack.addExpected(recID,pe);
+	errStack.addExpected(recID, ParserStack::Error("expr", ParserProxy::get().CurrentToken().getLocation()));
 	return false;
 }
 
-bool kwd::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t recID) const {
+bool kwd::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	clang::Token& token = ParserProxy::get().ConsumeToken();
 	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
 		if(isAddToMap() && getMapName().empty())
@@ -207,10 +225,7 @@ bool kwd::match(Preprocessor& PP, MatchMap& mmap, ErrorStack& errStack, size_t r
 			mmap[getMapName()].push_back( ValueUnionPtr(new ValueUnion( kw )) );
 		return true;
 	}
-	ParsingError pe;
-	pe.expected = "\'" + kw + "\'";
-	pe.loc = token.getLocation();
-	errStack.addExpected(recID,pe);
+	errStack.addExpected(recID, ParserStack::Error("\'" + kw + "\'", token.getLocation()));
 	return false;
 }
 

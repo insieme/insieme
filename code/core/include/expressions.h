@@ -58,10 +58,12 @@ DECLARE_NODE_TYPE(FloatLiteral);
 
 DECLARE_NODE_TYPE(VarExpr);
 DECLARE_NODE_TYPE(ParamExpr);
-
-DECLARE_NODE_TYPE(LambdaExpr);
 DECLARE_NODE_TYPE(CallExpr);
 DECLARE_NODE_TYPE(CastExpr);
+
+DECLARE_NODE_TYPE(TupleExpr);
+DECLARE_NODE_TYPE(LambdaExpr);
+
 
 // Forward Declarations } -----------------------------------------------------
 
@@ -103,8 +105,7 @@ protected:
 	virtual ~Literal() {}
 
 	bool equalsExpr(const Expression& expr) const {
-		// conversion is guaranteed by base operator==
-		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr); 
+		const Literal<T>& rhs = static_cast<const Literal<T>&>(expr);
 		return (value == rhs.value);
 	}
 
@@ -202,6 +203,40 @@ public:
 
 	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
 };
+
+
+class TupleExpr : public Expression {
+	const vector<ExpressionPtr> expressions;
+
+	TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions);
+	virtual TupleExpr* clone(NodeManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+
+	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
+};
+
+
+//class StructUnionExpr : public Expression {
+//	const vector<VarExprPtr> members;
+//
+//	TupleExpr(const TypePtr& type, const vector<ExprPtr>& expressions) 
+//		: Expression(type), expressions(expressions) { };
+//	virtual TupleExpr* clone(StatementManager& manager) const;
+//
+//protected:
+//	bool equalsExpr(const Expression& expr) const;
+//
+//public:
+//	virtual void printTo(std::ostream& out) const;
+//	virtual std::size_t hash() const;
+//
+//	static TupleExprPtr get(StatementManager& manager, const vector<ExprPtr>& expressions);
+//};
 
 
 class CallExpr : public Expression {

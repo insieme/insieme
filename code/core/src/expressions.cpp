@@ -45,7 +45,8 @@ using namespace insieme::core;
 
 enum {
 	HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
-	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR, HASHVAL_PARENEXPR
+	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
+	HASHVAL_TUPLEEXPR, HASHVAL_PARENEXPR
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -194,6 +195,39 @@ LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const P
 	return manager.get(LambdaExpr(type, params, body));
 }
 
+// ------------------------------------- TupleExpr ---------------------------------
+
+std::size_t hashTupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions) {
+	size_t seed = HASHVAL_TUPLEEXPR;
+	boost::hash_combine(seed, type->hash());
+	hashPtrRange(seed, expressions);
+	return seed;
+}
+
+TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions)
+		: Expression(type, hashTupleExpr(expressions)), expressions(expressions) { };
+
+TupleExpr* TupleExpr::clone(StatementManager& manager) const {
+	return new TupleExpr(manager.getTypeManager().get(type), manager.getAll(expressions));
+}
+
+bool TupleExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base equals
+	const TupleExpr& rhs = static_cast<const TupleExpr&>(expr);
+	return ::equals(expressions, rhs.expressions, equal_target<ExprPtr>());
+}
+
+void TupleExpr::printTo(std::ostream& out) const {
+	out << "tuple(" << join(", ", expressions, deref<ExpressionPtr>()) << ")";
+}
+
+
+TupleExprPtr TupleExpr::get(StatementManager& manager, const vector<ExprPtr>& expressions) {
+	TupleType::ElementTypeList elemTypes;
+	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](ExprPtr e) { return e->getType(); });
+	return manager.get(TupleExpr(TupleType::get(manager.getTypeManager(), elemTypes), expressions));
+}
+
 // ------------------------------------- CallExpr ---------------------------------
 
 std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -215,8 +249,7 @@ bool CallExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CallExpr& rhs = dynamic_cast<const CallExpr&>(expr);
 	return (*rhs.functionExpr == *functionExpr) && 
-		equal(arguments.cbegin(), arguments.cend(), rhs.arguments.cbegin(), equal_target<ExpressionPtr>());
-
+		equals(arguments, rhs.arguments, equal_target<ExpressionPtr>());
 }
 	
 void CallExpr::printTo(std::ostream& out) const {
