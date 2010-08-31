@@ -40,266 +40,149 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#include <llvm/ADT/PointerUnion.h>
+#include "clang_compiler.h"
+#include "pragma_matcher.h"
+#include "insieme_sema.h"
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>
-#include <clang/Lex/Token.h>
+
+#include "clang/Parse/Parser.h"
 
 #include <memory>
 #include <sstream>
 #include <map>
 
+// forward declaration
 namespace clang {
 class Stmt;
 class Decl;
 class Expr;
-class Preprocessor;
-class Scope;
 }
 
-class ValueUnion: public llvm::PointerUnion<clang::Stmt*,std::string*> {
-	bool ptrOwner;
-	
-public:
-	ValueUnion(clang::Stmt* stmt):
-		llvm::PointerUnion<clang::Stmt*,std::string*>(stmt), ptrOwner(true) { }
-		
-	ValueUnion(std::string const& str): 
-		llvm::PointerUnion<clang::Stmt*,std::string*>(new std::string(str)),
-		ptrOwner(true) { }
-	
-	template <class T>
-	T take() {
-		T ret = get<T>(); 
-		if(ret)	ptrOwner = false;
-		return ret;
-	}
-	
-	~ValueUnion() {
-//		if(ptrOwner && is<clang::Stmt*>())
-//			ClangContext::get().getASTContext().Deallocate(get<Stmt*>());
-//		if(ptrOwner && is<std::string*>())
-//			delete get<std::string*>();
-	}
-};
+namespace insieme {
+namespace frontend {
 
-typedef std::shared_ptr<ValueUnion> 	ValueUnionPtr;
-typedef std::vector< ValueUnionPtr > 	ValueList;
-
-class MatchMap: public std::map<std::string, ValueList> { };
-typedef std::pair<bool, MatchMap> 		MatcherResult;
-
-//===------------------------- Pragma ---------------------------===//
-// Defines a generic pragma which is defined by its location (start,end) 
-// and the associated statement 
+/**
+ * Defines a generic pragma which contains the location (start,end), and the target node
+ */
 class Pragma {
-	clang::SourceLocation startLoc;
-	clang::SourceLocation endLoc;
-	std::string name;
-	llvm::PointerUnion<clang::Stmt*,clang::Decl*> ref;
-	
-public:	
-	Pragma(clang::SourceLocation const& startLoc, clang::SourceLocation const& endLoc, std::string const& name):
-		startLoc(startLoc), endLoc(endLoc), name(name) { }
-			
-	Pragma(clang::SourceLocation const& startLoc,
-		   clang::SourceLocation const& endLoc,
-		   std::string 			 const&	name,
-		   MatchMap 			 const& mmap):
-		startLoc(startLoc), endLoc(endLoc), name(name) { }
-	
-	clang::SourceLocation const& getStartLocation() const { return startLoc; }
-	clang::SourceLocation const& getEndLocation() const { return endLoc; }
-	
-	void setStatement(clang::Stmt* stmt) { ref = stmt; }
-	void setDecl(clang::Decl* decl) { ref = decl; }
-	
-	clang::Stmt const* getStatement() const {
-		assert(!ref.isNull() && isStatement());
-		return ref.get<clang::Stmt*>();
-	}
-	
-	clang::Decl const* getDecl() const {
-		assert(!ref.isNull() && isDecl());
-		return ref.get<clang::Decl*>();
-	}
-	
-	bool isStatement() const { return ref.is<clang::Stmt*>(); }
-	bool isDecl() const { return ref.is<clang::Decl*>(); }
-	
-	std::string const& getType() const { return name; }
-	
-	virtual void dump() const;
-	std::string toString() const;
-	
-	virtual ~Pragma() { }
+	/**
+	 * Attach the pragma to a statement. If the pragma is already bound to a statement or location, a call to this method will produce an error.
+	 */
+	void setStatement(clang::Stmt const* stmt);
+
+	/**
+	 * Attach the pragma to a declaration. If the pragma is already bound to a statement or location, a call to this method will produce an error.
+	 */
+	void setDecl(clang::Decl const* decl);
+
+	friend class InsiemeSema;
+public:
+	typedef llvm::PointerUnion<clang::Stmt const*, clang::Decl const*> PragmaTarget;
+
+	/**
+	 * Creates an empty pragma starting from source location startLoc and ending ad endLoc.
+	 */
+	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type) :
+		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
+
+	/**
+	 * Creates a pragma starting from source location startLoc and ending ad endLoc by passing the content of the map which associates, for each
+	 * key defined in the pragma_matcher, the relative parsed list of values
+	 *
+	 */
+	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type,
+			MatchMap const& mmap) :
+		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
+
+	const clang::SourceLocation& getStartLocation() const { return mStartLoc; }
+	const clang::SourceLocation& getEndLocation() const { return mEndLoc; }
+	/**
+	 * Returns a string which identifies the pragma
+	 */
+	const std::string& getType() const { return mType; }
+
+	clang::Stmt const* getStatement() const;
+	clang::Decl const* getDecl() const;
+
+	/**
+	 * Returns true if the AST node associated to this pragma is a statement (clang::Stmt)
+	 */
+	bool isStatement() const { return mTargetNode.is<clang::Stmt const*> ();	}
+
+	/**
+	 * Returns true if the AST node associated to this pragma is a declaration (clang::Decl)
+	 */
+	bool isDecl() const { return mTargetNode.is<clang::Decl const*> (); }
+
+	/**
+	 * Writes the content of the pragma to standard output
+	 */
+	virtual void dump(std::ostream& out, const clang::SourceManager& sm) const;
+
+	/**
+	 * Returns a string representation of the pragma
+	 */
+	std::string toStr(const clang::SourceManager& sm) const;
+
+	virtual ~Pragma() {	}
+
+private:
+	clang::SourceLocation mStartLoc, mEndLoc;
+	std::string mType;
+	PragmaTarget mTargetNode;
 };
 
-class concat;
-class star;
-class choice;
-class option;
-
-template <clang::tok::TokenKind T>
-struct t;
-
-struct node{
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const = 0;
-	virtual node* copy() const = 0;
-	
-	concat 	operator>>(node const& n);
-	star 	operator*();
-	choice 	operator|(node const& n);
-	option  operator!();
-	
-	MatcherResult match(clang::Preprocessor& PP);
-	
-	virtual ~node() { }
-};
-
-template <class T>
-struct val_pair: public node, public std::pair<node*,node*> {
-	val_pair(node* n1, node* n2): std::pair<node*, node*>(n1,n2) { }
-	
-	node* copy() const { return new T(*first, *second); }
-	~val_pair() { delete first; delete second; }
-};
-
-struct concat: public val_pair<concat> {
-	concat(node const& n1, node const& n2): val_pair<concat>::val_pair(n1.copy(), n2.copy()) { }
-	
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-};
-
-struct choice: public val_pair<choice> {
-	choice(node const& n1, node const& n2): val_pair<choice>::val_pair(n1.copy(), n2.copy()) { }
-	
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-};
-
-struct option: public node {
-	node* n;
-	option(node const& n): n( n.copy() ) { }
-	
-	node* copy() const { return new option(*n); }
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-	~option(){ delete n; }
-};
-
-struct star: public node {
-	node* n;
-	
-	template <class T>
-	star(T const& n): n( n.copy() ) { }
-	
-	node* copy() const { return new star(*n); }
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-	~star(){ delete n; }
-};
-
-struct expr: public node {
-	std::string map_str;
-	
-	expr() { }
-	expr(std::string const& map_str): map_str(map_str) { }
-	node* copy() const { return new expr(map_str); }
-	
-	expr operator()(std::string const& str) { return expr(str); }
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-};
-
-void AddToMap(clang::tok::TokenKind tok,
-			  clang::Token const& 	token,
-			  std::string const& 	map_str, 
-			  MatchMap& 			mmap);
-
-#include "insieme.h"
-
-template <clang::tok::TokenKind T>
-struct t: public node {
-	std::string map_str;
-	
-	t(): map_str() {}
-	t(std::string const& map_str): map_str(map_str) { }
-		
-	node* copy() const { return new t<T>(map_str); }
-	
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap) const {
-		clang::Token& token = ParserProxy::get().ConsumeToken();
-		if( token.is(T) ) {
-			AddToMap(T, token, map_str, mmap);
-			return true;
-		}
-		return false;
-	}
-};
-
-struct kwd: public t<clang::tok::identifier> {
-	std::string kw;
-	
-	kwd(std::string const& kw): t<clang::tok::identifier>::t(), kw(kw) { }
-	
-	node* copy() const { return new kwd(kw); }
-	bool match(clang::Preprocessor& PP, MatchMap& mmap) const;
-};
-
-
-#define PUNCTUATOR(name, _) \
-	static t<clang::tok::name>  name##_p = t<clang::tok::name>();
-#define TOK(name) \
-	static t<clang::tok::name>  name##_p = t<clang::tok::name>();
-#include <clang/Basic/TokenKinds.def>
-#undef PUNCTUATOR
-#undef TOK
-static expr 					expr_p		= expr();
-
-template <class T>
+template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
 	std::string base_name;
 	node* reg_exp;
-	
+
 public:
-	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& reg_exp):
-		PragmaHandler(name), base_name(base_name), reg_exp( reg_exp.copy() ) { }
-		
+	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& reg_exp) :
+		PragmaHandler(name), base_name(base_name), reg_exp(reg_exp.copy()) {
+	}
+
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
 		// DEBUG("PRAGMA HANDLER: " << 
-		// 		std::string(getName()->getNameStart(), 
-		//					getName()->getNameStart()+getName()->getLength()) );
+		// std::string(getName()->getNameStart(),
+		//	   		   getName()->getNameStart()+getName()->getLength()) );
 		// ParserProxy::CurrentToken().getName().setKind(FirstToken);
-		
+
+		clang::Token saveTok = ParserProxy::get().CurrentToken();
 		// '#' symbol is 1 position before
-		clang::SourceLocation startLoc =
-			ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
-		
+		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
+
 		MatcherResult MR = reg_exp->match(PP);
-		if(MR.first){
+		if (MR.first) {
 			// act on pragma
 			// DEBUG(ParserProxy::CurrentToken().getName());
 			std::ostringstream pragma_name;
 			pragma_name << base_name;
-			if(getName())
-				pragma_name << "::" << 
-					std::string(getName()->getNameStart(), getName()->getNameStart()+getName()->getLength());
-			
+			if (getName())
+				pragma_name << "::" << std::string(getName()->getNameStart(), getName()->getNameStart() + getName()->getLength());
+
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
-//			((InsiemeSema&) ClangContext::get().getParser()->getActions()).
-//					ActOnPragma<T>(pragma_name.str(), MR.second, startLoc, endLoc);
-		}else{
-//			DEBUG("MATCHING FAILED!");
-//			PP.DiscardUntilEndOfDirective();
+			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), MR.second, startLoc, endLoc);
+		} else {
+			// TODO: REPORT ERROR
+			PP.DiscardUntilEndOfDirective();
 		}
 	}
-	
-	~BasicPragmaHandler() { delete reg_exp; } 
+
+	~BasicPragmaHandler() {	delete reg_exp;	}
 };
 
 struct PragmaHandlerFactory {
-	
-	template <class T>
+
+	template<class T>
 	static clang::PragmaHandler* CreatePragmaHandler(const char* base_name, clang::IdentifierInfo* name, node const& re) {
-		return new BasicPragmaHandler<T>(base_name, name, re);
+		return new BasicPragmaHandler<T> (base_name, name, re);
 	}
 };
+
+} // End frontend namespace
+} // End insieme namespace
+
 

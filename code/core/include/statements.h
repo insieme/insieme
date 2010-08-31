@@ -60,6 +60,9 @@ using std::vector;
 class Expression;
 typedef AnnotatedPtr<const Expression> ExprPtr;
 
+class VarExpr;
+typedef AnnotatedPtr<const VarExpr> VarExprPtr;
+
 // Forward Declarations { -----------------------------------------------------
 
 class Statement;
@@ -103,7 +106,7 @@ class StatementManager;
 
 class Statement : public Visitable<StmtPtr> {
 	// needs InstanceManager not StatementManager since base type calls clone
-	friend class InstanceManager<StatementManager, const Statement, StmtPtr>;
+	friend class InstanceManager<Statement, AnnotatedPtr>;
 	virtual Statement* clone(StatementManager& manager) const = 0;
 
 protected:
@@ -114,11 +117,14 @@ protected:
 	};
 
 	Statement() {}
-	virtual ~Statement() {}
 
 	virtual bool equals(const Statement& stmt) const = 0;
 
 public:
+
+	typedef StatementManager Manager;
+
+	virtual ~Statement() {}
 	virtual void printTo(std::ostream& out) const = 0;
 	virtual std::size_t hash() const = 0;
 	virtual ChildList getChildren() const;
@@ -176,11 +182,10 @@ public:
 
 
 class DeclarationStmt : public Statement {
-	const TypePtr type;
-	const Identifier id;
+	const VarExprPtr varExpression;
 	const ExprPtr initExpression;
 
-	DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression);
+	DeclarationStmt(const VarExprPtr& varExpression, const ExprPtr& initExpression);
 	virtual DeclarationStmt* clone(StatementManager& manager) const;
 	
 protected:
@@ -270,8 +275,10 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 	virtual ChildList getChildren() const;
+
+	const ExprPtr& getStep() const { return step; }
 	
-	static ForStmtPtr get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step = NULL);
+	static ForStmtPtr get(StatementManager& manager, const DeclarationStmtPtr& declaration, const StmtPtr& body, const ExprPtr& end, const ExprPtr& step = NULL);
 };
 
 class IfStmt: public Statement {
@@ -317,17 +324,11 @@ public:
 
 // ------------------------------------- Statement Manager ---------------------------------
 
-class StatementManager : public InstanceManager<StatementManager, const Statement, StmtPtr> {
+class StatementManager : public InstanceManager<Statement, AnnotatedPtr> {
 	TypeManager& typeManager;	
 
 public:
 	StatementManager(TypeManager& typeManager) : typeManager(typeManager) { }
-
-	// I never wanted this to be public - PT
-	template<typename T>
-	AnnotatedPtr<const T> getStmtPtr(const T& stmt) {
-		return dynamic_pointer_cast<const T>(get(stmt));
-	}
 
 	TypeManager& getTypeManager() {
 		return typeManager;

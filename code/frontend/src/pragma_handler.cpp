@@ -36,175 +36,71 @@
 
 #include "pragma_handler.h"
 
-#include <clang/Lex/Preprocessor.h>
-#include "clang/Parse/Parser.h"
+#include <llvm/Support/raw_ostream.h>
 
 using namespace clang;
+using namespace insieme::frontend;
 
-MatcherResult node::match(Preprocessor& PP){
-	MatchMap mmap;
-	
-	bool ret = match(PP, mmap);
-	return std::make_pair(ret, mmap);
+#include <iostream>
+namespace {
+
+std::string loc2string(const clang::SourceLocation& loc, const clang::SourceManager& sm) {
+	std::string str;
+	llvm::raw_string_ostream ss(str);
+	loc.print(ss,sm);
+	return ss.str();
+}
 }
 
-concat node::operator>>(node const& n){ return concat(*this, n); }
+namespace insieme {
+namespace frontend {
 
-star node::operator*(){ return star(*this); }
-
-choice node::operator|(node const& n){ return choice(*this, n); }
-
-option node::operator!(){ return option(*this); }
-
-bool concat::match(Preprocessor& PP, MatchMap& mmap) const {
-	PP.EnableBacktrackAtThisPos();
-	if(first->match(PP, mmap) && second->match(PP, mmap)){
-		PP.CommitBacktrackedTokens();
-		return true;
-	}
-	PP.Backtrack();
-	return false;
+void Pragma::setStatement(clang::Stmt const* stmt) {
+	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
+	mTargetNode = stmt;
 }
 
-bool star::match(Preprocessor& PP, MatchMap& mmap) const {
-	while(n->match(PP, mmap)) ;
-	return true;
+void Pragma::setDecl(clang::Decl const* decl) {
+	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
+	mTargetNode = decl;
 }
 
-bool choice::match(Preprocessor& PP, MatchMap& mmap) const {
-	PP.EnableBacktrackAtThisPos();
-	if(first->match(PP, mmap)){
-		PP.CommitBacktrackedTokens();
-		return true;
-	}
-	PP.Backtrack();
-	PP.EnableBacktrackAtThisPos();
-	if(second->match(PP, mmap)){
-		PP.CommitBacktrackedTokens();
-		return true;
-	}
-		
-	PP.Backtrack();
-	return false;
+clang::Stmt const* Pragma::getStatement() const {
+	assert(!mTargetNode.isNull() && isStatement());
+	return mTargetNode.get<clang::Stmt const*> ();
 }
 
-bool option::match(Preprocessor& PP, MatchMap& mmap) const {
-	PP.EnableBacktrackAtThisPos();
-	if(n->match(PP,mmap)){
-		PP.CommitBacktrackedTokens();
-		return true;
-	}
-	PP.Backtrack();
-	return true;
+clang::Decl const* Pragma::getDecl() const {
+	assert(!mTargetNode.isNull() && isDecl());
+	return mTargetNode.get<clang::Decl const*> ();
 }
 
-bool expr::match(Preprocessor& PP, MatchMap& mmap) const {
-	// ClangContext::get().getParser()->Tok.setKind(*firstTok);
-	PP.EnableBacktrackAtThisPos();
-	Expr* result = ParserProxy::get().ParseExpression(PP);
-	
-	if(result) {
-		PP.CommitBacktrackedTokens();
-		ParserProxy::get().EnterTokenStream(PP);
-		PP.LookAhead(1); // THIS IS CRAZY BUT IT WORKS
-		if(map_str.size())
-			mmap[map_str].push_back( ValueUnionPtr( new ValueUnion(result) ) );
-		return true;
-	}
-	PP.Backtrack();
-	return false;
-}
-
-bool kwd::match(Preprocessor& PP, MatchMap& mmap) const {
-	if(t<tok::identifier>::match(PP,mmap) && 
-		ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw)
-	{
-		mmap[kw];
-		return true;
-	}
-	return false;
-}
-
-void AddToMap(tok::TokenKind 		tok, 
-			  Token const& 			token, 
-			  std::string const& 	map_str, 
-			  MatchMap& 			mmap)
-{
-	if(!map_str.size())
-		return;
-	Action& A = ParserProxy::get().getParser()->getActions();
-	switch(tok){
-		case tok::numeric_constant:
-			mmap[map_str].push_back( ValueUnionPtr(
-					new ValueUnion(
-							A.ActOnNumericConstant(token).takeAs<IntegerLiteral>()
-					)
-			) );
-			break;
-		case tok::identifier:
-		{
-			UnqualifiedId Name;
-			CXXScopeSpec ScopeSpec;
-			Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
-			
-			mmap[map_str].push_back( ValueUnionPtr(
-					new ValueUnion(
-							A.ActOnIdExpression(
-							ParserProxy::get().CurrentScope(),
-							ScopeSpec,
-							Name,
-							false,
-							false).takeAs<Stmt>()
-					)
-			) );
-			break;
-		}
-		default:
-		{
-			if( token.isLiteral() ){
-				mmap[map_str].push_back( ValueUnionPtr(
-						new ValueUnion(
-								std::string(token.getLiteralData(),
-								token.getLiteralData() + token.getLength())
-						)
-				) );
-			}else{
-				mmap[map_str].push_back( ValueUnionPtr(
-						new ValueUnion(
-								std::string(tok::getTokenSimpleSpelling(tok))
-						)
-				));
-			}
-			break;
-		}
-	}
-}
-
-std::string Pragma::toString() const {
+std::string Pragma::toStr(const clang::SourceManager& sm) const {
 	std::ostringstream ss;
-//	ss << "(" << LOC2S(getStartLocation()) << ", " <<
-//				 LOC2S(getEndLocation()) <<
-//		  "),\n\t";
-//	if(isStatement())
-//		ss << "Stmt -> ";
-//	else
-//		ss << "Decl -> ";
-//	ss << "(";
-//	if(isStatement() && getStatement())
-//		ss << LOC2S(getStatement()->getLocStart()) << ", " <<
-//				 LOC2S(getStatement()->getLocEnd());
-//	else if(isDecl() && getDecl())
-//		ss << LOC2S(getDecl()->getLocStart()) << ", " <<
-//				 LOC2S(getDecl()->getLocEnd());
-//	ss << ")";
-		// << "\n" << PrintClangStmt(getStatement())
+	ss << "(" << loc2string(getStartLocation(), sm) << ", " <<
+				 loc2string(getEndLocation(), sm) <<
+		  "),\n\t";
+	if(isStatement())
+		ss << "Stmt -> ";
+	else
+		ss << "Decl -> ";
+	ss << "(";
+	if(isStatement() && getStatement())
+		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
+			  loc2string(getStatement()->getLocEnd(), sm);
+	else if(isDecl() && getDecl())
+		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
+			  loc2string(getDecl()->getLocEnd(), sm);
+	ss << ")";
+//		 << "\n" << PrintClangStmt(getStatement())
 	;
 	return ss.str();
 }
 
-void Pragma::dump() const {
-//	DEBUG_RUN(
-//		llvm::outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
-//						"|~> Pragma: " << getType() << " -> " << toString() << "\n";
-//	);
+void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
+	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
+		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
+
+} // End frontend namespace
+} // End insieme namespace

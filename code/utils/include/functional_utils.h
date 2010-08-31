@@ -37,3 +37,57 @@
 #pragma once
 
 template<typename T> T id(T t) { return t; };
+
+
+/**
+ * This utility struct definition defines a predicate comparing two pointers
+ * based on the value they are pointing to.
+ *
+ * @tparam PointerType the type of pointer to be compared
+ */
+template<typename PointerType>
+struct equal_target: public std::binary_function<const PointerType&, const PointerType&, bool> {
+	/**
+	 * Performs the actual comparison by using the operator== of the generic
+	 * pointer type.
+	 *
+	 * @param x the pointer to the first element to be compared
+	 * @param y the pointer to the second element to be compared
+	 */
+	bool operator()(const PointerType& x, const PointerType& y) const {
+		return *x == *y;
+	}
+};
+
+/**
+ * This utility struct defines the function used to compute hash codes for pointers.
+ * Thereby, the hash code is not computed using the pointer themselves. Instead, the
+ * target they are pointing to is used to compute the value. In case the pointer is null,
+ * 0 is returned as a hash value.
+ *
+ * @tparam T the type of element the used pointers are pointing to
+ */
+template<typename PointerType>
+struct hash_target: public std::unary_function<const PointerType, std::size_t> {
+	typedef typename PointerType::element_type element_type;
+
+	/**
+	 * This function is used to compute the hash of the actual target.
+	 */
+	boost::hash<element_type> hasher;
+
+	/**
+	 * Explicit Default constructor required by VC.
+	 */
+	hash_target() : hasher() {	}
+
+	/**
+	 * Computes the hash value of the given pointer based on the target it is pointing to.
+	 */
+	std::size_t operator()(const PointerType p) const {
+		if (!!p) {
+			return hasher(*p);
+		}
+		return 0;
+	}
+};

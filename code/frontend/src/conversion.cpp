@@ -34,67 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "conversion.h"
 
-#include <string>
-#include <boost/functional/hash.hpp>
+#include <iostream>
 
-#include "identifiers.h"
-#include "container_utils.h"
+using namespace clang;
+using namespace insieme;
+namespace fe = insieme::frontend;
 
+namespace insieme {
 
-TEST(TypeTest, DuplicateTest) {
-
-	// check names
-	Identifier identA("A");
-	EXPECT_EQ ("A" , identA.getName());
-
-	Identifier identB("B");
-	EXPECT_EQ ("B" , identB.getName());
-
-	Identifier identA2("A");
-	EXPECT_EQ ("A" , identA2.getName());
-
-	// check equality operator
-	EXPECT_NE ( identA, identB );
-	EXPECT_EQ ( identA, identA2 );
-	EXPECT_NE ( identB, identA2 );
-
-	EXPECT_NE ( identB, identA );
-	EXPECT_EQ ( identA2, identA );
-	EXPECT_NE ( identA2, identB );
-
-	// check hash
-	boost::hash<Identifier> hasher;
-	Identifier all[] = {identA, identB, identA2};
-	for (int i=0; i<3; i++) {
-		for (int j=0; j<3; j++) {
-			Identifier a = all[i];
-			Identifier b = all[j];
-			EXPECT_EQ ( a == b, hasher(a) == hasher(b));
-		}
-	}
-
-
-
-	// Tests whether hash function for identifiers is properly working
-
-	// create list of identifiers
-	vector<Identifier> identifier;
-	identifier.push_back(Identifier("A"));
-	identifier.push_back(Identifier("B"));
-	EXPECT_FALSE ( hasDuplicates(identifier) );
-
-	identifier.push_back(Identifier("A"));
-	EXPECT_TRUE ( hasDuplicates(identifier) );
-
+void RegisterPragmaHandlers(Preprocessor& pp) {
+	pp.AddPragmaHandler("insieme", fe::PragmaHandlerFactory::CreatePragmaHandler<insieme::InlinePragma>("insieme",
+			pp.getIdentifierInfo("inline"), !(fe::tok::l_paren >> // 	'!('
+					fe::tok::numeric_constant["LEVEL"] >> //	LEVEL
+					fe::tok::r_paren) >> fe::tok::eom //	')' eom
+			));
 }
 
-TEST(TypeTest, HashCodeTest) {
-
-	Identifier identA("a");
-	Identifier identB(std::string("a"));
-
-	EXPECT_EQ (identA.hash(), identB.hash());
-
+InlinePragma::InlinePragma(const SourceLocation& startLoc, const SourceLocation& endLoc, const std::string& name, const frontend::MatchMap& mmap) :
+	Pragma(startLoc, endLoc, name, mmap) {
+	frontend::MatchMap::const_iterator it = mmap.find("LEVEL");
+	if (it != mmap.end()) {
+		llvm::APInt level = dyn_cast<IntegerLiteral> (it->second.back()->take<Stmt*> ())->getValue();
+		mLevel = (unsigned) *level.getRawData();
+	} else
+		mLevel = 0;
 }
+
+void InlinePragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
+	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << "|-> Pragma: " << getType() << " : "
+			<< mLevel << " " << toStr(sm) << "\n";
+}
+
+} // End insieme namespace

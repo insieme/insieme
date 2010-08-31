@@ -39,10 +39,17 @@
 #include <vector>
 
 #include "container_utils.h"
+#include "annotated_ptr.h"
 #include "types.h"
 
 class IntType;
 typedef AnnotatedPtr<const IntType> IntTypePtr;
+
+class FloatType;
+typedef AnnotatedPtr<const FloatType> FloatTypePtr;
+
+class BoolType;
+typedef AnnotatedPtr<const BoolType> BoolTypePtr;
 
 class UnitType;
 typedef AnnotatedPtr<const UnitType> UnitTypePtr;
@@ -53,23 +60,51 @@ class IntType : public GenericType {
 	IntType(const unsigned short& numBytes = 4) :
 		GenericType("int", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes))) {};
 
-	/**
-	 * Creates a clone of this type within the given manager.
-	 */
 	virtual IntType* clone(TypeManager&) const {
 		return new IntType(getNumBytes());
 	}
 
 public:
-
-	static IntTypePtr get(TypeManager& manager, const unsigned short numBytes) {
-		return manager.getTypePtr(IntType(numBytes));
+	static IntTypePtr get(TypeManager& manager, const unsigned short numBytes = 4) {
+		return manager.get(IntType(numBytes));
 	}
 
 	const unsigned short getNumBytes() const {
 		return getIntTypeParameter()[0].getValue();
 	}
+};
 
+class FloatType : public GenericType {
+
+	FloatType(const unsigned short& numBytes = 8) :
+		GenericType("float", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes))) {};
+
+	virtual FloatType* clone(TypeManager&) const {
+		return new FloatType(getNumBytes());
+	}
+
+public:
+	static FloatTypePtr get(TypeManager& manager, const unsigned short numBytes = 8) {
+		return manager.get(FloatType(numBytes));
+	}
+
+	const unsigned short getNumBytes() const {
+		return getIntTypeParameter()[0].getValue();
+	}
+};
+
+class BoolType : public GenericType {
+
+	BoolType() : GenericType("bool") {};
+
+	virtual BoolType* clone(TypeManager&) const {
+		return new BoolType();
+	}
+
+public:
+	static BoolTypePtr get(TypeManager& manager) {
+		return manager.get(BoolType());
+	}
 };
 
 class UnitType : public GenericType {
@@ -79,14 +114,14 @@ class UnitType : public GenericType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnitType* clone(TypeManager& manager) const {
+	virtual UnitType* clone(TypeManager&) const {
 		return new UnitType();
 	}
 
 public:
 
 	static UnitTypePtr get(TypeManager& manager) {
-		return manager.getTypePtr(UnitType());
+		return manager.get(UnitType());
 	}
 
 };

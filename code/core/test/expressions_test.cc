@@ -34,60 +34,34 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include "expressions.h"
-#include "types.h"
+#include <sstream>
+
+#include <gtest/gtest.h>
 #include "statements.h"
-
 #include "expressions.h"
-#include "string_utils.h"
-#include "cmd_line_utils.h"
 
-#include "clang_compiler.h"
-
-using namespace std;
-
-
-int main(int argc, char** argv) {
-
-	CommandLineOptions::Parse(argc, argv, true);
-
-//	vector<IntTypeParam> list;
-//	list.push_back(IntTypeParam::getInfiniteIntParam());
-//	list.push_back(IntTypeParam::getInfiniteIntParam());
-//	list.push_back(IntTypeParam::getVariableIntParam('a'));
-//
-//	list[0] = list[2];
-
-//	cout << sizeof(IntTypeParam);
-
-
-//   cout << "Insieme (tm) compiler." << endl;
-//
-//
-//   std::vector<TypeRef> emptyRefs;
-//   std::vector<IntTypeParam> emptyInts;
-//
-//   TypeRef simple(new UserType("simple"));
-//
-//   cout << simple->toString()  << endl;
-//
-//   vector<TypeRef> v;
-//   v.push_back(simple);
-//   v.push_back(simple);
-//
-//   vector<IntTypeParam> p;
-//   p.push_back(IntTypeParam::getConcreteIntParam(12));
-//   p.push_back(IntTypeParam::getVariableIntParam('a'));
-//
-//   // works if construct is not private:
-////	p.push_back((IntTypeParam){IntTypeParam::CONCRETE, 12 });
-////	p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'a' });
-//
-//   UserType complex("complex", v, p, simple);
-//   cout << complex.toString() << endl;
-//
-//   UserType medium("medium", std::vector<TypeRef>(), p);
-//   cout << medium.toString() << endl;
+TEST(ExpressionsTest, IntLiterals) {
+	TypeManager typeMan;
+	StatementManager manager(typeMan);
+	IntLiteralPtr i5 = IntLiteral::get(manager, 5);
+	IntLiteralPtr i7 = IntLiteral::get(manager, 7);
+	IntLiteralPtr i5long = IntLiteral::get(manager, 5, 8);
+	
+	EXPECT_EQ( *i5, *IntLiteral::get(manager, 5) );
+	EXPECT_NE( *i5, *i5long );
+	EXPECT_NE( *i5, *i7 );
+	EXPECT_EQ( i5->getValue(), 5 );
 }
 
+TEST(ExpressionsTest, FloatLiterals) {
+	TypeManager typeMan;
+	StatementManager manager(typeMan);
+	FloatLiteralPtr f5_s = FloatLiteral::get(manager, "5.0");
+	FloatLiteralPtr f5 = FloatLiteral::get(manager, 5.0);
+	
+	// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
+	std::stringstream ss;
+	ss << *f5_s;
+	EXPECT_EQ( ss.str(), "5.0" );
+	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
+}

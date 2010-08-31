@@ -35,13 +35,47 @@
  */
 
 #include <gtest/gtest.h>
-#include "ast_manager.h"
-#include "types.h"
 
+#include "container_utils.h"
+#include "definitions.h"
 
-TEST(StatementManager, Basic) {
-	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), 4);
+TEST(Definitions, Basic) {
+
+	TypeManager typeManager;
+	StatementManager statementManager(typeManager);
+	DefinitionManager manager(statementManager);
+
+	TypePtr typeA = GenericType::get(typeManager, "A");
+	TypePtr typeB = GenericType::get(typeManager, "B");
+	TypePtr typeR = GenericType::get(typeManager, "R");
+
+	Identifier ident = "funA";
+//	Function::ParameterList list;
+//	list.push_back(Function::Parameter("a", typeA));
+//	list.push_back(Function::Parameter("b", typeB));
+//	FunctionPtr funA = Function::get(manager, ident, list, typeR);
+//
+//	TupleType::ElementTypeList elements;
+//	elements.push_back(typeA);
+//	elements.push_back(typeB);
+//	TupleTypePtr argumentA = TupleType::get(typeManager, elements);
+//	FunctionTypePtr funAType = FunctionType::get(typeManager, argumentA, typeR);
+//
+//	EXPECT_EQ ( funAType, funA->getType() );
+//
+//	FunctionPtr funB = Function::get(manager, ident, list);
+//	FunctionTypePtr funBType = FunctionType::get(typeManager, argumentA, UnitType::get(typeManager));
+//
+//	EXPECT_EQ ( funBType, funB->getType() );
+//
+//	FunctionPtr funC = Function::get(manager, ident, Function::ParameterList());
+//	FunctionTypePtr funCType = FunctionType::get(typeManager,
+//			TupleType::get(typeManager, TupleType::ElementTypeList()),
+//			UnitType::get(typeManager));
+//
+//	EXPECT_EQ ( funCType, funC->getType() );
+//
+//	EXPECT_EQ ( "fun funA : (()->unit)", toString(*funC) );
 }
 
 

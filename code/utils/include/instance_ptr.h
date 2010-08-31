@@ -41,36 +41,37 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/utility/enable_if.hpp>
-
 #include <boost/mpl/logical.hpp>
-
-
-using boost::mpl::and_;
-using boost::mpl::or_;
-using boost::is_base_of;
-using boost::is_convertible;
-using boost::enable_if;
-using boost::disable_if;
 
 
 template<typename T>
 class InstancePtr {
 public:
+
+	/**
+	 * Defines a type corresponding to the type this pointer is pointing to.
+	 */
+	typedef T element_type;
+
 	T* ptr;
 
 	InstancePtr(T* ptr) : ptr(ptr) { }
 
 	template<typename B>
-	InstancePtr(const InstancePtr<B>& from, typename enable_if<is_base_of<T,B>,int>::type = 0) : ptr(from.ptr) { }
+	InstancePtr(const InstancePtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : ptr(from.ptr) { }
 	
 	virtual ~InstancePtr() {};
+
+	operator bool() const {
+		return ptr!=NULL;
+	}
 
 	bool operator!() const {
 		return ptr==NULL;
 	}
 
 	const T& operator*() const {
-		assert(ptr != NULL);
+		assert(ptr != NULL && "Illegal: dereferencing a NULL pointer!" );
 		return *ptr;
 	}
 
@@ -93,7 +94,7 @@ public:
 	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
-	const typename enable_if< or_<is_convertible<T*, A*>,is_convertible<A*, T*>> , bool >::type operator==(const InstancePtr<A>& other) const {
+	const typename boost::enable_if< boost::mpl::or_<boost::is_convertible<T*, A*>,boost::is_convertible<A*, T*>> , bool >::type operator==(const InstancePtr<A>& other) const {
 		return ptr == other.ptr;
 	}
 
@@ -112,7 +113,7 @@ public:
 	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
-	const typename disable_if<or_<is_convertible<T*, A*>,is_convertible<A*, T*>>, bool>::type operator==(const InstancePtr<A>& other) const {
+	const typename boost::disable_if<boost::mpl::or_<boost::is_convertible<T*, A*>,boost::is_convertible<A*, T*>>, bool>::type operator==(const InstancePtr<A>& other) const {
 		return ptr == NULL && other.ptr == NULL;
 	}
 	

@@ -54,8 +54,8 @@ class Identifier {
 
 public:
 
-	Identifier(const char* name) : name(string(name)), hashCode(boost::hash_value(name)) {}
-	Identifier(const string& name) : name(name), hashCode(boost::hash_value(name)) {}
+	Identifier(const char* name_) : name(string(name_)), hashCode(boost::hash_value(name)) {}
+	Identifier(const string& name_) : name(name_), hashCode(boost::hash_value(name)) {}
 
 	const string& getName() const { return name; }
 
@@ -66,11 +66,15 @@ public:
 		}
 
 		// slow name comparison
-		return name == other.name;
+		return name.compare(other.name) == 0;
 	}
 
 	bool operator!=(const Identifier& other) const {
 		return !(*this==other);
+	}
+
+	bool operator<(const Identifier& other) const {
+		return name.compare(other.name) < 0;
 	}
 
 	std::size_t hash() const {

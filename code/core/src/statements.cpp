@@ -89,7 +89,7 @@ NoOpStmt* NoOpStmt::clone(StatementManager&) const {
 }
 
 NoOpStmtPtr NoOpStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(NoOpStmt());
+	return manager.get(NoOpStmt());
 }
 
 // ------------------------------------- BreakStmt ---------------------------------
@@ -111,7 +111,7 @@ BreakStmt* BreakStmt::clone(StatementManager&) const {
 }
 
 BreakStmtPtr BreakStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(BreakStmt());
+	return manager.get(BreakStmt());
 }
 
 // ------------------------------------- ContinueStmt ---------------------------------
@@ -133,43 +133,44 @@ ContinueStmt* ContinueStmt::clone(StatementManager&) const {
 }
 
 ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(ContinueStmt());
+	return manager.get(ContinueStmt());
 }
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
-DeclarationStmt::DeclarationStmt(const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) 
-	: type(type), id(id), initExpression(initExpression) { 
+DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExprPtr& initExpression)
+	: varExpression(varExpression), initExpression(initExpression) { 
 }
 
 void DeclarationStmt::printTo(std::ostream& out) const {
-	out << type << " = " << initExpression << ";";
+	out << varExpression->getType() << " " << varExpression << " = " << initExpression << ";";
 }
 
 bool DeclarationStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const DeclarationStmt& rhs = dynamic_cast<const DeclarationStmt&>(stmt); 
-	return (type == rhs.type) && (initExpression == rhs.initExpression);
+	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
 }
 
 std::size_t DeclarationStmt::hash() const {
 	std::size_t seed = HASHVAL_DECLARATION;
-	boost::hash_combine(seed, id.hash());
-    boost::hash_combine(seed, type->hash());
+    boost::hash_combine(seed, varExpression->hash());
     boost::hash_combine(seed, initExpression->hash());
 	return seed;
 }
 
 DeclarationStmt* DeclarationStmt::clone(StatementManager& manager) const {
-	return new DeclarationStmt(manager.getTypeManager().get(type), id, manager.getStmtPtr(*initExpression));
+	return new DeclarationStmt(manager.get(*varExpression), manager.get(*initExpression));
 }
 
 DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
-	return makeChildList(initExpression);
+	auto list = makeChildList(varExpression);
+	list->push_back(initExpression);
+	return list;
 }
 
 DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
-	return manager.getStmtPtr(DeclarationStmt(type, id, initExpression));
+	return manager.get(DeclarationStmt(VarExpr::get(manager, type, id), initExpression));
 }
 
 // ------------------------------------- ReturnStmt ---------------------------------
@@ -185,7 +186,7 @@ void ReturnStmt::printTo(std::ostream& out) const {
 bool ReturnStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const ReturnStmt& rhs = dynamic_cast<const ReturnStmt&>(stmt); 
-	return (returnExpression == rhs.returnExpression);
+	return (*returnExpression == *rhs.returnExpression);
 }
 
 std::size_t ReturnStmt::hash() const {
@@ -195,7 +196,7 @@ std::size_t ReturnStmt::hash() const {
 }
 
 ReturnStmt* ReturnStmt::clone(StatementManager& manager) const {
-	return new ReturnStmt(manager.getStmtPtr(*returnExpression));
+	return new ReturnStmt(manager.get(*returnExpression));
 }
 
 ReturnStmt::ChildList ReturnStmt::getChildren() const {
@@ -203,7 +204,7 @@ ReturnStmt::ChildList ReturnStmt::getChildren() const {
 }
 
 ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression) {
-	return manager.getStmtPtr(ReturnStmt(returnExpression));
+	return manager.get(ReturnStmt(returnExpression));
 }
 
 // ------------------------------------- CompoundStmt ---------------------------------
@@ -220,14 +221,15 @@ bool CompoundStmt::equals(const Statement& stmt) const {
 	//auto start = make_paired_iterator(statements.begin(), rhs.statements.begin());
 	//auto end = make_paired_iterator(statements.end(), rhs.statements.end());
 	//return all(start, end, [](std::pair<StmtPtr,StmtPtr> elems) { return elems.first == elems.second; } );
-	return statements == rhs.statements;
+	return ::equals(statements, rhs.statements, equal_target<StmtPtr>());
 }
 
 std::size_t CompoundStmt::hash() const {
 	std::size_t seed = HASHVAL_COMPOUND;
-	std::for_each(statements.begin(), statements.end(), [&seed](StmtPtr cur) { 
-		boost::hash_combine(seed, cur->hash());
-	} );
+	//std::for_each(statements.begin(), statements.end(), [&seed](StmtPtr cur) { 
+	//	boost::hash_combine(seed, cur->hash());
+	//} );
+	hashPtrRange(seed, statements);
 	return seed;
 }
 
@@ -244,13 +246,13 @@ const StmtPtr&  CompoundStmt::operator[](unsigned index) const {
 }
 
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager) {
-	return manager.getStmtPtr(CompoundStmt());
+	return manager.get(CompoundStmt());
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt) {
-	return manager.getStmtPtr(CompoundStmt(stmt));
+	return manager.get(CompoundStmt(stmt));
 }
 CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts) {
-	return manager.getStmtPtr(CompoundStmt(stmts));
+	return manager.get(CompoundStmt(stmts));
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
@@ -266,7 +268,7 @@ void WhileStmt::printTo(std::ostream& out) const {
 bool WhileStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const WhileStmt& rhs = dynamic_cast<const WhileStmt&>(stmt);
-	return (condition == rhs.condition) && (body == rhs.body);
+	return (*condition == *rhs.condition) && (*body == *rhs.body);
 }
 
 std::size_t WhileStmt::hash() const {
@@ -277,7 +279,7 @@ std::size_t WhileStmt::hash() const {
 }
 
 WhileStmt* WhileStmt::clone(StatementManager& manager) const {
-	return new WhileStmt(manager.getStmtPtr(*condition), manager.getStmtPtr(*body));
+	return new WhileStmt(manager.get(*condition), manager.get(*body));
 }
 
 WhileStmt::ChildList WhileStmt::getChildren() const {
@@ -287,7 +289,7 @@ WhileStmt::ChildList WhileStmt::getChildren() const {
 }
 
 WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body) {
-	return manager.getStmtPtr(WhileStmt(condition, body));
+	return manager.get(WhileStmt(condition, body));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
@@ -303,8 +305,8 @@ void ForStmt::printTo(std::ostream& out) const {
 bool ForStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const ForStmt& rhs = dynamic_cast<const ForStmt&>(stmt);
-	return (declaration == rhs.declaration) && (body == rhs.body) 
-		&& (end == rhs.end) && (step == rhs.step);
+	return (*declaration == *rhs.declaration) && (*body == *rhs.body) 
+		&& (*end == *rhs.end) && (*step == *rhs.step);
 }
 
 std::size_t ForStmt::hash() const {
@@ -317,8 +319,8 @@ std::size_t ForStmt::hash() const {
 }
 
 ForStmt* ForStmt::clone(StatementManager& manager) const {
-	return new ForStmt(manager.getStmtPtr(*declaration), manager.getStmtPtr(*body), 
-		manager.getStmtPtr(*end), manager.getStmtPtr(*step));
+	return new ForStmt(manager.get(*declaration), manager.get(*body),
+		manager.get(*end), manager.get(*step));
 }
 
 ForStmt::ChildList ForStmt::getChildren() const {
@@ -329,9 +331,9 @@ ForStmt::ChildList ForStmt::getChildren() const {
 	return ret;
 }
 
-ForStmtPtr ForStmt::get(StatementManager& manager, DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) {
-	if(!step) step = IntLiteral::one(manager);
-	return manager.getStmtPtr(ForStmt(declaration, body, end, step));
+ForStmtPtr ForStmt::get(StatementManager& manager, const DeclarationStmtPtr& declaration, const StmtPtr& body, const ExprPtr& end, const ExprPtr& step) {
+	if(!step) return manager.get(ForStmt(declaration, body, end, IntLiteral::one(manager)));
+	return manager.get(ForStmt(declaration, body, end, step));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
@@ -341,7 +343,7 @@ IfStmt::IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody) :
 }
 
 IfStmt* IfStmt::clone(StatementManager& manager) const {
-	return new IfStmt(manager.getStmtPtr(*condition), manager.getStmtPtr(*body), manager.getStmtPtr(*elseBody));
+	return new IfStmt(manager.get(*condition), manager.get(*body), manager.get(*elseBody));
 }
 
 void IfStmt::printTo(std::ostream& out) const {
@@ -351,7 +353,7 @@ void IfStmt::printTo(std::ostream& out) const {
 bool IfStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const IfStmt& rhs = dynamic_cast<const IfStmt&>(stmt);
-	return (condition == rhs.condition) && (body == rhs.body) && (elseBody == rhs.elseBody);
+	return (*condition == *rhs.condition) && (*body == *rhs.body) && (*elseBody == *rhs.elseBody);
 }
 
 std::size_t IfStmt::hash() const {
@@ -372,7 +374,7 @@ IfStmt::ChildList IfStmt::getChildren() const {
 IfStmtPtr IfStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody) {
 	// default to empty else block
 	if(!elseBody) elseBody = CompoundStmt::get(manager);
-	return manager.getStmtPtr(IfStmt(condition, body, elseBody));
+	return manager.get(IfStmt(condition, body, elseBody));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
@@ -384,9 +386,9 @@ SwitchStmt::SwitchStmt(ExprPtr switchExpr, const vector<Case>& cases) :
 SwitchStmt* SwitchStmt::clone(StatementManager& manager) const {
 	vector<Case> localCases;
 	std::for_each(cases.cbegin(), cases.cend(), [&](const Case& cur) {
-		localCases.push_back(SwitchStmt::Case(manager.getStmtPtr(*cur.first), manager.getStmtPtr(*cur.second)));
+		localCases.push_back(SwitchStmt::Case(manager.get(*cur.first), manager.get(*cur.second)));
 	});
-	return new SwitchStmt(manager.getStmtPtr(*switchExpr), localCases);
+	return new SwitchStmt(manager.get(*switchExpr), localCases);
 }
 
 void SwitchStmt::printTo(std::ostream& out) const {
@@ -399,7 +401,8 @@ void SwitchStmt::printTo(std::ostream& out) const {
 bool SwitchStmt::equals(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const SwitchStmt& rhs = dynamic_cast<const SwitchStmt&>(stmt);
-	return cases == rhs.cases;
+	return ::equals(cases, rhs.cases, 
+		[](const Case& l, const Case& r) { return *l.first == *r.first && *l.second == *r.second; });
 }
 
 std::size_t SwitchStmt::hash() const {
@@ -422,5 +425,5 @@ SwitchStmt::ChildList SwitchStmt::getChildren() const {
 }
 
 SwitchStmtPtr SwitchStmt::get(StatementManager& manager, ExprPtr switchExpr, const vector<Case>& cases) {
-	return manager.getStmtPtr(SwitchStmt(switchExpr, cases));
+	return manager.get(SwitchStmt(switchExpr, cases));
 }

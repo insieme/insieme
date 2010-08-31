@@ -48,6 +48,7 @@
 #include <boost/utility/enable_if.hpp>
 
 #include "string_utils.h"
+#include "iterator_utils.h"
 
 using std::vector;
 using std::function;
@@ -81,6 +82,41 @@ template<typename T, typename B>
 typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, const vector<B>& source) {
 	// add all elements of the source to the end of the target
 	copy(source.cbegin(), source.cend(), back_inserter(target));
+}
+
+
+/**
+ * Compares the given list (and their content) and determines whether both represent
+ * the an identical sequence of elements.
+ *
+ * @param a the first list
+ * @param b the second list
+ * @param comparator the comparator used to compare the elements within the given lists
+ * @return true if the list have the same size and contain an equivalent sequence of elements
+ * 			(according to the given comparator), false otherwise.
+ */
+template<typename ListA, typename ListB, typename Comparator>
+inline bool equals(const ListA& a, const ListB& b, const Comparator& comparator) {
+
+	// ensure same size
+	if (a.size() != b.size()) {
+		return false;
+	}
+
+	// compare values using std equal ...
+	return std::equal(a.cbegin(), a.cend(), b.cbegin(), comparator);
+}
+
+/**
+ * Compares the given list (and their content) and determines whether both represent
+ * the an identical sequence of elements.
+ *
+ * @param a the first list
+ * @param b the second list
+ */
+template<typename ListA, typename ListB>
+inline bool equals(const ListA& a, const ListB& b) {
+	return equals(a, b, std::equal_to<const typename ListA::value_type&>());
 }
 
 
@@ -138,6 +174,30 @@ bool any(InputIterator first, InputIterator last, const Function& predicate)
 template<class ContainerType, class Function>
 bool any(const ContainerType& list, const Function& predicate) {
 	return any(list.cbegin(), list.cend(), predicate);
+}
+
+/** Combines the hash value of each value element in the supplied range of pointers with seed.
+ *
+ *  @param seed hash value (MODIFIED)
+ *  @param first range start
+ *  @param last range end
+ */
+template<class InputIterator>
+void hashPtrRange(size_t& seed, InputIterator first, InputIterator last) {
+	while (first != last) {
+		boost::hash_combine(seed, hash_value(**first));
+		++first;
+	}
+}
+
+/** Combines the hash value of each value element in the supplied list of pointers with seed.
+ *
+ *  @param seed hash value (MODIFIED)
+ *  @param container iteratable container filled with pointers to value elements
+ */
+template<class ContainerType>
+void hashPtrRange(size_t& seed, const ContainerType& container) {
+	hashPtrRange(seed, container.cbegin(), container.cend());
 }
 
 /**

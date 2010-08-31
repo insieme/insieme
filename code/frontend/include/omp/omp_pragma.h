@@ -34,40 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
+#include "pragma_handler.h"
 
-#include "container_utils.h"
-#include "functions.h"
+namespace insieme {
+namespace frontend {
+namespace omp {
 
-TEST(Functions, Basic) {
+class OmpPragma: public insieme::frontend::Pragma {
+public:
+	OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name, const insieme::frontend::MatchMap& mmap);
 
-	TypeManager typeManager;
-	StatementManager statementManager(typeManager);
-	FunctionManager manager(statementManager);
+	static void RegisterPragmaHandlers(clang::Preprocessor& pp);
+};
 
-	TypePtr typeA = GenericType::get(typeManager, "A");
-	TypePtr typeB = GenericType::get(typeManager, "B");
-	TypePtr typeR = GenericType::get(typeManager, "R");
-
-	Identifier ident = "funA";
-	Function::ParameterList list;
-	list.push_back(Function::Parameter("a", typeA));
-	list.push_back(Function::Parameter("b", typeB));
-	FunctionPtr funA = Function::get(manager, ident, list, typeR);
-
-	TupleType::ElementTypeList elements;
-	elements.push_back(typeA);
-	elements.push_back(typeB);
-	TupleTypePtr argumentA = TupleType::get(typeManager, elements);
-	FunctionTypePtr funAType = FunctionType::get(typeManager, argumentA, typeR);
-
-	EXPECT_EQ ( funAType, funA->getType() );
-
-	FunctionPtr funB = Function::get(manager, ident, list);
-	FunctionTypePtr funBType = FunctionType::get(typeManager, argumentA, UnitType::get(typeManager));
-
-	EXPECT_EQ ( funBType, funB->getType() );
-
-}
-
-
+} // End omp namespace
+} // End frontend namespace
+} // End insieme namespace

@@ -36,65 +36,73 @@
 
 #include <gtest/gtest.h>
 
-#include <string>
+#include <ctime>
+#include <memory>
+
 #include <boost/functional/hash.hpp>
 
-#include "identifiers.h"
-#include "container_utils.h"
+#include "set_utils.h"
 
+//using boost::unordered_set;
+using namespace insieme::utils::set;
 
-TEST(TypeTest, DuplicateTest) {
+typedef std::unordered_set<int, boost::hash<int>> Set;
+//typedef std::unordered_set<int> Set;
+//typedef boost::unordered_set<int> Set;
 
-	// check names
-	Identifier identA("A");
-	EXPECT_EQ ("A" , identA.getName());
+TEST(SetUtilsTest, Merge) {
 
-	Identifier identB("B");
-	EXPECT_EQ ("B" , identB.getName());
+	Set setA;
+	setA.insert(1);
+	setA.insert(2);
 
-	Identifier identA2("A");
-	EXPECT_EQ ("A" , identA2.getName());
+	Set setB;
+	setB.insert(3);
 
-	// check equality operator
-	EXPECT_NE ( identA, identB );
-	EXPECT_EQ ( identA, identA2 );
-	EXPECT_NE ( identB, identA2 );
+	Set merged = merge(setA,setB);
 
-	EXPECT_NE ( identB, identA );
-	EXPECT_EQ ( identA2, identA );
-	EXPECT_NE ( identA2, identB );
+	Set setRef;
+	setRef.insert(1);
+	setRef.insert(2);
+	setRef.insert(3);
 
-	// check hash
-	boost::hash<Identifier> hasher;
-	Identifier all[] = {identA, identB, identA2};
-	for (int i=0; i<3; i++) {
-		for (int j=0; j<3; j++) {
-			Identifier a = all[i];
-			Identifier b = all[j];
-			EXPECT_EQ ( a == b, hasher(a) == hasher(b));
-		}
-	}
-
-
-
-	// Tests whether hash function for identifiers is properly working
-
-	// create list of identifiers
-	vector<Identifier> identifier;
-	identifier.push_back(Identifier("A"));
-	identifier.push_back(Identifier("B"));
-	EXPECT_FALSE ( hasDuplicates(identifier) );
-
-	identifier.push_back(Identifier("A"));
-	EXPECT_TRUE ( hasDuplicates(identifier) );
-
+	// NOTE: assumes that == is implemented (optional in std)
+	EXPECT_EQ ( setRef, merged );
 }
 
-TEST(TypeTest, HashCodeTest) {
+TEST(SetUtilsTest, Intersect) {
 
-	Identifier identA("a");
-	Identifier identB(std::string("a"));
+	Set setA;
+	setA.insert(1);
+	setA.insert(2);
 
-	EXPECT_EQ (identA.hash(), identB.hash());
+	Set setB;
+	setB.insert(1);
 
+	Set res = intersect(setA,setB);
+
+	Set setRef;
+	setRef.insert(1);
+
+	// NOTE: assumes that == is implemented (optional in std)
+	EXPECT_EQ ( setRef, res );
 }
+
+TEST(SetUtilsTest, Difference) {
+
+	Set setA;
+	setA.insert(1);
+	setA.insert(2);
+
+	Set setB;
+	setB.insert(1);
+
+	Set res = difference(setA,setB);
+
+	Set setRef;
+	setRef.insert(2);
+
+	// NOTE: assumes that == is implemented (optional in std)
+	EXPECT_EQ ( setRef, res );
+}
+

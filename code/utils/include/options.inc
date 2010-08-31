@@ -39,3 +39,5 @@ FLAG("version,v", "version", Version, "print version string")
 
 OPTION("input-file", "input-file", InputFiles, std::vector<std::string>, "input file(s)")
 OPTION("include-path,I", "include-path", IncludePaths, std::vector<std::string>, "Add directory to include search path")
+OPTION("std,std", "std-compatibility", STD, std::string, "Set compatibility mode")
+OPTION("definitions,D", "definitions", Defs, std::vector<std::string>, "Add a preprocessor definition")

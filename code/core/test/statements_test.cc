@@ -38,6 +38,8 @@
 
 #include <gtest/gtest.h>
 #include "statements.h"
+#include "expressions.h"
+#include "types_utils.h"
 #include "string_utils.h"
 
 TEST(StatementsTest, Management) {
@@ -57,16 +59,22 @@ TEST(StatementsTest, Management) {
 	stmtVec.push_back(nS);
 	stmtVec.push_back(bSC);
 	CompoundStmtPtr bSCVec = CompoundStmt::get(stmtMan, stmtVec);
+
+	EXPECT_EQ (5, stmtMan.size());
+	EXPECT_EQ (0, stmtMan2.size());
+
 	CompoundStmtPtr bSCVec2 = CompoundStmt::get(stmtMan2, stmtVec);
 
 	EXPECT_EQ (5, stmtMan.size());
+	EXPECT_EQ (5, stmtMan2.size());
 
 	DepthFirstVisitor<StmtPtr> stmt2check([&](StmtPtr cur) {
-		EXPECT_TRUE(stmtMan2.contains(cur));
+		EXPECT_TRUE(stmtMan2.addressesLocal(cur));
 	});
 	stmt2check.visit(bSCVec2);
-
-	EXPECT_FALSE(stmtMan.contains(bSCVec2));
+	
+	EXPECT_FALSE(stmtMan.addressesLocal(bSCVec2));
+	EXPECT_TRUE(stmtMan.contains(bSCVec2));
 }
 
 TEST(StatementsTest, CreationAndIdentity) {
@@ -99,4 +107,16 @@ TEST(StatementsTest, CompoundStmt) {
 	EXPECT_NE(bSC->hash() , bScSCVec->hash());
 	EXPECT_EQ((*bSC)[0], (*bScSCVec)[0]);
 	EXPECT_EQ("{\nbreak;\ncontinue;\n}\n", toString(*bScSCVec));
+}
+
+TEST(StatementsTest, DefaultParams) {
+	TypeManager typeMan;
+	StatementManager stmtMan(typeMan);
+
+	IntLiteralPtr one = IntLiteral::get(stmtMan, 1);
+	DeclarationStmtPtr decl = DeclarationStmt::get(stmtMan, IntType::get(typeMan), Identifier("bla"), one);
+	ForStmtPtr forStmt = ForStmt::get(stmtMan, decl, decl, one);
+	
+	EXPECT_EQ(one, forStmt->getStep());
+
 }
