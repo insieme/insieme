@@ -46,12 +46,16 @@
 //
 //Using:
 //  ENUM(testColor, RED, GREEN, YELLOW)
+//  testColor tc = fromName<testColor>("RED");
 //  for(testColor c = min(c); c < max(c); c++ )
+//      std::cout << c << ord(c) << name(c);
 //
 
 
 //private function
 std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enumMax);
+
+
 
 /**
  * Creates an enum type which is iterable and has its items as names.
@@ -60,7 +64,9 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enum
  *
  * Examples:
  *  ENUM(testColor, RED, GREEN, YELLOW)
- *   for(testColor c = min(c); c < max(c); c++ )
+ *  testColor tc = fromName<testColor>("RED");
+ *  for(testColor c = min(c); c < max(c); c++ )
+ *      std::cout << c << ord(c) << name(c);
  *
  * @param enumname The typename of the new enum
  * @param first The first element
@@ -96,6 +102,15 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enum
         } \
 
 
+/**
+ * Gets the element of the enum named "nam".
+ *
+ * @tparam T Enumtype to search on.
+ * @param nam The name of the element to get
+ * @return The enum element
+ */
+template <typename T>
+inline const T fromName(const std::string &nam);
 
 
 
@@ -143,4 +158,18 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enum
     res.push_back(enumTrimName(str.substr(oldFound)));
     assert(res.size()==enumMax);
     return res;
+}
+
+#include <iostream>
+
+template <typename T>
+inline const T fromName(const std::string &nam) {
+	T i;
+	for(i = min(i); i < max(i); ++i) {
+		if (nam == name(i))
+			return i;
+	}
+
+	//TODO: exception state: throw exception or use invalid number?
+	return max(i);
 }

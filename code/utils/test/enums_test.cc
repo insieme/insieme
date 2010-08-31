@@ -55,7 +55,7 @@ ENUM(testInt, ZERO, ONE)
 //ENUM(testItalianInt, UNO)
 
 //Long word and underscore
-ENUM(testLongElement,    VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal,     _KILLEM)
+ENUM(testLongElement, VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal,     _KILLEM)
 
 
 
@@ -67,17 +67,17 @@ TEST(Enums, LongString) {
 
     //The strings should be the identifier and the ord should be counting
     //Note: Though tested here, it could be considered as implementation detail
-    EXPECT_EQ(name(eins), "EINS");
-    EXPECT_EQ(ord(eins),  0);
+    EXPECT_EQ("EINS", name(eins));
+    EXPECT_EQ(0, ord(eins));
 
-    EXPECT_EQ(name(zwei), "ZWEI");
-    EXPECT_EQ(ord(zwei),  1);
+    EXPECT_EQ("ZWEI", name(zwei));
+    EXPECT_EQ(1, ord(zwei));
 
-    EXPECT_EQ(name(koenig), "KOENIG");
-    EXPECT_EQ(ord(koenig),  12);
+    EXPECT_EQ("KOENIG", name(koenig));
+    EXPECT_EQ(12, ord(koenig));
 
-    EXPECT_EQ(name(as), "AS");
-    EXPECT_EQ(ord(as),  13);
+    EXPECT_EQ("AS", name(as));
+    EXPECT_EQ(13, ord(as));
 
     //Those values should be seperate!
     EXPECT_NE(eins, zwei);
@@ -88,43 +88,48 @@ TEST(Enums, LongString) {
     EXPECT_NE(koenig, as);
 }
 
+//Tests wether a two-elements enum has two different elements and the string-things are working.
 TEST(Enums, TwoElements) {
     testInt z = ZERO;
     testInt o = ONE;
 
-    EXPECT_EQ(name(z), "ZERO");
-    EXPECT_EQ(ord(z),  0);
+    EXPECT_EQ("ZERO", name(z));
+    EXPECT_EQ(0, ord(z));
 
-    EXPECT_EQ(name(o), "ONE");
-    EXPECT_EQ(ord(o),  1);
+    EXPECT_EQ("ONE", name(o));
+    EXPECT_EQ(1, ord(o));
 
     EXPECT_NE(z, o);
 }
 
+//Would test for an one-element enum.
 /*TEST(Enums, OneElement) {
 
     testItalianInt u1 = UNO;
     testItalianInt u2 = UNO;
 
-    EXPECT_EQ(name(u1), "UNO");
-    EXPECT_EQ(ord(u1),  0);
+    EXPECT_EQ("UNO", name(u1));
+    EXPECT_EQ(0, ord(u1));
 
-    EXPECT_EQ(name(u2), "UNO");
-    EXPECT_EQ(ord(u2),  0);
+    EXPECT_EQ("UNO", name(u2));
+    EXPECT_EQ(0, ord(u2));
 
-    EXPECT_EQ(u1, u2);"_KILLEM"
+    EXPECT_EQ(u1, u2);
 }*/
 
+//Tests a long enum word. Just for being sure. :-)
 TEST(Enums, LongWord) {
     testLongElement t = (testLongElement) 0;
     EXPECT_EQ("VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal", name(t));
 }
 
+//Tests wether the first character may be underscore and may have prefix whitespaces
 TEST(Enums, UnderScore) {
     testLongElement t = _KILLEM;
     EXPECT_EQ("_KILLEM", name(t));
 }
 
+//Tests the tc++
 TEST(Enums, ForLoopPP) {
     std::size_t j = 0;
     for(testCard tc = min(tc); tc != max(tc); tc++) {
@@ -133,6 +138,7 @@ TEST(Enums, ForLoopPP) {
     EXPECT_EQ(14, j);
 }
 
+//Tests the ++tc
 TEST(Enums, PPForLoop) {
     std::size_t j = 0;
     for(testCard tc = min(tc); tc != max(tc); ++tc) {
@@ -141,15 +147,16 @@ TEST(Enums, PPForLoop) {
     EXPECT_EQ(14, j);
 }
 
-/* Das wird wohl eher nicht funktionieren (max(tc) - 1)
+//Tests the tc--
 TEST(Enums, ForLoopMM) {
     std::size_t j = 0;
-    for(testCard tc = max(tc) - 1; tc-- != min(tc); ) {
+    for(testCard tc = max(tc); tc-- != min(tc); ) {
         j++;
     }
     EXPECT_EQ(14, j);
-}*/
+}
 
+//Tests the --tc
 TEST(Enums, MMForLoop) {
     std::size_t j = 0;
     for(testCard tc = max(tc); --tc >= min(tc); ) {
@@ -158,3 +165,21 @@ TEST(Enums, MMForLoop) {
     EXPECT_EQ(14, j);
 }
 
+//Tests the function fromName
+TEST(Enums, FromName) {
+	//Should find
+    testCard tc1 = fromName<testCard>("KOENIG");
+    EXPECT_EQ(KOENIG, tc1);
+
+    //Should not find
+    //TODO: Should it better throw an exception?
+    testCard tc2 = fromName<testCard>("KNIGGE");
+    EXPECT_EQ(max(tc2), tc2);
+
+    testInt z = fromName<testInt>("KOENIG");
+    testInt o = fromName<testInt>("ONE");
+    EXPECT_NE(z, o);
+    //EXPECT_EQ(z, testIntMIN); //WTF: '0' breaked the gTest Suite!
+    EXPECT_EQ(z, max(z));
+    EXPECT_EQ(1, o);
+}
