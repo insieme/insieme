@@ -56,7 +56,7 @@ public:
 		countGenericTypes++;
 	}
 
-	void visitExpr(const ExprPtr& cur) {
+	void visitExpression(const ExpressionPtr& cur) {
 		countExpressions++;
 	}
 
@@ -74,7 +74,7 @@ public:
 
 TEST(Visitor2, TypeVisitor) {
 
-	ProgramDataManager manager;
+	NodeManager manager;
 	SimpleVisitor visitor;
 
 	ProgramPtr program = Program::createProgram();

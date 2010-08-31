@@ -40,6 +40,8 @@
 #include <boost/functional/hash.hpp>
 
 #include "definitions.h"
+#include "types.h"
+#include "expressions.h"
 
 using namespace insieme::core;
 
@@ -62,22 +64,20 @@ std::size_t hash(const Identifier& name, const TypePtr& type) {
 }
 
 Definition::Definition(const Identifier& name, const TypePtr& type, const bool& external,
-		const ExprPtr& definition, const std::size_t& hashCode)
+		const ExpressionPtr& definition, const std::size_t& hashCode)
 	:
 		Node(NodeType::DEFINITION, hashCode), name(name), type(type), external(external), definition(definition) { }
 
-Definition* Definition::clone(DefinitionManager& manager) const {
-	return new Definition(name,
-			manager.getTypeManager().get(type), external,
-			manager.getStatementManager().get(definition), hashCode);
+Definition* Definition::clone(NodeManager& manager) const {
+	return new Definition(name, manager.get(type), external, manager.get(definition), hashCode);
 }
 
-DefinitionPtr Definition::get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition, bool external) {
+DefinitionPtr Definition::get(NodeManager& manager, const Identifier& name, const TypePtr& type, const ExpressionPtr& definition, bool external) {
 	return manager.get(Definition(name, type, external, definition, ::hash(name, type)));
 
 }
 
-DefinitionPtr Definition::lookup(DefinitionManager& manager, const Identifier& name, const TypePtr& type) {
+DefinitionPtr Definition::lookup(NodeManager& manager, const Identifier& name, const TypePtr& type) {
 	return manager.lookup(Definition(name, type, false, NULL, ::hash(name, type)));
 }
 

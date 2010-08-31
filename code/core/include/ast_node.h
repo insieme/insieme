@@ -39,7 +39,7 @@
 #include <cassert>
 
 #include "annotated_ptr.h"
-
+#include "instance_manager.h"
 
 namespace insieme {
 namespace core {
@@ -60,6 +60,11 @@ namespace core {
  */
 DECLARE_NODE_TYPE(Node);
 
+/**
+ * Implements a node manager to be used for maintaining AST node instances.
+ */
+class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
+
 
 /**
  * An enumeration of the fundamental types of nodes
@@ -69,11 +74,12 @@ enum NodeType {
 	TYPE, 			/* < to represent a (data) type  */
 	EXPRESSION,		/* < to represent expressions */
 	STATEMENT, 		/* < to represent statements */
-	DEFINITION		/* < to represent definitions */
+	DEFINITION,		/* < to represent definitions */
+	PROGRAM			/* < to represent entire programs */
 };
 
 inline bool isNodeType(const NodeType& value) {
-	return TYPE <= value && value <=DEFINITION;
+	return TYPE <= value && value <=PROGRAM;
 }
 
 /**
@@ -85,9 +91,36 @@ inline bool isNodeType(const NodeType& value) {
 class Node {
 
 	/**
+	 * Allow the instance manager to access the private clone method.
+	 */
+	friend class InstanceManager<Node, AnnotatedPtr>;
+
+
+public:
+
+	/**
+	 * The type of instance manager to be used with this type.
+	 */
+	typedef NodeManager Manager;
+
+private:
+
+	/**
 	 * The type of node to be represented by this instance.
 	 */
 	const NodeType nodeType;
+
+private:
+
+	/**
+	 * Retrieves a clone of this node, hence a newly allocated instance representing the same value
+	 * as the current instance. The new instance (and all its referenced nodes) should be maintained
+	 * by teh given manager.
+	 *
+	 * @param manager the manager which should maintain all referenced nodes
+	 * @return a clone of this instance referencing elements maintained exclusively by the given manager
+	 */
+	virtual Node* clone(NodeManager& manager) const = 0;
 
 protected:
 
@@ -122,6 +155,12 @@ protected:
 public:
 
 	/**
+	 * The default virtual destructor enforcing the proper destruction of derived
+	 * instances.
+	 */
+	virtual ~Node() {};
+
+	/**
 	 * Computes a hash code for this node. The actual computation has to be conducted by
 	 * subclasses. This class will only return the hash code passed on through the constructor.
 	 *
@@ -132,6 +171,17 @@ public:
 	std::size_t hash() const {
 		// retrieve cached hash code
 		return hashCode;
+	}
+
+	/**
+	 * Obtains the fundamental type of this node.
+	 *
+	 * @return the type of node represented by this instance
+	 *
+	 * @see NodeType
+	 */
+	NodeType getNodeType() const {
+		return nodeType;
 	}
 
 	/**

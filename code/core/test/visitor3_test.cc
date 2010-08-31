@@ -76,7 +76,7 @@ public:
 
 TEST(Visitor3, TypeVisitor) {
 
-	ProgramDataManager manager;
+	NodeManager manager;
 	SimpleVisitor visitor;
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );

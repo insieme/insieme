@@ -37,14 +37,22 @@
 #include "expressions.h"
 
 #include "types_utils.h"
+#include "statements.h"
+#include "string_utils.h"
+#include "functional_utils.h"
 
 using namespace insieme::core;
 
+enum {
+	HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
+	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR, HASHVAL_PARENEXPR
+};
+
 // ------------------------------------- Expression ---------------------------------
 
-bool Expression::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const Expression& rhs = dynamic_cast<const Expression&>(stmt); 
+bool Expression::equals(const Node& stmt) const {
+	// conversion is guaranteed by base Node::operator==
+	const Expression& rhs = static_cast<const Expression&>(stmt);
 	return (*type == *rhs.type) && equalsExpr(rhs);
 }
 
@@ -53,71 +61,68 @@ std::ostream& operator<<(std::ostream& out, const Expression& expression) {
 	return out;
 }
 
+
 // ------------------------------------- IntLiteral ---------------------------------
 
-IntLiteral* IntLiteral::clone(StatementManager& manager) const {
-	return new IntLiteral(manager.getTypeManager().get(type), value);
+IntLiteral::IntLiteral(const TypePtr& type, int val) : Literal<int>(type, val, HASHVAL_INTLITERAL) { }
+
+IntLiteral* IntLiteral::clone(NodeManager& manager) const {
+	return new IntLiteral(manager.get(type), value);
 }
 
-std::size_t IntLiteral::hash() const {
-	size_t seed = HASHVAL_INTLITERAL;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, boost::hash_value(value));
-	return seed;
-}
 
-IntLiteralPtr IntLiteral::get(StatementManager& manager, int value, unsigned short bytes) {
-	return manager.get(IntLiteral(IntType::get(manager.getTypeManager(), bytes), value));
+IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, unsigned short bytes) {
+	return manager.get(IntLiteral(IntType::get(manager, bytes), value));
 }
 
 // ------------------------------------- FloatLiteral ---------------------------------
 
-FloatLiteral* FloatLiteral::clone(StatementManager& manager) const {
-	return new FloatLiteral(manager.getTypeManager().get(type), value, originalString);
+FloatLiteral::FloatLiteral(const TypePtr& type, double val, const string& originalString)
+		: Literal<double>(type, val, HASHVAL_FLOATLITERAL), originalString(originalString) { }
+
+FloatLiteral* FloatLiteral::clone(NodeManager& manager) const {
+	return new FloatLiteral(manager.get(type), value, originalString);
 }
 
 void FloatLiteral::printTo(std::ostream& out) const {
 	out << originalString;
 }
 
-std::size_t FloatLiteral::hash() const {
-	size_t seed = HASHVAL_FLOATLITERAL;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, boost::hash_value(value));
-	boost::hash_combine(seed, boost::hash_value(originalString));
-	return seed;
+FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
+	return manager.get(FloatLiteral(FloatType::get(manager, bytes), value, toString(value)));
 }
 
-FloatLiteralPtr FloatLiteral::get(StatementManager& manager, double value, unsigned short bytes) {
-	return manager.get(FloatLiteral(FloatType::get(manager.getTypeManager(), bytes), value, toString(value)));
-}
-
-FloatLiteralPtr FloatLiteral::get(StatementManager& manager, const string& from, unsigned short bytes) {
+FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
 	// TODO atof good idea? What about hex/octal/etc
-	return manager.get(FloatLiteral(FloatType::get(manager.getTypeManager(), bytes), atof(from.c_str()), from));
+	return manager.get(FloatLiteral(FloatType::get(manager, bytes), atof(from.c_str()), from));
 }
 
 // ------------------------------------- BoolLiteral ---------------------------------
 
-BoolLiteral* BoolLiteral::clone(StatementManager& manager) const {
-	return new BoolLiteral(manager.getTypeManager().get(type), value);
-}
-	
-std::size_t BoolLiteral::hash() const {
-	size_t seed = HASHVAL_BOOLLITERAL;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, boost::hash_value(value));
-	return seed;
+BoolLiteral::BoolLiteral(const TypePtr& type, bool val) : Literal<bool>(type, val, HASHVAL_BOOLLITERAL) { }
+
+BoolLiteral* BoolLiteral::clone(NodeManager& manager) const {
+	return new BoolLiteral(manager.get(type), value);
 }
 
-BoolLiteralPtr BoolLiteral::get(StatementManager& manager, bool value) {
-	return manager.get(BoolLiteral(BoolType::get(manager.getTypeManager()), value));
+BoolLiteralPtr BoolLiteral::get(NodeManager& manager, bool value) {
+	return manager.get(BoolLiteral(BoolType::get(manager), value));
 }
 
 // ------------------------------------- VarExpr ---------------------------------
 
-VarExpr* VarExpr::clone(StatementManager& manager) const {
-	return new VarExpr(manager.getTypeManager().get(type), id);
+std::size_t hashVarExpr(const TypePtr& type, const Identifier& id) {
+	size_t seed = HASHVAL_VAREXPR;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, id.hash());
+	return seed;
+}
+
+VarExpr::VarExpr(const TypePtr& type, const Identifier& id) : Expression(type, ::hashVarExpr(type, id)), id(id) { };
+VarExpr::VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode) : Expression(type, hashCode), id(id) { };
+
+VarExpr* VarExpr::clone(NodeManager& manager) const {
+	return new VarExpr(manager.get(type), id);
 }
 
 bool VarExpr::equalsExpr(const Expression& expr) const {
@@ -129,105 +134,113 @@ bool VarExpr::equalsExpr(const Expression& expr) const {
 void VarExpr::printTo(std::ostream& out) const {
 	out << id;
 }
-	
-std::size_t VarExpr::hash() const {
-	size_t seed = HASHVAL_VAREXPR;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, id.hash());
-	return seed;
-}
 
-VarExprPtr VarExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+VarExprPtr VarExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
 	return manager.get(VarExpr(type, id));
 }
 
 // ------------------------------------- ParamExpr ---------------------------------
 
-ParamExpr* ParamExpr::clone(StatementManager& manager) const {
-	return new ParamExpr(manager.getTypeManager().get(type), id);
-}
 
-void ParamExpr::printTo(std::ostream& out) const {
-	out << *type << id;
-}
-	
-std::size_t ParamExpr::hash() const {
+std::size_t hashParamExpr(const TypePtr& type, const Identifier& id) {
 	size_t seed = HASHVAL_PARAMEXPR;
 	boost::hash_combine(seed, type->hash());
 	boost::hash_combine(seed, id.hash());
 	return seed;
 }
 
-ParamExprPtr ParamExpr::get(StatementManager& manager, const TypePtr& type, const Identifier &id) {
+ParamExpr::ParamExpr(const TypePtr& type, const Identifier& id) : VarExpr(type, id, ::hashParamExpr(type,id)) { };
+
+ParamExpr* ParamExpr::clone(NodeManager& manager) const {
+	return new ParamExpr(manager.get(type), id);
+}
+
+void ParamExpr::printTo(std::ostream& out) const {
+	out << *type << id;
+}
+
+ParamExprPtr ParamExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
 	return manager.get(ParamExpr(type, id));
 }
 
 // ------------------------------------- LambdaExpr ---------------------------------
 
-LambdaExpr* LambdaExpr::clone(StatementManager& manager) const {
-	return new LambdaExpr(manager.getTypeManager().get(type), manager.getAll(params), manager.get(body));
+std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& params, const StatementPtr& body) {
+	size_t seed = HASHVAL_LAMBDAEXPR;
+	boost::hash_combine(seed, type->hash());
+	hashPtrRange(seed, params);
+	boost::hash_combine(seed, body->hash());
+	return seed;
+}
+
+LambdaExpr::LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body)
+		: Expression(type, ::hashLambdaExpr(type, params, body)), body(body), params(params) { };
+
+LambdaExpr* LambdaExpr::clone(NodeManager& manager) const {
+	return new LambdaExpr(manager.get(type), manager.getAll(params), manager.get(body));
 }
 
 bool LambdaExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const LambdaExpr& rhs = dynamic_cast<const LambdaExpr&>(expr);
-	return (*body == *rhs.body) && std::equal(params.cbegin(), params.cend(), rhs.params.cbegin(), equal_target<ExprPtr>());
+	return (*body == *rhs.body) && std::equal(params.cbegin(), params.cend(), rhs.params.cbegin(), equal_target<ExpressionPtr>());
 }
 
 void LambdaExpr::printTo(std::ostream& out) const {
-	out << "lambda(";
-	joinTo(out, ", ", params);
-	out << ") { " << body << " }";
+	out << "lambda(" << join(", ", params, deref<ExpressionPtr>()) << ") { " << body << " }";
 }
 
-std::size_t LambdaExpr::hash() const {
-	size_t seed = HASHVAL_LAMBDAEXPR;
-	hashPtrRange(seed, params);
-	return seed;
-}
-
-LambdaExprPtr LambdaExpr::get(StatementManager& manager, const TypePtr& type, const ParamList& params, const StmtPtr& body) {
+LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
 	return manager.get(LambdaExpr(type, params, body));
 }
 
 // ------------------------------------- CallExpr ---------------------------------
 
-CallExpr* CallExpr::clone(StatementManager& manager) const {
-	return new CallExpr(manager.getTypeManager().get(type), manager.get(*functionExpr), manager.getAll(arguments));
+std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	size_t seed = HASHVAL_CALLEXPR;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, functionExpr->hash());
+	hashPtrRange(seed, arguments);
+	return seed;
+}
+
+CallExpr::CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
+		: Expression(type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(functionExpr), arguments(arguments) { }
+
+CallExpr* CallExpr::clone(NodeManager& manager) const {
+	return new CallExpr(manager.get(type), manager.get(*functionExpr), manager.getAll(arguments));
 }
 	
 bool CallExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CallExpr& rhs = dynamic_cast<const CallExpr&>(expr);
 	return (*rhs.functionExpr == *functionExpr) && 
-		equal(arguments.cbegin(), arguments.cend(), rhs.arguments.cbegin(), equal_target<ExprPtr>());
+		equal(arguments.cbegin(), arguments.cend(), rhs.arguments.cbegin(), equal_target<ExpressionPtr>());
 
 }
 	
 void CallExpr::printTo(std::ostream& out) const {
-	out << functionExpr << "(";
-	joinTo(out, ", ", arguments);
-	out << ")";
+	out << functionExpr << "(" << join(", ", arguments) << ")";
 }
 
-std::size_t CallExpr::hash() const {
-	size_t seed = HASHVAL_CALLEXPR;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, functionExpr->hash());
-	std::for_each(arguments.begin(), arguments.end(), [&seed](StmtPtr cur) { 
-		boost::hash_combine(seed, cur->hash());
-	} );
-	return seed;
-}
-
-CallExprPtr CallExpr::get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments) {
+CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 	return manager.get(CallExpr(type, functionExpr, arguments));
 }
 
 // ------------------------------------- CastExpr ---------------------------------
 
-CastExpr* CastExpr::clone(StatementManager& manager) const {
-	return new CastExpr(manager.getTypeManager().get(type), manager.get(*subExpression));
+std::size_t hashCastExpr(const TypePtr& type, const ExpressionPtr& subExpression) {
+	size_t seed = HASHVAL_CASTEXPR;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, subExpression->hash());
+	return seed;
+}
+
+CastExpr::CastExpr(const TypePtr& type, const ExpressionPtr& subExpression)
+		: Expression(type, hashCastExpr(type, subExpression)), subExpression(subExpression) { }
+
+CastExpr* CastExpr::clone(NodeManager& manager) const {
+	return new CastExpr(manager.get(type), manager.get(*subExpression));
 }
 	
 bool CastExpr::equalsExpr(const Expression& expr) const {
@@ -240,20 +253,13 @@ void CastExpr::printTo(std::ostream& out) const {
 	out << "(" << type << ")" << "(" << subExpression <<")";
 }
 
-std::size_t CastExpr::hash() const {
-	size_t seed = HASHVAL_CASTEXPR;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, subExpression->hash());
-	return seed;
-}
-
-CastExprPtr CastExpr::get(StatementManager& manager, const TypePtr& type, const ExprPtr& subExpr) {
+CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpr) {
 	return manager.get(CastExpr(type, subExpr));
 }
 
 // ------------------------------------- ParenExpr ---------------------------------
 
-//ParenExpr* ParenExpr::clone(StatementManager& manager) const {
+//ParenExpr* ParenExpr::clone(NodeManager& manager) const {
 //	return new ParenExpr(manager.get(*subExpression));
 //}
 //	
@@ -274,6 +280,6 @@ CastExprPtr CastExpr::get(StatementManager& manager, const TypePtr& type, const 
 //	return seed;
 //}
 //
-//ParenExprPtr ParenExpr::get(StatementManager& manager, const ExprPtr& subExpr) {
+//ParenExprPtr ParenExpr::get(NodeManager& manager, const ExprPtr& subExpr) {
 //	return manager.get(ParenExpr(subExpr));
 //}

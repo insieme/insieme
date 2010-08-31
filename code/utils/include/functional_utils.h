@@ -36,7 +36,22 @@
 
 #pragma once
 
-template<typename T> T id(T t) { return t; };
+#include <boost/functional/hash.hpp>
+
+
+
+template<typename T>
+struct id : public std::unary_function<T, T> {
+	T operator()(T element) const { return element; }
+};
+
+
+template<typename PointerType>
+struct deref: public std::unary_function<const PointerType&, const typename PointerType::element_type&> {
+	const typename PointerType::element_type& operator()(const PointerType& ptr) const {
+		return *ptr;
+	}
+};
 
 
 /**

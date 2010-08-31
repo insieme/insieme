@@ -42,9 +42,10 @@
 
 using namespace insieme::core;
 
+
+
 TEST(ExpressionsTest, IntLiterals) {
-	TypeManager typeMan;
-	StatementManager manager(typeMan);
+	NodeManager manager;
 	IntLiteralPtr i5 = IntLiteral::get(manager, 5);
 	IntLiteralPtr i7 = IntLiteral::get(manager, 7);
 	IntLiteralPtr i5long = IntLiteral::get(manager, 5, 8);
@@ -56,8 +57,7 @@ TEST(ExpressionsTest, IntLiterals) {
 }
 
 TEST(ExpressionsTest, FloatLiterals) {
-	TypeManager typeMan;
-	StatementManager manager(typeMan);
+	NodeManager manager;
 	FloatLiteralPtr f5_s = FloatLiteral::get(manager, "5.0");
 	FloatLiteralPtr f5 = FloatLiteral::get(manager, 5.0);
 	

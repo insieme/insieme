@@ -46,6 +46,7 @@
 #include <boost/unordered_set.hpp>
 
 #include "string_utils.h"
+#include "container_utils.h"
 
 
 namespace insieme {
@@ -131,6 +132,63 @@ Set difference(const Set& setA, const Set& setB) {
 		}
 	});
 	return res;
+}
+
+template<typename SetA, typename SetB>
+bool equal(const SetA& setA, const SetB& setB) {
+	typedef typename SetA::value_type Element;
+
+	// check for identity
+	if (&setA == &setB) {
+		return true;
+	}
+
+	// quick check for its size
+	if (setA.size() != setB.size()) {
+		return false;
+	}
+
+	// so - the size is equal - check membership!
+	return all(setA.cbegin(), setA.cend(), [&setB](const Element& cur) {
+		return setB.find(cur) != setB.cend();
+	});
+}
+
+/**
+ * A utility function to compute a hash value for a set of elements. The hash
+ * value is computed by summing up the hash values of all elements within the
+ * set. Hence, the order of the elements is not considered. The hash code
+ * of an empty set is defined to be zero.
+ *
+ * @param set the set for which a hash value should be computed
+ * @param hasher a function deriving the hash value for each element
+ * @return a hash value for the given set
+ */
+template<typename Set, typename Hasher>
+std::size_t computeHash(const Set& set, Hasher hasher) {
+	typedef typename Set::value_type Element;
+
+	std::size_t seed = 0;
+	std::for_each(set.cbegin(), set.cend(), [&seed, &hasher](const Element& cur) {
+		seed += hasher(cur);
+	});
+	return seed;
+
+}
+
+/**
+ * A utility function to compute a hash value for a set of elements. The hash
+ * value is computed by summing up the hash values of all elements within the
+ * set. Hence, the order of the elements is not considered. The hash code
+ * of an empty set is defined to be zero.
+ *
+ * @param set the set for which a hash value should be computed
+ * @return a hash value for the given set
+ */
+template<typename Set>
+std::size_t computeHash(const Set& set) {
+	typedef typename Set::value_type Element;
+	return computeHash(set, boost::hash<Element>());
 }
 
 } // end namespace: set

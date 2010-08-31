@@ -56,12 +56,12 @@ class IntType : public GenericType {
 	IntType(const unsigned short& numBytes = 4) :
 		GenericType("int", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes))) {};
 
-	virtual IntType* clone(TypeManager&) const {
+	virtual IntType* clone(NodeManager&) const {
 		return new IntType(getNumBytes());
 	}
 
 public:
-	static IntTypePtr get(TypeManager& manager, const unsigned short numBytes = 4) {
+	static IntTypePtr get(NodeManager& manager, const unsigned short numBytes = 4) {
 		return manager.get(IntType(numBytes));
 	}
 
@@ -75,12 +75,12 @@ class FloatType : public GenericType {
 	FloatType(const unsigned short& numBytes = 8) :
 		GenericType("float", vector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(numBytes))) {};
 
-	virtual FloatType* clone(TypeManager&) const {
+	virtual FloatType* clone(NodeManager&) const {
 		return new FloatType(getNumBytes());
 	}
 
 public:
-	static FloatTypePtr get(TypeManager& manager, const unsigned short numBytes = 8) {
+	static FloatTypePtr get(NodeManager& manager, const unsigned short numBytes = 8) {
 		return manager.get(FloatType(numBytes));
 	}
 
@@ -93,12 +93,12 @@ class BoolType : public GenericType {
 
 	BoolType() : GenericType("bool") {};
 
-	virtual BoolType* clone(TypeManager&) const {
+	virtual BoolType* clone(NodeManager&) const {
 		return new BoolType();
 	}
 
 public:
-	static BoolTypePtr get(TypeManager& manager) {
+	static BoolTypePtr get(NodeManager& manager) {
 		return manager.get(BoolType());
 	}
 };
@@ -110,13 +110,13 @@ class UnitType : public GenericType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnitType* clone(TypeManager&) const {
+	virtual UnitType* clone(NodeManager&) const {
 		return new UnitType();
 	}
 
 public:
 
-	static UnitTypePtr get(TypeManager& manager) {
+	static UnitTypePtr get(NodeManager& manager) {
 		return manager.get(UnitType());
 	}
 

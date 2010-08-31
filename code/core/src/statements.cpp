@@ -37,20 +37,27 @@
 #include "statements.h"
 #include "expressions.h"
 
+#include "container_utils.h"
 #include "iterator_utils.h"
 
 
 namespace insieme {
 namespace core {
 
+
+enum {
+	HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE, HASHVAL_DECLARATION, HASHVAL_RETURN,
+	HASHVAL_COMPOUND, HASHVAL_WHILE, HASHVAL_FOR, HASHVAL_IF, HASHVAL_SWITCH
+};
+
+
 // ------------------------------------- Statement ---------------------------------
 
-bool Statement::operator==(const Statement& stmt) const {
-	return (typeid(*this) == typeid(stmt)) && (hash() == stmt.hash()) && equals(stmt);
-}
-
-bool Statement::operator!=(const Statement& stmt) const {
-	return !(*this == stmt);
+bool Statement::equals(const Node& node) const {
+	// conversion is guaranteed by base Node::operator==
+	const Statement& stmt = static_cast<const Statement&>(node);
+	// just check for same specialization and invoke statement comparison
+	return (typeid(*this) == typeid(stmt)) && equalsStmt(stmt);
 }
 
 Statement::ChildList Statement::getChildren() const {
@@ -61,96 +68,106 @@ std::size_t hash_value(const Statement& stmt) {
 	return stmt.hash();
 }
 
-// ------------------------------------- NoOpStmt ---------------------------------
-
-void NoOpStmt::printTo(std::ostream& out) const {
-	out << "{ /* NoOp */ };";
-}
-
-bool NoOpStmt::equals(const Statement&) const {
-	return true;
-}
-
-std::size_t NoOpStmt::hash() const {
-	return HASHVAL_NOOP;
-}
-
-NoOpStmt* NoOpStmt::clone(StatementManager&) const {
-	return new NoOpStmt();
-}
-
-NoOpStmtPtr NoOpStmt::get(StatementManager& manager) {
-	return manager.get(NoOpStmt());
-}
-
 // ------------------------------------- BreakStmt ---------------------------------
+
+BreakStmt::BreakStmt(): Statement(HASHVAL_BREAK) {}
 
 void BreakStmt::printTo(std::ostream& out) const {
 	out << "break;";
 }
 
-bool BreakStmt::equals(const Statement&) const {
+bool BreakStmt::equalsStmt(const Statement&) const {
+	// type has already been checked => all done
 	return true;
 }
 
-std::size_t BreakStmt::hash() const {
-	return HASHVAL_BREAK;
-}
-
-BreakStmt* BreakStmt::clone(StatementManager&) const {
+BreakStmt* BreakStmt::clone(NodeManager&) const {
 	return new BreakStmt();
 }
 
-BreakStmtPtr BreakStmt::get(StatementManager& manager) {
+BreakStmtPtr BreakStmt::get(NodeManager& manager) {
 	return manager.get(BreakStmt());
 }
 
 // ------------------------------------- ContinueStmt ---------------------------------
 
+ContinueStmt::ContinueStmt() : Statement(HASHVAL_CONTINUE) {};
+
 void ContinueStmt::printTo(std::ostream& out) const {
 	out << "continue;";
 }
 
-bool ContinueStmt::equals(const Statement&) const {
+bool ContinueStmt::equalsStmt(const Statement&) const {
+	// type has already been checked => all done
 	return true;
 }
 
-std::size_t ContinueStmt::hash() const {
-	return HASHVAL_CONTINUE;
-}
-
-ContinueStmt* ContinueStmt::clone(StatementManager&) const {
+ContinueStmt* ContinueStmt::clone(NodeManager&) const {
 	return new ContinueStmt();
 }
 
-ContinueStmtPtr ContinueStmt::get(StatementManager& manager) {
+ContinueStmtPtr ContinueStmt::get(NodeManager& manager) {
 	return manager.get(ContinueStmt());
+}
+
+// ------------------------------------- ReturnStmt ---------------------------------
+
+std::size_t hashReturnStmt(const ExpressionPtr& returnExpression) {
+	std::size_t seed = HASHVAL_RETURN;
+    boost::hash_combine(seed, returnExpression->hash());
+	return seed;
+}
+
+ReturnStmt::ReturnStmt(const ExpressionPtr& returnExpression)
+	: Statement(hashReturnStmt(returnExpression)), returnExpression(returnExpression) {
+}
+
+void ReturnStmt::printTo(std::ostream& out) const {
+	out << "return " << returnExpression << ";";
+}
+
+bool ReturnStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base equals
+	const ReturnStmt& rhs = static_cast<const ReturnStmt&>(stmt);
+	return (*returnExpression == *rhs.returnExpression);
+}
+
+ReturnStmt* ReturnStmt::clone(NodeManager& manager) const {
+	return new ReturnStmt(manager.get(*returnExpression));
+}
+
+ReturnStmt::ChildList ReturnStmt::getChildren() const {
+	return makeChildList(returnExpression);
+}
+
+ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnExpression) {
+	return manager.get(ReturnStmt(returnExpression));
 }
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
-DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExprPtr& initExpression)
-	: varExpression(varExpression), initExpression(initExpression) { 
-}
-
-void DeclarationStmt::printTo(std::ostream& out) const {
-	out << varExpression->getType() << " " << varExpression << " = " << initExpression << ";";
-}
-
-bool DeclarationStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const DeclarationStmt& rhs = dynamic_cast<const DeclarationStmt&>(stmt); 
-	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
-}
-
-std::size_t DeclarationStmt::hash() const {
+std::size_t hashDeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression) {
 	std::size_t seed = HASHVAL_DECLARATION;
     boost::hash_combine(seed, varExpression->hash());
     boost::hash_combine(seed, initExpression->hash());
 	return seed;
 }
 
-DeclarationStmt* DeclarationStmt::clone(StatementManager& manager) const {
+DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression)
+	: Statement(hashDeclarationStmt(varExpression, initExpression)), varExpression(varExpression), initExpression(initExpression) {
+}
+
+void DeclarationStmt::printTo(std::ostream& out) const {
+	out << varExpression->getType() << " " << varExpression << " = " << initExpression << ";";
+}
+
+bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base operator==
+	const DeclarationStmt& rhs = static_cast<const DeclarationStmt&>(stmt);
+	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
+}
+
+DeclarationStmt* DeclarationStmt::clone(NodeManager& manager) const {
 	return new DeclarationStmt(manager.get(*varExpression), manager.get(*initExpression));
 }
 
@@ -160,71 +177,33 @@ DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
 	return list;
 }
 
-DeclarationStmtPtr DeclarationStmt::get(StatementManager& manager, const TypePtr& type, const Identifier& id, const ExprPtr& initExpression) {
+DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression) {
 	return manager.get(DeclarationStmt(VarExpr::get(manager, type, id), initExpression));
 }
 
-// ------------------------------------- ReturnStmt ---------------------------------
-
-ReturnStmt::ReturnStmt(const ExprPtr& returnExpression)
-	: returnExpression(returnExpression) { 
-}
-
-void ReturnStmt::printTo(std::ostream& out) const {
-	out << "return " << returnExpression << ";";
-}
-
-bool ReturnStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const ReturnStmt& rhs = dynamic_cast<const ReturnStmt&>(stmt); 
-	return (*returnExpression == *rhs.returnExpression);
-}
-
-std::size_t ReturnStmt::hash() const {
-	std::size_t seed = HASHVAL_RETURN;
-    boost::hash_combine(seed, returnExpression->hash());
-	return seed;
-}
-
-ReturnStmt* ReturnStmt::clone(StatementManager& manager) const {
-	return new ReturnStmt(manager.get(*returnExpression));
-}
-
-ReturnStmt::ChildList ReturnStmt::getChildren() const {
-	return makeChildList(returnExpression);
-}
-
-ReturnStmtPtr ReturnStmt::get(StatementManager& manager, const ExprPtr& returnExpression) {
-	return manager.get(ReturnStmt(returnExpression));
-}
 
 // ------------------------------------- CompoundStmt ---------------------------------
 
-void CompoundStmt::printTo(std::ostream& out) const {
-	out << "{\n";
-	std::for_each(statements.cbegin(), statements.cend(), [&out](const StmtPtr& cur) { out << *cur << "\n";});
-	out << "}\n";
-}
-
-bool CompoundStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const CompoundStmt& rhs = dynamic_cast<const CompoundStmt&>(stmt);
-	//auto start = make_paired_iterator(statements.begin(), rhs.statements.begin());
-	//auto end = make_paired_iterator(statements.end(), rhs.statements.end());
-	//return all(start, end, [](std::pair<StmtPtr,StmtPtr> elems) { return elems.first == elems.second; } );
-	return ::equals(statements, rhs.statements, equal_target<StmtPtr>());
-}
-
-std::size_t CompoundStmt::hash() const {
+std::size_t hashCompoundStmt(const vector<StatementPtr>& stmts) {
 	std::size_t seed = HASHVAL_COMPOUND;
-	//std::for_each(statements.begin(), statements.end(), [&seed](StmtPtr cur) { 
-	//	boost::hash_combine(seed, cur->hash());
-	//} );
-	hashPtrRange(seed, statements);
+	hashPtrRange(seed, stmts);
 	return seed;
 }
 
-CompoundStmt* CompoundStmt::clone(StatementManager& manager) const {
+CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
+	: Statement(hashCompoundStmt(stmts)), statements(stmts) { }
+
+void CompoundStmt::printTo(std::ostream& out) const {
+	out << "{\n" << join("\n", statements, deref<StatementPtr>()) << "\n}\n";
+}
+
+bool CompoundStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base equals
+	const CompoundStmt& rhs = static_cast<const CompoundStmt&>(stmt);
+	return ::equals(statements, rhs.statements, equal_target<StatementPtr>());
+}
+
+CompoundStmt* CompoundStmt::clone(NodeManager& manager) const {
 	return new CompoundStmt(manager.getAll(statements));
 }
 
@@ -232,44 +211,44 @@ CompoundStmt::ChildList CompoundStmt::getChildren() const {
 	return makeChildList(statements);
 }
 
-const StmtPtr&  CompoundStmt::operator[](unsigned index) const {
+const StatementPtr&  CompoundStmt::operator[](unsigned index) const {
 	return statements[index];
 }
 
-CompoundStmtPtr CompoundStmt::get(StatementManager& manager) {
-	return manager.get(CompoundStmt());
+CompoundStmtPtr CompoundStmt::get(NodeManager& manager) {
+	return manager.get(CompoundStmt(vector<StatementPtr>()));
 }
-CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const StmtPtr& stmt) {
-	return manager.get(CompoundStmt(stmt));
+CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const StatementPtr& stmt) {
+	return manager.get(CompoundStmt(toVector(stmt)));
 }
-CompoundStmtPtr CompoundStmt::get(StatementManager& manager, const vector<StmtPtr>& stmts) {
+CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const vector<StatementPtr>& stmts) {
 	return manager.get(CompoundStmt(stmts));
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
 
-WhileStmt::WhileStmt(ExprPtr condition, StmtPtr body)
-	: condition(condition), body(body) {	
-}
-
-void WhileStmt::printTo(std::ostream& out) const {
-	out << "while(" << condition << ") " << body << ";";
-}
-	
-bool WhileStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const WhileStmt& rhs = dynamic_cast<const WhileStmt&>(stmt);
-	return (*condition == *rhs.condition) && (*body == *rhs.body);
-}
-
-std::size_t WhileStmt::hash() const {
+std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& body) {
 	std::size_t seed = HASHVAL_WHILE;
 	boost::hash_combine(seed, condition->hash());
 	boost::hash_combine(seed, body->hash());
 	return seed;
 }
 
-WhileStmt* WhileStmt::clone(StatementManager& manager) const {
+WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
+	: Statement(hashWhileStmt(condition, body)), condition(condition), body(body) {
+}
+
+void WhileStmt::printTo(std::ostream& out) const {
+	out << "while(" << condition << ") " << body << ";";
+}
+	
+bool WhileStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base equals
+	const WhileStmt& rhs = static_cast<const WhileStmt&>(stmt);
+	return (*condition == *rhs.condition) && (*body == *rhs.body);
+}
+
+WhileStmt* WhileStmt::clone(NodeManager& manager) const {
 	return new WhileStmt(manager.get(*condition), manager.get(*body));
 }
 
@@ -279,28 +258,13 @@ WhileStmt::ChildList WhileStmt::getChildren() const {
 	return ret;
 }
 
-WhileStmtPtr WhileStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body) {
+WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
 	return manager.get(WhileStmt(condition, body));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
 
-ForStmt::ForStmt(DeclarationStmtPtr declaration, StmtPtr body, ExprPtr end, ExprPtr step) :
-	declaration(declaration), body(body), end(end), step(step) {
-}
-	
-void ForStmt::printTo(std::ostream& out) const {
-	out << "for(" << declaration << ".." << end << ":" << step << ") " << body;
-}
-
-bool ForStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const ForStmt& rhs = dynamic_cast<const ForStmt&>(stmt);
-	return (*declaration == *rhs.declaration) && (*body == *rhs.body) 
-		&& (*end == *rhs.end) && (*step == *rhs.step);
-}
-
-std::size_t ForStmt::hash() const {
+std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
 	std::size_t seed = HASHVAL_FOR;
 	boost::hash_combine(seed, declaration->hash());
 	boost::hash_combine(seed, body->hash());
@@ -309,7 +273,21 @@ std::size_t ForStmt::hash() const {
 	return seed;
 }
 
-ForStmt* ForStmt::clone(StatementManager& manager) const {
+ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
+	: Statement(hashForStmt(declaration, body, end, step)), declaration(declaration), body(body), end(end), step(step) {}
+	
+void ForStmt::printTo(std::ostream& out) const {
+	out << "for(" << declaration << ".." << end << ":" << step << ") " << body;
+}
+
+bool ForStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base equals
+	const ForStmt& rhs = static_cast<const ForStmt&>(stmt);
+	return (*declaration == *rhs.declaration) && (*body == *rhs.body) 
+		&& (*end == *rhs.end) && (*step == *rhs.step);
+}
+
+ForStmt* ForStmt::clone(NodeManager& manager) const {
 	return new ForStmt(manager.get(*declaration), manager.get(*body),
 		manager.get(*end), manager.get(*step));
 }
@@ -322,59 +300,69 @@ ForStmt::ChildList ForStmt::getChildren() const {
 	return ret;
 }
 
-ForStmtPtr ForStmt::get(StatementManager& manager, const DeclarationStmtPtr& declaration, const StmtPtr& body, const ExprPtr& end, const ExprPtr& step) {
+ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
 	if(!step) return manager.get(ForStmt(declaration, body, end, IntLiteral::one(manager)));
 	return manager.get(ForStmt(declaration, body, end, step));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
 
-IfStmt::IfStmt(ExprPtr condition, StmtPtr body, StmtPtr elseBody) :
-	condition(condition), body(body), elseBody(elseBody) {
-}
-
-IfStmt* IfStmt::clone(StatementManager& manager) const {
-	return new IfStmt(manager.get(*condition), manager.get(*body), manager.get(*elseBody));
-}
-
-void IfStmt::printTo(std::ostream& out) const {
-	out << "if(" << condition << ") " << body << "else " << elseBody << ";";
-}
-
-bool IfStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const IfStmt& rhs = dynamic_cast<const IfStmt&>(stmt);
-	return (*condition == *rhs.condition) && (*body == *rhs.body) && (*elseBody == *rhs.elseBody);
-}
-
-std::size_t IfStmt::hash() const {
+std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) {
 	std::size_t seed = HASHVAL_IF;
 	boost::hash_combine(seed, condition->hash());
-	boost::hash_combine(seed, body->hash());
+	boost::hash_combine(seed, thenBody->hash());
 	boost::hash_combine(seed, elseBody->hash());
 	return seed;
 }
 
+IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) :
+	Statement(hashIfStmt(condition, thenBody, elseBody)), condition(condition), thenBody(thenBody), elseBody(elseBody) {
+}
+
+IfStmt* IfStmt::clone(NodeManager& manager) const {
+	return new IfStmt(manager.get(*condition), manager.get(*thenBody), manager.get(*elseBody));
+}
+
+void IfStmt::printTo(std::ostream& out) const {
+	out << "if(" << condition << ") " << thenBody << "else " << elseBody << ";";
+}
+
+bool IfStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base equals
+	const IfStmt& rhs = static_cast<const IfStmt&>(stmt);
+	return (*condition == *rhs.condition) && (*thenBody == *rhs.thenBody) && (*elseBody == *rhs.elseBody);
+}
+
 IfStmt::ChildList IfStmt::getChildren() const {
 	auto ret = makeChildList(condition);
-	ret->push_back(body);
+	ret->push_back(thenBody);
 	ret->push_back(elseBody);
 	return ret;
 }
 	
-IfStmtPtr IfStmt::get(StatementManager& manager, ExprPtr condition, StmtPtr body, StmtPtr elseBody) {
+IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
 	// default to empty else block
-	if(!elseBody) elseBody = CompoundStmt::get(manager);
-	return manager.get(IfStmt(condition, body, elseBody));
+	// TODO: replace with empty statement constant!
+	return manager.get(IfStmt(condition, body, (elseBody)?elseBody:CompoundStmt::get(manager)));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
 
-SwitchStmt::SwitchStmt(ExprPtr switchExpr, const vector<Case>& cases) :
-	switchExpr(switchExpr), cases(cases) {
+std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases) {
+	std::size_t seed = HASHVAL_SWITCH;
+	boost::hash_combine(seed, switchExpr->hash());
+	std::for_each(cases.begin(), cases.end(), [&seed](const SwitchStmt::Case& cur) {
+		boost::hash_combine(seed, cur.first->hash());
+		boost::hash_combine(seed, cur.second->hash());
+	});
+	return seed;
 }
 
-SwitchStmt* SwitchStmt::clone(StatementManager& manager) const {
+SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases) :
+	Statement(hashSwitchStmt(switchExpr, cases)), switchExpr(switchExpr), cases(cases) {
+}
+
+SwitchStmt* SwitchStmt::clone(NodeManager& manager) const {
 	vector<Case> localCases;
 	std::for_each(cases.cbegin(), cases.cend(), [&](const Case& cur) {
 		localCases.push_back(SwitchStmt::Case(manager.get(*cur.first), manager.get(*cur.second)));
@@ -389,21 +377,11 @@ void SwitchStmt::printTo(std::ostream& out) const {
 	});
 }
 
-bool SwitchStmt::equals(const Statement& stmt) const {
-	// conversion is guaranteed by base operator==
-	const SwitchStmt& rhs = dynamic_cast<const SwitchStmt&>(stmt);
-	return ::equals(cases, rhs.cases, 
+bool SwitchStmt::equalsStmt(const Statement& stmt) const {
+	// conversion is guaranteed by base equals
+	const SwitchStmt& rhs = static_cast<const SwitchStmt&>(stmt);
+	return ::equals(cases, rhs.cases,
 		[](const Case& l, const Case& r) { return *l.first == *r.first && *l.second == *r.second; });
-}
-
-std::size_t SwitchStmt::hash() const {
-	std::size_t seed = HASHVAL_SWITCH;
-	boost::hash_combine(seed, switchExpr->hash());
-	std::for_each(cases.begin(), cases.end(), [&seed](Case cur) { 
-		boost::hash_combine(seed, cur.first->hash());
-		boost::hash_combine(seed, cur.second->hash());
-	});
-	return seed;
 }
 
 SwitchStmt::ChildList SwitchStmt::getChildren() const {
@@ -415,7 +393,7 @@ SwitchStmt::ChildList SwitchStmt::getChildren() const {
 	return ret;
 }
 
-SwitchStmtPtr SwitchStmt::get(StatementManager& manager, ExprPtr switchExpr, const vector<Case>& cases) {
+SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases) {
 	return manager.get(SwitchStmt(switchExpr, cases));
 }
 

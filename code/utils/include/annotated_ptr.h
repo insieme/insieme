@@ -62,13 +62,15 @@ public:
 		InstancePtr<T>(from.ptr) { }
 };
 
-
 template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
+typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type
 dynamic_pointer_cast(AnnotatedPtr<T> src) {
+//	static AnnotatedPtr<T> NullInstance = NULL;
+
 	if (dynamic_cast<B*>(&(*src))) {
 		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
 	}
+//	return NullInstance;
 	return NULL;
 }
 

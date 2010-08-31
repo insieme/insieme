@@ -45,6 +45,7 @@
 #include "programs.h"
 #include "statements.h"
 #include "types.h"
+#include "types_utils.h"
 
 namespace insieme {
 namespace core {
@@ -69,7 +70,9 @@ public:
 		return visit(static_cast<const PARENT &>(node)); \
 	}
 
-	VISIT_BASE(Type);
+	VISIT_BASE(Node);
+
+	VISIT_DERIVED(Type, Node);
 
 	VISIT_DERIVED(TypeVariable, Type);
 	VISIT_DERIVED(FunctionType, Type);
@@ -91,9 +94,8 @@ public:
 	VISIT_DERIVED(UnionType, NamedCompositeType);
 
 
-	VISIT_BASE(Statement);
+	VISIT_DERIVED(Statement,Node);
 
-	VISIT_DERIVED(NoOpStmt, Statement);
 	VISIT_DERIVED(BreakStmt, Statement);
 	VISIT_DERIVED(ContinueStmt, Statement);
 	VISIT_DERIVED(ReturnStmt, Statement);
@@ -104,7 +106,7 @@ public:
 	VISIT_DERIVED(IfStmt, Statement);
 	VISIT_DERIVED(SwitchStmt, Statement);
 
-	VISIT_DERIVED(Expression, Statement);
+	VISIT_DERIVED(Expression, Node);
 	VISIT_DERIVED(IntLiteral, Expression);
 	VISIT_DERIVED(FloatLiteral, Expression);
 	VISIT_DERIVED(BoolLiteral, Expression);

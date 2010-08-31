@@ -41,12 +41,7 @@
 #include <vector>
 
 #include "ast_node.h"
-#include "instance_manager.h"
-#include "expressions.h"
-#include "statements.h"
-#include "string_utils.h"
-#include "types.h"
-#include "types_utils.h"
+#include "identifiers.h"
 
 using std::string;
 using std::vector;
@@ -54,30 +49,12 @@ using std::vector;
 namespace insieme {
 namespace core {
 
+// Declare definition and definition pointer ...
 DECLARE_NODE_TYPE(Definition);
 
+DECLARE_NODE_TYPE(Type);
+DECLARE_NODE_TYPE(Expression);
 
-class DefinitionManager : public InstanceManager<Definition, AnnotatedPtr> {
-
-	StatementManager& statementManager;
-	TypeManager& typeManager;
-
-public:
-
-	DefinitionManager(StatementManager& statementManager) :
-		statementManager(statementManager),
-		typeManager(statementManager.getTypeManager())
-	{};
-
-
-	TypeManager& getTypeManager() const {
-		return typeManager;
-	}
-
-	StatementManager& getStatementManager() const {
-		return statementManager;
-	}
-};
 
 /**
  * Definitions are top-level elements within an IR program. Each definition is defining
@@ -98,7 +75,7 @@ public:
 	/**
 	 * The type of instance manager to be used with this type.
 	 */
-	typedef DefinitionManager Manager;
+	typedef NodeManager Manager;
 
 private:
 
@@ -122,7 +99,7 @@ private:
 	 * An expression defining the value for the newly introduced element. In case
 	 * the definition is external, this pointer may be NULL.
 	 */
-	const ExprPtr definition;
+	const ExpressionPtr definition;
 
 	/**
 	 * A private constructor for this type creating a new element based on the given
@@ -136,14 +113,14 @@ private:
 	 * 				   an external source since this constructor is private.
 	 */
 	Definition(const Identifier& name, const TypePtr& type, const bool& external,
-			const ExprPtr& definition, const std::size_t& hashCode);
+			const ExpressionPtr& definition, const std::size_t& hashCode);
 
 	/**
 	 * Creates a clone of this definition within the given definition manager.
 	 *
 	 * @param manager the manager to create a clone within.
 	 */
-	Definition* clone(DefinitionManager& manager) const;
+	Definition* clone(NodeManager& manager) const;
 
 public:
 
@@ -157,7 +134,7 @@ public:
 	 * @param definition the expression providing a definition of the value, may be NULL if external.
 	 * @param external a flag indicating whether the definition to be looking for is externally defined / used.
 	 */
-	static DefinitionPtr get(DefinitionManager& manager, const Identifier& name, const TypePtr& type, const ExprPtr& definition = NULL, bool external = false);
+	static DefinitionPtr get(NodeManager& manager, const Identifier& name, const TypePtr& type, const ExpressionPtr& definition = NULL, bool external = false);
 
 	/**
 	 * A static factory method which will only look up a definition. The given name and type will be taken to obtain
@@ -167,7 +144,7 @@ public:
 	 * @param manager the manager within which the element should be searched.
 	 * @param type the type of element to be looking for.
 	 */
-	static DefinitionPtr lookup(DefinitionManager& manager, const Identifier& name, const TypePtr& type);
+	static DefinitionPtr lookup(NodeManager& manager, const Identifier& name, const TypePtr& type);
 
 	/**
 	 * Obtain the name of the element defined by this definition.
@@ -182,7 +159,7 @@ public:
 		return type;
 	}
 
-	const ExprPtr& getDefinition() const {
+	const ExpressionPtr& getDefinition() const {
 		return definition;
 	}
 

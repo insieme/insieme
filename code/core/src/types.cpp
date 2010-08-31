@@ -136,7 +136,7 @@ string TupleType::buildNameString(const ElementTypeList& elementTypes) {
  * @param manager the manager to obtain the new type reference from
  * @param elementTypes the list of element types to be used to form the tuple
  */
-TupleTypePtr TupleType::get(TypeManager& manager, const ElementTypeList& elementTypes) {
+TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& elementTypes) {
 	return manager.get(TupleType(elementTypes));
 }
 
@@ -154,7 +154,7 @@ TupleTypePtr TupleType::get(TypeManager& manager, const ElementTypeList& element
  * @param returnType the type of value to be returned by the obtained function type
  * @return a pointer to a instance of the required type maintained by the given manager
  */
-FunctionTypePtr FunctionType::get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
+FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 	// obtain reference to new element
 	return manager.get(FunctionType(argumentType, returnType));
 }
@@ -213,7 +213,7 @@ GenericType::GenericType(const string& name,
  * @param intTypeParams	the integer-type parameters of this type, concrete or variable
  * @param baseType		the base type of this generic type
  */
-GenericTypePtr GenericType::get(TypeManager& manager,
+GenericTypePtr GenericType::get(NodeManager& manager,
 			const string& name,
 			const vector<TypePtr>& typeParams,
 			const vector<IntTypeParam>& intTypeParams,
@@ -276,7 +276,7 @@ NamedCompositeType::NamedCompositeType(const string& prefix, const Entries& entr
  * @param entries the list of entries to be looked up
  * @return a list of entries referencing identical types within the given manager
  */
-NamedCompositeType::Entries NamedCompositeType::getEntriesFromManager(TypeManager& manager, Entries entries) {
+NamedCompositeType::Entries NamedCompositeType::getEntriesFromManager(NodeManager& manager, Entries entries) {
 
 	// quick check ..
 	if (entries.empty()) {
@@ -337,7 +337,7 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 // ------------------------------------ Struct Type ---------------------------
 
 
-StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
+StructTypePtr StructType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
 	return manager.get(StructType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
@@ -345,7 +345,7 @@ StructTypePtr StructType::get(TypeManager& manager, const Entries& entries) {
 // ------------------------------------ Union Type ---------------------------
 
 
-UnionTypePtr UnionType::get(TypeManager& manager, const Entries& entries) {
+UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
 	return manager.get(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }

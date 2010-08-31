@@ -192,7 +192,7 @@ TEST(ContainerUtils, ExtractFirstSecond) {
 	EXPECT_EQ(secondVec[1], "two");
 }
 
-TEST(ContainerUtils, equals) {
+TEST(ContainerUtils, equal) {
 
 	vector<int> vectorA;
 	vectorA.push_back(1);

@@ -49,7 +49,7 @@ using namespace insieme::core;
 TEST(TypeTest, IntType) {
 
 	// create type manager and element types
-	TypeManager manager;
+	NodeManager manager;
 	IntTypePtr intType = IntType::get(manager, 4);
 	EXPECT_EQ ( 4 , intType->getNumBytes());
 	EXPECT_EQ ( "int<4>", intType->getName() );

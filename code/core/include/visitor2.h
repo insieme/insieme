@@ -45,6 +45,7 @@
 #include "programs.h"
 #include "statements.h"
 #include "types.h"
+#include "types_utils.h"
 
 namespace insieme {
 namespace core {
@@ -62,27 +63,14 @@ public:
 
 	typedef ReturnType return_type;
 
-	ReturnType visit(const ProgramPtr& program) {
-		assert( program && "Cannot visit NULL program!");
-		return DISPATCH(Program, program);
-	}
+//	ReturnType visit(const ProgramPtr& program) {
+//		assert( program && "Cannot visit NULL program!");
+//		return DISPATCH(Program, program);
+//	}
 
-	ReturnType visit(const DefinitionPtr& definition) {
-		assert( definition && "Cannot visit NULL definition!");
-		return DISPATCH(Definition, definition);
-	}
-
-	ReturnType visit(const StmtPtr& statement) {
-		assert( statement && "Cannot visit NULL statement!");
-		if (const ExprPtr& ptr = dynamic_pointer_cast<const Expression>(statement)) {
-			return DISPATCH(Expr, ptr);
-		}
-		return DISPATCH(Stmt, statement);
-	}
-
-	ReturnType visit(const TypePtr& type) {
-		assert( type && "Cannot visit NULL type!");
-		return DISPATCH(Type, type);
+	ReturnType visit(const NodePtr& node) {
+		assert ( node && "Cannot visit NULL node!");
+		return DISPATCH(Node, node);
 	}
 
 protected:
@@ -91,13 +79,33 @@ protected:
 		if (dynamic_cast<const CLASS*>(&*PTR)) \
 			return DISPATCH(CLASS, dynamic_pointer_cast<const CLASS>(PTR))
 
-
 	// ---------------- Dispatcher ---------------------------------
 
-	ReturnType dispatchStmt(const StmtPtr& statement) {
-		assert ( statement && "Cannot dispatch NULL statement!");
+	ReturnType dispatchNode(const NodePtr& node) {
+		assert (node && "Cannot dispatch NULL node!");
 
-		TRY_DISPATCH(statement, NoOpStmt);
+		// dispatch node based on its type
+		switch (node->getNodeType()) {
+		case NodeType::TYPE:
+			return dispatchType(dynamic_pointer_cast<const Type>(node));
+		case NodeType::EXPRESSION:
+			return dispatchExpression(dynamic_pointer_cast<const Expression>(node));
+		case NodeType::STATEMENT:
+			return dispatchStatement(dynamic_pointer_cast<const Statement>(node));
+		case NodeType::DEFINITION:
+			return dispatchDefinition(dynamic_pointer_cast<const Definition>(node));
+		case NodeType::PROGRAM:
+			return dispatchProgram(dynamic_pointer_cast<const Program>(node));
+		}
+
+		// fail => invalid node type!
+		assert ( false && "Cannot dispatch unknown node type!" );
+		return ReturnType();
+	}
+
+
+	ReturnType dispatchStatement(const StatementPtr& statement) {
+		assert ( statement && "Cannot dispatch NULL statement!");
 
 		TRY_DISPATCH(statement, BreakStmt);
 		TRY_DISPATCH(statement, ContinueStmt);
@@ -115,7 +123,7 @@ protected:
 		return ReturnType();
 	}
 
-	ReturnType dispatchExpr(const ExprPtr& expression) {
+	ReturnType dispatchExpression(const ExpressionPtr& expression) {
 		assert ( expression && "Cannot dispatch NULL expression!");
 
 		TRY_DISPATCH(expression, IntLiteral);
@@ -209,7 +217,6 @@ protected:
 	DISPATCH_TERMINAL(UnionType);
 
 
-	DISPATCH_TERMINAL(NoOpStmt);
 	DISPATCH_TERMINAL(BreakStmt);
 	DISPATCH_TERMINAL(ContinueStmt);
 	DISPATCH_TERMINAL(ReturnStmt);
@@ -271,38 +278,33 @@ protected:
 	VISIT_NODE(UnionType, NamedCompositeType);
 
 
-	ReturnType visitStmt(const StmtPtr& ptr) {
-		return ReturnType();
-	}
+	VISIT_NODE(Statement, Node);
 
-	VISIT_NODE(NoOpStmt, Stmt);
-	VISIT_NODE(BreakStmt, Stmt);
-	VISIT_NODE(ContinueStmt, Stmt);
-	VISIT_NODE(ReturnStmt, Stmt);
-	VISIT_NODE(DeclarationStmt, Stmt);
-	VISIT_NODE(CompoundStmt, Stmt);
-	VISIT_NODE(WhileStmt, Stmt);
-	VISIT_NODE(ForStmt, Stmt);
-	VISIT_NODE(IfStmt, Stmt);
-	VISIT_NODE(SwitchStmt, Stmt);
+	VISIT_NODE(BreakStmt, Statement);
+	VISIT_NODE(ContinueStmt, Statement);
+	VISIT_NODE(ReturnStmt, Statement);
+	VISIT_NODE(DeclarationStmt, Statement);
+	VISIT_NODE(CompoundStmt, Statement);
+	VISIT_NODE(WhileStmt, Statement);
+	VISIT_NODE(ForStmt, Statement);
+	VISIT_NODE(IfStmt, Statement);
+	VISIT_NODE(SwitchStmt, Statement);
 
-	VISIT_NODE(Expr, Stmt);
-	VISIT_NODE(IntLiteral, Expr);
-	VISIT_NODE(FloatLiteral, Expr);
-	VISIT_NODE(BoolLiteral, Expr);
-	VISIT_NODE(VarExpr, Expr);
+	VISIT_NODE(IntLiteral, Expression);
+	VISIT_NODE(FloatLiteral, Expression);
+	VISIT_NODE(BoolLiteral, Expression);
+	VISIT_NODE(VarExpr, Expression);
 	VISIT_NODE(ParamExpr, VarExpr);
-	VISIT_NODE(LambdaExpr, Expr);
-	VISIT_NODE(CallExpr, Expr);
-	VISIT_NODE(CastExpr, Expr);
+	VISIT_NODE(LambdaExpr, Expression);
+	VISIT_NODE(CallExpr, Expression);
+	VISIT_NODE(CastExpr, Expression);
 
 
-	ReturnType visitProgram(const ProgramPtr& program) {
-		// by default, do nothing
-		return ReturnType();
-	}
+	VISIT_NODE(Program, Node);
 
-	ReturnType visitDefinition(const DefinitionPtr& definition) {
+	VISIT_NODE(Definition, Node);
+
+	ReturnType visitNode(const NodePtr& node) {
 		// by default, do nothing
 		return ReturnType();
 	}

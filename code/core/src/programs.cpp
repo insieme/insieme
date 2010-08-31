@@ -34,21 +34,44 @@
  * regarding third party software licenses.
  */
 
-#include "programs.h"
-
 #include <algorithm>
 #include <vector>
 
+#include <boost/functional/hash.hpp>
+
+#include "programs.h"
+
 #include "container_utils.h"
 #include "set_utils.h"
+#include "functional_utils.h"
+#include "types.h"
+#include "expressions.h"
 
 using namespace std;
 using namespace insieme::core;
 using namespace insieme::utils::set;
 
+std::size_t hash(const Program::DefinitionSet& definitions, const Program::EntryPointSet& entryPoints) {
+	std::size_t seed = 0;
+	boost::hash_combine(seed, insieme::utils::set::computeHash(definitions, hash_target<DefinitionPtr>()));
+	boost::hash_combine(seed, insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>()));
+	return seed;
+}
+
+Program* Program::clone(NodeManager& manager) const {
+	// TODO: remove data manager from program
+	// FIXME: this is not working this way (manager is shared twice)
+	return new Program(SharedDataManager(&manager), manager.getAll(definitions), manager.getAll(entryPoints));
+}
+
+
+Program::Program(SharedDataManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
+	Node(NodeType::PROGRAM, ::hash(definitions, entryPoints)), dataManager(dataManager), definitions(definitions), entryPoints(entryPoints) { };
+
+Program::Program() : Node(NodeType::PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), dataManager(SharedDataManager(new NodeManager())) {};
 
 ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(SharedDataManager(new ProgramDataManager()), definitions, entryPoints));
+	return ProgramPtr(new Program(SharedDataManager(new NodeManager()), definitions, entryPoints));
 }
 
 ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
@@ -56,7 +79,7 @@ ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::addDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(dataManager, merge(this->definitions, dataManager->getDefinitionManager().getAll(definitions)), entryPoints));
+	return ProgramPtr(new Program(dataManager, merge(this->definitions, dataManager->getAll(definitions)), entryPoints));
 }
 
 ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
@@ -68,15 +91,15 @@ ProgramPtr Program::remDefinitions(const DefinitionSet& definitions) const {
 }
 
 
-ProgramPtr Program::addEntryPoint(const ExprPtr& entryPoint) const {
+ProgramPtr Program::addEntryPoint(const ExpressionPtr& entryPoint) const {
 	return addEntryPoints(toSet<EntryPointSet>(entryPoint));
 }
 
 ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(dataManager, definitions, merge(this->entryPoints, dataManager->getStatementManager().getAll(entryPoints))));
+	return ProgramPtr(new Program(dataManager, definitions, merge(this->entryPoints, dataManager->getAll(entryPoints))));
 }
 
-ProgramPtr Program::remEntryPoint(const ExprPtr& entryPoint) const {
+ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
 	return remEntryPoints(toSet<EntryPointSet>(entryPoint));
 }
 
@@ -84,12 +107,25 @@ ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
 	return ProgramPtr(new Program(dataManager, definitions, difference(this->entryPoints, entryPoints)));
 }
 
+bool Program::equals(const Node& other) const {
+	// precondition: other must be a type
+	assert( dynamic_cast<const Program*>(&other) && "Type violation by base class!" );
+
+	// convert (statically) and check the type name
+	const Program& ref = static_cast<const Program&>(other);
+
+	// compare definitions and entry points
+	return
+			insieme::utils::set::equal(entryPoints, ref.entryPoints) &&
+			insieme::utils::set::equal(definitions, ref.definitions);
+}
+
 
 bool compareDefinitions(const DefinitionPtr& defA, const DefinitionPtr& defB) {
 	return defA->getName() < defB->getName();
 }
 
-bool compareEntryPoints(const ExprPtr& exprA, const ExprPtr& exprB) {
+bool compareEntryPoints(const ExpressionPtr& exprA, const ExpressionPtr& exprB) {
 	return toString(exprA) < toString(exprB);
 }
 
@@ -102,7 +138,7 @@ std::vector<GenericTypePtr> getAllGenericTypes(const Program& program);
 std::ostream& operator<<(std::ostream& out, const Program& program) {
 
 	typedef std::vector<DefinitionPtr> DefinitionList;
-	typedef std::vector<ExprPtr> EntryPointList;
+	typedef std::vector<ExpressionPtr> EntryPointList;
 
 	out << "PROGRAM { \n";
 
@@ -133,7 +169,7 @@ std::ostream& operator<<(std::ostream& out, const Program& program) {
 
 	out << "// Entry Points:" << endl;
 	for_each(entryList.cbegin(), entryList.cend(),
-		[&out](const ExprPtr& cur) {
+		[&out](const ExpressionPtr& cur) {
 			out << *cur << endl;
 	});
 	out << endl;

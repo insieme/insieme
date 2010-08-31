@@ -83,18 +83,9 @@ DECLARE_NODE_TYPE(UnionType);
 
 
 /**
- * The type manager to be used to type instances.
- */
-class TypeManager;
-
-/**
  * This class is used to represent integer parameters of generic types.
  */
 class IntTypeParam;
-
-// ---------------------------------- Type Manager ----------------------------------------
-
-class TypeManager: public InstanceManager<Type, AnnotatedPtr> { };
 
 // ---------------------------------------- A token for an abstract type ------------------------------
 
@@ -108,25 +99,13 @@ class TypeManager: public InstanceManager<Type, AnnotatedPtr> { };
  * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
  * both). Variable types can only be used as the input/output types of functions.
  */
-class Type: public Node, public Visitable<TypePtr> {
-
-	/**
-	 * Allow the instance manager to access the private clone method.
-	 */
-	friend class InstanceManager<Type, AnnotatedPtr>;
+class Type: public Node, public Visitable<NodePtr> {
 
 	/**
 	 * Allow the test case to access private methods.
 	 */
 	template<typename PT>
 	friend void basicTypeTests(PT, bool, bool, vector<TypePtr> children = vector<TypePtr>());
-
-public:
-
-	/**
-	 * The type of instance manager to be used with this type.
-	 */
-	typedef TypeManager Manager;
 
 private:
 
@@ -242,14 +221,6 @@ public:
 	 */
 	static bool allConcrete(const vector<TypePtr>& elementTypes);
 
-private:
-
-	/**
-	 * Retrieves a clone of this object (a newly allocated instance of this class)
-	 */
-	virtual Type* clone(TypeManager& manager) const = 0;
-
-
 };
 
 
@@ -271,7 +242,7 @@ class TypeVariable: public Type {
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TypeVariable* clone(TypeManager&) const {
+	virtual TypeVariable* clone(NodeManager&) const {
 		return new TypeVariable(*this);
 	}
 
@@ -282,7 +253,7 @@ public:
 	 * a type variable pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
 	 */
-	static TypeVariablePtr get(TypeManager& manager, const string& name) {
+	static TypeVariablePtr get(NodeManager& manager, const string& name) {
 		return manager.get(TypeVariable(name));
 	}
 
@@ -329,7 +300,7 @@ private:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TupleType* clone(TypeManager& manager) const {
+	virtual TupleType* clone(NodeManager& manager) const {
 		return new TupleType(manager.getAll(elementTypes));
 	}
 
@@ -343,7 +314,7 @@ public:
 	 * @param manager the manager to obtain the new type reference from
 	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
-	static TupleTypePtr get(TypeManager& manager, const ElementTypeList& elementTypes);
+	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes);
 
 	/**
 	 * Obtains a list of all types referenced by this tuple type.
@@ -385,7 +356,7 @@ class FunctionType: public Type {
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual FunctionType* clone(TypeManager& manager) const {
+	virtual FunctionType* clone(NodeManager& manager) const {
 		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
 
@@ -401,7 +372,7 @@ public:
 	 * @param returnType the type of value to be returned by the obtained function type
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
-	static FunctionTypePtr get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
+	static FunctionTypePtr get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
 
 	/**
 	 * Obtains a list of all types referenced by this function type.
@@ -611,7 +582,7 @@ protected:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual GenericType* clone(TypeManager& manager) const {
+	virtual GenericType* clone(NodeManager& manager) const {
 		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
 
@@ -627,7 +598,7 @@ public:
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 	 * @param baseType		the base type of this generic type
 	 */
-	static GenericTypePtr get(TypeManager& manager,
+	static GenericTypePtr get(NodeManager& manager,
 			const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
@@ -708,7 +679,7 @@ protected:
 	 */
 	NamedCompositeType(const string& prefix, const Entries& entries);
 
-	static Entries getEntriesFromManager(TypeManager& manager, Entries entries);
+	static Entries getEntriesFromManager(NodeManager& manager, Entries entries);
 
 public:
 
@@ -779,7 +750,7 @@ class StructType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual StructType* clone(TypeManager& manager) const {
+	virtual StructType* clone(NodeManager& manager) const {
 		return new StructType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
@@ -795,7 +766,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static StructTypePtr get(TypeManager& manager, const Entries& entries);
+	static StructTypePtr get(NodeManager& manager, const Entries& entries);
 
 };
 
@@ -818,7 +789,7 @@ class UnionType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnionType* clone(TypeManager& manager) const {
+	virtual UnionType* clone(NodeManager& manager) const {
 		return new UnionType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
@@ -834,7 +805,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
+	static UnionTypePtr get(NodeManager& manager, const Entries& entries);
 
 };
 
@@ -894,7 +865,7 @@ class ArrayType: public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ArrayType* clone(TypeManager& manager) const {
+	virtual ArrayType* clone(NodeManager& manager) const {
 		return new ArrayType(manager.get(getElementType()), getDimension());
 	}
 
@@ -911,7 +882,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
 		return manager.get(ArrayType(elementType, dim));
 	}
 
@@ -944,7 +915,7 @@ class VectorType : public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual VectorType* clone(TypeManager& manager) const {
+	virtual VectorType* clone(NodeManager& manager) const {
 		return new VectorType(manager.get(getElementType()), getSize());
 	}
 
@@ -961,7 +932,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
+	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
 		return manager.get(VectorType(elementType, size));
 	}
 
@@ -995,7 +966,7 @@ class RefType: public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual RefType* clone(TypeManager& manager) const {
+	virtual RefType* clone(NodeManager& manager) const {
 		return new RefType(manager.get(getElementType()));
 	}
 
@@ -1011,7 +982,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
+	static RefTypePtr get(NodeManager& manager, const TypePtr& elementType) {
 		return manager.get(RefType(elementType));
 	}
 };
@@ -1037,7 +1008,7 @@ class ChannelType: public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ChannelType* clone(TypeManager& manager) const {
+	virtual ChannelType* clone(NodeManager& manager) const {
 		return new ChannelType(manager.get(getElementType()), getSize());
 	}
 
@@ -1053,7 +1024,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
+	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
 		return manager.get(ChannelType(elementType, size));
 	}
 
