@@ -37,9 +37,12 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 #include <string>
 #include <cstring>
 #include <sstream>
+
+#include "functional_utils.h"
 
 using std::string;
 
@@ -52,12 +55,33 @@ string toString(T value) {
 	return res.str();
 }
 
-template<typename Container>
-void joinTo(std::ostream& out, const string& seperator, Container container) {
-	if(container.size() > 0) {
-		out << *container.cbegin();
-		std::for_each(container.cbegin()+1, container.cend(), [&](const typename Container::value_type cur) {
-			out << seperator << cur;
+
+template<typename Container, typename Extractor>
+struct Joinable {
+
+	const string& separator;
+	const Container& container;
+	const Extractor& extractor;
+
+	Joinable(const string& separator, const Container& container, const Extractor& extractor) :
+		separator(separator), container(container), extractor(extractor) {};
+
+};
+
+
+template<typename Container, typename Extractor>
+std::ostream& operator<<(std::ostream& out, const Joinable<Container, Extractor>& joinable) {
+	if(joinable.container.size() > 0) {
+		out << joinable.extractor(*joinable.container.cbegin());
+		std::for_each(joinable.container.cbegin()+1, joinable.container.cend(), [&](const typename Container::value_type& cur) {
+			out << joinable.separator << joinable.extractor(cur);
 		});
 	}
+	return out;
+}
+
+
+template<typename Container, typename Extractor = id<const typename Container::value_type&>>
+Joinable<Container, Extractor> join(const string& separator, const Container& container, const Extractor& extractor = Extractor()) {
+	return Joinable<Container,Extractor>(separator, container, extractor);
 }

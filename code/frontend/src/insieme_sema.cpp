@@ -42,8 +42,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 
-// TODO: remove
-#include <iostream>
+#include <glog/logging.h>
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -70,6 +69,9 @@ void EraseMatchedPragmas(std::list<PragmaPtr>& pending, PragmaList& matched) {
 
 }
 
+/**
+ * Given a range, the PragmaFilter returns the pragmas with are defined between that range.
+ */
 class PragmaFilter {
 	SourceRange bounds;
 	SourceManager const& sm;
@@ -169,7 +171,9 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 
 			if (I != E && Line((*I)->getLocStart(), SourceMgr) < Line(P->getEndLocation(), SourceMgr)) {
 				if (Line(Prev->getLocStart(), SourceMgr) >= Line(P->getEndLocation(), SourceMgr)) {
+					// set the statement for the current pragma
 					P->setStatement(Prev);
+					// add pragma to the list of matched pragmas
 					matched.push_back(P);
 				} else {
 					// add a ';' (NullStmt) before the end of the block in order to associate the pragma
@@ -191,8 +195,9 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 					ret = newCS;
 					CS = newCS;
 
-					free(oldStmt); // we have to make sure the old CompoundStmt is removed but not
-					// the statements inside it
+					// We can now remove the old CompoundStmt, we use the free because we don't want to delete child nodes which have been associated with
+					// the newly created CompoundStmt.
+					free(oldStmt); // we have to make sure the old CompoundStmt is removed
 					delete[] stmts;
 				}
 				break;
@@ -205,7 +210,7 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 		}
 	}
 
-	// remove mathced pragmas
+	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 
 	return clang::move(ret);
@@ -356,11 +361,9 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 }
 
 void InsiemeSema::dump() {
-	//	DEBUG_RUN(
-	std::cout << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
+	DLOG(INFO) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
-		(*I)->dump(std::cerr, SourceMgr);
-	//	);
+		(*I)->dump(DLOG(INFO), SourceMgr);
 }
 
 } // End frontend namespace

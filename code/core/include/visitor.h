@@ -42,6 +42,7 @@
 #include <vector>
 
 #include <boost/type_traits/is_pointer.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/noncopyable.hpp>
 
@@ -50,6 +51,8 @@ using std::vector;
 using std::function;
 using std::for_each;
 
+namespace insieme {
+namespace core {
 
 template<typename T>
 bool visitorTrueFilter(T) {
@@ -69,9 +72,18 @@ public:
 	virtual ChildList getChildren() const = 0;
 
 protected:
-	static ChildList makeChildList(const vector<T>& initial = vector<T>()) {
-		return ChildList(new vector<T>(initial));
+
+	template<typename S>
+	static typename boost::enable_if<boost::is_convertible<S,T>, ChildList>::type makeChildList(const vector<S>& initial) {
+		vector<T>* res = new vector<T>();
+		std::copy(initial.cbegin(), initial.cend(), back_inserter(*res));
+		return ChildList(res);
 	}
+
+	static ChildList makeChildList() {
+		return ChildList(new vector<T>());
+	}
+
 	static ChildList makeChildList(const T& initialElement) {
 		ChildList ret = makeChildList();
 		ret->push_back(initialElement);
@@ -130,4 +142,7 @@ public:
 		});
 	}
 };
+
+} // end namespace core
+} // end namespace insieme
 

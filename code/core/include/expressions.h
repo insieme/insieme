@@ -39,82 +39,73 @@
 #include <memory>
 
 #include "annotated_ptr.h"
-#include "types.h"
-#include "statements.h"
+#include "ast_node.h"
 #include "identifiers.h"
+#include "types.h"
+
+namespace insieme {
+namespace core {
+
+DECLARE_NODE_TYPE(Statement);
 
 // Forward Declarations { -----------------------------------------------------
 
-class Expression;
-typedef AnnotatedPtr<const Expression> ExprPtr;
+DECLARE_NODE_TYPE(Expression);
 
-class IntLiteral;
-typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
+DECLARE_NODE_TYPE(BoolLiteral);
+DECLARE_NODE_TYPE(IntLiteral);
+DECLARE_NODE_TYPE(FloatLiteral);
 
-class FloatLiteral;
-typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
+DECLARE_NODE_TYPE(VarExpr);
+DECLARE_NODE_TYPE(ParamExpr);
+DECLARE_NODE_TYPE(CallExpr);
+DECLARE_NODE_TYPE(CastExpr);
 
-class BoolLiteral;
-typedef AnnotatedPtr<const BoolLiteral> BoolLiteralPtr;
+DECLARE_NODE_TYPE(TupleExpr);
+DECLARE_NODE_TYPE(LambdaExpr);
 
-class VarExpr;
-typedef AnnotatedPtr<const VarExpr> VarExprPtr;
-
-class ParamExpr;
-typedef AnnotatedPtr<const ParamExpr> ParamExprPtr;
-
-class LambdaExpr;
-typedef AnnotatedPtr<const LambdaExpr> LambdaExprPtr;
-
-class CallExpr;
-typedef AnnotatedPtr<const CallExpr> CallExprPtr;
-
-class CastExpr;
-typedef AnnotatedPtr<const CastExpr> CastExprPtr;
-
-class ParenExpr;
-typedef AnnotatedPtr<const ParenExpr> ParenExprPtr;
 
 // Forward Declarations } -----------------------------------------------------
 
-class Expression : public Statement {
+class Expression : public Node {
 protected:	
-	enum {
-		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
-		HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR, HASHVAL_PARENEXPR
-	};
 
 	/** The type of the expression. */
 	const TypePtr type;
 	
-	Expression(const TypePtr& type) : type(type) { };
-	virtual ~Expression() {}
+	Expression(const TypePtr& type, const std::size_t& hashCode) : Node(EXPRESSION, hashCode), type(type) { };
 
-	virtual bool equals(const Statement& stmt) const;
+	virtual bool equals(const Node& stmt) const;
 	virtual bool equalsExpr(const Expression& expr) const = 0;
 
 public:
+
+	virtual ~Expression() {}
+
+	virtual void printTo(std::ostream& out) const = 0;
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
 };
 
-/// Allows expressions to be printed to a stream (especially useful during debugging and
-/// within test cases where equals expects values to be printable).
-std::ostream& operator<<(std::ostream& out, const Expression& expression);
-
-
 
 template<typename T>
 class Literal : public Expression {
+
+	static std::size_t hashLiteral(std::size_t seed, const TypePtr& type, const T& value) {
+		boost::hash_combine(seed, type->hash());
+		boost::hash_combine(seed, boost::hash_value(value));
+		return seed;
+	}
+
 protected:
     const T value;
 	
-	Literal(const TypePtr& type, const T& val) : Expression(type), value(val) { };
+	Literal(const TypePtr& type, const T& value, const std::size_t& hashSeed) :
+		Expression(type,hashLiteral(hashSeed, type, value)), value(value) { }
 	virtual ~Literal() {}
 
 	bool equalsExpr(const Expression& expr) const {
-		// conversion is guaranteed by base operator==
-		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr); 
+		const Literal<T>& rhs = static_cast<const Literal<T>&>(expr);
 		return (value == rhs.value);
 	}
 
@@ -127,40 +118,36 @@ public:
 };
 
 class IntLiteral : public Literal<int> {
-	IntLiteral(const TypePtr& type, int val) : Literal<int>(type, val) { }
-	virtual IntLiteral* clone(StatementManager& manager) const;
+	IntLiteral(const TypePtr& type, int val);
+	virtual IntLiteral* clone(NodeManager& manager) const;
 	
 public:
-	virtual std::size_t hash() const;
 	
-	static IntLiteralPtr get(StatementManager& manager, int value, unsigned short bytes = 4);
-	static IntLiteralPtr one(StatementManager& manager) { return get(manager, 1); }
-	static IntLiteralPtr zero(StatementManager& manager) { return get(manager, 0); }
+	static IntLiteralPtr get(NodeManager& manager, int value, unsigned short bytes = 4);
+	static IntLiteralPtr one(NodeManager& manager) { return get(manager, 1); }
+	static IntLiteralPtr zero(NodeManager& manager) { return get(manager, 0); }
 };
 
 class FloatLiteral : public Literal<double> {
 	const string originalString;
 
-	FloatLiteral(const TypePtr& type, double val, const string& originalString)
-		: Literal<double>(type, val), originalString(originalString) { }
-	virtual FloatLiteral* clone(StatementManager& manager) const;
+	FloatLiteral(const TypePtr& type, double val, const string& originalString);
+	virtual FloatLiteral* clone(NodeManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual std::size_t hash() const;
 
-	static FloatLiteralPtr get(StatementManager& manager, double value, unsigned short bytes = 8);
-	static FloatLiteralPtr get(StatementManager& manager, const string& from, unsigned short bytes = 8);
+	static FloatLiteralPtr get(NodeManager& manager, double value, unsigned short bytes = 8);
+	static FloatLiteralPtr get(NodeManager& manager, const string& from, unsigned short bytes = 8);
 };
 
 class BoolLiteral : public Literal<bool> {
-	BoolLiteral(const TypePtr& type, bool val) : Literal<bool>(type, val) { }
-	virtual BoolLiteral* clone(StatementManager& manager) const;
+	BoolLiteral(const TypePtr& type, bool val);
+	virtual BoolLiteral* clone(NodeManager& manager) const;
 	
 public:
-	virtual std::size_t hash() const;
 
-	static BoolLiteralPtr get(StatementManager& manager, bool value);
+	static BoolLiteralPtr get(NodeManager& manager, bool value);
 };
 
 //class StringLiteral : public Literal<string> {
@@ -173,27 +160,27 @@ class VarExpr : public Expression {
 protected:
 	const Identifier id;
 	
-    VarExpr(const TypePtr& type, const Identifier& id) : Expression(type), id(id) { };
-	virtual VarExpr* clone(StatementManager& manager) const;
+    VarExpr(const TypePtr& type, const Identifier& id);
+    VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode);
+
+	virtual VarExpr* clone(NodeManager& manager) const;
 	bool equalsExpr(const Expression& expr) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual std::size_t hash() const;
 
-	static VarExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
+	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
 
 
 class ParamExpr : public VarExpr {
-	ParamExpr(const TypePtr& type, const Identifier& id) : VarExpr(type, id) { };
-	virtual ParamExpr* clone(StatementManager& manager) const;
+	ParamExpr(const TypePtr& type, const Identifier& id);
+	virtual ParamExpr* clone(NodeManager& manager) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual std::size_t hash() const;
 
-	static ParamExprPtr get(StatementManager& manager, const TypePtr& type, const Identifier &id);
+	static ParamExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
 
 
@@ -202,58 +189,95 @@ public:
 	typedef vector<ParamExprPtr> ParamList;
 
 private:
-	const StmtPtr body;
+	const StatementPtr body;
 	const ParamList params;
 
-	LambdaExpr(const TypePtr& type, const ParamList& params, const StmtPtr& body) 
-		: Expression(type), body(body), params(params) { };
-	virtual LambdaExpr* clone(StatementManager& manager) const;
+	LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body);
+	virtual LambdaExpr* clone(NodeManager& manager) const;
 
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual std::size_t hash() const;
 
-	static LambdaExprPtr get(StatementManager& manager, const TypePtr& type, const ParamList& params, const StmtPtr& body);
+	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
 };
+
+
+class TupleExpr : public Expression {
+	const vector<ExpressionPtr> expressions;
+
+	TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions);
+	virtual TupleExpr* clone(NodeManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+
+	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
+};
+
+
+//class StructUnionExpr : public Expression {
+//	const vector<VarExprPtr> members;
+//
+//	TupleExpr(const TypePtr& type, const vector<ExprPtr>& expressions) 
+//		: Expression(type), expressions(expressions) { };
+//	virtual TupleExpr* clone(StatementManager& manager) const;
+//
+//protected:
+//	bool equalsExpr(const Expression& expr) const;
+//
+//public:
+//	virtual void printTo(std::ostream& out) const;
+//	virtual std::size_t hash() const;
+//
+//	static TupleExprPtr get(StatementManager& manager, const vector<ExprPtr>& expressions);
+//};
 
 
 class CallExpr : public Expression {
-	const ExprPtr functionExpr;
-	const vector<ExprPtr> arguments;
+	const ExpressionPtr functionExpr;
+	const vector<ExpressionPtr> arguments;
 
-	CallExpr(const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments) 
-		: Expression(type), functionExpr(functionExpr), arguments(arguments) { }
-	virtual CallExpr* clone(StatementManager& manager) const;
+	CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
+	virtual CallExpr* clone(NodeManager& manager) const;
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
 	
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual std::size_t hash() const;
 
-	static CallExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& functionExpr, const vector<ExprPtr>& arguments);
+	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 
 class CastExpr : public Expression {
-	const ExprPtr subExpression;
+	const ExpressionPtr subExpression;
 
-	CastExpr(const TypePtr& type, const ExprPtr& subExpression)
-		: Expression(type), subExpression(subExpression) { }
-	virtual CastExpr* clone(StatementManager& manager) const;
+	CastExpr(const TypePtr& type, const ExpressionPtr& subExpression);
+	virtual CastExpr* clone(NodeManager& manager) const;
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual std::size_t hash() const;
 
-	static CastExprPtr get(StatementManager& manager, const TypePtr& type, const ExprPtr& subExpression);
+	static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpression);
 };
+
+} // end namespace core
+} // end namespace insieme
+
+/// Allows expressions to be printed to a stream (especially useful during debugging and
+/// within test cases where equals expects values to be printable).
+std::ostream& operator<<(std::ostream& out, const insieme::core::Expression& expression);
+
+
 
 //class ParenExpr : public Expression {
 //	const ExprPtr subExpression;
@@ -261,7 +285,7 @@ public:
 //	ParenExpr(const ExprPtr& subExp)
 //		: Expression(subExp->getType()), subExpression(subExp) { }
 //	
-//	virtual ParenExpr* clone(StatementManager& manager) const;
+//	virtual ParenExpr* clone(NodeManager& manager) const;
 //
 //protected:
 //	bool equalsExpr(const Expression& expr) const;
@@ -270,6 +294,6 @@ public:
 //	virtual void printTo(std::ostream& out) const;
 //	virtual std::size_t hash() const;
 //
-//	static ParenExprPtr ParenExpr::get(StatementManager& manager, const ExprPtr& subExpr);
+//	static ParenExprPtr ParenExpr::get(NodeManager& manager, const ExprPtr& subExpr);
 //};
 

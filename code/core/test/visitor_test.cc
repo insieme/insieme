@@ -40,6 +40,8 @@
 
 #include <iostream>
 
+using namespace insieme::core;
+
 class MNode: public Visitable<MNode*> {
 
 	MNode* first;

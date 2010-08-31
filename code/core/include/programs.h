@@ -42,6 +42,7 @@
 
 //#include <boost/unordered_set.hpp>
 
+#include "ast_node.h"
 #include "container_utils.h"
 #include "expressions.h"
 #include "functional_utils.h"
@@ -51,50 +52,17 @@
 #include "types.h"
 
 
-class Program;
-typedef std::shared_ptr<Program> ProgramPtr;
-
-class ProgramDataManager {
-
-	TypeManager typeManager;
-	StatementManager stmtManager;
-	DefinitionManager definitionManager;
-
-	// TODO: add lookup table for variables!!
-
-public:
-	ProgramDataManager() : typeManager(), stmtManager(typeManager), definitionManager(stmtManager) {}
+namespace insieme {
+namespace core {
 
 
-	operator TypeManager&() {
-		return typeManager;
-	}
+DECLARE_NODE_TYPE(Program);
 
-	operator StatementManager&() {
-		return stmtManager;
-	}
-
-	operator DefinitionManager&() {
-		return definitionManager;
-	}
-
-	TypeManager& getTypeManager() {
-		return typeManager;
-	}
-
-	StatementManager& getStatementManager() {
-		return stmtManager;
-	}
-
-	DefinitionManager& getDefinitionManager() {
-		return definitionManager;
-	}
-
-};
+//class Program;
+//typedef std::shared_ptr<Program> ProgramPtr;
 
 
-
-class Program {
+class Program : public Node {
 
 public:
 
@@ -102,7 +70,7 @@ public:
 	 * The type used to share statement/type nodes and information among multiple
 	 * program versions.
 	 */
-	typedef std::shared_ptr<ProgramDataManager> SharedDataManager;
+	typedef std::shared_ptr<NodeManager> SharedDataManager;
 
 	/**
 	 * The type used to represent the list of top level definitions.
@@ -112,7 +80,7 @@ public:
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef std::unordered_set<ExprPtr, hash_target<ExprPtr>, equal_target<ExprPtr>> EntryPointSet;
+	typedef std::unordered_set<ExpressionPtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> EntryPointSet;
 
 private:
 
@@ -143,16 +111,16 @@ private:
 	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedDataManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
-		dataManager(dataManager), definitions(definitions), entryPoints(entryPoints) { };
+	Program(SharedDataManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints);
 
 	/**
 	 * Creates a new AST using a fresh AST data instance.
 	 */
-	Program() : dataManager(SharedDataManager(new ProgramDataManager())) {}
+	Program();
+
+	virtual Program* clone(NodeManager& manager) const;
 
 public:
-
 
 	static ProgramPtr createProgram(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
 
@@ -169,21 +137,27 @@ public:
 	ProgramPtr remDefinitions(const DefinitionSet& definitions) const;
 
 
-	ProgramPtr addEntryPoint(const ExprPtr& definition) const;
+	ProgramPtr addEntryPoint(const ExpressionPtr& point) const;
 
-	ProgramPtr addEntryPoints(const EntryPointSet& definitions) const;
+	ProgramPtr addEntryPoints(const EntryPointSet& points) const;
 
 	const EntryPointSet& getEntryPoints() const {
 		return entryPoints;
 	}
 
-	ProgramPtr remEntryPoint(const ExprPtr& definition) const;
+	ProgramPtr remEntryPoint(const ExpressionPtr& point) const;
 
-	ProgramPtr remEntryPoints(const EntryPointSet& definitions) const;
+	ProgramPtr remEntryPoints(const EntryPointSet& points) const;
 
 	SharedDataManager getDataManager() {
 		return dataManager;
 	}
+
+	/**
+	 * A default implementation of the equals operator comparing the actual
+	 * names of the types.
+	 */
+	bool equals(const Node& other) const;
 
 	// TODO: add consistency check routine!!
 	//   - check: all names defined in scope
@@ -191,6 +165,9 @@ public:
 	//   - no duplicates in names composite types
 
 };
+
+} // end namespace core
+} // end namespace insieme
 
 
 /**
@@ -202,5 +179,5 @@ public:
  * @param program the program to be printed
  * @return the given output stream
  */
-std::ostream& operator<<(std::ostream& out, const Program& program);
+std::ostream& operator<<(std::ostream& out, const insieme::core::Program& program);
 

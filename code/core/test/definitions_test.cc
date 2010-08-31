@@ -39,15 +39,15 @@
 #include "container_utils.h"
 #include "definitions.h"
 
+using namespace insieme::core;
+
 TEST(Definitions, Basic) {
 
-	TypeManager typeManager;
-	StatementManager statementManager(typeManager);
-	DefinitionManager manager(statementManager);
+	NodeManager nodeManager;
 
-	TypePtr typeA = GenericType::get(typeManager, "A");
-	TypePtr typeB = GenericType::get(typeManager, "B");
-	TypePtr typeR = GenericType::get(typeManager, "R");
+//	TypePtr typeA = GenericType::get(nodeManager, "A");
+//	TypePtr typeB = GenericType::get(nodeManager, "B");
+//	TypePtr typeR = GenericType::get(nodeManager, "R");
 
 	Identifier ident = "funA";
 //	Function::ParameterList list;
@@ -58,20 +58,20 @@ TEST(Definitions, Basic) {
 //	TupleType::ElementTypeList elements;
 //	elements.push_back(typeA);
 //	elements.push_back(typeB);
-//	TupleTypePtr argumentA = TupleType::get(typeManager, elements);
-//	FunctionTypePtr funAType = FunctionType::get(typeManager, argumentA, typeR);
+//	TupleTypePtr argumentA = TupleType::get(NodeManager, elements);
+//	FunctionTypePtr funAType = FunctionType::get(NodeManager, argumentA, typeR);
 //
 //	EXPECT_EQ ( funAType, funA->getType() );
 //
 //	FunctionPtr funB = Function::get(manager, ident, list);
-//	FunctionTypePtr funBType = FunctionType::get(typeManager, argumentA, UnitType::get(typeManager));
+//	FunctionTypePtr funBType = FunctionType::get(NodeManager, argumentA, UnitType::get(NodeManager));
 //
 //	EXPECT_EQ ( funBType, funB->getType() );
 //
 //	FunctionPtr funC = Function::get(manager, ident, Function::ParameterList());
-//	FunctionTypePtr funCType = FunctionType::get(typeManager,
-//			TupleType::get(typeManager, TupleType::ElementTypeList()),
-//			UnitType::get(typeManager));
+//	FunctionTypePtr funCType = FunctionType::get(NodeManager,
+//			TupleType::get(NodeManager, TupleType::ElementTypeList()),
+//			UnitType::get(NodeManager));
 //
 //	EXPECT_EQ ( funCType, funC->getType() );
 //

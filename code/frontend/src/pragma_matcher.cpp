@@ -35,18 +35,23 @@
  */
 
 #include "pragma_matcher.h"
+#include "utils/source_locations.h"
 
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
 #include <clang/AST/Expr.h>
 #include "lib/Sema/Sema.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 
 #include <llvm/Support/raw_ostream.h>
+
+#include <glog/logging.h>
+#include <boost/algorithm/string/join.hpp>
 
 using namespace clang;
 using namespace insieme::frontend;
 
-#include <iostream>
+#include <sstream>
 
 namespace insieme {
 namespace frontend {
@@ -71,56 +76,119 @@ std::string ValueUnion::toStr() const {
 	return rs.str();
 }
 
-// ------------------------------------ node ---------------------------
+// ------------------------------------ ErrorStack ---------------------------
 
-MatcherResult node::match(Preprocessor& PP) {
-	MatchMap mmap;
-
-	bool ret = match(PP, mmap);
-	return std::make_pair(ret, mmap);
+size_t ParserStack::openRecord() {
+	mRecords.push_back( LocErrorList() );
+	return mRecordId++;
 }
+
+void ParserStack::addExpected(size_t recordId, const Error& pe) { mRecords[recordId].push_back(pe); }
+
+void ParserStack::discardRecord(size_t recordId) { mRecords[recordId] = LocErrorList(); }
+
+size_t ParserStack::getFirstValidRecord() {
+	for(size_t i=0; i<mRecords.size(); ++i)
+		if(!mRecords[i].empty()) return i;
+	assert(false);
+}
+
+void ParserStack::discardPrevRecords(size_t recordId) {
+	std::for_each(mRecords.begin(), mRecords.begin()+recordId, [](LocErrorList& cur) {
+		cur = LocErrorList();
+	} );
+}
+
+const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const { return mRecords[recordId]; }
+
+void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
+	std::vector<std::string> list;
+	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
+
+	ss << boost::join(list, " | ");
+
+	ss << std::endl;
+}
+
+void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
+	TextDiagnosticPrinter &tdc = (TextDiagnosticPrinter&) *pp.getDiagnostics().getClient();
+
+	std::string str;
+	llvm::raw_string_ostream sstr(str);
+	pragmaLoc.print(sstr, pp.getSourceManager());
+	std::ostringstream ss;
+	ss << sstr.str() << ": ";
+	ss << "error: expected ";
+
+	size_t err, ferr = errStack.getFirstValidRecord();
+	err = ferr;
+	SourceLocation errLoc = errStack.getRecord(err).front().loc;
+	ss << "at location (" << frontend::util::Line(errLoc, pp.getSourceManager()) << ":" << frontend::util::Column(errLoc, pp.getSourceManager()) << ") ";
+	bool first = true;
+	do {
+		if(!errStack.getRecord(err).empty() && errStack.getRecord(err).front().loc == errLoc) {
+			!first && ss << "\t";
+
+			reportRecord(ss, errStack.getRecord(err), pp.getSourceManager());
+			first = false;
+		}
+		err++;
+	} while(err < errStack.stackSize());
+	llvm::errs() << ss.str();
+	tdc.EmitCaretDiagnostic(errLoc, NULL, 0, pp.getSourceManager(), 0, 0, 80);
+}
+
+// ------------------------------------ node ---------------------------
 
 concat node::operator>>(node const& n) const { return concat(*this, n); }
 star node::operator*() const { return star(*this); }
 choice node::operator|(node const& n) const { return choice(*this, n); }
 option node::operator!() const { return option(*this); }
 
-bool concat::match(Preprocessor& PP, MatchMap& mmap) const {
+bool concat::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
-	if (first->match(PP, mmap) && second->match(PP, mmap)) {
-		PP.CommitBacktrackedTokens();
-		return true;
+	if (first->match(PP, mmap, errStack, id)) {
+		errStack.discardPrevRecords(id);
+		id = errStack.openRecord();
+		if(second->match(PP, mmap, errStack, id)) {
+			PP.CommitBacktrackedTokens();
+			errStack.discardRecord(id);
+			return true;
+		}
 	}
 	PP.Backtrack();
 	return false;
 }
 
-bool star::match(Preprocessor& PP, MatchMap& mmap) const {
-	while (getNode()->match(PP, mmap))
+bool star::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+	while (getNode()->match(PP, mmap, errStack, recID))
 		;
 	return true;
 }
 
-bool choice::match(Preprocessor& PP, MatchMap& mmap) const {
+bool choice::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
-	if (first->match(PP, mmap)) {
+	if (first->match(PP, mmap, errStack, id)) {
 		PP.CommitBacktrackedTokens();
+		errStack.discardRecord(id);
 		return true;
 	}
 	PP.Backtrack();
 	PP.EnableBacktrackAtThisPos();
-	if (second->match(PP, mmap)) {
+	if (second->match(PP, mmap, errStack, id)) {
 		PP.CommitBacktrackedTokens();
+		errStack.discardRecord(id);
 		return true;
 	}
-
 	PP.Backtrack();
 	return false;
 }
 
-bool option::match(Preprocessor& PP, MatchMap& mmap) const {
+bool option::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	PP.EnableBacktrackAtThisPos();
-	if (getNode()->match(PP, mmap)) {
+	if (getNode()->match(PP, mmap, errStack, recID)) {
 		PP.CommitBacktrackedTokens();
 		return true;
 	}
@@ -128,7 +196,7 @@ bool option::match(Preprocessor& PP, MatchMap& mmap) const {
 	return true;
 }
 
-bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
+bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	// ClangContext::get().getParser()->Tok.setKind(*firstTok);
 	PP.EnableBacktrackAtThisPos();
 	Expr* result = ParserProxy::get().ParseExpression(PP);
@@ -144,10 +212,11 @@ bool expr_p::match(Preprocessor& PP, MatchMap& mmap) const {
 		return true;
 	}
 	PP.Backtrack();
+	errStack.addExpected(recID, ParserStack::Error("expr", ParserProxy::get().CurrentToken().getLocation()));
 	return false;
 }
 
-bool kwd::match(Preprocessor& PP, MatchMap& mmap) const {
+bool kwd::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	clang::Token& token = ParserProxy::get().ConsumeToken();
 	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
 		if(isAddToMap() && getMapName().empty())
@@ -156,7 +225,24 @@ bool kwd::match(Preprocessor& PP, MatchMap& mmap) const {
 			mmap[getMapName()].push_back( ValueUnionPtr(new ValueUnion( kw )) );
 		return true;
 	}
+	errStack.addExpected(recID, ParserStack::Error("\'" + kw + "\'", token.getLocation()));
 	return false;
+}
+
+std::string TokenToStr(clang::tok::TokenKind token) {
+	const char *name = clang::tok::getTokenSimpleSpelling(token);
+	if(name)
+		return std::string(name);
+	else
+		return std::string(clang::tok::getTokenName(token));
+}
+
+std::string TokenToStr(const clang::Token& token) {
+	if (token.isLiteral()) {
+		return std::string(token.getLiteralData(), token.getLiteralData() + token.getLength());
+	} else {
+		return TokenToStr(token);
+	}
 }
 
 void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
@@ -180,15 +266,7 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& 
 		break;
 	}
 	default: {
-		if (token.isLiteral()) {
-			mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(token.getLiteralData(), token.getLiteralData() + token.getLength()))) );
-		} else {
-			const char *name = clang::tok::getTokenSimpleSpelling(tok);
-			if(name)
-				mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(name))) );
-			else
-				mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(std::string(clang::tok::getTokenName(tok)))) );
-		}
+		mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(TokenToStr(token))) );
 		break;
 	}
 	}

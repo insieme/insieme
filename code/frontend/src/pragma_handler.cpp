@@ -50,7 +50,8 @@ std::string loc2string(const clang::SourceLocation& loc, const clang::SourceMana
 	loc.print(ss,sm);
 	return ss.str();
 }
-}
+
+} // End empty namespace
 
 namespace insieme {
 namespace frontend {
@@ -92,8 +93,6 @@ std::string Pragma::toStr(const clang::SourceManager& sm) const {
 		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
 			  loc2string(getDecl()->getLocEnd(), sm);
 	ss << ")";
-//		 << "\n" << PrintClangStmt(getStatement())
-	;
 	return ss.str();
 }
 

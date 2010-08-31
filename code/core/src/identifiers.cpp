@@ -36,6 +36,8 @@
 
 #include "identifiers.h"
 
+using namespace insieme::core;
+
 // ---------------------------------------------- Utility Functions ------------------------------------
 
 /**
@@ -45,14 +47,4 @@
 std::ostream& operator<<(std::ostream& out, const Identifier& identifier) {
 	out << identifier.getName();
 	return out;
-}
-
-/**
- * Allows to compute the hash value of an identifier.
- *
- * @param identifier the identifier for which a hash value should be computed
- * @return the computed hash value
- */
-std::size_t hash_value(const Identifier& identifier) {
-	return identifier.hash();
 }

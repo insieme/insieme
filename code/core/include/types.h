@@ -48,6 +48,7 @@
 
 #include <boost/functional/hash.hpp>
 
+#include "ast_node.h"
 #include "annotated_ptr.h"
 #include "container_utils.h"
 #include "identifiers.h"
@@ -59,50 +60,332 @@ using std::string;
 using std::vector;
 using std::map;
 
-enum {
-	// TODO: improve hash function (seperate from name)
-	TYPE_HASH_ABSTRACT
-};
+namespace insieme {
+namespace core {
 
 // ------------------------------ Forward Declarations ------------------------------------
 
-class Type;
-typedef AnnotatedPtr<const Type> TypePtr;
+DECLARE_NODE_TYPE(Type);
+DECLARE_NODE_TYPE(TypeVariable);
 
-class TypeVariable;
-typedef AnnotatedPtr<const TypeVariable> TypeVariablePtr;
+DECLARE_NODE_TYPE(FunctionType);
+DECLARE_NODE_TYPE(TupleType);
+DECLARE_NODE_TYPE(GenericType);
+DECLARE_NODE_TYPE(NamedCompositeType);
 
-class FunctionType;
-typedef AnnotatedPtr<const FunctionType> FunctionTypePtr;
+DECLARE_NODE_TYPE(ArrayType);
+DECLARE_NODE_TYPE(VectorType);
+DECLARE_NODE_TYPE(RefType);
+DECLARE_NODE_TYPE(ChannelType);
 
-class TupleType;
-typedef AnnotatedPtr<const TupleType> TupleTypePtr;
+DECLARE_NODE_TYPE(StructType);
+DECLARE_NODE_TYPE(UnionType);
 
-class ArrayType;
-typedef AnnotatedPtr<const ArrayType> ArrayTypePtr;
 
-class VectorType;
-typedef AnnotatedPtr<const VectorType> VectorTypePtr;
+/**
+ * This class is used to represent integer parameters of generic types.
+ */
+class IntTypeParam;
 
-class RefType;
-typedef AnnotatedPtr<const RefType> RefTypePtr;
+// ---------------------------------------- A token for an abstract type ------------------------------
 
-class ChannelType;
-typedef AnnotatedPtr<const ChannelType> ChannelTypePtr;
+/**
+ * The base type for all type tokens. Type tokens are immutable instances of classes derived from this base
+ * class and are used to represent the type of data elements and functions (generally types) within the IR.
+ *
+ * Each type is equipped with a unique name. The name makes them distinguishable. Further, there are two sorts
+ * of types. Concrete types represent types which for which actual values exist. For instance, a value for the type
+ * int<4> would be 7. Variable types however represent a family of types, e.g. the type int<p> represents all
+ * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
+ * both). Variable types can only be used as the input/output types of functions.
+ */
+class Type: public Node, public Visitable<NodePtr> {
 
-class GenericType;
-typedef AnnotatedPtr<const GenericType> GenericTypePtr;
+	/**
+	 * Allow the test case to access private methods.
+	 */
+	template<typename PT>
+	friend void basicTypeTests(PT, bool, bool, vector<TypePtr> children = vector<TypePtr>());
 
-class NamedCompositeType;
-typedef AnnotatedPtr<const NamedCompositeType> NamedCompositeTypePtr;
+private:
 
-class StructType;
-typedef AnnotatedPtr<const StructType> StructTypePtr;
+	/**
+	 * The name of this type. This name is used to uniquely identify the represented type. Since types
+	 * are generally immutable, the type name is marked to be constant.
+	 *
+	 * TODO: introduce lazy evaluation to speed up the creation of instances
+	 */
+	const string name;
 
-class UnionType;
-typedef AnnotatedPtr<const UnionType> UnionTypePtr;
+	/**
+	 * A flag indicating whether this type represents a concrete type (true) or a family of types
+	 * based on type variables (false).
+	 */
+	const bool concrete;
 
-class TypeManager;
+	/**
+	 * A flag indicating whether this type represents a function type (true) or a data type (false).
+	 */
+	const bool functionType;
+
+protected:
+
+	/**
+	 * Creates a new type using the given name. The constructor is public, however, since
+	 * this class is an abstract class, no actual instance can be created.
+	 *
+	 * @param name the unique name for this type
+	 * @param concrete a flag indicating whether this type is a concrete type or represents a family of types
+	 * 					due to type variables. Default: true
+	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
+	 */
+	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
+		: Node(NodeType::TYPE,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) {}
+
+public:
+
+	/**
+	 * A simple, virtual destructor for this abstract class.
+	 */
+	virtual ~Type() { }
+
+	/**
+	 * Checks whether the represented type is a concrete type (hence, it does not have any unbound,
+	 * variable type parameters).
+	 *
+	 * @return true if it is a concrete type, false otherwise
+	 */
+	bool isConcrete() const {
+		return concrete;
+	}
+
+	/**
+	 * Tests whether the represented type is a function type.
+	 * Since most types are not function types, the default implementation returns false.
+	 */
+	bool isFunctionType() const {
+		return functionType;
+	}
+
+	/**
+	 * Retrieves the unique name identifying this type.
+	 */
+	const string& getName() const {
+		return name;
+	}
+
+	/**
+	 * Provides a string representation of this type, which is by default
+	 * the actual name of the type. Specific sub-types may override this method
+	 * to customize the representation.
+	 */
+	virtual string toString() const {
+		return getName();
+	}
+
+	/**
+	 * A default implementation of the equals operator comparing the actual
+	 * names of the types.
+	 */
+	bool equals(const Node& other) const {
+		// precondition: other must be a type
+		assert( dynamic_cast<const Type*>(&other) && "Type violation by base class!" );
+
+		// convert (statically) and check the type name
+		const Type& ref = static_cast<const Type&>(other);
+		// TODO: improve this by eliminating the name!
+		return name.compare(ref.name) == 0;
+	}
+
+	/**
+	 * Retrieves references to types revered to by this type. The default implementation
+	 * returns and empty list. Sub-classes may override the method to return sub-types.
+	 *
+	 * The method is mainly used to ensure that all types referred to by one type are present
+	 * within the same type manager (to ensure their existence).
+	 *
+	 * @return a list containing all types this type is based on.
+	 */
+	virtual ChildList getChildren() const {
+		return makeChildList();
+	}
+
+
+	// ---------------------------------- Type Utils ----------------------------------------
+
+
+	/**
+	 * Tests whether this generic type instance represents a concrete or variable type.
+	 *
+	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
+	 */
+	static bool allConcrete(const vector<TypePtr>& elementTypes);
+
+};
+
+
+// ---------------------------------------- A class for type variables  ------------------------------
+
+/**
+ * Tokens of this type are used to represent type variables. Instances them-self represent types,
+ * yet no concrete ones.
+ */
+class TypeVariable: public Type {
+
+	/**
+	 * Creates a new type variable using the given name.
+	 *
+	 * @param name the name of the type variable to be created
+	 */
+	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual TypeVariable* clone(NodeManager&) const {
+		return new TypeVariable(*this);
+	}
+
+public:
+
+	/**
+	 * This method provides a static factory method for this type of node. It will return
+	 * a type variable pointer pointing toward a variable with the given name maintained by the
+	 * given manager.
+	 */
+	static TypeVariablePtr get(NodeManager& manager, const string& name) {
+		return manager.get(TypeVariable(name));
+	}
+
+};
+
+
+// ---------------------------------------- A tuple type ------------------------------
+
+/**
+ * The tuple type represents a special kind of type representing a simple aggregation
+ * (cross-product) of other types. It thereby forms the foundation for functions
+ * accepting multiple input parameters.
+ */
+class TupleType: public Type {
+
+public:
+
+	/**
+	 * The type used to represent list of tuple elements.
+	 */
+	typedef vector<TypePtr> ElementTypeList;
+
+private:
+
+	/**
+	 * The list of element types this tuple is consisting of.
+	 */
+	const ElementTypeList elementTypes;
+
+	/**
+	 * A private utility method building the name of a tuple type.
+	 *
+	 * @param elementTypes	the list of element types
+	 * @return a string representation of the resulting tuple type
+	 */
+	static string buildNameString(const ElementTypeList& elementTypes);
+
+	/**
+	 * Creates a new tuple type based on the given element types.
+	 */
+	TupleType(const ElementTypeList& elementTypes) :
+		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual TupleType* clone(NodeManager& manager) const {
+		return new TupleType(manager.getAll(elementTypes));
+	}
+
+public:
+
+	/**
+	 * This method provides a static factory method for this type of node. It will return
+	 * a tuple type pointer pointing toward a variable with the given name maintained by the
+	 * given manager.
+	 *
+	 * @param manager the manager to obtain the new type reference from
+	 * @param elementTypes the list of element types to be used to form the tuple
+	 */
+	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes);
+
+	/**
+	 * Obtains a list of all types referenced by this tuple type.
+	 */
+	virtual ChildList getChildren() const {
+		return makeChildList(elementTypes);
+	}
+};
+
+// ---------------------------------------- Function Type ------------------------------
+
+/**
+ * This type corresponds to the type of a function. It specifies the argument types and the
+ * value returned by the members of this type.
+ */
+class FunctionType: public Type {
+
+	/**
+	 * The type of element accepted as an argument by this function type.
+	 */
+	const TypePtr argumentType;
+
+	/**
+	 * The type of value produced by this function type.
+	 */
+	const TypePtr returnType;
+
+	/**
+	 * Creates a new instance of this type based on the given in and output types.
+	 *
+	 * @param argumentType a reference to the type used as argument
+	 * @param returnType a reference to the type used as return type
+	 */
+	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
+		Type(format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
+		argumentType(argumentType), returnType(returnType) {
+	}
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual FunctionType* clone(NodeManager& manager) const {
+		return new FunctionType(manager.get(argumentType), manager.get(returnType));
+	}
+
+public:
+
+	/**
+	 * This method provides a static factory method for this type of node. It will return
+	 * a function type pointer pointing toward a variable with the given name maintained by the
+	 * given manager.
+	 *
+	 * @param manager the manager to be used for handling the obtained type pointer
+	 * @param argumentType the argument type of the type to be obtained
+	 * @param returnType the type of value to be returned by the obtained function type
+	 * @return a pointer to a instance of the required type maintained by the given manager
+	 */
+	static FunctionTypePtr get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
+
+	/**
+	 * Obtains a list of all types referenced by this function type.
+	 */
+	virtual ChildList getChildren() const {
+		ChildList res = makeChildList();
+		res->push_back(argumentType);
+		res->push_back(returnType);
+		return res;
+	}
+
+};
+
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
@@ -252,359 +535,6 @@ public:
 
 };
 
-// ---------------------------------- Type Manager ----------------------------------------
-
-class TypeManager: public InstanceManager<Type, AnnotatedPtr> { };
-
-// ---------------------------------------- A token for an abstract type ------------------------------
-
-/**
- * The base type for all type tokens. Type tokens are immutable instances of classes derived from this base
- * class and are used to represent the type of data elements and functions (generally types) within the IR.
- *
- * Each type is equipped with a unique name. The name makes them distinguishable. Further, there are two sorts
- * of types. Concrete types represent types which for which actual values exist. For instance, a value for the type
- * int<4> would be 7. Variable types however represent a family of types, e.g. the type int<p> represents all
- * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
- * both). Variable types can only be used as the input/output types of functions.
- */
-class Type: public Visitable<TypePtr> {
-
-	/**
-	 * Allow the instance manager to access the private clone method.
-	 */
-	friend class InstanceManager<Type, AnnotatedPtr>;
-
-	/**
-	 * Allow the test case to access private methods.
-	 */
-	template<typename PT>
-	friend void basicTypeTests(PT, bool, bool, vector<TypePtr> children = vector<TypePtr>());
-
-public:
-
-	/**
-	 * The type of instance manager to be used with this type.
-	 */
-	typedef TypeManager Manager;
-
-private:
-
-	/**
-	 * The name of this type. This name is used to uniquely identify the represented type. Since types
-	 * are generally immutable, the type name is marked to be constant.
-	 *
-	 * TODO: introduce lazy evaluation to speed up the creation of instances
-	 */
-	const string name;
-
-	/**
-	 * A flag indicating whether this type represents a concrete type (true) or a family of types
-	 * based on type variables (false).
-	 */
-	const bool concrete;
-
-	/**
-	 * A flag indicating whether this type represents a function type (true) or a data type (false).
-	 */
-	const bool functionType;
-
-	/**
-	 * The hash value of this type derived once. This value will be required frequently,
-	 * hence evaluating it once and reusing it helps reducing computational overhead. Since
-	 * type tokens are immutable, the hash does not have to be altered after the creation of a type.
-	 */
-	const std::size_t hashCode;
-
-protected:
-
-	/**
-	 * Creates a new type using the given name. The constructor is public, however, since
-	 * this class is an abstract class, no actual instance can be created.
-	 *
-	 * @param name the unique name for this type
-	 * @param concrete a flag indicating whether this type is a concrete type or represents a family of types
-	 * 					due to type variables. Default: true
-	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
-	 */
-	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
-		: name(name), concrete(concrete), functionType(functionType), hashCode(boost::hash_value(name)) {}
-
-public:
-
-	/**
-	 * A simple, virtual destructor for this abstract class.
-	 */
-	virtual ~Type() {
-	}
-
-	/**
-	 * Checks whether the represented type is a concrete type (hence, it does not have any unbound,
-	 * variable type parameters).
-	 *
-	 * @return true if it is a concrete type, false otherwise
-	 */
-	bool isConcrete() const {
-		return concrete;
-	}
-
-	/**
-	 * Tests whether the represented type is a function type.
-	 * Since most types are not function types, the default implementation returns false.
-	 */
-	bool isFunctionType() const {
-		return functionType;
-	}
-
-	/**
-	 * Retrieves the unique name identifying this type.
-	 */
-	const string& getName() const {
-		return name;
-	}
-
-	/**
-	 * Provides a string representation of this type, which is by default
-	 * the actual name of the type. Specific sub-types may override this method
-	 * to customize the representation.
-	 */
-	virtual string toString() const {
-		return getName();
-	}
-
-	/**
-	 * A default implementation of the equals operator comparing the actual
-	 * names of the types.
-	 */
-	bool operator==(const Type& other) const {
-		// test for identity
-		if (this == &other) {
-			return true;
-		}
-
-		// fast hash code test
-		if (hashCode != other.hashCode) {
-			return false;
-		}
-
-		// slow name comparison
-		return name == other.name;
-	}
-
-	/**
-	 * Computes a hash code for this instance covering all constant fields making
-	 * the type unique.
-	 *
-	 * Note: this function is not virtual, so it should not be overridden in sub-classes.
-	 * Since every type is uniquely identified by its name, there should not be a need
-	 * for doing so.
-	 *
-	 * @return the hash code derived for this type.
-	 */
-	std::size_t hash() const {
-		// retrieve cached hash code
-		return hashCode;
-	}
-
-	/**
-	 * Retrieves references to types revered to by this type. The default implementation
-	 * returns and empty list. Sub-classes may override the method to return sub-types.
-	 *
-	 * The method is mainly used to ensure that all types referred to by one type are present
-	 * within the same type manager (to ensure their existence).
-	 *
-	 * @return a list containing all types this type is based on.
-	 */
-	virtual ChildList getChildren() const {
-		return makeChildList();
-	}
-
-
-
-	// ---------------------------------- Type Utils ----------------------------------------
-
-
-	/**
-	 * Tests whether this generic type instance represents a concrete or variable type.
-	 *
-	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
-	 */
-	static bool allConcrete(const vector<TypePtr>& elementTypes);
-
-private:
-
-	/**
-	 * Retrieves a clone of this object (a newly allocated instance of this class)
-	 */
-	virtual Type* clone(TypeManager& manager) const = 0;
-
-
-};
-
-
-// ---------------------------------------- A class for type variables  ------------------------------
-
-/**
- * Tokens of this type are used to represent type variables. Instances them-self represent types,
- * yet no concrete ones.
- */
-class TypeVariable: public Type {
-
-	/**
-	 * Creates a new type variable using the given name.
-	 *
-	 * @param name the name of the type variable to be created
-	 */
-	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual TypeVariable* clone(TypeManager&) const {
-		return new TypeVariable(*this);
-	}
-
-public:
-
-	/**
-	 * This method provides a static factory method for this type of node. It will return
-	 * a type variable pointer pointing toward a variable with the given name maintained by the
-	 * given manager.
-	 */
-	static TypeVariablePtr get(TypeManager& manager, const string& name) {
-		return manager.get(TypeVariable(name));
-	}
-
-};
-
-
-// ---------------------------------------- A tuple type ------------------------------
-
-/**
- * The tuple type represents a special kind of type representing a simple aggregation
- * (cross-product) of other types. It thereby forms the foundation for functions
- * accepting multiple input parameters.
- */
-class TupleType: public Type {
-
-public:
-
-	/**
-	 * The type used to represent list of tuple elements.
-	 */
-	typedef vector<TypePtr> ElementTypeList;
-
-private:
-
-	/**
-	 * The list of element types this tuple is consisting of.
-	 */
-	const ElementTypeList elementTypes;
-
-	/**
-	 * A private utility method building the name of a tuple type.
-	 *
-	 * @param elementTypes	the list of element types
-	 * @return a string representation of the resulting tuple type
-	 */
-	static string buildNameString(const ElementTypeList& elementTypes);
-
-	/**
-	 * Creates a new tuple type based on the given element types.
-	 */
-	TupleType(const ElementTypeList& elementTypes) :
-		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual TupleType* clone(TypeManager& manager) const {
-		return new TupleType(manager.getAll(elementTypes));
-	}
-
-public:
-
-	/**
-	 * This method provides a static factory method for this type of node. It will return
-	 * a tuple type pointer pointing toward a variable with the given name maintained by the
-	 * given manager.
-	 *
-	 * @param manager the manager to obtain the new type reference from
-	 * @param elementTypes the list of element types to be used to form the tuple
-	 */
-	static TupleTypePtr get(TypeManager& manager, const ElementTypeList& elementTypes);
-
-	/**
-	 * Obtains a list of all types referenced by this tuple type.
-	 */
-	virtual ChildList getChildren() const {
-		return makeChildList(elementTypes);
-	}
-};
-
-// ---------------------------------------- Function Type ------------------------------
-
-/**
- * This type corresponds to the type of a function. It specifies the argument types and the
- * value returned by the members of this type.
- */
-class FunctionType: public Type {
-
-	/**
-	 * The type of element accepted as an argument by this function type.
-	 */
-	const TypePtr argumentType;
-
-	/**
-	 * The type of value produced by this function type.
-	 */
-	const TypePtr returnType;
-
-	/**
-	 * Creates a new instance of this type based on the given in and output types.
-	 *
-	 * @param argumentType a reference to the type used as argument
-	 * @param returnType a reference to the type used as return type
-	 */
-	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
-		Type(format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
-		argumentType(argumentType), returnType(returnType) {
-	}
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual FunctionType* clone(TypeManager& manager) const {
-		return new FunctionType(manager.get(argumentType), manager.get(returnType));
-	}
-
-public:
-
-	/**
-	 * This method provides a static factory method for this type of node. It will return
-	 * a function type pointer pointing toward a variable with the given name maintained by the
-	 * given manager.
-	 *
-	 * @param manager the manager to be used for handling the obtained type pointer
-	 * @param argumentType the argument type of the type to be obtained
-	 * @param returnType the type of value to be returned by the obtained function type
-	 * @return a pointer to a instance of the required type maintained by the given manager
-	 */
-	static FunctionTypePtr get(TypeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
-
-	/**
-	 * Obtains a list of all types referenced by this function type.
-	 */
-	virtual ChildList getChildren() const {
-		ChildList res = makeChildList();
-		res->push_back(argumentType);
-		res->push_back(returnType);
-		return res;
-	}
-
-};
-
-
 // ---------------------------------------- Generic Type ------------------------------
 
 /**
@@ -634,17 +564,6 @@ class GenericType: public Type {
 	 */
 	const TypePtr baseType;
 
-	/**
-	 * A private utility method building the name of a generic type.
-	 *
-	 * @param name			the name of the generic type (only prefix, generic parameters are added automatically)
-	 * @param typeParams 	the list of type parameters to be appended
-	 * @param intParams		the list of integer type parameters to be appended
-	 * @return a string representation of the type
-	 */
-	static string buildNameString(const string& name, const vector<TypePtr>& typeParams,
-			const vector<IntTypeParam>& intParams);
-
 protected:
 
 	/**
@@ -658,18 +577,12 @@ protected:
 	GenericType(const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
-			const TypePtr& baseType = NULL)
-		:
-			Type(buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
-			familyName(name),
-			typeParams(typeParams),
-			intParams(intTypeParams),
-			baseType(baseType) { }
+			const TypePtr& baseType = NULL);
 
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual GenericType* clone(TypeManager& manager) const {
+	virtual GenericType* clone(NodeManager& manager) const {
 		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
 
@@ -685,7 +598,7 @@ public:
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 	 * @param baseType		the base type of this generic type
 	 */
-	static GenericTypePtr get(TypeManager& manager,
+	static GenericTypePtr get(NodeManager& manager,
 			const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
@@ -766,7 +679,7 @@ protected:
 	 */
 	NamedCompositeType(const string& prefix, const Entries& entries);
 
-	static Entries getEntriesFromManager(TypeManager& manager, Entries entries);
+	static Entries getEntriesFromManager(NodeManager& manager, Entries entries);
 
 public:
 
@@ -837,7 +750,7 @@ class StructType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual StructType* clone(TypeManager& manager) const {
+	virtual StructType* clone(NodeManager& manager) const {
 		return new StructType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
@@ -853,7 +766,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static StructTypePtr get(TypeManager& manager, const Entries& entries);
+	static StructTypePtr get(NodeManager& manager, const Entries& entries);
 
 };
 
@@ -876,7 +789,7 @@ class UnionType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnionType* clone(TypeManager& manager) const {
+	virtual UnionType* clone(NodeManager& manager) const {
 		return new UnionType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
 	}
 
@@ -892,7 +805,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static UnionTypePtr get(TypeManager& manager, const Entries& entries);
+	static UnionTypePtr get(NodeManager& manager, const Entries& entries);
 
 };
 
@@ -952,7 +865,7 @@ class ArrayType: public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ArrayType* clone(TypeManager& manager) const {
+	virtual ArrayType* clone(NodeManager& manager) const {
 		return new ArrayType(manager.get(getElementType()), getDimension());
 	}
 
@@ -969,7 +882,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ArrayTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
 		return manager.get(ArrayType(elementType, dim));
 	}
 
@@ -1002,7 +915,7 @@ class VectorType : public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual VectorType* clone(TypeManager& manager) const {
+	virtual VectorType* clone(NodeManager& manager) const {
 		return new VectorType(manager.get(getElementType()), getSize());
 	}
 
@@ -1019,7 +932,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static VectorTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
+	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
 		return manager.get(VectorType(elementType, size));
 	}
 
@@ -1053,7 +966,7 @@ class RefType: public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual RefType* clone(TypeManager& manager) const {
+	virtual RefType* clone(NodeManager& manager) const {
 		return new RefType(manager.get(getElementType()));
 	}
 
@@ -1069,7 +982,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static RefTypePtr get(TypeManager& manager, const TypePtr& elementType) {
+	static RefTypePtr get(NodeManager& manager, const TypePtr& elementType) {
 		return manager.get(RefType(elementType));
 	}
 };
@@ -1095,7 +1008,7 @@ class ChannelType: public SingleElementType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ChannelType* clone(TypeManager& manager) const {
+	virtual ChannelType* clone(NodeManager& manager) const {
 		return new ChannelType(manager.get(getElementType()), getSize());
 	}
 
@@ -1111,7 +1024,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(TypeManager& manager, const TypePtr& elementType, const unsigned short size) {
+	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
 		return manager.get(ChannelType(elementType, size));
 	}
 
@@ -1126,6 +1039,9 @@ public:
 };
 
 
+} // end namespace core
+} // end namespace insieme
+
 // ---------------------------------------------- Utility Functions ------------------------------------
 
 /**
@@ -1134,14 +1050,14 @@ public:
  * @param type the type for which a hash value should be computed
  * @return the computed hash value
  */
-std::size_t hash_value(const Type& type);
+std::size_t hash_value(const insieme::core::Type& type);
 
 
 /**
  * Allows this type to be printed to a stream (especially useful during debugging and
  * within test cases where equals expects values to be printable).
  */
-std::ostream& operator<<(std::ostream& out, const Type& type);
+std::ostream& operator<<(std::ostream& out, const insieme::core::Type& type);
 
 
 
