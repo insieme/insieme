@@ -190,6 +190,36 @@ LambdaExprPtr LambdaExpr::get(StatementManager& manager, const TypePtr& type, co
 	return manager.get(LambdaExpr(type, params, body));
 }
 
+// ------------------------------------- TupleExpr ---------------------------------
+
+TupleExpr* TupleExpr::clone(StatementManager& manager) const {
+	return new TupleExpr(manager.getTypeManager().get(type), manager.getAll(expressions));
+}
+
+bool TupleExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const TupleExpr& rhs = dynamic_cast<const TupleExpr&>(expr);
+	return ::equals(expressions, rhs.expressions, equal_target<ExprPtr>());
+}
+
+void TupleExpr::printTo(std::ostream& out) const {
+	out << "tuple(";
+	joinTo(out, ", ", expressions);
+	out << ")";
+}
+
+std::size_t TupleExpr::hash() const {
+	size_t seed = HASHVAL_TUPLEEXPR;
+	hashPtrRange(seed, expressions);
+	return seed;
+}
+
+TupleExprPtr TupleExpr::get(StatementManager& manager, const vector<ExprPtr>& expressions) {
+	TupleType::ElementTypeList elemTypes;
+	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](ExprPtr e) { return e->getType(); });
+	return manager.get(TupleExpr(TupleType::get(manager.getTypeManager(), elemTypes), expressions));
+}
+
 // ------------------------------------- CallExpr ---------------------------------
 
 CallExpr* CallExpr::clone(StatementManager& manager) const {
@@ -200,7 +230,7 @@ bool CallExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CallExpr& rhs = dynamic_cast<const CallExpr&>(expr);
 	return (*rhs.functionExpr == *functionExpr) && 
-		equal(arguments.cbegin(), arguments.cend(), rhs.arguments.cbegin(), equal_target<ExprPtr>());
+		::equals(arguments, rhs.arguments, equal_target<ExprPtr>());
 
 }
 	

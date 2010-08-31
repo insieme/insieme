@@ -69,6 +69,9 @@ typedef AnnotatedPtr<const ParamExpr> ParamExprPtr;
 class LambdaExpr;
 typedef AnnotatedPtr<const LambdaExpr> LambdaExprPtr;
 
+class TupleExpr;
+typedef AnnotatedPtr<const TupleExpr> TupleExprPtr;
+
 class CallExpr;
 typedef AnnotatedPtr<const CallExpr> CallExprPtr;
 
@@ -84,7 +87,8 @@ class Expression : public Statement {
 protected:	
 	enum {
 		HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
-		HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR, HASHVAL_PARENEXPR
+		HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR, 
+		HASHVAL_TUPLEEXPR, HASHVAL_PARENEXPR
 	};
 
 	/** The type of the expression. */
@@ -111,8 +115,7 @@ protected:
 	virtual ~Literal() {}
 
 	bool equalsExpr(const Expression& expr) const {
-		// conversion is guaranteed by base operator==
-		const Literal<T>& rhs = dynamic_cast<const Literal<T>&>(expr);
+		const Literal<T>& rhs = static_cast<const Literal<T>&>(expr);
 		return (value == rhs.value);
 	}
 
@@ -214,8 +217,44 @@ public:
 	virtual void printTo(std::ostream& out) const;
 	virtual std::size_t hash() const;
 
-	static LambdaExprPtr get(StatementManager& manager, const TypePtr& type, const ParamList& params, const StmtPtr& body);
+	static LambdaExprPtr get(StatementManager& manager, const TypePtr& type, const vector<ParamExprPtr>& params, const StmtPtr& body);
 };
+
+
+class TupleExpr : public Expression {
+	const vector<ExprPtr> expressions;
+
+	TupleExpr(const TypePtr& type, const vector<ExprPtr>& expressions) 
+		: Expression(type), expressions(expressions) { };
+	virtual TupleExpr* clone(StatementManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	virtual std::size_t hash() const;
+
+	static TupleExprPtr get(StatementManager& manager, const vector<ExprPtr>& expressions);
+};
+
+
+//class StructUnionExpr : public Expression {
+//	const vector<VarExprPtr> members;
+//
+//	TupleExpr(const TypePtr& type, const vector<ExprPtr>& expressions) 
+//		: Expression(type), expressions(expressions) { };
+//	virtual TupleExpr* clone(StatementManager& manager) const;
+//
+//protected:
+//	bool equalsExpr(const Expression& expr) const;
+//
+//public:
+//	virtual void printTo(std::ostream& out) const;
+//	virtual std::size_t hash() const;
+//
+//	static TupleExprPtr get(StatementManager& manager, const vector<ExprPtr>& expressions);
+//};
 
 
 class CallExpr : public Expression {
