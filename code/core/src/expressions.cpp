@@ -204,17 +204,17 @@ std::size_t hashTupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expr
 	return seed;
 }
 
-TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions)
-		: Expression(type, hashTupleExpr(expressions)), expressions(expressions) { };
+TupleExpr::TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions)
+		: Expression(type, hashTupleExpr(type, expressions)), expressions(expressions) { };
 
-TupleExpr* TupleExpr::clone(StatementManager& manager) const {
-	return new TupleExpr(manager.getTypeManager().get(type), manager.getAll(expressions));
+TupleExpr* TupleExpr::clone(NodeManager& manager) const {
+	return new TupleExpr(manager.get(type), manager.getAll(expressions));
 }
 
 bool TupleExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base equals
 	const TupleExpr& rhs = static_cast<const TupleExpr&>(expr);
-	return ::equals(expressions, rhs.expressions, equal_target<ExprPtr>());
+	return ::equals(expressions, rhs.expressions, equal_target<ExpressionPtr>());
 }
 
 void TupleExpr::printTo(std::ostream& out) const {
@@ -222,10 +222,10 @@ void TupleExpr::printTo(std::ostream& out) const {
 }
 
 
-TupleExprPtr TupleExpr::get(StatementManager& manager, const vector<ExprPtr>& expressions) {
+TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
 	TupleType::ElementTypeList elemTypes;
-	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](ExprPtr e) { return e->getType(); });
-	return manager.get(TupleExpr(TupleType::get(manager.getTypeManager(), elemTypes), expressions));
+	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](const ExpressionPtr& e) { return e->getType(); });
+	return manager.get(TupleExpr(TupleType::get(manager, elemTypes), expressions));
 }
 
 // ------------------------------------- CallExpr ---------------------------------
@@ -249,7 +249,7 @@ bool CallExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CallExpr& rhs = dynamic_cast<const CallExpr&>(expr);
 	return (*rhs.functionExpr == *functionExpr) && 
-		equals(arguments, rhs.arguments, equal_target<ExpressionPtr>());
+		::equals(arguments, rhs.arguments, equal_target<ExpressionPtr>());
 }
 	
 void CallExpr::printTo(std::ostream& out) const {
@@ -313,6 +313,6 @@ CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const Expre
 //	return seed;
 //}
 //
-//ParenExprPtr ParenExpr::get(NodeManager& manager, const ExprPtr& subExpr) {
+//ParenExprPtr ParenExpr::get(NodeManager& manager, const ExpressionPtr& subExpr) {
 //	return manager.get(ParenExpr(subExpr));
 //}
