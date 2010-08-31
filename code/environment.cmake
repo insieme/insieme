@@ -22,8 +22,13 @@ include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
 # glog
-include_directories( $ENV{GLOG_HOME}/include )
-find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
+if(MSVC)
+	include_directories( $ENV{GLOG_HOME}/src/windows )
+	set(glog_LIB $ENV{GLOG_HOME}/Release/libglog_static.lib)
+else()
+	include_directories( $ENV{GLOG_HOME}/include )
+	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
+endif()
 
 # lookup perl
 find_package( Perl )
