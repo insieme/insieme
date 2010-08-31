@@ -48,12 +48,19 @@ using clang::SourceLocation;
 namespace insieme {
 namespace frontend {
 
+// forward declarations
 class Pragma;
 typedef std::shared_ptr<Pragma> PragmaPtr;
 typedef std::vector<PragmaPtr> 	PragmaList;
 
 class MatchMap;
 
+// ------------------------------------ InsiemeSema ---------------------------
+
+/**
+ * This purpose of this class is to overload the behavior of clang parser in a way every time an AST node is created, pending pragmas are correctly associated
+ * to it.
+ */
 class InsiemeSema: public clang::Sema{
 	class InsiemeSemaImpl;
 	InsiemeSemaImpl* pimpl;
@@ -82,12 +89,18 @@ public:
 	DeclPtrTy ActOnFinishFunctionBody(DeclPtrTy Decl, StmtArg Body);
 	
 	DeclPtrTy ActOnDeclarator(clang::Scope *S, clang::Declarator &D);
-								 
+
+	/**
+	 * Register the parsed pragma.
+	 */
 	template <class T>
 	void ActOnPragma(const std::string& name, const MatchMap& mmap, SourceLocation startLoc, SourceLocation endLoc) {
 		addPragma( PragmaPtr(new T(startLoc, endLoc, name, mmap)) );
 	}
 	
+	/**
+	 * Write into the logger information about the pragmas and their associatioation to AST nodes.
+	 */
 	void dump();
 };
 

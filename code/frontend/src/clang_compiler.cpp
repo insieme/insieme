@@ -39,6 +39,7 @@
 #include "conversion.h"
 #include "insieme_sema.h"
 #include "pragma_handler.h"
+// #include "programs.h"
 
 #include "omp/omp_pragma.h"
 
@@ -72,8 +73,6 @@
 #include "lib/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/ExternalSemaSource.h"
-
-#include <iostream>
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -232,8 +231,8 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name): mClang(file_name) {
-	InsiemeIRConsumer cons;
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name /*, insieme::core::Program& prog*/): mClang(file_name) {
+	InsiemeIRConsumer cons; /*( prog.getDataManager()) */;
 	PragmaList PL;
 
 	// register omp pragmas

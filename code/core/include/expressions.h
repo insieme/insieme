@@ -115,7 +115,7 @@ protected:
 	virtual ~Literal() {}
 
 	bool equalsExpr(const Expression& expr) const {
-		const Literal<T>& rhs = static_cast<const Literal<T>&>(expr); 
+		const Literal<T>& rhs = static_cast<const Literal<T>&>(expr);
 		return (value == rhs.value);
 	}
 

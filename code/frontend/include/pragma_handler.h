@@ -65,6 +65,8 @@ class Expr;
 namespace insieme {
 namespace frontend {
 
+// ------------------------------------ Pragma ---------------------------
+
 /**
  * Defines a generic pragma which contains the location (start,end), and the target node
  */
@@ -136,14 +138,21 @@ private:
 	PragmaTarget mTargetNode;
 };
 
+// ------------------------------------ BasicPragmaHandler<T> ---------------------------
+
+/**
+ * Defines a generic pragma handler which uses the pragma_matcher. Pragmas which are syntactically correct are then instantiated and associated with the
+ * following node (i.e. a Stmt or Declaration). If an error occurs, the error message is printed out showing the location and the list of tokens the parser
+ * was expecting at that location.
+ */
 template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
 	std::string base_name;
-	node* reg_exp;
+	node* pragma_matcher;
 
 public:
-	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& reg_exp) :
-		PragmaHandler(name), base_name(base_name), reg_exp(reg_exp.copy()) {
+	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& pragma_matcher) :
+		PragmaHandler(name), base_name(base_name), pragma_matcher(pragma_matcher.copy()) {
 	}
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
@@ -151,26 +160,33 @@ public:
 		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 
 		MatchMap mmap;
-		ErrorStack errStack;
+		ParserStack errStack;
 
-		if (reg_exp->MatchPragma(PP, mmap, errStack)) {
-			// act on pragma
+		if (pragma_matcher->MatchPragma(PP, mmap, errStack)) {
+			// the pragma type is formed by concatenation of the base_name and identifier, for example the type for the pragma:
+			// #pragma omp barrier
+			// will be "omp::barrier", the string is passed to the pragma constructur which store the value
 			std::ostringstream pragma_name;
 			pragma_name << base_name;
 			if (getName())
 				pragma_name << "::" << std::string(getName()->getNameStart(), getName()->getNameStart() + getName()->getLength());
 
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
+			// the pragma has been successfully parsed, now we have to instantiate the correct type which is associated to this pragma (T) and
+			// pass the matcher map in order for the pragma to initialize his internal representation. The framework will then take care of
+			// associating the pragma to the following node (i.e. a statement or a declaration).
 			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), mmap, startLoc, endLoc);
 		} else {
-			// TODO: REPORT ERROR
+			// In case of error, we report it to the console using the clang Diagnostics.
 			ErrorReport(PP, startLoc, errStack);
 			PP.DiscardUntilEndOfDirective();
 		}
 	}
 
-	~BasicPragmaHandler() {	delete reg_exp;	}
+	~BasicPragmaHandler() {	delete pragma_matcher; }
 };
+
+// ------------------------------------ PragmaHandlerFactory ---------------------------
 
 struct PragmaHandlerFactory {
 
