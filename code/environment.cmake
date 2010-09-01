@@ -79,9 +79,9 @@ if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
 
 	# add -all-valgrind target
-	if(NOT CONDUCT_MEMORY_CHECKS)
+	# if(NOT CONDUCT_MEMORY_CHECKS)
 		add_custom_target(valgrind)
-	endif(NOT CONDUCT_MEMORY_CHECKS)
+	#endif(NOT CONDUCT_MEMORY_CHECKS)
 
 	# define macro for adding tests
 	macro ( add_unit_test case_name )
