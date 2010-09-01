@@ -5,8 +5,6 @@ project(insieme_frontend CXX)
 
 include(../environment.cmake)
 
-set(CMAKE_CXX_FLAGS "-g -Wall -fmessage-length=0 -fno-rtti")
-
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
@@ -68,15 +66,19 @@ target_link_libraries(insieme_frontend ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB}
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-# file(GLOB test_cases test/*.cc)
-# foreach ( case_file ${test_cases})
-# 	get_filename_component( case_name ${case_file} NAME_WE )
-#	
-#	add_executable(ut_${case_name} ${case_file})
-#	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
-#	target_link_libraries(ut_${case_name} insieme_utils)
-#	target_link_libraries(ut_${case_name} ${pthread_LIB})
+file(GLOB test_cases test/*.cc)
+foreach ( case_file ${test_cases})
+ 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-#	add_test(ut_${case_name} ut_${case_name})
-#endforeach(case_file)
+	add_executable(ut_${case_name} ${case_file})
+	include_directories(ut_${case_name} ${insieme_utils_include_dir})
+	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(ut_${case_name} insieme_frontend)
+	target_link_libraries(ut_${case_name} insieme_utils)
+	target_link_libraries(ut_${case_name} boost_program_options)
+	target_link_libraries(ut_${case_name} ${glog_LIB})
+	target_link_libraries(ut_${case_name} ${pthread_LIB})
+	
+	add_unit_test(${case_name})
+endforeach(case_file)
  

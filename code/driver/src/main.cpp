@@ -84,10 +84,10 @@ int main(int argc, char** argv) {
 //	list.push_back(IntTypeParam::getVariableIntParam('a'));
 //
 //	list[0] = list[2];
-
-//	cout << sizeof(IntTypeParam);
-
-
+//
+////	cout << sizeof(IntTypeParam);
+//
+//
 //   cout << "Insieme (tm) compiler." << endl;
 //
 //
