@@ -77,7 +77,7 @@ TEST(Visitor2, TypeVisitor) {
 	NodeManager manager;
 	SimpleVisitor visitor;
 
-	ProgramPtr program = Program::createProgram();
+	ProgramPtr program = Program::create();
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );
 	EXPECT_EQ ( 0, visitor.countExpressions );

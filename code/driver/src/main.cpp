@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 	SetStderrLogging(INFO);
 
 	LOG(INFO) << "Insieme compiler";
-	core::ProgramPtr program = core::Program::createProgram();
+	core::ProgramPtr program = core::Program::create();
 	try {
 		for(std::vector<std::string>::const_iterator i = CommandLineOptions::InputFiles.begin(),
 													 e = CommandLineOptions::InputFiles.end(); i != e; ++i) {

@@ -56,7 +56,7 @@ using namespace insieme::core;
 
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_parallel.c", *Program::createProgram());
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_parallel.c", *Program::create());
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());
@@ -136,7 +136,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_for.c", *Program::createProgram());
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_for.c", *Program::create());
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());

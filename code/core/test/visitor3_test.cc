@@ -84,7 +84,7 @@ TEST(Visitor3, TypeVisitor) {
 	EXPECT_EQ ( 0, visitor.countGenericTypes );
 	EXPECT_EQ ( 0, visitor.countRefTypes );
 
-	ProgramPtr program = Program::createProgram();
+	ProgramPtr program = Program::create();
 	visitor.visit(*program);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );

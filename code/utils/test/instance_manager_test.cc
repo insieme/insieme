@@ -271,3 +271,4 @@ TEST(InstanceManager, LookupTests) {
 	EXPECT_EQ ( nulPtr, res[1] );
 	EXPECT_EQ ( nulPtr, res[2] );
 }
+

@@ -70,12 +70,12 @@ class ConversionFactory {
 
 	ConversionFactory(core::NodeManager& mgr);
 
-	static ConversionFactory& get(core::Program::SharedDataManager mgr = core::Program::SharedDataManager()) {
+	static ConversionFactory& get(core::SharedNodeManager mgr = core::SharedNodeManager(new core::NodeManager())) {
 		static ConversionFactory theConversionFactory(*mgr);
 		return theConversionFactory;
 	}
 public:
-	static void init(core::Program::SharedDataManager mgr) { get(mgr); }
+	static void init(core::SharedNodeManager mgr) { get(mgr); }
 	static TypeWrapper ConvertType(const clang::Type& type);
 	static StmtWrapper ConvertStmt(const clang::Stmt& stmt);
 
@@ -86,10 +86,10 @@ public:
 
 class InsiemeIRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
-	insieme::core::Program::SharedDataManager mDataMgr;
+	insieme::core::SharedNodeManager mDataMgr;
 
 public:
-	InsiemeIRConsumer(const insieme::core::Program::SharedDataManager& dataMgr) : mCtx(NULL), mDataMgr(dataMgr){
+	InsiemeIRConsumer(const insieme::core::SharedNodeManager& dataMgr) : mCtx(NULL), mDataMgr(dataMgr){
 		ConversionFactory::init(mDataMgr);
 	}
 

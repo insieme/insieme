@@ -60,7 +60,9 @@ TEST(Program, HelloWorld) {
 	auto printfArgType = build.tupleType(tp);
 	auto unitType = build.unitType();
 	auto printfType = build.functionType(printfArgType, unitType);
+
 	auto printfDefinition = build.definition("printf", printfType);
+
 
 	auto emptyTupleType = build.tupleType(TupleType::ElementTypeList());
 	auto voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);

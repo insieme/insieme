@@ -54,8 +54,8 @@ using namespace insieme::core;
 
 TEST(TypeConversion, HandleBuildinTypes) {
 
-	ProgramPtr prog = Program::createProgram();
-	insieme::ConversionFactory::init( prog->getDataManager() );
+	ProgramPtr prog = Program::create();
+	insieme::ConversionFactory::init( prog->getNodeManager() );
 
 	insieme::TypeWrapper convType;
 

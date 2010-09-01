@@ -632,6 +632,7 @@ TEST(TypeTest, IntTypeParam) {
 	EXPECT_TRUE (inf == infb);
 }
 
+
 template<typename PT>
 void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children) {
 
