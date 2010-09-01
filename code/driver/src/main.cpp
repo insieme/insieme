@@ -50,6 +50,7 @@
 using namespace std;
 using namespace google;
 namespace fe = insieme::frontend;
+namespace core = insieme::core;
 
 int main(int argc, char** argv) {
 
@@ -64,13 +65,11 @@ int main(int argc, char** argv) {
 	SetStderrLogging(INFO);
 
 	LOG(INFO) << "Insieme compiler";
-
-
-
+	core::ProgramPtr program = core::Program::createProgram();
 	try {
 		for(std::vector<std::string>::const_iterator i = CommandLineOptions::InputFiles.begin(),
 													 e = CommandLineOptions::InputFiles.end(); i != e; ++i) {
-			fe::InsiemeTransUnit::ParseFile(*i);
+			fe::InsiemeTransUnit::ParseFile(*i, *program);
 		}
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;

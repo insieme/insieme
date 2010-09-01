@@ -37,7 +37,7 @@
 #pragma once
 
 #include "pragma_handler.h"
-// #include "programs.h"
+#include "programs.h"
 
 #include "clang/AST/ASTConsumer.h"
 
@@ -49,19 +49,56 @@ class DeclGroupRef;
 
 namespace insieme {
 
+class ClangStmtConverter;
+class ClangTypeConverter;
+
+struct TypeWrapper {
+	core::TypePtr ref;
+	TypeWrapper(): ref(core::TypePtr(NULL)) { }
+	TypeWrapper(core::TypePtr type): ref(type) { }
+};
+
+struct StmtWrapper {
+	core::StatementPtr ref;
+	StmtWrapper(): ref(core::StatementPtr(NULL)) { }
+	StmtWrapper(core::StatementPtr stmt): ref(core::StatementPtr(stmt)) { }
+};
+
+class ConversionFactory {
+	ClangStmtConverter* stmtConv;
+	ClangTypeConverter* typeConv;
+
+	ConversionFactory(core::NodeManager& mgr);
+
+	static ConversionFactory& get(core::Program::SharedDataManager mgr = core::Program::SharedDataManager()) {
+		static ConversionFactory theConversionFactory(*mgr);
+		return theConversionFactory;
+	}
+public:
+	static void init(core::Program::SharedDataManager mgr) { get(mgr); }
+	static TypeWrapper ConvertType(const clang::Type& type);
+	static StmtWrapper ConvertStmt(const clang::Stmt& stmt);
+
+	~ConversionFactory();
+};
+
 // ------------------------------------ InsiemeIRConsumer ---------------------------
 
 class InsiemeIRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
-	// insieme::core::Program::SharedDataManager mDataMgr;
+	insieme::core::Program::SharedDataManager mDataMgr;
 
 public:
-	InsiemeIRConsumer(/*insieme::core::Program::SharedDataManager dataMgr*/) : mCtx(NULL)/*, mDataMgr(dataMgr)*/{ }
+	InsiemeIRConsumer(const insieme::core::Program::SharedDataManager& dataMgr) : mCtx(NULL), mDataMgr(dataMgr){
+		ConversionFactory::init(mDataMgr);
+	}
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
 	virtual void HandleTranslationUnit(clang::ASTContext &Ctx);
 };
+
+
 
 }
 

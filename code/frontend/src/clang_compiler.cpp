@@ -76,6 +76,7 @@
 
 using namespace clang;
 using namespace insieme::frontend;
+using namespace insieme::core;
 
 ParserProxy* ParserProxy::currParser = NULL;
 
@@ -145,6 +146,9 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 //	S.dump();
 }
 
+ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
+	pimpl->clang.createASTContext();
+}
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
 	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
@@ -229,8 +233,8 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name /*, insieme::core::Program& prog*/): mClang(file_name) {
-	InsiemeIRConsumer cons; /*( prog.getDataManager()) */;
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog): mClang(file_name) {
+	InsiemeIRConsumer cons(prog.getDataManager());
 
 	// register omp pragmas
 	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );

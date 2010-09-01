@@ -77,11 +77,10 @@ std::string ValueUnion::toStr() const {
 }
 
 MatchMap::MatchMap(const MatchMap& other) {
-	MatchMap& thisObj = *this;
 
-	std::for_each(other.cbegin(), other.cend(), [ &thisObj ](const MatchMap::value_type& curr) {
-		thisObj[curr.first] = ValueList();
-		ValueList& currList = thisObj[curr.first];
+	std::for_each(other.cbegin(), other.cend(), [ this ](const MatchMap::value_type& curr) {
+		(*this)[curr.first] = ValueList();
+		ValueList& currList = (*this)[curr.first];
 
 		std::for_each(curr.second.cbegin(), curr.second.cend(), [ &currList ](const ValueList::value_type& elem) {
 			currList.push_back( ValueUnionPtr( new ValueUnion(*elem, true) ) );

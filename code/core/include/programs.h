@@ -172,7 +172,7 @@ public:
 
 	ProgramPtr remEntryPoints(const EntryPointSet& points) const;
 
-	SharedDataManager getDataManager() {
+	SharedDataManager getDataManager() const {
 		return dataManager;
 	}
 
