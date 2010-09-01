@@ -56,47 +56,7 @@ namespace insieme {
 namespace core {
 
 // forward declaration of the program class
-class Program;
-
-/**
- * The Program Pointer class is an extended variant of the annotated pointer.
- * It can be set up to maintain a shared pointer to its referenced program. In
- * case the last program Pointer with a shared semantic is eliminated, the
- * the referenced program will be freed.
- */
-class ProgramPtr : public AnnotatedPtr<const Program> {
-
-	/**
-	 * The additional shared pointer used to maintain an optional reference count for
-	 * the referenced program. If the shared-feature should not be used, this pointer
-	 * will point to NULL.
-	 */
-	std::shared_ptr<const Program> program;
-
-public:
-
-	/**
-	 * Creates a new program pointer referencing the given program. The boolean
-	 * flag allows to determine whether the smart-pointer feature should be enabled.
-	 *
-	 * @param ptr the program to be referenced
-	 * @param shared if set to true, the referenced program will be deleted as soon
-	 * 				 as the last copy of this pointer is removed. If set to false,
-	 * 				 this pointer behavior equals any other annotated pointer.
-	 */
-	ProgramPtr(const Program* ptr, bool shared = false)
-		: AnnotatedPtr<const Program>(ptr), program((shared)?ptr:NULL) {}
-
-	/**
-	 * A implicit conversion constructor to convert a compatible annotated pointer
-	 * into a program pointer. The automatic memory management of the resulting
-	 * shared pointer is never enabled.
-	 *
-	 * @param pointer the pointer to be converted.
-	 */
-	ProgramPtr(const AnnotatedPtr<const Program>& pointer)
-		: AnnotatedPtr<const Program>(pointer) {};
-};
+class ProgramPtr;
 
 /**
  * This class implements an AST Node which can be used to represent entire programs. Unlike
@@ -229,6 +189,46 @@ public:
 	//   - no duplicates in switch
 	//   - no duplicates in names composite types
 
+};
+
+/**
+ * The Program Pointer class is an extended variant of the annotated pointer.
+ * It can be set up to maintain a shared pointer to its referenced program. In
+ * case the last program Pointer with a shared semantic is eliminated, the
+ * the referenced program will be freed.
+ */
+class ProgramPtr : public AnnotatedPtr<const Program> {
+
+	/**
+	 * The additional shared pointer used to maintain an optional reference count for
+	 * the referenced program. If the shared-feature should not be used, this pointer
+	 * will point to NULL.
+	 */
+	std::shared_ptr<const Program> program;
+
+public:
+
+	/**
+	 * Creates a new program pointer referencing the given program. The boolean
+	 * flag allows to determine whether the smart-pointer feature should be enabled.
+	 *
+	 * @param ptr the program to be referenced
+	 * @param shared if set to true, the referenced program will be deleted as soon
+	 * 				 as the last copy of this pointer is removed. If set to false,
+	 * 				 this pointer behavior equals any other annotated pointer.
+	 */
+	ProgramPtr(const Program* ptr, bool shared = false)
+		: AnnotatedPtr<const Program>(ptr), program((shared)?ptr:NULL) {}
+
+	/**
+	 * A implicit conversion constructor to convert a compatible annotated pointer
+	 * into a program pointer. The automatic memory management of the resulting
+	 * shared pointer is never enabled.
+	 *
+	 * @param pointer the pointer to be converted.
+	 */
+	ProgramPtr(const AnnotatedPtr<const Program>& pointer)
+		: AnnotatedPtr<const Program>(pointer) {};
 };
 
 } // end namespace core

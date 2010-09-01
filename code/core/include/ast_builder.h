@@ -36,56 +36,35 @@
 
 #pragma once
 
-#include <algorithm>
-#include <functional>
+#include <vector>
 #include <string>
-#include <cstring>
-#include <sstream>
 
-#include "functional_utils.h"
+#include "programs.h"
+#include "statements.h"
+#include "expressions.h"
+#include "types.h"
+#include "types_utils.h"
 
+namespace insieme {
+namespace core {
+	
+using std::vector;
 using std::string;
 
-string format(const char* formatString, ...);
+class ASTBuilder {
 
-template<typename T>
-string toString(T value) {
-	std::stringstream res;
-	res << value;
-	return res.str();
-}
+	NodeManager& manager;
 
+public:
+	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
-template<typename Container, typename Extractor>
-struct Joinable {
+	typedef vector<ParamExprPtr> ParamList;
+	typedef std::pair<Identifier, TypePtr> Entry;
+	typedef vector<Entry> Entries;
+	typedef vector<TypePtr> ElementTypeList;
 
-	const string& separator;
-	const Container& container;
-	const Extractor& extractor;
-
-	Joinable(const string& separator, const Container& container, const Extractor& extractor) :
-		separator(separator), container(container), extractor(extractor) {};
-
+#include "ast_builder.inl"
 };
 
-
-template<typename Container, typename Extractor>
-std::ostream& operator<<(std::ostream& out, const Joinable<Container, Extractor>& joinable) {
-	if(joinable.container.size() > 0) {
-		out << joinable.extractor(*joinable.container.cbegin());
-		std::for_each(joinable.container.cbegin()+1, joinable.container.cend(), [&](const typename Container::value_type& cur) {
-			out << joinable.separator << joinable.extractor(cur);
-		});
-	}
-	return out;
-}
-
-template<typename Container, typename Extractor>
-Joinable<Container, Extractor> join(const string& separator, const Container& container, const Extractor& extractor) {
-	return Joinable<Container,Extractor>(separator, container, extractor);
-}
-
-template<typename Container>
-Joinable<Container, id<const typename Container::value_type&>> join(const string& separator, const Container& container) {
-	return Joinable<Container, id<const typename Container::value_type&>>(separator, container, id<const typename Container::value_type&>());
-}
+} // namespace core
+} // namespace insieme

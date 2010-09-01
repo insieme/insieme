@@ -60,10 +60,8 @@ namespace core {
  */
 DECLARE_NODE_TYPE(Node);
 
-/**
- * Implements a node manager to be used for maintaining AST node instances.
- */
-class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
+
+class NodeManager;
 
 
 /**
@@ -216,6 +214,11 @@ public:
 		return !(*this == other);
 	}
 };
+
+/**
+ * Implements a node manager to be used for maintaining AST node instances.
+ */
+class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
 
 /**
  * Integrates the hash code computation for nodes into the boost hash code framework.

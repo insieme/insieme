@@ -66,10 +66,10 @@ Program* Program::clone(NodeManager& manager) const {
 
 
 Program::Program(SharedNodeManager manager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
-	Node(NodeType::PROGRAM, ::hash(definitions, entryPoints)), nodeManager(manager), definitions(definitions), entryPoints(entryPoints) { };
+	Node(PROGRAM, ::hash(definitions, entryPoints)), nodeManager(manager), definitions(definitions), entryPoints(entryPoints) { };
 
 Program::Program() :
-	Node(NodeType::PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
+	Node(PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
 
 ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
 	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), definitions, entryPoints), true);
