@@ -51,13 +51,10 @@ using namespace insieme::core;
 	EXPECT_TRUE(convType.ref); \
 	EXPECT_EQ(InsiemeTypeDesc, convType.ref->getName()); }
 
-
 TEST(TypeConversion, HandleBuildinTypes) {
 
 	ProgramPtr prog = Program::create();
 	insieme::ConversionFactory::init( prog->getNodeManager() );
-
-	insieme::TypeWrapper convType;
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
