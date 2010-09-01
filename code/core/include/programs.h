@@ -55,27 +55,60 @@
 namespace insieme {
 namespace core {
 
-//DECLARE_NODE_TYPE(Program);
-
+// forward declaration of the program class
 class Program;
-//typedef std::shared_ptr<Program> ProgramPtr;
 
+/**
+ * The Program Pointer class is an extended variant of the annotated pointer.
+ * It can be set up to maintain a shared pointer to its referenced program. In
+ * case the last program Pointer with a shared semantic is eliminated, the
+ * the referenced program will be freed.
+ */
 class ProgramPtr : public AnnotatedPtr<const Program> {
 
-	const std::shared_ptr<const Program> program;
+	/**
+	 * The additional shared pointer used to maintain an optional reference count for
+	 * the referenced program. If the shared-feature should not be used, this pointer
+	 * will point to NULL.
+	 */
+	std::shared_ptr<const Program> program;
+
 public:
 
+	/**
+	 * Creates a new program pointer referencing the given program. The boolean
+	 * flag allows to determine whether the smart-pointer feature should be enabled.
+	 *
+	 * @param ptr the program to be referenced
+	 * @param shared if set to true, the referenced program will be deleted as soon
+	 * 				 as the last copy of this pointer is removed. If set to false,
+	 * 				 this pointer behavior equals any other annotated pointer.
+	 */
 	ProgramPtr(const Program* ptr, bool shared = false)
 		: AnnotatedPtr<const Program>(ptr), program((shared)?ptr:NULL) {}
 
-	ProgramPtr(const AnnotatedPtr<const Program>& base)
-		: AnnotatedPtr<const Program>(base) {};
+	/**
+	 * A implicit conversion constructor to convert a compatible annotated pointer
+	 * into a program pointer. The automatic memory management of the resulting
+	 * shared pointer is never enabled.
+	 *
+	 * @param pointer the pointer to be converted.
+	 */
+	ProgramPtr(const AnnotatedPtr<const Program>& pointer)
+		: AnnotatedPtr<const Program>(pointer) {};
 };
-//
-//ProgramPtr dynamic_pointer_cast(AnnotatedPtr<const Program> src) {
-//	return ProgramPtr(&*src);
-//}
 
+/**
+ * This class implements an AST Node which can be used to represent entire programs. Unlike
+ * other nodes, this node cannot be maintained within a node manager (invoking this will lead
+ * to an assertion error).
+ *
+ * Programs and especially ProgramPtrs can be used like values. Generally, they are immutable
+ * and can be copied / passed as an argument or return value of a function. Programs manage
+ * the memory allocation of all its referenced nodes implicitly using a shared NodeManager.
+ * This ensures that by passing a program between methods, no referenced AST nodes will be
+ * lost.
+ */
 class Program : public Node {
 
 public:
@@ -84,7 +117,7 @@ public:
 	 * The type used to share statement/type nodes and information among multiple
 	 * program versions.
 	 */
-	typedef std::shared_ptr<NodeManager> SharedDataManager;
+	typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 	/**
 	 * The type used to represent the list of top level definitions.
@@ -101,7 +134,7 @@ private:
 	/**
 	 * The shared data manager used to maintain nodes within this AST.
 	 */
-	const SharedDataManager dataManager;
+	const SharedNodeManager nodeManager;
 
 	/**
 	 * The set of definitions represented by this AST. Each definition
@@ -125,7 +158,7 @@ private:
 	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedDataManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints);
+	Program(SharedNodeManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints);
 
 	/**
 	 * Creates a new AST using a fresh AST data instance.
@@ -145,6 +178,15 @@ private:
 
 public:
 
+	/**
+	 * Creates a new program based on the given definitions and entry points.
+	 *
+	 * @param definitions the definitions to be included within the resulting program.
+	 * @param entryPoints the list of entry points to be included within the resulting program.
+	 * @return a ProgramPtr referencing the resulting program. The pointer can be treated like a shared
+	 * 		   pointer, hence the allocated memory will be automatically cleared as soon as the last
+	 * 		   copy is gone.
+	 */
 	static ProgramPtr createProgram(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
 
 	ProgramPtr addDefinition(const DefinitionPtr& definition) const;
@@ -172,13 +214,13 @@ public:
 
 	ProgramPtr remEntryPoints(const EntryPointSet& points) const;
 
-	SharedDataManager getDataManager() {
-		return dataManager;
+	SharedNodeManager getNodeManager() const {
+		return nodeManager;
 	}
 
 	/**
-	 * A default implementation of the equals operator comparing the actual
-	 * names of the types.
+	 * Implements equals for the program type. Two programs are considered
+	 * equal if they consist of the same set of definitions and entry points.
 	 */
 	bool equals(const Node& other) const;
 

@@ -48,85 +48,78 @@ using namespace insieme::utils::set;
 
 TEST(Program, ProgramData) {
 
-//	// a local manager for temporary types
-//	NodeManager manager;
-//
-//	// start with empty program
-//	ProgramPtr program = Program::createProgram();
-//
-//	// check some basic properties
-//	ProgramDataManager& programManager = *program->getDataManager();
-//	EXPECT_EQ ( 0, programManager.getDefinitionManager().size() );
-//	EXPECT_EQ ( 0, programManager.getStatementManager().size() );
-//	EXPECT_EQ ( 0, programManager.getNodeManager().size() );
-//
-//	EXPECT_TRUE (program->getDefinitions().empty());
-//	EXPECT_TRUE (program->getEntryPoints().empty());
-//
-//	TypePtr typeInt = GenericType::get(manager, "int");
-//	TypePtr typeDouble = GenericType::get(manager, "double");
-//
-//	DefinitionPtr defA = Definition::get(manager, "a", typeInt, NULL, true);
-//	DefinitionPtr defB = Definition::get(manager, "b", typeInt, IntLiteral::get(manager, 12));
-//	DefinitionPtr defC = Definition::get(manager, "c", typeDouble);
-//
-//	// nothing should be present within the program manager ...
-//	EXPECT_EQ ( 0, programManager.getDefinitionManager().size() );
-//	EXPECT_EQ ( 0, programManager.getStatementManager().size() );
-//	EXPECT_EQ ( 0, programManager.getNodeManager().size() );
-//
-//	// add first definition
-//	program = program->addDefinition(defA);
-//
-//	const Program::DefinitionSet& definitions = program->getDefinitions();
-//	EXPECT_EQ ( (std::size_t)1 , definitions.size() );
-//	EXPECT_TRUE ( programManager.getDefinitionManager().addressesLocal(*definitions.cbegin()));
-//	EXPECT_EQ ( toSet<Program::DefinitionSet>(programManager.getDefinitionManager().get(defA)), program->getDefinitions());
-//
-//	// ... now: there should be one definition and one type
-//	EXPECT_EQ ( 1, programManager.getDefinitionManager().size() );
-//	EXPECT_EQ ( 0, programManager.getStatementManager().size() );
-//	EXPECT_EQ ( 1, programManager.getNodeManager().size() );
-//
-//
-//	// add additional definitions
-//	Program::DefinitionSet set;
-//	set.insert(defB);
-//	set.insert(defC);
-//	program = program->addDefinitions(set);
-//
-//	// ... now: there should be an additional definition
-//	EXPECT_EQ ( 3, programManager.getDefinitionManager().size() );
-//	EXPECT_EQ ( 1, programManager.getStatementManager().size() );
-//	EXPECT_EQ ( 3, programManager.getNodeManager().size() );
-//
-//
-//	// ------------- Entry Points ------------
-//	ExprPtr entryA = VarExpr::get(manager, typeInt, "a");
-//	ExprPtr entryB = VarExpr::get(manager, typeInt, "b");
-//	ExprPtr entryC = VarExpr::get(manager, typeDouble, "c");
-//
-//	program = program->addEntryPoint(entryA);
-//	EXPECT_NE (entryA , *program->getEntryPoints().begin());
-//	EXPECT_EQ (toSet<Program::EntryPointSet>(programManager.getStatementManager().get(entryA)), program->getEntryPoints());
-//
-//	Program::EntryPointSet entrySet;
-//	entrySet.insert(entryA);
-//	entrySet.insert(entryB);
-//	entrySet.insert(entryC);
-//
-//	program = program->addEntryPoints(entrySet);
-//	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
-//
-//	const Program::EntryPointSet& points = program->getEntryPoints();
-//	std::for_each(points.cbegin(), points.cend(),
-//		[&manager, &programManager](const ExprPtr& cur) {
-//			EXPECT_FALSE( manager.getStatementManager().addressesLocal(cur) );
-//			EXPECT_TRUE( programManager.getStatementManager().addressesLocal(cur) );
-//	});
+	// create local manager
+	NodeManager manager;
+
+	// start with empty program
+	ProgramPtr program = Program::createProgram();
+	NodeManager& programManager = *program->getNodeManager();
+
+	// check some basic properties
+	EXPECT_EQ ( 0, manager.size() );
+	EXPECT_EQ ( 0, programManager.size() );
+
+	EXPECT_TRUE (program->getDefinitions().empty());
+	EXPECT_TRUE (program->getEntryPoints().empty());
+
+	TypePtr typeInt = GenericType::get(manager, "int");
+	TypePtr typeDouble = GenericType::get(manager, "double");
+
+	DefinitionPtr defA = Definition::get(manager, "a", typeInt, NULL, true);
+	DefinitionPtr defB = Definition::get(manager, "b", typeInt, IntLiteral::get(manager, 12));
+	DefinitionPtr defC = Definition::get(manager, "c", typeDouble);
+
+	// nothing should be present within the program manager ...
+	EXPECT_EQ ( 0, programManager.size() );
+
+	// add first definition
+	program = program->addDefinition(defA);
+
+	const Program::DefinitionSet& definitions = program->getDefinitions();
+	EXPECT_EQ ( (std::size_t)1 , definitions.size() );
+	EXPECT_TRUE ( programManager.addressesLocal(*definitions.cbegin()));
+	EXPECT_EQ ( toSet<Program::DefinitionSet>(programManager.get(defA)), program->getDefinitions());
+
+	// ... now: there should be one definition and one type
+	EXPECT_EQ ( 2, programManager.size() );
+
+
+	// add additional definitions
+	Program::DefinitionSet set;
+	set.insert(defB);
+	set.insert(defC);
+	program = program->addDefinitions(set);
+
+	// ... now: there should be an additional definition
+	EXPECT_EQ ( 7, programManager.size() );
+
+
+	// ------------- Entry Points ------------
+	ExpressionPtr entryA = VarExpr::get(manager, typeInt, "a");
+	ExpressionPtr entryB = VarExpr::get(manager, typeInt, "b");
+	ExpressionPtr entryC = VarExpr::get(manager, typeDouble, "c");
+
+	program = program->addEntryPoint(entryA);
+	EXPECT_NE (entryA , *program->getEntryPoints().begin());
+	EXPECT_EQ (toSet<Program::EntryPointSet>(programManager.get(entryA)), program->getEntryPoints());
+
+	Program::EntryPointSet entrySet;
+	entrySet.insert(entryA);
+	entrySet.insert(entryB);
+	entrySet.insert(entryC);
+
+	program = program->addEntryPoints(entrySet);
+	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
+
+	const Program::EntryPointSet& points = program->getEntryPoints();
+	std::for_each(points.cbegin(), points.cend(),
+		[&manager, &programManager](const ExpressionPtr& cur) {
+			EXPECT_FALSE( manager.addressesLocal(cur) );
+			EXPECT_TRUE( programManager.addressesLocal(cur) );
+	});
 
 	// print resulting program
-//	cout << *program << endl;
+	cout << *program << endl;
 }
 
 
