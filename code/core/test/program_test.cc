@@ -38,7 +38,7 @@
 
 #include <iostream>
 
-#include "programs.h"
+#include "program.h"
 #include "set_utils.h"
 #include "types.h"
 #include "ast_builder.h"

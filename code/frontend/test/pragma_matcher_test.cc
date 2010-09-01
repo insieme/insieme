@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "programs.h"
+#include "program.h"
 
 #include "clang_compiler.h"
 #include "pragma_handler.h"
