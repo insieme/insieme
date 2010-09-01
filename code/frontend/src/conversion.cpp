@@ -280,14 +280,14 @@ StmtWrapper ClangStmtConverter::VisitVarDecl(clang::VarDecl* varDecl) {
 
 void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
-		Decl* decl = *it;
-		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+//		Decl* decl = *it;
+//		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			// this is a function decl
-			if(funcDecl->getBody())
-				ConversionFactory::ConvertStmt( *funcDecl->getBody() );
-		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-			ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
-		}
+//			if(funcDecl->getBody())
+//				ConversionFactory::ConvertStmt( *funcDecl->getBody() );
+//		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+//			ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
+//		}
 	}
 }
 
