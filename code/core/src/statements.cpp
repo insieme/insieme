@@ -158,7 +158,7 @@ DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const Expressi
 }
 
 void DeclarationStmt::printTo(std::ostream& out) const {
-	out << varExpression->getType() << " " << varExpression << " = " << initExpression << ";";
+	out << *varExpression->getType() << " " << *varExpression << " = " << *initExpression << ";";
 }
 
 bool DeclarationStmt::equalsStmt(const Statement& stmt) const {

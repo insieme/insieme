@@ -59,19 +59,20 @@ std::size_t hash(const Program::DefinitionSet& definitions, const Program::Entry
 }
 
 Program* Program::clone(NodeManager& manager) const {
-//	return new Program(SharedDataManager(NULL), manager.getAll(definitions), manager.getAll(entryPoints));
+//	return new Program(SharedNodeManager(NULL), manager.getAll(definitions), manager.getAll(entryPoints));
 	assert ( false && "Programs cannot be migrated between manager!");
 	return NULL;
 }
 
 
-Program::Program(SharedDataManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
-	Node(NodeType::PROGRAM, ::hash(definitions, entryPoints)), dataManager(dataManager), definitions(definitions), entryPoints(entryPoints) { };
+Program::Program(SharedNodeManager manager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
+	Node(PROGRAM, ::hash(definitions, entryPoints)), nodeManager(manager), definitions(definitions), entryPoints(entryPoints) { };
 
-Program::Program() : Node(NodeType::PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), dataManager(SharedDataManager(new NodeManager())) {};
+Program::Program() :
+	Node(PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
 
 ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(SharedDataManager(new NodeManager()), definitions, entryPoints), true);
+	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), definitions, entryPoints), true);
 }
 
 ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
@@ -79,7 +80,7 @@ ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::addDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(dataManager, merge(this->definitions, dataManager->getAll(definitions)), entryPoints), true);
+	return ProgramPtr(new Program(nodeManager, merge(this->definitions, nodeManager->getAll(definitions)), entryPoints), true);
 }
 
 ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
@@ -87,7 +88,7 @@ ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
 }
 
 ProgramPtr Program::remDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(dataManager, difference(this->definitions, definitions), entryPoints), true);
+	return ProgramPtr(new Program(nodeManager, difference(this->definitions, definitions), entryPoints), true);
 }
 
 
@@ -96,7 +97,7 @@ ProgramPtr Program::addEntryPoint(const ExpressionPtr& entryPoint) const {
 }
 
 ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(dataManager, definitions, merge(this->entryPoints, dataManager->getAll(entryPoints))), true);
+	return ProgramPtr(new Program(nodeManager, definitions, merge(this->entryPoints, nodeManager->getAll(entryPoints))), true);
 }
 
 ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
@@ -104,7 +105,7 @@ ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
 }
 
 ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(dataManager, definitions, difference(this->entryPoints, entryPoints)), true);
+	return ProgramPtr(new Program(nodeManager, definitions, difference(this->entryPoints, entryPoints)), true);
 }
 
 bool Program::equals(const Node& other) const {

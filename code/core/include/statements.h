@@ -94,7 +94,7 @@ class Statement : public Node, public Visitable<NodePtr> {
 
 protected:
 
-	Statement(std::size_t hashCode) : Node(NodeType::STATEMENT, hashCode) {}
+	Statement(std::size_t hashCode) : Node(STATEMENT, hashCode) {}
 
 	virtual bool equals(const Node& node) const;
 	virtual bool equalsStmt(const Statement& stmt) const = 0;
