@@ -26,6 +26,10 @@ if(BUILD_DOCUMENTATION)
 	#-- Configure the Template Doxyfile for our specific project
 	configure_file(Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile  @ONLY IMMEDIATE)
 	
+	if( DOXYGEN_HOME )
+		set(${DOXYGEN_EXECUTABLE} ${DOXYGEN_HOME}/bin/doxygen) 
+	endif()
+	
 	#-- Add a custom target to run Doxygen when ever the project is built
 	add_custom_target (Docs ALL 
   		COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
