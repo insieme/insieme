@@ -63,11 +63,6 @@ public:
 
 	typedef ReturnType return_type;
 
-//	ReturnType visit(const ProgramPtr& program) {
-//		assert( program && "Cannot visit NULL program!");
-//		return DISPATCH(Program, program);
-//	}
-
 	ReturnType visit(const NodePtr& node) {
 		assert ( node && "Cannot visit NULL node!");
 		return DISPATCH(Node, node);

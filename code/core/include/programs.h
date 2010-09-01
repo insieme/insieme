@@ -55,12 +55,26 @@
 namespace insieme {
 namespace core {
 
+//DECLARE_NODE_TYPE(Program);
 
-DECLARE_NODE_TYPE(Program);
-
-//class Program;
+class Program;
 //typedef std::shared_ptr<Program> ProgramPtr;
 
+class ProgramPtr : public AnnotatedPtr<const Program> {
+
+	const std::shared_ptr<const Program> program;
+public:
+
+	ProgramPtr(const Program* ptr, bool shared = false)
+		: AnnotatedPtr<const Program>(ptr), program((shared)?ptr:NULL) {}
+
+	ProgramPtr(const AnnotatedPtr<const Program>& base)
+		: AnnotatedPtr<const Program>(base) {};
+};
+//
+//ProgramPtr dynamic_pointer_cast(AnnotatedPtr<const Program> src) {
+//	return ProgramPtr(&*src);
+//}
 
 class Program : public Node {
 
@@ -118,6 +132,15 @@ private:
 	 */
 	Program();
 
+	/**
+	 * Implements the clone method defined by the Base Node class. However,
+	 * invoking this method will lead to an assertion error, since programs
+	 * should and cannot be migrated between managers (Programs are not maintained
+	 * by managers at all).
+	 *
+	 * @param manager the manager this program should be cloned to
+	 * @return a pointer to the new program, cloned for the new manager
+	 */
 	virtual Program* clone(NodeManager& manager) const;
 
 public:
