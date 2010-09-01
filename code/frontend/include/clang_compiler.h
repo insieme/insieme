@@ -38,7 +38,7 @@
 
 #include <memory>
 #include <string>
-
+#include <vector>
 #include <exception>
 #include <stdexcept>
 #include <cassert>
@@ -117,7 +117,6 @@ class Program;
 }
 
 namespace frontend {
-
 /**
  * Used to report a parsing error occurred during the parsing of the input file
  */
@@ -148,15 +147,26 @@ public:
 	~ClangCompiler();
 };
 
+// Forward declaration for Pragma
+class Pragma;
+typedef std::shared_ptr<Pragma> PragmaPtr;
+typedef std::vector<PragmaPtr> 	PragmaList;
+
+
 /**
  * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
  * and the insieme IR which has been generated from the source file.
  */
 class InsiemeTransUnit: public boost::noncopyable {
 	ClangCompiler mClang;
+	PragmaList mPragmaList;
 
 	InsiemeTransUnit(const std::string& file_name /*, insieme::core::Program& prog*/);
 public:
+
+	const PragmaList& getPragmaList() const { return mPragmaList; }
+	const ClangCompiler& getCompiler() const { return mClang; }
+
 	/**
 	 * Main entry method, it creates a translation unit starting from an input file
 	 */

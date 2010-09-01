@@ -76,7 +76,7 @@ public:
 	 * It has a string representing the expecting tokens and the location at which the error was encountered.
 	 */
 	struct Error {
-		std::string 			expected;
+		std::string 		expected;
 		clang::SourceLocation loc;
 
 		Error(const std::string& exp, const clang::SourceLocation& loc): expected(exp), loc(loc) { }
@@ -129,6 +129,12 @@ public:
 	ValueUnion(std::string const& str) :
 		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)), ptrOwner(true), clangCtx(NULL) { }
 
+	ValueUnion(ValueUnion& other, bool transferOwnership=false) :
+		llvm::PointerUnion<clang::Stmt*, std::string*>(other), ptrOwner(true), clangCtx(other.clangCtx) {
+		if(transferOwnership) 	other.ptrOwner = false;
+		else	ptrOwner = false;
+	}
+
 	/**
 	 * A ValueUnion instance always owns the internal value. This method transfer the ownership to the owner.
 	 */
@@ -151,6 +157,9 @@ class MatchMap: public std::map<std::string, ValueList> {
 public:
 	typedef std::map<std::string, ValueList>::value_type value_type;
 	typedef std::map<std::string, ValueList>::key_type key_type;
+
+	MatchMap() {}
+	MatchMap(const MatchMap& other);
 };
 
 typedef std::pair<bool, MatchMap> MatcherResult;

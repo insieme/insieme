@@ -51,7 +51,6 @@ using namespace insieme::frontend::util;
 namespace {
 
 bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
-	// DEBUG("(" << sloc::Line(SR).first << ", " << sloc::Line(SR).second << ") <- " << sloc::Line(SL));
 	return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 }
 
@@ -60,13 +59,11 @@ bool isAfterRange(SourceRange SR, SourceLocation SL, clang::SourceManager const&
 }
 
 void EraseMatchedPragmas(std::list<PragmaPtr>& pending, PragmaList& matched) {
-
 	for (PragmaList::iterator I = matched.begin(), E = matched.end(); I != E; ++I) {
 		std::list<PragmaPtr>::iterator it = std::find(pending.begin(), pending.end(), *I);
-		assert(it != pending.end());
+		CHECK(it != pending.end()) << ": current matched pragma is not in the list of pending pragmas!";
 		pending.erase(it);
 	}
-
 }
 
 /**
@@ -78,10 +75,9 @@ class PragmaFilter {
 	std::list<PragmaPtr>::reverse_iterator I, E;
 
 	void inc(bool first) {
-		while (first && I != E && isAfterRange(bounds, (*I)->getStartLocation(), sm))
+		while(first && I != E && isAfterRange(bounds, (*I)->getStartLocation(), sm))
 			++I;
-		if (!first)
-			++I;
+		if(!first)	++I;
 	}
 
 public:
@@ -91,8 +87,7 @@ public:
 	void operator++() {	inc(false); }
 
 	PragmaPtr operator*() const {
-		if (I == E)
-			return PragmaPtr();
+		if (I == E) return PragmaPtr();
 		if (isInsideRange(bounds, (*I)->getStartLocation(), sm))
 			return *I;
 		return PragmaPtr();
@@ -130,7 +125,7 @@ const char* strbchr(const char* stream, char c) {
 }
 
 clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R, Sema::MultiStmtArg Elts, bool isStmtExpr) {
-//	std::cout << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+//	DLOG(INFO) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
 
 	/*
 	 * when pragmas are just after the beginning of a compound stmt, example:
@@ -144,6 +139,10 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 	 * the value of L (which contains the wrong location) with the correct value.
 	 *
 	 */
+//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
+//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+
+	{
 	SourceLocation leftBracketLoc = SourceMgr.getInstantiationLoc(L);
 	std::pair<FileID, unsigned> locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
 	std::pair<const char*, const char*> buffer = SourceMgr.getBufferData(locInfo.first);
@@ -152,9 +151,21 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 
 	// We know the location of the left bracket, we overwrite the value of L with the correct location
 	L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+	}
+	// the same is done for the right bracket
 
-//	std::cout << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-//			util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
+//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+	{
+	SourceLocation rightBracketLoc = SourceMgr.getInstantiationLoc(R);
+	std::pair<FileID, unsigned> locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
+	std::pair<const char*, const char*> buffer = SourceMgr.getBufferData(locInfo.first);
+	const char *strData = buffer.first + locInfo.second;
+	char const* rBracePos = strbchr(strData, '}');
+
+	// We know the location of the left bracket, we overwrite the value of L with the correct location
+	R = rightBracketLoc.getFileLocWithOffset(rBracePos - strData);
+	}
 
 	clang::Sema::OwningStmtResult ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
 	CompoundStmt* CS = (CompoundStmt*) ret.get();
@@ -183,6 +194,7 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 							new (Context) CompoundStmt(Context, stmts, CS->size() + 1, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
 
 					std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
+					std::for_each(CS->body_begin(), CS->body_end(), [](Stmt*& curr) { curr->Retain(); });
 					CompoundStmt::body_iterator it = newCS->body_begin();
 					for (size_t i = 0; i < CS->size(); ++i, ++it)
 						;
@@ -191,13 +203,13 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 					P->setStatement(*it);
 					matched.push_back(P);
 
-					CompoundStmt* oldStmt = ret.takeAs<CompoundStmt> ();
+					// transfer the ownership of the statement
+					CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
 					ret = newCS;
 					CS = newCS;
 
-					// We can now remove the old CompoundStmt, we use the free because we don't want to delete child nodes which have been associated with
-					// the newly created CompoundStmt.
-					free(oldStmt); // we have to make sure the old CompoundStmt is removed
+					// destroy the old compound stmt
+					oldStmt->Destroy(Context);
 					delete[] stmts;
 				}
 				break;
@@ -212,7 +224,6 @@ clang::Sema::OwningStmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, S
 
 	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
-
 	return clang::move(ret);
 }
 
@@ -220,7 +231,6 @@ void InsiemeSema::matchStmt(Stmt* S, const SourceRange& bounds, const SourceMana
 
 	for (PragmaFilter filter = PragmaFilter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter) {
 		PragmaPtr P = *filter;
-
 		P->setStatement(S);
 		matched.push_back(P);
 	}
@@ -253,7 +263,7 @@ InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal,
 clang::Sema::OwningStmtResult
 InsiemeSema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, Sema::StmtArg First, Sema::FullExprArg Second, Sema::DeclPtrTy SecondVar,
 	Sema::FullExprArg Third, SourceLocation RParenLoc, Sema::StmtArg Body) {
-	// DEBUG("{InsiemeSema}: ActOnForStmt()");
+//	DLOG(INFO) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	Sema::OwningStmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
 
 	ForStmt* forStmt = (ForStmt*) ret.get();

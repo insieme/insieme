@@ -41,8 +41,11 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
+
 class OmpPragma: public insieme::frontend::Pragma {
 public:
+	insieme::frontend::MatchMap mMap;
+
 	OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name, const insieme::frontend::MatchMap& mmap);
 
 	static void RegisterPragmaHandlers(clang::Preprocessor& pp);
