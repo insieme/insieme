@@ -74,6 +74,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -Wall )
 endif()
 
+# Add debug symbols
+add_definitions( -g )
+
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)

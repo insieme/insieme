@@ -35,7 +35,12 @@
  */
 
 #include "conversion.h"
+
+#include "programs.h"
 #include "ast_node.h"
+#include "types.h"
+#include "statements.h"
+#include "container_utils.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -50,49 +55,33 @@ namespace fe = insieme::frontend;
 
 namespace insieme {
 
-struct IRNode {
-	core::NodePtr ref;
-
-	IRNode(): ref(core::NodePtr(NULL)) { }
-};
-
-class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, IRNode> {
-
+class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
+	core::NodeManager& mgr;
 public:
-	IRNode VisitVarDecl(clang::VarDecl* varDecl) {
-//		PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
-//		// registering variable in the var map
-//		mDeclMap[varDecl] = polyVar;
-//		// a vardecl is stored as a simple varref
-//		PolyExprPtr ret = new PolyVarRefImpl<clang::VarDecl>(polyVar, *varDecl );
-//		if( varDecl->getInit() ) {
-//			// there is an initialization
-//			ret = new PolyBinExprImpl<clang::VarDecl>( ret, PolyBinExpr::ASSIGN, Visit(varDecl->getInit()), *varDecl );
-//		}
-//		return ret;
-		return IRNode();
-	}
+	ClangStmtConverter(core::NodeManager& mgr): mgr(mgr) { }
 
-	IRNode VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
+	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl);
+
+	StmtWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 //		// look for the vardecl in the map
 //		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declRef->getDecl());
 //		DeclMap::const_iterator fit = mDeclMap.find(varDecl);
 //		assert( fit != mDeclMap.end() && "VarDecl is not registered in the DeclMap." );
 //		return new PolyVarRefImpl<clang::DeclRefExpr>(fit->second, *declRef );
-		return IRNode();
+		return StmtWrapper();
 	}
 
-	IRNode VisitIntegerLiteral(clang::IntegerLiteral* intLit){
+	StmtWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit){
 //		return new PolyIntLitImpl<clang::IntegerLiteral>(*intLit);
-		return IRNode();
+		return StmtWrapper();
 	}
 
-	IRNode VisitCastExpr(clang::CastExpr* castExpr) {
+	StmtWrapper VisitCastExpr(clang::CastExpr* castExpr) {
 //		return Visit(castExpr->getSubExpr());
-		return IRNode();
+		return StmtWrapper();
 	}
 
-	IRNode VisitUnaryOperator(clang::UnaryOperator *unOp) {
+	StmtWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) {
 //		PolyExprPtr subExpr( BaseClass::Visit(unOp->getSubExpr()) );
 //		PolyUnExpr::Op op;
 //		switch(unOp->getOpcode()){
@@ -113,10 +102,10 @@ public:
 //					  "' not (yet) supported in the PolyIR representation.");
 //		}
 //		return new PolyUnExprImpl<clang::UnaryOperator>( op, subExpr, *unOp );
-		return IRNode();
+		return StmtWrapper();
 	}
 
-	IRNode VisitBinaryOperator(clang::BinaryOperator* binOp) {
+	StmtWrapper VisitBinaryOperator(clang::BinaryOperator* binOp) {
 //		PolyExprPtr lhs( BaseClass::Visit(binOp->getLHS()) );
 //		PolyExprPtr rhs( BaseClass::Visit(binOp->getRHS()) );
 //		PolyBinExpr::Op op;
@@ -142,63 +131,162 @@ public:
 //					  "' not (yet) supported in the PolyIR representation.");
 //		}
 //		return new PolyBinExprImpl<clang::BinaryOperator>( lhs, op, rhs, *binOp );
-		return IRNode();
+		return StmtWrapper();
 	}
 
-	IRNode VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
+	StmtWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
 //		return new PolyBinExprImpl<clang::ArraySubscriptExpr>( Visit(arraySubExpr->getBase()),
 //				PolyBinExpr::ARRAY_SUB,
 //				Visit(arraySubExpr->getIdx()), *arraySubExpr );
-		return IRNode();
+		return StmtWrapper();
 	}
 
 	// In clang a declstmt is represented as a list of VarDecl
 	// the conversion to PolyIR replace with an expressions
-	IRNode VisitDeclStmt(clang::DeclStmt* declStmt) {
-//		// if there is only one declaration in the DeclStmt we return it
-//		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
-//			return VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
-//
-//		// otherwise we create an an expression list which contains the multiple declaration inside the statement
+	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
+		// if there is only one declaration in the DeclStmt we return it
+		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
+			return VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
+
+		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 //		PolyExprListImpl<clang::DeclStmt>* exprList = new PolyExprListImpl<clang::DeclStmt>(*declStmt);
 //		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 //			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
 //				exprList->push_back( VisitVarDecl(varDecl) );
 //		return exprList;
-		return IRNode();
+		return StmtWrapper();
+	}
+
+	StmtWrapper VisitStmt(Stmt* stmt) {
+		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ](Stmt* stmt){ this->Visit(stmt); } );
+		return StmtWrapper();
 	}
 
 };
 
-class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, void> {
+#define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
+#define EMPTY_TYPE_LIST	vector<core::TypePtr>()
+
+class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
+	core::NodeManager& mgr;
+
 public:
+	ClangTypeConverter(core::NodeManager& mgr): mgr(mgr) { }
 
-	void VisitBuiltinType(BuiltinType* bulinTy) { }
+	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
 
-	void VisitComplexType(ComplexType* bulinTy) { }
+		switch(buldInTy->getKind()) {
+		case BuiltinType::Void:  	return TypeWrapper( core::GenericType::get(mgr, "unit") );
+		case BuiltinType::Bool:		return TypeWrapper( core::GenericType::get(mgr, "bool") );
+		// char types
+		case BuiltinType::Char_U:
+		case BuiltinType::UChar:
+			return TypeWrapper( core::GenericType::get(mgr, "uchar") );
+		case BuiltinType::Char16:
+			return TypeWrapper( core::GenericType::get(mgr, "char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char16_t) )) );
+		case BuiltinType::Char32:
+			return TypeWrapper( core::GenericType::get(mgr, "char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char32_t) )) );
+		case BuiltinType::Char_S:
+		case BuiltinType::SChar:
+			return TypeWrapper( core::GenericType::get(mgr, "char") );
+		case BuiltinType::WChar:
+			return TypeWrapper( core::GenericType::get(mgr, "wchar") );
+		// short types
+		case BuiltinType::UShort:
+			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned short) )) );
+		case BuiltinType::Short:
+			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(short) )) );
+		// integer types
+		case BuiltinType::UInt:
+			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned int) )) );
+		case BuiltinType::Int:
+			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(int) )) );
+		case BuiltinType::UInt128:
+			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
+		case BuiltinType::Int128:
+			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
+		// long types
+		case BuiltinType::ULong:
+			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long) )) );
+		case BuiltinType::ULongLong:
+			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long long) )) );
+		case BuiltinType::Long:
+			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long) )) );
+		case BuiltinType::LongLong:
+			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long long) )) );
+		// float types
+		case BuiltinType::Float:
+			return TypeWrapper( core::GenericType::get(mgr, "real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(float) )) );
+		case BuiltinType::Double:
+			return TypeWrapper( core::GenericType::get(mgr, "real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(double) )) );
+		case BuiltinType::LongDouble:
+			return TypeWrapper( core::GenericType::get(mgr, "real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long double) )) );
+		case BuiltinType::NullPtr:
+		case BuiltinType::Overload:
+		case BuiltinType::Dependent:
+		case BuiltinType::UndeducedAuto:
+		default:
+			throw "type not supported"; //todo introduce exception class
+		}
+		return TypeWrapper();
+	}
 
-	void VisitArrayType(ArrayType* arrTy) { }
+	TypeWrapper VisitComplexType(ComplexType* bulinTy) { return TypeWrapper(); }
 
-	void VisitFunctionType(FunctionType* funcTy) { }
+	TypeWrapper VisitArrayType(ArrayType* arrTy) { return TypeWrapper(); }
 
-	void VisitPointerType(PointerType* pointerTy) { }
+	TypeWrapper VisitFunctionType(FunctionType* funcTy) { return TypeWrapper(); }
 
-	void VisitReferenceType(ReferenceType* refTy) { }
+	TypeWrapper VisitPointerType(PointerType* pointerTy) { return TypeWrapper(); }
+
+	TypeWrapper VisitReferenceType(ReferenceType* refTy) { return TypeWrapper(); }
 
 };
 
+ConversionFactory::ConversionFactory(core::NodeManager& mgr): stmtConv(new ClangStmtConverter(mgr)), typeConv(new ClangTypeConverter(mgr)) { }
+
+TypeWrapper ConversionFactory::ConvertType(const clang::Type& type) { return get().typeConv->Visit(const_cast<Type*>(&type)); }
+
+StmtWrapper ConversionFactory::ConvertStmt(const clang::Stmt& stmt) { return get().stmtConv->Visit(const_cast<Stmt*>(&stmt)); }
+
+ConversionFactory::~ConversionFactory() {
+	delete typeConv;
+	delete stmtConv;
+}
+
+// ------------------------------------ ClangStmtConverter ---------------------------
+
+StmtWrapper ClangStmtConverter::VisitVarDecl(clang::VarDecl* varDecl) {
+
+	TypeWrapper tw = ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
+
+	if(!!tw.ref)
+		DLOG(INFO) << tw.ref->toString();
+
+//	PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
+//	// registering variable in the var map
+//	mDeclMap[varDecl] = polyVar;
+//	// a vardecl is stored as a simple varref
+//	PolyExprPtr ret = new PolyVarRefImpl<clang::VarDecl>(polyVar, *varDecl );
+//	if( varDecl->getInit() ) {
+//		// there is an initialization
+//		ret = new PolyBinExprImpl<clang::VarDecl>( ret, PolyBinExpr::ASSIGN, Visit(varDecl->getInit()), *varDecl );
+//	}
+//	return ret;
+	return StmtWrapper();
+}
+
+// ------------------------------------ ClangTypeConverter ---------------------------
 
 void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
-	ClangStmtConverter stmtConv;
-	ClangTypeConverter typeConv;
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			// this is a function decl
 			if(funcDecl->getBody())
-				stmtConv.Visit( funcDecl->getBody() );
+				ConversionFactory::ConvertStmt( *funcDecl->getBody() );
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-			typeConv.Visit(varDecl->getType().getTypePtr());
+			ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
 		}
 	}
 }

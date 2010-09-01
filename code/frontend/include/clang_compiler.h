@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include "programs.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -139,6 +141,7 @@ class ClangCompiler: boost::noncopyable {
 	ClangCompilerImpl* pimpl;
 	friend class InsiemeTransUnit;
 public:
+	ClangCompiler();
 	ClangCompiler(const std::string& file_name);
 	clang::ASTContext& getASTContext() const;
 	clang::SourceManager& getSourceManager() const;
@@ -161,7 +164,7 @@ class InsiemeTransUnit: public boost::noncopyable {
 	ClangCompiler mClang;
 	PragmaList mPragmaList;
 
-	InsiemeTransUnit(const std::string& file_name /*, insieme::core::Program& prog*/);
+	InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog);
 public:
 
 	const PragmaList& getPragmaList() const { return mPragmaList; }
@@ -170,8 +173,8 @@ public:
 	/**
 	 * Main entry method, it creates a translation unit starting from an input file
 	 */
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name /*, insieme::core::Program& prog*/) {
-		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name/*, prog*/));
+	static InsiemeTransUnitPtr ParseFile(const std::string& file_name, const insieme::core::Program& prog) {
+		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name, prog));
 	}
 };
 

@@ -36,6 +36,8 @@
 
 #include <gtest/gtest.h>
 
+#include "programs.h"
+
 #include "clang_compiler.h"
 #include "pragma_handler.h"
 #include "utils/source_locations.h"
@@ -46,6 +48,7 @@
 #include <clang/AST/Stmt.h>
 
 using namespace insieme::frontend;
+using namespace insieme::core;
 
 #define CHECK_LOCATION(loc, srcMgr, line, col) \
 	EXPECT_EQ(util::Line(loc, srcMgr), (size_t)line); \
@@ -53,8 +56,7 @@ using namespace insieme::frontend;
 
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
-	std::cout << std::string(SRC_DIR) + "/omp_parallel.c" << std::endl;
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_parallel.c");
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_parallel.c", *Program::createProgram());
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());
@@ -133,7 +135,8 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_for.c");
+
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_for.c", *Program::createProgram());
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());
