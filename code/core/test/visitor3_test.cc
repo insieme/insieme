@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "programs.h"
+#include "program.h"
 #include "visitor3.h"
 
 using namespace insieme::core;

@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "container_utils.h"
-#include "definitions.h"
+#include "definition.h"
 
 using namespace insieme::core;
 

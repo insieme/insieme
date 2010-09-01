@@ -46,7 +46,7 @@
 #include "container_utils.h"
 #include "expressions.h"
 #include "functional_utils.h"
-#include "definitions.h"
+#include "definition.h"
 #include "set_utils.h"
 #include "statements.h"
 #include "types.h"

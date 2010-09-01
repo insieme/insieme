@@ -312,7 +312,7 @@ public:
 	 * @param manager the manager to obtain the new type reference from
 	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
-	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes);
+	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes = ElementTypeList());
 
 	/**
 	 * Obtains a list of all types referenced by this tuple type.

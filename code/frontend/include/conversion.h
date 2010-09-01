@@ -37,7 +37,7 @@
 #pragma once
 
 #include "pragma_handler.h"
-#include "programs.h"
+#include "program.h"
 
 #include "clang/AST/ASTConsumer.h"
 

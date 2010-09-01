@@ -39,7 +39,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "definitions.h"
+#include "definition.h"
 #include "types.h"
 #include "expressions.h"
 

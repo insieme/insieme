@@ -36,7 +36,7 @@
 
 #include "conversion.h"
 
-#include "programs.h"
+#include "program.h"
 #include "ast_node.h"
 #include "types.h"
 #include "statements.h"
