@@ -42,7 +42,7 @@
 using std::string;
 using std::vector;
 
-/* The following enums need to be defined outside of some function.
+/* The following enums need to be defined outside of any function.
 */
 
 //Normal, 'long' one
@@ -127,6 +127,12 @@ TEST(Enums, LongWord) {
 TEST(Enums, UnderScore) {
     testLongElement t = _KILLEM;
     EXPECT_EQ("_KILLEM", name(t));
+}
+
+//Tests the counting
+TEST(Enums, Counting) {
+    testCard tc;
+    EXPECT_EQ(14, count(tc));
 }
 
 //Tests the tc++
