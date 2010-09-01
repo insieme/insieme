@@ -84,6 +84,17 @@ bool IntTypeParam::allConcrete(const vector<IntTypeParam>& intTypeParams) {
 	return all(intTypeParams, [](const IntTypeParam& param) { return param.isConcrete(); });
 }
 
+IntTypeParam IntTypeParam::getVariableIntParam(char symbol) {
+	return IntTypeParam(symbol);
+}
+
+IntTypeParam IntTypeParam::getConcreteIntParam(unsigned short value) {
+	return IntTypeParam(value);
+}
+
+IntTypeParam IntTypeParam::getInfiniteIntParam() {
+	return IntTypeParam(INFINITE);
+}
 
 // ---------------------------------------- Type --------------------------------
 
@@ -100,7 +111,9 @@ bool Type::allConcrete(const vector<TypePtr>& elementTypes) {
 
 // -------------------------------------- Type Variable -------------------------------
 
-
+TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
+	return manager.get(TypeVariable(name));
+}
 
 // ---------------------------------------- Tuple Type --------------------------------
 
@@ -344,11 +357,39 @@ StructTypePtr StructType::get(NodeManager& manager, const Entries& entries) {
 
 // ------------------------------------ Union Type ---------------------------
 
-
 UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
 	return manager.get(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
+
+
+// ------------------------------------ Array Type ---------------------------
+
+ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim) {
+	return manager.get(ArrayType(elementType, dim));
+}
+
+
+// ------------------------------------ Vector Type ---------------------------
+
+VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
+	return manager.get(VectorType(elementType, size));
+}
+
+
+// ------------------------------------ Ref Type ---------------------------
+
+RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
+	return manager.get(RefType(elementType));
+}
+
+
+// ------------------------------------ Channel Type ---------------------------
+
+ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
+	return manager.get(ChannelType(elementType, size));
+}
+
 
 // ---------------------------------------------- Utility Functions ------------------------------------
 
