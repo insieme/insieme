@@ -253,9 +253,7 @@ public:
 	 * a type variable pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
 	 */
-	static TypeVariablePtr get(NodeManager& manager, const string& name) {
-		return manager.get(TypeVariable(name));
-	}
+	static TypeVariablePtr get(NodeManager& manager, const string& name);
 
 };
 
@@ -483,15 +481,14 @@ public:
 	}
 
 public:
+
 	/**
 	 * A factory method to obtain a integer type parameter variable.
 	 *
 	 * @param symbol the symbol to be used for the variable
 	 * @return an IntTypeParam representing a token for this variable.
 	 */
-	static IntTypeParam getVariableIntParam(char symbol) {
-		return IntTypeParam(symbol);
-	}
+	static IntTypeParam getVariableIntParam(char symbol);
 
 	/**
 	 * A factory method to obtain a concrete integer type parameter.
@@ -499,9 +496,7 @@ public:
 	 * @param value the value to be represented
 	 * @return an IntTypeParam representing a token for this value.
 	 */
-	static IntTypeParam getConcreteIntParam(unsigned short value) {
-		return IntTypeParam(value);
-	}
+	static IntTypeParam getConcreteIntParam(unsigned short value);
 
 	/**
 	 * A factory method to obtain a integer type parameter representing
@@ -509,10 +504,7 @@ public:
 	 *
 	 * @return an IntTypeParam representing a token for the infinite value.
 	 */
-	static IntTypeParam getInfiniteIntParam() {
-		return IntTypeParam(INFINITE);
-	}
-
+	static IntTypeParam getInfiniteIntParam();
 
 	/**
 	 * Tests whether all of the given integer type parameter are concrete.
@@ -882,9 +874,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
-		return manager.get(ArrayType(elementType, dim));
-	}
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim = 1);
 
 	/**
 	 * Retrieves the dimension of the represented array.
@@ -932,9 +922,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
-		return manager.get(VectorType(elementType, size));
-	}
+	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size);
 
 	/**
 	 * Retrieves the size (=number of elements) of the represented vector type.
@@ -982,12 +970,11 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static RefTypePtr get(NodeManager& manager, const TypePtr& elementType) {
-		return manager.get(RefType(elementType));
-	}
+	static RefTypePtr get(NodeManager& manager, const TypePtr& elementType);
+
 };
 
-// --------------------------------- Reference Type ----------------------------
+// --------------------------------- Channel Type ----------------------------
 
 /**
  * This intrinsic reference type used to represent communication channels.
@@ -1024,9 +1011,7 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
-		return manager.get(ChannelType(elementType, size));
-	}
+	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size);
 
 	/**
 	 * Retrieves the (buffer) size of this channel.
