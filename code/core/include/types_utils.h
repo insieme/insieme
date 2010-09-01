@@ -61,9 +61,7 @@ class IntType : public GenericType {
 	}
 
 public:
-	static IntTypePtr get(NodeManager& manager, const unsigned short numBytes = 4) {
-		return manager.get(IntType(numBytes));
-	}
+	static IntTypePtr get(NodeManager& manager, const unsigned short numBytes = 4);
 
 	const unsigned short getNumBytes() const {
 		return getIntTypeParameter()[0].getValue();
@@ -80,9 +78,7 @@ class FloatType : public GenericType {
 	}
 
 public:
-	static FloatTypePtr get(NodeManager& manager, const unsigned short numBytes = 8) {
-		return manager.get(FloatType(numBytes));
-	}
+	static FloatTypePtr get(NodeManager& manager, const unsigned short numBytes = 8);
 
 	const unsigned short getNumBytes() const {
 		return getIntTypeParameter()[0].getValue();
@@ -98,9 +94,7 @@ class BoolType : public GenericType {
 	}
 
 public:
-	static BoolTypePtr get(NodeManager& manager) {
-		return manager.get(BoolType());
-	}
+	static BoolTypePtr get(NodeManager& manager);
 };
 
 class UnitType : public GenericType {
@@ -115,11 +109,7 @@ class UnitType : public GenericType {
 	}
 
 public:
-
-	static UnitTypePtr get(NodeManager& manager) {
-		return manager.get(UnitType());
-	}
-
+	static UnitTypePtr get(NodeManager& manager);
 };
 
 } // end namespace core
