@@ -57,17 +57,61 @@ using boost::is_convertible;
 using boost::enable_if;
 
 
+
 /**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
+ * Create an empty vector containing no elements.
  */
 template<typename T>
-vector<T> toVector(T element) {
-	return vector<T> (1, element);
+inline vector<T> toVector() {
+	return vector<T> ();
+}
+
+/**
+ * Create a vector containing a single element.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a) {
+	return vector<T> (1, a);
+}
+
+/**
+ * Create a vector containing two elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b) {
+	vector<T> res = toVector(a);
+	res.push_back(b);
+	return res;
+}
+
+/**
+ * Create a vector containing three elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c) {
+	vector<T> res = toVector(a,b);
+	res.push_back(c);
+	return res;
+}
+
+/**
+ * Create a vector containing four elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d) {
+	vector<T> res = toVector(a,b,c);
+	res.push_back(d);
+	return res;
+}
+
+/**
+ * Create a vector containing five elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const T& e) {
+	vector<T> res = toVector(a,b,c,d);
+	res.push_back(e);
+	return res;
 }
 
 /**

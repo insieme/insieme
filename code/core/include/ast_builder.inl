@@ -26,7 +26,7 @@ RefTypePtr                     refType(const TypePtr& elementType);
 ReturnStmtPtr                  returnStmt(const ExpressionPtr& returnExpression);
 StructTypePtr                  structType(const Entries& entries);
 TupleExprPtr                   tupleExpr(const vector<ExpressionPtr>& expressions);
-TupleTypePtr                   tupleType(const ElementTypeList& elementTypes);
+TupleTypePtr                   tupleType(const ElementTypeList& elementTypes = ElementTypeList());
 TypeVariablePtr                typeVariable(const string& name);
 UnionTypePtr                   unionType(const Entries& entries);
 UnitTypePtr                    unitType();

@@ -39,6 +39,7 @@
 #include <iostream>
 
 #include "program.h"
+#include "container_utils.h"
 #include "set_utils.h"
 #include "types.h"
 #include "ast_builder.h"
@@ -49,28 +50,26 @@ using namespace insieme::utils::set;
 
 
 TEST(Program, HelloWorld) {
-	ProgramPtr pro = Program::create();
-	ASTBuilder build = pro->getASTBuilder();
 
-	auto stringType = build.genericType("string");
-	auto varArgType = build.genericType("var_list");
-	TupleType::ElementTypeList tp;
-	tp.push_back(stringType);
-	tp.push_back(varArgType);
-	auto printfArgType = build.tupleType(tp);
-	auto unitType = build.unitType();
-	auto printfType = build.functionType(printfArgType, unitType);
+	ASTBuilder build;
+
+	TypePtr stringType = build.genericType("string");
+	TypePtr varArgType = build.genericType("var_list");
+	TypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
+	TypePtr unitType = build.unitType();
+	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.definition("printf", printfType);
 
+	TypePtr emptyTupleType = build.tupleType();
+	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	auto emptyTupleType = build.tupleType(TupleType::ElementTypeList());
-	auto voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+	auto invocation = build.breakStmt();
+	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
-	auto mainDefinition = build.definition("main", voidNullaryFunctionType);
+	auto mainDefinition = build.definition("main", voidNullaryFunctionType, mainBody, false);
 	
-	pro = pro->addDefinition(printfDefinition);
-	pro = pro->addDefinition(mainDefinition);
+	ProgramPtr pro = build.createProgram(toSet<Program::DefinitionSet>(printfDefinition, mainDefinition));
 
 	cout << pro;
 }
