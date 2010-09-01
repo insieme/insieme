@@ -106,18 +106,18 @@ private:
 	const EntryPointSet entryPoints;
 
 	/**
+	 * Creates a new AST using a fresh AST node manager.
+	 */
+	Program();
+
+	/**
 	 * Creates a new AST based on the given data.
 	 *
-	 * @param dataManager shared data manager to be used to maintain definitions, AST nodes and types.
+	 * @param nodeManager a shared node manager to be used to maintain definitions, AST nodes and types.
 	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedNodeManager dataManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints);
-
-	/**
-	 * Creates a new AST using a fresh AST data instance.
-	 */
-	Program();
+	Program(SharedNodeManager nodeManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints);
 
 	/**
 	 * Implements the clone method defined by the Base Node class. However,
@@ -142,6 +142,9 @@ public:
 	 * 		   copy is gone.
 	 */
 	static ProgramPtr create(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
+
+	static ProgramPtr create(const SharedNodeManager& manager, const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
+
 
 	ProgramPtr addDefinition(const DefinitionPtr& definition) const;
 

@@ -76,6 +76,10 @@ ProgramPtr Program::create(const DefinitionSet& definitions, const EntryPointSet
 	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), definitions, entryPoints), true);
 }
 
+ProgramPtr Program::create(const SharedNodeManager& manager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
+	return ProgramPtr(new Program(manager, definitions, entryPoints), true);
+}
+
 ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
 	return addDefinitions(toSet<DefinitionSet>(definition));
 }

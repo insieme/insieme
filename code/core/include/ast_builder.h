@@ -57,14 +57,23 @@ class ASTBuilder {
 	NodeManager& manager;
 
 public:
-	ASTBuilder(SharedNodeManager manager = SharedNodeManager(new NodeManager())) : sharedManager(sharedManager), manager(*sharedManager) { }
+	ASTBuilder(const SharedNodeManager& manager = SharedNodeManager(new NodeManager())) : sharedManager(manager), manager(*sharedManager) { }
 
 	typedef vector<ParamExprPtr> ParamList;
 	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
 	typedef vector<TypePtr> ElementTypeList;
 
+	SharedNodeManager getNodeManager() {
+		return sharedManager;
+	}
+
+	ProgramPtr createProgram(
+			const Program::DefinitionSet& definitions = Program::DefinitionSet(),
+			const Program::EntryPointSet& entryPoints = Program::EntryPointSet());
+
 #include "ast_builder.inl"
+
 };
 
 } // namespace core
