@@ -53,7 +53,7 @@
 
 
 //private function
-std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enumMax);
+std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax);
 
 
 
@@ -92,10 +92,13 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enum
         inline enumname max(const enumname &rs) { return enumname ## MAX; } \
         inline enumname min(const enumname &rs) { return enumname ## MIN; } \
         inline std::string name(const enumname &rs) {\
-            return (enumname ## Strings).at((int) rs);\
+            return (enumname ## Strings).at((std::size_t) rs);\
         } \
         inline std::size_t ord(const enumname &rs) {\
             return (std::size_t) rs;\
+        } \
+        inline enumname count(const enumname &rs) { \
+            return (enumname) (ord(enumname ## MAX) - ord(enumname ## MIN)); \
         } \
         inline std::ostream& operator<<(std::ostream &os, const enumname &c) { \
             return os << name(c);\
@@ -125,7 +128,7 @@ const std::string ENUM_BAD_CHARS(", \r\n\t");
  * @return Trimmed std::string
 */
 std::string enumTrimName(std::string s) {
-    size_t j = 0, i = 0;
+    std::size_t j = 0, i = 0;
     while( (ENUM_BAD_CHARS.find(s.at(j))) != std::string::npos) {
         j++;
     }
@@ -146,7 +149,7 @@ std::string enumTrimName(std::string s) {
  * @param enumMax The count of elements the enum should have
  * @return Vector of the elements' names
 */
-std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enumMax) {
+std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax) {
     std::vector<std::string> res;
     if (str.empty()) return res;
     std::size_t oldFound = 0;
@@ -156,11 +159,9 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, size_t enum
         oldFound = found;
     }
     res.push_back(enumTrimName(str.substr(oldFound)));
-    assert(res.size()==enumMax);
+    assert(res.size() == (size_t) enumMax);
     return res;
 }
-
-#include <iostream>
 
 template <typename T>
 inline const T fromName(const std::string &nam) {
