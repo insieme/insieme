@@ -220,6 +220,8 @@ public:
  */
 class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
 
+typedef std::shared_ptr<NodeManager> SharedNodeManager;
+
 /**
  * Integrates the hash code computation for nodes into the boost hash code framework.
  *

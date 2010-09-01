@@ -54,9 +54,10 @@ using std::string;
 class ASTBuilder {
 
 	NodeManager& manager;
+	SharedNodeManager sharedManager;
 
 public:
-	ASTBuilder(NodeManager& manager) : manager(manager) { }
+	ASTBuilder(SharedNodeManager manager = SharedNodeManager(new NodeManager())) : sharedManager(sharedManager), manager(*sharedManager) { }
 
 	typedef vector<ParamExprPtr> ParamList;
 	typedef std::pair<Identifier, TypePtr> Entry;

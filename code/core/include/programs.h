@@ -51,12 +51,13 @@
 #include "statements.h"
 #include "types.h"
 
-
 namespace insieme {
 namespace core {
 
 // forward declaration of the program class
 class ProgramPtr;
+
+class ASTBuilder;
 
 /**
  * This class implements an AST Node which can be used to represent entire programs. Unlike
@@ -72,13 +73,6 @@ class ProgramPtr;
 class Program : public Node {
 
 public:
-
-	/**
-	 * The type used to share statement/type nodes and information among multiple
-	 * program versions.
-	 */
-	typedef std::shared_ptr<NodeManager> SharedNodeManager;
-
 	/**
 	 * The type used to represent the list of top level definitions.
 	 */
@@ -147,7 +141,7 @@ public:
 	 * 		   pointer, hence the allocated memory will be automatically cleared as soon as the last
 	 * 		   copy is gone.
 	 */
-	static ProgramPtr createProgram(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
+	static ProgramPtr create(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
 
 	ProgramPtr addDefinition(const DefinitionPtr& definition) const;
 
@@ -177,6 +171,8 @@ public:
 	SharedNodeManager getNodeManager() const {
 		return nodeManager;
 	}
+
+	ASTBuilder getASTBuilder() const;
 
 	/**
 	 * Implements equals for the program type. Two programs are considered

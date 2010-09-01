@@ -61,4 +61,3 @@ TEST(ASTBuilder, Basic) {
 
 	EXPECT_EQ(compound2, compound);
 }
-

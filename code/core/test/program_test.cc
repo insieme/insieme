@@ -41,10 +41,37 @@
 #include "programs.h"
 #include "set_utils.h"
 #include "types.h"
+#include "ast_builder.h"
 
 using namespace std;
 using namespace insieme::core;
 using namespace insieme::utils::set;
+
+
+TEST(Program, HelloWorld) {
+	ProgramPtr pro = Program::create();
+	ASTBuilder build = pro->getASTBuilder();
+
+	auto stringType = build.genericType("string");
+	auto varArgType = build.genericType("var_list");
+	TupleType::ElementTypeList tp;
+	tp.push_back(stringType);
+	tp.push_back(varArgType);
+	auto printfArgType = build.tupleType(tp);
+	auto unitType = build.unitType();
+	auto printfType = build.functionType(printfArgType, unitType);
+	auto printfDefinition = build.definition("printf", printfType);
+
+	auto emptyTupleType = build.tupleType(TupleType::ElementTypeList());
+	auto voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+
+	auto mainDefinition = build.definition("main", voidNullaryFunctionType);
+	
+	pro = pro->addDefinition(printfDefinition);
+	pro = pro->addDefinition(mainDefinition);
+
+	cout << pro;
+}
 
 TEST(Program, ProgramData) {
 
@@ -52,7 +79,7 @@ TEST(Program, ProgramData) {
 	NodeManager manager;
 
 	// start with empty program
-	ProgramPtr program = Program::createProgram();
+	ProgramPtr program = Program::create();
 	NodeManager& programManager = *program->getNodeManager();
 
 	// check some basic properties

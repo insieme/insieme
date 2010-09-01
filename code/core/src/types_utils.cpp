@@ -36,6 +36,9 @@
 
 #include "types_utils.h"
 
+namespace insieme {
+namespace core {
+
 IntTypePtr IntType::get(NodeManager& manager, const unsigned short numBytes) {
 	return manager.get(IntType(numBytes));
 }
@@ -51,3 +54,6 @@ BoolTypePtr BoolType::get(NodeManager& manager) {
 UnitTypePtr UnitType::get(NodeManager& manager) {
 	return manager.get(UnitType());
 }
+
+} // core
+} // insieme

@@ -46,6 +46,7 @@
 #include "functional_utils.h"
 #include "types.h"
 #include "expressions.h"
+#include "ast_builder.h"
 
 using namespace std;
 using namespace insieme::core;
@@ -71,7 +72,7 @@ Program::Program(SharedNodeManager manager, const DefinitionSet& definitions, co
 Program::Program() :
 	Node(PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
 
-ProgramPtr Program::createProgram(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
+ProgramPtr Program::create(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
 	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), definitions, entryPoints), true);
 }
 
@@ -106,6 +107,10 @@ ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
 
 ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
 	return ProgramPtr(new Program(nodeManager, definitions, difference(this->entryPoints, entryPoints)), true);
+}
+
+ASTBuilder Program::getASTBuilder() const {
+	return ASTBuilder(nodeManager);
 }
 
 bool Program::equals(const Node& other) const {
