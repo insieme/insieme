@@ -27,7 +27,7 @@ if(BUILD_DOCUMENTATION)
 	configure_file(Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile  @ONLY IMMEDIATE)
 	
 	if( $ENV{DOXYGEN_HOME} )
-		set(${DOXYGEN_EXECUTABLE} ${DOXYGEN_HOME}/bin/doxygen) 
+		set(DOXYGEN_EXECUTABLE ${DOXYGEN_HOME}/bin/doxygen) 
 	endif()
 	
 	#-- Add a custom target to run Doxygen when ever the project is built
