@@ -153,6 +153,12 @@ TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& element
 	return manager.get(TupleType(elementTypes));
 }
 
+Node::OptionChildList TupleType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	std::copy(elementTypes.cbegin(), elementTypes.cend(), iter);
+	return res;
+}
 
 // ---------------------------------------- Function Type ------------------------------
 
@@ -172,11 +178,11 @@ FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentT
 	return manager.get(FunctionType(argumentType, returnType));
 }
 
-OptionChildList FunctionType::getChildNodes() const {
+Node::OptionChildList FunctionType::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res.end());
-	iter = argumentType;
-	iter = returnType;
+	auto iter = inserter(*res, res->end());
+	*iter = argumentType;
+	*iter = returnType;
 	return res;
 }
 
@@ -255,15 +261,13 @@ GenericTypePtr GenericType::get(NodeManager& manager,
  *
  * @return the
  */
-OptionChildList GenericType::getChildNodes() const {
+Node::OptionChildList GenericType::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res.end());
-	std::copy(elementTypes.cbegin(), elementTypes.cend(), iter);
-
+	auto iter = inserter(*res, res->end());
+	std::copy(typeParams.cbegin(), typeParams.cend(), iter);
 	if (baseType) {
-		iter = baseType;
+		*iter = baseType;
 	}
-
 	return res;
 }
 
@@ -355,9 +359,9 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 	});
 }
 
-OptionChildList NamedCompositeType::getChildNodes() const {
+Node::OptionChildList NamedCompositeType::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	projectToSecond(entries.cbegin(), entries.cend(), inserter(*res, res.end()));
+	projectToSecond(entries.cbegin(), entries.cend(), inserter(*res, res->end()));
 	return res;
 }
 

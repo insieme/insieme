@@ -86,6 +86,14 @@ protected:
 		return false;
 	}
 
+	/**
+	 * The Expression class provides this default implementation of the getChildNodes() method
+	 * returning a list containing only the type of the expression.
+	 */
+	virtual OptionChildList getChildNodes() const {
+		return OptionChildList(new ChildList(1, type));
+	}
+
 public:
 
 	virtual ~Expression() {}
@@ -204,7 +212,10 @@ private:
 	virtual LambdaExpr* clone(NodeManager& manager) const;
 
 protected:
-	bool equalsExpr(const Expression& expr) const;
+
+	virtual bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -221,6 +232,8 @@ class TupleExpr : public Expression {
 
 protected:
 	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -239,6 +252,8 @@ protected:
 
 	const Members members;
 	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
 
 	Members getManagedMembers(NodeManager& manager) const;
 	static NamedCompositeType::Entries getTypeEntries(const Members& mem);
@@ -280,6 +295,8 @@ private:
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
 	
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -298,6 +315,8 @@ class CallExpr : public Expression {
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
 	
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -313,6 +332,8 @@ class CastExpr : public Expression {
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;

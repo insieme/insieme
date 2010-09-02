@@ -65,6 +65,16 @@ Program* Program::clone(NodeManager& manager) const {
 	return NULL;
 }
 
+/**
+ * Obtains a list of all nodes referenced by this program node.
+ */
+Node::OptionChildList Program::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	std::copy(definitions.cbegin(), definitions.cend(), iter);
+	std::copy(entryPoints.cbegin(), entryPoints.cend(), iter);
+	return res;
+}
 
 Program::Program(SharedNodeManager manager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
 	Node(PROGRAM, ::hash(definitions, entryPoints)), nodeManager(manager), definitions(definitions), entryPoints(entryPoints) { };

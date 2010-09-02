@@ -106,8 +106,6 @@ public:
 	 */
 	typedef vector<NodePtr> ChildList;
 
-protected:
-
 	/**
 	 * A type used to represent a optionally available child list.
 	 */

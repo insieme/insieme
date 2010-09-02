@@ -130,6 +130,13 @@ private:
 	 */
 	virtual Program* clone(NodeManager& manager) const;
 
+protected:
+
+	/**
+	 * Obtains a list of all nodes referenced by this program node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**

@@ -107,7 +107,6 @@ public:
 
 	virtual ~Statement() {}
 	virtual void printTo(std::ostream& out) const = 0;
-	virtual ChildList getChildren() const;
 };
 
 class BreakStmt : public Statement {
@@ -116,6 +115,7 @@ class BreakStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -130,6 +130,7 @@ class ContinueStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
@@ -146,10 +147,10 @@ class ReturnStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 
 	static ReturnStmtPtr get(NodeManager& manager, const ExpressionPtr& returnExpression);
 };
@@ -164,10 +165,10 @@ class DeclarationStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 
 	static DeclarationStmtPtr get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression);
 };
@@ -181,10 +182,10 @@ class CompoundStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 
 	const StatementPtr& operator[](unsigned index) const;
 
@@ -203,10 +204,10 @@ class WhileStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 
 	const ExpressionPtr& getCondition() const { return condition; }
 	const StatementPtr& getBody() const { return body; }
@@ -224,10 +225,10 @@ class ForStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 
 	const DeclarationStmtPtr& getDeclaration() const { return declaration; }
 	const StatementPtr& getBody() const { return body; }
@@ -247,10 +248,10 @@ class IfStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 	
 	const ExpressionPtr& getCondition() const { return condition; }
 	const StatementPtr& getThenBody() const { return thenBody; }
@@ -272,10 +273,10 @@ private:
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
 	
 	SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases);
 };

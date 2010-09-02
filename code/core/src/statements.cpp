@@ -60,10 +60,6 @@ bool Statement::equals(const Node& node) const {
 	return (typeid(*this) == typeid(stmt)) && equalsStmt(stmt);
 }
 
-Statement::ChildList Statement::getChildren() const {
-	return makeChildList();
-}
-
 std::size_t hash_value(const Statement& stmt) {
 	return stmt.hash();
 }
@@ -79,6 +75,11 @@ void BreakStmt::printTo(std::ostream& out) const {
 bool BreakStmt::equalsStmt(const Statement&) const {
 	// type has already been checked => all done
 	return true;
+}
+
+Node::OptionChildList BreakStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	return OptionChildList(new ChildList());
 }
 
 BreakStmt* BreakStmt::clone(NodeManager&) const {
@@ -100,6 +101,11 @@ void ContinueStmt::printTo(std::ostream& out) const {
 bool ContinueStmt::equalsStmt(const Statement&) const {
 	// type has already been checked => all done
 	return true;
+}
+
+Node::OptionChildList ContinueStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	return OptionChildList(new ChildList());
 }
 
 ContinueStmt* ContinueStmt::clone(NodeManager&) const {
@@ -132,12 +138,13 @@ bool ReturnStmt::equalsStmt(const Statement& stmt) const {
 	return (*returnExpression == *rhs.returnExpression);
 }
 
-ReturnStmt* ReturnStmt::clone(NodeManager& manager) const {
-	return new ReturnStmt(manager.get(*returnExpression));
+Node::OptionChildList ReturnStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	return OptionChildList(new ChildList());
 }
 
-ReturnStmt::ChildList ReturnStmt::getChildren() const {
-	return makeChildList(returnExpression);
+ReturnStmt* ReturnStmt::clone(NodeManager& manager) const {
+	return new ReturnStmt(manager.get(*returnExpression));
 }
 
 ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnExpression) {
@@ -171,10 +178,13 @@ DeclarationStmt* DeclarationStmt::clone(NodeManager& manager) const {
 	return new DeclarationStmt(manager.get(*varExpression), manager.get(*initExpression));
 }
 
-DeclarationStmt::ChildList DeclarationStmt::getChildren() const {
-	auto list = makeChildList(varExpression);
-	list->push_back(initExpression);
-	return list;
+Node::OptionChildList DeclarationStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	*iter = varExpression;
+	*iter = initExpression;
+	return res;
 }
 
 DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression) {
@@ -203,12 +213,17 @@ bool CompoundStmt::equalsStmt(const Statement& stmt) const {
 	return ::equals(statements, rhs.statements, equal_target<StatementPtr>());
 }
 
+
 CompoundStmt* CompoundStmt::clone(NodeManager& manager) const {
 	return new CompoundStmt(manager.getAll(statements));
 }
 
-CompoundStmt::ChildList CompoundStmt::getChildren() const {
-	return makeChildList(statements);
+Node::OptionChildList CompoundStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	std::copy(statements.cbegin(), statements.cend(), iter);
+	return res;
 }
 
 const StatementPtr&  CompoundStmt::operator[](unsigned index) const {
@@ -252,10 +267,13 @@ WhileStmt* WhileStmt::clone(NodeManager& manager) const {
 	return new WhileStmt(manager.get(*condition), manager.get(*body));
 }
 
-WhileStmt::ChildList WhileStmt::getChildren() const {
-	auto ret = makeChildList(condition);
-	ret->push_back(body);
-	return ret;
+Node::OptionChildList WhileStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	*iter = condition;
+	*iter = body;
+	return res;
 }
 
 WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
@@ -292,12 +310,15 @@ ForStmt* ForStmt::clone(NodeManager& manager) const {
 		manager.get(*end), manager.get(*step));
 }
 
-ForStmt::ChildList ForStmt::getChildren() const {
-	auto ret = makeChildList(declaration);
-	ret->push_back(end);
-	ret->push_back(step);
-	ret->push_back(body);
-	return ret;
+Node::OptionChildList ForStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	*iter = declaration;
+	*iter = step;
+	*iter = end;
+	*iter = body;
+	return res;
 }
 
 ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
@@ -333,11 +354,14 @@ bool IfStmt::equalsStmt(const Statement& stmt) const {
 	return (*condition == *rhs.condition) && (*thenBody == *rhs.thenBody) && (*elseBody == *rhs.elseBody);
 }
 
-IfStmt::ChildList IfStmt::getChildren() const {
-	auto ret = makeChildList(condition);
-	ret->push_back(thenBody);
-	ret->push_back(elseBody);
-	return ret;
+Node::OptionChildList IfStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	*iter = condition;
+	*iter = thenBody;
+	*iter = elseBody;
+	return res;
 }
 	
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
@@ -384,13 +408,16 @@ bool SwitchStmt::equalsStmt(const Statement& stmt) const {
 		[](const Case& l, const Case& r) { return *l.first == *r.first && *l.second == *r.second; });
 }
 
-SwitchStmt::ChildList SwitchStmt::getChildren() const {
-	auto ret = makeChildList(switchExpr);
-	std::for_each(cases.begin(), cases.end(), [&ret](Case cur) { 
-		ret->push_back(cur.first);
-		ret->push_back(cur.second);
+Node::OptionChildList SwitchStmt::getChildNodes() const {
+	// does not have any sub-nodes
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	*iter = switchExpr;
+	std::for_each(cases.cbegin(), cases.cend(), [&iter](const Case& cur) {
+		*iter = cur.first;
+		*iter = cur.second;
 	});
-	return ret;
+	return res;
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases) {
