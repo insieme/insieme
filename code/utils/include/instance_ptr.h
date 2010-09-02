@@ -152,3 +152,4 @@ std::ostream& operator<<(std::ostream& out, const InstancePtr<T>& ptr) {
 	return out;
 }
 
+

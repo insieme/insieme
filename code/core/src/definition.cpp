@@ -68,6 +68,16 @@ Definition::Definition(const Identifier& name, const TypePtr& type, const bool& 
 	:
 		Node(NodeType::DEFINITION, hashCode), name(name), type(type), external(external), definition(definition) { }
 
+Node::OptionChildList Definition::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res->end());
+	*iter = type;
+	if (definition) {
+		*iter = definition;
+	}
+	return res;
+}
+
 Definition* Definition::clone(NodeManager& manager) const {
 	return new Definition(name, manager.get(type), external, manager.get(definition), hashCode);
 }
@@ -99,12 +109,10 @@ bool Definition::equals(const Node& other) const {
 std::ostream& operator<<(std::ostream& out, const Definition& definition) {
 
 	// print this definition
-	out << "define " << definition.getName() << " : " << *definition.getType() << " = ";
+	out << ((definition.isExternal())?"external ":"") << "define " << definition.getName() << " : " << *definition.getType() << " = ";
 
 	// print defining body ...
-	if (definition.isExternal()) {
-		out << "<external>";
-	} else if (definition.isAbstract()) {
+	if (definition.isAbstract()) {
 		out << "<abstract>";
 	} else {
 		out << *(definition.getDefinition());

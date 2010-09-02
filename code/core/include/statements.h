@@ -69,8 +69,6 @@ DECLARE_NODE_TYPE(VarExpr);
 
 DECLARE_NODE_TYPE(Statement)
 
-DECLARE_NODE_TYPE(AtomicStmt) // TODO: implement atomic statement
-
 DECLARE_NODE_TYPE(BreakStmt)
 DECLARE_NODE_TYPE(ContinueStmt)
 DECLARE_NODE_TYPE(ReturnStmt)
@@ -87,14 +85,18 @@ DECLARE_NODE_TYPE(SwitchStmt)
 
 // ------------------------------------- Statements ---------------------------------
 
-class Statement : public Node, public Visitable<NodePtr> {
+/**
+ * The abstract statement class provides the foundation for all AST nodes representing statements
+ * and expressions.
+ */
+class Statement : public Node {
 	// needs InstanceManager not NodeManager since base type calls clone
 	friend class InstanceManager<Statement, AnnotatedPtr>;
 	virtual Statement* clone(NodeManager& manager) const = 0;
 
 protected:
 
-	Statement(std::size_t hashCode) : Node(STATEMENT, hashCode) {}
+	Statement(std::size_t hashCode, bool isExpr = false) : Node((isExpr)?EXPRESSION:STATEMENT, hashCode) {}
 
 	virtual bool equals(const Node& node) const;
 	virtual bool equalsStmt(const Statement& stmt) const = 0;

@@ -36,51 +36,59 @@
 
 #pragma once
 
-#include <iostream>
-#include <set>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <memory>
+#include <unordered_map>
+#include <boost/functional/hash.hpp>
 
-#include "instance_ptr.h"
-#include "type_traits_utils.h"
+#include "hash_utils.h"
+#include "functional_utils.h"
 
-class Annotation;
+class AnnotationKey : public insieme::utils::HashableImmutableData<AnnotationKey> {
+	AnnotationKey(std::size_t hashCode) : HashableImmutableData(hashCode) {};
+};
+
+
+class Annotation {
+public:
+	virtual const AnnotationKey* getKey() const = 0;
+};
+
+typedef std::shared_ptr<Annotation> ManagedAnnotation;
+typedef std::unordered_map<const AnnotationKey*, ManagedAnnotation, hash_target<const AnnotationKey*>> AnnotationMap;
+typedef std::shared_ptr<AnnotationMap> SharedAnnotationMap;
 
 class Annotatable {
-	std::set<Annotation> *annotations;
+	SharedAnnotationMap map;
 public:
-	void addAnnotation(const Annotation&) {};
-};
+	void addAnnotation(const ManagedAnnotation& annotation) {
+		map->insert(std::make_pair(annotation->getKey(), annotation));
+	};
 
-template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, Annotatable {
-public:
-	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
-
-	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) :
-		InstancePtr<T>(from.ptr) { }
-};
-
-template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
-dynamic_pointer_cast(AnnotatedPtr<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
+	ManagedAnnotation getAnnotation(const AnnotationKey* key) const {
+		auto pos = map->find(key);
+		if (pos == map->end()) {
+			return ManagedAnnotation();
+		}
+		return (*pos).second;
 	}
-//	return NullInstance;
-	return NULL;
-}
 
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const AnnotatedPtr<T>& ptr) {
-//	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
-	out << "AP(";
-	if (!!ptr) {
-		out << *ptr;
-	} else {
-		out << "NULL";
+	ManagedAnnotation getAnnotation(const AnnotationKey& key) const {
+		return getAnnotation(&key);
 	}
-	out << ")";
-	return out;
-}
+
+	void remAnnotation(const AnnotationKey* key) {
+		map->erase(map->find(key));
+	}
+
+	void remAnnotation(const AnnotationKey& key) {
+		remAnnotation(&key);
+	}
+
+	bool contains(const AnnotationKey* key) const {
+		return map->find(key) != map->end();
+	}
+
+	bool contains(const AnnotationKey& key) const {
+		return contains(&key);
+	}
+};

@@ -36,17 +36,17 @@
 
 #pragma once
 
+#include <cassert>
 #include <memory>
 
 #include "annotated_ptr.h"
 #include "ast_node.h"
 #include "identifiers.h"
+#include "statements.h"
 #include "types.h"
 
 namespace insieme {
 namespace core {
-
-DECLARE_NODE_TYPE(Statement);
 
 // Forward Declarations { -----------------------------------------------------
 
@@ -67,16 +67,21 @@ DECLARE_NODE_TYPE(LambdaExpr);
 
 // Forward Declarations } -----------------------------------------------------
 
-class Expression : public Node {
+class Expression : public Statement {
 protected:	
 
 	/** The type of the expression. */
 	const TypePtr type;
 	
-	Expression(const TypePtr& type, const std::size_t& hashCode) : Node(EXPRESSION, hashCode), type(type) { };
+	Expression(const TypePtr& type, const std::size_t& hashCode) : Statement(hashCode, true), type(type) { };
 
 	virtual bool equals(const Node& stmt) const;
 	virtual bool equalsExpr(const Expression& expr) const = 0;
+
+	virtual bool equalsStmt(const Statement& stmt) const {
+		assert( false && "Should not be compared with a statement!");
+		return false;
+	}
 
 public:
 

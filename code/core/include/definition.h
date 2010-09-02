@@ -122,6 +122,13 @@ private:
 	 */
 	Definition* clone(NodeManager& manager) const;
 
+protected:
+
+	/**
+	 * Creates a list of node pointer referencing all referenced nodes.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**

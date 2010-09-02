@@ -172,6 +172,14 @@ FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentT
 	return manager.get(FunctionType(argumentType, returnType));
 }
 
+OptionChildList FunctionType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res.end());
+	iter = argumentType;
+	iter = returnType;
+	return res;
+}
+
 // ---------------------------------------- Generic Type ------------------------------
 
 /**
@@ -247,12 +255,13 @@ GenericTypePtr GenericType::get(NodeManager& manager,
  *
  * @return the
  */
-GenericType::ChildList GenericType::getChildren() const {
-	auto res = makeChildList(typeParams);
+OptionChildList GenericType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	auto iter = inserter(*res, res.end());
+	std::copy(elementTypes.cbegin(), elementTypes.cend(), iter);
 
-	// further add base types
-	if (!!baseType) {
-		res->push_back(baseType);
+	if (baseType) {
+		iter = baseType;
 	}
 
 	return res;
@@ -344,6 +353,12 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 		[](const Entry& cur) {
 			return cur.second->isConcrete();
 	});
+}
+
+OptionChildList NamedCompositeType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	projectToSecond(entries.cbegin(), entries.cend(), inserter(*res, res.end()));
+	return res;
 }
 
 

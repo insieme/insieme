@@ -39,6 +39,7 @@
 #include <cassert>
 
 #include "annotated_ptr.h"
+#include "hash_utils.h"
 #include "instance_manager.h"
 
 namespace insieme {
@@ -86,13 +87,12 @@ inline bool isNodeType(const NodeType& value) {
  * (including to be hash- and comparable, such that instances can be used within unordered
  * sets).
  */
-class Node {
+class Node : public insieme::utils::HashableImmutableData<Node> {
 
 	/**
 	 * Allow the instance manager to access the private clone method.
 	 */
 	friend class InstanceManager<Node, AnnotatedPtr>;
-
 
 public:
 
@@ -101,6 +101,18 @@ public:
 	 */
 	typedef NodeManager Manager;
 
+	/**
+	 * The type used to represent the list of children of a node.
+	 */
+	typedef vector<NodePtr> ChildList;
+
+protected:
+
+	/**
+	 * A type used to represent a optionally available child list.
+	 */
+	typedef std::shared_ptr<ChildList> OptionChildList;
+
 private:
 
 	/**
@@ -108,7 +120,10 @@ private:
 	 */
 	const NodeType nodeType;
 
-private:
+	/**
+	 * The list of child nodes referenced by this node.
+	 */
+	mutable OptionChildList children;
 
 	/**
 	 * Retrieves a clone of this node, hence a newly allocated instance representing the same value
@@ -123,32 +138,19 @@ private:
 protected:
 
 	/**
-	 * The hash value of this node derived once during its construction. This value will be required
-	 * frequently, hence evaluating it once and reusing it helps reducing computational overhead. Since
-	 * AST nodes are immutable, the hash does not have to be altered after the creation of a node.
-	 */
-	const std::size_t hashCode;
-
-	/**
 	 * Construct a new node instance based on the essential features.
 	 *
 	 * @param nodeType the type of node to be created
 	 * @param hashCode the hash code of the new node
 	 */
-	Node(const NodeType& nodeType, const std::size_t& hashCode) : nodeType(nodeType), hashCode(hashCode) {
+	Node(const NodeType& nodeType, const std::size_t& hashCode) : HashableImmutableData(hashCode), nodeType(nodeType) {
 		assert(isNodeType(nodeType) && "Given Node type is not valid!");
 	}
 
 	/**
-	 * A hooker method to be implemented by sub-classes to compare instances with other
-	 * node instances.
-	 *
-	 * @param other the node to be compared to. The handed in element will already be checked for
-	 * 				identity, node type and hash value. Hence, simple checks may be omitted within
-	 * 				the implementation of this method.
-	 * @return true if equivalent, false otherwise.
+	 * Requests a list of child nodes from the actual node implementation.
 	 */
-	virtual bool equals(const Node& other) const = 0;
+	virtual OptionChildList getChildNodes() const = 0;
 
 public:
 
@@ -159,16 +161,17 @@ public:
 	virtual ~Node() {};
 
 	/**
-	 * Computes a hash code for this node. The actual computation has to be conducted by
-	 * subclasses. This class will only return the hash code passed on through the constructor.
+	 * Retrieves a reference to the internally maintained list of child nodes. The
+	 * retrieved list is valid as long as this node exists. Hence, during its destruction,
+	 * the returned list will also be eliminated.
 	 *
-	 * Note: this function is not virtual, so it should not be overridden in sub-classes.
-	 *
-	 * @return the hash code derived for this type.
+	 * @return a reference to the inter
 	 */
-	std::size_t hash() const {
-		// retrieve cached hash code
-		return hashCode;
+	const ChildList& getChildList() const {
+		if (!children) {
+			children = getChildNodes();
+		}
+		return *children;
 	}
 
 	/**
@@ -206,31 +209,13 @@ public:
 		return equals(other);
 	}
 
-	/**
-	 * Implementing the not-equal operator for AST nodes by negating the equals
-	 * operator.
-	 */
-	bool operator!=(const Node& other) const {
-		return !(*this == other);
-	}
 };
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.
  */
 class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
-
 typedef std::shared_ptr<NodeManager> SharedNodeManager;
-
-/**
- * Integrates the hash code computation for nodes into the boost hash code framework.
- *
- * @param node the node for which a hash code should be obtained.
- * @return the hash code of the given node
- */
-inline std::size_t hash_value(const insieme::core::Node& node) {
-	return node.hash();
-}
 
 } // end namespace core
 } // end namespace insieme

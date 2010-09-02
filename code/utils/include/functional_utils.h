@@ -37,8 +37,9 @@
 #pragma once
 
 #include <boost/functional/hash.hpp>
-
-
+#include <boost/type_traits/is_pointer.hpp>
+#include <boost/type_traits/remove_pointer.hpp>
+#include <boost/utility/enable_if.hpp>
 
 template<typename T>
 struct id : public std::unary_function<T, T> {
@@ -84,24 +85,13 @@ struct equal_target: public std::binary_function<const PointerType&, const Point
  */
 template<typename PointerType>
 struct hash_target: public std::unary_function<const PointerType, std::size_t> {
-	typedef typename PointerType::element_type element_type;
-
-	/**
-	 * This function is used to compute the hash of the actual target.
-	 */
-	boost::hash<element_type> hasher;
-
-	/**
-	 * Explicit Default constructor required by VC.
-	 */
-	hash_target() : hasher() {	}
 
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to.
 	 */
 	std::size_t operator()(const PointerType p) const {
 		if (!!p) {
-			return hasher(*p);
+			return hash_value(*p);
 		}
 		return 0;
 	}

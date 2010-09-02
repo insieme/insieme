@@ -59,17 +59,21 @@ TEST(Program, HelloWorld) {
 	TypePtr unitType = build.unitType();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
-	auto printfDefinition = build.definition("printf", printfType);
+	auto printfDefinition = build.definition("printf", printfType, NULL, true);
 
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	auto invocation = build.breakStmt();
+	ExpressionPtr intLiteral = build.intLiteral(4);
+	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
 	auto mainDefinition = build.definition("main", voidNullaryFunctionType, mainBody, false);
 	
-	ProgramPtr pro = build.createProgram(toSet<Program::DefinitionSet>(printfDefinition, mainDefinition));
+	ProgramPtr pro = build.createProgram(
+		toSet<Program::DefinitionSet>(printfDefinition, mainDefinition),
+		toSet<Program::EntryPointSet>(build.varExpr(voidNullaryFunctionType, "main"))
+	);
 
 	cout << pro;
 }

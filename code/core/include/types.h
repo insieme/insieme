@@ -99,7 +99,7 @@ class IntTypeParam;
  * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
  * both). Variable types can only be used as the input/output types of functions.
  */
-class Type: public Node, public Visitable<NodePtr> {
+class Type: public Node {
 
 	/**
 	 * Allow the test case to access private methods.
@@ -197,19 +197,6 @@ public:
 		return name.compare(ref.name) == 0;
 	}
 
-	/**
-	 * Retrieves references to types revered to by this type. The default implementation
-	 * returns and empty list. Sub-classes may override the method to return sub-types.
-	 *
-	 * The method is mainly used to ensure that all types referred to by one type are present
-	 * within the same type manager (to ensure their existence).
-	 *
-	 * @return a list containing all types this type is based on.
-	 */
-	virtual ChildList getChildren() const {
-		return makeChildList();
-	}
-
 
 	// ---------------------------------- Type Utils ----------------------------------------
 
@@ -244,6 +231,16 @@ class TypeVariable: public Type {
 	 */
 	virtual TypeVariable* clone(NodeManager&) const {
 		return new TypeVariable(*this);
+	}
+
+protected:
+
+	/**
+	 * Creates a empty child list since this node represents a terminal node.
+	 */
+	virtual OptionChildList getChildNodes() const {
+		// return an option child list filled with an empty list
+		return OptionChildList(new ChildList());
 	}
 
 public:
@@ -302,6 +299,13 @@ private:
 		return new TupleType(manager.getAll(elementTypes));
 	}
 
+protected:
+
+	/**
+	 * Creates a empty child list since this node represents a terminal node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**
@@ -314,12 +318,6 @@ public:
 	 */
 	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes = ElementTypeList());
 
-	/**
-	 * Obtains a list of all types referenced by this tuple type.
-	 */
-	virtual ChildList getChildren() const {
-		return makeChildList(elementTypes);
-	}
 };
 
 // ---------------------------------------- Function Type ------------------------------
@@ -358,6 +356,13 @@ class FunctionType: public Type {
 		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
 
+protected:
+
+	/**
+	 * Creates a empty child list since this node represents a terminal node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**
@@ -371,16 +376,6 @@ public:
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
 	static FunctionTypePtr get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
-
-	/**
-	 * Obtains a list of all types referenced by this function type.
-	 */
-	virtual ChildList getChildren() const {
-		ChildList res = makeChildList();
-		res->push_back(argumentType);
-		res->push_back(returnType);
-		return res;
-	}
 
 };
 
@@ -578,6 +573,12 @@ protected:
 		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
 
+	/**
+	 * Obtains a list of all type parameters and the optional base type
+	 * referenced by this generic type.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**
@@ -595,14 +596,6 @@ public:
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
-
-	/**
-	 * Retrieves a list of all types referenced by this generic type. This
-	 * list includes the all type parameters and the base type.
-	 *
-	 * @return the set of all referenced types.
-	 */
-	virtual ChildList getChildren() const;
 
 	/**
 	 * Retrieves all type parameter associated to this generic type.
@@ -673,6 +666,12 @@ protected:
 
 	static Entries getEntriesFromManager(NodeManager& manager, Entries entries);
 
+
+	/**
+	 * Obtains a list of all child sub-types used within this struct.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**
@@ -684,26 +683,7 @@ public:
 		return entries;
 	}
 
-	/**
-	 * Retrieves the child types referenced by this generic type.
-	 *
-	 * @return the
-	 */
-	virtual ChildList getChildren() const {
-		auto res = makeChildList();
-
-		// add all referenced types
-		std::transform(entries.cbegin(), entries.cend(), back_inserter(*res),
-			[](const Entry& cur) {
-				return cur.second;
-		});
-
-		// return resulting type
-		return res;
-	}
-
 private:
-
 
 	/**
 	 * A static utility function composing the name of this type.
