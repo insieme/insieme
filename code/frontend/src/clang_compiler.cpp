@@ -147,6 +147,19 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 }
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
+
+	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
+	Diagnostic* diags = new Diagnostic(diagClient);
+	pimpl->clang.setDiagnostics(diags);
+
+	pimpl->clang.createFileManager();
+	pimpl->clang.createSourceManager();
+
+	TargetOptions TO;
+	TO.Triple = llvm::sys::getHostTriple();
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
+
+	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
 }
 

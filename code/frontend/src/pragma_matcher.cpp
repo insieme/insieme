@@ -53,6 +53,16 @@ using namespace insieme::frontend;
 
 #include <sstream>
 
+namespace {
+void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
+	std::vector<std::string> list;
+	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
+
+	ss << boost::join(list, " | ");
+	ss << std::endl;
+}
+}
+
 namespace insieme {
 namespace frontend {
 
@@ -112,14 +122,6 @@ void ParserStack::discardPrevRecords(size_t recordId) {
 }
 
 const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const { return mRecords[recordId]; }
-
-void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
-	std::vector<std::string> list;
-	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
-
-	ss << boost::join(list, " | ");
-	ss << std::endl;
-}
 
 void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 	TextDiagnosticPrinter &tdc = (TextDiagnosticPrinter&) *pp.getDiagnostics().getClient();

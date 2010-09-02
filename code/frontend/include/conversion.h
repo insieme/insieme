@@ -52,18 +52,6 @@ namespace insieme {
 class ClangStmtConverter;
 class ClangTypeConverter;
 
-struct TypeWrapper {
-	core::TypePtr ref;
-	TypeWrapper(): ref(core::TypePtr(NULL)) { }
-	TypeWrapper(core::TypePtr type): ref(type) { }
-};
-
-struct StmtWrapper {
-	core::StatementPtr ref;
-	StmtWrapper(): ref(core::StatementPtr(NULL)) { }
-	StmtWrapper(core::StatementPtr stmt): ref(core::StatementPtr(stmt)) { }
-};
-
 class ConversionFactory {
 	ClangStmtConverter* stmtConv;
 	ClangTypeConverter* typeConv;
@@ -76,8 +64,8 @@ class ConversionFactory {
 	}
 public:
 	static void init(core::SharedNodeManager mgr) { get(mgr); }
-	static TypeWrapper ConvertType(const clang::Type& type);
-	static StmtWrapper ConvertStmt(const clang::Stmt& stmt);
+	static core::TypePtr ConvertType(const clang::Type& type);
+	static core::StatementPtr ConvertStmt(const clang::Stmt& stmt);
 
 	~ConversionFactory();
 };

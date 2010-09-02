@@ -47,9 +47,9 @@ using namespace insieme::frontend;
 using namespace insieme::core;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ insieme::TypeWrapper convType = insieme::ConversionFactory::ConvertType( clang::BuiltinType(clang::BuiltinType::TypeName) ); \
-	EXPECT_TRUE(convType.ref); \
-	EXPECT_EQ(InsiemeTypeDesc, convType.ref->getName()); }
+	{ TypePtr convType = insieme::ConversionFactory::ConvertType( clang::BuiltinType(clang::BuiltinType::TypeName) ); \
+	EXPECT_TRUE(convType); \
+	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); }
 
 TEST(TypeConversion, HandleBuildinTypes) {
 
@@ -97,5 +97,20 @@ TEST(TypeConversion, HandleBuildinTypes) {
 	CHECK_BUILTIN_TYPE(Double, "real<8>");
 	// LongDouble
 	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+
+}
+
+TEST(TypeConversion, HandlePointerTypes) {
+
+	ProgramPtr prog = Program::create();
+	insieme::ConversionFactory::init( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	clang::BuiltinType intTy(clang::BuiltinType::Int);
+	clang::QualType pointerTy = clang.getASTContext().getPointerType(clang::QualType(&intTy, 0));
+
+	TypePtr insiemeTy = insieme::ConversionFactory::ConvertType( *pointerTy.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
 
 }

@@ -53,6 +53,20 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
+namespace {
+struct TypeWrapper {
+	core::TypePtr ref;
+	TypeWrapper(): ref(core::TypePtr(NULL)) { }
+	TypeWrapper(core::TypePtr type): ref(type) { }
+};
+
+struct StmtWrapper {
+	core::StatementPtr ref;
+	StmtWrapper(): ref(core::StatementPtr(NULL)) { }
+	StmtWrapper(core::StatementPtr stmt): ref(core::StatementPtr(stmt)) { }
+};
+}
+
 namespace insieme {
 
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
@@ -231,13 +245,25 @@ public:
 		return TypeWrapper();
 	}
 
-	TypeWrapper VisitComplexType(ComplexType* bulinTy) { return TypeWrapper(); }
+	TypeWrapper VisitComplexType(ComplexType* bulinTy) {
+		LOG(INFO) << "Converting complex type";
+		return TypeWrapper();
+	}
 
-	TypeWrapper VisitArrayType(ArrayType* arrTy) { return TypeWrapper(); }
+	TypeWrapper VisitArrayType(ArrayType* arrTy) {
+		LOG(INFO) << "Converting array type";
+		return TypeWrapper();
+	}
 
-	TypeWrapper VisitFunctionType(FunctionType* funcTy) { return TypeWrapper(); }
+	TypeWrapper VisitFunctionType(FunctionType* funcTy) {
+		LOG(INFO) << "Converting function type";
+		return TypeWrapper();
+	}
 
-	TypeWrapper VisitPointerType(PointerType* pointerTy) { return TypeWrapper(); }
+	TypeWrapper VisitPointerType(PointerType* pointerTy) {
+		LOG(INFO) << "Converting pointer type";
+		return TypeWrapper( core::RefType::get(mgr, Visit(pointerTy-> getPointeeType().getTypePtr()).ref) );
+	}
 
 	TypeWrapper VisitReferenceType(ReferenceType* refTy) { return TypeWrapper(); }
 
@@ -245,9 +271,13 @@ public:
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr): stmtConv(new ClangStmtConverter(mgr)), typeConv(new ClangTypeConverter(mgr)) { }
 
-TypeWrapper ConversionFactory::ConvertType(const clang::Type& type) { return get().typeConv->Visit(const_cast<Type*>(&type)); }
+core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
+	return get().typeConv->Visit(const_cast<Type*>(&type)).ref;
+}
 
-StmtWrapper ConversionFactory::ConvertStmt(const clang::Stmt& stmt) { return get().stmtConv->Visit(const_cast<Stmt*>(&stmt)); }
+core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
+	return get().stmtConv->Visit(const_cast<Stmt*>(&stmt)).ref;
+}
 
 ConversionFactory::~ConversionFactory() {
 	delete typeConv;
