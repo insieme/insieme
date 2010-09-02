@@ -53,8 +53,8 @@ using std::string;
 
 class ASTBuilder {
 
-	SharedNodeManager sharedManager;
-	NodeManager& manager;
+	mutable SharedNodeManager sharedManager;
+	mutable NodeManager& manager;
 
 public:
 	ASTBuilder(const SharedNodeManager& manager = SharedNodeManager(new NodeManager())) : sharedManager(manager), manager(*sharedManager) { }

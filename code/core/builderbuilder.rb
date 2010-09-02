@@ -34,15 +34,15 @@ File.open("include/ast_builder_decls.inl", "w+") { |inlDeclFile|
 		typeName = sig[0][0..-4]
 		params = sig[2]
 		funDecl = "#{typeName.sub(/[A-Z]/) {|c| c.downcase}}(#{params})"
-		inlFile.puts("#{sig[0].ljust(30)} #{funDecl};")
+		inlFile.puts("#{sig[0].ljust(30)} #{funDecl} const;")
 		if(params)
 			# remove default param assignments
 			params = params.split(",").map { |param| param.sub(/=.*/,"").strip }.join(", ")
 			funDecl = "#{typeName.sub(/[A-Z]/) {|c| c.downcase}}(#{params})"
 			paramNames = params.split(",").map { |param| param[/\w* *\z/].strip }.join(", ")
-			inlFileImpl.puts("#{sig[0].ljust(18)} ASTBuilder::#{funDecl} { return #{typeName}::get(manager, #{paramNames}); }")
+			inlFileImpl.puts("#{sig[0].ljust(18)} ASTBuilder::#{funDecl} const { return #{typeName}::get(manager, #{paramNames}); }")
 		else
-			inlFileImpl.puts("#{sig[0].ljust(18)} ASTBuilder::#{funDecl} { return #{typeName}::get(manager); }")
+			inlFileImpl.puts("#{sig[0].ljust(18)} ASTBuilder::#{funDecl} const { return #{typeName}::get(manager); }")
 		end
 		inlDeclFile.puts("class #{typeName}; typedef AnnotatedPtr<const #{typeName}> #{sig[0]};")
 	}
