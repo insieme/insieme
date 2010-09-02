@@ -70,9 +70,9 @@ struct StmtWrapper {
 namespace insieme {
 
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
-	core::NodeManager& mgr;
+	ConversionFactory& convFact;
 public:
-	ClangStmtConverter(core::NodeManager& mgr): mgr(mgr) { }
+	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
 
 	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl);
 
@@ -182,59 +182,60 @@ public:
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
-	core::NodeManager& mgr;
+	ConversionFactory& 		convFact;
+	const core::ASTBuilder&	builder;
 
 public:
-	ClangTypeConverter(core::NodeManager& mgr): mgr(mgr) { }
+	ClangTypeConverter(ConversionFactory& convFact): convFact(convFact), builder(convFact.builder()) { }
 
 	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
 
 		switch(buldInTy->getKind()) {
-		case BuiltinType::Void:  	return TypeWrapper( core::GenericType::get(mgr, "unit") );
-		case BuiltinType::Bool:		return TypeWrapper( core::GenericType::get(mgr, "bool") );
+		case BuiltinType::Void:  	return TypeWrapper( builder.unitType() );
+		case BuiltinType::Bool:		return TypeWrapper( builder.boolType() );
 		// char types
 		case BuiltinType::Char_U:
 		case BuiltinType::UChar:
-			return TypeWrapper( core::GenericType::get(mgr, "uchar") );
+			return TypeWrapper( builder.genericType("uchar") );
 		case BuiltinType::Char16:
-			return TypeWrapper( core::GenericType::get(mgr, "char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char16_t) )) );
+			return TypeWrapper( builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char16_t) )) );
 		case BuiltinType::Char32:
-			return TypeWrapper( core::GenericType::get(mgr, "char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char32_t) )) );
+			return TypeWrapper( builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char32_t) )) );
 		case BuiltinType::Char_S:
 		case BuiltinType::SChar:
-			return TypeWrapper( core::GenericType::get(mgr, "char") );
+			return TypeWrapper( builder.genericType("char") );
 		case BuiltinType::WChar:
-			return TypeWrapper( core::GenericType::get(mgr, "wchar") );
+			return TypeWrapper( builder.genericType("wchar") );
 		// short types
 		case BuiltinType::UShort:
-			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned short) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned short) )) );
 		case BuiltinType::Short:
-			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(short) )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(short) )) );
 		// integer types
 		case BuiltinType::UInt:
-			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned int) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned int) )) );
 		case BuiltinType::Int:
-			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(int) )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(int) )) );
 		case BuiltinType::UInt128:
-			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
 		case BuiltinType::Int128:
-			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
 		// long types
 		case BuiltinType::ULong:
-			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long) )) );
 		case BuiltinType::ULongLong:
-			return TypeWrapper( core::GenericType::get(mgr, "uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long long) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long long) )) );
 		case BuiltinType::Long:
-			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long) )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long) )) );
 		case BuiltinType::LongLong:
-			return TypeWrapper( core::GenericType::get(mgr, "int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long long) )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long long) )) );
 		// float types
 		case BuiltinType::Float:
-			return TypeWrapper( core::GenericType::get(mgr, "real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(float) )) );
+			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(float) )) );
 		case BuiltinType::Double:
-			return TypeWrapper( core::GenericType::get(mgr, "real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(double) )) );
+			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(double) )) );
 		case BuiltinType::LongDouble:
-			return TypeWrapper( core::GenericType::get(mgr, "real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long double) )) );
+			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long double) )) );
 		case BuiltinType::NullPtr:
 		case BuiltinType::Overload:
 		case BuiltinType::Dependent:
@@ -262,21 +263,22 @@ public:
 
 	TypeWrapper VisitPointerType(PointerType* pointerTy) {
 		LOG(INFO) << "Converting pointer type";
-		return TypeWrapper( core::RefType::get(mgr, Visit(pointerTy-> getPointeeType().getTypePtr()).ref) );
+		return TypeWrapper( builder.refType(Visit(pointerTy-> getPointeeType().getTypePtr()).ref) );
 	}
 
 	TypeWrapper VisitReferenceType(ReferenceType* refTy) { return TypeWrapper(); }
 
 };
 
-ConversionFactory::ConversionFactory(core::NodeManager& mgr): stmtConv(new ClangStmtConverter(mgr)), typeConv(new ClangTypeConverter(mgr)) { }
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mMgr(mgr), mBuilder(mgr),
+		stmtConv(new ClangStmtConverter(*this)), typeConv(new ClangTypeConverter(*this)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-	return get().typeConv->Visit(const_cast<Type*>(&type)).ref;
+	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-	return get().stmtConv->Visit(const_cast<Stmt*>(&stmt)).ref;
+	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).ref;
 }
 
 ConversionFactory::~ConversionFactory() {
@@ -288,10 +290,10 @@ ConversionFactory::~ConversionFactory() {
 
 StmtWrapper ClangStmtConverter::VisitVarDecl(clang::VarDecl* varDecl) {
 
-	TypeWrapper tw = ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
+	// TypeWrapper tw = ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
 
-	if(!!tw.ref)
-		DLOG(INFO) << tw.ref->toString();
+//	if(!!tw.ref)
+//		DLOG(INFO) << tw.ref->toString();
 
 //	PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
 //	// registering variable in the var map

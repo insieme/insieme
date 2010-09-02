@@ -38,6 +38,7 @@
 
 #include "pragma_handler.h"
 #include "program.h"
+#include "ast_builder.h"
 
 #include "clang/AST/ASTConsumer.h"
 
@@ -53,19 +54,19 @@ class ClangStmtConverter;
 class ClangTypeConverter;
 
 class ConversionFactory {
+	core::SharedNodeManager  mMgr;
+	const core::ASTBuilder   mBuilder;
+
 	ClangStmtConverter* stmtConv;
 	ClangTypeConverter* typeConv;
 
-	ConversionFactory(core::NodeManager& mgr);
-
-	static ConversionFactory& get(core::SharedNodeManager mgr = core::SharedNodeManager(new core::NodeManager())) {
-		static ConversionFactory theConversionFactory(*mgr);
-		return theConversionFactory;
-	}
 public:
-	static void init(core::SharedNodeManager mgr) { get(mgr); }
-	static core::TypePtr ConvertType(const clang::Type& type);
-	static core::StatementPtr ConvertStmt(const clang::Stmt& stmt);
+	ConversionFactory(core::SharedNodeManager mgr);
+
+	core::TypePtr 		ConvertType(const clang::Type& type);
+	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
+	core::SharedNodeManager&	manager() { return mMgr; }
+	const core::ASTBuilder& 	builder() const { return mBuilder; }
 
 	~ConversionFactory();
 };
@@ -77,9 +78,7 @@ class InsiemeIRConsumer: public clang::ASTConsumer {
 	insieme::core::SharedNodeManager mDataMgr;
 
 public:
-	InsiemeIRConsumer(const insieme::core::SharedNodeManager& dataMgr) : mCtx(NULL), mDataMgr(dataMgr){
-		ConversionFactory::init(mDataMgr);
-	}
+	InsiemeIRConsumer(const insieme::core::SharedNodeManager& dataMgr) : mCtx(NULL), mDataMgr(dataMgr){ }
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
