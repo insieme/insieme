@@ -62,8 +62,11 @@ DECLARE_NODE_TYPE(CallExpr);
 DECLARE_NODE_TYPE(CastExpr);
 
 DECLARE_NODE_TYPE(TupleExpr);
+DECLARE_NODE_TYPE(NamedCompositeExpr);
+DECLARE_NODE_TYPE(StructExpr);
+DECLARE_NODE_TYPE(UnionExpr);
+DECLARE_NODE_TYPE(JobExpr);
 DECLARE_NODE_TYPE(LambdaExpr);
-
 
 // Forward Declarations } -----------------------------------------------------
 
@@ -226,22 +229,64 @@ public:
 };
 
 
-//class StructUnionExpr : public Expression {
-//	const vector<VarExprPtr> members;
-//
-//	TupleExpr(const TypePtr& type, const vector<ExprPtr>& expressions) 
-//		: Expression(type), expressions(expressions) { };
-//	virtual TupleExpr* clone(StatementManager& manager) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//
-//public:
-//	virtual void printTo(std::ostream& out) const;
-//	virtual std::size_t hash() const;
-//
-//	static TupleExprPtr get(StatementManager& manager, const vector<ExprPtr>& expressions);
-//};
+class NamedCompositeExpr : public Expression {
+public:
+	typedef std::pair<Identifier, ExpressionPtr> Member;
+	typedef std::vector<Member> Members;
+
+protected:
+	NamedCompositeExpr(const TypePtr& type, size_t hashval, const Members& members);
+
+	const Members members;
+	bool equalsExpr(const Expression& expr) const;
+
+	Members getManagedMembers(NodeManager& manager) const;
+	static NamedCompositeType::Entries getTypeEntries(const Members& mem);
+};
+
+class StructExpr : public NamedCompositeExpr {
+	StructExpr(const TypePtr& type, const Members& members);
+	virtual StructExpr* clone(NodeManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	static StructExprPtr get(NodeManager& manager, const Members& members);
+};
+
+class UnionExpr : public NamedCompositeExpr {
+	UnionExpr(const TypePtr& type, const Members& members);
+	virtual UnionExpr* clone(NodeManager& manager) const;
+
+public:
+	virtual void printTo(std::ostream& out) const;
+	static UnionExprPtr get(NodeManager& manager, const Members& members);
+};
+
+
+class JobExpr : public Expression {
+public:
+	typedef std::vector<DeclarationStmtPtr> LocalDecls;
+	typedef std::pair<ExpressionPtr, StatementPtr> GuardedStmt;
+	typedef std::vector<GuardedStmt> GuardedStmts;
+
+private:
+	LocalDecls localDecls;
+	GuardedStmts guardedStmts;
+	StatementPtr defaultStmt;
+
+	JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, 
+		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
+	virtual JobExpr* clone(NodeManager& manager) const;
+	
+protected:
+	bool equalsExpr(const Expression& expr) const;
+	
+public:
+	virtual void printTo(std::ostream& out) const;
+
+	static JobExprPtr get(NodeManager& manager, const StatementPtr& defaultStmt, 
+		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
+};
 
 
 class CallExpr : public Expression {
