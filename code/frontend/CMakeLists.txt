@@ -58,9 +58,9 @@ else()
 endif() 
 
 
-# build the utils library
+# build the frontend library
 add_library(insieme_frontend ${insieme_frontend_srcs} ${insieme_frontend_incs} )
-target_link_libraries(insieme_frontend ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
+target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
 
 # enable tests for this project
 find_package(GTest REQUIRED)
