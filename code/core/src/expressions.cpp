@@ -46,7 +46,7 @@ using namespace insieme::core;
 enum {
 	HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
-	HASHVAL_TUPLEEXPR, HASHVAL_PARENEXPR
+	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -228,6 +228,118 @@ TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& e
 	return manager.get(TupleExpr(TupleType::get(manager, elemTypes), expressions));
 }
 
+// ------------------------------------- NamedCompositeExpr ---------------------------------
+
+NamedCompositeExpr::NamedCompositeExpr(const TypePtr& type, size_t hashval, const Members& members)
+	: Expression(type, hashval), members(members) { }
+
+bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const NamedCompositeExpr& rhs = static_cast<const NamedCompositeExpr&>(expr);
+	return ::equals(members, rhs.members, [](const Member& l, const Member& r) { 
+		return l.first == r.first && *l.second == *r.second; });
+}
+
+NamedCompositeExpr::Members NamedCompositeExpr::getManagedMembers(NodeManager& manager) const {
+	Members managedMembers;
+	std::transform(members.cbegin(), members.cend(), std::back_inserter(managedMembers), [&manager](const Member& m) {
+		return NamedCompositeExpr::Member(m.first, manager.get(m.second)); });
+	return managedMembers;
+}
+
+NamedCompositeType::Entries NamedCompositeExpr::getTypeEntries(const Members& mem) {
+	NamedCompositeType::Entries entries;
+	std::transform(mem.cbegin(), mem.cend(), back_inserter(entries), [](const Member& m) 
+		{ return NamedCompositeType::Entry(m.first, m.second->getType()); } );
+	return entries;
+}
+
+std::size_t hashStructOrUnionExpr(size_t seed, const StructExpr::Members& members) {
+	std::for_each(members.cbegin(), members.cend(), [&](const StructExpr::Member &m) { boost::hash_combine(seed, m); });
+	return seed;
+}
+
+// ------------------------------------- StructExpr ---------------------------------
+
+StructExpr::StructExpr(const TypePtr& type, const Members& members)
+	: NamedCompositeExpr(type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
+
+StructExpr* StructExpr::clone(NodeManager& manager) const {
+	return new StructExpr(manager.get(type), getManagedMembers(manager)); 
+}
+
+void StructExpr::printTo(std::ostream& out) const {
+	// TODO fugly
+	//out << "struct(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
+}
+
+StructExprPtr StructExpr::get(NodeManager& manager, const Members& members) {
+	return manager.get(StructExpr(StructType::get(manager, getTypeEntries(members)), members));
+}
+
+// ------------------------------------- UnionExpr ---------------------------------
+
+UnionExpr::UnionExpr(const TypePtr& type, const Members& members)
+	: NamedCompositeExpr(type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
+
+UnionExpr* UnionExpr::clone(NodeManager& manager) const {
+	return new UnionExpr(manager.get(type), getManagedMembers(manager)); 
+}
+
+void UnionExpr::printTo(std::ostream& out) const {
+	// TODO fugly
+	//out << "union(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
+}
+
+UnionExprPtr UnionExpr::get(NodeManager& manager, const Members& members) {
+	return manager.get(UnionExpr(UnionType::get(manager, getTypeEntries(members)), members));
+}
+
+// ------------------------------------- JobExpr ---------------------------------
+
+size_t hashJobExpr(const StatementPtr& defaultStmt, const JobExpr::GuardedStmts& guardedStmts, const JobExpr::LocalDecls& localDecls) {
+	size_t seed = HASHVAL_JOBEXPR;
+	boost::hash_combine(seed, defaultStmt);
+	hashPtrRange(seed, localDecls);
+	for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&seed](const JobExpr::GuardedStmt& s){ 
+		boost::hash_combine(seed, s.first);
+		boost::hash_combine(seed, s.second);
+	});
+	return seed;
+}
+
+JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) 
+	: Expression(type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)), 
+	  defaultStmt(defaultStmt), guardedStmts(guardedStmts), localDecls(localDecls) { }
+
+JobExpr* JobExpr::clone(NodeManager& manager) const {
+	GuardedStmts localGuardedStmts;
+	std::transform(guardedStmts.cbegin(), guardedStmts.cend(), back_inserter(localGuardedStmts), 
+		[&manager](const GuardedStmt& stmt) { return JobExpr::GuardedStmt(manager.get(stmt.first), manager.get(stmt.second)); } );
+	return new JobExpr(manager.get(type), manager.get(defaultStmt), localGuardedStmts, manager.getAll(localDecls));
+}
+	
+bool JobExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const JobExpr& rhs = static_cast<const JobExpr&>(expr);
+	return *defaultStmt == *rhs.defaultStmt && 
+		::equals(localDecls, rhs.localDecls, equal_target<DeclarationStmtPtr>()) &&
+		::equals(guardedStmts, rhs.guardedStmts, [](const GuardedStmt& l, const GuardedStmt& r) { 
+			return *l.first == *r.first && *l.second == *r.second; } );
+}
+	
+void JobExpr::printTo(std::ostream& out) const {
+	// TODO
+	//out << "job {" << join(", ", localDecls) << "} ("
+	//	<< join(", ", guardedStmts, [](const GuardedStmt& s) { return format("(%s, %s)", toString(*s.first).c_str(), toString(*s.second).c_str()); } )
+	//	<< ", " << defaultStmt << ")";
+}
+
+JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
+	auto type = GenericType::get(manager, "Job"); // TODO 
+	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
+}
+
 // ------------------------------------- CallExpr ---------------------------------
 
 std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -247,7 +359,7 @@ CallExpr* CallExpr::clone(NodeManager& manager) const {
 	
 bool CallExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const CallExpr& rhs = dynamic_cast<const CallExpr&>(expr);
+	const CallExpr& rhs = static_cast<const CallExpr&>(expr);
 	return (*rhs.functionExpr == *functionExpr) && 
 		::equals(arguments, rhs.arguments, equal_target<ExpressionPtr>());
 }
@@ -278,7 +390,7 @@ CastExpr* CastExpr::clone(NodeManager& manager) const {
 	
 bool CastExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const CastExpr& rhs = dynamic_cast<const CastExpr&>(expr);
+	const CastExpr& rhs = static_cast<const CastExpr&>(expr);
 	return (*rhs.subExpression == *subExpression);
 }
 	
