@@ -179,17 +179,9 @@ public:
 	}
 
 	bool equals(const Node& other) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 };
 
 } // end namespace core
 } // end namespace insieme
-
-
-// ---------------------------------------------- Utilities ------------------------------------
-
-/**
- * Allows this definition to be printed to a stream (especially useful during debugging and
- * within test cases where equals expects values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Definition& type);

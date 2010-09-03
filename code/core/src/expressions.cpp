@@ -57,11 +57,6 @@ bool Expression::equals(const Node& stmt) const {
 	return (*type == *rhs.type) && equalsExpr(rhs);
 }
 
-std::ostream& operator<<(std::ostream& out, const Expression& expression) {
-	expression.printTo(out);
-	return out;
-}
-
 
 // ------------------------------------- IntLiteral ---------------------------------
 
@@ -85,12 +80,12 @@ FloatLiteral* FloatLiteral::clone(NodeManager& manager) const {
 	return new FloatLiteral(manager.get(type), value, originalString);
 }
 
-void FloatLiteral::printTo(std::ostream& out) const {
-	out << originalString;
+std::ostream& FloatLiteral::printTo(std::ostream& out) const {
+	return out << originalString;
 }
 
 FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
-	return manager.get(FloatLiteral(FloatType::get(manager, bytes), value, toString(value)));
+	return manager.get(FloatLiteral(FloatType::get(manager, bytes), value, ::toString(value)));
 }
 
 FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
@@ -132,8 +127,8 @@ bool VarExpr::equalsExpr(const Expression& expr) const {
 	return rhs.id == id;
 }
 
-void VarExpr::printTo(std::ostream& out) const {
-	out << id;
+std::ostream& VarExpr::printTo(std::ostream& out) const {
+	return out << id;
 }
 
 VarExprPtr VarExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
@@ -156,8 +151,8 @@ ParamExpr* ParamExpr::clone(NodeManager& manager) const {
 	return new ParamExpr(manager.get(type), id);
 }
 
-void ParamExpr::printTo(std::ostream& out) const {
-	out << *type << id;
+std::ostream& ParamExpr::printTo(std::ostream& out) const {
+	return out << *type << id;
 }
 
 ParamExprPtr ParamExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
@@ -195,8 +190,8 @@ Node::OptionChildList LambdaExpr::getChildNodes() const {
 	return res;
 }
 
-void LambdaExpr::printTo(std::ostream& out) const {
-	out << "lambda(" << join(", ", params, deref<ExpressionPtr>()) << ") { " << body << " }";
+std::ostream& LambdaExpr::printTo(std::ostream& out) const {
+	return out << "lambda(" << join(", ", params, deref<ExpressionPtr>()) << ") { " << body << " }";
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
@@ -232,8 +227,8 @@ Node::OptionChildList TupleExpr::getChildNodes() const {
 	return res;
 }
 
-void TupleExpr::printTo(std::ostream& out) const {
-	out << "tuple(" << join(", ", expressions, deref<ExpressionPtr>()) << ")";
+std::ostream& TupleExpr::printTo(std::ostream& out) const {
+	return out << "tuple(" << join(", ", expressions, deref<ExpressionPtr>()) << ")";
 }
 
 
@@ -299,9 +294,10 @@ StructExpr* StructExpr::clone(NodeManager& manager) const {
 	return new StructExpr(manager.get(type), getManagedMembers(manager));
 }
 
-void StructExpr::printTo(std::ostream& out) const {
+std::ostream& StructExpr::printTo(std::ostream& out) const {
 	// TODO fugly
 	//out << "struct(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
+	return out;
 }
 
 StructExprPtr StructExpr::get(NodeManager& manager, const Members& members) {
@@ -317,9 +313,10 @@ UnionExpr* UnionExpr::clone(NodeManager& manager) const {
 	return new UnionExpr(manager.get(type), getManagedMembers(manager));
 }
 
-void UnionExpr::printTo(std::ostream& out) const {
+std::ostream& UnionExpr::printTo(std::ostream& out) const {
 	// TODO fugly
 	//out << "union(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
+	return out;
 }
 
 UnionExprPtr UnionExpr::get(NodeManager& manager, const Members& members) {
@@ -371,11 +368,12 @@ bool JobExpr::equalsExpr(const Expression& expr) const {
 			return *l.first == *r.first && *l.second == *r.second; } );
 }
 
-void JobExpr::printTo(std::ostream& out) const {
+std::ostream& JobExpr::printTo(std::ostream& out) const {
 	// TODO
 	//out << "job {" << join(", ", localDecls) << "} ("
 	//	<< join(", ", guardedStmts, [](const GuardedStmt& s) { return format("(%s, %s)", toString(*s.first).c_str(), toString(*s.second).c_str()); } )
 	//	<< ", " << defaultStmt << ")";
+	return out;
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
@@ -415,8 +413,8 @@ Node::OptionChildList CallExpr::getChildNodes() const {
 	return res;
 }
 
-void CallExpr::printTo(std::ostream& out) const {
-	out << functionExpr << "(" << join(", ", arguments) << ")";
+std::ostream& CallExpr::printTo(std::ostream& out) const {
+	return out << functionExpr << "(" << join(", ", arguments) << ")";
 }
 
 CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -452,8 +450,8 @@ Node::OptionChildList CastExpr::getChildNodes() const {
 	return res;
 }
 
-void CastExpr::printTo(std::ostream& out) const {
-	out << "(" << type << ")" << "(" << subExpression <<")";
+std::ostream& CastExpr::printTo(std::ostream& out) const {
+	return out << "(" << type << ")" << "(" << subExpression <<")";
 }
 
 CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpr) {

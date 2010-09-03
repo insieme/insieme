@@ -98,7 +98,8 @@ public:
 
 	virtual ~Expression() {}
 
-	virtual void printTo(std::ostream& out) const = 0;
+	virtual std::ostream& printTo(std::ostream& out) const = 0;
+
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
 };
@@ -126,8 +127,8 @@ protected:
 	}
 
 public:
-	virtual void printTo(std::ostream& out) const {
-		out << value;
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return (out << value);
 	}
 
     const T getValue() const { return value; }
@@ -151,7 +152,7 @@ class FloatLiteral : public Literal<double> {
 	virtual FloatLiteral* clone(NodeManager& manager) const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static FloatLiteralPtr get(NodeManager& manager, double value, unsigned short bytes = 8);
 	static FloatLiteralPtr get(NodeManager& manager, const string& from, unsigned short bytes = 8);
@@ -183,7 +184,7 @@ protected:
 	bool equalsExpr(const Expression& expr) const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
@@ -194,7 +195,7 @@ class ParamExpr : public VarExpr {
 	virtual ParamExpr* clone(NodeManager& manager) const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static ParamExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
@@ -218,7 +219,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
 };
@@ -236,7 +237,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
 };
@@ -264,7 +265,7 @@ class StructExpr : public NamedCompositeExpr {
 	virtual StructExpr* clone(NodeManager& manager) const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	static StructExprPtr get(NodeManager& manager, const Members& members);
 };
 
@@ -273,7 +274,7 @@ class UnionExpr : public NamedCompositeExpr {
 	virtual UnionExpr* clone(NodeManager& manager) const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	static UnionExprPtr get(NodeManager& manager, const Members& members);
 };
 
@@ -299,7 +300,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 	
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static JobExprPtr get(NodeManager& manager, const StatementPtr& defaultStmt, 
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
@@ -319,7 +320,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 	
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
@@ -336,35 +337,11 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpression);
 };
 
 } // end namespace core
 } // end namespace insieme
-
-/// Allows expressions to be printed to a stream (especially useful during debugging and
-/// within test cases where equals expects values to be printable).
-std::ostream& operator<<(std::ostream& out, const insieme::core::Expression& expression);
-
-
-
-//class ParenExpr : public Expression {
-//	const ExprPtr subExpression;
-//
-//	ParenExpr(const ExprPtr& subExp)
-//		: Expression(subExp->getType()), subExpression(subExp) { }
-//	
-//	virtual ParenExpr* clone(NodeManager& manager) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//	
-//public:
-//	virtual void printTo(std::ostream& out) const;
-//	virtual std::size_t hash() const;
-//
-//	static ParenExprPtr ParenExpr::get(NodeManager& manager, const ExprPtr& subExpr);
-//};
 

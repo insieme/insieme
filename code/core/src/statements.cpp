@@ -68,8 +68,8 @@ std::size_t hash_value(const Statement& stmt) {
 
 BreakStmt::BreakStmt(): Statement(HASHVAL_BREAK) {}
 
-void BreakStmt::printTo(std::ostream& out) const {
-	out << "break;";
+std::ostream& BreakStmt::printTo(std::ostream& out) const {
+	return out << "break;";
 }
 
 bool BreakStmt::equalsStmt(const Statement&) const {
@@ -94,8 +94,8 @@ BreakStmtPtr BreakStmt::get(NodeManager& manager) {
 
 ContinueStmt::ContinueStmt() : Statement(HASHVAL_CONTINUE) {};
 
-void ContinueStmt::printTo(std::ostream& out) const {
-	out << "continue;";
+std::ostream& ContinueStmt::printTo(std::ostream& out) const {
+	return out << "continue;";
 }
 
 bool ContinueStmt::equalsStmt(const Statement&) const {
@@ -128,8 +128,8 @@ ReturnStmt::ReturnStmt(const ExpressionPtr& returnExpression)
 	: Statement(hashReturnStmt(returnExpression)), returnExpression(returnExpression) {
 }
 
-void ReturnStmt::printTo(std::ostream& out) const {
-	out << "return " << returnExpression << ";";
+std::ostream& ReturnStmt::printTo(std::ostream& out) const {
+	return out << "return " << returnExpression << ";";
 }
 
 bool ReturnStmt::equalsStmt(const Statement& stmt) const {
@@ -164,8 +164,8 @@ DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const Expressi
 	: Statement(hashDeclarationStmt(varExpression, initExpression)), varExpression(varExpression), initExpression(initExpression) {
 }
 
-void DeclarationStmt::printTo(std::ostream& out) const {
-	out << *varExpression->getType() << " " << *varExpression << " = " << *initExpression << ";";
+std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
+	return out << *varExpression->getType() << " " << *varExpression << " = " << *initExpression << ";";
 }
 
 bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
@@ -202,8 +202,8 @@ std::size_t hashCompoundStmt(const vector<StatementPtr>& stmts) {
 CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
 	: Statement(hashCompoundStmt(stmts)), statements(stmts) { }
 
-void CompoundStmt::printTo(std::ostream& out) const {
-	out << "{\n" << join("\n", statements, deref<StatementPtr>()) << "\n}\n";
+std::ostream& CompoundStmt::printTo(std::ostream& out) const {
+	return out << "{\n" << join("\n", statements, deref<StatementPtr>()) << "\n}\n";
 }
 
 bool CompoundStmt::equalsStmt(const Statement& stmt) const {
@@ -251,8 +251,8 @@ WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
 	: Statement(hashWhileStmt(condition, body)), condition(condition), body(body) {
 }
 
-void WhileStmt::printTo(std::ostream& out) const {
-	out << "while(" << condition << ") " << body << ";";
+std::ostream& WhileStmt::printTo(std::ostream& out) const {
+	return out << "while(" << condition << ") " << body << ";";
 }
 	
 bool WhileStmt::equalsStmt(const Statement& stmt) const {
@@ -291,8 +291,8 @@ std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPt
 ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
 	: Statement(hashForStmt(declaration, body, end, step)), declaration(declaration), body(body), end(end), step(step) {}
 	
-void ForStmt::printTo(std::ostream& out) const {
-	out << "for(" << declaration << ".." << end << ":" << step << ") " << body;
+std::ostream& ForStmt::printTo(std::ostream& out) const {
+	return out << "for(" << declaration << ".." << end << ":" << step << ") " << body;
 }
 
 bool ForStmt::equalsStmt(const Statement& stmt) const {
@@ -340,8 +340,8 @@ IfStmt* IfStmt::clone(NodeManager& manager) const {
 	return new IfStmt(manager.get(*condition), manager.get(*thenBody), manager.get(*elseBody));
 }
 
-void IfStmt::printTo(std::ostream& out) const {
-	out << "if(" << condition << ") " << thenBody << "else " << elseBody << ";";
+std::ostream& IfStmt::printTo(std::ostream& out) const {
+	return out << "if(" << condition << ") " << thenBody << "else " << elseBody << ";";
 }
 
 bool IfStmt::equalsStmt(const Statement& stmt) const {
@@ -389,11 +389,12 @@ SwitchStmt* SwitchStmt::clone(NodeManager& manager) const {
 	return new SwitchStmt(manager.get(*switchExpr), localCases);
 }
 
-void SwitchStmt::printTo(std::ostream& out) const {
+std::ostream& SwitchStmt::printTo(std::ostream& out) const {
 	out << "switch(" << *switchExpr << ") ";
 	std::for_each(cases.cbegin(), cases.cend(), [&out](const Case& cur) { 
 		out << *(cur.first) << ": " << *(cur.second) << "\n";
 	});
+	return out;
 }
 
 bool SwitchStmt::equalsStmt(const Statement& stmt) const {
@@ -421,8 +422,3 @@ SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchE
 } // end namespace core
 } // end namespace insieme
 
-
-std::ostream& operator<<(std::ostream& out, const insieme::core::Statement& stmt) {
-	stmt.printTo(out);
-	return out;
-}

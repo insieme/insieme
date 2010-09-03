@@ -409,24 +409,3 @@ ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType
 	return manager.get(ChannelType(elementType, size));
 }
 
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-/**
- * Allows to compute the hash value of a type.
- *
- * @param type the type for which a hash value should be computed
- * @return the computed hash value
- */
-std::size_t hash_value(const Type& type) {
-	return type.hash();
-}
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Type& type) {
-	out << type.toString();
-	return out;
-}

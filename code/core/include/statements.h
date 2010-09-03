@@ -105,7 +105,6 @@ public:
 	typedef NodeManager Manager;
 
 	virtual ~Statement() {}
-	virtual void printTo(std::ostream& out) const = 0;
 };
 
 class BreakStmt : public Statement {
@@ -117,7 +116,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static BreakStmtPtr get(NodeManager& manager);
 };
@@ -132,7 +131,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	static ContinueStmtPtr get(NodeManager& manager);
 };
@@ -149,7 +148,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static ReturnStmtPtr get(NodeManager& manager, const ExpressionPtr& returnExpression);
 };
@@ -167,7 +166,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static DeclarationStmtPtr get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression);
 };
@@ -184,7 +183,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const StatementPtr& operator[](unsigned index) const;
 
@@ -206,7 +205,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getCondition() const { return condition; }
 	const StatementPtr& getBody() const { return body; }
@@ -227,7 +226,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const DeclarationStmtPtr& getDeclaration() const { return declaration; }
 	const StatementPtr& getBody() const { return body; }
@@ -250,7 +249,7 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	const ExpressionPtr& getCondition() const { return condition; }
 	const StatementPtr& getThenBody() const { return thenBody; }
@@ -275,14 +274,10 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases);
 };
 
-std::size_t hash_value(const insieme::core::Statement& stmt);
-
 } // end namespace core
 } // end namespace insieme
-
-std::ostream& operator<<(std::ostream& out, const insieme::core::Statement& stmt);

@@ -180,8 +180,8 @@ public:
 	 * the actual name of the type. Specific sub-types may override this method
 	 * to customize the representation.
 	 */
-	virtual string toString() const {
-		return getName();
+	std::ostream& printTo(std::ostream& out) const {
+		return (out << getName());
 	}
 
 	/**
@@ -1037,23 +1037,6 @@ public:
 
 } // end namespace core
 } // end namespace insieme
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-/**
- * Allows to compute the hash value of a type.
- *
- * @param type the type for which a hash value should be computed
- * @return the computed hash value
- */
-std::size_t hash_value(const insieme::core::Type& type);
-
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals expects values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Type& type);
 
 
 

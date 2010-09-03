@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "program.h"
+#include "iostream"
 #include "ast_visitor.h"
 
 using namespace insieme::core;
@@ -134,7 +135,23 @@ TEST(ASTVisitor, DispatcherTest) {
 }
 
 
-//class CountingVisitor : Vis
+class CountingVisitor : public ASTVisitor<CountingVisitor, int> {
+public:
+
+	int counter;
+
+	CountingVisitor() : counter(0) {};
+
+	int visitNode(const NodePtr& node) {
+std::cout << *node << std::endl;
+		return ++counter;
+	};
+
+	void reset() {
+		counter = 0;
+	}
+
+};
 
 
 TEST(ASTVisitor, RecursiveVisitorTest) {
@@ -142,60 +159,52 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
-	SimpleVisitor visitor;
+	CountingVisitor visitor;
+	RecursiveProgramVisitor<int, CountingVisitor> recVisitor(visitor);
 
 	ProgramPtr program = Program::create();
 
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 0, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
-
+	visitor.reset();
 	visitor.visit(program);
+	EXPECT_EQ ( 1, visitor.counter );
 
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 0, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
+	visitor.reset();
+	recVisitor.visit(program);
+	EXPECT_EQ ( 1, visitor.counter );
 
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 	visitor.visit(type);
 
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 1, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
+	visitor.reset();
+	visitor.visit(program);
+	EXPECT_EQ ( 1, visitor.counter );
 
-	IntTypePtr intType = IntType::get(manager);
-	visitor.visit(intType);
+	visitor.reset();
+	recVisitor.visit(program);
+	EXPECT_EQ ( 1, visitor.counter );
 
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 2, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
+	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector<IntTypeParam>('p'), type);
 
-	IntLiteralPtr literal = IntLiteral::get(manager, 3, 2);
-	visitor.visit(literal);
+	visitor.reset();
+	visitor.visit(type2);
+	EXPECT_EQ ( 1, visitor.counter );
 
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 2, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
+	visitor.reset();
+	recVisitor.visit(type2);
+	EXPECT_EQ ( 4, visitor.counter );
 
-	ArrayTypePtr arrayType = ArrayType::get(manager, type);
-	visitor.visit(arrayType);
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		IntLiteral::get(manager, 12),
+		IntLiteral::get(manager, 14)
+	);
 
-	EXPECT_EQ ( 1, visitor.countArrayTypes );
-	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 2, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
+	visitor.reset();
+	visitor.visit(ifStmt);
+	EXPECT_EQ ( 1, visitor.counter );
 
-	RefTypePtr refType = RefType::get(manager, type);
-	visitor.visit(refType);
+	visitor.reset();
+	recVisitor.visit(ifStmt);
+	EXPECT_EQ ( 6, visitor.counter );
 
-	EXPECT_EQ ( 1, visitor.countArrayTypes );
-	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 3, visitor.countGenericTypes );
-	EXPECT_EQ ( 1, visitor.countRefTypes );
 }

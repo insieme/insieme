@@ -154,7 +154,7 @@ bool compareTypes(const TypePtr& typeA, const TypePtr& typeB) {
 
 std::vector<GenericTypePtr> getAllGenericTypes(const Program& program);
 
-std::ostream& operator<<(std::ostream& out, const Program& program) {
+std::ostream& Program::printTo(std::ostream& out) const {
 
 	typedef std::vector<DefinitionPtr> DefinitionList;
 	typedef std::vector<ExpressionPtr> EntryPointList;
@@ -168,9 +168,8 @@ std::ostream& operator<<(std::ostream& out, const Program& program) {
 	// TODO: filter generic types and print them in alphabetical order
 
 	// print definitions
-	const Program::DefinitionSet& defSet = program.getDefinitions();
 	DefinitionList defList;
-	defList.insert(defList.end(),defSet.cbegin(), defSet.cend());
+	defList.insert(defList.end(),definitions.begin(), definitions.end());
 	sort(defList.begin(), defList.end(), compareDefinitions);
 
 	out << "// Definitions:" << endl;
@@ -181,7 +180,6 @@ std::ostream& operator<<(std::ostream& out, const Program& program) {
 	out << endl;
 
 	// print entry points
-	const Program::EntryPointSet& entryPoints = program.getEntryPoints();
 	EntryPointList entryList;
 	entryList.insert(entryList.end(), entryPoints.cbegin(), entryPoints.cend());
 	sort(entryList.begin(), entryList.end(), compareEntryPoints);

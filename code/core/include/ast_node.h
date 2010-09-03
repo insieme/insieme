@@ -41,6 +41,7 @@
 #include "annotated_ptr.h"
 #include "hash_utils.h"
 #include "instance_manager.h"
+#include "string_utils.h"
 
 namespace insieme {
 namespace core {
@@ -179,6 +180,26 @@ public:
 	}
 
 	/**
+	 * This pure abstract method is imposing the requirement to every node to
+	 * be printable to an output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return the output stream to print further information (allows to concatenate print operations)
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const = 0;
+
+	/**
+	 * Provides a string representation of this node, which is by default
+	 * the same as would be printed in case the object is written into an
+	 * output stream.
+	 *
+	 * @return a string representation for this node instacne
+	 */
+	virtual string toString() const {
+		return ::toString(*this);
+	}
+
+	/**
 	 * Obtains the fundamental type of this node.
 	 *
 	 * @return the type of node represented by this instance
@@ -223,3 +244,10 @@ typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 } // end namespace core
 } // end namespace insieme
+
+/**
+ * Allows nodes to be printed to a stream (especially useful during debugging and
+ * within test cases where equals expects values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::Node& node);
+

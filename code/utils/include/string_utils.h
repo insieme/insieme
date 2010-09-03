@@ -49,7 +49,7 @@ using std::string;
 string format(const char* formatString, ...);
 
 template<typename T>
-string toString(T value) {
+string toString(const T& value) {
 	std::stringstream res;
 	res << value;
 	return res.str();

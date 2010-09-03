@@ -190,6 +190,11 @@ public:
 	 */
 	bool equals(const Node& other) const;
 
+	/**
+	 * Implements the printing of this program into the given output stream.
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
+
 	// TODO: add consistency check routine!!
 	//   - check: all names defined in scope
 	//   - no duplicates in switch
@@ -239,16 +244,4 @@ public:
 
 } // end namespace core
 } // end namespace insieme
-
-
-/**
- * Allows programs to be printed to an output stream.
- *
- * NOTE: this mechanism should not be used to dump / pretty print a program.
- *
- * @param out the stream to be printed to
- * @param program the program to be printed
- * @return the given output stream
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Program& program);
 

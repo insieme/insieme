@@ -242,16 +242,7 @@ protected:
 		return static_cast<Derived*>(this)->visit ## PARENT(ptr); \
 	}
 
-	/**
-	 * The base case - all type visits will be default be forwarded
-	 * to this method.
-	 *
-	 * @param ptr the pointer to be visited
-	 */
-	ReturnType visitType(const TypePtr& ptr) {
-		// base case
-		return ReturnType();
-	}
+	VISIT_NODE(Type, Node);
 
 	VISIT_NODE(TypeVariable, Type);
 	VISIT_NODE(FunctionType, Type);
@@ -284,6 +275,9 @@ protected:
 	VISIT_NODE(ForStmt, Statement);
 	VISIT_NODE(IfStmt, Statement);
 	VISIT_NODE(SwitchStmt, Statement);
+
+
+	VISIT_NODE(Expression, Statement);
 
 	VISIT_NODE(IntLiteral, Expression);
 	VISIT_NODE(FloatLiteral, Expression);
@@ -322,13 +316,13 @@ struct CurrentNodeOnly {
  * within every node, the sub-visitor's visit method will be invoked. Further, the results
  * of the visited nodes may be combined using a generic result combinator.
  */
-template<typename ReturnType, typename ResultCombinator = CurrentNodeOnly<ReturnType>>
-class RecursiveProgramVisitor : public ASTVisitor<RecursiveProgramVisitor<ReturnType>, ReturnType> {
+template<typename ReturnType, typename SubVisitor, typename ResultCombinator = CurrentNodeOnly<ReturnType>>
+class RecursiveProgramVisitor : public ASTVisitor<RecursiveProgramVisitor<ReturnType, SubVisitor>, ReturnType> {
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
 	 */
-	ASTVisitor<ReturnType>& subVisitor;
+	SubVisitor& subVisitor;
 
 	/**
 	 * The combinator used to combine the result value within complex nodes.
@@ -340,7 +334,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	RecursiveProgramVisitor(ASTVisitor<ReturnType>& subVisitor) : subVisitor(subVisitor) {};
+	RecursiveProgramVisitor(SubVisitor& subVisitor) : subVisitor(subVisitor) {};
 
 	/**
 	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
@@ -352,7 +346,7 @@ public:
 		ReturnType cur = subVisitor.visit(node);
 
 		// recursively visit all sub-nodes
-		Node::ChildList& children = node->getChildList();
+		const Node::ChildList& children = node->getChildList();
 		std::vector<ReturnType> results;
 		std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
 			results.push_back(this->visit(cur));

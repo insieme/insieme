@@ -102,19 +102,16 @@ bool Definition::equals(const Node& other) const {
 	return *type == *ref.type && name == ref.name;
 }
 
-// ---------------------------------------------- Utilities ------------------------------------
-
-
-std::ostream& operator<<(std::ostream& out, const Definition& definition) {
+std::ostream& Definition::printTo(std::ostream& out) const {
 
 	// print this definition
-	out << ((definition.isExternal())?"external ":"") << "define " << definition.getName() << " : " << *definition.getType() << " = ";
+	out << ((external)?"external ":"") << "define " << name << " : " << *type << " = ";
 
 	// print defining body ...
-	if (definition.isAbstract()) {
+	if (isAbstract()) {
 		out << "<abstract>";
 	} else {
-		out << *(definition.getDefinition());
+		out << *(definition);
 	}
 
 	return out;
