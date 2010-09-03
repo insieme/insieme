@@ -214,6 +214,10 @@ class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 public:
 	ClangTypeConverter(const core::ASTBuilder& builder): builder( builder ) { }
 
+	// -------------------- BUILTIN ------------------------------------------------------------------------------
+	/**
+	 * This method handles buildin types (void,int,long,float,...).
+	 */
 	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
 
 		switch(buldInTy->getKind()) {
@@ -277,19 +281,109 @@ public:
 		return TypeWrapper();
 	}
 
+	// --------------------  COMPLEX   ------------------------------------------------------------------------------
 	TypeWrapper VisitComplexType(ComplexType* bulinTy) {
-		LOG(INFO) << "Converting complex type";
-		return TypeWrapper();
+		assert(false && "ComplexType not yet handled!");
 	}
 
-	TypeWrapper VisitArrayType(ArrayType* arrTy) {
-		LOG(INFO) << "Converting array type";
-		return TypeWrapper();
+	// ------------------------   ARRAYS  ----------------------------------------------------------------
+	/**
+	 * This method handles the canonical version of C arrays with a specified constant size.
+	 * For example, the canonical type for 'int A[4 + 4*100]' is a ConstantArrayType where the element type is 'int' and the size is 404
+	 *
+	 * The IR representation for such array will be: vector<ref<int<4>>,404>
+	 */
+	TypeWrapper VisitConstantArrayType(ConstantArrayType* arrTy) {
+		if(arrTy->isSugared())
+			// if the type is sugared, we Visit the desugared type
+			return Visit( arrTy->desugar().getTypePtr() );
+
+		size_t arrSize = *arrTy->getSize().getRawData();
+		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
+		assert(elemTy.ref && "Conversion of array element type failed.");
+		return TypeWrapper( builder.vectorType(builder.refType(elemTy.ref), arrSize) );
 	}
 
-	TypeWrapper VisitFunctionType(FunctionType* funcTy) {
-		LOG(INFO) << "Converting function type";
-		return TypeWrapper();
+	/**
+	 * This method handles C arrays with an unspecified size. For example 'int A[]' has an IncompleteArrayType where the element
+	 * type is 'int' and the size is unspecified.
+	 *
+	 * The representation for such array will be: ref<array<ref<int<4>>>>
+	 */
+	TypeWrapper VisitIncompleteArrayType(IncompleteArrayType* arrTy) {
+		if(arrTy->isSugared())
+			// if the type is sugared, we Visit the desugared type
+			return Visit( arrTy->desugar().getTypePtr() );
+
+		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
+		assert(elemTy.ref && "Conversion of array element type failed.");
+		return TypeWrapper( builder.refType( builder.arrayType(builder.refType(elemTy.ref)) ) );
+	}
+
+	/**
+	 * This class represents C arrays with a specified size which is not an integer-constant-expression. For example, 'int s[x+foo()]'.
+	 * Since the size expression is an arbitrary expression, we store it as such. Note: VariableArrayType's aren't uniqued
+	 * (since the expressions aren't) and should not be: two lexically equivalent variable array types could mean different things,
+	 * for example, these variables do not have the same type dynamically:
+	 * 	 void foo(int x) { int Y[x]; ++x; int Z[x]; }
+	 *
+	 * he representation for such array will be: array<ref<int<4>>>( expr() )
+	 */
+	TypeWrapper VisitVariableArrayType(VariableArrayType* arrTy) {
+		if(arrTy->isSugared())
+			// if the type is sugared, we Visit the desugared type
+			return Visit( arrTy->desugar().getTypePtr() );
+
+		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
+		assert(elemTy.ref && "Conversion of array element type failed.");
+		return TypeWrapper( builder.arrayType(builder.refType(elemTy.ref)) );
+	}
+
+	/**
+	 * This type represents an array type in C++ whose size is a value-dependent expression. For example:
+	 *
+	 *  template<typename T, int Size>
+	 *  class array {
+	 *     T data[Size];
+	 *  };
+	 *
+	 *  For these types, we won't actually know what the array bound is until template instantiation occurs,
+	 *  at which point this will become either a ConstantArrayType or a VariableArrayType.
+	 */
+	TypeWrapper VisitDependentSizedArrayType(DependentSizedArrayType* arrTy) {
+		assert(false && "DependentSizedArrayType not yet handled!");
+	}
+
+	// --------------------  FUNCTIONS  ----------------------------------------------------------------------------
+	/**
+	 * Represents a prototype with argument type info, e.g. 'int foo(int)' or 'int foo(void)'. 'void' is represented as having no arguments,
+	 * not as having a single void argument. Such a type can have an exception specification, but this specification is not part of the canonical type.
+	 */
+	TypeWrapper VisitFunctionProtoType(FunctionProtoType* funcTy) {
+		core::TypePtr retTy = Visit( funcTy->getResultType().getTypePtr() ).ref;
+		assert(retTy && "Function has no return type!");
+
+		core::TupleType::ElementTypeList argTypes;
+		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(), [ &argTypes, this ](const QualType& currArgType){
+			argTypes.push_back( this->Visit( currArgType.getTypePtr() ).ref );
+		} );
+
+		if( argTypes.size() == 1 && argTypes.front() == builder.unitType()) {
+			// we have only 1 argument, and it is a unit type (void), remove it from the list
+			argTypes.clear();
+		}
+
+		return TypeWrapper( builder.functionType( builder.tupleType(argTypes), retTy) );
+	}
+
+	/**
+	 *  Represents a K&R-style 'int foo()' function, which has no information available about its arguments.
+	 */
+	TypeWrapper VisitFunctionNoProtoType(FunctionNoProtoType* funcTy) {
+		core::TypePtr retTy = Visit( funcTy->getResultType().getTypePtr() ).ref;
+		assert(retTy && "Function has no return type!");
+
+		return TypeWrapper( builder.functionType( builder.tupleType(), retTy) );
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* elabType) {
@@ -299,12 +393,16 @@ public:
 
 	TypeWrapper VisitTagType(TagType* tagType) {
 		DLOG(INFO) << "Converting tag type" << std::endl;
+
+		// lookup the type map to see if this type has been already converted
 		TypeMap::const_iterator fit = typeMap.find(tagType);
 		if(fit != typeMap.end())
 			return fit->second;
 
+		// otherwise do the conversion
 		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
-		// iterate through all the redeclarations to see if one of them provides a definition
+
+		// iterate through all the re-declarations to see if one of them provides a definition
 		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
 		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
 		if(i != e) {
@@ -314,26 +412,30 @@ public:
 
 			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
 			switch(tagDecl->getTagKind()) {
-			case TagDecl::TK_struct: {
+			case TagDecl::TK_struct:
+			case TagDecl::TK_union: {
 				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
-				assert(recDecl);
+				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 				core::NamedCompositeType::Entries structElements;
 				std::for_each(recDecl->field_begin(), recDecl->field_end(), [ &structElements, this ]( RecordDecl::field_iterator::value_type curr ){
 					structElements.push_back(
 							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), this->Visit( curr->getType().getTypePtr() ).ref )
 					);
 				});
-				typeMap[tagType] = TypeWrapper( builder.structType( structElements ) );
-				DLOG(INFO) << "TYPE ";
-				return typeMap[tagType];
+				TypeWrapper retTy;
+				if(tagDecl->getTagKind() == TagDecl::TK_struct)
+					retTy = TypeWrapper( builder.structType( structElements ) );
+				else
+					retTy = TypeWrapper( builder.unionType( structElements ) );
+				typeMap[tagType] = retTy;
+				return retTy;
 			}
-			case TagDecl::TK_union:
 			case TagDecl::TK_class:
 			case TagDecl::TK_enum:
 				return TypeWrapper();
 			}
 		} else {
-			// use a forward declaration for it
+			// We didn't find any definition for this type, so we use a name and define it as a generic type
 			DLOG(INFO) << builder.genericType( tagDecl->getNameAsString() )->toString();
 			return TypeWrapper( builder.genericType( tagDecl->getNameAsString() ) );
 		}
@@ -381,6 +483,7 @@ void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+			LOG(INFO) << "Converted into: " << fact.ConvertType( *funcDecl->getType().getTypePtr() );
 			// this is a function decl
 			if(funcDecl->getBody())
 				fact.ConvertStmt( *funcDecl->getBody() );

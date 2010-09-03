@@ -129,3 +129,8 @@ TEST(TypeConversion, HandleReferenceTypes) {
 	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
 
 }
+
+TEST(TypeConversion, HandleStructTypes) {
+
+}
+
