@@ -264,11 +264,19 @@ NamedCompositeExpr::Members NamedCompositeExpr::getManagedMembers(NodeManager& m
 	return managedMembers;
 }
 
-// TODO: fix this method - it is causing the internal error!
 NamedCompositeType::Entries NamedCompositeExpr::getTypeEntries(const Members& mem) {
 	NamedCompositeType::Entries entries;
+
+	// NOTE: transform would be equivalent but causes an internal error in GCC 4.5.1
 //	std::transform(mem.cbegin(), mem.cend(), back_inserter(entries), [](const Member& m)
 //		{ return NamedCompositeType::Entry(m.first, m.second->getType()); } );
+
+	auto iter = back_inserter(entries);
+	for(auto it = mem.cbegin(); it!=mem.cend(); ++it) {
+		const Member& cur = *it;
+		*iter = NamedCompositeType::Entry(cur.first, cur.second->getType());
+	}
+
 	return entries;
 }
 
