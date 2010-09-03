@@ -41,7 +41,7 @@
 
 using namespace insieme::core;
 
-class SimpleVisitor : public ProgramVisitor<SimpleVisitor> {
+class SimpleVisitor : public ASTVisitor<SimpleVisitor> {
 
 public:
 	int countGenericTypes;
@@ -72,7 +72,7 @@ public:
 	}
 };
 
-TEST(Visitor2, TypeVisitor) {
+TEST(ASTVisitor, DispatcherTest) {
 
 	NodeManager manager;
 	SimpleVisitor visitor;
@@ -133,3 +133,69 @@ TEST(Visitor2, TypeVisitor) {
 	EXPECT_EQ ( 1, visitor.countRefTypes );
 }
 
+
+//class CountingVisitor : Vis
+
+
+TEST(ASTVisitor, RecursiveVisitorTest) {
+
+	// TODO: run recursive visitor test
+
+	NodeManager manager;
+	SimpleVisitor visitor;
+
+	ProgramPtr program = Program::create();
+
+	EXPECT_EQ ( 0, visitor.countArrayTypes );
+	EXPECT_EQ ( 0, visitor.countExpressions );
+	EXPECT_EQ ( 0, visitor.countGenericTypes );
+	EXPECT_EQ ( 0, visitor.countRefTypes );
+
+	visitor.visit(program);
+
+	EXPECT_EQ ( 0, visitor.countArrayTypes );
+	EXPECT_EQ ( 0, visitor.countExpressions );
+	EXPECT_EQ ( 0, visitor.countGenericTypes );
+	EXPECT_EQ ( 0, visitor.countRefTypes );
+
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+	visitor.visit(type);
+
+	EXPECT_EQ ( 0, visitor.countArrayTypes );
+	EXPECT_EQ ( 0, visitor.countExpressions );
+	EXPECT_EQ ( 1, visitor.countGenericTypes );
+	EXPECT_EQ ( 0, visitor.countRefTypes );
+
+	IntTypePtr intType = IntType::get(manager);
+	visitor.visit(intType);
+
+	EXPECT_EQ ( 0, visitor.countArrayTypes );
+	EXPECT_EQ ( 0, visitor.countExpressions );
+	EXPECT_EQ ( 2, visitor.countGenericTypes );
+	EXPECT_EQ ( 0, visitor.countRefTypes );
+
+	IntLiteralPtr literal = IntLiteral::get(manager, 3, 2);
+	visitor.visit(literal);
+
+	EXPECT_EQ ( 0, visitor.countArrayTypes );
+	EXPECT_EQ ( 1, visitor.countExpressions );
+	EXPECT_EQ ( 2, visitor.countGenericTypes );
+	EXPECT_EQ ( 0, visitor.countRefTypes );
+
+	ArrayTypePtr arrayType = ArrayType::get(manager, type);
+	visitor.visit(arrayType);
+
+	EXPECT_EQ ( 1, visitor.countArrayTypes );
+	EXPECT_EQ ( 1, visitor.countExpressions );
+	EXPECT_EQ ( 2, visitor.countGenericTypes );
+	EXPECT_EQ ( 0, visitor.countRefTypes );
+
+	RefTypePtr refType = RefType::get(manager, type);
+	visitor.visit(refType);
+
+	EXPECT_EQ ( 1, visitor.countArrayTypes );
+	EXPECT_EQ ( 1, visitor.countExpressions );
+	EXPECT_EQ ( 3, visitor.countGenericTypes );
+	EXPECT_EQ ( 1, visitor.countRefTypes );
+}

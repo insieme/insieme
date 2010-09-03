@@ -51,7 +51,7 @@ namespace insieme {
 namespace core {
 
 template<typename Derived, typename ReturnType = void>
-class ProgramVisitor {
+class ASTVisitor {
 
 #define DISPATCH(CLASS, PTR) \
 		static_cast<Derived*>(this)->dispatch ## CLASS(PTR)
@@ -308,21 +308,59 @@ protected:
 };
 
 
+template<typename T>
+struct CurrentNodeOnly {
+	inline T operator()(const NodePtr& currentNode, T& currentNodeReturn, std::vector<T>& subNodeResult){
+		return currentNodeReturn;
+	}
+};
+
 
 /**
- * A visitor which by default is descending into all types.
+ * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
+ * will recursively iterated depth first, pre-order through every visited node. Thereby,
+ * within every node, the sub-visitor's visit method will be invoked. Further, the results
+ * of the visited nodes may be combined using a generic result combinator.
  */
-template<typename ReturnType>
-class RecursiveProgramVisitor : public ProgramVisitor<RecursiveProgramVisitor<ReturnType>, ReturnType> {
+template<typename ReturnType, typename ResultCombinator = CurrentNodeOnly<ReturnType>>
+class RecursiveProgramVisitor : public ASTVisitor<RecursiveProgramVisitor<ReturnType>, ReturnType> {
 
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	ASTVisitor<ReturnType>& subVisitor;
+
+	/**
+	 * The combinator used to combine the result value within complex nodes.
+	 */
+	ResultCombinator combinator;
 
 public:
 
-	ReturnType visitProgram(const ProgramPtr& program) {
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	RecursiveProgramVisitor(ASTVisitor<ReturnType>& subVisitor) : subVisitor(subVisitor) {};
 
+	/**
+	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * subtree rooted at this node.
+	 */
+	ReturnType visitNode(const NodePtr& node) {
+
+		// visit current
+		ReturnType cur = subVisitor.visit(node);
+
+		// recursively visit all sub-nodes
+		Node::ChildList& children = node->getChildList();
+		std::vector<ReturnType> results;
+		std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
+			results.push_back(this->visit(cur));
+		});
+
+		// finally, combine results
+		return combinator(node, cur, results);
 	}
-
-
 };
 
 } // end namespace core

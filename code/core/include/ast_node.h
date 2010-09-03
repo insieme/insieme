@@ -87,7 +87,7 @@ inline bool isNodeType(const NodeType& value) {
  * (including to be hash- and comparable, such that instances can be used within unordered
  * sets).
  */
-class Node : public insieme::utils::HashableImmutableData<Node> {
+class Node : public insieme::utils::HashableImmutableData<Node>,  public Annotatable {
 
 	/**
 	 * Allow the instance manager to access the private clone method.
@@ -110,6 +110,12 @@ public:
 	 * A type used to represent a optionally available child list.
 	 */
 	typedef std::shared_ptr<ChildList> OptionChildList;
+
+	/**
+	 * Allow the test case to access private methods.
+	 */
+	template<typename PT>
+	friend void basicNodeTests(PT, const ChildList& children = ChildList());
 
 private:
 

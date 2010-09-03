@@ -104,7 +104,7 @@ class Type: public Node {
 	 * Allow the test case to access private methods.
 	 */
 	template<typename PT>
-	friend void basicTypeTests(PT, bool, bool, Node::ChildList children = Node::ChildList());
+	friend void basicTypeTests(PT, bool, bool, const Node::ChildList& children = Node::ChildList());
 
 private:
 
@@ -390,7 +390,7 @@ public:
  * Integer parameters may be concrete values, variables (equal to type variables) or the infinite sigh.
  */
 class IntTypeParam {
-private:
+public:
 	/**
 	 * An enumeration to determine the actual type of the integer parameter.
 	 */
@@ -398,6 +398,7 @@ private:
 		VARIABLE, CONCRETE, INFINITE
 	} Type;
 
+private:
 	/**
 	 * The type of the parameter represented by this instance.
 	 * 3 bits for compilers with unsigned enum
@@ -416,6 +417,8 @@ private:
 		char symbol;
 	};
 
+public:
+
 	/**
 	 * A private constructor to create a variable integer type parameter.
 	 * The constructor is private to enforce the usage of static factory methods.
@@ -433,6 +436,8 @@ private:
 	 */
 	IntTypeParam(const unsigned short value) : type(CONCRETE), value(value) {
 	}
+
+private:
 
 	/**
 	 * A private constructor to create a infinite integer type parameter.
@@ -509,6 +514,18 @@ public:
 	 * @return true if all are concrete, false otherwise
 	 */
 	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
+
+
+	/**
+	 * Obtains the type of parameter this instance is.
+	 *
+	 * @return the type of int-type parameter
+	 *
+	 * @see Type
+	 */
+	Type getType() const {
+		return type;
+	}
 
 	/**
 	 * Obtains the value of a concrete int-type parameter. The value is only
@@ -875,19 +892,19 @@ public:
 class VectorType : public SingleElementType {
 
 	/**
-	 * Creates a new instance of this class using the given parameters.
+	 * Creates a new instance of a vector type token using the given element and size parameter.
 	 *
-	 * @param elementType the element type of this vector
-	 * @param size the size of the new vector type
+	 * @param elementType the element type of the new vector
+	 * @param size the size of the new vector
 	 */
-	VectorType(const TypePtr elementType, const unsigned short size) :
-		SingleElementType("vector", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+	VectorType(const TypePtr& elementType, const IntTypeParam& size) :
+		SingleElementType("vector", elementType, toVector(size)) {}
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
 	virtual VectorType* clone(NodeManager& manager) const {
-		return new VectorType(manager.get(getElementType()), getSize());
+		return new VectorType(manager.get(getElementType()), getIntTypeParameter()[0]);
 	}
 
 public:
@@ -899,11 +916,24 @@ public:
 	 * @param manager 		the manager which should be responsible for maintaining the new
 	 * 				  		type instance and all its referenced elements.
 	 * @param elementType 	the type of element to be maintained within the vector
-	 * @param dim 			the size of the requested vector
+	 * @param size 			the size of the requested vector
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
 	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size);
+
+	/**
+	 * A factory method allowing to obtain a pointer to a vector type representing
+	 * an instance managed by the given manager.
+	 *
+	 * @param manager 		the manager which should be responsible for maintaining the new
+	 * 				  		type instance and all its referenced elements.
+	 * @param elementType 	the type of element to be maintained within the vector
+	 * @param size 			the size of the requested vector
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
+	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size);
 
 	/**
 	 * Retrieves the size (=number of elements) of the represented vector type.

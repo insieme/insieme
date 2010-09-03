@@ -64,6 +64,15 @@ public:
 	typedef vector<Entry> Entries;
 	typedef vector<TypePtr> ElementTypeList;
 
+	typedef std::pair<Identifier, ExpressionPtr> Member;
+	typedef std::vector<Member> Members;
+
+	typedef std::vector<DeclarationStmtPtr> LocalDecls;
+	typedef std::pair<ExpressionPtr, StatementPtr> GuardedStmt;
+	typedef std::vector<GuardedStmt> GuardedStmts;
+
+
+
 	SharedNodeManager getNodeManager() {
 		return sharedManager;
 	}

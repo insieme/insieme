@@ -43,20 +43,15 @@
 #include "container_utils.h"
 #include "functional_utils.h"
 
+#include "ast_node_test.cc"
+
 using std::vector;
 
 namespace insieme {
 namespace core {
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, Node::ChildList children = Node::ChildList());
-
-template<typename NodePtr>
-Node::ChildList toList(const vector<NodePtr>& list) {
-	Node::ChildList res;
-	std::copy(list.begin(), list.end(), back_inserter(res));
-	return res;
-}
+void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children = Node::ChildList());
 
 TEST(TypeTest, NodeManager ) {
 
@@ -194,9 +189,12 @@ TEST(TypeTest, Type_AllConcrete) {
 TEST(TypeTest, GenericType_AllConcrete) {
 
 	// create some integer type parameter
-	IntTypeParam var = IntTypeParam::getVariableIntParam('p');
-	IntTypeParam con = IntTypeParam::getConcreteIntParam(12);
+	IntTypeParam var = 'p';
+	IntTypeParam con = (short unsigned)12;
 	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
+
+	EXPECT_EQ ( IntTypeParam::VARIABLE, var.getType());
+	EXPECT_EQ ( IntTypeParam::CONCRETE, con.getType());
 
 	// check basic
 	EXPECT_FALSE ( var.isConcrete() );
@@ -641,9 +639,13 @@ TEST(TypeTest, IntTypeParam) {
 
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, Node::ChildList children) {
+void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children) {
 
 	typedef typename PT::element_type T;
+
+	// ------------- Basic Node Tests ----------------
+
+	basicNodeTests(type, children);
 
 	// ------------ Type Ptr based tests -------------
 
@@ -652,10 +654,6 @@ void basicTypeTests(PT type, bool concrete, bool functional, Node::ChildList chi
 
 	// check function type
 	EXPECT_EQ( functional, type->isFunctionType() );
-
-	// check children
-	EXPECT_TRUE ( equals(children, type->getChildList(), equal_target<NodePtr>()) );
-
 
 	// ------------ Type Token based tests -------------
 

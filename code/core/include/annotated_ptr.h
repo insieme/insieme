@@ -45,8 +45,11 @@
 #include "type_traits_utils.h"
 
 
+namespace insieme {
+namespace core {
+
 template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, Annotatable {
+class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
 public:
 	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
 
@@ -65,8 +68,11 @@ dynamic_pointer_cast(AnnotatedPtr<T> src) {
 	return NULL;
 }
 
+} // end namespace core
+} // end namespace insieme
+
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const AnnotatedPtr<T>& ptr) {
+std::ostream& operator<<(std::ostream& out, const insieme::core::AnnotatedPtr<T>& ptr) {
 //	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
 	out << "AP(";
 	if (!!ptr) {
@@ -77,3 +83,4 @@ std::ostream& operator<<(std::ostream& out, const AnnotatedPtr<T>& ptr) {
 	out << ")";
 	return out;
 }
+

@@ -389,9 +389,12 @@ ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, co
 // ------------------------------------ Vector Type ---------------------------
 
 VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
-	return manager.get(VectorType(elementType, size));
+	return manager.get(VectorType(elementType, IntTypeParam::getConcreteIntParam(size)));
 }
 
+VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
+	return manager.get(VectorType(elementType, size));
+}
 
 // ------------------------------------ Ref Type ---------------------------
 

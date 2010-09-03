@@ -43,6 +43,10 @@
 #include "hash_utils.h"
 #include "functional_utils.h"
 
+namespace insieme {
+namespace core {
+
+
 class AnnotationKey : public insieme::utils::HashableImmutableData<AnnotationKey> {
 	AnnotationKey(std::size_t hashCode) : HashableImmutableData(hashCode) {};
 };
@@ -53,6 +57,8 @@ public:
 	virtual const AnnotationKey* getKey() const = 0;
 };
 
+
+// Some type definitions for combined types required for handling annotations
 typedef std::shared_ptr<Annotation> ManagedAnnotation;
 typedef std::unordered_map<const AnnotationKey*, ManagedAnnotation, hash_target<const AnnotationKey*>> AnnotationMap;
 typedef std::shared_ptr<AnnotationMap> SharedAnnotationMap;
@@ -60,6 +66,10 @@ typedef std::shared_ptr<AnnotationMap> SharedAnnotationMap;
 class Annotatable {
 	SharedAnnotationMap map;
 public:
+
+	Annotatable() : map(SharedAnnotationMap(new AnnotationMap())) {};
+	virtual ~Annotatable() {};
+
 	void addAnnotation(const ManagedAnnotation& annotation) {
 		map->insert(std::make_pair(annotation->getKey(), annotation));
 	};
@@ -92,3 +102,6 @@ public:
 		return contains(&key);
 	}
 };
+
+} // end namespace core
+} // end namespace insieme

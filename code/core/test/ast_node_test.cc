@@ -36,100 +36,77 @@
 
 #include <gtest/gtest.h>
 
-#include "program.h"
-#include "ast_visitor.h"
-
-using namespace insieme::core;
-
-class SimpleVisitor : public ProgramVisitor<SimpleVisitor> {
-
-public:
-	int countGenericTypes;
-	int countArrayTypes;
-	int countExpressions;
-	int countRefTypes;
-
-	SimpleVisitor() : countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
-
-public:
-	void visitGenericType(const GenericTypePtr& cur) {
-		countGenericTypes++;
-	}
-
-	void visitExpression(const ExpressionPtr& cur) {
-		countExpressions++;
-	}
-
-	void visitArrayType(const ArrayTypePtr& cur) {
-		countArrayTypes++;
-	}
-
-	void visitRefType(const RefTypePtr& cur) {
-		countRefTypes++;
-
-		// forward processing
-		visitGenericType(cur);
-	}
-};
-
-TEST(Visitor2, TypeVisitor) {
-
-	NodeManager manager;
-	SimpleVisitor visitor;
-
-	ProgramPtr program = Program::create();
-
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 0, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
-
-	visitor.visit(program);
-
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 0, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
+#include "ast_node.h"
+#include "annotation.h"
+#include "container_utils.h"
 
 
-	GenericTypePtr type = GenericType::get(manager, "int");
-	visitor.visit(type);
+namespace insieme {
+namespace core {
 
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 1, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
-
-	IntTypePtr intType = IntType::get(manager);
-	visitor.visit(intType);
-
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 0, visitor.countExpressions );
-	EXPECT_EQ ( 2, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
-
-	IntLiteralPtr literal = IntLiteral::get(manager, 3, 2);
-	visitor.visit(literal);
-
-	EXPECT_EQ ( 0, visitor.countArrayTypes );
-	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 2, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
-
-	ArrayTypePtr arrayType = ArrayType::get(manager, type);
-	visitor.visit(arrayType);
-
-	EXPECT_EQ ( 1, visitor.countArrayTypes );
-	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 2, visitor.countGenericTypes );
-	EXPECT_EQ ( 0, visitor.countRefTypes );
-
-	RefTypePtr refType = RefType::get(manager, type);
-	visitor.visit(refType);
-
-	EXPECT_EQ ( 1, visitor.countArrayTypes );
-	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 3, visitor.countGenericTypes );
-	EXPECT_EQ ( 1, visitor.countRefTypes );
+template<typename NodePtr>
+Node::ChildList toList(const vector<NodePtr>& list) {
+	Node::ChildList res;
+	std::copy(list.begin(), list.end(), back_inserter(res));
+	return res;
 }
+
+
+template<typename NodePtr>
+void basicNodeTests(NodePtr node, const Node::ChildList& children = Node::ChildList()) {
+
+	typedef typename NodePtr::element_type T;
+
+	// ------------ Node Ptr based tests -------------
+
+	// check children
+	EXPECT_TRUE ( equals(children, node->getChildList(), equal_target<insieme::core::NodePtr>()) );
+
+	// ------------ Annotation Tests -------------
+
+	// check for shared annotations
+	Node::ChildList listA = node->getChildList();
+	Node::ChildList listB = node->getChildList();
+
+	EXPECT_TRUE ( equals( listA, listB ) );
+	EXPECT_TRUE ( equals( listA, listB, equal_target<insieme::core::NodePtr>()) );
+
+
+	// ------------ Type Token based tests -------------
+
+	// copy and clone the type
+	NodeManager manager;
+	T copy = T(*node);
+	T* clone = dynamic_cast<T*>(static_cast<const Node*>(&*node)->clone(manager));
+
+	// check whether all are equal
+	T* all[] = { &*node, &copy, clone };
+	for (int i=0; i<3; i++) {
+		for (int j=0; j<3; j++) {
+
+			T* a = all[i];
+			T* b = all[j];
+
+			EXPECT_EQ ( *a , *b );
+			EXPECT_EQ ( a->hash(), b->hash() );
+			EXPECT_EQ ( a->getName(), b->getName() );
+			EXPECT_EQ ( a->toString(), b->toString() );
+
+		}
+	}
+
+	// check type properties
+	for (int i=0; i<3; i++) {
+
+		T* cur = all[i];
+
+		// check children
+		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<insieme::core::NodePtr>()) );
+	}
+
+	delete clone;
+}
+
+} // end namespace core
+} // end namespace insieme
 
