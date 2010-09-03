@@ -53,6 +53,8 @@ namespace insieme {
 class ClangStmtConverter;
 class ClangTypeConverter;
 
+// ------------------------------------ InsiemeIRConsumer ---------------------------
+
 class ConversionFactory {
 	core::SharedNodeManager  mMgr;
 	const core::ASTBuilder   mBuilder;
@@ -75,10 +77,10 @@ public:
 
 class InsiemeIRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
-	insieme::core::SharedNodeManager mDataMgr;
+	ConversionFactory  fact;
 
 public:
-	InsiemeIRConsumer(const insieme::core::SharedNodeManager& dataMgr) : mCtx(NULL), mDataMgr(dataMgr){ }
+	InsiemeIRConsumer(insieme::core::SharedNodeManager dataMgr) : mCtx(NULL), fact(dataMgr){ }
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);

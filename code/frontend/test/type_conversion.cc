@@ -114,3 +114,18 @@ TEST(TypeConversion, HandlePointerTypes) {
 	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
 
 }
+
+TEST(TypeConversion, HandleReferenceTypes) {
+
+	ProgramPtr prog = Program::create();
+	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	clang::BuiltinType intTy(clang::BuiltinType::Int);
+	clang::QualType refTy = clang.getASTContext().getLValueReferenceType(clang::QualType(&intTy, 0));
+
+	TypePtr insiemeTy = convFactory.ConvertType( *refTy.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
+
+}

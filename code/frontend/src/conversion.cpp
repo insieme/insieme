@@ -36,6 +36,7 @@
 
 #include "conversion.h"
 
+#include "utils/types_lenght.h"
 #include "program.h"
 #include "ast_node.h"
 #include "types.h"
@@ -74,7 +75,29 @@ class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 public:
 	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
 
-	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl);
+	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
+		DLOG(INFO) << "Visiting VarDecl";
+		clang::QualType clangType = varDecl->getType();
+		clangType->dump();
+		if(!clangType.isCanonical())
+			clangType = clangType->getCanonicalTypeInternal();
+		core::TypePtr type = convFact.ConvertType( *varDecl->getType().getTypePtr() );
+
+		if(!!type)
+			DLOG(INFO) << type->toString();
+
+	//	PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
+	//	// registering variable in the var map
+	//	mDeclMap[varDecl] = polyVar;
+	//	// a vardecl is stored as a simple varref
+	//	PolyExprPtr ret = new PolyVarRefImpl<clang::VarDecl>(polyVar, *varDecl );
+	//	if( varDecl->getInit() ) {
+	//		// there is an initialization
+	//		ret = new PolyBinExprImpl<clang::VarDecl>( ret, PolyBinExpr::ASSIGN, Visit(varDecl->getInit()), *varDecl );
+	//	}
+	//	return ret;
+		return StmtWrapper();
+	}
 
 	StmtWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 //		// look for the vardecl in the map
@@ -182,60 +205,68 @@ public:
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
-	ConversionFactory& 		convFact;
 	const core::ASTBuilder&	builder;
 
+	typedef std::map<Type*, TypeWrapper> TypeMap;
+
+	TypeMap typeMap;
+
 public:
-	ClangTypeConverter(ConversionFactory& convFact): convFact(convFact), builder(convFact.builder()) { }
+	ClangTypeConverter(const core::ASTBuilder& builder): builder( builder ) { }
 
 	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
 
 		switch(buldInTy->getKind()) {
-		case BuiltinType::Void:  	return TypeWrapper( builder.unitType() );
-		case BuiltinType::Bool:		return TypeWrapper( builder.boolType() );
+		case BuiltinType::Void:
+			return TypeWrapper( builder.unitType() );
+		case BuiltinType::Bool:
+			return TypeWrapper( builder.boolType() );
+
 		// char types
 		case BuiltinType::Char_U:
 		case BuiltinType::UChar:
 			return TypeWrapper( builder.genericType("uchar") );
 		case BuiltinType::Char16:
-			return TypeWrapper( builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char16_t) )) );
+			return TypeWrapper( builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE(2)) );
 		case BuiltinType::Char32:
-			return TypeWrapper( builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(char32_t) )) );
+			return TypeWrapper( builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE(4)) );
 		case BuiltinType::Char_S:
 		case BuiltinType::SChar:
 			return TypeWrapper( builder.genericType("char") );
 		case BuiltinType::WChar:
 			return TypeWrapper( builder.genericType("wchar") );
-		// short types
-		case BuiltinType::UShort:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned short) )) );
-		case BuiltinType::Short:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(short) )) );
+
 		// integer types
+		case BuiltinType::UShort:
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( SHORT_LENGTH )) );
+		case BuiltinType::Short:
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( SHORT_LENGTH )) );
 		case BuiltinType::UInt:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned int) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( INT_LENGTH )) );
 		case BuiltinType::Int:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(int) )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( INT_LENGTH )) );
 		case BuiltinType::UInt128:
 			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
 		case BuiltinType::Int128:
 			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
-		// long types
 		case BuiltinType::ULong:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LENGTH )) );
 		case BuiltinType::ULongLong:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(unsigned long long) )) );
+			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LONG_LENGTH )) );
 		case BuiltinType::Long:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long) )) );
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LENGTH )) );
 		case BuiltinType::LongLong:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long long) )) );
-		// float types
+			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LONG_LENGTH )) );
+
+		// real types
 		case BuiltinType::Float:
-			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(float) )) );
+			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( FLOAT_LENGTH )) );
 		case BuiltinType::Double:
-			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(double) )) );
+			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( DOUBLE_LENGTH )) );
 		case BuiltinType::LongDouble:
-			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( sizeof(long double) )) );
+			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_DOUBLE_LENGTH )) );
+
+		// not supported types
 		case BuiltinType::NullPtr:
 		case BuiltinType::Overload:
 		case BuiltinType::Dependent:
@@ -261,23 +292,81 @@ public:
 		return TypeWrapper();
 	}
 
-	TypeWrapper VisitPointerType(PointerType* pointerTy) {
-		LOG(INFO) << "Converting pointer type";
-		return TypeWrapper( builder.refType(Visit(pointerTy-> getPointeeType().getTypePtr()).ref) );
+	TypeWrapper VisitTypedefType(TypedefType* elabType) {
+		LOG(INFO) << "Converting typedef type" << std::endl;
+		return TypeWrapper();
 	}
 
-	TypeWrapper VisitReferenceType(ReferenceType* refTy) { return TypeWrapper(); }
+	TypeWrapper VisitTagType(TagType* tagType) {
+		DLOG(INFO) << "Converting tag type" << std::endl;
+		TypeMap::const_iterator fit = typeMap.find(tagType);
+		if(fit != typeMap.end())
+			return fit->second;
+
+		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
+		// iterate through all the redeclarations to see if one of them provides a definition
+		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
+		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
+		if(i != e) {
+			tagDecl = tagDecl->getDefinition();
+			// we found a definition for this declaration, use it
+			assert(tagDecl->isDefinition() && "TagType is not a definition");
+
+			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
+			switch(tagDecl->getTagKind()) {
+			case TagDecl::TK_struct: {
+				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
+				assert(recDecl);
+				core::NamedCompositeType::Entries structElements;
+				std::for_each(recDecl->field_begin(), recDecl->field_end(), [ &structElements, this ]( RecordDecl::field_iterator::value_type curr ){
+					structElements.push_back(
+							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), this->Visit( curr->getType().getTypePtr() ).ref )
+					);
+				});
+				typeMap[tagType] = TypeWrapper( builder.structType( structElements ) );
+				DLOG(INFO) << "TYPE ";
+				return typeMap[tagType];
+			}
+			case TagDecl::TK_union:
+			case TagDecl::TK_class:
+			case TagDecl::TK_enum:
+				return TypeWrapper();
+			}
+		} else {
+			// use a forward declaration for it
+			DLOG(INFO) << builder.genericType( tagDecl->getNameAsString() )->toString();
+			return TypeWrapper( builder.genericType( tagDecl->getNameAsString() ) );
+		}
+		return TypeWrapper();
+	}
+
+	TypeWrapper VisitElaboratedType(ElaboratedType* elabType) {
+		LOG(INFO) << "Converting elaborated type" << std::endl;
+		return TypeWrapper();
+	}
+
+	TypeWrapper VisitPointerType(PointerType* pointerTy) {
+		return TypeWrapper( builder.refType( Visit(pointerTy->getPointeeType().getTypePtr()).ref ) );
+	}
+
+	TypeWrapper VisitReferenceType(ReferenceType* refTy) {
+		return TypeWrapper( builder.refType( Visit(refTy->getPointeeType().getTypePtr()).ref ) );
+	}
 
 };
 
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mMgr(mgr), mBuilder(mgr),
-		stmtConv(new ClangStmtConverter(*this)), typeConv(new ClangTypeConverter(*this)) { }
+		stmtConv(new ClangStmtConverter(*this)), typeConv(new ClangTypeConverter(mBuilder)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
+	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
+	type.dump();
 	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
+	DLOG(INFO) << "Converting stmt:";
+	stmt.dump();
 	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).ref;
 }
 
@@ -286,40 +375,18 @@ ConversionFactory::~ConversionFactory() {
 	delete stmtConv;
 }
 
-// ------------------------------------ ClangStmtConverter ---------------------------
-
-StmtWrapper ClangStmtConverter::VisitVarDecl(clang::VarDecl* varDecl) {
-
-	// TypeWrapper tw = ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
-
-//	if(!!tw.ref)
-//		DLOG(INFO) << tw.ref->toString();
-
-//	PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
-//	// registering variable in the var map
-//	mDeclMap[varDecl] = polyVar;
-//	// a vardecl is stored as a simple varref
-//	PolyExprPtr ret = new PolyVarRefImpl<clang::VarDecl>(polyVar, *varDecl );
-//	if( varDecl->getInit() ) {
-//		// there is an initialization
-//		ret = new PolyBinExprImpl<clang::VarDecl>( ret, PolyBinExpr::ASSIGN, Visit(varDecl->getInit()), *varDecl );
-//	}
-//	return ret;
-	return StmtWrapper();
-}
-
 // ------------------------------------ ClangTypeConverter ---------------------------
 
 void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
-//		Decl* decl = *it;
-//		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+		Decl* decl = *it;
+		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			// this is a function decl
-//			if(funcDecl->getBody())
-//				ConversionFactory::ConvertStmt( *funcDecl->getBody() );
-//		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-//			ConversionFactory::ConvertType( *varDecl->getType().getTypePtr() );
-//		}
+			if(funcDecl->getBody())
+				fact.ConvertStmt( *funcDecl->getBody() );
+		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();
+		}
 	}
 }
 
