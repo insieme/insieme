@@ -70,10 +70,9 @@ Definition::Definition(const Identifier& name, const TypePtr& type, const bool& 
 
 Node::OptionChildList Definition::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
+	res->push_back(type);
 	if (definition) {
-		*iter = definition;
+		res->push_back(definition);
 	}
 	return res;
 }

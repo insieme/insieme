@@ -49,7 +49,14 @@ namespace insieme {
 namespace core {
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>());
+void basicTypeTests(PT type, bool concrete, bool functional, Node::ChildList children = Node::ChildList());
+
+template<typename NodePtr>
+Node::ChildList toList(const vector<NodePtr>& list) {
+	Node::ChildList res;
+	std::copy(list.begin(), list.end(), back_inserter(res));
+	return res;
+}
 
 TEST(TypeTest, NodeManager ) {
 
@@ -271,19 +278,19 @@ TEST(TypeTest, GenericType) {
 		basicTypeTests(typeB, true, false);
 	}{
 		SCOPED_TRACE ( "typeC" );
-		basicTypeTests(typeC, false, false, toVector<TypePtr>(varA));
+		basicTypeTests(typeC, false, false, toVector<NodePtr>(varA));
 	}{
 		SCOPED_TRACE ( "typeD" );
 		basicTypeTests(typeD, false, false);
 	}{
 		SCOPED_TRACE ( "typeE" );
-		basicTypeTests(typeE, true, false, typeListA);
+		basicTypeTests(typeE, true, false, toList(typeListA));
 	}{
 		SCOPED_TRACE ( "typeF" );
-		basicTypeTests(typeF, true, false, toVector<TypePtr>(typeA));
+		basicTypeTests(typeF, true, false, toVector<NodePtr>(typeA));
 	}{
 		SCOPED_TRACE ( "typeG" );
-		vector<TypePtr> list(typeListA);
+		Node::ChildList list = toList(typeListA);
 		list.push_back(typeA);
 		basicTypeTests(typeG, true, false, list);
 	}
@@ -343,8 +350,8 @@ TEST(TypeTest, TupleType) {
 
 
 	// perform basic type tests
-	basicTypeTests(typeA, true, false, subTypesA);
-	basicTypeTests(typeB, true, false, subTypesB);
+	basicTypeTests(typeA, true, false, toList(subTypesA));
+	basicTypeTests(typeB, true, false, toList(subTypesB));
 
 }
 
@@ -372,8 +379,8 @@ TEST(TypeTest, FunctionType) {
 	subTypesB.push_back(resultB);
 
 	// perform basic type tests
-	basicTypeTests(funTypeA, true, true, subTypesA);
-	basicTypeTests(funTypeB, true, true, subTypesB);
+	basicTypeTests(funTypeA, true, true, toList(subTypesA));
+	basicTypeTests(funTypeB, true, true, toList(subTypesB));
 }
 
 TEST(TypeTest, StructType) {
@@ -430,9 +437,9 @@ TEST(TypeTest, StructType) {
 			return cur.second;
 	});
 
-	basicTypeTests(structA, true, false, typeListA);
-	basicTypeTests(structB, true, false, typeListB);
-	basicTypeTests(structC, false, false, typeListC);
+	basicTypeTests(structA, true, false, toList(typeListA));
+	basicTypeTests(structB, true, false, toList(typeListB));
+	basicTypeTests(structC, false, false, toList(typeListC));
 }
 
 TEST(TypeTest, UnionType) {
@@ -479,9 +486,9 @@ TEST(TypeTest, UnionType) {
 			return cur.second;
 	});
 
-	basicTypeTests(unionA, true, false, typeListA);
-	basicTypeTests(unionB, true, false, typeListB);
-	basicTypeTests(unionC, false, false, typeListC);
+	basicTypeTests(unionA, true, false, toList(typeListA));
+	basicTypeTests(unionB, true, false, toList(typeListB));
+	basicTypeTests(unionC, false, false, toList(typeListC));
 }
 
 TEST(TypeTest, ArrayType) {
@@ -508,8 +515,8 @@ TEST(TypeTest, ArrayType) {
 	EXPECT_EQ ( 3, arrayTypeB->getDimension());
 
 	// check remaining type properties
-	basicTypeTests(arrayTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(arrayTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(arrayTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(arrayTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 TEST(TypeTest, VectorType) {
@@ -536,8 +543,8 @@ TEST(TypeTest, VectorType) {
 	EXPECT_EQ ( 3, vectorTypeB->getSize());
 
 	// check remaining type properties
-	basicTypeTests(vectorTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(vectorTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(vectorTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(vectorTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 TEST(TypeTest, ChannelType) {
@@ -564,8 +571,8 @@ TEST(TypeTest, ChannelType) {
 	EXPECT_EQ ( 3, channelTypeB->getSize());
 
 	// check remaining type properties
-	basicTypeTests(channelTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(channelTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(channelTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(channelTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 TEST(TypeTest, RefType) {
@@ -588,8 +595,8 @@ TEST(TypeTest, RefType) {
 	EXPECT_EQ ( elementTypeB, refTypeB->getElementType() );
 
 	// check remaining type properties
-	basicTypeTests(refTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(refTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(refTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(refTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 
@@ -634,7 +641,7 @@ TEST(TypeTest, IntTypeParam) {
 
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children) {
+void basicTypeTests(PT type, bool concrete, bool functional, Node::ChildList children) {
 
 	typedef typename PT::element_type T;
 
@@ -646,9 +653,8 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	// check function type
 	EXPECT_EQ( functional, type->isFunctionType() );
 
-	/* TODO:
 	// check children
-	EXPECT_TRUE ( children == *(type->getChildren()) );
+	EXPECT_TRUE ( equals(children, type->getChildList(), equal_target<NodePtr>()) );
 
 
 	// ------------ Type Token based tests -------------
@@ -656,7 +662,7 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*type);
-	T* clone = dynamic_cast<T*>(dynamic_cast<const Type*>(&*type)->clone(manager));
+	T* clone = dynamic_cast<T*>(static_cast<const Type*>(&*type)->clone(manager));
 
 	// check whether all are equal
 	T* all[] = { &*type, &copy, clone };
@@ -686,11 +692,10 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 		EXPECT_EQ( functional, cur->isFunctionType() );
 
 		// check children
-		EXPECT_TRUE ( equals(children, *(cur->getChildren()), equal_target<TypePtr>()));
+		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<NodePtr>()) );
 	}
 
 	delete clone;
-	*/
 }
 
 } // end namespace core

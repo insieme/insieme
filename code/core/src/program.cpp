@@ -70,9 +70,8 @@ Program* Program::clone(NodeManager& manager) const {
  */
 Node::OptionChildList Program::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	std::copy(definitions.cbegin(), definitions.cend(), iter);
-	std::copy(entryPoints.cbegin(), entryPoints.cend(), iter);
+	std::copy(definitions.cbegin(), definitions.cend(), back_inserter(*res));
+	std::copy(entryPoints.cbegin(), entryPoints.cend(), back_inserter(*res));
 	return res;
 }
 

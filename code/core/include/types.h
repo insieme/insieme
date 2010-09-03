@@ -54,7 +54,6 @@
 #include "identifiers.h"
 #include "instance_manager.h"
 #include "string_utils.h"
-#include "visitor.h"
 
 using std::string;
 using std::vector;
@@ -105,7 +104,7 @@ class Type: public Node {
 	 * Allow the test case to access private methods.
 	 */
 	template<typename PT>
-	friend void basicTypeTests(PT, bool, bool, vector<TypePtr> children = vector<TypePtr>());
+	friend void basicTypeTests(PT, bool, bool, Node::ChildList children = Node::ChildList());
 
 private:
 
@@ -127,6 +126,8 @@ private:
 	 * A flag indicating whether this type represents a function type (true) or a data type (false).
 	 */
 	const bool functionType;
+
+	virtual Type* clone(NodeManager& manager) const = 0;
 
 protected:
 

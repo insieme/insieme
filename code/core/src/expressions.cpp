@@ -189,10 +189,9 @@ bool LambdaExpr::equalsExpr(const Expression& expr) const {
 
 Node::OptionChildList LambdaExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
-	std::copy(params.cbegin(), params.cend(), iter);
-	*iter = body;
+	res->push_back(type);
+	std::copy(params.cbegin(), params.cend(), back_inserter(*res));
+	res->push_back(body);
 	return res;
 }
 
@@ -228,9 +227,8 @@ bool TupleExpr::equalsExpr(const Expression& expr) const {
 
 Node::OptionChildList TupleExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
-	std::copy(expressions.cbegin(), expressions.cend(), iter);
+	res->push_back(type);
+	std::copy(expressions.cbegin(), expressions.cend(), back_inserter(*res));
 	return res;
 }
 
@@ -287,9 +285,8 @@ std::size_t hashStructOrUnionExpr(size_t seed, const StructExpr::Members& member
 
 Node::OptionChildList NamedCompositeExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
-	std::transform(members.cbegin(), members.cend(), iter, extractSecond<Member>());
+	res->push_back(type);
+	std::transform(members.cbegin(), members.cend(), back_inserter(*res), extractSecond<Member>());
 	return res;
 }
 
@@ -355,14 +352,13 @@ JobExpr* JobExpr::clone(NodeManager& manager) const {
 
 Node::OptionChildList JobExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
-	std::copy(localDecls.cbegin(), localDecls.cend(), iter);
-	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&iter](const GuardedStmt& cur) {
-		*iter = cur.first;
-		*iter = cur.second;
+	res->push_back(type);
+	std::copy(localDecls.cbegin(), localDecls.cend(), back_inserter(*res));
+	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&res](const GuardedStmt& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
 	});
-	*iter = defaultStmt;
+	res->push_back(defaultStmt);
 	return res;
 }
 
@@ -413,10 +409,9 @@ bool CallExpr::equalsExpr(const Expression& expr) const {
 
 Node::OptionChildList CallExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
-	*iter = functionExpr;
-	std::copy(arguments.cbegin(), arguments.cend(), iter);
+	res->push_back(type);
+	res->push_back(functionExpr);
+	std::copy(arguments.cbegin(), arguments.cend(), back_inserter(*res));
 	return res;
 }
 
@@ -452,9 +447,8 @@ bool CastExpr::equalsExpr(const Expression& expr) const {
 
 Node::OptionChildList CastExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = type;
-	*iter = subExpression;
+	res->push_back(type);
+	res->push_back(subExpression);
 	return res;
 }
 

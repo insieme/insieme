@@ -52,7 +52,6 @@
 #include "container_utils.h"
 #include "instance_manager.h"
 #include "types.h"
-#include "visitor.h"
 #include "identifiers.h"
 
 using std::string;

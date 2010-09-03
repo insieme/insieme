@@ -181,9 +181,8 @@ DeclarationStmt* DeclarationStmt::clone(NodeManager& manager) const {
 Node::OptionChildList DeclarationStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = varExpression;
-	*iter = initExpression;
+	res->push_back(varExpression);
+	res->push_back(initExpression);
 	return res;
 }
 
@@ -221,8 +220,7 @@ CompoundStmt* CompoundStmt::clone(NodeManager& manager) const {
 Node::OptionChildList CompoundStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	std::copy(statements.cbegin(), statements.cend(), iter);
+	std::copy(statements.cbegin(), statements.cend(), back_inserter(*res));
 	return res;
 }
 
@@ -270,9 +268,8 @@ WhileStmt* WhileStmt::clone(NodeManager& manager) const {
 Node::OptionChildList WhileStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = condition;
-	*iter = body;
+	res->push_back(condition);
+	res->push_back(body);
 	return res;
 }
 
@@ -313,11 +310,10 @@ ForStmt* ForStmt::clone(NodeManager& manager) const {
 Node::OptionChildList ForStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = declaration;
-	*iter = step;
-	*iter = end;
-	*iter = body;
+	res->push_back(declaration);
+	res->push_back(step);
+	res->push_back(end);
+	res->push_back(body);
 	return res;
 }
 
@@ -357,10 +353,9 @@ bool IfStmt::equalsStmt(const Statement& stmt) const {
 Node::OptionChildList IfStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = condition;
-	*iter = thenBody;
-	*iter = elseBody;
+	res->push_back(condition);
+	res->push_back(thenBody);
+	res->push_back(elseBody);
 	return res;
 }
 	
@@ -411,11 +406,10 @@ bool SwitchStmt::equalsStmt(const Statement& stmt) const {
 Node::OptionChildList SwitchStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	auto iter = inserter(*res, res->end());
-	*iter = switchExpr;
-	std::for_each(cases.cbegin(), cases.cend(), [&iter](const Case& cur) {
-		*iter = cur.first;
-		*iter = cur.second;
+	res->push_back(switchExpr);
+	std::for_each(cases.cbegin(), cases.cend(), [&res](const Case& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
 	});
 	return res;
 }
