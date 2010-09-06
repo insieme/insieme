@@ -127,6 +127,9 @@ public:
 	}
 };
 
+} // end namespace utils
+} // end namespace insieme
+
 /**
  * Integrates the hash code computation for nodes into the boost hash code framework.
  *
@@ -134,12 +137,9 @@ public:
  * @return the hash code of the given instance
  */
 template<typename Derived>
-inline std::size_t hash_value(const HashableImmutableData<Derived>& instance) {
+inline std::size_t hash_value(const insieme::utils::HashableImmutableData<Derived>& instance) {
 	return instance.hash();
 }
-
-} // end namespace utils
-} // end namespace insieme
 
 namespace std
 {

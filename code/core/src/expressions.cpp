@@ -329,7 +329,7 @@ size_t hashJobExpr(const StatementPtr& defaultStmt, const JobExpr::GuardedStmts&
 	size_t seed = HASHVAL_JOBEXPR;
 	boost::hash_combine(seed, defaultStmt);
 	hashPtrRange(seed, localDecls);
-	for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&seed](const JobExpr::GuardedStmt& s){
+	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&seed](const JobExpr::GuardedStmt& s){
 		boost::hash_combine(seed, s.first);
 		boost::hash_combine(seed, s.second);
 	});

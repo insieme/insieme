@@ -40,6 +40,7 @@
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <hash_utils.h>
 
 template<typename T>
 struct id : public std::unary_function<T, T> {
@@ -91,7 +92,7 @@ struct hash_target: public std::unary_function<const PointerType, std::size_t> {
 	 */
 	std::size_t operator()(const PointerType p) const {
 		if (!!p) {
-			return hash_value(*p);
+			return ::hash_value(*p);
 		}
 		return 0;
 	}
