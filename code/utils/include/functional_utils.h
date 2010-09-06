@@ -92,7 +92,7 @@ struct hash_target: public std::unary_function<const PointerType, std::size_t> {
 	 */
 	std::size_t operator()(const PointerType p) const {
 		if (!!p) {
-			return ::hash_value(*p);
+			return hash_value(*p);
 		}
 		return 0;
 	}
