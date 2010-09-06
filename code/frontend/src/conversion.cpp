@@ -55,127 +55,127 @@ using namespace insieme;
 namespace fe = insieme::frontend;
 
 namespace {
-struct TypeWrapper {
-	core::TypePtr ref;
-	TypeWrapper(): ref(core::TypePtr(NULL)) { }
-	TypeWrapper(core::TypePtr type): ref(type) { }
+
+template <class T>
+struct IRWrapper {
+	T ref;
+	IRWrapper(): ref(T(NULL)) { }
+	IRWrapper(const T& type): ref(type) { }
 };
 
-struct StmtWrapper {
-	core::StatementPtr ref;
-	StmtWrapper(): ref(core::StatementPtr(NULL)) { }
-	StmtWrapper(core::StatementPtr stmt): ref(core::StatementPtr(stmt)) { }
+struct TypeWrapper: public IRWrapper<core::TypePtr> {
+	TypeWrapper(): IRWrapper<core::TypePtr>() { }
+	TypeWrapper(const core::TypePtr& type): IRWrapper<core::TypePtr>(type) { }
 };
+
+struct ExprWrapper: public IRWrapper<core::ExpressionPtr> {
+	ExprWrapper(): IRWrapper<core::ExpressionPtr>() { }
+	ExprWrapper(const core::ExpressionPtr& expr): IRWrapper<core::ExpressionPtr>(expr) { }
+};
+
+struct StmtWrapper: public std::vector<core::StatementPtr>{
+	StmtWrapper(): std::vector<core::StatementPtr>() { }
+	StmtWrapper(const core::StatementPtr& stmt):  std::vector<core::StatementPtr>() { push_back(stmt); }
+
+	core::StatementPtr getFront() const {
+		assert(size() == 1 && "More than 1 statement present");
+		return front();
+	}
+};
+
+unsigned short getSizeSpecifier(core::GenericTypePtr type) {
+	LOG(INFO) << type;
+	std::vector<core::IntTypeParam> intParamList = type->getIntTypeParameter();
+	assert(!intParamList.empty() && "Generic type has no size specifier");
+	LOG(INFO) << "Size: " << intParamList[0].getValue();
+	return intParamList[0].getValue()/2;
+}
+
 }
 
 namespace insieme {
 
+namespace core {
+
+//class StmtList: public Statement {
+//public:
+//	typedef vector<StatementPtr> StmtVect;
+//
+//	StmtList(const StmtVect& list): Statement(EXPRESSION), stmtVect(list) { }
+//
+//	std::ostream& printTo(std::ostream& out) const { return out; }
+//protected:
+//	OptionChildList getChildNodes() const { return OptionChildList(); }
+//	bool equalsStmt(const Statement& stmt) const { return false; }
+//private:
+//	StmtList* clone(NodeManager& manager) const { return NULL; }
+//
+//	StmtVect stmtVect;
+//};
+//
+//typedef std::shared_ptr<StmtList> StmtListPtr;
+
+}
+
+class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
+	ConversionFactory& convFact;
+	const core::ASTBuilder&	builder;
+
+public:
+	ClangExprConverter(ConversionFactory& convFact, const core::ASTBuilder& builder): convFact(convFact), builder( builder ) { }
+
+	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
+		return ExprWrapper( builder.intLiteral( *intLit->getValue().getRawData(),
+				getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(convFact.ConvertType( *intLit->getType().getTypePtr() )))) );
+	}
+
+	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
+		// todo: handle float and doubles
+		return ExprWrapper( builder.floatLiteral( floatLit->getValue().convertToDouble(),
+				getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(convFact.ConvertType( *floatLit->getType().getTypePtr() )))) );
+	}
+
+	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {	return ExprWrapper();	}
+	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper(); }
+	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(); }
+	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper(); }
+	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {	return ExprWrapper(); }
+
+};
+
+
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
+
+	core::CompoundStmtPtr currBlock;
 public:
-	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
+
+	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact), currBlock(NULL) { }
 
 	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
-		DLOG(INFO) << "Visiting VarDecl";
 		clang::QualType clangType = varDecl->getType();
-		clangType->dump();
+
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 		core::TypePtr type = convFact.ConvertType( *varDecl->getType().getTypePtr() );
 
-		if(!!type)
-			DLOG(INFO) << type->toString();
-
-	//	PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
-	//	// registering variable in the var map
-	//	mDeclMap[varDecl] = polyVar;
-	//	// a vardecl is stored as a simple varref
-	//	PolyExprPtr ret = new PolyVarRefImpl<clang::VarDecl>(polyVar, *varDecl );
-	//	if( varDecl->getInit() ) {
-	//		// there is an initialization
-	//		ret = new PolyBinExprImpl<clang::VarDecl>( ret, PolyBinExpr::ASSIGN, Visit(varDecl->getInit()), *varDecl );
-	//	}
-	//	return ret;
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
-//		// look for the vardecl in the map
-//		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declRef->getDecl());
-//		DeclMap::const_iterator fit = mDeclMap.find(varDecl);
-//		assert( fit != mDeclMap.end() && "VarDecl is not registered in the DeclMap." );
-//		return new PolyVarRefImpl<clang::DeclRefExpr>(fit->second, *declRef );
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit){
-//		return new PolyIntLitImpl<clang::IntegerLiteral>(*intLit);
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitCastExpr(clang::CastExpr* castExpr) {
-//		return Visit(castExpr->getSubExpr());
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) {
-//		PolyExprPtr subExpr( BaseClass::Visit(unOp->getSubExpr()) );
-//		PolyUnExpr::Op op;
-//		switch(unOp->getOpcode()){
-//			case clang::UnaryOperator::Minus:
-//				op = PolyUnExpr::MINUS; break;
-//			case clang::UnaryOperator::Plus:
-//				op = PolyUnExpr::PLUS; break;
-//			case clang::UnaryOperator::PostInc:
-//				op = PolyUnExpr::POST_INC; break;
-//			case clang::UnaryOperator::PreInc:
-//				op = PolyUnExpr::PRE_INC; break;
-//			case clang::UnaryOperator::PostDec:
-//				op = PolyUnExpr::POST_DEC; break;
-//			case clang::UnaryOperator::PreDec:
-//				op = PolyUnExpr::PRE_DEC; break;
-//			default:
-//				FATAL("Unary operator '" << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()) <<
-//					  "' not (yet) supported in the PolyIR representation.");
-//		}
-//		return new PolyUnExprImpl<clang::UnaryOperator>( op, subExpr, *unOp );
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitBinaryOperator(clang::BinaryOperator* binOp) {
-//		PolyExprPtr lhs( BaseClass::Visit(binOp->getLHS()) );
-//		PolyExprPtr rhs( BaseClass::Visit(binOp->getRHS()) );
-//		PolyBinExpr::Op op;
-//		switch(binOp->getOpcode()){
-//			case clang::BinaryOperator::Sub:
-//				op = PolyBinExpr::SUB; break;
-//			case clang::BinaryOperator::Add:
-//				op = PolyBinExpr::SUM; break;
-//			case clang::BinaryOperator::Assign:
-//				op = PolyBinExpr::ASSIGN; break;
-//			case clang::BinaryOperator::LT:
-//				op = PolyBinExpr::LT; break;
-//			case clang::BinaryOperator::LE:
-//				op = PolyBinExpr::LE; break;
-//			case clang::BinaryOperator::GT:
-//				op = PolyBinExpr::GT; break;
-//			case clang::BinaryOperator::GE:
-//				op = PolyBinExpr::GE; break;
-//			case clang::BinaryOperator::EQ:
-//				op = PolyBinExpr::EQ; break;
-//			default:
-//				FATAL("Binary operator '" << clang::BinaryOperator::getOpcodeStr(binOp->getOpcode()) <<
-//					  "' not (yet) supported in the PolyIR representation.");
-//		}
-//		return new PolyBinExprImpl<clang::BinaryOperator>( lhs, op, rhs, *binOp );
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
-//		return new PolyBinExprImpl<clang::ArraySubscriptExpr>( Visit(arraySubExpr->getBase()),
-//				PolyBinExpr::ARRAY_SUB,
-//				Visit(arraySubExpr->getIdx()), *arraySubExpr );
-		return StmtWrapper();
+		// initialization value
+		core::ExpressionPtr initExpr(NULL);
+		if( varDecl->getInit() )
+			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
+		else {
+			// in case of floating types we initialize with 0.0f
+			if( varDecl->getType().getTypePtr()->isFloatingType() ) {
+				initExpr = convFact.builder().floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEdouble).convertToDouble(),
+						getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(type) ) );
+			} else if ( varDecl->getType().getTypePtr()->isIntegerType() ) {
+				initExpr = convFact.builder().intLiteral(*llvm::APInt::getNullValue(8).getRawData(),
+						getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(type) ) );
+			}
+		}
+		LOG(INFO) << initExpr;
+		// todo: initialization for declarations with no initialization value
+		return StmtWrapper( convFact.builder().declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
 	}
 
 	// In clang a declstmt is represented as a list of VarDecl
@@ -186,12 +186,29 @@ public:
 			return VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
-//		PolyExprListImpl<clang::DeclStmt>* exprList = new PolyExprListImpl<clang::DeclStmt>(*declStmt);
-//		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
-//			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-//				exprList->push_back( VisitVarDecl(varDecl) );
-//		return exprList;
-		return StmtWrapper();
+		StmtWrapper retList;
+		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
+			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
+				retList.push_back( VisitVarDecl(varDecl).getFront() );
+		return retList;
+	}
+
+	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
+		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
+		return StmtWrapper( convFact.builder().returnStmt( convFact.ConvertExpr( *retStmt->getRetValue() ) ) );
+	}
+
+	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
+		vector<core::StatementPtr> stmtList;
+		std::for_each( compStmt->body_begin(), compStmt->body_end(),
+				[ &stmtList, this ](Stmt* stmt){
+					// A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted in multiple
+					// StatementPtr because an initialization list such as: int a,b=1; is converted into the following sequence of statements:
+					// int<a> a = 0; int<4> b = 1;
+					StmtWrapper&& convertedStmt = this->Visit(stmt);
+					std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+				} );
+		return StmtWrapper( convFact.builder().compoundStmt(stmtList) );
 	}
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
@@ -387,13 +404,10 @@ public:
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* elabType) {
-		LOG(INFO) << "Converting typedef type" << std::endl;
-		return TypeWrapper();
+		assert(false && "TypedefType not yet handled!");
 	}
 
 	TypeWrapper VisitTagType(TagType* tagType) {
-		DLOG(INFO) << "Converting tag type" << std::endl;
-
 		// lookup the type map to see if this type has been already converted
 		TypeMap::const_iterator fit = typeMap.find(tagType);
 		if(fit != typeMap.end())
@@ -411,9 +425,10 @@ public:
 			assert(tagDecl->isDefinition() && "TagType is not a definition");
 
 			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
-			switch(tagDecl->getTagKind()) {
-			case TagDecl::TK_struct:
-			case TagDecl::TK_union: {
+			if(tagDecl->getTagKind() == TagDecl::TK_enum) {
+
+			} else {
+				// handle struct/union/class
 				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 				core::NamedCompositeType::Entries structElements;
@@ -422,17 +437,18 @@ public:
 							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), this->Visit( curr->getType().getTypePtr() ).ref )
 					);
 				});
+
 				TypeWrapper retTy;
-				if(tagDecl->getTagKind() == TagDecl::TK_struct)
+				// class and struct are handled in the same way
+				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class )
 					retTy = TypeWrapper( builder.structType( structElements ) );
-				else
+				else if( tagDecl->getTagKind() == TagDecl::TK_union )
 					retTy = TypeWrapper( builder.unionType( structElements ) );
+				else
+					assert(false);
+
 				typeMap[tagType] = retTy;
 				return retTy;
-			}
-			case TagDecl::TK_class:
-			case TagDecl::TK_enum:
-				return TypeWrapper();
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
@@ -443,8 +459,7 @@ public:
 	}
 
 	TypeWrapper VisitElaboratedType(ElaboratedType* elabType) {
-		LOG(INFO) << "Converting elaborated type" << std::endl;
-		return TypeWrapper();
+		assert(false && "ElaboratedType not yet handled!");
 	}
 
 	TypeWrapper VisitPointerType(PointerType* pointerTy) {
@@ -457,8 +472,12 @@ public:
 
 };
 
+// ------------------------------------ ConversionFactory ---------------------------
+
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mMgr(mgr), mBuilder(mgr),
-		stmtConv(new ClangStmtConverter(*this)), typeConv(new ClangTypeConverter(mBuilder)) { }
+		typeConv(new ClangTypeConverter(mBuilder)),
+		exprConv(new ClangExprConverter(*this, mBuilder)),
+		stmtConv(new ClangStmtConverter(*this)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
@@ -469,7 +488,13 @@ core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
 	DLOG(INFO) << "Converting stmt:";
 	stmt.dump();
-	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).ref;
+	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getFront();
+}
+
+core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
+	DLOG(INFO) << "Converting expression:";
+	expr.dump();
+	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
 }
 
 ConversionFactory::~ConversionFactory() {
@@ -483,21 +508,34 @@ void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
-			LOG(INFO) << "Converted into: " << fact.ConvertType( *funcDecl->getType().getTypePtr() );
+			// finds a definition of this function if any
+			for(auto it = funcDecl->redecls_begin(), end = funcDecl->redecls_end(); it!=end; ++it)
+				if((*it)->isThisDeclarationADefinition())
+					funcDecl = (*it)->getCanonicalDecl();
+
+			core::TypePtr funcType = fact.ConvertType( *funcDecl->getType().getTypePtr() );
+
+			// paramlist
+			core::LambdaExpr::ParamList funcParamList;
+			std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [&funcParamList, &fact](ParmVarDecl* currParam){
+				funcParamList.push_back( fact.builder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
+			});
 			// this is a function decl
+			core::StatementPtr funcBody(NULL);
 			if(funcDecl->getBody())
-				fact.ConvertStmt( *funcDecl->getBody() );
+				funcBody =fact.ConvertStmt( *funcDecl->getBody() );
+
+			core::DefinitionPtr IRFuncDecl = fact.builder().definition(funcDecl->getNameAsString(), funcType,
+					fact.builder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
+			IRFuncDecl->printTo(std::cout);
+
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();
 		}
 	}
 }
 
-void InsiemeIRConsumer::HandleTranslationUnit (ASTContext &Ctx) {
-
-
-
-}
+void InsiemeIRConsumer::HandleTranslationUnit (ASTContext &Ctx) { }
 
 
 } // End insieme namespace

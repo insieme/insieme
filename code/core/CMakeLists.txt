@@ -15,7 +15,6 @@ file(GLOB insieme_core_incs 	include/*.h )
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_frontend_include_dir} )
 
 # Build the core library
 add_library(insieme_core ${insieme_core_srcs} ${insieme_core_incs} )

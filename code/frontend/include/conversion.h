@@ -52,6 +52,7 @@ namespace insieme {
 
 class ClangStmtConverter;
 class ClangTypeConverter;
+class ClangExprConverter;
 
 // ------------------------------------ InsiemeIRConsumer ---------------------------
 
@@ -59,14 +60,17 @@ class ConversionFactory {
 	core::SharedNodeManager  mMgr;
 	const core::ASTBuilder   mBuilder;
 
-	ClangStmtConverter* stmtConv;
 	ClangTypeConverter* typeConv;
+	ClangExprConverter* exprConv;
+	ClangStmtConverter* stmtConv;
 
 public:
 	ConversionFactory(core::SharedNodeManager mgr);
 
 	core::TypePtr 		ConvertType(const clang::Type& type);
 	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
+	core::ExpressionPtr ConvertExpr(const clang::Expr& expr);
+
 	core::SharedNodeManager&	manager() { return mMgr; }
 	const core::ASTBuilder& 	builder() const { return mBuilder; }
 

@@ -52,7 +52,7 @@ if(NOT MSVC)
 	find_library(llvm_Support_LIB 		  	NAMES LLVMSupport 	PATHS $ENV{LLVM_HOME}/lib)
 	find_library(llvm_Core_LIB 		 	  	NAMES LLVMCore 		PATHS $ENV{LLVM_HOME}/lib)
 	
-	set(llvm_LIBs ${llvm_Core_LIB} ${LLVMMC} ${llvm_System_LIB} ${llvm_Support_LIB} ${llvm_Core_LIB}) 
+	set(llvm_LIBs ${llvm_Core_LIB} ${llvm_MMC_LIB} ${llvm_System_LIB} ${llvm_Support_LIB} ${llvm_Core_LIB}) 
 else()
 	set(llvm_LIBs )
 endif() 
