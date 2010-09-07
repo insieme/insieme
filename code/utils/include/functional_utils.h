@@ -63,7 +63,7 @@ struct deref: public std::unary_function<const PointerType&, const typename Poin
  * @tparam PointerType the type of pointer to be compared
  */
 template<typename PointerType>
-struct equal_target: public std::binary_function<const PointerType&, const PointerType&, bool> {
+struct equal_target : public std::binary_function<const PointerType&, const PointerType&, bool> {
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
 	 * pointer type.
