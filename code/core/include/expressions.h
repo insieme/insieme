@@ -186,6 +186,8 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const Identifier& getIdentifier() const { return id; }
+
 	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
 

@@ -77,10 +77,12 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 	StmtWrapper(): std::vector<core::StatementPtr>() { }
 	StmtWrapper(const core::StatementPtr& stmt):  std::vector<core::StatementPtr>() { push_back(stmt); }
 
-	core::StatementPtr getFront() const {
+	core::StatementPtr getSingleStmt() const {
 		assert(size() == 1 && "More than 1 statement present");
 		return front();
 	}
+
+	bool isSingleStmt() const { return size() == 1; }
 };
 
 unsigned short getSizeSpecifier(core::GenericTypePtr type) {
@@ -94,28 +96,6 @@ unsigned short getSizeSpecifier(core::GenericTypePtr type) {
 }
 
 namespace insieme {
-
-namespace core {
-
-//class StmtList: public Statement {
-//public:
-//	typedef vector<StatementPtr> StmtVect;
-//
-//	StmtList(const StmtVect& list): Statement(EXPRESSION), stmtVect(list) { }
-//
-//	std::ostream& printTo(std::ostream& out) const { return out; }
-//protected:
-//	OptionChildList getChildNodes() const { return OptionChildList(); }
-//	bool equalsStmt(const Statement& stmt) const { return false; }
-//private:
-//	StmtList* clone(NodeManager& manager) const { return NULL; }
-//
-//	StmtVect stmtVect;
-//};
-//
-//typedef std::shared_ptr<StmtList> StmtListPtr;
-
-}
 
 class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
@@ -135,7 +115,10 @@ public:
 				getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(convFact.ConvertType( *floatLit->getType().getTypePtr() )))) );
 	}
 
-	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {	return ExprWrapper();	}
+	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
+		return ExprWrapper( builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
+	}
+
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper(); }
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(); }
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper(); }
@@ -143,14 +126,11 @@ public:
 
 };
 
-
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
-
-	core::CompoundStmtPtr currBlock;
 public:
 
-	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact), currBlock(NULL) { }
+	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
 
 	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
 		clang::QualType clangType = varDecl->getType();
@@ -164,22 +144,30 @@ public:
 		if( varDecl->getInit() )
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else {
-			// in case of floating types we initialize with 0.0f
-			if( varDecl->getType().getTypePtr()->isFloatingType() ) {
-				initExpr = convFact.builder().floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEdouble).convertToDouble(),
+			Type& ty = *varDecl->getType().getTypePtr();
+			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+				// in case of floating types we initialize with a zero value
+				initExpr = convFact.builder().floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEsingle).convertToFloat(),
 						getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(type) ) );
-			} else if ( varDecl->getType().getTypePtr()->isIntegerType() ) {
-				initExpr = convFact.builder().intLiteral(*llvm::APInt::getNullValue(8).getRawData(),
+			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+				// initialize integer value
+				initExpr = convFact.builder().intLiteral(*llvm::APInt::getNullValue(16).getRawData(),
 						getSizeSpecifier( core::dynamic_pointer_cast<const core::GenericType>(type) ) );
+			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+				// initialize pointer/reference types with the null value
+				//todo
+			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+				//todo
+			} else if ( ty.isBooleanType() ) {
+				// boolean values are initialized to false
+				initExpr = convFact.builder().boolLiteral(false);
 			}
 		}
-		LOG(INFO) << initExpr;
 		// todo: initialization for declarations with no initialization value
 		return StmtWrapper( convFact.builder().declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
 	}
 
 	// In clang a declstmt is represented as a list of VarDecl
-	// the conversion to PolyIR replace with an expressions
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
@@ -189,13 +177,86 @@ public:
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-				retList.push_back( VisitVarDecl(varDecl).getFront() );
+				retList.push_back( VisitVarDecl(varDecl).getSingleStmt() );
 		return retList;
 	}
 
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
 		return StmtWrapper( convFact.builder().returnStmt( convFact.ConvertExpr( *retStmt->getRetValue() ) ) );
+	}
+
+	StmtWrapper VisitForStmt(ForStmt* forStmt) {
+		StmtWrapper retStmt;
+
+		StmtWrapper&& body = Visit(forStmt->getBody());
+
+		LOG(INFO) << "ForStmt body: " << body;
+
+		ExprWrapper&& incExpr = convFact.ConvertExpr( *forStmt->getInc() );
+		// Determine the induction variable
+		// todo: analyze the incExpr looking for the induction variable for this loop
+
+		LOG(INFO) << "ForStmt incExpr: " << incExpr.ref;
+
+		ExprWrapper condExpr;
+
+		if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
+			assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
+			// the for loop has a variable declared in the condition part, e.g.
+			// for(...; int a = f(); ...)
+			//
+			// to handle this kind of situation we have to move the declaration outside the loop body
+			// inside a new context
+			Expr* expr = condVarDecl->getInit();
+			condVarDecl->setInit(NULL); // set the expression to null temporarely
+			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			condVarDecl->setInit(expr);
+
+			retStmt.push_back( declStmt );
+
+			// now the condition expression has to be converted into the following form:
+			// int a = 0;
+			// for(...; a=f(); ...) { }
+			const core::VarExprPtr& varExpr = declStmt->getVarExpression();
+			core::ExpressionPtr&& initExpr = convFact.ConvertExpr( *expr );
+			// todo: build a binary expression
+			// condExpr = (varExpr = initExpr);
+		} else
+			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
+
+		LOG(INFO) << "ForStmt condExpr: " << condExpr.ref;
+
+		StmtWrapper&& initExpr = Visit(forStmt->getInit());
+		if( !initExpr.isSingleStmt() ) {
+			assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
+			// we have a multiple declaration in the initialization part of the stmt
+			// e.g.
+			// for(int a,b=0; ...)
+			//
+			// to handle this situation we have to create an outer block and declare the variable which is
+			// not used as induction variable
+			// WE ASSUME FOR NOW THE FIRST DECL IS THE INDUCTION VARIABLE
+			std::copy(initExpr.begin()+1, initExpr.end(), std::back_inserter(retStmt));
+			initExpr = StmtWrapper( initExpr.front() );
+		}
+
+		LOG(INFO) << "ForStmt initExpr: " << initExpr;
+
+		if( initExpr.empty() ) {
+			// we are analyzing a loop where the init expression is empty, e.g.:
+			// for(;a<..) { }
+			//
+			// As the IR doesn't support loop stmt with no initialization we represent the for loop as while stmt
+
+		}
+		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr.getSingleStmt());
+		assert(declStmt && "Falied loop init expression conversion");
+		retStmt.push_back( convFact.builder().forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref) );
+		if(retStmt.size() == 1)
+			return retStmt.front();
+		// we have to create a CompoundStmt
+		return StmtWrapper( convFact.builder().compoundStmt(retStmt) );
 	}
 
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
@@ -481,19 +542,19 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mMgr(mgr), mB
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
-	type.dump();
+	// type.dump();
 	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
 	DLOG(INFO) << "Converting stmt:";
-	stmt.dump();
-	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getFront();
+	// stmt.dump();
+	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
 }
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
 	DLOG(INFO) << "Converting expression:";
-	expr.dump();
+	// expr.dump();
 	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
 }
 
@@ -505,6 +566,9 @@ ConversionFactory::~ConversionFactory() {
 // ------------------------------------ ClangTypeConverter ---------------------------
 
 void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
+	if(!mDoConversion)
+		return;
+
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {

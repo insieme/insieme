@@ -147,6 +147,7 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 }
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
+	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
 
 	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
 	Diagnostic* diags = new Diagnostic(diagClient);
@@ -246,8 +247,8 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog): mClang(file_name) {
-	InsiemeIRConsumer cons(prog.getNodeManager());
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog, bool doConversion): mClang(file_name) {
+	InsiemeIRConsumer cons(prog.getNodeManager(), doConversion);
 
 	// register omp pragmas
 	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );

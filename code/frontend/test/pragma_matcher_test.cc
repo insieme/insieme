@@ -57,7 +57,7 @@ using namespace insieme::core;
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_parallel.c", *program);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_parallel.c", *program, false);
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());
@@ -137,7 +137,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_for.c", *program);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/omp_for.c", *program, false);
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());
@@ -224,6 +224,40 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 17, 3);
 
+		// check the omp parallel is empty
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+
+		ValueList& values = omp->mMap["firstprivate"];
+		// only 1 variable in the private construct
+		EXPECT_EQ(values.size(), (size_t) 1);
+
+		// check first variable name
+		{
+			clang::DeclRefExpr* varRef =  dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
+			ASSERT_TRUE(varRef);
+			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
+		}
+
+		// look for 'nowait' keyword in the map
+		EXPECT_TRUE(omp->mMap.find("nowait") != omp->mMap.end());
+	}
+
+	// pragma is at location [(16:5) - (16:24)]
+	p = pl[3];
+	{
+		// check pragma start location
+		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 16, 5);
+		// check pragma end location
+		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 16, 24);
+
+		EXPECT_EQ(p->getType(), "omp::barrier");
+
+		// pragma associated to a statement
+		EXPECT_TRUE(p->isStatement());
+		const clang::Stmt* stmt = p->getStatement();
+
+		EXPECT_TRUE( dyn_cast<clang::NullStmt>(stmt) != NULL );
+		EXPECT_TRUE( stmt->getLocStart().isInvalid() );
 	}
 
 }

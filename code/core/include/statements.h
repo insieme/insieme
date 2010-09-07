@@ -168,6 +168,9 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const VarExprPtr& getVarExpression() const { return varExpression; }
+	const ExpressionPtr& getInitialization() const { return initExpression; }
+
 	static DeclarationStmtPtr get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression);
 };
 

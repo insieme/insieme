@@ -82,9 +82,10 @@ public:
 class InsiemeIRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
 	ConversionFactory  fact;
+	bool mDoConversion;
 
 public:
-	InsiemeIRConsumer(insieme::core::SharedNodeManager dataMgr) : mCtx(NULL), fact(dataMgr){ }
+	InsiemeIRConsumer(insieme::core::SharedNodeManager dataMgr, bool doConversion=true) : mCtx(NULL), fact(dataMgr), mDoConversion(doConversion){ }
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
