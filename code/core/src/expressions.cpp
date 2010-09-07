@@ -66,9 +66,12 @@ IntLiteral* IntLiteral::clone(NodeManager& manager) const {
 	return new IntLiteral(manager.get(type), value);
 }
 
-
 IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, unsigned short bytes) {
 	return manager.get(IntLiteral(IntType::get(manager, bytes), value));
+}
+
+IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, TypePtr type) {
+	return manager.get(IntLiteral(type, value));
 }
 
 // ------------------------------------- FloatLiteral ---------------------------------

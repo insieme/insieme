@@ -139,8 +139,8 @@ class IntLiteral : public Literal<int> {
 	virtual IntLiteral* clone(NodeManager& manager) const;
 	
 public:
-	
 	static IntLiteralPtr get(NodeManager& manager, int value, unsigned short bytes = 4);
+	static IntLiteralPtr get(NodeManager& manager, int value, TypePtr type);
 	static IntLiteralPtr one(NodeManager& manager) { return get(manager, 1); }
 	static IntLiteralPtr zero(NodeManager& manager) { return get(manager, 0); }
 };

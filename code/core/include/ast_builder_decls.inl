@@ -19,6 +19,7 @@ class FunctionType; typedef AnnotatedPtr<const FunctionType> FunctionTypePtr;
 class GenericType; typedef AnnotatedPtr<const GenericType> GenericTypePtr;
 class IfStmt; typedef AnnotatedPtr<const IfStmt> IfStmtPtr;
 class IntLiteral; typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
+class IntLiteral; typedef AnnotatedPtr<const IntLiteral> IntLiteralPtr;
 class IntType; typedef AnnotatedPtr<const IntType> IntTypePtr;
 class JobExpr; typedef AnnotatedPtr<const JobExpr> JobExprPtr;
 class LambdaExpr; typedef AnnotatedPtr<const LambdaExpr> LambdaExprPtr;

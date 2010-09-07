@@ -5,9 +5,9 @@ BreakStmtPtr       ASTBuilder::breakStmt() const { return BreakStmt::get(manager
 CallExprPtr        ASTBuilder::callExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const { return CallExpr::get(manager, type, functionExpr, arguments); }
 CastExprPtr        ASTBuilder::castExpr(const TypePtr& type, const ExpressionPtr& subExpression) const { return CastExpr::get(manager, type, subExpression); }
 ChannelTypePtr     ASTBuilder::channelType(const TypePtr& elementType, const unsigned short size) const { return ChannelType::get(manager, elementType, size); }
-CompoundStmtPtr    ASTBuilder::compoundStmt(const StatementPtr& stmt) const { return CompoundStmt::get(manager, stmt); }
-CompoundStmtPtr    ASTBuilder::compoundStmt(const vector<StatementPtr>& stmts) const { return CompoundStmt::get(manager, stmts); }
 CompoundStmtPtr    ASTBuilder::compoundStmt() const { return CompoundStmt::get(manager); }
+CompoundStmtPtr    ASTBuilder::compoundStmt(const vector<StatementPtr>& stmts) const { return CompoundStmt::get(manager, stmts); }
+CompoundStmtPtr    ASTBuilder::compoundStmt(const StatementPtr& stmt) const { return CompoundStmt::get(manager, stmt); }
 ContinueStmtPtr    ASTBuilder::continueStmt() const { return ContinueStmt::get(manager); }
 DeclarationStmtPtr ASTBuilder::declarationStmt(const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression) const { return DeclarationStmt::get(manager, type, id, initExpression); }
 DefinitionPtr      ASTBuilder::definition(const Identifier& name, const TypePtr& type, const ExpressionPtr& definition, bool external) const { return Definition::get(manager, name, type, definition, external); }
@@ -18,6 +18,7 @@ ForStmtPtr         ASTBuilder::forStmt(const DeclarationStmtPtr& declaration, co
 FunctionTypePtr    ASTBuilder::functionType(const TypePtr& argumentType, const TypePtr& returnType) const { return FunctionType::get(manager, argumentType, returnType); }
 GenericTypePtr     ASTBuilder::genericType(const string& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intTypeParams, const TypePtr& baseType) const { return GenericType::get(manager, name, typeParams, intTypeParams, baseType); }
 IfStmtPtr          ASTBuilder::ifStmt(const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) const { return IfStmt::get(manager, condition, body, elseBody); }
+IntLiteralPtr      ASTBuilder::intLiteral(int value, TypePtr type) const { return IntLiteral::get(manager, value, type); }
 IntLiteralPtr      ASTBuilder::intLiteral(int value, unsigned short bytes) const { return IntLiteral::get(manager, value, bytes); }
 IntTypePtr         ASTBuilder::intType(const unsigned short numBytes) const { return IntType::get(manager, numBytes); }
 JobExprPtr         ASTBuilder::jobExpr(const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecs) const { return JobExpr::get(manager, defaultStmt, guardedStmts, localDecs); }
