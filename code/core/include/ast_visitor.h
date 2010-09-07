@@ -81,6 +81,8 @@ protected:
 
 		// dispatch node based on its type
 		switch (node->getNodeType()) {
+		case NodeType::SUPPORT:
+			return dispatchSupport(node);
 		case NodeType::TYPE:
 			return dispatchType(dynamic_pointer_cast<const Type>(node));
 		case NodeType::EXPRESSION:
@@ -98,6 +100,14 @@ protected:
 		return ReturnType();
 	}
 
+	ReturnType dispatchSupport(const NodePtr& node) {
+		assert ( node && "Cannot dispatch NULL node!");
+
+		TRY_DISPATCH(node, RecursiveTypeDefinition);
+
+		assert( false && "Cannot dispatch unknown supportive AST node!");
+		return ReturnType();
+	}
 
 	ReturnType dispatchStatement(const StatementPtr& statement) {
 		assert ( statement && "Cannot dispatch NULL statement!");
@@ -143,6 +153,7 @@ protected:
 		TRY_DISPATCH(type, FunctionType);
 		TRY_DISPATCH(type, TupleType);
 		TRY_DISPATCH(type, GenericType);
+		TRY_DISPATCH(type, RecursiveType);
 
 		assert ( false && "Cannot dispatch unknown type pointer." );
 		return ReturnType();
@@ -197,6 +208,7 @@ protected:
 	DISPATCH_TERMINAL(TypeVariable);
 	DISPATCH_TERMINAL(FunctionType);
 	DISPATCH_TERMINAL(TupleType);
+	DISPATCH_TERMINAL(RecursiveType);
 
 	DISPATCH_TERMINAL(ArrayType);
 	DISPATCH_TERMINAL(VectorType);
@@ -230,6 +242,8 @@ protected:
 	DISPATCH_TERMINAL(CallExpr);
 	DISPATCH_TERMINAL(CastExpr);
 
+	DISPATCH_TERMINAL(RecursiveTypeDefinition);
+
 #undef DISPATCH_TERMINAL
 #undef VISIT
 #undef DISPATCH
@@ -247,6 +261,7 @@ protected:
 	VISIT_NODE(TypeVariable, Type);
 	VISIT_NODE(FunctionType, Type);
 	VISIT_NODE(TupleType, Type);
+	VISIT_NODE(RecursiveType, Type);
 
 	VISIT_NODE(GenericType, Type);
 	VISIT_NODE(ArrayType, GenericType);
@@ -263,6 +278,7 @@ protected:
 	VISIT_NODE(StructType, NamedCompositeType);
 	VISIT_NODE(UnionType, NamedCompositeType);
 
+	VISIT_NODE(RecursiveTypeDefinition, Node);
 
 	VISIT_NODE(Statement, Node);
 

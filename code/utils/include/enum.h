@@ -74,35 +74,36 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
  */
 
 #define ENUM(enumname, first, ...) \
-        enum enumname {enumname ## MIN, first = enumname ## MIN, __VA_ARGS__ , enumname ## MAX}; \
-        const std::vector<std::string> enumname ## Strings \
-            = getListOutOfCommaSeperated( "" #first "," #__VA_ARGS__ "", enumname ## MAX ); \
-        inline enumname operator++(enumname &rs) { return rs = enumname( rs+1 ); }  \
-        inline enumname operator++(enumname &rs, int) {\
-            enumname old = rs; \
-            rs = enumname( rs+1 ); \
-            return old; \
-        } \
-        inline enumname operator--(enumname &rs) { return rs = enumname( rs - 1 ); }  \
-        inline enumname operator--(enumname &rs, int) {\
-            enumname old = rs; \
-            rs = enumname( rs - 1 ); \
-            return old; \
-        } \
-        inline enumname max(const enumname &rs) { return enumname ## MAX; } \
-        inline enumname min(const enumname &rs) { return enumname ## MIN; } \
-        inline std::string name(const enumname &rs) {\
-            return (enumname ## Strings).at((std::size_t) rs);\
-        } \
-        inline std::size_t ord(const enumname &rs) {\
-            return (std::size_t) rs;\
-        } \
-        inline enumname count(const enumname &rs) { \
-            return (enumname) (ord(enumname ## MAX) - ord(enumname ## MIN)); \
-        } \
-        inline std::ostream& operator<<(std::ostream &os, const enumname &c) { \
-            return os << name(c);\
-        } \
+		enum enumname {enumname ## MIN, first = enumname ## MIN, __VA_ARGS__ , enumname ## MAX}; \
+		const std::vector<std::string> enumname ## Strings \
+			= getListOutOfCommaSeperated( "" #first "," #__VA_ARGS__ "", enumname ## MAX ); \
+		inline enumname operator++(enumname &rs) { return rs = enumname( rs+1 ); }  \
+		inline enumname operator++(enumname &rs, int) {\
+			enumname old = rs; \
+			rs = enumname( rs+1 ); \
+			return old; \
+		} \
+		inline enumname operator--(enumname &rs) { return rs = enumname( rs - 1 ); }  \
+		inline enumname operator--(enumname &rs, int) {\
+			enumname old = rs; \
+			rs = enumname( rs - 1 ); \
+			return old; \
+		} \
+		inline enumname max(const enumname &rs) { return enumname ## MAX; } \
+		inline enumname min(const enumname &rs) { return enumname ## MIN; } \
+		inline bool isMember(const enumname& rs) { return enumname ## MIN < rs && rs < enumname ## MAX; } \
+		inline std::string name(const enumname &rs) {\
+			return (enumname ## Strings).at((std::size_t) rs);\
+		} \
+		inline std::size_t ord(const enumname &rs) {\
+			return (std::size_t) rs;\
+		} \
+		inline enumname count(const enumname &rs) { \
+			return (enumname) (ord(enumname ## MAX) - ord(enumname ## MIN)); \
+		} \
+		inline std::ostream& operator<<(std::ostream &os, const enumname &c) { \
+			return os << name(c);\
+		} \
 
 
 /**

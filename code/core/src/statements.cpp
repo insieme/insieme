@@ -203,7 +203,7 @@ CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
 	: Statement(hashCompoundStmt(stmts)), statements(stmts) { }
 
 std::ostream& CompoundStmt::printTo(std::ostream& out) const {
-	return out << "{\n" << join("\n", statements, deref<StatementPtr>()) << "\n}\n";
+	return out << "{\n" << join("\n", statements, print<deref<StatementPtr>>()) << "\n}\n";
 }
 
 bool CompoundStmt::equalsStmt(const Statement& stmt) const {

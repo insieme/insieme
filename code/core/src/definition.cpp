@@ -105,7 +105,12 @@ bool Definition::equals(const Node& other) const {
 std::ostream& Definition::printTo(std::ostream& out) const {
 
 	// print this definition
-	out << ((external)?"external ":"") << "define " << name << " : " << *type << " = ";
+	out << ((external)?"external ":"");
+	out << "define ";
+	out << name;
+	out << " : ";
+	out << *type;
+	out << " = ";
 
 	// print defining body ...
 	if (isAbstract()) {

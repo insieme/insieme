@@ -39,7 +39,7 @@
 #include <string>
 #include <boost/functional/hash.hpp>
 
-#include "identifiers.h"
+#include "identifier.h"
 #include "container_utils.h"
 
 using namespace insieme::core;

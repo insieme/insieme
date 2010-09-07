@@ -163,6 +163,36 @@ inline bool equals(const ListA& a, const ListB& b) {
 	return equals(a, b, std::equal_to<const typename ListA::value_type&>());
 }
 
+/**
+ * Checks whether the given container an element being equal to the given value regarding
+ * the given comparison predicate.
+ *
+ * @tparam Container the type of container to be inspected
+ * @tparam Comparator the type of the comparison predicate
+ * @param container the container to be tested
+ * @param value the value to be searched
+ * @param comparator the comparator used to compare the given value with the elements within the container
+ * @return true if found, false otherwise
+ */
+template<class Container, typename Comparator>
+inline bool contains(const Container& container, const typename Container::value_type& value, const Comparator& comparator) {
+	return any(container, [&value, &comparator](const typename Container::value_type& cur){
+		return comparator(cur, value);
+	});
+}
+
+/**
+ * Checks whether the given container an element being equal to the given value (using operator==).
+ *
+ * @tparam Container the type of container to be inspected
+ * @param container the container to be tested
+ * @param value the value to be searched
+ * @return true if found, false otherwise
+ */
+template<class Container>
+inline bool contains(const Container& container, const typename Container::value_type& value) {
+	return contains(container, value, std::equal_to<const typename Container::value_type&>());
+}
 
 /** Checks whether a condition is true for all elements of the supplied iteration range.
  *

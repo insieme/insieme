@@ -123,7 +123,7 @@ VarExpr* VarExpr::clone(NodeManager& manager) const {
 
 bool VarExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const VarExpr& rhs = dynamic_cast<const VarExpr&>(expr);
+	const VarExpr& rhs = static_cast<const VarExpr&>(expr);
 	return rhs.id == id;
 }
 
@@ -178,7 +178,7 @@ LambdaExpr* LambdaExpr::clone(NodeManager& manager) const {
 
 bool LambdaExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const LambdaExpr& rhs = dynamic_cast<const LambdaExpr&>(expr);
+	const LambdaExpr& rhs = static_cast<const LambdaExpr&>(expr);
 	return (*body == *rhs.body) && std::equal(params.cbegin(), params.cend(), rhs.params.cbegin(), equal_target<ExpressionPtr>());
 }
 
@@ -191,7 +191,7 @@ Node::OptionChildList LambdaExpr::getChildNodes() const {
 }
 
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-	return out << "lambda(" << join(", ", params, deref<ExpressionPtr>()) << ") { " << body << " }";
+	return out << "lambda(" << join(", ", params, print<deref<ExpressionPtr>>()) << ") { " << body << " }";
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
@@ -228,7 +228,7 @@ Node::OptionChildList TupleExpr::getChildNodes() const {
 }
 
 std::ostream& TupleExpr::printTo(std::ostream& out) const {
-	return out << "tuple(" << join(", ", expressions, deref<ExpressionPtr>()) << ")";
+	return out << "tuple(" << join(", ", expressions, print<deref<ExpressionPtr>>()) << ")";
 }
 
 

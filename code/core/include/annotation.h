@@ -103,5 +103,15 @@ public:
 	}
 };
 
+//template<typename T>
+//class SimpleAnnotationKey : public AnnotationKey {
+//
+//	const T value;
+//
+//	public SimpleAnnot
+//
+//};
+
+
 } // end namespace core
 } // end namespace insieme

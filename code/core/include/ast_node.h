@@ -65,12 +65,12 @@ DECLARE_NODE_TYPE(Node);
 
 class NodeManager;
 
-
 /**
  * An enumeration of the fundamental types of nodes
  * to be present within an AST.
  */
 enum NodeType {
+	SUPPORT,		/* < to represent shared values */
 	TYPE, 			/* < to represent a (data) type  */
 	EXPRESSION,		/* < to represent expressions */
 	STATEMENT, 		/* < to represent statements */
@@ -79,7 +79,7 @@ enum NodeType {
 };
 
 inline bool isNodeType(const NodeType& value) {
-	return TYPE <= value && value <=PROGRAM;
+	return SUPPORT <= value && value <= PROGRAM;
 }
 
 /**

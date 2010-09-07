@@ -42,10 +42,15 @@
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "container_utils.h"
+#include "map_utils.h"
 #include "types.h"
 
 
 using namespace insieme::core;
+
+enum HashSeed {
+	RECURSIVE_DEFINITION
+};
 
 
 // -------------------------------- Integer Type Parameter ----------------------------
@@ -194,7 +199,7 @@ Node::OptionChildList FunctionType::getChildNodes() const {
  * @param intParams		the list of integer type parameters to be appended
  * @return a string representation of the type
  */
-string buildNameString(const string& name, const vector<TypePtr>& typeParams,
+string buildNameString(const Identifier& name, const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intParams) {
 
 	// create output buffer
@@ -217,7 +222,7 @@ string buildNameString(const string& name, const vector<TypePtr>& typeParams,
 /**
  * Creates an new generic type instance based on the given parameters.
  */
-GenericType::GenericType(const string& name,
+GenericType::GenericType(const Identifier& name,
 		const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intTypeParams,
 		const TypePtr& baseType)
@@ -239,7 +244,7 @@ GenericType::GenericType(const string& name,
  * @param baseType		the base type of this generic type
  */
 GenericTypePtr GenericType::get(NodeManager& manager,
-			const string& name,
+			const Identifier& name,
 			const vector<TypePtr>& typeParams,
 			const vector<IntTypeParam>& intTypeParams,
 			const TypePtr& baseType) {
@@ -268,6 +273,76 @@ Node::OptionChildList GenericType::getChildNodes() const {
 	return res;
 }
 
+// ------------------------------------ Recursive Definition ------------------------------
+
+std::size_t hashRecursiveTypeDefinition(const RecursiveTypeDefinition::Definitions& definitions) {
+	std::size_t hash = RECURSIVE_DEFINITION;
+	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
+	return hash;
+}
+
+RecursiveTypeDefinition::RecursiveTypeDefinition(const Definitions& definitions)
+	: Node(SUPPORT, hashRecursiveTypeDefinition(definitions)), definitions(definitions) { };
+
+RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, const Definitions& definitions) {
+	return manager.get(RecursiveTypeDefinition(definitions));
+}
+
+RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) const {
+	Definitions localDefinitions;
+	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
+		[&manager](const Definition& cur) {
+			return Definition(manager.get(cur.first), manager.get(cur.second));
+	});
+	return new RecursiveTypeDefinition(localDefinitions);
+}
+
+bool RecursiveTypeDefinition::equals(const Node& other) const {
+	// conversion is guaranteed by base operator==
+	const RecursiveTypeDefinition& rhs = static_cast<const RecursiveTypeDefinition&>(other);
+	return insieme::utils::map::equal(definitions, rhs.definitions);
+}
+
+Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	std::for_each(definitions.begin(), definitions.end(), [&res](const Definition& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
+	});
+	return res;
+}
+
+std::ostream& RecursiveTypeDefinition::printTo(std::ostream& out) const {
+	return out << "{" << join(", ", definitions, [](std::ostream& out, const Definition& cur) {
+		out << *cur.first << "=" << *cur.second;
+	}) << "}";
+}
+
+// ---------------------------------------- Recursive Type ------------------------------
+
+
+string buildRecursiveTypeName(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition) {
+	// create output buffer
+	std::stringstream res;
+	res << "rec " << *variable << "." << *definition;
+	return res.str();
+}
+
+// TODO: determine whether recursive type is concrete or function type ..
+RecursiveType::RecursiveType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition)
+	: Type(buildRecursiveTypeName(variable, definition)), typeVariable(typeVariable), definition(definition) { }
+
+
+RecursiveType* RecursiveType::clone(NodeManager& manager) const {
+	return new RecursiveType(manager.get(typeVariable), manager.get(definition));
+}
+
+Node::OptionChildList RecursiveType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(typeVariable);
+	res->push_back(definition);
+	return res;
+}
 
 // ------------------------------------ Named Composite Type ---------------------------
 
@@ -381,8 +456,19 @@ UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 
 // ------------------------------------ Array Type ---------------------------
 
+ArrayType::ArrayType(const TypePtr elementType, const unsigned short dim) :
+	SingleElementType("array", elementType, toVector(IntTypeParam::getConcreteIntParam(dim))) {}
+
+ArrayType* ArrayType::clone(NodeManager& manager) const {
+	return new ArrayType(manager.get(getElementType()), getDimension());
+}
+
 ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim) {
 	return manager.get(ArrayType(elementType, dim));
+}
+
+const unsigned short ArrayType::getDimension() const {
+	return getIntTypeParameter()[0].getValue();
 }
 
 
@@ -396,6 +482,10 @@ VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, 
 	return manager.get(VectorType(elementType, size));
 }
 
+const unsigned short VectorType::getSize() const {
+	return getIntTypeParameter()[0].getValue();
+}
+
 // ------------------------------------ Ref Type ---------------------------
 
 RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
@@ -405,7 +495,15 @@ RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
 
 // ------------------------------------ Channel Type ---------------------------
 
+ChannelType::ChannelType(const TypePtr elementType, const unsigned short size) :
+	SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+
+
 ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
 	return manager.get(ChannelType(elementType, size));
+}
+
+const unsigned short ChannelType::getSize() const {
+	return getIntTypeParameter()[0].getValue();
 }
 

@@ -38,11 +38,8 @@
 
 #include <algorithm>
 #include <iterator>
-#include <map>
 #include <memory>
-#include <set>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
 #include <utility>
@@ -52,7 +49,7 @@
 #include "container_utils.h"
 #include "instance_manager.h"
 #include "types.h"
-#include "identifiers.h"
+#include "identifier.h"
 
 using std::string;
 using std::vector;

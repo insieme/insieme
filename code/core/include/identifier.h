@@ -37,6 +37,7 @@
 #pragma once
 
 #include <string>
+#include <ostream>
 #include <boost/functional/hash.hpp>
 
 #include "annotated_ptr.h"
@@ -105,6 +106,6 @@ inline std::size_t hash_value(const Identifier& identifier) {
  * Allows this type to be printed to a stream (especially useful during debugging and
  * within test cases where equals values to be printable).
  */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& type);
+std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& identifier);
 
 

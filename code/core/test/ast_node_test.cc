@@ -44,13 +44,20 @@
 namespace insieme {
 namespace core {
 
+
+
+class DummyAnnotation : public Annotation {
+
+
+
+};
+
 template<typename NodePtr>
 Node::ChildList toList(const vector<NodePtr>& list) {
 	Node::ChildList res;
 	std::copy(list.begin(), list.end(), back_inserter(res));
 	return res;
 }
-
 
 template<typename NodePtr>
 void basicNodeTests(NodePtr node, const Node::ChildList& children = Node::ChildList()) {

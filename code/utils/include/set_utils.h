@@ -239,7 +239,7 @@ std::size_t computeHash(const Set& set) {
 } // end namespace: insieme
 
 /**
- * Allows to print unoredered sets including printable elements.
+ * Allows to print unordered sets including printable elements.
  *
  * @param out the stream to which the given vector should be printed to
  * @param container the vector to be printed
@@ -257,7 +257,7 @@ std::ostream& operator<<(std::ostream& out, const std::unordered_set<Element, Ha
 }
 
 /**
- * Allows to print unoredered sets including printable elements.
+ * Allows to print unordered sets including printable elements.
  *
  * @param out the stream to which the given vector should be printed to
  * @param container the vector to be printed

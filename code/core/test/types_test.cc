@@ -317,7 +317,6 @@ TEST(TypeTest, GenericType) {
 	}
 }
 
-
 TEST(TypeTest, TypeVariable) {
 
 	NodeManager manager;
@@ -379,6 +378,25 @@ TEST(TypeTest, FunctionType) {
 	// perform basic type tests
 	basicTypeTests(funTypeA, true, true, toList(subTypesA));
 	basicTypeTests(funTypeB, true, true, toList(subTypesB));
+}
+
+TEST(TypeTest, RecursiveType) {
+
+	// create a manager for this test
+	NodeManager manager;
+
+	// create a simple recursive type uX.X (actually illegal)
+
+	// TODO: test whether order of definitions is important ... (it should not)
+
+	TypeVariablePtr variable = TypeVariable::get(manager, "X");
+//	RecursiveTypeDefinitionPtr definition = ;
+//	RecursiveTypePtr type = RecursiveType::get(manager, variable, definition);
+
+
+	// create a a recursive list type uX.[int<4>,ref<X>]
+
+	// conduct basic tests
 }
 
 TEST(TypeTest, StructType) {
