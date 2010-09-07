@@ -85,13 +85,9 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 	bool isSingleStmt() const { return size() == 1; }
 };
 
-//core::IntTypePtr getSizeSpecifier(core::GenericTypePtr type) {
-//	LOG(INFO) << type;
-//	std::vector<core::IntTypeParam> intParamList = type->getIntTypeParameter();
-//	assert(!intParamList.empty() && "Generic type has no size specifier");
-//	LOG(INFO) << "Size: " << intParamList[0].getValue();
-//	return core::IntTypePtr( intParamList[0] );
-//}
+insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
+	return builder.intLiteral(0, 2);
+}
 
 } // End empty namespace
 
@@ -121,13 +117,32 @@ public:
 		return ExprWrapper( convFact.builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
 	}
 
-	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) { return ExprWrapper(); }
-	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper(); }
-	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(); }
-	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper(); }
-	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {	return ExprWrapper(); }
+	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+
+	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
+		const core::ASTBuilder& builder = convFact.builder;
+		// check whether this is a reference to a variable
+		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
+			core::TypePtr&& varTy = convFact.ConvertType( *declRef->getType().getTypePtr() );
+			core::Identifier id( declRef->getDecl()->getNameAsString() );
+			// if this variable is declared in a method signature
+			if(isa<ParmVarDecl>(varDecl)) {
+				return ExprWrapper( builder.paramExpr(varTy, id) );
+			}
+			// else it is a
+			return ExprWrapper( builder.varExpr(varTy, id) );
+		}
+		// todo: C++ check whether this is a reference to a class field, or method (function).
+		assert(false && "DeclRefExpr not supported!");
+	}
 
 };
+
+#define FORWARD_VISITOR_CALL(StmtTy) \
+	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
@@ -229,7 +244,26 @@ public:
 
 		LOG(INFO) << "ForStmt condExpr: " << condExpr.ref;
 
-		StmtWrapper&& initExpr = Visit(forStmt->getInit());
+		Stmt* initStmt = forStmt->getInit();
+		// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
+		if( !initStmt ) {
+			// we are analyzing a loop where the init expression is empty, e.g.:
+			// for(; cond; inc) { body }
+			//
+			// As the IR doesn't support loop stmt with no initialization we represent the for loop as while stmt, i.e.
+			// while( cond ) {
+			//	{ body }
+			//  inc;
+			// }
+			vector<core::StatementPtr> whileBody;
+			// adding the body
+			std::copy(body.begin(), body.end(), std::back_inserter(whileBody));
+			// adding the incExpr at after the loop body
+			whileBody.push_back(incExpr.ref);
+			return StmtWrapper( builder.whileStmt( condExpr.ref, builder.compoundStmt(whileBody) ) );
+		}
+
+		StmtWrapper&& initExpr = Visit( initStmt );
 		if( !initExpr.isSingleStmt() ) {
 			assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
 			// we have a multiple declaration in the initialization part of the stmt
@@ -238,20 +272,9 @@ public:
 			//
 			// to handle this situation we have to create an outer block and declare the variable which is
 			// not used as induction variable
-			// WE ASSUME (FOR NOW) THE FIRST DECL IS THE INDUCTION VARIABLE
+			// todo: WE ASSUME (FOR NOW) THE FIRST DECL IS THE INDUCTION VARIABLE
 			std::copy(initExpr.begin()+1, initExpr.end(), std::back_inserter(retStmt));
 			initExpr = StmtWrapper( initExpr.front() );
-		}
-
-		if( initExpr.empty() ) {
-			// we are analyzing a loop where the init expression is empty, e.g.:
-			// for(; a < ..) { }
-			//
-			// As the IR doesn't support loop stmt with no initialization we represent the for loop as while stmt
-			vector<core::StatementPtr> whileBody;
-			whileBody.push_back(body.getSingleStmt());
-			whileBody.push_back(incExpr.ref);
-			return StmtWrapper( builder.whileStmt( condExpr.ref, builder.compoundStmt(whileBody) ) );
 		}
 
 		// We are in the case where we are sure there is exactly 1 element in the initialization expression
@@ -280,11 +303,22 @@ public:
 		return StmtWrapper( convFact.builder.compoundStmt(stmtList) );
 	}
 
+	FORWARD_VISITOR_CALL(IntegerLiteral)
+	FORWARD_VISITOR_CALL(FloatingLiteral)
+	FORWARD_VISITOR_CALL(CharacterLiteral)
+
+	FORWARD_VISITOR_CALL(BinaryOperator)
+	FORWARD_VISITOR_CALL(UnaryOperator)
+
+	FORWARD_VISITOR_CALL(CastExpr)
+	FORWARD_VISITOR_CALL(DeclRefExpr)
+	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
+	FORWARD_VISITOR_CALL(CallExpr)
+
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ](Stmt* stmt){ this->Visit(stmt); } );
 		return StmtWrapper();
 	}
-
 };
 
 #define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
@@ -293,9 +327,9 @@ public:
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
-	typedef std::map<Type*, TypeWrapper> TypeMap;
-
-	TypeMap typeMap;
+//	typedef std::map<Type*, TypeWrapper> TypeMap;
+//
+//	TypeMap typeMap;
 
 public:
 	ClangTypeConverter(const ConversionFactory& fact): convFact( fact ) { }
@@ -365,7 +399,7 @@ public:
 		default:
 			throw "type not supported"; //todo introduce exception class
 		}
-		return TypeWrapper();
+		assert(false && "Built-in type conversion not supported!");
 	}
 
 	// --------------------  COMPLEX   ------------------------------------------------------------------------------
@@ -482,9 +516,9 @@ public:
 
 	TypeWrapper VisitTagType(TagType* tagType) {
 		// lookup the type map to see if this type has been already converted
-		TypeMap::const_iterator fit = typeMap.find(tagType);
-		if(fit != typeMap.end())
-			return fit->second;
+//		TypeMap::const_iterator fit = typeMap.find(tagType);
+//		if(fit != typeMap.end())
+//			return fit->second;
 
 		// otherwise do the conversion
 		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
@@ -520,7 +554,7 @@ public:
 				else
 					assert(false);
 
-				typeMap[tagType] = retTy;
+//				typeMap[tagType] = retTy;
 				return retTy;
 			}
 		} else {
@@ -602,7 +636,7 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			// this is a function decl
 			core::StatementPtr funcBody(NULL);
 			if(funcDecl->getBody())
-				funcBody =fact.ConvertStmt( *funcDecl->getBody() );
+				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
 
 			core::DefinitionPtr IRFuncDecl = fact.getASTBuilder().definition(funcDecl->getNameAsString(), funcType,
 					fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
