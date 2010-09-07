@@ -34,24 +34,3 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
-
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-using namespace insieme::core;
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
-}
-
-const insieme::core::Node::ChildList& insieme::core::Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
-	}
-	return *children;
-}

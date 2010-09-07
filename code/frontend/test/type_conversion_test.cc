@@ -43,8 +43,10 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
-using namespace insieme::frontend;
 using namespace insieme::core;
+
+using namespace insieme::frontend;
+using namespace insieme::frontend::conversion;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
 	{ TypePtr convType = convFactory.ConvertType( clang::BuiltinType(clang::BuiltinType::TypeName) ); \
@@ -54,7 +56,7 @@ using namespace insieme::core;
 TEST(TypeConversion, HandleBuildinTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -103,7 +105,7 @@ TEST(TypeConversion, HandleBuildinTypes) {
 TEST(TypeConversion, HandlePointerTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
 	clang::BuiltinType intTy(clang::BuiltinType::Int);
@@ -118,7 +120,7 @@ TEST(TypeConversion, HandlePointerTypes) {
 TEST(TypeConversion, HandleReferenceTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
 	clang::BuiltinType intTy(clang::BuiltinType::Int);
@@ -132,5 +134,62 @@ TEST(TypeConversion, HandleReferenceTypes) {
 
 TEST(TypeConversion, HandleStructTypes) {
 
+	ProgramPtr prog = Program::create();
+	ConversionFactory convFactory( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	clang::BuiltinType charTy(clang::BuiltinType::SChar);
+	clang::BuiltinType longTy(clang::BuiltinType::Long);
+
+	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(&charTy, 0)), 0, 0, false));
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(&longTy,0), 0, 0, false));
+
+	decl->completeDefinition ();
+	clang::QualType type = clang.getASTContext().getTagDeclType (decl);
+
+	TypePtr insiemeTy = convFactory.ConvertType( *type.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("struct<name:ref<char>,age:int<8>>", insiemeTy->toString());
+
 }
+
+TEST(TypeConversion, HandleRecursiveStructTypes) {
+
+//	ProgramPtr prog = Program::create();
+//	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+//
+//	ClangCompiler clang;
+//	clang::BuiltinType charTy(clang::BuiltinType::SChar);
+//	clang::BuiltinType longTy(clang::BuiltinType::Long);
+//
+//	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
+//			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
+//
+//	clang::QualType declType = clang.getASTContext().getTagDeclType (decl);
+//
+//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+//			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(&charTy, 0)), 0, 0, false));
+//
+//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+//			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(&longTy,0), 0, 0, false));
+//
+//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+//			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
+//	decl->completeDefinition();
+//
+//	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
+//	EXPECT_TRUE(insiemeTy);
+//	EXPECT_EQ("struct<name:ref<char>,age:int<8>>,mate:ref<...>", insiemeTy->toString());
+
+}
+
+
+
+
 

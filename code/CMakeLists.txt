@@ -10,10 +10,8 @@ enable_testing()
 add_subdirectory( core )
 add_subdirectory( utils )
 add_subdirectory( frontend )
+add_subdirectory( simple_backend )
 add_subdirectory( driver )
-
-# add dependencies
-add_dependencies( insieme_core insieme_utils insieme_frontend )
 
 #-- Add an Option to toggle the generation of the API documentation
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)

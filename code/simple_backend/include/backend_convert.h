@@ -34,24 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
+#pragma once
 
+#include "statements.h"
+#include "ast_visitor.h"
 
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-using namespace insieme::core;
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
-}
-
-const insieme::core::Node::ChildList& insieme::core::Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
-	}
-	return *children;
-}
+//class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
+//public:
+//
+//	int counter;
+//
+//	CountingVisitor() : counter(0) {};
+//
+//	int visitNode(const NodePtr& node) {
+//		std::cout << *node << std::endl;
+//		return ++counter;
+//	};
+//
+//	void reset() {
+//		counter = 0;
+//	}
+//
+//};

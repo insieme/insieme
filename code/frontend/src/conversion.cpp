@@ -55,170 +55,291 @@ using namespace insieme;
 namespace fe = insieme::frontend;
 
 namespace {
-struct TypeWrapper {
-	core::TypePtr ref;
-	TypeWrapper(): ref(core::TypePtr(NULL)) { }
-	TypeWrapper(core::TypePtr type): ref(type) { }
+
+template <class T>
+struct IRWrapper {
+	T ref;
+	IRWrapper(): ref(T(NULL)) { }
+	IRWrapper(const T& type): ref(type) { }
 };
 
-struct StmtWrapper {
-	core::StatementPtr ref;
-	StmtWrapper(): ref(core::StatementPtr(NULL)) { }
-	StmtWrapper(core::StatementPtr stmt): ref(core::StatementPtr(stmt)) { }
+struct TypeWrapper: public IRWrapper<core::TypePtr> {
+	TypeWrapper(): IRWrapper<core::TypePtr>() { }
+	TypeWrapper(const core::TypePtr& type): IRWrapper<core::TypePtr>(type) { }
 };
+
+struct ExprWrapper: public IRWrapper<core::ExpressionPtr> {
+	ExprWrapper(): IRWrapper<core::ExpressionPtr>() { }
+	ExprWrapper(const core::ExpressionPtr& expr): IRWrapper<core::ExpressionPtr>(expr) { }
+};
+
+struct StmtWrapper: public std::vector<core::StatementPtr>{
+	StmtWrapper(): std::vector<core::StatementPtr>() { }
+	StmtWrapper(const core::StatementPtr& stmt):  std::vector<core::StatementPtr>() { push_back(stmt); }
+
+	core::StatementPtr getSingleStmt() const {
+		assert(size() == 1 && "More than 1 statement present");
+		return front();
+	}
+
+	bool isSingleStmt() const { return size() == 1; }
+};
+
+insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
+	return builder.intLiteral(0, 2);
 }
 
+} // End empty namespace
+
 namespace insieme {
+namespace frontend {
+namespace conversion {
+
+class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
+	ConversionFactory& convFact;
+
+public:
+	ClangExprConverter(ConversionFactory& convFact): convFact(convFact) { }
+
+	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
+		return ExprWrapper(
+				convFact.builder.intLiteral( *intLit->getValue().getRawData(), convFact.ConvertType( *intLit->getType().getTypePtr() ))
+		);
+	}
+
+	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
+		// todo: handle float and doubles
+		return ExprWrapper( convFact.builder.floatLiteral( floatLit->getValue().convertToDouble(),
+				convFact.ConvertType( *floatLit->getType().getTypePtr() )) );
+	}
+
+	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
+		return ExprWrapper( convFact.builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
+	}
+
+	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+
+	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
+		const core::ASTBuilder& builder = convFact.builder;
+		// check whether this is a reference to a variable
+		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
+			core::TypePtr&& varTy = convFact.ConvertType( *declRef->getType().getTypePtr() );
+			core::Identifier id( declRef->getDecl()->getNameAsString() );
+			// if this variable is declared in a method signature
+			if(isa<ParmVarDecl>(varDecl)) {
+				return ExprWrapper( builder.paramExpr(varTy, id) );
+			}
+			// else it is a
+			return ExprWrapper( builder.varExpr(varTy, id) );
+		}
+		// todo: C++ check whether this is a reference to a class field, or method (function).
+		assert(false && "DeclRefExpr not supported!");
+	}
+
+};
+
+#define FORWARD_VISITOR_CALL(StmtTy) \
+	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
 public:
+
 	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
 
 	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
-		DLOG(INFO) << "Visiting VarDecl";
 		clang::QualType clangType = varDecl->getType();
-		clangType->dump();
+
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 		core::TypePtr type = convFact.ConvertType( *varDecl->getType().getTypePtr() );
 
-		if(!!type)
-			DLOG(INFO) << type->toString();
-
-	//	PolyVarDeclImpl<clang::VarDecl>* polyVar = new PolyVarDeclImpl<clang::VarDecl>(*varDecl);
-	//	// registering variable in the var map
-	//	mDeclMap[varDecl] = polyVar;
-	//	// a vardecl is stored as a simple varref
-	//	PolyExprPtr ret = new PolyVarRefImpl<clang::VarDecl>(polyVar, *varDecl );
-	//	if( varDecl->getInit() ) {
-	//		// there is an initialization
-	//		ret = new PolyBinExprImpl<clang::VarDecl>( ret, PolyBinExpr::ASSIGN, Visit(varDecl->getInit()), *varDecl );
-	//	}
-	//	return ret;
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
-//		// look for the vardecl in the map
-//		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declRef->getDecl());
-//		DeclMap::const_iterator fit = mDeclMap.find(varDecl);
-//		assert( fit != mDeclMap.end() && "VarDecl is not registered in the DeclMap." );
-//		return new PolyVarRefImpl<clang::DeclRefExpr>(fit->second, *declRef );
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit){
-//		return new PolyIntLitImpl<clang::IntegerLiteral>(*intLit);
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitCastExpr(clang::CastExpr* castExpr) {
-//		return Visit(castExpr->getSubExpr());
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) {
-//		PolyExprPtr subExpr( BaseClass::Visit(unOp->getSubExpr()) );
-//		PolyUnExpr::Op op;
-//		switch(unOp->getOpcode()){
-//			case clang::UnaryOperator::Minus:
-//				op = PolyUnExpr::MINUS; break;
-//			case clang::UnaryOperator::Plus:
-//				op = PolyUnExpr::PLUS; break;
-//			case clang::UnaryOperator::PostInc:
-//				op = PolyUnExpr::POST_INC; break;
-//			case clang::UnaryOperator::PreInc:
-//				op = PolyUnExpr::PRE_INC; break;
-//			case clang::UnaryOperator::PostDec:
-//				op = PolyUnExpr::POST_DEC; break;
-//			case clang::UnaryOperator::PreDec:
-//				op = PolyUnExpr::PRE_DEC; break;
-//			default:
-//				FATAL("Unary operator '" << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()) <<
-//					  "' not (yet) supported in the PolyIR representation.");
-//		}
-//		return new PolyUnExprImpl<clang::UnaryOperator>( op, subExpr, *unOp );
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitBinaryOperator(clang::BinaryOperator* binOp) {
-//		PolyExprPtr lhs( BaseClass::Visit(binOp->getLHS()) );
-//		PolyExprPtr rhs( BaseClass::Visit(binOp->getRHS()) );
-//		PolyBinExpr::Op op;
-//		switch(binOp->getOpcode()){
-//			case clang::BinaryOperator::Sub:
-//				op = PolyBinExpr::SUB; break;
-//			case clang::BinaryOperator::Add:
-//				op = PolyBinExpr::SUM; break;
-//			case clang::BinaryOperator::Assign:
-//				op = PolyBinExpr::ASSIGN; break;
-//			case clang::BinaryOperator::LT:
-//				op = PolyBinExpr::LT; break;
-//			case clang::BinaryOperator::LE:
-//				op = PolyBinExpr::LE; break;
-//			case clang::BinaryOperator::GT:
-//				op = PolyBinExpr::GT; break;
-//			case clang::BinaryOperator::GE:
-//				op = PolyBinExpr::GE; break;
-//			case clang::BinaryOperator::EQ:
-//				op = PolyBinExpr::EQ; break;
-//			default:
-//				FATAL("Binary operator '" << clang::BinaryOperator::getOpcodeStr(binOp->getOpcode()) <<
-//					  "' not (yet) supported in the PolyIR representation.");
-//		}
-//		return new PolyBinExprImpl<clang::BinaryOperator>( lhs, op, rhs, *binOp );
-		return StmtWrapper();
-	}
-
-	StmtWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
-//		return new PolyBinExprImpl<clang::ArraySubscriptExpr>( Visit(arraySubExpr->getBase()),
-//				PolyBinExpr::ARRAY_SUB,
-//				Visit(arraySubExpr->getIdx()), *arraySubExpr );
-		return StmtWrapper();
+		// initialization value
+		core::ExpressionPtr initExpr(NULL);
+		if( varDecl->getInit() )
+			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
+		else {
+			Type& ty = *varDecl->getType().getTypePtr();
+			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+				// in case of floating types we initialize with a zero value
+				initExpr = convFact.builder.floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEsingle).convertToFloat(), type);
+			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+				// initialize integer value
+				initExpr = convFact.builder.intLiteral(*llvm::APInt::getNullValue(16).getRawData(), type);
+			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+				// initialize pointer/reference types with the null value
+				//todo
+			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+				//todo
+			} else if ( ty.isBooleanType() ) {
+				// boolean values are initialized to false
+				initExpr = convFact.builder.boolLiteral(false);
+			}
+		}
+		// todo: initialization for declarations with no initialization value
+		return StmtWrapper( convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
 	}
 
 	// In clang a declstmt is represented as a list of VarDecl
-	// the conversion to PolyIR replace with an expressions
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
 			return VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
-//		PolyExprListImpl<clang::DeclStmt>* exprList = new PolyExprListImpl<clang::DeclStmt>(*declStmt);
-//		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
-//			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-//				exprList->push_back( VisitVarDecl(varDecl) );
-//		return exprList;
-		return StmtWrapper();
+		StmtWrapper retList;
+		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
+			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
+				retList.push_back( VisitVarDecl(varDecl).getSingleStmt() );
+		return retList;
 	}
+
+	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
+		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
+		return StmtWrapper( convFact.builder.returnStmt( convFact.ConvertExpr( *retStmt->getRetValue() ) ) );
+	}
+
+	StmtWrapper VisitForStmt(ForStmt* forStmt) {
+		const core::ASTBuilder& builder = convFact.builder;
+
+		StmtWrapper retStmt;
+		StmtWrapper&& body = Visit(forStmt->getBody());
+
+		LOG(INFO) << "ForStmt body: " << body;
+
+		ExprWrapper&& incExpr = convFact.ConvertExpr( *forStmt->getInc() );
+		// Determine the induction variable
+		// analyze the incExpr looking for the induction variable for this loop
+
+		LOG(INFO) << "ForStmt incExpr: " << incExpr.ref;
+
+		ExprWrapper condExpr;
+
+		if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
+			assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
+			// the for loop has a variable declared in the condition part, e.g.
+			// for(...; int a = f(); ...)
+			//
+			// to handle this kind of situation we have to move the declaration outside the loop body
+			// inside a new context
+			Expr* expr = condVarDecl->getInit();
+			condVarDecl->setInit(NULL); // set the expression to null temporarily
+			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			condVarDecl->setInit(expr);
+
+			retStmt.push_back( declStmt );
+
+			// now the condition expression has to be converted into the following form:
+			// int a = 0;
+			// for(...; a=f(); ...) { }
+			const core::VarExprPtr& varExpr = declStmt->getVarExpression();
+			core::ExpressionPtr&& initExpr = convFact.ConvertExpr( *expr );
+			// todo: build a binary expression
+			// condExpr = (varExpr = initExpr);
+		} else
+			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
+
+		LOG(INFO) << "ForStmt condExpr: " << condExpr.ref;
+
+		Stmt* initStmt = forStmt->getInit();
+		// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
+		if( !initStmt ) {
+			// we are analyzing a loop where the init expression is empty, e.g.:
+			// for(; cond; inc) { body }
+			//
+			// As the IR doesn't support loop stmt with no initialization we represent the for loop as while stmt, i.e.
+			// while( cond ) {
+			//	{ body }
+			//  inc;
+			// }
+			vector<core::StatementPtr> whileBody;
+			// adding the body
+			std::copy(body.begin(), body.end(), std::back_inserter(whileBody));
+			// adding the incExpr at after the loop body
+			whileBody.push_back(incExpr.ref);
+			return StmtWrapper( builder.whileStmt( condExpr.ref, builder.compoundStmt(whileBody) ) );
+		}
+
+		StmtWrapper&& initExpr = Visit( initStmt );
+		if( !initExpr.isSingleStmt() ) {
+			assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
+			// we have a multiple declaration in the initialization part of the stmt
+			// e.g.
+			// for(int a,b=0; ...)
+			//
+			// to handle this situation we have to create an outer block and declare the variable which is
+			// not used as induction variable
+			// todo: WE ASSUME (FOR NOW) THE FIRST DECL IS THE INDUCTION VARIABLE
+			std::copy(initExpr.begin()+1, initExpr.end(), std::back_inserter(retStmt));
+			initExpr = StmtWrapper( initExpr.front() );
+		}
+
+		// We are in the case where we are sure there is exactly 1 element in the initialization expression
+
+		LOG(INFO) << "ForStmt initExpr: " << initExpr;
+
+		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr.getSingleStmt());
+		assert(declStmt && "Falied loop init expression conversion");
+		retStmt.push_back( builder.forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref) );
+		if(retStmt.size() == 1)
+			return retStmt.front();
+		// we have to create a CompoundStmt
+		return StmtWrapper( builder.compoundStmt(retStmt) );
+	}
+
+	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
+		vector<core::StatementPtr> stmtList;
+		std::for_each( compStmt->body_begin(), compStmt->body_end(),
+				[ &stmtList, this ](Stmt* stmt){
+					// A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted in multiple
+					// StatementPtr because an initialization list such as: int a,b=1; is converted into the following sequence of statements:
+					// int<a> a = 0; int<4> b = 1;
+					StmtWrapper&& convertedStmt = this->Visit(stmt);
+					std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+				} );
+		return StmtWrapper( convFact.builder.compoundStmt(stmtList) );
+	}
+
+	FORWARD_VISITOR_CALL(IntegerLiteral)
+	FORWARD_VISITOR_CALL(FloatingLiteral)
+	FORWARD_VISITOR_CALL(CharacterLiteral)
+
+	FORWARD_VISITOR_CALL(BinaryOperator)
+	FORWARD_VISITOR_CALL(UnaryOperator)
+
+	FORWARD_VISITOR_CALL(CastExpr)
+	FORWARD_VISITOR_CALL(DeclRefExpr)
+	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
+	FORWARD_VISITOR_CALL(CallExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ](Stmt* stmt){ this->Visit(stmt); } );
 		return StmtWrapper();
 	}
-
 };
 
 #define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
-	const core::ASTBuilder&	builder;
+	const ConversionFactory& convFact;
 
-	typedef std::map<Type*, TypeWrapper> TypeMap;
-
-	TypeMap typeMap;
+//	typedef std::map<Type*, TypeWrapper> TypeMap;
+//
+//	TypeMap typeMap;
 
 public:
-	ClangTypeConverter(const core::ASTBuilder& builder): builder( builder ) { }
+	ClangTypeConverter(const ConversionFactory& fact): convFact( fact ) { }
 
 	// -------------------- BUILTIN ------------------------------------------------------------------------------
 	/**
 	 * This method handles buildin types (void,int,long,float,...).
 	 */
 	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
+		const core::ASTBuilder& builder = convFact.builder;
 
 		switch(buldInTy->getKind()) {
 		case BuiltinType::Void:
@@ -278,7 +399,7 @@ public:
 		default:
 			throw "type not supported"; //todo introduce exception class
 		}
-		return TypeWrapper();
+		assert(false && "Built-in type conversion not supported!");
 	}
 
 	// --------------------  COMPLEX   ------------------------------------------------------------------------------
@@ -301,7 +422,7 @@ public:
 		size_t arrSize = *arrTy->getSize().getRawData();
 		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy.ref && "Conversion of array element type failed.");
-		return TypeWrapper( builder.vectorType(builder.refType(elemTy.ref), arrSize) );
+		return TypeWrapper( convFact.builder.vectorType( convFact.builder.refType(elemTy.ref), arrSize ) );
 	}
 
 	/**
@@ -315,6 +436,7 @@ public:
 			// if the type is sugared, we Visit the desugared type
 			return Visit( arrTy->desugar().getTypePtr() );
 
+		const core::ASTBuilder& builder = convFact.builder;
 		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy.ref && "Conversion of array element type failed.");
 		return TypeWrapper( builder.refType( builder.arrayType(builder.refType(elemTy.ref)) ) );
@@ -334,9 +456,10 @@ public:
 			// if the type is sugared, we Visit the desugared type
 			return Visit( arrTy->desugar().getTypePtr() );
 
+		const core::ASTBuilder& builder = convFact.builder;
 		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy.ref && "Conversion of array element type failed.");
-		return TypeWrapper( builder.arrayType(builder.refType(elemTy.ref)) );
+		return TypeWrapper( builder.arrayType( builder.refType(elemTy.ref) ) );
 	}
 
 	/**
@@ -360,6 +483,7 @@ public:
 	 * not as having a single void argument. Such a type can have an exception specification, but this specification is not part of the canonical type.
 	 */
 	TypeWrapper VisitFunctionProtoType(FunctionProtoType* funcTy) {
+		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr retTy = Visit( funcTy->getResultType().getTypePtr() ).ref;
 		assert(retTy && "Function has no return type!");
 
@@ -383,21 +507,18 @@ public:
 		core::TypePtr retTy = Visit( funcTy->getResultType().getTypePtr() ).ref;
 		assert(retTy && "Function has no return type!");
 
-		return TypeWrapper( builder.functionType( builder.tupleType(), retTy) );
+		return TypeWrapper( convFact.builder.functionType( convFact.builder.tupleType(), retTy) );
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* elabType) {
-		LOG(INFO) << "Converting typedef type" << std::endl;
-		return TypeWrapper();
+		assert(false && "TypedefType not yet handled!");
 	}
 
 	TypeWrapper VisitTagType(TagType* tagType) {
-		DLOG(INFO) << "Converting tag type" << std::endl;
-
 		// lookup the type map to see if this type has been already converted
-		TypeMap::const_iterator fit = typeMap.find(tagType);
-		if(fit != typeMap.end())
-			return fit->second;
+//		TypeMap::const_iterator fit = typeMap.find(tagType);
+//		if(fit != typeMap.end())
+//			return fit->second;
 
 		// otherwise do the conversion
 		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
@@ -411,9 +532,10 @@ public:
 			assert(tagDecl->isDefinition() && "TagType is not a definition");
 
 			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
-			switch(tagDecl->getTagKind()) {
-			case TagDecl::TK_struct:
-			case TagDecl::TK_union: {
+			if(tagDecl->getTagKind() == TagDecl::TK_enum) {
+
+			} else {
+				// handle struct/union/class
 				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 				core::NamedCompositeType::Entries structElements;
@@ -422,82 +544,112 @@ public:
 							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), this->Visit( curr->getType().getTypePtr() ).ref )
 					);
 				});
+
 				TypeWrapper retTy;
-				if(tagDecl->getTagKind() == TagDecl::TK_struct)
-					retTy = TypeWrapper( builder.structType( structElements ) );
+				// class and struct are handled in the same way
+				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class )
+					retTy = TypeWrapper( convFact.builder.structType( structElements ) );
+				else if( tagDecl->getTagKind() == TagDecl::TK_union )
+					retTy = TypeWrapper( convFact.builder.unionType( structElements ) );
 				else
-					retTy = TypeWrapper( builder.unionType( structElements ) );
-				typeMap[tagType] = retTy;
+					assert(false);
+
+//				typeMap[tagType] = retTy;
 				return retTy;
-			}
-			case TagDecl::TK_class:
-			case TagDecl::TK_enum:
-				return TypeWrapper();
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
-			DLOG(INFO) << builder.genericType( tagDecl->getNameAsString() )->toString();
-			return TypeWrapper( builder.genericType( tagDecl->getNameAsString() ) );
+			DLOG(INFO) << convFact.builder.genericType( tagDecl->getNameAsString() )->toString();
+			return TypeWrapper( convFact.builder.genericType( tagDecl->getNameAsString() ) );
 		}
 		return TypeWrapper();
 	}
 
 	TypeWrapper VisitElaboratedType(ElaboratedType* elabType) {
-		LOG(INFO) << "Converting elaborated type" << std::endl;
-		return TypeWrapper();
+		assert(false && "ElaboratedType not yet handled!");
 	}
 
 	TypeWrapper VisitPointerType(PointerType* pointerTy) {
-		return TypeWrapper( builder.refType( Visit(pointerTy->getPointeeType().getTypePtr()).ref ) );
+		return TypeWrapper( convFact.builder.refType( Visit(pointerTy->getPointeeType().getTypePtr()).ref ) );
 	}
 
 	TypeWrapper VisitReferenceType(ReferenceType* refTy) {
-		return TypeWrapper( builder.refType( Visit(refTy->getPointeeType().getTypePtr()).ref ) );
+		return TypeWrapper( convFact.builder.refType( Visit(refTy->getPointeeType().getTypePtr()).ref ) );
 	}
 
 };
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mMgr(mgr), mBuilder(mgr),
-		stmtConv(new ClangStmtConverter(*this)), typeConv(new ClangTypeConverter(mBuilder)) { }
+// ------------------------------------ ConversionFactory ---------------------------
+
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), builder(mgr),
+		typeConv(new ClangTypeConverter(*this)),
+		exprConv(new ClangExprConverter(*this)),
+		stmtConv(new ClangStmtConverter(*this)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
-	type.dump();
+//	type.dump();
 	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
 	DLOG(INFO) << "Converting stmt:";
-	stmt.dump();
-	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).ref;
+//	stmt.dump();
+	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
+}
+
+core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
+	DLOG(INFO) << "Converting expression:";
+//	expr.dump();
+	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
 }
 
 ConversionFactory::~ConversionFactory() {
 	delete typeConv;
 	delete stmtConv;
+	delete exprConv;
 }
 
 // ------------------------------------ ClangTypeConverter ---------------------------
 
-void InsiemeIRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
+void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
+	if(!mDoConversion)
+		return;
+
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
-			LOG(INFO) << "Converted into: " << fact.ConvertType( *funcDecl->getType().getTypePtr() );
+			// finds a definition of this function if any
+			for(auto it = funcDecl->redecls_begin(), end = funcDecl->redecls_end(); it!=end; ++it)
+				if((*it)->isThisDeclarationADefinition())
+					funcDecl = (*it)->getCanonicalDecl();
+
+			core::TypePtr funcType = fact.ConvertType( *funcDecl->getType().getTypePtr() );
+
+			// paramlist
+			core::LambdaExpr::ParamList funcParamList;
+			std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [&funcParamList, &fact](ParmVarDecl* currParam){
+				funcParamList.push_back(
+						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString())
+				);
+			});
 			// this is a function decl
+			core::StatementPtr funcBody(NULL);
 			if(funcDecl->getBody())
-				fact.ConvertStmt( *funcDecl->getBody() );
+				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
+
+			core::DefinitionPtr IRFuncDecl = fact.getASTBuilder().definition(funcDecl->getNameAsString(), funcType,
+					fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
+			IRFuncDecl->printTo(std::cout);
+
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();
 		}
 	}
 }
 
-void InsiemeIRConsumer::HandleTranslationUnit (ASTContext &Ctx) {
+void IRConsumer::HandleTranslationUnit (ASTContext &Ctx) { }
 
-
-
-}
-
-
+} // End conversion namespace
+} // End frontend namespace
 } // End insieme namespace

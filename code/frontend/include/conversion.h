@@ -49,38 +49,52 @@ class DeclGroupRef;
 }
 
 namespace insieme {
+namespace frontend {
+namespace conversion {
 
 class ClangStmtConverter;
 class ClangTypeConverter;
+class ClangExprConverter;
 
-// ------------------------------------ InsiemeIRConsumer ---------------------------
+// ------------------------------------ ConversionFactory ---------------------------
 
+/**
+ * A factory used to convert clang AST nodes (i.e. statements, expressions and types) into Insieme IR nodes.
+ */
 class ConversionFactory {
-	core::SharedNodeManager  mMgr;
-	const core::ASTBuilder   mBuilder;
+	core::SharedNodeManager  mgr;
+	const core::ASTBuilder   builder;
 
-	ClangStmtConverter* stmtConv;
 	ClangTypeConverter* typeConv;
+	ClangExprConverter* exprConv;
+	ClangStmtConverter* stmtConv;
 
+	friend class ClangTypeConverter;
+	friend class ClangExprConverter;
+	friend class ClangStmtConverter;
 public:
 	ConversionFactory(core::SharedNodeManager mgr);
 
 	core::TypePtr 		ConvertType(const clang::Type& type);
 	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
-	core::SharedNodeManager&	manager() { return mMgr; }
-	const core::ASTBuilder& 	builder() const { return mBuilder; }
+	core::ExpressionPtr ConvertExpr(const clang::Expr& expr);
+
+	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 
 	~ConversionFactory();
 };
 
-// ------------------------------------ InsiemeIRConsumer ---------------------------
-
-class InsiemeIRConsumer: public clang::ASTConsumer {
+// ------------------------------------ IRConsumer ---------------------------
+/**
+ *
+ */
+class IRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
 	ConversionFactory  fact;
+	bool mDoConversion;
 
 public:
-	InsiemeIRConsumer(insieme::core::SharedNodeManager dataMgr) : mCtx(NULL), fact(dataMgr){ }
+	IRConsumer(insieme::core::SharedNodeManager dataMgr, bool doConversion=true) : mCtx(NULL), fact(dataMgr), mDoConversion(doConversion){ }
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
@@ -88,6 +102,6 @@ public:
 };
 
 
-
-}
-
+} // End conversion namespace
+} // End frontend namespace
+} // End insieme namespace

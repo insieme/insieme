@@ -52,7 +52,7 @@ if(NOT MSVC)
 	find_library(llvm_Support_LIB 		  	NAMES LLVMSupport 	PATHS $ENV{LLVM_HOME}/lib)
 	find_library(llvm_Core_LIB 		 	  	NAMES LLVMCore 		PATHS $ENV{LLVM_HOME}/lib)
 	
-	set(llvm_LIBs ${llvm_Core_LIB} ${LLVMMC} ${llvm_System_LIB} ${llvm_Support_LIB} ${llvm_Core_LIB}) 
+	set(llvm_LIBs ${llvm_Core_LIB} ${llvm_MMC_LIB} ${llvm_System_LIB} ${llvm_Support_LIB} ${llvm_Core_LIB}) 
 else()
 	set(llvm_LIBs )
 endif() 
@@ -61,6 +61,9 @@ endif()
 # build the frontend library
 add_library(insieme_frontend ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
+
+# add dependencies
+add_dependencies( insieme_frontend insieme_core insieme_utils )
 
 # enable tests for this project
 find_package(GTest REQUIRED)

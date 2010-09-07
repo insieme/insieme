@@ -139,8 +139,8 @@ class IntLiteral : public Literal<int> {
 	virtual IntLiteral* clone(NodeManager& manager) const;
 	
 public:
-	
 	static IntLiteralPtr get(NodeManager& manager, int value, unsigned short bytes = 4);
+	static IntLiteralPtr get(NodeManager& manager, int value, const TypePtr& type);
 	static IntLiteralPtr one(NodeManager& manager) { return get(manager, 1); }
 	static IntLiteralPtr zero(NodeManager& manager) { return get(manager, 0); }
 };
@@ -156,6 +156,8 @@ public:
 
 	static FloatLiteralPtr get(NodeManager& manager, double value, unsigned short bytes = 8);
 	static FloatLiteralPtr get(NodeManager& manager, const string& from, unsigned short bytes = 8);
+	static FloatLiteralPtr get(NodeManager& manager, double value, const TypePtr& type);
+	static FloatLiteralPtr get(NodeManager& manager, const string& from, const TypePtr& type);
 };
 
 class BoolLiteral : public Literal<bool> {
@@ -185,6 +187,8 @@ protected:
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const Identifier& getIdentifier() const { return id; }
 
 	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };

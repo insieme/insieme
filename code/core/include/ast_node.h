@@ -172,12 +172,7 @@ public:
 	 *
 	 * @return a reference to the inter
 	 */
-	const ChildList& getChildList() const {
-		if (!children) {
-			children = getChildNodes();
-		}
-		return *children;
-	}
+	const ChildList& getChildList() const;
 
 	/**
 	 * This pure abstract method is imposing the requirement to every node to

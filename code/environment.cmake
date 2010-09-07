@@ -13,6 +13,7 @@ set ( insieme_core_include_dir 	${insieme_code_dir}/core/include )
 set ( insieme_utils_src_dir 	${insieme_code_dir}/utils/src )
 set ( insieme_utils_include_dir ${insieme_code_dir}/utils/include )
 set ( insieme_frontend_include_dir ${insieme_code_dir}/frontend/include )
+set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
 
 set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 
@@ -75,7 +76,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 # Add debug symbols
-add_definitions( -g )
+if (CMAKE_COMPILER_IS_GNUCXX)
+	add_definitions( -g )
+endif()
 
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)

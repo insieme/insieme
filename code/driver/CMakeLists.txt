@@ -1,5 +1,5 @@
 #
-# Builds the insieme core library
+# Builds the insieme default driver
 #
 project(insieme_driver CXX)
 
@@ -19,6 +19,9 @@ include_directories( ${insieme_frontend_include_dir} )
 
 # Build dummy executable
 add_executable( main src/main.cpp )
+
+# add dependencies
+add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend )
 
 # register linked libraries
 target_link_libraries( main insieme_core insieme_utils insieme_frontend )
