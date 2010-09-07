@@ -87,14 +87,6 @@ std::ostream& FloatLiteral::printTo(std::ostream& out) const {
 	return out << originalString;
 }
 
-FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
-	return get(manager, value, FloatType::get(manager, bytes));
-}
-
-FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
-	return get(manager, from, FloatType::get(manager, bytes));
-}
-
 FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, const TypePtr& type) {
 	return manager.get(FloatLiteral(type, value, ::toString(value)));
 }
@@ -102,6 +94,14 @@ FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, const Type
 FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, const TypePtr& type) {
 	// TODO atof good idea? What about hex/octal/etc
 	return manager.get(FloatLiteral(type, atof(from.c_str()), from));
+}
+
+FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
+	return FloatLiteral::get(manager, value, static_cast<TypePtr>(FloatType::get(manager, bytes)));
+}
+
+FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
+	return FloatLiteral::get(manager, from, static_cast<TypePtr>(FloatType::get(manager, bytes)));
 }
 
 // ------------------------------------- BoolLiteral ---------------------------------

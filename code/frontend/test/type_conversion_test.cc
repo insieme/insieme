@@ -43,8 +43,10 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
-using namespace insieme::frontend;
 using namespace insieme::core;
+
+using namespace insieme::frontend;
+using namespace insieme::frontend::conversion;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
 	{ TypePtr convType = convFactory.ConvertType( clang::BuiltinType(clang::BuiltinType::TypeName) ); \
@@ -54,7 +56,7 @@ using namespace insieme::core;
 TEST(TypeConversion, HandleBuildinTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -103,7 +105,7 @@ TEST(TypeConversion, HandleBuildinTypes) {
 TEST(TypeConversion, HandlePointerTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
 	clang::BuiltinType intTy(clang::BuiltinType::Int);
@@ -118,7 +120,7 @@ TEST(TypeConversion, HandlePointerTypes) {
 TEST(TypeConversion, HandleReferenceTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
 	clang::BuiltinType intTy(clang::BuiltinType::Int);
@@ -133,7 +135,7 @@ TEST(TypeConversion, HandleReferenceTypes) {
 TEST(TypeConversion, HandleStructTypes) {
 
 	ProgramPtr prog = Program::create();
-	insieme::ConversionFactory convFactory( prog->getNodeManager() );
+	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
 	clang::BuiltinType charTy(clang::BuiltinType::SChar);
@@ -186,4 +188,8 @@ TEST(TypeConversion, HandleRecursiveStructTypes) {
 //	EXPECT_EQ("struct<name:ref<char>,age:int<8>>,mate:ref<...>", insiemeTy->toString());
 
 }
+
+
+
+
 

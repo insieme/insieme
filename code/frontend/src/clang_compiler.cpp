@@ -248,7 +248,7 @@ ClangCompiler::~ClangCompiler() {
 }
 
 InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog, bool doConversion): mClang(file_name) {
-	InsiemeIRConsumer cons(prog.getNodeManager(), doConversion);
+	conversion::IRConsumer cons(prog.getNodeManager(), doConversion);
 
 	// register omp pragmas
 	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );
