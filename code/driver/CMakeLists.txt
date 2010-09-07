@@ -1,9 +1,12 @@
 #
-# Builds the insieme core library
+# Builds the insieme default driver
 #
 project(insieme_driver CXX)
 
 include(../environment.cmake)
+
+# add dependencies
+add_dependencies( insieme_core insieme_utils insieme_frontend insieme_simple_backend )
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)

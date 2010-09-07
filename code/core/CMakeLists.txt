@@ -5,6 +5,9 @@ project(insieme_core CXX)
 
 include(../environment.cmake)
 
+# add dependencies
+add_dependencies( insieme_utils )
+
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
