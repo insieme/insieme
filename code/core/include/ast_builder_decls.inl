@@ -13,6 +13,8 @@ class DeclarationStmt; typedef AnnotatedPtr<const DeclarationStmt> DeclarationSt
 class Definition; typedef AnnotatedPtr<const Definition> DefinitionPtr;
 class FloatLiteral; typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
 class FloatLiteral; typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
+class FloatLiteral; typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
+class FloatLiteral; typedef AnnotatedPtr<const FloatLiteral> FloatLiteralPtr;
 class FloatType; typedef AnnotatedPtr<const FloatType> FloatTypePtr;
 class ForStmt; typedef AnnotatedPtr<const ForStmt> ForStmtPtr;
 class FunctionType; typedef AnnotatedPtr<const FunctionType> FunctionTypePtr;
