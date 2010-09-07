@@ -5,9 +5,6 @@ project(insieme_driver CXX)
 
 include(../environment.cmake)
 
-# add dependencies
-add_dependencies( insieme_core insieme_utils insieme_frontend insieme_simple_backend )
-
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
@@ -22,6 +19,9 @@ include_directories( ${insieme_frontend_include_dir} )
 
 # Build dummy executable
 add_executable( main src/main.cpp )
+
+# add dependencies
+add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend )
 
 # register linked libraries
 target_link_libraries( main insieme_core insieme_utils insieme_frontend )

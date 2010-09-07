@@ -5,9 +5,6 @@ project(insieme_frontend CXX)
 
 include(../environment.cmake)
 
-# add dependencies
-add_dependencies( insieme_core insieme_utils )
-
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
@@ -64,6 +61,9 @@ endif()
 # build the frontend library
 add_library(insieme_frontend ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
+
+# add dependencies
+add_dependencies( insieme_frontend insieme_core insieme_utils )
 
 # enable tests for this project
 find_package(GTest REQUIRED)
