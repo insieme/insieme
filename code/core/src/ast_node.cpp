@@ -48,3 +48,10 @@ using namespace insieme::core;
 std::ostream& operator<<(std::ostream& out, const Node& node) {
 	return node.printTo(out);
 }
+
+const insieme::core::Node::ChildList& insieme::core::Node::getChildList() const {
+	if (!children) {
+		children = getChildNodes();
+	}
+	return *children;
+}

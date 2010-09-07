@@ -143,7 +143,7 @@ public:
 	CountingVisitor() : counter(0) {};
 
 	int visitNode(const NodePtr& node) {
-std::cout << *node << std::endl;
+		std::cout << *node << std::endl;
 		return ++counter;
 	};
 
