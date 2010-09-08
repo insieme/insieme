@@ -163,16 +163,15 @@ public:
 class BoolLiteral : public Literal<bool> {
 	BoolLiteral(const TypePtr& type, bool val);
 	virtual BoolLiteral* clone(NodeManager& manager) const;
-	
 public:
-
 	static BoolLiteralPtr get(NodeManager& manager, bool value);
 };
 
-//class StringLiteral : public Literal<string> {
+//class StringLiteral : public Literal<std::string> {
+//	StringLiteral(const TypePtr& type, const std::string& val);
+//	virtual StringLiteral* clone(NodeManager& manager) const;
 //public:
-//	// TODO: fix null type
-//	StringLiteral(const string& val) : Literal(NULL, val) { }
+//	static StringLiteralPtr get(NodeManager& manager, const std::string& value);
 //};
 
 class VarExpr : public Expression {

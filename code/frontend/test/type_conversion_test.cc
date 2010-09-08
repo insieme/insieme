@@ -53,7 +53,7 @@ using namespace insieme::frontend::conversion;
 	EXPECT_TRUE(convType); \
 	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); }
 
-TEST(TypeConversion, HandleBuildinTypes) {
+TEST(TypeConversion, HandleBuildinType) {
 
 	ProgramPtr prog = Program::create();
 	ConversionFactory convFactory( prog->getNodeManager() );
@@ -102,14 +102,16 @@ TEST(TypeConversion, HandleBuildinTypes) {
 
 }
 
-TEST(TypeConversion, HandlePointerTypes) {
+TEST(TypeConversion, HandlePointerType) {
+
+	using namespace clang;
 
 	ProgramPtr prog = Program::create();
 	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
-	clang::BuiltinType intTy(clang::BuiltinType::Int);
-	clang::QualType pointerTy = clang.getASTContext().getPointerType(clang::QualType(&intTy, 0));
+	BuiltinType intTy(BuiltinType::Int);
+	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
 
 	TypePtr insiemeTy = convFactory.ConvertType( *pointerTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
@@ -117,14 +119,16 @@ TEST(TypeConversion, HandlePointerTypes) {
 
 }
 
-TEST(TypeConversion, HandleReferenceTypes) {
+TEST(TypeConversion, HandleReferenceType) {
+
+	using namespace clang;
 
 	ProgramPtr prog = Program::create();
 	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
-	clang::BuiltinType intTy(clang::BuiltinType::Int);
-	clang::QualType refTy = clang.getASTContext().getLValueReferenceType(clang::QualType(&intTy, 0));
+	BuiltinType intTy(BuiltinType::Int);
+	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
 
 	TypePtr insiemeTy = convFactory.ConvertType( *refTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
@@ -132,34 +136,48 @@ TEST(TypeConversion, HandleReferenceTypes) {
 
 }
 
-TEST(TypeConversion, HandleStructTypes) {
+TEST(TypeConversion, HandleStructType) {
+
+	using namespace clang;
 
 	ProgramPtr prog = Program::create();
 	ConversionFactory convFactory( prog->getNodeManager() );
 
 	ClangCompiler clang;
-	clang::BuiltinType charTy(clang::BuiltinType::SChar);
-	clang::BuiltinType longTy(clang::BuiltinType::Long);
+	SourceLocation emptyLoc;
 
-	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
-			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
+	BuiltinType charTy(BuiltinType::SChar);
+	BuiltinType ushortTy(BuiltinType::UShort);
 
-	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(&charTy, 0)), 0, 0, false));
+	// create a struct:
+	// struct Person {
+	//	char* name;
+	//	unsigned short age;
+	// };
+	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), RecordDecl::TK_struct, NULL,
+			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
 
-	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(&longTy,0), 0, 0, false));
+	// creates 'char* name' field
+	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(&charTy, 0)), 0, 0, false));
+
+	// creates 'unsigned short age' field
+	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+			clang.getPreprocessor().getIdentifierInfo("age"), QualType(&ushortTy,0), 0, 0, false));
 
 	decl->completeDefinition ();
-	clang::QualType type = clang.getASTContext().getTagDeclType (decl);
 
+	// Gets the type for the record declaration
+	QualType type = clang.getASTContext().getTagDeclType(decl);
+
+	// convert the type into an IR type
 	TypePtr insiemeTy = convFactory.ConvertType( *type.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<name:ref<char>,age:int<8>>", insiemeTy->toString());
+	EXPECT_EQ("struct<name:ref<char>,age:uint<2>>", insiemeTy->toString());
 
 }
 
-TEST(TypeConversion, HandleRecursiveStructTypes) {
+TEST(TypeConversion, HandleRecursiveStructType) {
 
 //	ProgramPtr prog = Program::create();
 //	insieme::ConversionFactory convFactory( prog->getNodeManager() );
@@ -186,10 +204,73 @@ TEST(TypeConversion, HandleRecursiveStructTypes) {
 //	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
 //	EXPECT_TRUE(insiemeTy);
 //	EXPECT_EQ("struct<name:ref<char>,age:int<8>>,mate:ref<...>", insiemeTy->toString());
-
 }
 
 
+TEST(TypeConversion, HandleFunctionType) {
+	using namespace clang;
 
+	ProgramPtr prog = Program::create();
+	ConversionFactory convFactory( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	ASTContext& ctx = clang.getASTContext();
+
+	// Defines a function with the following prototype:
+	// int f(double a, float* b)
+
+	BuiltinType intTy(BuiltinType::Int);
+	BuiltinType doubleTy(BuiltinType::Double);
+	BuiltinType floatTy(BuiltinType::Float);
+	{
+		QualType argTy[] = { QualType(&doubleTy, 0), ctx.getPointerType(QualType(&floatTy, 0)) };
+		QualType funcTy = ctx.getFunctionType(QualType(&intTy, 0), argTy, 2, false, 0, false, false, 0, NULL, false, CallingConv::CC_Default);
+
+		// convert into IR type
+		TypePtr insiemeTy = convFactory.ConvertType( *funcTy.getTypePtr() );
+		EXPECT_TRUE(insiemeTy);
+		EXPECT_EQ("((real<8>,ref<real<4>>)->int<4>)", insiemeTy->toString());
+	}
+	// check conversion of function with no prototype
+	// int f()
+	{
+		QualType funcTy = ctx.getFunctionNoProtoType(QualType(&intTy, 0));
+
+		// convert into IR type
+		TypePtr insiemeTy = convFactory.ConvertType( *funcTy.getTypePtr() );
+		EXPECT_TRUE(insiemeTy);
+		EXPECT_EQ("(()->int<4>)", insiemeTy->toString());
+	}
+}
+
+TEST(TypeConversion, HandleArrayType) {
+	using namespace clang;
+
+	ProgramPtr prog = Program::create();
+	ConversionFactory convFactory( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	ASTContext& ctx = clang.getASTContext();
+
+	// Check constant arrays: i.e. int a[4];
+	BuiltinType intTy(BuiltinType::Int);
+	{
+		QualType arrayTy = ctx.getConstantArrayType(QualType(&intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
+		TypePtr insiemeTy = convFactory.ConvertType( *arrayTy.getTypePtr() );
+		EXPECT_TRUE(insiemeTy);
+		EXPECT_EQ("vector<ref<int<4>>,8>", insiemeTy->toString());
+	}
+
+	// check incomplete array types: char* arr[]
+	BuiltinType charTy(BuiltinType::SChar);
+	{
+		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(&charTy, 0)), clang::ArrayType::Normal, 0);
+		TypePtr insiemeTy = convFactory.ConvertType( *arrayTy.getTypePtr() );
+		EXPECT_TRUE(insiemeTy);
+		EXPECT_EQ("ref<array<ref<ref<char>>,1>>", insiemeTy->toString());
+	}
+	// ... check variable array and dependent array sizes
+
+}
 
 

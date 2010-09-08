@@ -141,6 +141,12 @@ public:
 
 };
 
+core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vector<core::StatementPtr>& stmtVect) {
+	if( stmtVect.size() == 1 )
+		return stmtVect.front();
+	return builder.compoundStmt(stmtVect);
+}
+
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
@@ -287,6 +293,60 @@ public:
 		if(retStmt.size() == 1)
 			return retStmt.front();
 		// we have to create a CompoundStmt
+		return StmtWrapper( builder.compoundStmt(retStmt) );
+	}
+
+	StmtWrapper VisitIfStmt(IfStmt* ifStmt) {
+		const core::ASTBuilder& builder = convFact.builder;
+		StmtWrapper retStmt;
+
+		core::StatementPtr thenBody = tryAggregateStmts( builder, Visit( ifStmt->getThen() ) );
+		assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
+
+		DLOG(INFO) << "IfStmt then body: " << thenBody;
+
+		core::ExpressionPtr condExpr(NULL);
+		if( VarDecl* condVarDecl = ifStmt->getConditionVariable() ) {
+			assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
+
+			// we are in the situation where a variable is declared in the if condition, i.e.:
+			// if(int a = ...) { }
+			//
+			// this will be converted into the following IR representation:
+			// { int a = ...; if(a){ } }
+			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			retStmt.push_back( declStmt );
+
+			// the expression will be a reference to the declared variable
+			condExpr = declStmt->getVarExpression();
+		} else {
+			Expr* cond = ifStmt->getCond();
+			assert(cond && "If statement with no condition.");
+			condExpr = convFact.ConvertExpr( *cond );
+		}
+		assert(condExpr && "Couldn't convert 'condition' expression of the IfStmt");
+		DLOG(INFO) << "IfStmt condition expression: " << condExpr;
+
+		core::StatementPtr elseBody(NULL);
+		// check for else statement
+		if(Stmt* elseStmt = ifStmt->getElse()) {
+			elseBody = tryAggregateStmts( builder, Visit( elseStmt ) );
+		} else {
+			// create an empty compound statement in the case there is no else stmt
+			elseBody = builder.compoundStmt();
+		}
+		assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
+		DLOG(INFO) << "IfStmt else body: " << elseBody;
+
+		// adding the ifstmt to the list of returned stmts
+		retStmt.push_back( builder.ifStmt(condExpr, thenBody, elseBody) );
+
+		// if we have only 1 statement resulting from the if, we return it
+		if( retStmt.isSingleStmt() ) {
+			return retStmt;
+		}
+
+		// otherwise we introduce an outer CompoundStmt
 		return StmtWrapper( builder.compoundStmt(retStmt) );
 	}
 
