@@ -71,6 +71,8 @@ public:
 	typedef std::pair<ExpressionPtr, StatementPtr> GuardedStmt;
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
+	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Definitions;
+
 
 
 	SharedNodeManager getNodeManager() {

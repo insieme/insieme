@@ -496,7 +496,6 @@ class RecursiveTypeDefinition : public Node {
 
 public:
 
-	typedef std::pair<TypeVariablePtr, TypePtr> Definition;
 	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Definitions;
 
 private:

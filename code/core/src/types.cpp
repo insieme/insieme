@@ -291,8 +291,8 @@ RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, co
 RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) const {
 	Definitions localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-		[&manager](const Definition& cur) {
-			return RecursiveTypeDefinition::Definition(manager.get(cur.first), manager.get(cur.second));
+		[&manager](const Definitions::value_type& cur) {
+			return Definitions::value_type(manager.get(cur.first), manager.get(cur.second));
 	});
 	return new RecursiveTypeDefinition(localDefinitions);
 }
@@ -309,7 +309,7 @@ bool RecursiveTypeDefinition::equals(const Node& other) const {
 
 Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	std::for_each(definitions.begin(), definitions.end(), [&res](const Definition& cur) {
+	std::for_each(definitions.begin(), definitions.end(), [&res](const Definitions::value_type& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
 	});
@@ -317,7 +317,7 @@ Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
 }
 
 std::ostream& RecursiveTypeDefinition::printTo(std::ostream& out) const {
-	return out << "{" << join(", ", definitions, [](std::ostream& out, const Definition& cur) {
+	return out << "{" << join(", ", definitions, [](std::ostream& out, const Definitions::value_type& cur) {
 		out << *cur.first << "=" << *cur.second;
 	}) << "}";
 }
