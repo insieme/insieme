@@ -74,7 +74,7 @@ TEST(AnnotatedPtr, Basic) {
 
 }
 
-TEST(AnnotatedPtrerence, UpCast) {
+TEST(AnnotatedPtr, UpCast) {
 
 	// create two related instances
 	A a;
@@ -86,6 +86,23 @@ TEST(AnnotatedPtrerence, UpCast) {
 
 	// make assignment (if it compiles, test passed!)
 	refA = refB;
+}
+
+TEST(AnnotatedPtr, ImplicitConversion) {
+
+	int value = 3;
+	AnnotatedPtr<int> ptr(value);
+
+	EXPECT_EQ( 3, value);
+	EXPECT_EQ( 3, *ptr);
+
+	value = 4;
+	EXPECT_EQ( 4, value);
+	EXPECT_EQ( 4, *ptr);
+
+	*ptr = 5;
+	EXPECT_EQ( 5, value);
+	EXPECT_EQ( 5, *ptr);
 }
 
 

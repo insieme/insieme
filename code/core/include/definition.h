@@ -115,6 +115,20 @@ private:
 	Definition(const Identifier& name, const TypePtr& type, const bool& external,
 			const ExpressionPtr& definition, const std::size_t& hashCode);
 
+public:
+
+	/**
+	 * A constructor for this type creating a new element based on the given properties.
+	 *
+	 * @param name the name of the element to be defined by this definition
+	 * @param type the type of the newly defined element.
+	 * @param external a flag indicating whether this definition is externally defined / used.
+	 * @param definition the actual value assigned. It has to be an expression of the specified type.
+	 */
+	Definition(const Identifier& name, const TypePtr& type, const bool& external, const ExpressionPtr& definition);
+
+private:
+
 	/**
 	 * Creates a clone of this definition within the given definition manager.
 	 *

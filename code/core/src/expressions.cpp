@@ -394,6 +394,14 @@ JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, c
 
 // ------------------------------------- CallExpr ---------------------------------
 
+const TypePtr& getReturnType(const VarExprPtr& functionExpr) {
+	const TypePtr& type = functionExpr->getType();
+	assert( dynamic_cast<const FunctionType*>(&type) && "Non-function type expression used as operator within call Expression!");
+
+	const FunctionType& funType = static_cast<const FunctionType&>(*type);
+	return funType.getReturnType();
+}
+
 std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 	size_t seed = HASHVAL_CALLEXPR;
 	boost::hash_combine(seed, type->hash());
@@ -404,6 +412,10 @@ std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr,
 
 CallExpr::CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
 		: Expression(type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(functionExpr), arguments(arguments) { }
+
+CallExpr::CallExpr(const VarExprPtr& functionExpr, const vector<ExpressionPtr>& arguments)
+		: Expression(::getReturnType(functionExpr), ::hashCallExpr(::getReturnType(functionExpr), functionExpr, arguments)),
+		  functionExpr(functionExpr), arguments(arguments) { }
 
 CallExpr* CallExpr::clone(NodeManager& manager) const {
 	return new CallExpr(manager.get(type), manager.get(*functionExpr), manager.getAll(arguments));

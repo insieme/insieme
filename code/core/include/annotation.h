@@ -99,7 +99,7 @@ class Annotatable {
 	 * NOTE: the shared pointer cannot be initialized with NULL (thereby avoiding the initialization
 	 * overhead) since updating it afterward would make copies no longer share the same register.
 	 */
-	SharedAnnotationMap map;
+	mutable SharedAnnotationMap map;
 
 public:
 
@@ -119,7 +119,7 @@ public:
 	 *
 	 * @param annotation the annotation to be added. The key will be obtained from the given annotation.
 	 */
-	void addAnnotation(const std::shared_ptr<Annotation>& annotation) {
+	void addAnnotation(const std::shared_ptr<Annotation>& annotation) const {
 
 		// check pre-condition
 		assert ( annotation && "Cannot add NULL annotation!" );
@@ -182,7 +182,7 @@ public:
 	 *
 	 * @param key a pointer to the key addressing the element to be removed.
 	 */
-	void remAnnotation(const AnnotationKey* key) {
+	void remAnnotation(const AnnotationKey* key) const {
 		map->erase(map->find(key));
 	}
 
@@ -191,7 +191,7 @@ public:
 	 *
 	 * @param key a refernec to the key addressing the element to be removed.
 	 */
-	void remAnnotation(const AnnotationKey& key) {
+	void remAnnotation(const AnnotationKey& key) const {
 		remAnnotation(&key);
 	}
 
@@ -218,7 +218,7 @@ public:
 	/**
 	 * Obtains an immutable reference to the internally maintained annotations.
 	 */
-	const AnnotationMap& getAnnotations() {
+	const AnnotationMap& getAnnotations() const {
 		return *map;
 	}
 };

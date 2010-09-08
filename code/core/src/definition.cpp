@@ -68,6 +68,11 @@ Definition::Definition(const Identifier& name, const TypePtr& type, const bool& 
 	:
 		Node(NodeType::DEFINITION, hashCode), name(name), type(type), external(external), definition(definition) { }
 
+Definition::Definition(const Identifier& name, const TypePtr& type, const bool& external,
+		const ExpressionPtr& definition)
+	:
+		Node(NodeType::DEFINITION, ::hash(name, type)), name(name), type(type), external(external), definition(definition) { }
+
 Node::OptionChildList Definition::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
@@ -82,12 +87,12 @@ Definition* Definition::clone(NodeManager& manager) const {
 }
 
 DefinitionPtr Definition::get(NodeManager& manager, const Identifier& name, const TypePtr& type, const ExpressionPtr& definition, bool external) {
-	return manager.get(Definition(name, type, external, definition, ::hash(name, type)));
+	return manager.get(Definition(name, type, external, definition));
 
 }
 
 DefinitionPtr Definition::lookup(NodeManager& manager, const Identifier& name, const TypePtr& type) {
-	return manager.lookup(Definition(name, type, false, NULL, ::hash(name, type)));
+	return manager.lookup(Definition(name, type, false, NULL));
 }
 
 

@@ -147,6 +147,23 @@ string TupleType::buildNameString(const ElementTypeList& elementTypes) {
 }
 
 /**
+ * Creates a new, empty tuple type.
+ */
+TupleType::TupleType() : Type(buildNameString(toVector<TypePtr>()), allConcrete(toVector<TypePtr>())), elementTypes(toVector<TypePtr>()) {}
+
+/**
+ * Creates a new tuple type based on the given element type(s).
+ */
+TupleType::TupleType(const TypePtr& a)
+	: Type(buildNameString(toVector<TypePtr>(a)), allConcrete(toVector<TypePtr>(a))), elementTypes(toVector<TypePtr>(a)) {}
+
+/**
+ * Creates a new tuple type based on the given element type(s).
+ */
+TupleType::TupleType(const TypePtr& a, const TypePtr& b)
+	: Type(buildNameString(toVector<TypePtr>(a,b)), allConcrete(toVector<TypePtr>(a,b))), elementTypes(toVector<TypePtr>(a,b)) {}
+
+/**
  * This method provides a static factory method for this type of node. It will return
  * a tuple type pointer pointing toward a variable with the given name maintained by the
  * given manager.

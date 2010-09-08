@@ -1,0 +1,252 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#include <cassert>
+
+#include "lang_basic.h"
+
+#include "container_utils.h"
+
+namespace insieme {
+namespace core {
+namespace lang {
+
+
+
+
+
+const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
+
+
+// -------------------------------- Boolean Type -------------------------------
+
+const Identifier TYPE_NAME_BOOL("bool");
+
+bool isBoolType(const Type& type) {
+	return type == TYPE_BOOL;
+}
+
+const GenericType TYPE_BOOL = GenericType(TYPE_NAME_BOOL);
+
+
+// -------------------------------- Integer Types -------------------------------
+
+const Identifier TYPE_NAME_INT("int");
+
+bool isIntegerType(const Type& type) {
+	return isIntType(type) || isUIntType(type);
+}
+
+IntegerType getIntegerType(unsigned short size, bool _signed) {
+	return (_signed)?getIntType(size):getUIntType(size);
+}
+
+int getNumBytes(const IntegerType& type) {
+	assert( isIntegerType(type) && "Given argument is not an integer type!");
+	IntTypeParam param = type.getIntTypeParameter()[0];
+	if (param.getType()==IntTypeParam::CONCRETE) {
+		return param.getValue();
+	}
+	return -1;
+}
+
+
+IntType getIntType(unsigned short size) {
+	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam(size)));
+}
+
+IntType getGenIntType(char symbol) {
+	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam(symbol)));
+}
+
+bool isIntType(const Type& type) {
+	// TODO: replace with unification test ?
+
+	// check type
+	if (typeid(type) != typeid(IntType)) {
+		return false;
+	}
+
+	// test whether the criteria are matching
+	const GenericType& other = static_cast<const GenericType&>(type);
+	return	other.getFamilyName() == TYPE_NAME_INT
+			&& other.getTypeParameter().size() == 0
+			&& other.getIntTypeParameter().size() == 1
+			&& other.getBaseType() == TypePtr(NULL);
+}
+
+
+const IntType TYPE_INT_GEN = getGenIntType('a');
+const IntType TYPE_INT_1 = getIntType(1);
+const IntType TYPE_INT_2 = getIntType(2);
+const IntType TYPE_INT_4 = getIntType(4);
+const IntType TYPE_INT_8 = getIntType(8);
+const IntType TYPE_INT_INF = GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF));
+
+
+const Identifier TYPE_NAME_UINT("uint");
+
+UIntType getUIntType(unsigned short size) {
+	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam(size)));
+}
+
+UIntType getGenUIntType(char symbol) {
+	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam(symbol)));
+}
+
+bool isUIntType(const Type& type) {
+	// TODO: replace with unification test ?
+
+	// check type
+	if (typeid(type) != typeid(IntType)) {
+		return false;
+	}
+
+	// test whether the criteria are matching
+	const GenericType& other = static_cast<const GenericType&>(type);
+	return	other.getFamilyName() == TYPE_NAME_UINT
+			&& other.getTypeParameter().size() == 0
+			&& other.getIntTypeParameter().size() == 1
+			&& other.getBaseType() == TypePtr(NULL);
+}
+
+const UIntType TYPE_UINT_GEN = getGenUIntType('a');
+const UIntType TYPE_UINT_1 = getUIntType(1);
+const UIntType TYPE_UINT_2 = getUIntType(2);
+const UIntType TYPE_UINT_4 = getUIntType(4);
+const UIntType TYPE_UINT_8 = getUIntType(8);
+const UIntType TYPE_UINT_INF = GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF));
+
+
+// -------------------------------- Real Types ------------------------------
+
+const Identifier TYPE_NAME_REAL("real");
+
+RealType getRealType(unsigned short size) {
+	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam(size)));
+}
+
+RealType getGenRealType(char symbol) {
+	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam(symbol)));
+}
+
+bool isRealType(const Type& type) {
+	// TODO: replace with unification test ?
+
+	// check type
+	if (typeid(type) != typeid(RealType)) {
+		return false;
+	}
+
+	// test whether the criteria are matching
+	const GenericType& other = static_cast<const GenericType&>(type);
+	return	other.getFamilyName() == TYPE_NAME_REAL
+			&& other.getTypeParameter().size() == 0
+			&& other.getIntTypeParameter().size() == 1
+			&& other.getBaseType() == TypePtr(NULL);
+}
+
+const RealType TYPE_REAL_GEN = getGenRealType('a');
+const RealType TYPE_REAL_1 = getRealType(1);
+const RealType TYPE_REAL_2 = getRealType(2);
+const RealType TYPE_REAL_4 = getRealType(4);
+const RealType TYPE_REAL_8 = getRealType(8);
+const RealType TYPE_REAL_INF = GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF));
+
+
+
+// -------------------------------- Operator ------------------------------
+
+#define ADD_UNARY_OP(Name, Type, Symbol) \
+		const UnaryOp OP_ ## Name (Type, Symbol); \
+		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
+
+#define ADD_BINARY_OP(Name, Type, Symbol) \
+		const BinaryOp OP_ ## Name (Type, Symbol); \
+		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
+
+const FunctionType TYPE_UNARY_BOOL_OP(TupleType(TYPE_BOOL), TYPE_BOOL);
+const FunctionType TYPE_BINARY_BOOL_OP(TupleType(TYPE_BOOL, TYPE_BOOL), TYPE_BOOL);
+
+ADD_UNARY_OP(BOOL_NOT, TYPE_UNARY_BOOL_OP, "bool.not");
+ADD_BINARY_OP(BOOL_AND, TYPE_BINARY_BOOL_OP, "bool.and");
+ADD_BINARY_OP(BOOL_OR, TYPE_BINARY_BOOL_OP, "bool.or");
+
+
+const FunctionType TYPE_BINARY_INT_OP(TupleType(TYPE_INT_GEN, TYPE_INT_GEN), TYPE_INT_GEN);
+
+ADD_BINARY_OP(INT_ADD, TYPE_BINARY_INT_OP, "int.add");
+ADD_BINARY_OP(INT_SUB, TYPE_BINARY_INT_OP, "int.sub");
+ADD_BINARY_OP(INT_MUL, TYPE_BINARY_INT_OP, "int.mul");
+ADD_BINARY_OP(INT_DIV, TYPE_BINARY_INT_OP, "int.div");
+ADD_BINARY_OP(INT_MOD, TYPE_BINARY_INT_OP, "int.mod");
+
+const FunctionType TYPE_BINARY_UINT_OP(TupleType(TYPE_UINT_GEN, TYPE_UINT_GEN), TYPE_UINT_GEN);
+
+ADD_BINARY_OP(UINT_ADD, TYPE_BINARY_UINT_OP, "uint.add");
+ADD_BINARY_OP(UINT_SUB, TYPE_BINARY_UINT_OP, "uint.sub");
+ADD_BINARY_OP(UINT_MUL, TYPE_BINARY_UINT_OP, "uint.mul");
+ADD_BINARY_OP(UINT_DIV, TYPE_BINARY_UINT_OP, "uint.div");
+ADD_BINARY_OP(UINT_MOD, TYPE_BINARY_UINT_OP, "uint.mod");
+
+const FunctionType TYPE_BINARY_REAL_OP(TupleType(TYPE_REAL_GEN, TYPE_REAL_GEN), TYPE_REAL_GEN);
+
+ADD_BINARY_OP(REAL_ADD, TYPE_BINARY_REAL_OP, "real.add");
+ADD_BINARY_OP(REAL_SUB, TYPE_BINARY_REAL_OP, "real.sub");
+ADD_BINARY_OP(REAL_MUL, TYPE_BINARY_REAL_OP, "real.mul");
+ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP, "real.div");
+
+#undef ADD_UNARY_OP
+#undef ADD_BINARY_OP
+
+
+// -------------------------------- Expressions ------------------------------
+
+CallExpr createExpr(const UnaryOp& op, const ExpressionPtr& operant) {
+	// TODO: add type checks ?
+	return CallExpr(op, toVector<ExpressionPtr>(operant));
+}
+
+CallExpr createExpr(const ExpressionPtr& rhs, const BinaryOp& op, const ExpressionPtr& lhs) {
+	// TODO: add type checks ?
+	return CallExpr(op, toVector<ExpressionPtr>(rhs, lhs));
+}
+
+
+} // end namespace: lang
+} // end namespace: core
+} // end namespace: insieme
+

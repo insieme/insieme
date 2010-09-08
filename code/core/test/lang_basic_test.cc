@@ -34,54 +34,40 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <iostream>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/utility/enable_if.hpp>
-
-#include "annotation.h"
-#include "instance_ptr.h"
-#include "type_traits_utils.h"
+#include "lang_basic.h"
 
 
-namespace insieme {
-namespace core {
+using namespace insieme::core;
+using namespace insieme::core::lang;
 
-template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
-public:
-	AnnotatedPtr(T& value) : InstancePtr<T>(&value) {}
-	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
+TEST(LangBasic, Types) {
 
-	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) :
-		InstancePtr<T>(from.ptr) { }
-};
-
-template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
-dynamic_pointer_cast(AnnotatedPtr<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
+	// test some signed integers ...
+	{
+		GenericType types[] = {TYPE_INT_1, TYPE_INT_2, TYPE_INT_4, TYPE_INT_8};
+		for (int i=0; i<4; i++) {
+			EXPECT_TRUE ( isIntegerType(types[i]) );
+			EXPECT_TRUE ( isIntType(types[i]) );
+			EXPECT_FALSE ( isUIntType(types[i]) );
+			EXPECT_EQ ( 1<<i, getNumBytes(types[i]) );
+		}
+		EXPECT_TRUE ( isIntType(TYPE_INT_GEN) );
+		EXPECT_TRUE ( isIntType(TYPE_INT_INF) );
 	}
-//	return NullInstance;
-	return NULL;
-}
 
-} // end namespace core
-} // end namespace insieme
 
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const insieme::core::AnnotatedPtr<T>& ptr) {
-//	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
-	out << "AP(";
-	if (!!ptr) {
-		out << *ptr;
-	} else {
-		out << "NULL";
+	// test some unsigned integers ...
+	{
+		GenericType types[] = {TYPE_UINT_1, TYPE_UINT_2, TYPE_UINT_4, TYPE_UINT_8};
+		for (int i=0; i<4; i++) {
+			EXPECT_TRUE ( isIntegerType(types[i]) );
+			EXPECT_FALSE ( isIntType(types[i]) );
+			EXPECT_TRUE ( isUIntType(types[i]) );
+			EXPECT_EQ ( 1<<i, getNumBytes(types[i]) );
+		}
+		EXPECT_TRUE ( isUIntType(TYPE_UINT_GEN) );
+		EXPECT_TRUE ( isUIntType(TYPE_UINT_INF) );
 	}
-	out << ")";
-	return out;
 }
-

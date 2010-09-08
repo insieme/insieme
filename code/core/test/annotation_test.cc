@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "annotation.h"
+#include "types.h"
 
 using std::shared_ptr;
 
@@ -139,6 +140,18 @@ TEST(Annotation, Basic) {
 
 	EXPECT_TRUE ( NULL == target.getAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE(target.contains(DummyAnnotation2::DummyKey));
+}
+
+TEST(Annotation, ASTNode) {
+
+	NodeManager manager;
+
+	// Just try to add an annotation to a AST node
+	std::shared_ptr<DummyAnnotation> annotation(new DummyAnnotation(1));
+
+	GenericTypePtr ptr = GenericType::get(manager, "test");
+	ptr->addAnnotation(annotation);
+
 }
 
 } // end namespace core

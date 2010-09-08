@@ -290,11 +290,30 @@ private:
 	 */
 	static string buildNameString(const ElementTypeList& elementTypes);
 
+public:
+
+	/**
+	 * Creates a new, empty tuple type.
+	 */
+	TupleType();
+
+	/**
+	 * Creates a new tuple type based on the given element type(s).
+	 */
+	TupleType(const TypePtr&);
+
+	/**
+	 * Creates a new tuple type based on the given element type(s).
+	 */
+	TupleType(const TypePtr&, const TypePtr&);
+
 	/**
 	 * Creates a new tuple type based on the given element types.
 	 */
 	TupleType(const ElementTypeList& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
+
+private:
 
 	/**
 	 * Creates a clone of this node.
@@ -342,6 +361,8 @@ class FunctionType: public Type {
 	 */
 	const TypePtr returnType;
 
+public:
+
 	/**
 	 * Creates a new instance of this type based on the given in and output types.
 	 *
@@ -353,14 +374,14 @@ class FunctionType: public Type {
 		argumentType(argumentType), returnType(returnType) {
 	}
 
+protected:
+
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual FunctionType* clone(NodeManager& manager) const {
 		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
-
-protected:
 
 	/**
 	 * Creates a empty child list since this node represents a terminal node.
@@ -381,6 +402,23 @@ public:
 	 */
 	static FunctionTypePtr get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
 
+	/**
+	 * Obtains a reference to the internally maintained argument type.
+	 *
+	 * @return a reference to the argument type.
+	 */
+	const TypePtr& getArgumentType() const {
+		return argumentType;
+	}
+
+	/**
+	 * Obtains a reference to the internally maintained result type.
+	 *
+	 * @return a reference to the result type.
+	 */
+	const TypePtr& getReturnType() const {
+		return returnType;
+	}
 };
 
 
@@ -415,7 +453,7 @@ class GenericType: public Type {
 	 */
 	const TypePtr baseType;
 
-protected:
+public:
 
 	/**
 	 * Creates an new generic type instance based on the given parameters.
@@ -429,6 +467,8 @@ protected:
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
+
+protected:
 
 	/**
 	 * Creates a clone of this node.
@@ -460,6 +500,13 @@ public:
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
+
+	/**
+	 * Obtains the family name of this generic type.
+	 */
+	const Identifier& getFamilyName() const {
+		return familyName;
+	}
 
 	/**
 	 * Retrieves all type parameter associated to this generic type.

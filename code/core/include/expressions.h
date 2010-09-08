@@ -177,8 +177,9 @@ public:
 class VarExpr : public Expression {
 protected:
 	const Identifier id;
-	
+public:
     VarExpr(const TypePtr& type, const Identifier& id);
+protected:
     VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode);
 
 	virtual VarExpr* clone(NodeManager& manager) const;
@@ -315,6 +316,9 @@ class CallExpr : public Expression {
 	const vector<ExpressionPtr> arguments;
 
 	CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
+public:
+	CallExpr(const VarExprPtr& functionExpr, const vector<ExpressionPtr>& arguments);
+private:
 	virtual CallExpr* clone(NodeManager& manager) const;
 	
 protected:
