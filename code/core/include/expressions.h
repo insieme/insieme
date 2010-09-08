@@ -326,6 +326,9 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
+	const vector<ExpressionPtr>& getArguments() const { return arguments; }
+
 	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 
@@ -342,6 +345,8 @@ protected:
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const ExpressionPtr& getSubExpression() const { return subExpression; }
 
 	static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpression);
 };

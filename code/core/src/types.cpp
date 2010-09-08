@@ -292,7 +292,7 @@ RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) co
 	Definitions localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
 		[&manager](const Definition& cur) {
-			return Definition(manager.get(cur.first), manager.get(cur.second));
+			return RecursiveTypeDefinition::Definition(manager.get(cur.first), manager.get(cur.second));
 	});
 	return new RecursiveTypeDefinition(localDefinitions);
 }

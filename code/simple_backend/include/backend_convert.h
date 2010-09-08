@@ -36,23 +36,192 @@
 
 #pragma once
 
-#include "statements.h"
-#include "ast_visitor.h"
+#include <strstream>
+#include <assert.h>
 
-//class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
-//public:
-//
-//	int counter;
-//
-//	CountingVisitor() : counter(0) {};
-//
-//	int visitNode(const NodePtr& node) {
-//		std::cout << *node << std::endl;
-//		return ++counter;
-//	};
-//
-//	void reset() {
-//		counter = 0;
-//	}
-//
-//};
+#include <boost/algorithm/string/replace.hpp>
+
+#include "ast_node.h"
+#include "ast_visitor.h"
+#include "statements.h"
+#include "program.h"
+#include "definition.h"
+
+#include "container_utils.h"
+
+namespace insieme {
+namespace simple_backend {
+
+using namespace ::insieme::core;
+
+class CodeStream {
+public:
+	struct IndR { }; static IndR indR;
+	struct IndL { }; static IndL indL;
+
+private:
+	std::stringstream ss;
+	string indentString;
+
+	template<typename T>
+	friend CodeStream& operator<<(CodeStream& cstr, T& param);
+	
+	template<typename T>
+	void append(T& param) {
+		std::stringstream ssTmp;
+		// TODO fix operator lookup
+		//ssTmp << param;
+		string tmp = ssTmp.str();
+		boost::replace_all(tmp, "\n", string("\n") + indentString);
+		ss << tmp;
+	}
+	void append(IndR param) {
+		indentString += "\t";
+	}
+	void append(IndL param) {
+		assert(indentString.length()>0 && "Trying to indent below level 0");
+		indentString = indentString.substr(0, indentString.length()-1);
+	}
+
+public:
+	CodeStream() : indentString("") {
+	}
+
+};
+
+template<typename T>
+CodeStream& operator<<(CodeStream& cstr, T& param) {
+	cstr.append(param);
+	return cstr;
+}
+
+class TypeConverter : public ASTVisitor<TypeConverter, string> {
+public:
+	string visitStructType(const StructTypePtr& ptr) {
+		string ret = "struct " + ptr->getName() + "{\n";
+		for_each(ptr->getEntries(), [](const NamedCompositeType::Entry& entry) {
+			//entry.first
+		});
+	}
+};
+
+class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
+	CodeStream cStr;
+	TypeConverter typeConv;
+
+	void printTypeName(const TypePtr& typ) {
+		// TODO print C type name for specified type to cStr
+	}
+
+public:
+	ConvertVisitor() {};
+
+	//void visitNode(const NodePtr& node) {
+	//	std::cout << *node << std::endl;
+	//}
+
+	//void visitProgram(const ProgramPtr& ptr) {
+	//	for_each(ptr->getDefinitions(), [](const DefinitionPtr& def) {
+	//		def->getType();
+	//	});
+	//}
+	
+#pragma region StatementVisits 
+
+	void visitBreakStmt(const BreakStmtPtr&) {
+		cStr << "break;\n";
+	}
+
+	void visitCompoundStmt(const CompoundStmtPtr& ptr) {
+		cStr << "{" << CodeStream::indR << "\n";
+		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { this->visit(ptr); });
+		cStr << CodeStream::indL << "}" << "\n";
+	}
+
+	void visitContinueStmt(const ContinueStmtPtr& ptr) {
+		cStr << "continue;\n";
+	}
+
+	void visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
+		cStr << ptr->getVarExpression()->getType()->getName() << " = ";
+		visit(ptr->getInitialization());
+		cStr << ";\n";
+	}
+
+	void visitForStmt(const ForStmtPtr& ptr) {
+		auto decl = ptr->getDeclaration();
+		auto ident = decl->getVarExpression()->getIdentifier();
+		cStr << "for(";
+		visit(decl);
+		cStr << "; " << ident << " < ";
+		visit(ptr->getEnd());
+		cStr << "; " << ident << " += "; 
+		visit(ptr->getStep());
+		cStr << ") ";
+		visit(ptr->getBody());
+	}
+
+	void visitIfStmt(const IfStmtPtr& ptr) {
+		cStr << "if(";
+		visit(ptr->getCondition());
+		cStr << ") ";
+		visit(ptr->getThenBody());
+		cStr << "else ";
+		visit(ptr->getElseBody());
+	}
+
+	void visitReturnStmt(const ReturnStmtPtr& ptr) {
+		cStr << "return;\n";
+	}
+
+	void visitSwitchStmt(const SwitchStmtPtr& ptr) {
+		cStr << "switch(";
+		visit(ptr->getSwitchExpr());
+		cStr << ") {\n";
+		for_each(ptr->getCases(), [&](const SwitchStmt::Case& curCase) { // GCC sucks
+			this->visit(curCase.first);
+			this->cStr << ":" << CodeStream::indR << "\n";
+			this->visit(curCase.second);
+			this->cStr << "break;" << CodeStream::indL << "\n";
+		});
+		cStr << "}\n";
+	}
+
+	void visitWhileStmt(const WhileStmtPtr& ptr) {
+		cStr << "while(";
+		visit(ptr->getCondition());
+		cStr << ") ";
+		visit(ptr->getBody());
+	}
+
+#pragma endregion StatementVisits
+
+#pragma region ExpressionVisits
+
+	void visitCallExpr(const CallExprPtr& ptr) {
+		const std::vector<ExpressionPtr>& args = ptr->getArguments();
+		visit(ptr->getFunctionExpr());
+		cStr << "(";
+		if(args.size()>0) {
+			visit(args.front());
+			for_each(args.cbegin()+1, args.cend(), [&, this](const ExpressionPtr& curArg) {
+				this->cStr << ", ";
+				this->visit(curArg);
+			});
+		}
+		cStr << ")";
+	}
+
+	void visitCastExpr(const CastExprPtr& ptr) {
+		cStr << "((";
+		printTypeName(ptr->getType());
+		cStr << ")(";
+		visit(ptr->getSubExpression());
+		cStr << "))";
+	}
+
+#pragma endregion ExpressionVisits
+};
+
+} // namespace simple_backend
+} // namespace insieme

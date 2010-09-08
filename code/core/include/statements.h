@@ -275,6 +275,9 @@ protected:
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const ExpressionPtr& getSwitchExpr() const { return switchExpr; }
+	const vector<Case>& getCases() const { return cases; }
 	
 	SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases);
 };
