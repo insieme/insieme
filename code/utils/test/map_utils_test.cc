@@ -73,42 +73,42 @@ void testMap() {
 	Map mapB;
 	EXPECT_EQ ( 0, computeHash(mapA) );
 	EXPECT_EQ ( 0, computeHash(mapB) );
-	EXPECT_TRUE ( equal(mapA, mapB) );
+	EXPECT_TRUE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapA.insert(std::make_pair(1,2));
 	EXPECT_NE ( 0, computeHash(mapA) );
 	EXPECT_EQ ( 0, computeHash(mapB) );
-	EXPECT_FALSE ( equal(mapA, mapB) );
+	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapB.insert(std::make_pair(2,4));
 	EXPECT_NE ( 0, computeHash(mapA) );
 	EXPECT_NE ( 0, computeHash(mapB) );
 	EXPECT_NE ( computeHash(mapA), computeHash(mapB) );
-	EXPECT_FALSE ( equal(mapA, mapB) );
+	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapB.erase(2);
 	EXPECT_NE ( 0, computeHash(mapA) );
 	EXPECT_EQ ( 0, computeHash(mapB) );
-	EXPECT_FALSE ( equal(mapA, mapB) );
+	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapB.insert(std::make_pair(1,2));
 	EXPECT_NE ( 0, computeHash(mapA) );
 	EXPECT_NE ( 0, computeHash(mapB) );
 	EXPECT_EQ ( computeHash(mapA), computeHash(mapB) );
-	EXPECT_TRUE ( equal(mapA, mapB) );
+	EXPECT_TRUE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapA.insert(std::make_pair(2,3));
 	mapB.insert(std::make_pair(2,3));
 	EXPECT_NE ( 0, computeHash(mapA) );
 	EXPECT_NE ( 0, computeHash(mapB) );
 	EXPECT_EQ ( computeHash(mapA), computeHash(mapB) );
-	EXPECT_TRUE ( equal(mapA, mapB) );
+	EXPECT_TRUE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapA.erase(2);
 	mapA.insert(std::make_pair(2,2));
 	EXPECT_NE ( 0, computeHash(mapA) );
 	EXPECT_NE ( 0, computeHash(mapB) );
 	EXPECT_NE ( computeHash(mapA), computeHash(mapB) );
-	EXPECT_FALSE ( equal(mapA, mapB) );
+	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 }
 
