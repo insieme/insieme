@@ -163,16 +163,15 @@ public:
 class BoolLiteral : public Literal<bool> {
 	BoolLiteral(const TypePtr& type, bool val);
 	virtual BoolLiteral* clone(NodeManager& manager) const;
-	
 public:
-
 	static BoolLiteralPtr get(NodeManager& manager, bool value);
 };
 
-//class StringLiteral : public Literal<string> {
+//class StringLiteral : public Literal<std::string> {
+//	StringLiteral(const TypePtr& type, const std::string& val);
+//	virtual StringLiteral* clone(NodeManager& manager) const;
 //public:
-//	// TODO: fix null type
-//	StringLiteral(const string& val) : Literal(NULL, val) { }
+//	static StringLiteralPtr get(NodeManager& manager, const std::string& value);
 //};
 
 class VarExpr : public Expression {
@@ -326,6 +325,9 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
+	const vector<ExpressionPtr>& getArguments() const { return arguments; }
+
 	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 
@@ -342,6 +344,8 @@ protected:
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const ExpressionPtr& getSubExpression() const { return subExpression; }
 
 	static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpression);
 };

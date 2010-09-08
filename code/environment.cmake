@@ -39,10 +39,14 @@ find_library(pthread_LIB pthread)
 
 # Visual Studio customization
 if(MSVC) 
+	# enable minimal rebuild
+	add_definitions( /Gm )
 	# disable some warnings
 	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
 	# disable warning "assignment operator could not be generated"
 	add_definitions( /wd"4512" )
+	# disable warning "nonstandard extension: enum '[EnumName::ENUM]' used in qualified name"	
+	add_definitions( /wd"4482" )
 	# statically link with runtime library (required for gtest)
 	foreach(flag_var
 		CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE

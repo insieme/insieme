@@ -325,6 +325,12 @@ struct CurrentNodeOnly {
 	}
 };
 
+template<>
+struct CurrentNodeOnly<void> {
+	inline void operator()(const NodePtr& currentNode, ...){
+	}
+};
+
 
 /**
  * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which

@@ -36,3 +36,11 @@
 
 #include "backend_convert.h"
 
+namespace insieme {
+namespace simple_backend {
+
+CodeStream::IndR CodeStream::indR;
+CodeStream::IndL CodeStream::indL;
+
+}
+}
