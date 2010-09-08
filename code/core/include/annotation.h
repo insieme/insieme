@@ -291,7 +291,7 @@ public:
  * A simple annotation key definition which is based on a string.
  */
 template<typename AnnotationType = Annotation>
-class StringKey : public SimpleKey<string, AnnotationType, equal_str> {
+class StringKey : public SimpleKey<string, AnnotationType, std::equal_to<string>> {
 public:
 
 	/**
@@ -305,7 +305,7 @@ public:
 	 *
 	 * @param value the value to be represented.
 	 */
-	StringKey(const string& value) : SimpleKey<string, AnnotationType, equal_str>(value) {};
+	StringKey(const string& value) : SimpleKey<string, AnnotationType, std::equal_to<string>>(value) {};
 };
 
 } // end namespace core

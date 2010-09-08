@@ -198,7 +198,7 @@ public:
 		// convert (statically) and check the type name
 		const Type& ref = static_cast<const Type&>(other);
 		// TODO: improve this by eliminating the name!
-		return name.compare(ref.name) == 0;
+		return name == ref.name;
 	}
 
 
@@ -497,7 +497,7 @@ class RecursiveTypeDefinition : public Node {
 public:
 
 	typedef std::pair<TypeVariablePtr, TypePtr> Definition;
-	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>> Definitions;
+	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Definitions;
 
 private:
 
@@ -518,11 +518,13 @@ protected:
 
 public:
 
-	RecursiveTypeDefinitionPtr get(NodeManager& manager, const Definitions& definitions);
+	static RecursiveTypeDefinitionPtr get(NodeManager& manager, const Definitions& definitions);
 
 	const Definitions& getDefinitions() {
 		return definitions;
 	}
+
+	const TypePtr getDefinitionOf(const TypeVariablePtr& variable) const;
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -577,7 +579,7 @@ public:
 	 * 					   recursive type to be defined by the resulting type instance.
 	 * @param definition the definition of the recursive type.
 	 */
-	RecursiveTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition);
+	static RecursiveTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition);
 
 };
 

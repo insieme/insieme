@@ -385,18 +385,43 @@ TEST(TypeTest, RecursiveType) {
 	// create a manager for this test
 	NodeManager manager;
 
-	// create a simple recursive type uX.X (actually illegal)
 
 	// TODO: test whether order of definitions is important ... (it should not)
 
-	TypeVariablePtr variable = TypeVariable::get(manager, "X");
-//	RecursiveTypeDefinitionPtr definition = ;
-//	RecursiveTypePtr type = RecursiveType::get(manager, variable, definition);
+	// create a simple recursive type uX.X (no actual type)
+	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+
+	// create definition
+	RecursiveTypeDefinition::Definitions definitions;
+	definitions.insert(RecursiveTypeDefinition::Definition(varX, varX));
+	RecursiveTypeDefinitionPtr definition = RecursiveTypeDefinition::get(manager, definitions);
+	EXPECT_EQ ( "{'X='X}", toString(*definition) );
 
 
-	// create a a recursive list type uX.[int<4>,ref<X>]
+	RecursiveTypePtr type = RecursiveType::get(manager, varX, definition);
+	EXPECT_EQ ( "rec 'X.{'X='X}", toString(*type) );
+	basicTypeTests(type, true, false, toList(toVector<NodePtr>(varX, definition)));
 
-	// conduct basic tests
+
+	// create mutually recursive type
+	TypeVariablePtr varY = TypeVariable::get(manager, "Y");
+
+	definitions = RecursiveTypeDefinition::Definitions();
+	definitions.insert(RecursiveTypeDefinition::Definition(varX, varY));
+	definitions.insert(RecursiveTypeDefinition::Definition(varY, varX));
+	definition = RecursiveTypeDefinition::get(manager, definitions);
+	EXPECT_TRUE ( toString(*definition)=="{'Y='X, 'X='Y}" || toString(*definition)=="{'X='Y, 'Y='X}" );
+
+	RecursiveTypePtr typeX = RecursiveType::get(manager, varX, definition);
+	RecursiveTypePtr typeY = RecursiveType::get(manager, varY, definition);
+
+	EXPECT_NE ( typeX, typeY );
+	EXPECT_NE ( typeX, type );
+
+	EXPECT_TRUE ( toString(*typeX)=="rec 'X.{'Y='X, 'X='Y}" || toString(*typeX)=="rec 'X.{'X='Y, 'Y='X}" );
+
+	basicTypeTests(typeX, true, false, toList(toVector<NodePtr>(varX, definition)));
+	basicTypeTests(typeY, true, false, toList(toVector<NodePtr>(varY, definition)));
 }
 
 TEST(TypeTest, StructType) {

@@ -158,8 +158,8 @@ template<typename Key, typename Mapped, typename Hash, typename Pred, typename A
 std::ostream& operator<<(std::ostream& out, const std::unordered_map<Key, Mapped, Hash, Pred, Alloc>& container) {
 	typedef typename std::unordered_map<Key, Mapped, Hash, Pred, Alloc>::value_type Element;
 
-	return out << "{" <<  join(", ", container, [](const Element& cur) {
-		return format("%s=%s", toString(cur.first), toString(cur.second));
+	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
+		out << cur.first << "=" << cur.second;
 	}) << "}";
 }
 

@@ -56,37 +56,6 @@ string toString(const T& value) {
 }
 
 /**
- * Checks whether the given strings are equal or not.
- *
- * @param strA the first string
- * @param strB the second string
- * @return true if both strings are equivalent, false otherwise
- */
-inline bool equal(const string& strA, const string& strB) {
-	// quick check for equality
-	if (&strA == &strB) {
-		return true;
-	}
-
-	// check string length
-	if (strA.length() != strB.length()) {
-		return false;
-	}
-
-	// compare actual string values
-	return strA.compare(strB) == 0;
-}
-
-/**
- * This functor can be used to compare string for being equivalent.
- */
-struct equal_str : public std::binary_function<const string&, const string&, bool> {
-	inline bool operator()(const string& strA, const string& strB) const {
-		return equal(strA, strB);
-	}
-};
-
-/**
  * This functor can be used to print elements to an output stream.
  */
 template<typename Extractor>

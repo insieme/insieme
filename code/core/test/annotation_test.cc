@@ -80,7 +80,7 @@ TEST(Annotation, Basic) {
 	Annotatable target;
 
 	// some basic tests
-	EXPECT_DEATH( target.addAnnotation(DummyAnnotationPtr()), ".*Cannot add NULL annotation!.*");
+//	EXPECT_DEATH( target.addAnnotation(DummyAnnotationPtr()), ".*Cannot add NULL annotation!.*");
 
 	// check annotations
 	EXPECT_EQ ( 0, target.getAnnotations().size() );

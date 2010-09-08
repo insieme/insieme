@@ -298,9 +298,13 @@ RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) co
 }
 
 bool RecursiveTypeDefinition::equals(const Node& other) const {
-	// conversion is guaranteed by base operator==
+	// check type
+	if (typeid(other) != typeid(RecursiveTypeDefinition)) {
+		return false;
+	}
+
 	const RecursiveTypeDefinition& rhs = static_cast<const RecursiveTypeDefinition&>(other);
-	return insieme::utils::map::equal(definitions, rhs.definitions);
+	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<TypePtr>());
 }
 
 Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
@@ -318,6 +322,14 @@ std::ostream& RecursiveTypeDefinition::printTo(std::ostream& out) const {
 	}) << "}";
 }
 
+const TypePtr RecursiveTypeDefinition::getDefinitionOf(const TypeVariablePtr& variable) const {
+	auto it = definitions.find(variable);
+	if (it == definitions.end()) {
+		return TypePtr(NULL);
+	}
+	return (*it).second;
+}
+
 // ---------------------------------------- Recursive Type ------------------------------
 
 
@@ -328,9 +340,24 @@ string buildRecursiveTypeName(const TypeVariablePtr& variable, const RecursiveTy
 	return res.str();
 }
 
+bool isConcreteRecursiveType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition) {
+	// TODO: search for unbound type variables - if there are, return false - true otherwise
+	return true;
+}
+
+bool isRecursiveFunctionType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definitions) {
+	TypePtr definition = definitions->getDefinitionOf(variable);
+	assert( definition && "No definition for given variable within definitions!");
+	return definition->isFunctionType();
+}
+
+
 // TODO: determine whether recursive type is concrete or function type ..
 RecursiveType::RecursiveType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition)
-	: Type(buildRecursiveTypeName(variable, definition)), typeVariable(typeVariable), definition(definition) { }
+	: Type(buildRecursiveTypeName(variable, definition),
+			isConcreteRecursiveType(variable, definition),
+			isRecursiveFunctionType(variable, definition)),
+			typeVariable(variable), definition(definition) { }
 
 
 RecursiveType* RecursiveType::clone(NodeManager& manager) const {
@@ -343,6 +370,11 @@ Node::OptionChildList RecursiveType::getChildNodes() const {
 	res->push_back(definition);
 	return res;
 }
+
+RecursiveTypePtr RecursiveType::get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition) {
+	return manager.get(RecursiveType(typeVariable, definition));
+}
+
 
 // ------------------------------------ Named Composite Type ---------------------------
 
