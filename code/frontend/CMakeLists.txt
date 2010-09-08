@@ -36,31 +36,17 @@ if(NOT MSVC)
 	find_library(clang_Parse_LIB 		  		NAMES clangParse 		PATHS $ENV{LLVM_HOME}/lib)
 	find_library(clang_Index_LIB 		  		NAMES clangIndex 		PATHS $ENV{LLVM_HOME}/lib)
 
-	set(clang_LIBs  ${clang_CompilerDriver_LIB} ${clang_CIndex_LIB} ${clang_Sema_LIB} 
-						 ${clang_Driver_LIB} ${clang_AST_LIB} ${clang_Rewrite_LIB} 
-						 ${clang_Analysis_LIB} ${clang_Lex_LIB} ${clang_Frontend_LIB} 
-						 ${clang_Parse_LIB} ${clang_Basic_LIB} ${clang_Index_LIB} )
+	set(clang_LIBs  ${clang_CompilerDriver_LIB} 	${clang_CIndex_LIB} 	${clang_Sema_LIB} 
+						 ${clang_Driver_LIB} 			${clang_AST_LIB} 		${clang_Rewrite_LIB} 
+						 ${clang_Analysis_LIB} 			${clang_Lex_LIB} 		${clang_Frontend_LIB} 
+						 ${clang_Parse_LIB} 				${clang_Basic_LIB} 	${clang_Index_LIB} )
 else()
 	set(clang_LIBs )
 endif() 
 
-if(NOT MSVC)
-	# LLVM Libs
-	find_library(llvm_Core_LIB 			  	NAMES LLVMCore 		PATHS $ENV{LLVM_HOME}/lib)
-	find_library(llvm_MMC_LIB 			  		NAMES LLVMMC 			PATHS $ENV{LLVM_HOME}/lib)
-	find_library(llvm_System_LIB 		  		NAMES LLVMSystem 		PATHS $ENV{LLVM_HOME}/lib)
-	find_library(llvm_Support_LIB 		  	NAMES LLVMSupport 	PATHS $ENV{LLVM_HOME}/lib)
-	find_library(llvm_Core_LIB 		 	  	NAMES LLVMCore 		PATHS $ENV{LLVM_HOME}/lib)
-	
-	set(llvm_LIBs ${llvm_Core_LIB} ${llvm_MMC_LIB} ${llvm_System_LIB} ${llvm_Support_LIB} ${llvm_Core_LIB}) 
-else()
-	set(llvm_LIBs )
-endif() 
-
-
 # build the frontend library
 add_library(insieme_frontend ${insieme_frontend_srcs} ${insieme_frontend_incs} )
-target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${llvm_LIBs} ${pthread_LIB} )
+target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB} )
 
 # add dependencies
 add_dependencies( insieme_frontend insieme_core insieme_utils )
