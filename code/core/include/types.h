@@ -71,6 +71,7 @@ DECLARE_NODE_TYPE(TypeVariable);
 DECLARE_NODE_TYPE(FunctionType);
 DECLARE_NODE_TYPE(TupleType);
 DECLARE_NODE_TYPE(GenericType);
+DECLARE_NODE_TYPE(RecGenericType);
 DECLARE_NODE_TYPE(NamedCompositeType);
 DECLARE_NODE_TYPE(RecursiveType);
 
@@ -83,6 +84,7 @@ DECLARE_NODE_TYPE(StructType);
 DECLARE_NODE_TYPE(UnionType);
 
 DECLARE_NODE_TYPE(RecursiveTypeDefinition);
+DECLARE_NODE_TYPE(RecType);
 
 /**
  * This class is used to represent integer parameters of generic types.
@@ -144,7 +146,7 @@ protected:
 	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
 	 */
 	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
-		: Node(TYPE,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) {}
+		: Node(TYPE,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
 
 public:
 
@@ -249,6 +251,7 @@ protected:
 
 public:
 
+	static TypeVariable DotTy;
 	/**
 	 * This method provides a static factory method for this type of node. It will return
 	 * a type variable pointer pointing toward a variable with the given name maintained by the
@@ -258,6 +261,29 @@ public:
 
 };
 
+// ---------------------------------------- Recursive type ------------------------------
+
+class RecType: public Type {
+	TypePtr innerTy;
+
+	RecType(const std::string& name, const TypePtr& ty): Type(name), innerTy(ty) { }
+
+	virtual RecType* clone(NodeManager& manager) const {
+		return new RecType(getName(), manager.get(innerTy));
+	}
+protected:
+	virtual OptionChildList getChildNodes() const {
+		// return an option child list filled with an empty list
+		return OptionChildList();
+	}
+public:
+	TypePtr fold(const TypePtr& ty) { return TypePtr(NULL); }
+	TypePtr unfold(const TypePtr& ty) { return TypePtr(NULL); }
+
+	std::string toString() const { return getName() + "|" + innerTy->toString() + "|"; }
+
+	static RecTypePtr get(NodeManager& manager, const std::string& name, const TypePtr& innerTy);
+};
 
 // ---------------------------------------- A tuple type ------------------------------
 
@@ -628,6 +654,7 @@ public:
 	static RecursiveTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition);
 
 };
+
 
 // --------------------------------- Named Composite Type ----------------------------
 

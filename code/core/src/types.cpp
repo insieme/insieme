@@ -120,6 +120,8 @@ TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
 	return manager.get(TypeVariable(name));
 }
 
+TypeVariable TypeVariable::DotTy("@");
+
 // ---------------------------------------- Tuple Type --------------------------------
 
 /**
@@ -234,6 +236,12 @@ string buildNameString(const Identifier& name, const vector<TypePtr>& typeParams
 		res << "<" << boost::join(list, ",") << ">";
 	}
 	return res.str();
+}
+
+
+// RECTYPE
+RecTypePtr RecType::get(NodeManager& manager, const std::string& name, const TypePtr& innerTy) {
+	return manager.get(RecType(name, innerTy));
 }
 
 /**
