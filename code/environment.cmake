@@ -41,6 +41,8 @@ find_library(pthread_LIB pthread)
 if(MSVC) 
 	# enable minimal rebuild
 	add_definitions( /Gm )
+	# disable optimizations (compilation speed)
+	add_definitions( /Od )
 	# disable some warnings
 	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
 	# disable warning "assignment operator could not be generated"
