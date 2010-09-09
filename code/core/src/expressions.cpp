@@ -394,7 +394,7 @@ JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, c
 
 // ------------------------------------- CallExpr ---------------------------------
 
-const TypePtr& getReturnType(const VarExprPtr& functionExpr) {
+const TypePtr& getReturnType(const ExpressionPtr& functionExpr) {
 	const TypePtr& type = functionExpr->getType();
 	assert( dynamic_cast<const FunctionType*>(&type) && "Non-function type expression used as operator within call Expression!");
 
@@ -413,7 +413,7 @@ std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr,
 CallExpr::CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
 		: Expression(type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(functionExpr), arguments(arguments) { }
 
-CallExpr::CallExpr(const VarExprPtr& functionExpr, const vector<ExpressionPtr>& arguments)
+CallExpr::CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
 		: Expression(::getReturnType(functionExpr), ::hashCallExpr(::getReturnType(functionExpr), functionExpr, arguments)),
 		  functionExpr(functionExpr), arguments(arguments) { }
 
@@ -438,6 +438,10 @@ Node::OptionChildList CallExpr::getChildNodes() const {
 
 std::ostream& CallExpr::printTo(std::ostream& out) const {
 	return out << functionExpr << "(" << join(", ", arguments) << ")";
+}
+
+CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	return manager.get(CallExpr(functionExpr, arguments));
 }
 
 CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {

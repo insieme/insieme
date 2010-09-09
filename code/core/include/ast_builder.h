@@ -44,6 +44,7 @@
 #include "expressions.h"
 #include "types.h"
 #include "types_utils.h"
+#include "lang_basic.h"
 
 namespace insieme {
 namespace core {
@@ -82,6 +83,13 @@ public:
 	ProgramPtr createProgram(
 			const Program::DefinitionSet& definitions = Program::DefinitionSet(),
 			const Program::EntryPointSet& entryPoints = Program::EntryPointSet());
+
+
+	// -------------------------------- Expressions ------------------------------
+
+	ExpressionPtr createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant);
+	ExpressionPtr createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs);
+
 
 #include "ast_builder.inl"
 

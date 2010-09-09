@@ -45,7 +45,9 @@ namespace core {
 namespace lang {
 
 
-
+#define ADD_TYPE(TYPE, NAME, VALUE) \
+	const TYPE TYPE_ ## NAME = VALUE; \
+	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME);
 
 
 const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
@@ -59,8 +61,7 @@ bool isBoolType(const Type& type) {
 	return type == TYPE_BOOL;
 }
 
-const GenericType TYPE_BOOL = GenericType(TYPE_NAME_BOOL);
-
+ADD_TYPE(BoolType, BOOL, GenericType(TYPE_NAME_BOOL));
 
 // -------------------------------- Integer Types -------------------------------
 
@@ -108,13 +109,12 @@ bool isIntType(const Type& type) {
 			&& other.getBaseType() == TypePtr(NULL);
 }
 
-
-const IntType TYPE_INT_GEN = getGenIntType('a');
-const IntType TYPE_INT_1 = getIntType(1);
-const IntType TYPE_INT_2 = getIntType(2);
-const IntType TYPE_INT_4 = getIntType(4);
-const IntType TYPE_INT_8 = getIntType(8);
-const IntType TYPE_INT_INF = GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF));
+ADD_TYPE(IntType, INT_GEN, getGenIntType('a'));
+ADD_TYPE(IntType, INT_1, getIntType(1));
+ADD_TYPE(IntType, INT_2, getIntType(2));
+ADD_TYPE(IntType, INT_4, getIntType(4));
+ADD_TYPE(IntType, INT_8, getIntType(8));
+ADD_TYPE(IntType, INT_INF, (GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
 
 
 const Identifier TYPE_NAME_UINT("uint");
@@ -143,12 +143,12 @@ bool isUIntType(const Type& type) {
 			&& other.getBaseType() == TypePtr(NULL);
 }
 
-const UIntType TYPE_UINT_GEN = getGenUIntType('a');
-const UIntType TYPE_UINT_1 = getUIntType(1);
-const UIntType TYPE_UINT_2 = getUIntType(2);
-const UIntType TYPE_UINT_4 = getUIntType(4);
-const UIntType TYPE_UINT_8 = getUIntType(8);
-const UIntType TYPE_UINT_INF = GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF));
+ADD_TYPE(UIntType, UINT_GEN, getGenUIntType('a'));
+ADD_TYPE(UIntType, UINT_1, getUIntType(1));
+ADD_TYPE(UIntType, UINT_2, getUIntType(2));
+ADD_TYPE(UIntType, UINT_4, getUIntType(4));
+ADD_TYPE(UIntType, UINT_8, getUIntType(8));
+ADD_TYPE(UIntType, UINT_INF, (GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
 
 
 // -------------------------------- Real Types ------------------------------
@@ -179,12 +179,12 @@ bool isRealType(const Type& type) {
 			&& other.getBaseType() == TypePtr(NULL);
 }
 
-const RealType TYPE_REAL_GEN = getGenRealType('a');
-const RealType TYPE_REAL_1 = getRealType(1);
-const RealType TYPE_REAL_2 = getRealType(2);
-const RealType TYPE_REAL_4 = getRealType(4);
-const RealType TYPE_REAL_8 = getRealType(8);
-const RealType TYPE_REAL_INF = GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF));
+ADD_TYPE(RealType, REAL_GEN, getGenRealType('a'));
+ADD_TYPE(RealType, REAL_1, getRealType(1));
+ADD_TYPE(RealType, REAL_2, getRealType(2));
+ADD_TYPE(RealType, REAL_4, getRealType(4));
+ADD_TYPE(RealType, REAL_8, getRealType(8));
+ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
 
 
 
@@ -198,52 +198,50 @@ const RealType TYPE_REAL_INF = GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), 
 		const BinaryOp OP_ ## Name (Type, Symbol); \
 		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
 
-const FunctionType TYPE_UNARY_BOOL_OP(TupleType(TYPE_BOOL), TYPE_BOOL);
-const FunctionType TYPE_BINARY_BOOL_OP(TupleType(TYPE_BOOL, TYPE_BOOL), TYPE_BOOL);
+ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
+ADD_TYPE(TupleType, BOOL_PAIR, TupleType(TYPE_BOOL_PTR,TYPE_BOOL_PTR));
 
-ADD_UNARY_OP(BOOL_NOT, TYPE_UNARY_BOOL_OP, "bool.not");
-ADD_BINARY_OP(BOOL_AND, TYPE_BINARY_BOOL_OP, "bool.and");
-ADD_BINARY_OP(BOOL_OR, TYPE_BINARY_BOOL_OP, "bool.or");
+ADD_TYPE(FunctionType, UNARY_BOOL_OP, (FunctionType(TYPE_BOOL_SINGLE_PTR, TYPE_BOOL_PTR)));
+ADD_TYPE(FunctionType, BINARY_BOOL_OP, (FunctionType(TYPE_BOOL_PAIR_PTR, TYPE_BOOL_PTR)));
 
+ADD_UNARY_OP(BOOL_NOT, TYPE_UNARY_BOOL_OP_PTR, "bool.not");
+ADD_BINARY_OP(BOOL_AND, TYPE_BINARY_BOOL_OP_PTR, "bool.and");
+ADD_BINARY_OP(BOOL_OR, TYPE_BINARY_BOOL_OP_PTR, "bool.or");
 
-const FunctionType TYPE_BINARY_INT_OP(TupleType(TYPE_INT_GEN, TYPE_INT_GEN), TYPE_INT_GEN);
+ADD_TYPE(TupleType, INT_SINGLE, TupleType(TYPE_INT_GEN_PTR));
+ADD_TYPE(TupleType, INT_PAIR, TupleType(TYPE_INT_GEN_PTR,TYPE_INT_GEN_PTR));
 
-ADD_BINARY_OP(INT_ADD, TYPE_BINARY_INT_OP, "int.add");
-ADD_BINARY_OP(INT_SUB, TYPE_BINARY_INT_OP, "int.sub");
-ADD_BINARY_OP(INT_MUL, TYPE_BINARY_INT_OP, "int.mul");
-ADD_BINARY_OP(INT_DIV, TYPE_BINARY_INT_OP, "int.div");
-ADD_BINARY_OP(INT_MOD, TYPE_BINARY_INT_OP, "int.mod");
+ADD_TYPE(FunctionType, BINARY_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_INT_GEN_PTR)));
 
-const FunctionType TYPE_BINARY_UINT_OP(TupleType(TYPE_UINT_GEN, TYPE_UINT_GEN), TYPE_UINT_GEN);
+ADD_BINARY_OP(INT_ADD, TYPE_BINARY_INT_OP_PTR, "int.add");
+ADD_BINARY_OP(INT_SUB, TYPE_BINARY_INT_OP_PTR, "int.sub");
+ADD_BINARY_OP(INT_MUL, TYPE_BINARY_INT_OP_PTR, "int.mul");
+ADD_BINARY_OP(INT_DIV, TYPE_BINARY_INT_OP_PTR, "int.div");
+ADD_BINARY_OP(INT_MOD, TYPE_BINARY_INT_OP_PTR, "int.mod");
 
-ADD_BINARY_OP(UINT_ADD, TYPE_BINARY_UINT_OP, "uint.add");
-ADD_BINARY_OP(UINT_SUB, TYPE_BINARY_UINT_OP, "uint.sub");
-ADD_BINARY_OP(UINT_MUL, TYPE_BINARY_UINT_OP, "uint.mul");
-ADD_BINARY_OP(UINT_DIV, TYPE_BINARY_UINT_OP, "uint.div");
-ADD_BINARY_OP(UINT_MOD, TYPE_BINARY_UINT_OP, "uint.mod");
+ADD_TYPE(TupleType, UINT_SINGLE, TupleType(TYPE_UINT_GEN_PTR));
+ADD_TYPE(TupleType, UINT_PAIR, TupleType(TYPE_UINT_GEN_PTR,TYPE_UINT_GEN_PTR));
 
-const FunctionType TYPE_BINARY_REAL_OP(TupleType(TYPE_REAL_GEN, TYPE_REAL_GEN), TYPE_REAL_GEN);
+ADD_TYPE(FunctionType, BINARY_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UINT_GEN_PTR)));
 
-ADD_BINARY_OP(REAL_ADD, TYPE_BINARY_REAL_OP, "real.add");
-ADD_BINARY_OP(REAL_SUB, TYPE_BINARY_REAL_OP, "real.sub");
-ADD_BINARY_OP(REAL_MUL, TYPE_BINARY_REAL_OP, "real.mul");
-ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP, "real.div");
+ADD_BINARY_OP(UINT_ADD, TYPE_BINARY_UINT_OP_PTR, "uint.add");
+ADD_BINARY_OP(UINT_SUB, TYPE_BINARY_UINT_OP_PTR, "uint.sub");
+ADD_BINARY_OP(UINT_MUL, TYPE_BINARY_UINT_OP_PTR, "uint.mul");
+ADD_BINARY_OP(UINT_DIV, TYPE_BINARY_UINT_OP_PTR, "uint.div");
+ADD_BINARY_OP(UINT_MOD, TYPE_BINARY_UINT_OP_PTR, "uint.mod");
+
+ADD_TYPE(TupleType, REAL_SINGLE, TupleType(TYPE_REAL_GEN_PTR));
+ADD_TYPE(TupleType, REAL_PAIR, TupleType(TYPE_REAL_GEN_PTR,TYPE_REAL_GEN_PTR));
+
+ADD_TYPE(FunctionType, BINARY_REAL_OP, (FunctionType(TYPE_REAL_PAIR_PTR, TYPE_REAL_GEN_PTR)));
+
+ADD_BINARY_OP(REAL_ADD, TYPE_BINARY_REAL_OP_PTR, "real.add");
+ADD_BINARY_OP(REAL_SUB, TYPE_BINARY_REAL_OP_PTR, "real.sub");
+ADD_BINARY_OP(REAL_MUL, TYPE_BINARY_REAL_OP_PTR, "real.mul");
+ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP_PTR, "real.div");
 
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP
-
-
-// -------------------------------- Expressions ------------------------------
-
-CallExpr createExpr(const UnaryOp& op, const ExpressionPtr& operant) {
-	// TODO: add type checks ?
-	return CallExpr(op, toVector<ExpressionPtr>(operant));
-}
-
-CallExpr createExpr(const ExpressionPtr& rhs, const BinaryOp& op, const ExpressionPtr& lhs) {
-	// TODO: add type checks ?
-	return CallExpr(op, toVector<ExpressionPtr>(rhs, lhs));
-}
 
 
 } // end namespace: lang

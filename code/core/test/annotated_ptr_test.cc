@@ -88,10 +88,10 @@ TEST(AnnotatedPtr, UpCast) {
 	refA = refB;
 }
 
-TEST(AnnotatedPtr, ImplicitConversion) {
+TEST(AnnotatedPtr, SimplePointerTest) {
 
 	int value = 3;
-	AnnotatedPtr<int> ptr(value);
+	AnnotatedPtr<int> ptr(&value);
 
 	EXPECT_EQ( 3, value);
 	EXPECT_EQ( 3, *ptr);

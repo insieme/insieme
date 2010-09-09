@@ -315,9 +315,8 @@ class CallExpr : public Expression {
 	const ExpressionPtr functionExpr;
 	const vector<ExpressionPtr> arguments;
 
+	CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
-public:
-	CallExpr(const VarExprPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 private:
 	virtual CallExpr* clone(NodeManager& manager) const;
 	
@@ -332,6 +331,7 @@ public:
 	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
+	static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 

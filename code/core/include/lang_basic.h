@@ -50,65 +50,77 @@ namespace lang {
 
 // Definition of basic data types
 
+#define DEF_TYPE(TYPE, NAME) \
+	typedef TYPE NAME; \
+	typedef TYPE ## Ptr NAME ## Ptr;
+
+#define ADD_TYPE(TYPE, NAME) \
+	extern const TYPE TYPE_ ## NAME; \
+	extern const TYPE ## Ptr TYPE_ ## NAME ## _PTR;
+
 // -------------------------------- Boolean Type -------------------------------
 
-typedef GenericType BoolType;
+DEF_TYPE(GenericType, BoolType);
+
 bool isBoolType(const Type& type);
-extern const BoolType TYPE_BOOL;
+
+ADD_TYPE(BoolType, BOOL);
 
 // -------------------------------- Integer Types ------------------------------
 
-typedef GenericType IntegerType;
+DEF_TYPE(GenericType, IntegerType);
+
 bool isIntegerType(const Type& type);
 IntegerType getIntegerType(unsigned short size, bool _signed);
 int getNumBytes(const IntegerType& type);
 
+DEF_TYPE(GenericType, IntType);
 
-typedef GenericType IntType;
 IntType getIntType(unsigned short size);
 IntType getGenIntType(char symbol);
 bool isIntType(const Type& type);
 
-extern const IntType TYPE_INT_GEN;
-extern const IntType TYPE_INT_1;
-extern const IntType TYPE_INT_2;
-extern const IntType TYPE_INT_4;
-extern const IntType TYPE_INT_8;
-extern const IntType TYPE_INT_INF;
+ADD_TYPE(IntType, INT_GEN);
+ADD_TYPE(IntType, INT_1);
+ADD_TYPE(IntType, INT_2);
+ADD_TYPE(IntType, INT_4);
+ADD_TYPE(IntType, INT_8);
+ADD_TYPE(IntType, INT_INF);
 
 
-typedef GenericType UIntType;
+DEF_TYPE(GenericType, UIntType);
+
 UIntType getUIntType(unsigned short size);
 UIntType getGenUIntType(char symbol);
 bool isUIntType(const Type& type);
 
-extern const UIntType TYPE_UINT_GEN;
-extern const UIntType TYPE_UINT_1;
-extern const UIntType TYPE_UINT_2;
-extern const UIntType TYPE_UINT_4;
-extern const UIntType TYPE_UINT_8;
-extern const UIntType TYPE_UINT_INF;
+ADD_TYPE(UIntType, UINT_GEN);
+ADD_TYPE(UIntType, UINT_1);
+ADD_TYPE(UIntType, UINT_2);
+ADD_TYPE(UIntType, UINT_4);
+ADD_TYPE(UIntType, UINT_8);
+ADD_TYPE(UIntType, UINT_INF);
 
 // -------------------------------- Real Types ------------------------------
 
-typedef GenericType RealType;
+DEF_TYPE(GenericType, RealType);
+
 RealType getRealType(unsigned short size);
 RealType getGenRealType(char symbol);
 bool isRealType(const Type& type);
 
-extern const RealType TYPE_REAL_GEN;
-extern const RealType TYPE_REAL_1;
-extern const RealType TYPE_REAL_2;
-extern const RealType TYPE_REAL_4;
-extern const RealType TYPE_REAL_8;
-extern const RealType TYPE_REAL_INF;
-
+ADD_TYPE(RealType, REAL_GEN);
+ADD_TYPE(RealType, REAL_1);
+ADD_TYPE(RealType, REAL_2);
+ADD_TYPE(RealType, REAL_4);
+ADD_TYPE(RealType, REAL_8);
+ADD_TYPE(RealType, REAL_INF);
 
 
 // -------------------------------- Operator ------------------------------
 
-typedef VarExpr UnaryOp;
-typedef VarExpr BinaryOp;
+DEF_TYPE(VarExpr, UnaryOp);
+DEF_TYPE(VarExpr, BinaryOp);
 
 #define ADD_UNARY_OP(Name) \
 		extern const UnaryOp OP_ ## Name; \
@@ -118,14 +130,14 @@ typedef VarExpr BinaryOp;
 		extern const BinaryOp OP_ ## Name; \
 		extern const Definition DEF_ ## Name; \
 
-extern const FunctionType TYPE_UNARY_BOOL_OP;
-extern const FunctionType TYPE_BINARY_BOOL_OP;
+ADD_TYPE(FunctionType, UNARY_BOOL_OP);
+ADD_TYPE(FunctionType, BINARY_BOOL_OP);
 
 ADD_UNARY_OP(BOOL_NOT)
 ADD_BINARY_OP(BOOL_AND);
 
 
-extern const FunctionType TYPE_BINARY_INT_OP;
+ADD_TYPE(FunctionType, BINARY_INT_OP);
 
 ADD_BINARY_OP(INT_ADD);
 ADD_BINARY_OP(INT_SUB);
@@ -133,7 +145,7 @@ ADD_BINARY_OP(INT_MUL);
 ADD_BINARY_OP(INT_DIV);
 ADD_BINARY_OP(INT_MOD);
 
-extern const FunctionType TYPE_BINARY_UINT_OP;
+ADD_TYPE(FunctionType, BINARY_UINT_OP);
 
 ADD_BINARY_OP(UINT_ADD);
 ADD_BINARY_OP(UINT_SUB);
@@ -141,7 +153,7 @@ ADD_BINARY_OP(UINT_MUL);
 ADD_BINARY_OP(UINT_DIV);
 ADD_BINARY_OP(UINT_MOD);
 
-extern const FunctionType TYPE_BINARY_REAL_OP;
+ADD_TYPE(FunctionType, BINARY_REAL_OP);
 
 ADD_BINARY_OP(REAL_ADD);
 ADD_BINARY_OP(REAL_SUB);
@@ -150,6 +162,9 @@ ADD_BINARY_OP(REAL_DIV);
 
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP
+
+#undef ADD_TYPE
+#undef DEF_TYPE
 
 } // end namespace: lang
 } // end namespace: core

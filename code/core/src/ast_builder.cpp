@@ -53,6 +53,15 @@ ProgramPtr ASTBuilder::createProgram(
 	return Program::create(sharedManager, definitions, entryPoints);
 }
 
+
+ExpressionPtr ASTBuilder::createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant) {
+	return CallExpr::get(manager, op, toVector(operant));
+}
+ExpressionPtr ASTBuilder::createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs) {
+	return CallExpr::get(manager, op, toVector(rhs, lhs));
+}
+
+
 #include "ast_builder_impl.inl"
 
 } // namespace core

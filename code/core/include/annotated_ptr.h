@@ -51,7 +51,6 @@ namespace core {
 template<typename T>
 class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
 public:
-	AnnotatedPtr(T& value) : InstancePtr<T>(&value) {}
 	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
 
 	template<typename B>
