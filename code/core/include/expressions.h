@@ -290,9 +290,9 @@ public:
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
 private:
-	LocalDecls localDecls;
-	GuardedStmts guardedStmts;
-	StatementPtr defaultStmt;
+	const LocalDecls localDecls;
+	const GuardedStmts guardedStmts;
+	const StatementPtr defaultStmt;
 
 	JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, 
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
@@ -305,6 +305,10 @@ protected:
 	
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const LocalDecls& getLocalDecls() const { return localDecls; }
+	const GuardedStmts& getGuardedStmts() const { return guardedStmts; }
+	const StatementPtr& getDefaultStmt() const { return defaultStmt; }
 
 	static JobExprPtr get(NodeManager& manager, const StatementPtr& defaultStmt, 
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
