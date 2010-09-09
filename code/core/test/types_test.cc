@@ -424,27 +424,6 @@ TEST(TypeTest, RecursiveType) {
 	basicTypeTests(typeY, true, false, toList(toVector<NodePtr>(varY, definition)));
 }
 
-TEST(TypeTest, MyRecursiveType) {
-	// create a manager for this test
-	NodeManager manager;
-
-	vector<TypePtr> typeListA;
-	typeListA.push_back(TypeVariable::DotTy);
-	// A<@>
-	GenericTypePtr typeA = GenericType::get(manager, "A", typeListA);
-	// B
-	GenericTypePtr typeB = GenericType::get(manager, "B");
-
-	vector<TypePtr> typeListG;
-	typeListG.push_back(typeA);
-	typeListG.push_back(typeB);
-	// G<A<@>,B,12>
-	RecTypePtr typeG = RecType::get(manager, "G", GenericType::get(manager, "G'", typeListG, toVector(IntTypeParam::getConcreteIntParam(12))) );
-	EXPECT_TRUE ( typeG->isConcrete() );
-	EXPECT_EQ ( "G<A<@>,B,12>" , typeG->toString() );
-
-}
-
 TEST(TypeTest, StructType) {
 
 	NodeManager manager;
