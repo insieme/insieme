@@ -38,6 +38,7 @@
 
 #include <strstream>
 #include <assert.h>
+#include <unordered_map>
 
 #include <boost/algorithm/string/replace.hpp>
 
@@ -48,6 +49,7 @@
 #include "definition.h"
 
 #include "container_utils.h"
+#include "hash_utils.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -105,6 +107,19 @@ public:
 	}
 };
 
+class NameGenerator {
+	unsigned long num;
+
+	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
+
+	//string getName(const NodePtr& ptr, const char* fragment) {
+	//	auto it = nameMap.find(ptr);
+	//	if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
+	//	string
+	//	nameMap.insert(make_pair())
+	//} 
+};
+
 class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
 	CodeStream cStr;
 	TypeConverter typeConv;
@@ -126,7 +141,7 @@ public:
 	//	});
 	//}
 	
-#pragma region StatementVisits 
+	////////////////////////////////////////////////////////////////////////// Statements
 
 	void visitBreakStmt(const BreakStmtPtr&) {
 		cStr << "break;\n";
@@ -194,9 +209,7 @@ public:
 		visit(ptr->getBody());
 	}
 
-#pragma endregion StatementVisits
-
-#pragma region ExpressionVisits
+	////////////////////////////////////////////////////////////////////////// Expressions
 
 	void visitCallExpr(const CallExprPtr& ptr) {
 		const std::vector<ExpressionPtr>& args = ptr->getArguments();
@@ -220,7 +233,10 @@ public:
 		cStr << "))";
 	}
 
-#pragma endregion ExpressionVisits
+	void visitJobExpr(const JobExprPtr& ptr) {
+		ptr->getLocalDecls();
+	}
+
 };
 
 } // namespace simple_backend
