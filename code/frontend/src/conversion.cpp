@@ -342,12 +342,137 @@ public:
 		retStmt.push_back( builder.ifStmt(condExpr, thenBody, elseBody) );
 
 		// if we have only 1 statement resulting from the if, we return it
-		if( retStmt.isSingleStmt() ) {
-			return retStmt;
-		}
+		if( retStmt.isSingleStmt() ) { return retStmt; }
 
 		// otherwise we introduce an outer CompoundStmt
 		return StmtWrapper( builder.compoundStmt(retStmt) );
+	}
+
+	StmtWrapper VisitWhileStmt(WhileStmt* whileStmt) {
+		const core::ASTBuilder& builder = convFact.builder;
+		StmtWrapper retStmt;
+
+		core::StatementPtr body = tryAggregateStmts( builder, Visit( whileStmt->getBody() ) );
+		assert(body && "Couldn't convert body of the WhileStmt");
+
+		DLOG(INFO) << "WhileStmt then body: " << body;
+
+		core::ExpressionPtr condExpr(NULL);
+		if( VarDecl* condVarDecl = whileStmt->getConditionVariable() ) {
+			assert(whileStmt->getCond() == NULL && "WhileStmt condition cannot contains both a variable declaration and an expression");
+
+			// we are in the situation where a variable is declared in the if condition, i.e.:
+			// while(int a = expr) { }
+			//
+			// this will be converted into the following IR representation:
+			// { int a = 0; while(a = expr){ } }
+			Expr* expr = condVarDecl->getInit();
+			condVarDecl->setInit(NULL); // set the expression to null temporarily
+			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			condVarDecl->setInit(expr);
+
+			retStmt.push_back( declStmt );
+
+			// the expression will be an a = expr
+			// condExpr = declStmt->getVarExpression();
+			assert(false && "WhileStmt with a declaration of a condition variable not supported");
+		} else {
+			Expr* cond = whileStmt->getCond();
+			assert(cond && "WhileStmt with no condition.");
+			condExpr = convFact.ConvertExpr( *cond );
+		}
+		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
+		DLOG(INFO) << "WhileStmt condition expression: " << condExpr;
+
+		// adding the WhileStmt to the list of returned stmts
+		retStmt.push_back( builder.whileStmt(condExpr, body) );
+
+		// if we have only 1 statement resulting from the if, we return it
+		if( retStmt.isSingleStmt() ) { return retStmt; }
+
+		// otherwise we introduce an outer CompoundStmt
+		return StmtWrapper( builder.compoundStmt(retStmt) );
+	}
+
+	StmtWrapper VisitSwitchStmt(SwitchStmt* switchStmt) {
+		const core::ASTBuilder& builder = convFact.builder;
+		StmtWrapper retStmt;
+
+		core::ExpressionPtr condExpr(NULL);
+		if( VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
+			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
+
+			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			retStmt.push_back( declStmt );
+
+			// the expression will be a reference to the declared variable
+			condExpr = declStmt->getVarExpression();
+		} else {
+			Expr* cond = switchStmt->getCond();
+			assert(cond && "SwitchStmt with no condition.");
+			condExpr = convFact.ConvertExpr( *cond );
+		}
+		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
+
+		// Handle the cases of the SwitchStmt
+		if( Stmt* body = switchStmt->getBody() ) {
+			// this SwitchStmt has a body, i.e.:
+			// switch(e) {
+			// 	 { body }
+			// 	 case x:...
+			// ...
+			// As the IR doens't allow a body to be represented inside the switch stmt we bring this code outside
+			// after the declaration of the eventual conditional variable.
+			// TODO: a problem could arise when the body depends on the evaluation of the condition expression, i.e.:
+			//		 switch ( a = f() ) {
+			//		    b = a+1;
+			//			case 1: ...
+			//       In this case the a=f() must be assigned to a new variable and replace the occurences of a with the new var inside
+			//		 the switch body
+
+			if(CompoundStmt* compStmt = dyn_cast<CompoundStmt>(body)) {
+				std::for_each(compStmt->body_begin(), compStmt->body_end(), [ &retStmt, this ](Stmt* curr){
+					if(!isa<SwitchCase>(curr)) {
+						StmtWrapper&& visitedStmt = this->Visit(curr);
+						std::copy(visitedStmt.begin(), visitedStmt.end(), back_inserter(retStmt));
+					}
+				});
+			}
+		}
+		vector<core::SwitchStmt::Case> cases;
+		// the cases can be handled now
+		SwitchCase* switchCaseStmt = switchStmt->getSwitchCaseList();
+		while(switchCaseStmt) {
+			if( CaseStmt* caseStmt = dyn_cast<CaseStmt>(switchCaseStmt) ) {
+				core::StatementPtr subStmt(NULL);
+				if( Expr* rhs = caseStmt->getRHS() ) {
+					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
+					subStmt = convFact.ConvertExpr( *rhs );
+				} else if( Stmt* sub = caseStmt->getSubStmt() ) {
+					subStmt = tryAggregateStmts( builder, Visit(sub) );
+				}
+				cases.push_back( std::make_pair(convFact.ConvertExpr( *caseStmt->getLHS() ), subStmt) );
+			} else {
+				// todo: default case
+				assert(false && "Default case of SwitchStmt not handled");
+			}
+			switchCaseStmt = switchCaseStmt->getNextSwitchCase();
+		}
+
+		retStmt.push_back( builder.switchStmt(condExpr, cases) );
+
+		// if the SwitchStmt results in a single IR stmt, return it
+		if( retStmt.isSingleStmt() ) return retStmt;
+		// otherwise build a CompoundStmt around it and return it
+		return StmtWrapper( builder.compoundStmt(retStmt) );
+	}
+
+	// as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error in the case
+	// the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the visitor is not called on his subnodes
+	StmtWrapper VisitSwitchCase(SwitchCase* caseStmt) { assert(false && "Visitor is visiting a 'case' stmt (cannot compute)"); }
+
+	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) {
+		return StmtWrapper( convFact.builder.breakStmt() );
 	}
 
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {

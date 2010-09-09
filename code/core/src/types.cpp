@@ -120,6 +120,8 @@ TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
 	return manager.get(TypeVariable(name));
 }
 
+TypeVariable TypeVariable::DotTy("@");
+
 // ---------------------------------------- Tuple Type --------------------------------
 
 /**
@@ -236,6 +238,12 @@ string buildNameString(const Identifier& name, const vector<TypePtr>& typeParams
 	return res.str();
 }
 
+
+// RECTYPE
+RecTypePtr RecType::get(NodeManager& manager, const std::string& name, const TypePtr& innerTy) {
+	return manager.get(RecType(name, innerTy));
+}
+
 /**
  * Creates an new generic type instance based on the given parameters.
  */
@@ -298,10 +306,10 @@ std::size_t hashRecursiveTypeDefinition(const RecursiveTypeDefinition::Definitio
 	return hash;
 }
 
-RecursiveTypeDefinition::RecursiveTypeDefinition(const Definitions& definitions)
+RecursiveTypeDefinition::RecursiveTypeDefinition(const RecursiveTypeDefinition::Definitions& definitions)
 	: Node(SUPPORT, hashRecursiveTypeDefinition(definitions)), definitions(definitions) { };
 
-RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, const Definitions& definitions) {
+RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, const RecursiveTypeDefinition::Definitions& definitions) {
 	return manager.get(RecursiveTypeDefinition(definitions));
 }
 
@@ -309,7 +317,7 @@ RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) co
 	Definitions localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
 		[&manager](const Definitions::value_type& cur) {
-			return Definitions::value_type(manager.get(cur.first), manager.get(cur.second));
+			return RecursiveTypeDefinition::Definitions::value_type(manager.get(cur.first), manager.get(cur.second));
 	});
 	return new RecursiveTypeDefinition(localDefinitions);
 }

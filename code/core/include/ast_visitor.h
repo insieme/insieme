@@ -139,6 +139,9 @@ protected:
 		TRY_DISPATCH(expression, LambdaExpr);
 		TRY_DISPATCH(expression, CallExpr);
 		TRY_DISPATCH(expression, CastExpr);
+		TRY_DISPATCH(expression, UnionExpr);
+		TRY_DISPATCH(expression, StructExpr);
+		TRY_DISPATCH(expression, JobExpr);
 
 		assert ( false && "Cannot dispatch unknown expression pointer type." );
 		return ReturnType();
@@ -241,6 +244,9 @@ protected:
 	DISPATCH_TERMINAL(LambdaExpr);
 	DISPATCH_TERMINAL(CallExpr);
 	DISPATCH_TERMINAL(CastExpr);
+	DISPATCH_TERMINAL(UnionExpr);
+	DISPATCH_TERMINAL(StructExpr);
+	DISPATCH_TERMINAL(JobExpr);
 
 	DISPATCH_TERMINAL(RecursiveTypeDefinition);
 
@@ -303,6 +309,9 @@ protected:
 	VISIT_NODE(LambdaExpr, Expression);
 	VISIT_NODE(CallExpr, Expression);
 	VISIT_NODE(CastExpr, Expression);
+	VISIT_NODE(UnionExpr, Expression);
+	VISIT_NODE(StructExpr, Expression);
+	VISIT_NODE(JobExpr, Expression);
 
 
 	VISIT_NODE(Program, Node);
