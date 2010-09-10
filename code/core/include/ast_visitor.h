@@ -45,7 +45,6 @@
 #include "program.h"
 #include "statements.h"
 #include "types.h"
-#include "types_utils.h"
 
 namespace insieme {
 namespace core {
@@ -171,11 +170,6 @@ protected:
 		TRY_DISPATCH(type, RefType);
 		TRY_DISPATCH(type, ChannelType);
 
-		TRY_DISPATCH(type, IntType);
-		TRY_DISPATCH(type, FloatType);
-		TRY_DISPATCH(type, BoolType);
-		TRY_DISPATCH(type, UnitType);
-
 		// just forward visit generic type
 		return VISIT(GenericType, type);
 	}
@@ -218,11 +212,6 @@ protected:
 	DISPATCH_TERMINAL(VectorType);
 	DISPATCH_TERMINAL(RefType);
 	DISPATCH_TERMINAL(ChannelType);
-
-	DISPATCH_TERMINAL(IntType);
-	DISPATCH_TERMINAL(FloatType);
-	DISPATCH_TERMINAL(BoolType);
-	DISPATCH_TERMINAL(UnitType);
 
 	DISPATCH_TERMINAL(StructType);
 	DISPATCH_TERMINAL(UnionType);
@@ -276,11 +265,6 @@ protected:
 	VISIT_NODE(VectorType, GenericType);
 	VISIT_NODE(RefType, GenericType);
 	VISIT_NODE(ChannelType, GenericType);
-
-	VISIT_NODE(IntType, GenericType);
-	VISIT_NODE(FloatType, GenericType);
-	VISIT_NODE(BoolType, GenericType);
-	VISIT_NODE(UnitType, GenericType);
 
 	VISIT_NODE(NamedCompositeType, Type);
 	VISIT_NODE(StructType, NamedCompositeType);

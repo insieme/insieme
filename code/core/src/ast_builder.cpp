@@ -41,7 +41,6 @@
 #include "statements.h"
 #include "expressions.h"
 #include "types.h"
-#include "types_utils.h"
 
 namespace insieme {
 namespace core {
@@ -53,11 +52,34 @@ ProgramPtr ASTBuilder::createProgram(
 	return Program::create(sharedManager, definitions, entryPoints);
 }
 
+// ------------------------------- Build Basic Types -------------------------
 
-ExpressionPtr ASTBuilder::createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant) {
+lang::UnitTypePtr ASTBuilder::getUnitType() const {
+	return manager.get(lang::TYPE_UNIT);
+}
+
+lang::BoolTypePtr ASTBuilder::getBoolType() const {
+	return manager.get(lang::TYPE_BOOL);
+}
+
+lang::IntTypePtr  ASTBuilder::getIntType (unsigned short size) const {
+	return manager.get(lang::getIntType(size));
+}
+
+lang::UIntTypePtr ASTBuilder::getUIntType(unsigned short size) const {
+	return manager.get(lang::getUIntType(size));
+}
+
+lang::RealTypePtr ASTBuilder::getRealType(unsigned short size) const {
+	return manager.get(lang::getRealType(size));
+}
+
+// ------------------------------- Build Expressions -------------------------
+
+ExpressionPtr ASTBuilder::createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant) const {
 	return CallExpr::get(manager, op, toVector(operant));
 }
-ExpressionPtr ASTBuilder::createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs) {
+ExpressionPtr ASTBuilder::createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs) const {
 	return CallExpr::get(manager, op, toVector(rhs, lhs));
 }
 

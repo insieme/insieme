@@ -39,8 +39,10 @@
 #include <gtest/gtest.h>
 
 #include "ast_builder.h"
+#include "lang_basic.h"
 
 using namespace insieme::core;
+using namespace insieme::core::lang;
 
 TEST(ASTBuilder, Basic) {
 
@@ -49,14 +51,14 @@ TEST(ASTBuilder, Basic) {
 	ASTBuilder build;
 	std::vector<StatementPtr> statements;
 	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(build.boolType(), "test", build.literal("true", build.boolType())));
+	statements.push_back(build.declarationStmt(TYPE_BOOL_PTR, "test", build.literal("true", TYPE_BOOL_PTR)));
 	auto compound = build.compoundStmt(statements);
 
 	// Without Builder
 	SharedNodeManager manager(new NodeManager());
 	std::vector<StatementPtr> statements2;
-	statements2.push_back(BreakStmt::get(*manager));
-	statements2.push_back(DeclarationStmt::get(*manager, BoolType::get(*manager), "test", build.literal("true", build.boolType())));
+	statements2.push_back(build.breakStmt());
+	statements2.push_back(build.declarationStmt(TYPE_BOOL_PTR, "test",  build.literal("true", TYPE_BOOL_PTR)));
 	auto compound2 = CompoundStmt::get(*manager, statements2);
 
 	EXPECT_EQ(*compound2, *compound);

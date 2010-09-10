@@ -42,6 +42,7 @@
 #include "types.h"
 #include "statements.h"
 #include "container_utils.h"
+#include "lang_basic.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -535,9 +536,9 @@ public:
 
 		switch(buldInTy->getKind()) {
 		case BuiltinType::Void:
-			return TypeWrapper( builder.unitType() );
+			return TypeWrapper( builder.getUnitType() );
 		case BuiltinType::Bool:
-			return TypeWrapper( builder.boolType() );
+			return TypeWrapper( builder.getBoolType() );
 
 		// char types
 		case BuiltinType::Char_U:
@@ -555,33 +556,33 @@ public:
 
 		// integer types
 		case BuiltinType::UShort:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( SHORT_LENGTH )) );
+			return TypeWrapper( builder.getUIntType( SHORT_LENGTH ) );
 		case BuiltinType::Short:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( SHORT_LENGTH )) );
+			return TypeWrapper( builder.getIntType( SHORT_LENGTH ) );
 		case BuiltinType::UInt:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( INT_LENGTH )) );
+			return TypeWrapper( builder.getUIntType( INT_LENGTH ) );
 		case BuiltinType::Int:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( INT_LENGTH )) );
+			return TypeWrapper( builder.getIntType( INT_LENGTH ) );
 		case BuiltinType::UInt128:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
+			return TypeWrapper( builder.getUIntType( 16 ) );
 		case BuiltinType::Int128:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( 16 )) );
+			return TypeWrapper( builder.getIntType( 16 ) );
 		case BuiltinType::ULong:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LENGTH )) );
+			return TypeWrapper( builder.getUIntType( LONG_LENGTH ) );
 		case BuiltinType::ULongLong:
-			return TypeWrapper( builder.genericType("uint", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LONG_LENGTH )) );
+			return TypeWrapper( builder.getUIntType( LONG_LONG_LENGTH ) );
 		case BuiltinType::Long:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LENGTH )) );
+			return TypeWrapper( builder.getIntType( LONG_LENGTH ) );
 		case BuiltinType::LongLong:
-			return TypeWrapper( builder.genericType("int", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_LONG_LENGTH )) );
+			return TypeWrapper( builder.getIntType( LONG_LONG_LENGTH ) );
 
 		// real types
 		case BuiltinType::Float:
-			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( FLOAT_LENGTH )) );
+			return TypeWrapper( builder.getRealType( FLOAT_LENGTH ) );
 		case BuiltinType::Double:
-			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( DOUBLE_LENGTH )) );
+			return TypeWrapper( builder.getRealType( DOUBLE_LENGTH ) );
 		case BuiltinType::LongDouble:
-			return TypeWrapper( builder.genericType("real", EMPTY_TYPE_LIST, MAKE_SIZE( LONG_DOUBLE_LENGTH )) );
+			return TypeWrapper( builder.getRealType( LONG_DOUBLE_LENGTH ) );
 
 		// not supported types
 		case BuiltinType::NullPtr:
@@ -684,7 +685,7 @@ public:
 			argTypes.push_back( this->Visit( currArgType.getTypePtr() ).ref );
 		} );
 
-		if( argTypes.size() == 1 && argTypes.front() == builder.unitType()) {
+		if( argTypes.size() == 1 && *argTypes.front() == insieme::core::lang::TYPE_UNIT) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}

@@ -39,6 +39,7 @@
 #include "program.h"
 #include "iostream"
 #include "ast_visitor.h"
+#include "lang_basic.h"
 
 using namespace insieme::core;
 
@@ -101,7 +102,7 @@ TEST(ASTVisitor, DispatcherTest) {
 	EXPECT_EQ ( 1, visitor.countGenericTypes );
 	EXPECT_EQ ( 0, visitor.countRefTypes );
 
-	IntTypePtr intType = IntType::get(manager);
+	lang::IntTypePtr intType = manager.get(lang::getIntType(12));
 	visitor.visit(intType);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );

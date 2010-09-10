@@ -43,9 +43,11 @@
 #include "set_utils.h"
 #include "types.h"
 #include "ast_builder.h"
+#include "lang_basic.h"
 
 using namespace std;
 using namespace insieme::core;
+using namespace insieme::core::lang;
 using namespace insieme::utils::set;
 
 
@@ -56,7 +58,7 @@ TEST(Program, HelloWorld) {
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
 	TypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
-	TypePtr unitType = build.unitType();
+	TypePtr unitType = lang::TYPE_UNIT_PTR;
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.definition("printf", printfType, NULL, true);
@@ -64,7 +66,7 @@ TEST(Program, HelloWorld) {
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	ExpressionPtr intLiteral = build.literal("4", build.intType());
+	ExpressionPtr intLiteral = build.literal("4", TYPE_INT_GEN_PTR);
 	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 

@@ -104,6 +104,7 @@ public:
 		for_each(ptr->getEntries(), [](const NamedCompositeType::Entry& entry) {
 			//entry.first
 		});
+		return ret;
 	}
 };
 

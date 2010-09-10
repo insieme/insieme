@@ -52,6 +52,16 @@ namespace lang {
 
 const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
 
+// -------------------------------- Unit Type -------------------------------
+
+
+const Identifier TYPE_NAME_UNIT("unit");
+
+bool isUnitType(const Type& type) {
+	return type == TYPE_UNIT;
+}
+
+ADD_TYPE(UnitType, UNIT, GenericType(TYPE_NAME_UNIT));
 
 // -------------------------------- Boolean Type -------------------------------
 

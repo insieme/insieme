@@ -39,11 +39,12 @@
 #include <gtest/gtest.h>
 #include "statements.h"
 #include "expressions.h"
-#include "types_utils.h"
 #include "string_utils.h"
 #include "ast_builder.h"
+#include "lang_basic.h"
 
 using namespace insieme::core;
+using namespace insieme::core::lang;
 
 TEST(StatementsTest, Management) {
 	NodeManager manager;
@@ -113,8 +114,8 @@ TEST(StatementsTest, CompoundStmt) {
 TEST(StatementsTest, DefaultParams) {
 	ASTBuilder builder;
 
-	LiteralPtr one = builder.literal("1", builder.intType());
-	DeclarationStmtPtr decl = builder.declarationStmt(builder.intType(), Identifier("bla"), one);
+	LiteralPtr one = builder.literal("1", TYPE_INT_GEN_PTR);
+	DeclarationStmtPtr decl = builder.declarationStmt(TYPE_INT_GEN_PTR, Identifier("bla"), one);
 	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
 	
 	EXPECT_EQ(one, forStmt->getStep());
