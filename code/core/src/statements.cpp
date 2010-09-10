@@ -317,8 +317,8 @@ Node::OptionChildList ForStmt::getChildNodes() const {
 	return res;
 }
 
-ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
-	if(!step) return manager.get(ForStmt(declaration, body, end, IntLiteral::one(manager)));
+ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
+		const ExpressionPtr& step) {
 	return manager.get(ForStmt(declaration, body, end, step));
 }
 
@@ -367,18 +367,19 @@ IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, cons
 
 // ------------------------------------- SwitchStmt ---------------------------------
 
-std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases) {
+std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase) {
 	std::size_t seed = HASHVAL_SWITCH;
 	boost::hash_combine(seed, switchExpr->hash());
 	std::for_each(cases.begin(), cases.end(), [&seed](const SwitchStmt::Case& cur) {
 		boost::hash_combine(seed, cur.first->hash());
 		boost::hash_combine(seed, cur.second->hash());
 	});
+	boost::hash_combine(seed, defaultCase->hash());
 	return seed;
 }
 
-SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases) :
-	Statement(hashSwitchStmt(switchExpr, cases)), switchExpr(switchExpr), cases(cases) {
+SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) :
+	Statement(hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(switchExpr), cases(cases), defaultCase(defaultCase) {
 }
 
 SwitchStmt* SwitchStmt::clone(NodeManager& manager) const {
@@ -386,7 +387,7 @@ SwitchStmt* SwitchStmt::clone(NodeManager& manager) const {
 	std::for_each(cases.cbegin(), cases.cend(), [&](const Case& cur) {
 		localCases.push_back(SwitchStmt::Case(manager.get(*cur.first), manager.get(*cur.second)));
 	});
-	return new SwitchStmt(manager.get(*switchExpr), localCases);
+	return new SwitchStmt( manager.get(*switchExpr), localCases, manager.get(*defaultCase) );
 }
 
 std::ostream& SwitchStmt::printTo(std::ostream& out) const {
@@ -394,6 +395,7 @@ std::ostream& SwitchStmt::printTo(std::ostream& out) const {
 	std::for_each(cases.cbegin(), cases.cend(), [&out](const Case& cur) { 
 		out << *(cur.first) << ": " << *(cur.second) << "\n";
 	});
+	out << "default:" << *defaultCase << "\n";
 	return out;
 }
 
@@ -401,7 +403,9 @@ bool SwitchStmt::equalsStmt(const Statement& stmt) const {
 	// conversion is guaranteed by base equals
 	const SwitchStmt& rhs = static_cast<const SwitchStmt&>(stmt);
 	return ::equals(cases, rhs.cases,
-		[](const Case& l, const Case& r) { return *l.first == *r.first && *l.second == *r.second; });
+		[](const Case& l, const Case& r) {
+			return *l.first == *r.first && *l.second == *r.second;
+		}) && (*defaultCase == *rhs.defaultCase);
 }
 
 Node::OptionChildList SwitchStmt::getChildNodes() const {
@@ -412,11 +416,12 @@ Node::OptionChildList SwitchStmt::getChildNodes() const {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
 	});
+	res->push_back(defaultCase);
 	return res;
 }
 
-SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases) {
-	return manager.get(SwitchStmt(switchExpr, cases));
+SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {
+	return manager.get(SwitchStmt(switchExpr, cases, defaultCase));
 }
 
 } // end namespace core

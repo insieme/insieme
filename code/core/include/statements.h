@@ -233,7 +233,8 @@ public:
 	const ExpressionPtr& getEnd() const { return end; }
 	const ExpressionPtr& getStep() const { return step; }
 	
-	static ForStmtPtr get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step = NULL);
+	static ForStmtPtr get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
+			const ExpressionPtr& step);
 };
 
 class IfStmt: public Statement {
@@ -255,7 +256,7 @@ public:
 	const StatementPtr& getThenBody() const { return thenBody; }
 	const StatementPtr& getElseBody() const { return elseBody; }
 
-	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody = NULL);
+	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody);
 };
 
 class SwitchStmt: public Statement {
@@ -265,8 +266,9 @@ public:
 private:
 	const ExpressionPtr switchExpr;
 	const vector<Case> cases;
+	const StatementPtr defaultCase;
 
-	SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases);
+	SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase);
 	virtual SwitchStmt* clone(NodeManager& manager) const;
 	
 protected:
@@ -279,7 +281,7 @@ public:
 	const ExpressionPtr& getSwitchExpr() const { return switchExpr; }
 	const vector<Case>& getCases() const { return cases; }
 	
-	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases);
+	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase);
 };
 
 } // end namespace core

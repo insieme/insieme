@@ -39,31 +39,33 @@
 #include <gtest/gtest.h>
 #include "statements.h"
 #include "expressions.h"
+#include "ast_builder.h"
+#include "lang_basic.h"
 
 using namespace insieme::core;
-
-
+using namespace insieme::core::lang;
 
 TEST(ExpressionsTest, IntLiterals) {
-	NodeManager manager;
-	IntLiteralPtr i5 = IntLiteral::get(manager, 5);
-	IntLiteralPtr i7 = IntLiteral::get(manager, 7);
-	IntLiteralPtr i5long = IntLiteral::get(manager, 5, 8);
+	ASTBuilder builder;
+
+	LiteralPtr i5 = builder.literal("5", TYPE_INT_GEN_PTR);
+	LiteralPtr i7 = builder.literal("7", TYPE_INT_GEN_PTR);
+	LiteralPtr i5long = builder.literal("5", TYPE_INT_8_PTR);
 	
-	EXPECT_EQ( *i5, *IntLiteral::get(manager, 5) );
+	EXPECT_EQ( *i5, *builder.literal("5", TYPE_INT_GEN_PTR) );
 	EXPECT_NE( *i5, *i5long );
 	EXPECT_NE( *i5, *i7 );
-	EXPECT_EQ( i5->getValue(), 5 );
+	EXPECT_EQ( i5->getValueAs<int>(), 5 );
 }
 
 TEST(ExpressionsTest, FloatLiterals) {
-	NodeManager manager;
-	FloatLiteralPtr f5_s = FloatLiteral::get(manager, "5.0");
-	FloatLiteralPtr f5 = FloatLiteral::get(manager, 5.0);
+	ASTBuilder builder;
+
+	LiteralPtr f5_s = builder.literal("5.0", TYPE_REAL_4_PTR);
 	
 	// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
 	std::stringstream ss;
 	ss << *f5_s;
 	EXPECT_EQ( ss.str(), "5.0" );
-	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
+//	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
 }

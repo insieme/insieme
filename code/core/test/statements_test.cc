@@ -40,9 +40,11 @@
 #include "statements.h"
 #include "expressions.h"
 #include "string_utils.h"
+#include "ast_builder.h"
 #include "lang_basic.h"
 
 using namespace insieme::core;
+using namespace insieme::core::lang;
 
 TEST(StatementsTest, Management) {
 	NodeManager manager;
@@ -110,11 +112,11 @@ TEST(StatementsTest, CompoundStmt) {
 }
 
 TEST(StatementsTest, DefaultParams) {
-	NodeManager manager;
+	ASTBuilder builder;
 
-	IntLiteralPtr one = IntLiteral::get(manager, 1);
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, Identifier("bla"), one);
-	ForStmtPtr forStmt = ForStmt::get(manager, decl, decl, one);
+	LiteralPtr one = builder.literal("1", TYPE_INT_GEN_PTR);
+	DeclarationStmtPtr decl = builder.declarationStmt(TYPE_INT_GEN_PTR, Identifier("bla"), one);
+	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
 	
 	EXPECT_EQ(one, forStmt->getStep());
 

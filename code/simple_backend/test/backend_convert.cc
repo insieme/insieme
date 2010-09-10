@@ -41,10 +41,11 @@
 #include "backend_convert.h"
 #include "program.h"
 #include "ast_builder.h"
-
+#include "lang_basic.h"
 #include "set_utils.h"
 
 using namespace insieme::core;
+using namespace insieme::core::lang;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 
@@ -61,7 +62,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	ExpressionPtr intLiteral = build.intLiteral(4);
+	ExpressionPtr intLiteral = build.literal("4", TYPE_INT_GEN_PTR);
 	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 

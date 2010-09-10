@@ -44,7 +44,7 @@
 using namespace insieme::core;
 
 enum {
-	HASHVAL_INTLITERAL = 100 /* offset from statements */, HASHVAL_FLOATLITERAL, HASHVAL_BOOLLITERAL,
+	HASHVAL_LITERAL = 100 /* offset from statements */,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
 	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR
 };
@@ -57,64 +57,73 @@ bool Expression::equals(const Node& stmt) const {
 	return (*type == *rhs.type) && equalsExpr(rhs);
 }
 
+// ------------------------------------- Literal ---------------------------------
+
+Literal* Literal::clone(NodeManager& manager) const {
+	return new Literal(manager.get(type), value, HASHVAL_LITERAL);
+}
+
+LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr& type) {
+	return manager.get( Literal(manager.get(type), value, HASHVAL_LITERAL) );
+}
 
 // ------------------------------------- IntLiteral ---------------------------------
-
-IntLiteral::IntLiteral(const TypePtr& type, int val) : Literal<int>(type, val, HASHVAL_INTLITERAL) { }
-
-IntLiteral* IntLiteral::clone(NodeManager& manager) const {
-	return new IntLiteral(manager.get(type), value);
-}
-
-IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, unsigned short bytes) {
-	return manager.get(IntLiteral(manager.get(lang::getIntType(bytes)), value));
-}
-
-IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, const TypePtr& type) {
-	return manager.get(IntLiteral(type, value));
-}
-
-// ------------------------------------- FloatLiteral ---------------------------------
-
-FloatLiteral::FloatLiteral(const TypePtr& type, double val, const string& originalString)
-		: Literal<double>(type, val, HASHVAL_FLOATLITERAL), originalString(originalString) { }
-
-FloatLiteral* FloatLiteral::clone(NodeManager& manager) const {
-	return new FloatLiteral(manager.get(type), value, originalString);
-}
-
-std::ostream& FloatLiteral::printTo(std::ostream& out) const {
-	return out << originalString;
-}
-
-FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, const TypePtr& type) {
-	return manager.get(FloatLiteral(type, value, ::toString(value)));
-}
-
-FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, const TypePtr& type) {
-	// TODO atof good idea? What about hex/octal/etc
-	return manager.get(FloatLiteral(type, atof(from.c_str()), from));
-}
-
-FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
-	return FloatLiteral::get(manager, value, static_cast<TypePtr>(manager.get(lang::getRealType(bytes))));
-}
-
-FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
-	return FloatLiteral::get(manager, from, static_cast<TypePtr>(manager.get(lang::getRealType(bytes))));
-}
-
-// ------------------------------------- BoolLiteral ---------------------------------
-
-BoolLiteral::BoolLiteral(const TypePtr& type, bool val) : Literal<bool>(type, val, HASHVAL_BOOLLITERAL) { }
-
-BoolLiteral* BoolLiteral::clone(NodeManager& manager) const {
-	return new BoolLiteral(manager.get(type), value);
-}
-
-BoolLiteralPtr BoolLiteral::get(NodeManager& manager, bool value) {
-	return manager.get(BoolLiteral(manager.get(lang::TYPE_BOOL), value));
-}
+//
+//IntLiteral::IntLiteral(const TypePtr& type, int val) : Literal<int>(type, val, HASHVAL_INTLITERAL) { }
+//
+//IntLiteral* IntLiteral::clone(NodeManager& manager) const {
+//	return new IntLiteral(manager.get(type), value);
+//}
+//
+//IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, unsigned short bytes) {
+//	return manager.get(IntLiteral(IntType::get(manager, bytes), value));
+//}
+//
+//IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, const TypePtr& type) {
+//	return manager.get(IntLiteral(type, value));
+//}
+//
+//// ------------------------------------- FloatLiteral ---------------------------------
+//
+//FloatLiteral::FloatLiteral(const TypePtr& type, double val, const string& originalString)
+//		: Literal<double>(type, val, HASHVAL_FLOATLITERAL), originalString(originalString) { }
+//
+//FloatLiteral* FloatLiteral::clone(NodeManager& manager) const {
+//	return new FloatLiteral(manager.get(type), value, originalString);
+//}
+//
+//std::ostream& FloatLiteral::printTo(std::ostream& out) const {
+//	return out << originalString;
+//}
+//
+//FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, const TypePtr& type) {
+//	return manager.get(FloatLiteral(type, value, ::toString(value)));
+//}
+//
+//FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, const TypePtr& type) {
+//	// TODO atof good idea? What about hex/octal/etc
+//	return manager.get(FloatLiteral(type, atof(from.c_str()), from));
+//}
+//
+//FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
+//	return FloatLiteral::get(manager, value, static_cast<TypePtr>(FloatType::get(manager, bytes)));
+//}
+//
+//FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
+//	return FloatLiteral::get(manager, from, static_cast<TypePtr>(FloatType::get(manager, bytes)));
+//}
+//
+//// ------------------------------------- BoolLiteral ---------------------------------
+//
+//BoolLiteral::BoolLiteral(const TypePtr& type, bool val) : Literal<bool>(type, val, HASHVAL_BOOLLITERAL) { }
+//
+//BoolLiteral* BoolLiteral::clone(NodeManager& manager) const {
+//	return new BoolLiteral(manager.get(type), value);
+//}
+//
+//BoolLiteralPtr BoolLiteral::get(NodeManager& manager, bool value) {
+//	return manager.get(BoolLiteral(BoolType::get(manager), value));
+//}
 
 // ------------------------------------- VarExpr ---------------------------------
 

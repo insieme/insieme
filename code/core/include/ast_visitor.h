@@ -130,9 +130,10 @@ protected:
 	ReturnType dispatchExpression(const ExpressionPtr& expression) {
 		assert ( expression && "Cannot dispatch NULL expression!");
 
-		TRY_DISPATCH(expression, IntLiteral);
-		TRY_DISPATCH(expression, FloatLiteral);
-		TRY_DISPATCH(expression, BoolLiteral);
+//		TRY_DISPATCH(expression, IntLiteral);
+//		TRY_DISPATCH(expression, FloatLiteral);
+//		TRY_DISPATCH(expression, BoolLiteral);
+		TRY_DISPATCH(expression, Literal);
 		TRY_DISPATCH(expression, VarExpr);
 		TRY_DISPATCH(expression, ParamExpr);
 		TRY_DISPATCH(expression, LambdaExpr);
@@ -226,9 +227,10 @@ protected:
 	DISPATCH_TERMINAL(IfStmt);
 	DISPATCH_TERMINAL(SwitchStmt);
 
-	DISPATCH_TERMINAL(IntLiteral);
-	DISPATCH_TERMINAL(FloatLiteral);
-	DISPATCH_TERMINAL(BoolLiteral);
+//	DISPATCH_TERMINAL(IntLiteral);
+//	DISPATCH_TERMINAL(FloatLiteral);
+//	DISPATCH_TERMINAL(BoolLiteral);
+	DISPATCH_TERMINAL(Literal);
 	DISPATCH_TERMINAL(ParamExpr);
 	DISPATCH_TERMINAL(LambdaExpr);
 	DISPATCH_TERMINAL(CallExpr);
@@ -285,9 +287,10 @@ protected:
 
 	VISIT_NODE(Expression, Statement);
 
-	VISIT_NODE(IntLiteral, Expression);
-	VISIT_NODE(FloatLiteral, Expression);
-	VISIT_NODE(BoolLiteral, Expression);
+//	VISIT_NODE(IntLiteral, Expression);
+//	VISIT_NODE(FloatLiteral, Expression);
+//	VISIT_NODE(BoolLiteral, Expression);
+	VISIT_NODE(Literal, Expression);
 	VISIT_NODE(VarExpr, Expression);
 	VISIT_NODE(ParamExpr, VarExpr);
 	VISIT_NODE(LambdaExpr, Expression);
