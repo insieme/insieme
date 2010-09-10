@@ -96,7 +96,6 @@ void basicNodeTests(NodePtr node, const Node::ChildList& children = Node::ChildL
 
 			EXPECT_EQ ( *a , *b );
 			EXPECT_EQ ( a->hash(), b->hash() );
-			EXPECT_EQ ( a->getName(), b->getName() );
 			EXPECT_EQ ( a->toString(), b->toString() );
 
 		}

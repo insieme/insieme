@@ -281,15 +281,12 @@ NamedCompositeType::Entries NamedCompositeExpr::getTypeEntries(const Members& me
 	NamedCompositeType::Entries entries;
 
 	// NOTE: transform would be equivalent but causes an internal error in GCC 4.5.1
-//	std::transform(mem.cbegin(), mem.cend(), back_inserter(entries), [](const Member& m)
+//	std::transform(mem.begin(), mem.end(), back_inserter(entries), [](const Member& m)
 //		{ return NamedCompositeType::Entry(m.first, m.second->getType()); } );
 
-	auto iter = back_inserter(entries);
-	for(auto it = mem.cbegin(); it!=mem.cend(); ++it) {
-		const Member& cur = *it;
-		*iter = NamedCompositeType::Entry(cur.first, cur.second->getType());
-	}
-
+	std::for_each(mem.begin(), mem.end(), [&entries](const Member& m) {
+		entries.push_back(NamedCompositeType::Entry(m.first, m.second->getType()));
+	});
 	return entries;
 }
 
@@ -487,7 +484,7 @@ Node::OptionChildList CastExpr::getChildNodes() const {
 }
 
 std::ostream& CastExpr::printTo(std::ostream& out) const {
-	return out << "(" << *type << ")" << "(" << *subExpression <<")";
+	return out << "cast<" << *type << ">" << "(" << *subExpression <<")";
 }
 
 CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpr) {
