@@ -37,6 +37,7 @@
 #include "conversion.h"
 
 #include "utils/types_lenght.h"
+#include "utils/source_locations.h"
 #include "program.h"
 #include "ast_node.h"
 #include "types.h"
@@ -87,7 +88,20 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 };
 
 insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
-//	return builder.intLiteral(0, 2);
+	return builder.literal("0", core::lang::TYPE_INT_GEN_PTR);
+}
+
+// Returns a string of the text within the source range of the input stream
+// unfortunately clang only keeps the location of the beginning of the literal
+// so the end has to be found manually
+std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
+	DLOG(INFO) << insieme::frontend::util::Column(start, srcMgr);
+	std::pair<FileID, unsigned> startLocInfo = srcMgr.getDecomposedLoc( start);
+
+	std::pair<const char*, const char*> startBuffer = srcMgr.getBufferData(startLocInfo.first);
+	const char *strDataStart = startBuffer.first + startLocInfo.second;
+//	DLOG(INFO) << "VALUE: " << string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
+	return string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
 }
 
 } // End empty namespace
@@ -104,14 +118,38 @@ public:
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		return ExprWrapper(
-				convFact.builder.literal( "0", convFact.ConvertType( *intLit->getType().getTypePtr() ))
+				// retrieve the string representation from the source code
+				convFact.builder.literal(
+						GetStringFromStream(convFact.clangCtx->getSourceManager(), intLit->getExprLoc()),
+						convFact.ConvertType( *intLit->getType().getTypePtr() )
+				)
 		);
 	}
 
 	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
-		// todo: handle float and doubles
-//		return ExprWrapper( convFact.builder.floatLiteral( floatLit->getValue().convertToDouble(),
-//				convFact.ConvertType( *floatLit->getType().getTypePtr() )) );
+		return ExprWrapper(
+				// retrieve the string representation from the source code
+				convFact.builder.literal(
+						GetStringFromStream(convFact.clangCtx->getSourceManager(), floatLit->getExprLoc()),
+						convFact.ConvertType( *floatLit->getType().getTypePtr())
+				)
+		);
+	}
+
+	// CXX Extension for boolean types
+	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
+		return ExprWrapper(
+				// retrieve the string representation from the source code
+				convFact.builder.literal(GetStringFromStream(convFact.clangCtx->getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR)
+		);
+	}
+
+	ExprWrapper VisitCharacterLiteral(CharacterLiteral* charLit) {
+		return ExprWrapper(
+				// retrieve the string representation from the source code
+				convFact.builder.literal(GetStringFromStream(convFact.clangCtx->getSourceManager(), charLit->getExprLoc()),
+						(charLit->isWide() ? convFact.builder.genericType("wchar") : convFact.builder.genericType("char")) )
+		);
 	}
 
 	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
@@ -169,22 +207,22 @@ public:
 		if( varDecl->getInit() )
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else {
-//			Type& ty = *varDecl->getType().getTypePtr();
-//			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
-//				// in case of floating types we initialize with a zero value
-//				initExpr = convFact.builder.floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEsingle).convertToFloat(), type);
-//			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
-//				// initialize integer value
-//				initExpr = convFact.builder.intLiteral(*llvm::APInt::getNullValue(16).getRawData(), type);
-//			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
-//				// initialize pointer/reference types with the null value
-//				//todo
-//			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-//				//todo
-//			} else if ( ty.isBooleanType() ) {
-//				// boolean values are initialized to false
-//				initExpr = convFact.builder.boolLiteral(false);
-//			}
+			Type& ty = *varDecl->getType().getTypePtr();
+			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+				// in case of floating types we initialize with a zero value
+				initExpr = convFact.builder.literal("0.0", type);
+			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+				// initialize integer value
+				initExpr = convFact.builder.literal("0", type);
+			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+				// initialize pointer/reference types with the null value
+				//todo
+			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+				//todo
+			} else if ( ty.isBooleanType() ) {
+				// boolean values are initialized to false
+				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
+			}
 		}
 		// todo: initialization for declarations with no initialization value
 		return StmtWrapper( convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
@@ -428,7 +466,7 @@ public:
 			//		 switch ( a = f() ) {
 			//		    b = a+1;
 			//			case 1: ...
-			//       In this case the a=f() must be assigned to a new variable and replace the occurences of a with the new var inside
+			//       In this case the a=f() must be assigned to a new variable and replace the occurences of a with the new variable inside
 			//		 the switch body
 
 			if(CompoundStmt* compStmt = dyn_cast<CompoundStmt>(body)) {
@@ -481,6 +519,10 @@ public:
 
 	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) {
 		return StmtWrapper( convFact.builder.breakStmt() );
+	}
+
+	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) {
+		return StmtWrapper( convFact.builder.continueStmt() );
 	}
 
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {

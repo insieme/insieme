@@ -74,7 +74,6 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 		);
 }
 
-
 TEST(SimpleBackend, Basic) {
 
 	ConvertVisitor converter;
