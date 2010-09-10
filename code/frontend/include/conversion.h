@@ -64,6 +64,7 @@ class ClangExprConverter;
 class ConversionFactory {
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
+	clang::ASTContext* clangCtx;
 
 	ClangTypeConverter* typeConv;
 	ClangExprConverter* exprConv;
@@ -81,6 +82,8 @@ public:
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 
+	void setClangContext(clang::ASTContext* ctx) { clangCtx = ctx; }
+
 	~ConversionFactory();
 };
 
@@ -96,7 +99,7 @@ class IRConsumer: public clang::ASTConsumer {
 public:
 	IRConsumer(insieme::core::SharedNodeManager dataMgr, bool doConversion=true) : mCtx(NULL), fact(dataMgr), mDoConversion(doConversion){ }
 
-	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
+	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; fact.setClangContext(&Context); }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
 	virtual void HandleTranslationUnit(clang::ASTContext &Ctx);
 };
