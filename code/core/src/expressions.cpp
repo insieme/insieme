@@ -36,10 +36,10 @@
 
 #include "expressions.h"
 
-#include "types_utils.h"
 #include "statements.h"
 #include "string_utils.h"
 #include "functional_utils.h"
+#include "lang_basic.h"
 
 using namespace insieme::core;
 
@@ -67,7 +67,7 @@ IntLiteral* IntLiteral::clone(NodeManager& manager) const {
 }
 
 IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, unsigned short bytes) {
-	return manager.get(IntLiteral(IntType::get(manager, bytes), value));
+	return manager.get(IntLiteral(manager.get(lang::getIntType(bytes)), value));
 }
 
 IntLiteralPtr IntLiteral::get(NodeManager& manager, int value, const TypePtr& type) {
@@ -97,11 +97,11 @@ FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, cons
 }
 
 FloatLiteralPtr FloatLiteral::get(NodeManager& manager, double value, unsigned short bytes) {
-	return FloatLiteral::get(manager, value, static_cast<TypePtr>(FloatType::get(manager, bytes)));
+	return FloatLiteral::get(manager, value, static_cast<TypePtr>(manager.get(lang::getRealType(bytes))));
 }
 
 FloatLiteralPtr FloatLiteral::get(NodeManager& manager, const string& from, unsigned short bytes) {
-	return FloatLiteral::get(manager, from, static_cast<TypePtr>(FloatType::get(manager, bytes)));
+	return FloatLiteral::get(manager, from, static_cast<TypePtr>(manager.get(lang::getRealType(bytes))));
 }
 
 // ------------------------------------- BoolLiteral ---------------------------------
@@ -113,7 +113,7 @@ BoolLiteral* BoolLiteral::clone(NodeManager& manager) const {
 }
 
 BoolLiteralPtr BoolLiteral::get(NodeManager& manager, bool value) {
-	return manager.get(BoolLiteral(BoolType::get(manager), value));
+	return manager.get(BoolLiteral(manager.get(lang::TYPE_BOOL), value));
 }
 
 // ------------------------------------- VarExpr ---------------------------------

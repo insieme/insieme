@@ -53,7 +53,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
 	TypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
-	TypePtr unitType = build.unitType();
+	TypePtr unitType = build.getUnitType();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.definition("printf", printfType, NULL, true);

@@ -43,6 +43,7 @@
 #include "set_utils.h"
 #include "types.h"
 #include "ast_builder.h"
+#include "lang_basic.h"
 
 using namespace std;
 using namespace insieme::core;
@@ -56,7 +57,7 @@ TEST(Program, HelloWorld) {
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
 	TypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
-	TypePtr unitType = build.unitType();
+	TypePtr unitType = lang::TYPE_UNIT_PTR;
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.definition("printf", printfType, NULL, true);

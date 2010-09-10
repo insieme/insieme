@@ -43,7 +43,6 @@
 #include "statements.h"
 #include "expressions.h"
 #include "types.h"
-#include "types_utils.h"
 #include "lang_basic.h"
 
 namespace insieme {
@@ -85,10 +84,18 @@ public:
 			const Program::EntryPointSet& entryPoints = Program::EntryPointSet());
 
 
-	// -------------------------------- Expressions ------------------------------
+	// ---------------------------- Create Derived Types ----------------------------
 
-	ExpressionPtr createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant);
-	ExpressionPtr createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs);
+	lang::UnitTypePtr getUnitType() const;
+	lang::BoolTypePtr getBoolType() const;
+	lang::IntTypePtr  getIntType (unsigned short size) const;
+	lang::UIntTypePtr getUIntType(unsigned short size) const;
+	lang::RealTypePtr getRealType(unsigned short size) const;
+
+	// -------------------------------- Expressions ---------------------------------
+
+	ExpressionPtr createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant) const;
+	ExpressionPtr createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs) const;
 
 
 #include "ast_builder.inl"

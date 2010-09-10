@@ -58,6 +58,14 @@ namespace lang {
 	extern const TYPE TYPE_ ## NAME; \
 	extern const TYPE ## Ptr TYPE_ ## NAME ## _PTR;
 
+
+// -------------------------------- Unit Type -------------------------------
+
+DEF_TYPE(GenericType, UnitType);
+bool isUnitType(const Type& type);
+
+ADD_TYPE(UnitType, UNIT);
+
 // -------------------------------- Boolean Type -------------------------------
 
 DEF_TYPE(GenericType, BoolType);
@@ -133,7 +141,7 @@ DEF_TYPE(VarExpr, BinaryOp);
 ADD_TYPE(FunctionType, UNARY_BOOL_OP);
 ADD_TYPE(FunctionType, BINARY_BOOL_OP);
 
-ADD_UNARY_OP(BOOL_NOT)
+ADD_UNARY_OP(BOOL_NOT);
 ADD_BINARY_OP(BOOL_AND);
 
 

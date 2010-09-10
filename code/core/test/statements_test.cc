@@ -39,8 +39,8 @@
 #include <gtest/gtest.h>
 #include "statements.h"
 #include "expressions.h"
-#include "types_utils.h"
 #include "string_utils.h"
+#include "lang_basic.h"
 
 using namespace insieme::core;
 
@@ -113,7 +113,7 @@ TEST(StatementsTest, DefaultParams) {
 	NodeManager manager;
 
 	IntLiteralPtr one = IntLiteral::get(manager, 1);
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, IntType::get(manager), Identifier("bla"), one);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, Identifier("bla"), one);
 	ForStmtPtr forStmt = ForStmt::get(manager, decl, decl, one);
 	
 	EXPECT_EQ(one, forStmt->getStep());
