@@ -64,7 +64,7 @@ TEST(Program, HelloWorld) {
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	ExpressionPtr intLiteral = build.intLiteral(4);
+	ExpressionPtr intLiteral = build.literal("4", build.intType());
 	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
@@ -98,7 +98,7 @@ TEST(Program, ProgramData) {
 	TypePtr typeDouble = GenericType::get(manager, "double");
 
 	DefinitionPtr defA = Definition::get(manager, "a", typeInt, NULL, true);
-	DefinitionPtr defB = Definition::get(manager, "b", typeInt, IntLiteral::get(manager, 12));
+	DefinitionPtr defB = Definition::get(manager, "b", typeInt, Literal::get(manager, "12", typeInt));
 	DefinitionPtr defC = Definition::get(manager, "c", typeDouble);
 
 	// nothing should be present within the program manager ...
@@ -123,7 +123,7 @@ TEST(Program, ProgramData) {
 	program = program->addDefinitions(set);
 
 	// ... now: there should be an additional definition
-	EXPECT_EQ ( 7, programManager.size() );
+	EXPECT_EQ ( 6, programManager.size() );
 
 
 	// ------------- Entry Points ------------

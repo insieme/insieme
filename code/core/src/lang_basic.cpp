@@ -187,7 +187,6 @@ ADD_TYPE(RealType, REAL_8, getRealType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
 
 
-
 // -------------------------------- Operator ------------------------------
 
 #define ADD_UNARY_OP(Name, Type, Symbol) \

@@ -41,6 +41,7 @@
 #include "expressions.h"
 #include "types_utils.h"
 #include "string_utils.h"
+#include "ast_builder.h"
 
 using namespace insieme::core;
 
@@ -110,11 +111,11 @@ TEST(StatementsTest, CompoundStmt) {
 }
 
 TEST(StatementsTest, DefaultParams) {
-	NodeManager manager;
+	ASTBuilder builder;
 
-	IntLiteralPtr one = IntLiteral::get(manager, 1);
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, IntType::get(manager), Identifier("bla"), one);
-	ForStmtPtr forStmt = ForStmt::get(manager, decl, decl, one);
+	LiteralPtr one = builder.literal("1", builder.intType());
+	DeclarationStmtPtr decl = builder.declarationStmt(builder.intType(), Identifier("bla"), one);
+	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
 	
 	EXPECT_EQ(one, forStmt->getStep());
 

@@ -86,7 +86,7 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 };
 
 insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
-	return builder.intLiteral(0, 2);
+//	return builder.intLiteral(0, 2);
 }
 
 } // End empty namespace
@@ -103,14 +103,14 @@ public:
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		return ExprWrapper(
-				convFact.builder.intLiteral( *intLit->getValue().getRawData(), convFact.ConvertType( *intLit->getType().getTypePtr() ))
+				convFact.builder.literal( "0", convFact.ConvertType( *intLit->getType().getTypePtr() ))
 		);
 	}
 
 	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
 		// todo: handle float and doubles
-		return ExprWrapper( convFact.builder.floatLiteral( floatLit->getValue().convertToDouble(),
-				convFact.ConvertType( *floatLit->getType().getTypePtr() )) );
+//		return ExprWrapper( convFact.builder.floatLiteral( floatLit->getValue().convertToDouble(),
+//				convFact.ConvertType( *floatLit->getType().getTypePtr() )) );
 	}
 
 	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
@@ -168,22 +168,22 @@ public:
 		if( varDecl->getInit() )
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else {
-			Type& ty = *varDecl->getType().getTypePtr();
-			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
-				// in case of floating types we initialize with a zero value
-				initExpr = convFact.builder.floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEsingle).convertToFloat(), type);
-			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
-				// initialize integer value
-				initExpr = convFact.builder.intLiteral(*llvm::APInt::getNullValue(16).getRawData(), type);
-			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
-				// initialize pointer/reference types with the null value
-				//todo
-			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-				//todo
-			} else if ( ty.isBooleanType() ) {
-				// boolean values are initialized to false
-				initExpr = convFact.builder.boolLiteral(false);
-			}
+//			Type& ty = *varDecl->getType().getTypePtr();
+//			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+//				// in case of floating types we initialize with a zero value
+//				initExpr = convFact.builder.floatLiteral(llvm::APFloat::getZero(llvm::APFloat::IEEEsingle).convertToFloat(), type);
+//			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+//				// initialize integer value
+//				initExpr = convFact.builder.intLiteral(*llvm::APInt::getNullValue(16).getRawData(), type);
+//			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+//				// initialize pointer/reference types with the null value
+//				//todo
+//			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+//				//todo
+//			} else if ( ty.isBooleanType() ) {
+//				// boolean values are initialized to false
+//				initExpr = convFact.builder.boolLiteral(false);
+//			}
 		}
 		// todo: initialization for declarations with no initialization value
 		return StmtWrapper( convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
@@ -440,6 +440,9 @@ public:
 			}
 		}
 		vector<core::SwitchStmt::Case> cases;
+		// initialize the default case with an empty compoundstmt
+		core::StatementPtr defStmt = builder.compoundStmt();
+
 		// the cases can be handled now
 		SwitchCase* switchCaseStmt = switchStmt->getSwitchCaseList();
 		while(switchCaseStmt) {
@@ -453,13 +456,17 @@ public:
 				}
 				cases.push_back( std::make_pair(convFact.ConvertExpr( *caseStmt->getLHS() ), subStmt) );
 			} else {
-				// todo: default case
-				assert(false && "Default case of SwitchStmt not handled");
+				// default case
+				DefaultStmt* defCase = dyn_cast<DefaultStmt>(switchCaseStmt);
+				assert(defCase && "Case is not the 'default:'.");
+				defStmt = tryAggregateStmts( builder, Visit(defCase->getSubStmt()) );
 			}
+			// next case
 			switchCaseStmt = switchCaseStmt->getNextSwitchCase();
 		}
 
-		retStmt.push_back( builder.switchStmt(condExpr, cases) );
+		// Appends the switchstmt to the current list of stmt
+		retStmt.push_back( builder.switchStmt(condExpr, cases, defStmt) );
 
 		// if the SwitchStmt results in a single IR stmt, return it
 		if( retStmt.isSingleStmt() ) return retStmt;

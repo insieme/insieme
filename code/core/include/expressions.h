@@ -45,6 +45,8 @@
 #include "statements.h"
 #include "types.h"
 
+#include <boost/lexical_cast.hpp>
+
 namespace insieme {
 namespace core {
 
@@ -52,9 +54,11 @@ namespace core {
 
 DECLARE_NODE_TYPE(Expression);
 
-DECLARE_NODE_TYPE(BoolLiteral);
-DECLARE_NODE_TYPE(IntLiteral);
-DECLARE_NODE_TYPE(FloatLiteral);
+DECLARE_NODE_TYPE(Literal);
+
+//DECLARE_NODE_TYPE(BoolLiteral);
+//DECLARE_NODE_TYPE(IntLiteral);
+//DECLARE_NODE_TYPE(FloatLiteral);
 
 DECLARE_NODE_TYPE(VarExpr);
 DECLARE_NODE_TYPE(ParamExpr);
@@ -105,67 +109,71 @@ public:
 };
 
 
-template<typename T>
 class Literal : public Expression {
 
-	static std::size_t hashLiteral(std::size_t seed, const TypePtr& type, const T& value) {
+	static std::size_t hashLiteral(std::size_t seed, const TypePtr& type, const string& value) {
 		boost::hash_combine(seed, type->hash());
 		boost::hash_combine(seed, boost::hash_value(value));
 		return seed;
 	}
+	const string value;
 
 protected:
-    const T value;
-	
-	Literal(const TypePtr& type, const T& value, const std::size_t& hashSeed) :
+	Literal(const TypePtr& type, const string& value, const std::size_t& hashSeed) :
 		Expression(type,hashLiteral(hashSeed, type, value)), value(value) { }
+
 	virtual ~Literal() {}
 
 	bool equalsExpr(const Expression& expr) const {
-		const Literal<T>& rhs = static_cast<const Literal<T>&>(expr);
+		const Literal& rhs = static_cast<const Literal&>(expr);
 		return (value == rhs.value);
 	}
 
 public:
+	virtual Literal* clone(NodeManager& manager) const;
+
 	virtual std::ostream& printTo(std::ostream& out) const {
 		return (out << value);
 	}
 
-    const T getValue() const { return value; }
+	template <class T>
+    const T getValueAs() const { boost::lexical_cast<T>(value); }
+
+	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
 };
 
-class IntLiteral : public Literal<int> {
-	IntLiteral(const TypePtr& type, int val);
-	virtual IntLiteral* clone(NodeManager& manager) const;
-	
-public:
-	static IntLiteralPtr get(NodeManager& manager, int value, unsigned short bytes = 4);
-	static IntLiteralPtr get(NodeManager& manager, int value, const TypePtr& type);
-	static IntLiteralPtr one(NodeManager& manager) { return get(manager, 1); }
-	static IntLiteralPtr zero(NodeManager& manager) { return get(manager, 0); }
-};
-
-class FloatLiteral : public Literal<double> {
-	const string originalString;
-
-	FloatLiteral(const TypePtr& type, double val, const string& originalString);
-	virtual FloatLiteral* clone(NodeManager& manager) const;
-
-public:
-	virtual std::ostream& printTo(std::ostream& out) const;
-
-	static FloatLiteralPtr get(NodeManager& manager, double value, unsigned short bytes = 8);
-	static FloatLiteralPtr get(NodeManager& manager, const string& from, unsigned short bytes = 8);
-	static FloatLiteralPtr get(NodeManager& manager, double value, const TypePtr& type);
-	static FloatLiteralPtr get(NodeManager& manager, const string& from, const TypePtr& type);
-};
-
-class BoolLiteral : public Literal<bool> {
-	BoolLiteral(const TypePtr& type, bool val);
-	virtual BoolLiteral* clone(NodeManager& manager) const;
-public:
-	static BoolLiteralPtr get(NodeManager& manager, bool value);
-};
+//class IntLiteral : public Literal<int> {
+//	IntLiteral(const TypePtr& type, int val);
+//	virtual IntLiteral* clone(NodeManager& manager) const;
+//
+//public:
+//	static IntLiteralPtr get(NodeManager& manager, int value, unsigned short bytes = 4);
+//	static IntLiteralPtr get(NodeManager& manager, int value, const TypePtr& type);
+//	static IntLiteralPtr one(NodeManager& manager) { return get(manager, 1); }
+//	static IntLiteralPtr zero(NodeManager& manager) { return get(manager, 0); }
+//};
+//
+//class FloatLiteral : public Literal<double> {
+//	const string originalString;
+//
+//	FloatLiteral(const TypePtr& type, double val, const string& originalString);
+//	virtual FloatLiteral* clone(NodeManager& manager) const;
+//
+//public:
+//	virtual std::ostream& printTo(std::ostream& out) const;
+//
+//	static FloatLiteralPtr get(NodeManager& manager, double value, unsigned short bytes = 8);
+//	static FloatLiteralPtr get(NodeManager& manager, const string& from, unsigned short bytes = 8);
+//	static FloatLiteralPtr get(NodeManager& manager, double value, const TypePtr& type);
+//	static FloatLiteralPtr get(NodeManager& manager, const string& from, const TypePtr& type);
+//};
+//
+//class BoolLiteral : public Literal<bool> {
+//	BoolLiteral(const TypePtr& type, bool val);
+//	virtual BoolLiteral* clone(NodeManager& manager) const;
+//public:
+//	static BoolLiteralPtr get(NodeManager& manager, bool value);
+//};
 
 //class StringLiteral : public Literal<std::string> {
 //	StringLiteral(const TypePtr& type, const std::string& val);
