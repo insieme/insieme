@@ -38,13 +38,15 @@
 
 #include "ast_node.h"
 #include "types.h"
-#include "statements.h"
 #include "expressions.h"
 #include "definition.h"
+#include "statements.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
+
+
 
 // TODO: fix problem of annotations!
 
@@ -182,7 +184,7 @@ ADD_BINARY_OP(REAL_DIV);
 DEF_TYPE(CompoundStmt, NoOpStmt);
 
 extern const NoOpStmt STMT_NO_OP;
-
+extern const NoOpStmtPtr STMT_NO_OP_PTR;
 
 #undef ADD_TYPE
 #undef DEF_TYPE

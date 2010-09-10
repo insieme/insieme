@@ -119,6 +119,7 @@ class Literal : public Expression {
 	const string value;
 
 protected:
+
 	Literal(const TypePtr& type, const string& value, const std::size_t& hashSeed) :
 		Expression(type,hashLiteral(hashSeed, type, value)), value(value) { }
 
@@ -129,15 +130,16 @@ protected:
 		return (value == rhs.value);
 	}
 
-public:
 	virtual Literal* clone(NodeManager& manager) const;
+
+public:
 
 	virtual std::ostream& printTo(std::ostream& out) const {
 		return (out << value);
 	}
 
 	template <class T>
-    const T getValueAs() const { boost::lexical_cast<T>(value); }
+    const T getValueAs() const { return boost::lexical_cast<T>(value); }
 
 	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
 };

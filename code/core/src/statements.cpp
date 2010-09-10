@@ -40,6 +40,7 @@
 #include "container_utils.h"
 #include "iterator_utils.h"
 
+#include "lang_basic.h"
 
 namespace insieme {
 namespace core {
@@ -358,11 +359,15 @@ Node::OptionChildList IfStmt::getChildNodes() const {
 	res->push_back(elseBody);
 	return res;
 }
-	
+
+IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
+	// default to empty else block
+	return get(manager, condition, body, lang::STMT_NO_OP_PTR);
+}
+
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
 	// default to empty else block
-	// TODO: replace with empty statement constant!
-	return manager.get(IfStmt(condition, body, (elseBody)?elseBody:CompoundStmt::get(manager)));
+	return manager.get(IfStmt(condition, body, elseBody));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
@@ -418,6 +423,10 @@ Node::OptionChildList SwitchStmt::getChildNodes() const {
 	});
 	res->push_back(defaultCase);
 	return res;
+}
+
+SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases) {
+	return get(manager, switchExpr, cases, lang::STMT_NO_OP_PTR);
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {

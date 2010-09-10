@@ -256,6 +256,10 @@ ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP_PTR, "real.div");
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP
 
+// -------------------------------- Statements ------------------------------
+
+const NoOpStmt STMT_NO_OP(toVector<StatementPtr>());
+const NoOpStmtPtr STMT_NO_OP_PTR = NoOpStmtPtr(&STMT_NO_OP);
 
 } // end namespace: lang
 } // end namespace: core

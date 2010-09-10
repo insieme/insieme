@@ -487,7 +487,7 @@ Node::OptionChildList CastExpr::getChildNodes() const {
 }
 
 std::ostream& CastExpr::printTo(std::ostream& out) const {
-	return out << "(" << type << ")" << "(" << subExpression <<")";
+	return out << "(" << *type << ")" << "(" << *subExpression <<")";
 }
 
 CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpr) {

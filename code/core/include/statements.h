@@ -175,7 +175,9 @@ public:
 class CompoundStmt: public Statement {
 	const vector<StatementPtr> statements;
 
+public:
 	CompoundStmt(const vector<StatementPtr>& stmts);
+private:
 	virtual CompoundStmt* clone(NodeManager& manager) const;
 	
 protected:
@@ -256,7 +258,8 @@ public:
 	const StatementPtr& getThenBody() const { return thenBody; }
 	const StatementPtr& getElseBody() const { return elseBody; }
 
-	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody);
+	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenBody);
+	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody);
 };
 
 class SwitchStmt: public Statement {
@@ -281,6 +284,7 @@ public:
 	const ExpressionPtr& getSwitchExpr() const { return switchExpr; }
 	const vector<Case>& getCases() const { return cases; }
 	
+	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases);
 	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase);
 };
 
