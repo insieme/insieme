@@ -202,11 +202,15 @@ ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), t
 
 #define ADD_UNARY_OP(Name, Type, Symbol) \
 		const UnaryOp OP_ ## Name (Type, Symbol); \
+		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name); \
 		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
+		const DefinitionPtr DEF_ ## Name ## _PTR = DefinitionPtr(&DEF_ ## Name); \
 
 #define ADD_BINARY_OP(Name, Type, Symbol) \
 		const BinaryOp OP_ ## Name (Type, Symbol); \
+		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name); \
 		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
+		const DefinitionPtr DEF_ ## Name ## _PTR = DefinitionPtr(&DEF_ ## Name); \
 
 ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
 ADD_TYPE(TupleType, BOOL_PAIR, TupleType(TYPE_BOOL_PTR,TYPE_BOOL_PTR));

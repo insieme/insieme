@@ -38,6 +38,7 @@
 
 #include "ast_node.h"
 #include "types.h"
+#include "statements.h"
 #include "expressions.h"
 #include "definition.h"
 
@@ -132,11 +133,15 @@ DEF_TYPE(VarExpr, BinaryOp);
 
 #define ADD_UNARY_OP(Name) \
 		extern const UnaryOp OP_ ## Name; \
+		extern const UnaryOpPtr OP_ ## Name ## _PTR; \
 		extern const Definition DEF_ ## Name; \
+		extern const DefinitionPtr DEF_ ## Name ## _PTR; \
 
 #define ADD_BINARY_OP(Name) \
 		extern const BinaryOp OP_ ## Name; \
+		extern const BinaryOpPtr OP_ ## Name ## _PTR; \
 		extern const Definition DEF_ ## Name; \
+		extern const DefinitionPtr DEF_ ## Name ## _PTR; \
 
 ADD_TYPE(FunctionType, UNARY_BOOL_OP);
 ADD_TYPE(FunctionType, BINARY_BOOL_OP);
@@ -170,6 +175,14 @@ ADD_BINARY_OP(REAL_DIV);
 
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP
+
+
+// -------------------------------- Statements ------------------------------
+
+DEF_TYPE(CompoundStmt, NoOpStmt);
+
+extern const NoOpStmt STMT_NO_OP;
+
 
 #undef ADD_TYPE
 #undef DEF_TYPE
