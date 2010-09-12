@@ -250,19 +250,19 @@ public:
 	 *
 	 * TODO: think about replacing the function body by a value, not a pointer?
 	 */
-	typedef std::unordered_map<VarExprPtr, LambdaExprPtr, hash_target<VarExprPtr>, equal_target<VarExprPtr>> Definitions;
+	typedef std::unordered_map<VarExprPtr, LambdaExprPtr, hash_target<VarExprPtr>, equal_target<VarExprPtr>> RecFunDefs;
 
 private:
 
 	/**
 	 * The definitions forming the body of this recursive lambda definition.
 	 */
-	const Definitions definitions;
+	const RecFunDefs definitions;
 
 	/**
 	 * Creates a new instance of this type based on a copy of the handed in definition.
 	 */
-	RecLambdaDefinition(const Definitions& definitions);
+	RecLambdaDefinition(const RecFunDefs& definitions);
 
 	/**
 	 * Creates a clone / deep copy of this instance referencing instances maintained
@@ -296,12 +296,12 @@ public:
 	 * @param definitions the definitions to be represented by the requested object
 	 * @return a pointer to the requested recursive definition
 	 */
-	static RecLambdaDefinitionPtr get(NodeManager& manager, const Definitions& definitions);
+	static RecLambdaDefinitionPtr get(NodeManager& manager, const RecFunDefs& definitions);
 
 	/**
 	 * Retrieves the definitions of the recursive functions represented by this instance.
 	 */
-	const Definitions& getDefinitions() {
+	const RecFunDefs& getDefinitions() {
 		return definitions;
 	}
 

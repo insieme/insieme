@@ -392,7 +392,7 @@ TEST(TypeTest, RecursiveType) {
 	TypeVariablePtr varX = TypeVariable::get(manager, "X");
 
 	// create definition
-	RecursiveTypeDefinition::Definitions definitions;
+	RecursiveTypeDefinition::RecTypeDefs definitions;
 	definitions.insert(std::make_pair(varX, varX));
 	RecursiveTypeDefinitionPtr definition = RecursiveTypeDefinition::get(manager, definitions);
 	EXPECT_EQ ( "{'X='X}", toString(*definition) );
@@ -406,7 +406,7 @@ TEST(TypeTest, RecursiveType) {
 	// create mutually recursive type
 	TypeVariablePtr varY = TypeVariable::get(manager, "Y");
 
-	definitions = RecursiveTypeDefinition::Definitions();
+	definitions = RecursiveTypeDefinition::RecTypeDefs();
 	definitions.insert(std::make_pair(varX, varY));
 	definitions.insert(std::make_pair(varY, varX));
 	definition = RecursiveTypeDefinition::get(manager, definitions);

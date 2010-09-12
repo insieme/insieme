@@ -497,24 +497,24 @@ CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const Expre
 // ------------------------------------ Recursive Definition ------------------------------
 
 
-std::size_t hashRecLambdaDefinition(const RecLambdaDefinition::Definitions& definitions) {
+std::size_t hashRecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions) {
 	std::size_t hash = HASHVAL_REC_LAMBDA_DEFINITION;
 	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
 	return hash;
 }
 
-RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::Definitions& definitions)
+RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions)
 	: Node(SUPPORT, hashRecLambdaDefinition(definitions)), definitions(definitions) { };
 
-RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::Definitions& definitions) {
+RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::RecFunDefs& definitions) {
 	return manager.get(RecLambdaDefinition(definitions));
 }
 
 RecLambdaDefinition* RecLambdaDefinition::clone(NodeManager& manager) const {
-	Definitions localDefinitions;
+	RecFunDefs localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-		[&manager](const Definitions::value_type& cur) {
-			return RecLambdaDefinition::Definitions::value_type(manager.get(cur.first), manager.get(cur.second));
+		[&manager](const RecFunDefs::value_type& cur) {
+			return RecLambdaDefinition::RecFunDefs::value_type(manager.get(cur.first), manager.get(cur.second));
 	});
 	return new RecLambdaDefinition(localDefinitions);
 }
@@ -531,7 +531,7 @@ bool RecLambdaDefinition::equals(const Node& other) const {
 
 Node::OptionChildList RecLambdaDefinition::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	std::for_each(definitions.begin(), definitions.end(), [&res](const Definitions::value_type& cur) {
+	std::for_each(definitions.begin(), definitions.end(), [&res](const RecFunDefs::value_type& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
 	});
@@ -539,7 +539,7 @@ Node::OptionChildList RecLambdaDefinition::getChildNodes() const {
 }
 
 std::ostream& RecLambdaDefinition::printTo(std::ostream& out) const {
-	return out << "{" << join(", ", definitions, [](std::ostream& out, const Definitions::value_type& cur) {
+	return out << "{" << join(", ", definitions, [](std::ostream& out, const RecFunDefs::value_type& cur) {
 		out << *cur.first << "=" << *cur.second;
 	}) << "}";
 }

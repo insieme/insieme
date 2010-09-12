@@ -569,16 +569,16 @@ class RecursiveTypeDefinition : public Node {
 
 public:
 
-	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Definitions;
+	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;
 
 private:
 
 	/**
 	 * The list of definitions this recursive type definition is consisting of.
 	 */
-	const Definitions definitions;
+	const RecTypeDefs definitions;
 
-	RecursiveTypeDefinition(const Definitions& definitions);
+	RecursiveTypeDefinition(const RecTypeDefs& definitions);
 
 	RecursiveTypeDefinition* clone(NodeManager& manager) const;
 
@@ -590,9 +590,9 @@ protected:
 
 public:
 
-	static RecursiveTypeDefinitionPtr get(NodeManager& manager, const Definitions& definitions);
+	static RecursiveTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
 
-	const Definitions& getDefinitions() {
+	const RecTypeDefs& getDefinitions() {
 		return definitions;
 	}
 
