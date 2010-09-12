@@ -40,13 +40,15 @@
 #include "string_utils.h"
 #include "functional_utils.h"
 #include "lang_basic.h"
+#include "map_utils.h"
 
 using namespace insieme::core;
 
 enum {
 	HASHVAL_LITERAL = 100 /* offset from statements */,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
-	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR
+	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_REC_LAMBDA_DEFINITION,
+	HASHVAL_REC_LAMBDA
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -491,3 +493,99 @@ CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const Expre
 	return manager.get(CastExpr(type, subExpr));
 }
 
+
+// ------------------------------------ Recursive Definition ------------------------------
+
+
+std::size_t hashRecLambdaDefinition(const RecLambdaDefinition::Definitions& definitions) {
+	std::size_t hash = HASHVAL_REC_LAMBDA_DEFINITION;
+	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
+	return hash;
+}
+
+RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::Definitions& definitions)
+	: Node(SUPPORT, hashRecLambdaDefinition(definitions)), definitions(definitions) { };
+
+RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::Definitions& definitions) {
+	return manager.get(RecLambdaDefinition(definitions));
+}
+
+RecLambdaDefinition* RecLambdaDefinition::clone(NodeManager& manager) const {
+	Definitions localDefinitions;
+	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
+		[&manager](const Definitions::value_type& cur) {
+			return RecLambdaDefinition::Definitions::value_type(manager.get(cur.first), manager.get(cur.second));
+	});
+	return new RecLambdaDefinition(localDefinitions);
+}
+
+bool RecLambdaDefinition::equals(const Node& other) const {
+	// check type
+	if (typeid(other) != typeid(RecLambdaDefinition)) {
+		return false;
+	}
+
+	const RecLambdaDefinition& rhs = static_cast<const RecLambdaDefinition&>(other);
+	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<LambdaExprPtr>());
+}
+
+Node::OptionChildList RecLambdaDefinition::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	std::for_each(definitions.begin(), definitions.end(), [&res](const Definitions::value_type& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
+	});
+	return res;
+}
+
+std::ostream& RecLambdaDefinition::printTo(std::ostream& out) const {
+	return out << "{" << join(", ", definitions, [](std::ostream& out, const Definitions::value_type& cur) {
+		out << *cur.first << "=" << *cur.second;
+	}) << "}";
+}
+
+const LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VarExprPtr& variable) const {
+	auto it = definitions.find(variable);
+	if (it == definitions.end()) {
+		return LambdaExprPtr(NULL);
+	}
+	return (*it).second;
+}
+
+
+// ------------------------------------ Recursive Lambda Expr ------------------------------
+
+std::size_t hashRecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition) {
+	std::size_t hash = HASHVAL_REC_LAMBDA;
+	boost::hash_combine(hash, variable->hash());
+	boost::hash_combine(hash, definition->hash());
+	return hash;
+}
+
+RecLambdaExpr::RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition)
+	: Expression(variable->getType(), ::hashRecLambdaExpr(variable, definition)), variable(variable), definition(definition) { }
+
+RecLambdaExpr* RecLambdaExpr::clone(NodeManager& manager) const {
+	return new RecLambdaExpr(manager.get(variable), manager.get(definition));
+}
+
+Node::OptionChildList RecLambdaExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(variable);
+	res->push_back(definition);
+	return res;
+}
+
+bool RecLambdaExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const RecLambdaExpr& rhs = static_cast<const RecLambdaExpr&>(expr);
+	return (*rhs.variable == *variable && *rhs.definition == *definition);
+}
+
+RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition) {
+	return manager.get(RecLambdaExpr(variable, definition));
+}
+
+std::ostream& RecLambdaExpr::printTo(std::ostream& out) const {
+	return out << "rec fun " << *variable << "." << *definition;
+}
