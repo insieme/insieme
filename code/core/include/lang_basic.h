@@ -57,9 +57,9 @@ namespace lang {
 	typedef TYPE ## Ptr NAME ## Ptr;
 
 #define ADD_TYPE(TYPE, NAME) \
-	extern const TYPE TYPE_ ## NAME; \
+	extern const TYPE TYPE_ ## NAME ## _VAL; \
+	extern const TYPE ## Ptr TYPE_ ## NAME; \
 	extern const TYPE ## Ptr TYPE_ ## NAME ## _PTR;
-
 
 // -------------------------------- Unit Type -------------------------------
 
@@ -147,13 +147,13 @@ DEF_TYPE(Literal, BinaryOp);
 
 #define ADD_UNARY_OP(Name) \
 		extern const UnaryOp OP_ ## Name ## _VAL; \
-		extern const UnaryOpPtr OP_ ## Name ## _PTR; \
 		extern const UnaryOpPtr OP_ ## Name; \
+		extern const UnaryOpPtr OP_ ## Name ## _PTR; \
 
 #define ADD_BINARY_OP(Name) \
 		extern const BinaryOp OP_ ## Name ## _VAL; \
-		extern const BinaryOpPtr OP_ ## Name ## _PTR; \
 		extern const BinaryOpPtr OP_ ## Name; \
+		extern const BinaryOpPtr OP_ ## Name ## _PTR; \
 
 ADD_TYPE(FunctionType, UNARY_BOOL_OP);
 ADD_TYPE(FunctionType, BINARY_BOOL_OP);

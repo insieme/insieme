@@ -46,8 +46,9 @@ namespace lang {
 
 
 #define ADD_TYPE(TYPE, NAME, VALUE) \
-	const TYPE TYPE_ ## NAME = VALUE; \
-	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME);
+	const TYPE TYPE_ ## NAME ## _VAL = VALUE; \
+	const TYPE ## Ptr TYPE_ ## NAME = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL); \
+	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL);
 
 
 const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
@@ -58,7 +59,7 @@ const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
 const Identifier TYPE_NAME_UNIT("unit");
 
 bool isUnitType(const Type& type) {
-	return type == TYPE_UNIT;
+	return type == TYPE_UNIT_VAL;
 }
 
 ADD_TYPE(UnitType, UNIT, GenericType(TYPE_NAME_UNIT));
@@ -68,7 +69,7 @@ ADD_TYPE(UnitType, UNIT, GenericType(TYPE_NAME_UNIT));
 const Identifier TYPE_NAME_BOOL("bool");
 
 bool isBoolType(const Type& type) {
-	return type == TYPE_BOOL;
+	return type == TYPE_BOOL_VAL;
 }
 
 ADD_TYPE(BoolType, BOOL, GenericType(TYPE_NAME_BOOL));

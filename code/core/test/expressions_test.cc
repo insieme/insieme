@@ -40,6 +40,7 @@
 #include "expressions.h"
 #include "ast_builder.h"
 #include "lang_basic.h"
+#include "set_utils.h"
 
 #include "ast_node_test.cc"
 
@@ -47,6 +48,7 @@ namespace insieme {
 namespace core {
 
 using namespace insieme::core::lang;
+using namespace insieme::utils::set;
 
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children = Node::ChildList());
@@ -181,7 +183,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
 
 	// test definition node
-	basicNodeTests(definition, toList(toVector<NodePtr>(evenVar, evenLambda, oddVar, oddLambda)));
+	typedef typename std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> Set;
+	EXPECT_TRUE( equal(toSet<Set, NodePtr>(evenVar, evenLambda, oddVar, oddLambda), asSet<Set>(definition->getChildList())) );
 
 	// create recursive lambda nodes
 	RecLambdaExprPtr even = builder.recLambdaExpr(evenVar, definition);
