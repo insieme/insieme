@@ -52,11 +52,8 @@ using namespace std;
 using namespace insieme::core;
 using namespace insieme::utils::set;
 
-std::size_t hash(const Program::DefinitionSet& definitions, const Program::EntryPointSet& entryPoints) {
-	std::size_t seed = 0;
-	boost::hash_combine(seed, insieme::utils::set::computeHash(definitions, hash_target<DefinitionPtr>()));
-	boost::hash_combine(seed, insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>()));
-	return seed;
+std::size_t hash(const Program::EntryPointSet& entryPoints) {
+	return insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
 }
 
 Program* Program::clone(NodeManager& manager) const {
@@ -70,48 +67,30 @@ Program* Program::clone(NodeManager& manager) const {
  */
 Node::OptionChildList Program::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	std::copy(definitions.cbegin(), definitions.cend(), back_inserter(*res));
 	std::copy(entryPoints.cbegin(), entryPoints.cend(), back_inserter(*res));
 	return res;
 }
 
-Program::Program(SharedNodeManager manager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) :
-	Node(PROGRAM, ::hash(definitions, entryPoints)), nodeManager(manager), definitions(definitions), entryPoints(entryPoints) { };
+Program::Program(SharedNodeManager manager, const EntryPointSet& entryPoints) :
+	Node(PROGRAM, ::hash(entryPoints)), nodeManager(manager), entryPoints(entryPoints) { };
 
 Program::Program() :
-	Node(PROGRAM, ::hash(DefinitionSet(), EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
+	Node(PROGRAM, ::hash(EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
 
-ProgramPtr Program::create(const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), definitions, entryPoints), true);
+ProgramPtr Program::create(const EntryPointSet& entryPoints) {
+	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), entryPoints), true);
 }
 
-ProgramPtr Program::create(const SharedNodeManager& manager, const DefinitionSet& definitions, const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(manager, definitions, entryPoints), true);
+ProgramPtr Program::create(const SharedNodeManager& manager, const EntryPointSet& entryPoints) {
+	return ProgramPtr(new Program(manager, entryPoints), true);
 }
-
-ProgramPtr Program::addDefinition(const DefinitionPtr& definition) const {
-	return addDefinitions(toSet<DefinitionSet>(definition));
-}
-
-ProgramPtr Program::addDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(nodeManager, merge(this->definitions, nodeManager->getAll(definitions)), entryPoints), true);
-}
-
-ProgramPtr Program::remDefinition(const DefinitionPtr& definition) const {
-	return remDefinitions(toSet<DefinitionSet>(definition));
-}
-
-ProgramPtr Program::remDefinitions(const DefinitionSet& definitions) const {
-	return ProgramPtr(new Program(nodeManager, difference(this->definitions, definitions), entryPoints), true);
-}
-
 
 ProgramPtr Program::addEntryPoint(const ExpressionPtr& entryPoint) const {
 	return addEntryPoints(toSet<EntryPointSet>(entryPoint));
 }
 
 ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(nodeManager, definitions, merge(this->entryPoints, nodeManager->getAll(entryPoints))), true);
+	return ProgramPtr(new Program(nodeManager, merge(this->entryPoints, nodeManager->getAll(entryPoints))), true);
 }
 
 ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
@@ -119,7 +98,7 @@ ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
 }
 
 ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(nodeManager, definitions, difference(this->entryPoints, entryPoints)), true);
+	return ProgramPtr(new Program(nodeManager, difference(this->entryPoints, entryPoints)), true);
 }
 
 ASTBuilder Program::getASTBuilder() const {
@@ -134,14 +113,7 @@ bool Program::equals(const Node& other) const {
 	const Program& ref = static_cast<const Program&>(other);
 
 	// compare definitions and entry points
-	return
-			insieme::utils::set::equal(entryPoints, ref.entryPoints) &&
-			insieme::utils::set::equal(definitions, ref.definitions);
-}
-
-
-bool compareDefinitions(const DefinitionPtr& defA, const DefinitionPtr& defB) {
-	return defA->getName() < defB->getName();
+	return insieme::utils::set::equal(entryPoints, ref.entryPoints);
 }
 
 bool compareEntryPoints(const ExpressionPtr& exprA, const ExpressionPtr& exprB) {
@@ -156,28 +128,9 @@ std::vector<GenericTypePtr> getAllGenericTypes(const Program& program);
 
 std::ostream& Program::printTo(std::ostream& out) const {
 
-	typedef std::vector<DefinitionPtr> DefinitionList;
 	typedef std::vector<ExpressionPtr> EntryPointList;
 
 	out << "PROGRAM { \n";
-
-	// print generic type definitions
-	out << "// Types: \n";
-	out << "\n";
-
-	// TODO: filter generic types and print them in alphabetical order
-
-	// print definitions
-	DefinitionList defList;
-	defList.insert(defList.end(),definitions.begin(), definitions.end());
-	sort(defList.begin(), defList.end(), compareDefinitions);
-
-	out << "// Definitions:" << endl;
-	for_each(defList.cbegin(), defList.cend(),
-		[&out](const DefinitionPtr& cur) {
-			out << *cur << endl;
-	});
-	out << endl;
 
 	// print entry points
 	EntryPointList entryList;

@@ -40,6 +40,7 @@
 #include "expressions.h"
 #include "ast_builder.h"
 #include "lang_basic.h"
+#include "set_utils.h"
 
 #include "ast_node_test.cc"
 
@@ -47,6 +48,7 @@ namespace insieme {
 namespace core {
 
 using namespace insieme::core::lang;
+using namespace insieme::utils::set;
 
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children = Node::ChildList());
@@ -181,7 +183,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
 
 	// test definition node
-	basicNodeTests(definition, toList(toVector<NodePtr>(evenVar, evenLambda, oddVar, oddLambda)));
+	typedef typename std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> Set;
+	EXPECT_TRUE( equal(toSet<Set, NodePtr>(evenVar, evenLambda, oddVar, oddLambda), asSet<Set>(definition->getChildList())) );
 
 	// create recursive lambda nodes
 	RecLambdaExprPtr even = builder.recLambdaExpr(evenVar, definition);
@@ -197,7 +200,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 
 	EXPECT_NE ( even->hash(), odd->hash());
 
-	EXPECT_EQ ("rec even.{even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }, odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }}", toString(*even));
+	EXPECT_TRUE (toString(*even) == "rec even.{even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }, odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }}" ||
+			     toString(*even) == "rec even.{odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }, even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }}");
 }
 
 

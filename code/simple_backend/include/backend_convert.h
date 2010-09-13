@@ -46,7 +46,6 @@
 #include "ast_visitor.h"
 #include "statements.h"
 #include "program.h"
-#include "definition.h"
 
 #include "container_utils.h"
 #include "hash_utils.h"

@@ -74,7 +74,6 @@ enum NodeType {
 	TYPE, 			/* < to represent a (data) type  */
 	EXPRESSION,		/* < to represent expressions */
 	STATEMENT, 		/* < to represent statements */
-	DEFINITION,		/* < to represent definitions */
 	PROGRAM			/* < to represent entire programs */
 };
 

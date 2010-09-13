@@ -46,28 +46,28 @@ TEST(LangBasic, Types) {
 
 	// test some signed integers ...
 	{
-		GenericType types[] = {TYPE_INT_1, TYPE_INT_2, TYPE_INT_4, TYPE_INT_8};
+		GenericType types[] = {TYPE_INT_1_VAL, TYPE_INT_2_VAL, TYPE_INT_4_VAL, TYPE_INT_8_VAL};
 		for (int i=0; i<4; i++) {
 			EXPECT_TRUE ( isIntegerType(types[i]) );
 			EXPECT_TRUE ( isIntType(types[i]) );
 			EXPECT_FALSE ( isUIntType(types[i]) );
 			EXPECT_EQ ( 1<<i, getNumBytes(types[i]) );
 		}
-		EXPECT_TRUE ( isIntType(TYPE_INT_GEN) );
-		EXPECT_TRUE ( isIntType(TYPE_INT_INF) );
+		EXPECT_TRUE ( isIntType(TYPE_INT_GEN_VAL) );
+		EXPECT_TRUE ( isIntType(TYPE_INT_INF_VAL) );
 	}
 
 
 	// test some unsigned integers ...
 	{
-		GenericType types[] = {TYPE_UINT_1, TYPE_UINT_2, TYPE_UINT_4, TYPE_UINT_8};
+		GenericType types[] = {TYPE_UINT_1_VAL, TYPE_UINT_2_VAL, TYPE_UINT_4_VAL, TYPE_UINT_8_VAL};
 		for (int i=0; i<4; i++) {
 			EXPECT_TRUE ( isIntegerType(types[i]) );
 			EXPECT_FALSE ( isIntType(types[i]) );
 			EXPECT_TRUE ( isUIntType(types[i]) );
 			EXPECT_EQ ( 1<<i, getNumBytes(types[i]) );
 		}
-		EXPECT_TRUE ( isUIntType(TYPE_UINT_GEN) );
-		EXPECT_TRUE ( isUIntType(TYPE_UINT_INF) );
+		EXPECT_TRUE ( isUIntType(TYPE_UINT_GEN_VAL) );
+		EXPECT_TRUE ( isUIntType(TYPE_UINT_INF_VAL) );
 	}
 }

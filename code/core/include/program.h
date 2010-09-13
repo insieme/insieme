@@ -46,7 +46,6 @@
 #include "container_utils.h"
 #include "expressions.h"
 #include "functional_utils.h"
-#include "definition.h"
 #include "set_utils.h"
 #include "statements.h"
 #include "types.h"
@@ -73,10 +72,6 @@ class ASTBuilder;
 class Program : public Node {
 
 public:
-	/**
-	 * The type used to represent the list of top level definitions.
-	 */
-	typedef std::unordered_set<DefinitionPtr, hash_target<DefinitionPtr>, equal_target<DefinitionPtr>> DefinitionSet;
 
 	/**
 	 * The type used to represent the list of entry points.
@@ -89,13 +84,6 @@ private:
 	 * The shared data manager used to maintain nodes within this AST.
 	 */
 	const SharedNodeManager nodeManager;
-
-	/**
-	 * The set of definitions represented by this AST. Each definition
-	 * represents a root node of a tree within this AST (which is actually
-	 * a forest).
-	 */
-	const DefinitionSet definitions;
 
 	/**
 	 * This set contains the list of expressions to be exported to the context
@@ -114,10 +102,9 @@ private:
 	 * Creates a new AST based on the given data.
 	 *
 	 * @param nodeManager a shared node manager to be used to maintain definitions, AST nodes and types.
-	 * @param definitions the list of top-level definitions the program to be represented should consist of
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedNodeManager nodeManager, const DefinitionSet& definitions, const EntryPointSet& entryPoints);
+	Program(SharedNodeManager nodeManager, const EntryPointSet& entryPoints);
 
 	/**
 	 * Implements the clone method defined by the Base Node class. However,
@@ -148,23 +135,9 @@ public:
 	 * 		   pointer, hence the allocated memory will be automatically cleared as soon as the last
 	 * 		   copy is gone.
 	 */
-	static ProgramPtr create(const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
+	static ProgramPtr create(const EntryPointSet& entryPoints = EntryPointSet());
 
-	static ProgramPtr create(const SharedNodeManager& manager, const DefinitionSet& definitions = DefinitionSet(), const EntryPointSet& entryPoints = EntryPointSet());
-
-
-	ProgramPtr addDefinition(const DefinitionPtr& definition) const;
-
-	ProgramPtr addDefinitions(const DefinitionSet& definitions) const;
-
-	const DefinitionSet& getDefinitions() const {
-		return definitions;
-	}
-
-	ProgramPtr remDefinition(const DefinitionPtr& definition) const;
-
-	ProgramPtr remDefinitions(const DefinitionSet& definitions) const;
-
+	static ProgramPtr create(const SharedNodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet());
 
 	ProgramPtr addEntryPoint(const ExpressionPtr& point) const;
 

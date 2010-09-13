@@ -40,7 +40,6 @@
 #include <cassert>
 
 #include "annotated_ptr.h"
-#include "definition.h"
 #include "expressions.h"
 #include "program.h"
 #include "statements.h"
@@ -88,8 +87,6 @@ protected:
 			return dispatchExpression(dynamic_pointer_cast<const Expression>(node));
 		case NodeType::STATEMENT:
 			return dispatchStatement(dynamic_pointer_cast<const Statement>(node));
-		case NodeType::DEFINITION:
-			return dispatchDefinition(dynamic_pointer_cast<const Definition>(node));
 		case NodeType::PROGRAM:
 			return dispatchProgram(dynamic_pointer_cast<const Program>(node));
 		}
@@ -102,7 +99,8 @@ protected:
 	ReturnType dispatchSupport(const NodePtr& node) {
 		assert ( node && "Cannot dispatch NULL node!");
 
-		TRY_DISPATCH(node, RecursiveTypeDefinition);
+		TRY_DISPATCH(node, RecTypeDefinition);
+		TRY_DISPATCH(node, RecLambdaDefinition);
 
 		assert( false && "Cannot dispatch unknown supportive AST node!");
 		return ReturnType();
@@ -156,7 +154,7 @@ protected:
 		TRY_DISPATCH(type, FunctionType);
 		TRY_DISPATCH(type, TupleType);
 		TRY_DISPATCH(type, GenericType);
-		TRY_DISPATCH(type, RecursiveType);
+		TRY_DISPATCH(type, RecType);
 
 		assert ( false && "Cannot dispatch unknown type pointer." );
 		return ReturnType();
@@ -201,12 +199,11 @@ protected:
 	}
 
 	DISPATCH_TERMINAL(Program);
-	DISPATCH_TERMINAL(Definition);
 
 	DISPATCH_TERMINAL(TypeVariable);
 	DISPATCH_TERMINAL(FunctionType);
 	DISPATCH_TERMINAL(TupleType);
-	DISPATCH_TERMINAL(RecursiveType);
+	DISPATCH_TERMINAL(RecType);
 
 	DISPATCH_TERMINAL(ArrayType);
 	DISPATCH_TERMINAL(VectorType);
@@ -239,7 +236,8 @@ protected:
 	DISPATCH_TERMINAL(StructExpr);
 	DISPATCH_TERMINAL(JobExpr);
 
-	DISPATCH_TERMINAL(RecursiveTypeDefinition);
+	DISPATCH_TERMINAL(RecTypeDefinition);
+	DISPATCH_TERMINAL(RecLambdaDefinition);
 
 #undef DISPATCH_TERMINAL
 #undef VISIT
@@ -258,7 +256,7 @@ protected:
 	VISIT_NODE(TypeVariable, Type);
 	VISIT_NODE(FunctionType, Type);
 	VISIT_NODE(TupleType, Type);
-	VISIT_NODE(RecursiveType, Type);
+	VISIT_NODE(RecType, Type);
 
 	VISIT_NODE(GenericType, Type);
 	VISIT_NODE(ArrayType, GenericType);
@@ -270,7 +268,8 @@ protected:
 	VISIT_NODE(StructType, NamedCompositeType);
 	VISIT_NODE(UnionType, NamedCompositeType);
 
-	VISIT_NODE(RecursiveTypeDefinition, Node);
+	VISIT_NODE(RecTypeDefinition, Node);
+	VISIT_NODE(RecLambdaDefinition, Node);
 
 	VISIT_NODE(Statement, Node);
 
@@ -300,11 +299,11 @@ protected:
 	VISIT_NODE(StructExpr, Expression);
 	VISIT_NODE(JobExpr, Expression);
 
-
 	VISIT_NODE(Program, Node);
 
-	VISIT_NODE(Definition, Node);
-
+	/**
+	 * Implements a the base not visit.
+	 */
 	ReturnType visitNode(const NodePtr& node) {
 		// by default, do nothing
 		return ReturnType();
