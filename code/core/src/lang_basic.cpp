@@ -197,6 +197,20 @@ ADD_TYPE(RealType, REAL_8, getRealType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
 
 
+// -------------------------------- Constants ------------------------------
+
+#define ADD_CONST(NAME, VALUE) \
+	const Literal CONST_ ## NAME = VALUE; \
+	const LiteralPtr CONST_ ## NAME ## _PTR = LiteralPtr(&CONST_ ## NAME);
+
+ADD_CONST(UINT_ZERO, Literal(TYPE_UINT_1_PTR, "0"));
+ADD_CONST(UINT_ONE, Literal(TYPE_UINT_1_PTR, "1"));
+
+ADD_CONST(BOOL_TRUE, Literal(TYPE_BOOL_PTR, "true"));
+ADD_CONST(BOOL_FALSE, Literal(TYPE_BOOL_PTR, "false"));
+
+#undef ADD_CONST
+
 // -------------------------------- Operator ------------------------------
 
 #define ADD_UNARY_OP(Name, Type, Symbol) \
@@ -252,6 +266,12 @@ ADD_BINARY_OP(REAL_ADD, TYPE_BINARY_REAL_OP_PTR, "real.add");
 ADD_BINARY_OP(REAL_SUB, TYPE_BINARY_REAL_OP_PTR, "real.sub");
 ADD_BINARY_OP(REAL_MUL, TYPE_BINARY_REAL_OP_PTR, "real.mul");
 ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP_PTR, "real.div");
+
+
+ADD_TYPE(FunctionType, COMPARISON_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_BOOL_PTR)));
+ADD_TYPE(FunctionType, COMPARISON_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_BOOL_PTR)));
+ADD_TYPE(FunctionType, COMPARISON_REAL_OP, (FunctionType(TYPE_REAL_PAIR_PTR, TYPE_BOOL_PTR)));
+
 
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP

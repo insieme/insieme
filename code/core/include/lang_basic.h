@@ -127,6 +127,19 @@ ADD_TYPE(RealType, REAL_4);
 ADD_TYPE(RealType, REAL_8);
 ADD_TYPE(RealType, REAL_INF);
 
+// -------------------------------- Constants ------------------------------
+
+#define ADD_CONST(NAME) \
+	extern const Literal CONST_ ## NAME; \
+	extern const LiteralPtr CONST_ ## NAME ## _PTR;
+
+ADD_CONST(UINT_ZERO);
+ADD_CONST(UINT_ONE);
+
+ADD_CONST(BOOL_TRUE);
+ADD_CONST(BOOL_FALSE);
+
+#undef ADD_CONST
 
 // -------------------------------- Operator ------------------------------
 
@@ -174,6 +187,13 @@ ADD_BINARY_OP(REAL_ADD);
 ADD_BINARY_OP(REAL_SUB);
 ADD_BINARY_OP(REAL_MUL);
 ADD_BINARY_OP(REAL_DIV);
+
+
+ADD_TYPE(FunctionType, COMPARISON_INT_OP);
+ADD_TYPE(FunctionType, COMPARISON_UINT_OP);
+ADD_TYPE(FunctionType, COMPARISON_REAL_OP);
+
+
 
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP

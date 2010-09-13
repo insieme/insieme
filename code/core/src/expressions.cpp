@@ -61,12 +61,23 @@ bool Expression::equals(const Node& stmt) const {
 
 // ------------------------------------- Literal ---------------------------------
 
+static std::size_t hashLiteral(const TypePtr& type, const string& value) {
+	std::size_t seed = HASHVAL_LITERAL;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, boost::hash_value(value));
+	return seed;
+}
+
+Literal::Literal(const TypePtr& type, const string& value) :
+		Expression(type,::hashLiteral(type, value)), value(value) { }
+
+
 Literal* Literal::clone(NodeManager& manager) const {
-	return new Literal(manager.get(type), value, HASHVAL_LITERAL);
+	return new Literal(manager.get(type), value);
 }
 
 LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr& type) {
-	return manager.get( Literal(manager.get(type), value, HASHVAL_LITERAL) );
+	return manager.get( Literal(manager.get(type), value) );
 }
 
 // ------------------------------------- IntLiteral ---------------------------------
@@ -404,7 +415,7 @@ JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, c
 
 const TypePtr& getReturnType(const ExpressionPtr& functionExpr) {
 	const TypePtr& type = functionExpr->getType();
-	assert( dynamic_cast<const FunctionType*>(&type) && "Non-function type expression used as operator within call Expression!");
+	assert( dynamic_cast<const FunctionType*>(&*type) && "Non-function type expression used as operator within call Expression!");
 
 	const FunctionType& funType = static_cast<const FunctionType&>(*type);
 	return funType.getReturnType();

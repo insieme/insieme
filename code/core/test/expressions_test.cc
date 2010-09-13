@@ -42,6 +42,8 @@
 #include "ast_builder.h"
 #include "lang_basic.h"
 
+#include "ast_node_test.cc"
+
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
@@ -68,4 +70,53 @@ TEST(ExpressionsTest, FloatLiterals) {
 	ss << *f5_s;
 	EXPECT_EQ( ss.str(), "5.0" );
 //	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
+}
+
+
+TEST(ExpressionsTest, RecursiveLambda) {
+	ASTBuilder builder;
+
+	// create a recursive even/odd example
+	FunctionTypePtr functionType = builder.functionType(lang::TYPE_UINT_4_PTR, lang::TYPE_BOOL_PTR);
+	VarExprPtr evenVar = builder.varExpr(functionType, "even");
+	VarExprPtr oddVar = builder.varExpr(functionType, "odd");
+
+
+	LambdaExpr::ParamList param;
+	param.push_back(builder.paramExpr(lang::TYPE_UINT_4_PTR, "x"));
+
+	VarExprPtr lessOrEqual = builder.varExpr(lang::TYPE_COMPARISON_UINT_OP_PTR, "==");
+
+	VarExprPtr x = builder.varExpr(lang::TYPE_UINT_4_PTR, "x");
+	ExpressionPtr condition = builder.callExpr(lessOrEqual,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
+
+	// build even body ...
+	StatementPtr evenBody = builder.ifStmt(condition,
+			builder.returnStmt(builder.literal("true", lang::TYPE_BOOL_PTR)),
+			builder.returnStmt(builder.callExpr(oddVar, toVector<ExpressionPtr>(x))));
+	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
+
+	// build odd body ...
+	StatementPtr oddBody = builder.ifStmt(condition,
+				builder.returnStmt(builder.literal("false", lang::TYPE_BOOL_PTR)),
+				builder.returnStmt(builder.callExpr(evenVar, toVector<ExpressionPtr>(x))));
+	LambdaExprPtr oddLambda = builder.lambdaExpr(functionType, param, oddBody);
+
+	// finish definition
+	RecLambdaDefinition::RecFunDefs definitions;
+	definitions.insert(std::make_pair(evenVar, evenLambda));
+	definitions.insert(std::make_pair(oddVar, oddLambda));
+	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+
+	// test definition node
+	basicNodeTests(definition, toList(toVector<NodePtr>(evenVar, evenLambda, oddVar, oddLambda)));
+
+	// create recursive lambda nodes
+	RecLambdaExprPtr even = builder.recLambdaExpr(evenVar, definition);
+	RecLambdaExprPtr odd  = builder.recLambdaExpr(oddVar,  definition);
+
+	basicNodeTests(even, toList(toVector<NodePtr>(evenVar, definition)));
+	basicNodeTests(odd, toList(toVector<NodePtr>(oddVar, definition)));
+
+	//EXPECT_EQ ("", toString(*even));
 }
