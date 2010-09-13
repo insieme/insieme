@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <strstream>
+#include <sstream>
 #include <assert.h>
 #include <unordered_map>
 
@@ -56,6 +56,10 @@ namespace simple_backend {
 
 using namespace ::insieme::core;
 
+/**
+ * A stream based on std::stringstream that keeps a level of indentation and automatically
+ * applies it at every line break.
+ */
 class CodeStream {
 public:
 	struct IndR { }; static IndR indR;
@@ -66,13 +70,13 @@ private:
 	string indentString;
 
 	template<typename T>
-	friend CodeStream& operator<<(CodeStream& cstr, T& param);
+	friend CodeStream& operator<<(CodeStream& cstr, const T& param);
 	
 	template<typename T>
-	void append(T& param) {
+	void append(const T& param) {
 		std::stringstream ssTmp;
 		// TODO fix operator lookup
-		//ssTmp << param;
+		ssTmp << param;
 		string tmp = ssTmp.str();
 		boost::replace_all(tmp, "\n", string("\n") + indentString);
 		ss << tmp;
@@ -89,13 +93,43 @@ public:
 	CodeStream() : indentString("") {
 	}
 
+	string getString() {
+		return ss.str();
+	}
 };
 
 template<typename T>
-CodeStream& operator<<(CodeStream& cstr, T& param) {
+CodeStream& operator<<(CodeStream& cstr, const T& param) {
 	cstr.append(param);
 	return cstr;
 }
+
+
+// Forward declarations
+class CodeFragment;
+typedef std::shared_ptr<CodeFragment> CodePtr;
+
+/**
+ * A code fragment encapsulates some generated source code (in the form of a CodeStream) and an 
+ * (optional) list of code fragments it depends on.
+ */
+class CodeFragment {
+
+	CodeStream cStream;
+	string name;
+	std::vector<CodePtr> dependencies;
+
+public:
+	CodeFragment(const string& name = "unnamed") : name(name) {	}
+
+	CodePtr addDependency(const string& name = "unnamed") {
+		CodePtr newDep(new CodeFragment(name));
+		dependencies.push_back(newDep);
+		return newDep;
+	}
+
+	CodeStream& getCodeStream() { return cStream; }
+};
 
 class TypeConverter : public ASTVisitor<TypeConverter, string> {
 public:
@@ -108,39 +142,72 @@ public:
 	}
 };
 
+/**
+ * Generates unique names for anonymous AST nodes when required.
+ * Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
+ * for the same node in different circumstances. Names will, however, stay the same for unchanged 
+ * programs over multiple runs of the compiler.
+ */
 class NameGenerator {
 	unsigned long num;
 
+public:
 	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
 
-	//string getName(const NodePtr& ptr, const char* fragment) {
-	//	auto it = nameMap.find(ptr);
-	//	if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
-	//	string
-	//	nameMap.insert(make_pair())
-	//} 
+	string getName(const NodePtr& ptr, const char* fragment) {
+		auto it = nameMap.find(ptr);
+		if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
+		// generate a new name string
+		std::stringstream name;
+		switch(ptr->getNodeType()) {
+		case SUPPORT:		name << "supp"; break;
+		case TYPE:			name << "type"; break;
+		case EXPRESSION:	name << "expr"; break;
+		case STATEMENT:		name << "stat"; break;
+		case DEFINITION:	name << "defi"; break;
+		case PROGRAM:		name << "prog"; break;
+		}
+		name << "_" << num++;
+		nameMap.insert(make_pair(ptr, name.str()));
+		return getName(ptr, fragment);
+	} 
 };
 
 class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
-	CodeStream cStr;
+	CodeFragment defCodeFrag;
+	CodeStream& cStr;
 	TypeConverter typeConv;
-
-	void printTypeName(const TypePtr& typ) {
+	NameGenerator nameGen;
+	
+	string printTypeName(const TypePtr& typ) {
 		// TODO print C type name for specified type to cStr
+		return "!Type";
+	}
+
+	template<typename Functor>
+	void runWithCodeStream(CodeStream& cs, Functor f) {
+		CodeStream& oldCodeStream = cStr;
+		cStr = cs;
+		f();
+		cs = oldCodeStream;
 	}
 
 public:
-	ConvertVisitor() {};
+	ConvertVisitor() : cStr(defCodeFrag.getCodeStream()) { };
+
+	string getCode() {
+		return cStr.getString();
+	}
 
 	//void visitNode(const NodePtr& node) {
 	//	std::cout << *node << std::endl;
 	//}
 
-	//void visitProgram(const ProgramPtr& ptr) {
-	//	for_each(ptr->getDefinitions(), [](const DefinitionPtr& def) {
-	//		def->getType();
-	//	});
-	//}
+	void visitProgram(const ProgramPtr& ptr) {
+		for_each(ptr->getDefinitions(), [](const DefinitionPtr& def) {
+			
+		});
+	}
 	
 	////////////////////////////////////////////////////////////////////////// Statements
 
@@ -159,14 +226,14 @@ public:
 	}
 
 	void visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
-		cStr << ptr->getVarExpression()->getType()->getName() << " = ";
+		cStr << printTypeName(ptr->getVarExpression()->getType()) << " " << ptr->getVarExpression()->getIdentifier().getName() << " = ";
 		visit(ptr->getInitialization());
 		cStr << ";\n";
 	}
 
 	void visitForStmt(const ForStmtPtr& ptr) {
 		auto decl = ptr->getDeclaration();
-		auto ident = decl->getVarExpression()->getIdentifier();
+		const string& ident = decl->getVarExpression()->getIdentifier().getName();
 		cStr << "for(";
 		visit(decl);
 		cStr << "; " << ident << " < ";
@@ -227,17 +294,85 @@ public:
 	}
 
 	void visitCastExpr(const CastExprPtr& ptr) {
-		cStr << "((";
-		printTypeName(ptr->getType());
-		cStr << ")(";
+		cStr << "((" << printTypeName(ptr->getType()) << ")(";
 		visit(ptr->getSubExpression());
 		cStr << "))";
 	}
 
 	void visitJobExpr(const JobExprPtr& ptr) {
-		ptr->getLocalDecls();
+		// check if local decls exist, if so generate struct to hold them and populate it
+		auto localDecls = ptr->getLocalDecls();
+		if(localDecls.size() > 0) {
+			string structName = nameGen.getName(ptr, "jobLocalDecls");
+			string structVarName = structName + "__var";
+			CodePtr structCode = defCodeFrag.addDependency(structName);
+			CodeStream& sCStr = structCode->getCodeStream();
+			// definition
+			sCStr << "struct " << structName << CodeStream::indR << " {\n";
+			// variable declaration
+			cStr << "struct " << structName << "* " << structVarName << " = new " << structName << ";";
+			for_each(localDecls, [&](const DeclarationStmtPtr& cur) {
+				auto varExp = cur->getVarExpression();
+				// generate definition
+				sCStr << this->printTypeName(varExp->getType()) << " " << varExp->getIdentifier().getName() << ";";
+				// populate entry
+				cStr << structVarName << "." << varExp->getIdentifier().getName() << " = ";
+				this->visit(cur->getInitialization());
+				cStr << ";";
+			});
+			sCStr << CodeStream::indL << "};";
+			// TODO finish job generation (when runtime lib available)
+		}
 	}
 
+	void visitLambdaExpr(const LambdaExprPtr& ptr) {
+		// TODO when cname annotations are standardized
+	}
+
+	void visitRecLambdaExpr(const LambdaExprPtr& ptr) {
+		// TODO when cname annotations are standardized
+	}
+
+	void visitLiteral(const LiteralPtr& ptr) {
+		cStr << ptr->getValue();
+	}
+
+private:
+	void internalVisitComposite(const NamedCompositeExprPtr& ptr) {
+		//auto members = ptr->getMembers();
+		//cStr << CodeStream::indR << "{\n"
+		//for_each(members, [&](const NamedCompositeExpr::Member& cur) {
+		//	
+		//};
+	}
+public:
+
+	void visitStructExpr(const StructExprPtr& ptr) {
+		//cStr << "struct ";
+		//internalVisitComposite(ptr);
+	}
+
+	void visitUnionExpr(const UnionExprPtr& ptr) {
+		//
+	}
+
+	void visitTupleExpr(const TupleExprPtr& ptr) {
+		// TODO check when to use ref()/cref()
+		cStr << "std::make_tuple(";
+		auto exps = ptr->getExpressions();
+		if(exps.size() > 0) {
+			visit(exps.front());
+			for_each(exps.cbegin()+1, exps.cend(), [&](const ExpressionPtr& cur) {
+				cStr << ", ";
+				this->visit(cur);
+			});
+		}
+		cStr << ")";
+	}
+
+	void visitVarExpr(const VarExprPtr& ptr) {
+		cStr << ptr->getIdentifier().getName();
+	}
 };
 
 } // namespace simple_backend

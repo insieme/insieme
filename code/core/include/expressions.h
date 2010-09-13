@@ -144,6 +144,8 @@ public:
 	template <class T>
     const T getValueAs() const { return boost::lexical_cast<T>(value); }
 
+	const string& getValue() const { return value; }
+
 	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
 };
 
@@ -405,6 +407,8 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
+
 	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
 };
 
@@ -421,9 +425,11 @@ protected:
 	bool equalsExpr(const Expression& expr) const;
 
 	virtual OptionChildList getChildNodes() const;
-
 	Members getManagedMembers(NodeManager& manager) const;
 	static NamedCompositeType::Entries getTypeEntries(const Members& mem);
+
+public:
+	const Members& getMembers() { return members; }
 };
 
 class StructExpr : public NamedCompositeExpr {
