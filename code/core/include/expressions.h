@@ -45,7 +45,7 @@
 #include "statements.h"
 #include "types.h"
 
-#include <boost/lexical_cast.hpp>
+#include <numeric_cast.h>
 
 namespace insieme {
 namespace core {
@@ -138,7 +138,7 @@ public:
 	}
 
 	template <class T>
-    const T getValueAs() const { return boost::lexical_cast<T>(value); }
+    const T getValueAs() const { return utils::numeric_cast<T>(value); }
 
 	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
 };

@@ -113,6 +113,46 @@ TEST(StatementsTest, CompoundStmt) {
 	EXPECT_EQ("{break; continue;}", toString(*bScSCVec));
 }
 
+TEST(StatementsTest, IntLiterals) {
+	ASTBuilder builder;
+
+//	{
+//		LiteralPtr intLit = builder.literal("-10", lang::TYPE_INT_2_PTR);
+//		int val = intLit->getValueAs<int>();
+//		EXPECT_EQ(val, -10);
+//	}
+//	{
+//		LiteralPtr intLit = builder.literal("0x10", lang::TYPE_INT_2_PTR);
+//		unsigned long val = intLit->getValueAs<unsigned long>();
+//		EXPECT_EQ(val, 16);
+//	}
+//	{
+//		LiteralPtr intLit = builder.literal("-0x10", lang::TYPE_INT_2_PTR);
+//		char val = intLit->getValueAs<char>();
+//		EXPECT_EQ(val, -16);
+//	}
+//	{
+//		LiteralPtr intLit = builder.literal("010", lang::TYPE_INT_2_PTR);
+//		unsigned short val = intLit->getValueAs<unsigned short>();
+//		EXPECT_EQ(val, 8);
+//	}
+}
+
+TEST(StatementsTest, RealLiterals) {
+	ASTBuilder builder;
+
+//	{
+//		LiteralPtr floatLit = builder.literal("0.4d", lang::TYPE_REAL_4_PTR);
+//		float val = floatLit->getValueAs<float>();
+//		EXPECT_EQ(val, 0.4d);
+//	}
+//	{
+//		LiteralPtr intLit = builder.literal("0.00001l", lang::TYPE_REAL_8_PTR);
+//		double val = intLit->getValueAs<double>();
+//		EXPECT_EQ(val, 0.00001l);
+//	}
+}
+
 TEST(StatementsTest, DefaultParams) {
 	ASTBuilder builder;
 
