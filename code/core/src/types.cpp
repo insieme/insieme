@@ -239,10 +239,10 @@ string buildNameString(const Identifier& name, const vector<TypePtr>& typeParams
 }
 
 
-// RECTYPE
-RecTypePtr RecType::get(NodeManager& manager, const std::string& name, const TypePtr& innerTy) {
-	return manager.get(RecType(name, innerTy));
-}
+//// RECTYPE
+//RecTypePtr RecType::get(NodeManager& manager, const std::string& name, const TypePtr& innerTy) {
+//	return manager.get(RecType(name, innerTy));
+//}
 
 /**
  * Creates an new generic type instance based on the given parameters.
@@ -298,41 +298,41 @@ Node::OptionChildList GenericType::getChildNodes() const {
 	return res;
 }
 
-// ------------------------------------ Recursive Definition ------------------------------
+// ------------------------------------ Rec Definition ------------------------------
 
-std::size_t hashRecursiveTypeDefinition(const RecursiveTypeDefinition::RecTypeDefs& definitions) {
+std::size_t hashRecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions) {
 	std::size_t hash = RECURSIVE_DEFINITION;
 	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
 	return hash;
 }
 
-RecursiveTypeDefinition::RecursiveTypeDefinition(const RecursiveTypeDefinition::RecTypeDefs& definitions)
-	: Node(SUPPORT, hashRecursiveTypeDefinition(definitions)), definitions(definitions) { };
+RecTypeDefinition::RecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions)
+	: Node(SUPPORT, hashRecTypeDefinition(definitions)), definitions(definitions) { };
 
-RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, const RecursiveTypeDefinition::RecTypeDefs& definitions) {
-	return manager.get(RecursiveTypeDefinition(definitions));
+RecTypeDefinitionPtr RecTypeDefinition::get(NodeManager& manager, const RecTypeDefinition::RecTypeDefs& definitions) {
+	return manager.get(RecTypeDefinition(definitions));
 }
 
-RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) const {
+RecTypeDefinition* RecTypeDefinition::clone(NodeManager& manager) const {
 	RecTypeDefs localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
 		[&manager](const RecTypeDefs::value_type& cur) {
-			return RecursiveTypeDefinition::RecTypeDefs::value_type(manager.get(cur.first), manager.get(cur.second));
+			return RecTypeDefinition::RecTypeDefs::value_type(manager.get(cur.first), manager.get(cur.second));
 	});
-	return new RecursiveTypeDefinition(localDefinitions);
+	return new RecTypeDefinition(localDefinitions);
 }
 
-bool RecursiveTypeDefinition::equals(const Node& other) const {
+bool RecTypeDefinition::equals(const Node& other) const {
 	// check type
-	if (typeid(other) != typeid(RecursiveTypeDefinition)) {
+	if (typeid(other) != typeid(RecTypeDefinition)) {
 		return false;
 	}
 
-	const RecursiveTypeDefinition& rhs = static_cast<const RecursiveTypeDefinition&>(other);
+	const RecTypeDefinition& rhs = static_cast<const RecTypeDefinition&>(other);
 	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<TypePtr>());
 }
 
-Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
+Node::OptionChildList RecTypeDefinition::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	std::for_each(definitions.begin(), definitions.end(), [&res](const RecTypeDefs::value_type& cur) {
 		res->push_back(cur.first);
@@ -341,13 +341,13 @@ Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
 	return res;
 }
 
-std::ostream& RecursiveTypeDefinition::printTo(std::ostream& out) const {
+std::ostream& RecTypeDefinition::printTo(std::ostream& out) const {
 	return out << "{" << join(", ", definitions, [](std::ostream& out, const RecTypeDefs::value_type& cur) {
 		out << *cur.first << "=" << *cur.second;
 	}) << "}";
 }
 
-const TypePtr RecursiveTypeDefinition::getDefinitionOf(const TypeVariablePtr& variable) const {
+const TypePtr RecTypeDefinition::getDefinitionOf(const TypeVariablePtr& variable) const {
 	auto it = definitions.find(variable);
 	if (it == definitions.end()) {
 		return TypePtr(NULL);
@@ -355,22 +355,22 @@ const TypePtr RecursiveTypeDefinition::getDefinitionOf(const TypeVariablePtr& va
 	return (*it).second;
 }
 
-// ---------------------------------------- Recursive Type ------------------------------
+// ---------------------------------------- Rec Type ------------------------------
 
 
-string buildRecursiveTypeName(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition) {
+string buildRecTypeName(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
 	// create output buffer
 	std::stringstream res;
 	res << "rec " << *variable << "." << *definition;
 	return res.str();
 }
 
-bool isConcreteRecursiveType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition) {
+bool isConcreteRecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
 	// TODO: search for unbound type variables - if there are, return false - true otherwise
 	return true;
 }
 
-bool isRecursiveFunctionType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definitions) {
+bool isRecFunctionType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definitions) {
 	TypePtr definition = definitions->getDefinitionOf(variable);
 	assert( definition && "No definition for given variable within definitions!");
 	return definition->isFunctionType();
@@ -378,26 +378,26 @@ bool isRecursiveFunctionType(const TypeVariablePtr& variable, const RecursiveTyp
 
 
 // TODO: determine whether recursive type is concrete or function type ..
-RecursiveType::RecursiveType(const TypeVariablePtr& variable, const RecursiveTypeDefinitionPtr& definition)
-	: Type(buildRecursiveTypeName(variable, definition),
-			isConcreteRecursiveType(variable, definition),
-			isRecursiveFunctionType(variable, definition)),
+RecType::RecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition)
+	: Type(buildRecTypeName(variable, definition),
+			isConcreteRecType(variable, definition),
+			isRecFunctionType(variable, definition)),
 			typeVariable(variable), definition(definition) { }
 
 
-RecursiveType* RecursiveType::clone(NodeManager& manager) const {
-	return new RecursiveType(manager.get(typeVariable), manager.get(definition));
+RecType* RecType::clone(NodeManager& manager) const {
+	return new RecType(manager.get(typeVariable), manager.get(definition));
 }
 
-Node::OptionChildList RecursiveType::getChildNodes() const {
+Node::OptionChildList RecType::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(typeVariable);
 	res->push_back(definition);
 	return res;
 }
 
-RecursiveTypePtr RecursiveType::get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition) {
-	return manager.get(RecursiveType(typeVariable, definition));
+RecTypePtr RecType::get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
+	return manager.get(RecType(typeVariable, definition));
 }
 
 

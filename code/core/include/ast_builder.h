@@ -79,9 +79,7 @@ public:
 		return sharedManager;
 	}
 
-	ProgramPtr createProgram(
-			const Program::DefinitionSet& definitions = Program::DefinitionSet(),
-			const Program::EntryPointSet& entryPoints = Program::EntryPointSet());
+	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet());
 
 
 	// ---------------------------- Create Derived Types ----------------------------

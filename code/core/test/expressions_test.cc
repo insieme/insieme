@@ -197,7 +197,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 
 	EXPECT_NE ( even->hash(), odd->hash());
 
-	EXPECT_EQ ("rec even.{even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }, odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }}", toString(*even));
+	EXPECT_TRUE (toString(*even) == "rec even.{even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }, odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }}" ||
+			     toString(*even) == "rec even.{odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }, even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }}");
 }
 
 

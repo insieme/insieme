@@ -873,9 +873,15 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			if(funcDecl->getBody())
 				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
 
-			core::DefinitionPtr IRFuncDecl = fact.getASTBuilder().definition(funcDecl->getNameAsString(), funcType,
-					fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
-			IRFuncDecl->printTo(std::cout);
+			//
+			// FIXME: no idea what this does ...
+			// 		  doesn't break anything when being removed ...
+			// 		  I just drop it ..
+			//		  if somebody is missing it, fix it!
+			//
+//			core::DefinitionPtr IRFuncDecl = fact.getASTBuilder().definition(funcDecl->getNameAsString(), funcType,
+//					fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
+//			IRFuncDecl->printTo(std::cout);
 
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();

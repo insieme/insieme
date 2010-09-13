@@ -380,7 +380,7 @@ TEST(TypeTest, FunctionType) {
 	basicTypeTests(funTypeB, true, true, toList(subTypesB));
 }
 
-TEST(TypeTest, RecursiveType) {
+TEST(TypeTest, RecType) {
 
 	// create a manager for this test
 	NodeManager manager;
@@ -392,13 +392,13 @@ TEST(TypeTest, RecursiveType) {
 	TypeVariablePtr varX = TypeVariable::get(manager, "X");
 
 	// create definition
-	RecursiveTypeDefinition::RecTypeDefs definitions;
+	RecTypeDefinition::RecTypeDefs definitions;
 	definitions.insert(std::make_pair(varX, varX));
-	RecursiveTypeDefinitionPtr definition = RecursiveTypeDefinition::get(manager, definitions);
+	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
 	EXPECT_EQ ( "{'X='X}", toString(*definition) );
 
 
-	RecursiveTypePtr type = RecursiveType::get(manager, varX, definition);
+	RecTypePtr type = RecType::get(manager, varX, definition);
 	EXPECT_EQ ( "rec 'X.{'X='X}", toString(*type) );
 	basicTypeTests(type, true, false, toList(toVector<NodePtr>(varX, definition)));
 
@@ -406,14 +406,14 @@ TEST(TypeTest, RecursiveType) {
 	// create mutually recursive type
 	TypeVariablePtr varY = TypeVariable::get(manager, "Y");
 
-	definitions = RecursiveTypeDefinition::RecTypeDefs();
+	definitions = RecTypeDefinition::RecTypeDefs();
 	definitions.insert(std::make_pair(varX, varY));
 	definitions.insert(std::make_pair(varY, varX));
-	definition = RecursiveTypeDefinition::get(manager, definitions);
+	definition = RecTypeDefinition::get(manager, definitions);
 	EXPECT_TRUE ( toString(*definition)=="{'Y='X, 'X='Y}" || toString(*definition)=="{'X='Y, 'Y='X}" );
 
-	RecursiveTypePtr typeX = RecursiveType::get(manager, varX, definition);
-	RecursiveTypePtr typeY = RecursiveType::get(manager, varY, definition);
+	RecTypePtr typeX = RecType::get(manager, varX, definition);
+	RecTypePtr typeY = RecType::get(manager, varY, definition);
 
 	EXPECT_NE ( typeX, typeY );
 	EXPECT_NE ( typeX, type );

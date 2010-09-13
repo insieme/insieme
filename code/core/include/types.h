@@ -73,7 +73,6 @@ DECLARE_NODE_TYPE(TupleType);
 DECLARE_NODE_TYPE(GenericType);
 DECLARE_NODE_TYPE(RecGenericType);
 DECLARE_NODE_TYPE(NamedCompositeType);
-DECLARE_NODE_TYPE(RecursiveType);
 
 DECLARE_NODE_TYPE(ArrayType);
 DECLARE_NODE_TYPE(VectorType);
@@ -83,7 +82,7 @@ DECLARE_NODE_TYPE(ChannelType);
 DECLARE_NODE_TYPE(StructType);
 DECLARE_NODE_TYPE(UnionType);
 
-DECLARE_NODE_TYPE(RecursiveTypeDefinition);
+DECLARE_NODE_TYPE(RecTypeDefinition);
 DECLARE_NODE_TYPE(RecType);
 
 /**
@@ -263,27 +262,27 @@ public:
 
 // ---------------------------------------- Recursive type ------------------------------
 
-class RecType: public Type {
-	TypePtr innerTy;
-
-	RecType(const std::string& name, const TypePtr& ty): Type(name), innerTy(ty) { }
-
-	virtual RecType* clone(NodeManager& manager) const {
-		return new RecType(getName(), manager.get(innerTy));
-	}
-protected:
-	virtual OptionChildList getChildNodes() const {
-		// return an option child list filled with an empty list
-		return OptionChildList();
-	}
-public:
-	TypePtr fold(const TypePtr& ty) { return TypePtr(NULL); }
-	TypePtr unfold(const TypePtr& ty) { return TypePtr(NULL); }
-
-	std::string toString() const { return getName() + "|" + innerTy->toString() + "|"; }
-
-	static RecTypePtr get(NodeManager& manager, const std::string& name, const TypePtr& innerTy);
-};
+//class RecType: public Type {
+//	TypePtr innerTy;
+//
+//	RecType(const std::string& name, const TypePtr& ty): Type(name), innerTy(ty) { }
+//
+//	virtual RecType* clone(NodeManager& manager) const {
+//		return new RecType(getName(), manager.get(innerTy));
+//	}
+//protected:
+//	virtual OptionChildList getChildNodes() const {
+//		// return an option child list filled with an empty list
+//		return OptionChildList();
+//	}
+//public:
+//	TypePtr fold(const TypePtr& ty) { return TypePtr(NULL); }
+//	TypePtr unfold(const TypePtr& ty) { return TypePtr(NULL); }
+//
+//	std::string toString() const { return getName() + "|" + innerTy->toString() + "|"; }
+//
+//	static RecTypePtr get(NodeManager& manager, const std::string& name, const TypePtr& innerTy);
+//};
 
 // ---------------------------------------- A tuple type ------------------------------
 
@@ -565,7 +564,7 @@ public:
 // ---------------------------------------- Recursive Type ------------------------------
 
 
-class RecursiveTypeDefinition : public Node {
+class RecTypeDefinition : public Node {
 
 public:
 
@@ -578,9 +577,9 @@ private:
 	 */
 	const RecTypeDefs definitions;
 
-	RecursiveTypeDefinition(const RecTypeDefs& definitions);
+	RecTypeDefinition(const RecTypeDefs& definitions);
 
-	RecursiveTypeDefinition* clone(NodeManager& manager) const;
+	RecTypeDefinition* clone(NodeManager& manager) const;
 
 protected:
 
@@ -590,7 +589,7 @@ protected:
 
 public:
 
-	static RecursiveTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
+	static RecTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
 
 	const RecTypeDefs& getDefinitions() {
 		return definitions;
@@ -612,7 +611,7 @@ public:
  * This implementation allows to define mutually recursive data types, hence, situations
  * in which the definition of multiple recursive types are interleaved.
  */
-class RecursiveType: public Type {
+class RecType: public Type {
 
 	/**
 	 * The name of the type variable describing this type.
@@ -623,18 +622,18 @@ class RecursiveType: public Type {
 	 * The definition body of this recursive type. Identical definitions may be
 	 * shared among recursive type definitions.
 	 */
-	const RecursiveTypeDefinitionPtr definition;
+	const RecTypeDefinitionPtr definition;
 
 
 	/**
 	 * A constructor for creating a new recursive type.
 	 */
-	RecursiveType(const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition);
+	RecType(const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition);
 
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual RecursiveType* clone(NodeManager& manager) const;
+	virtual RecType* clone(NodeManager& manager) const;
 
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
@@ -651,7 +650,7 @@ public:
 	 * 					   recursive type to be defined by the resulting type instance.
 	 * @param definition the definition of the recursive type.
 	 */
-	static RecursiveTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecursiveTypeDefinitionPtr& definition);
+	static RecTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition);
 
 };
 

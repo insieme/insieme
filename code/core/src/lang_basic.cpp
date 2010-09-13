@@ -214,16 +214,15 @@ ADD_CONST(BOOL_FALSE, Literal(TYPE_BOOL_PTR, "false"));
 // -------------------------------- Operator ------------------------------
 
 #define ADD_UNARY_OP(Name, Type, Symbol) \
-		const UnaryOp OP_ ## Name (Type, Symbol); \
-		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name); \
-		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
-		const DefinitionPtr DEF_ ## Name ## _PTR = DefinitionPtr(&DEF_ ## Name); \
+		const UnaryOp OP_ ## Name ## _VAL(Type, Symbol); \
+		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+		const UnaryOpPtr OP_ ## Name = UnaryOpPtr(&OP_ ## Name ## _VAL); \
 
 #define ADD_BINARY_OP(Name, Type, Symbol) \
-		const BinaryOp OP_ ## Name (Type, Symbol); \
-		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name); \
-		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
-		const DefinitionPtr DEF_ ## Name ## _PTR = DefinitionPtr(&DEF_ ## Name); \
+		const BinaryOp OP_ ## Name ##_VAL(Type, Symbol); \
+		const BinaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+		const BinaryOpPtr OP_ ## Name = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+
 
 ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
 ADD_TYPE(TupleType, BOOL_PAIR, TupleType(TYPE_BOOL_PTR,TYPE_BOOL_PTR));

@@ -61,7 +61,7 @@ TEST(Program, HelloWorld) {
 	TypePtr unitType = lang::TYPE_UNIT_PTR;
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
-	auto printfDefinition = build.definition("printf", printfType, NULL, true);
+	auto printfDefinition = build.literal("printf", printfType);
 
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
@@ -70,10 +70,9 @@ TEST(Program, HelloWorld) {
 	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
-	auto mainDefinition = build.definition("main", voidNullaryFunctionType, mainBody, false);
+	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
 	
 	ProgramPtr pro = build.createProgram(
-		toSet<Program::DefinitionSet>(printfDefinition, mainDefinition),
 		toSet<Program::EntryPointSet>(build.varExpr(voidNullaryFunctionType, "main"))
 	);
 
@@ -93,40 +92,10 @@ TEST(Program, ProgramData) {
 	EXPECT_EQ ( 0, manager.size() );
 	EXPECT_EQ ( 0, programManager.size() );
 
-	EXPECT_TRUE (program->getDefinitions().empty());
 	EXPECT_TRUE (program->getEntryPoints().empty());
 
 	TypePtr typeInt = GenericType::get(manager, "int");
 	TypePtr typeDouble = GenericType::get(manager, "double");
-
-	DefinitionPtr defA = Definition::get(manager, "a", typeInt, NULL, true);
-	DefinitionPtr defB = Definition::get(manager, "b", typeInt, Literal::get(manager, "12", typeInt));
-	DefinitionPtr defC = Definition::get(manager, "c", typeDouble);
-
-	// nothing should be present within the program manager ...
-	EXPECT_EQ ( 0, programManager.size() );
-
-	// add first definition
-	program = program->addDefinition(defA);
-
-	const Program::DefinitionSet& definitions = program->getDefinitions();
-	EXPECT_EQ ( (std::size_t)1 , definitions.size() );
-	EXPECT_TRUE ( programManager.addressesLocal(*definitions.cbegin()));
-	EXPECT_EQ ( toSet<Program::DefinitionSet>(programManager.get(defA)), program->getDefinitions());
-
-	// ... now: there should be one definition and one type
-	EXPECT_EQ ( 2, programManager.size() );
-
-
-	// add additional definitions
-	Program::DefinitionSet set;
-	set.insert(defB);
-	set.insert(defC);
-	program = program->addDefinitions(set);
-
-	// ... now: there should be an additional definition
-	EXPECT_EQ ( 6, programManager.size() );
-
 
 	// ------------- Entry Points ------------
 	ExpressionPtr entryA = VarExpr::get(manager, typeInt, "a");

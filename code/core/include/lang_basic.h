@@ -39,7 +39,6 @@
 #include "ast_node.h"
 #include "types.h"
 #include "expressions.h"
-#include "definition.h"
 #include "statements.h"
 
 namespace insieme {
@@ -143,20 +142,18 @@ ADD_CONST(BOOL_FALSE);
 
 // -------------------------------- Operator ------------------------------
 
-DEF_TYPE(VarExpr, UnaryOp);
-DEF_TYPE(VarExpr, BinaryOp);
+DEF_TYPE(Literal, UnaryOp);
+DEF_TYPE(Literal, BinaryOp);
 
 #define ADD_UNARY_OP(Name) \
-		extern const UnaryOp OP_ ## Name; \
+		extern const UnaryOp OP_ ## Name ## _VAL; \
 		extern const UnaryOpPtr OP_ ## Name ## _PTR; \
-		extern const Definition DEF_ ## Name; \
-		extern const DefinitionPtr DEF_ ## Name ## _PTR; \
+		extern const UnaryOpPtr OP_ ## Name; \
 
 #define ADD_BINARY_OP(Name) \
-		extern const BinaryOp OP_ ## Name; \
+		extern const BinaryOp OP_ ## Name ## _VAL; \
 		extern const BinaryOpPtr OP_ ## Name ## _PTR; \
-		extern const Definition DEF_ ## Name; \
-		extern const DefinitionPtr DEF_ ## Name ## _PTR; \
+		extern const BinaryOpPtr OP_ ## Name; \
 
 ADD_TYPE(FunctionType, UNARY_BOOL_OP);
 ADD_TYPE(FunctionType, BINARY_BOOL_OP);
