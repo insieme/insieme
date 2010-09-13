@@ -111,6 +111,27 @@ TEST(StatementsTest, CompoundStmt) {
 	EXPECT_EQ("{\nbreak;\ncontinue;\n}\n", toString(*bScSCVec));
 }
 
+TEST(StatementsTest, Literals) {
+	ASTBuilder builder;
+
+	{
+		LiteralPtr intLit = builder.literal("-10", lang::TYPE_INT_2_PTR);
+		int val = intLit->getValueAs<int>();
+		EXPECT_EQ(val, -10);
+	}
+	{
+		LiteralPtr intLit = builder.literal("0x10", lang::TYPE_INT_2_PTR);
+		unsigned long val = intLit->getValueAs<unsigned long>();
+		EXPECT_EQ(val, 16);
+	}
+	{
+		LiteralPtr intLit = builder.literal("-0x10", lang::TYPE_INT_2_PTR);
+		long val = intLit->getValueAs<long>();
+		EXPECT_EQ(val, -16);
+	}
+
+}
+
 TEST(StatementsTest, DefaultParams) {
 	ASTBuilder builder;
 
