@@ -300,24 +300,24 @@ Node::OptionChildList GenericType::getChildNodes() const {
 
 // ------------------------------------ Recursive Definition ------------------------------
 
-std::size_t hashRecursiveTypeDefinition(const RecursiveTypeDefinition::Definitions& definitions) {
+std::size_t hashRecursiveTypeDefinition(const RecursiveTypeDefinition::RecTypeDefs& definitions) {
 	std::size_t hash = RECURSIVE_DEFINITION;
 	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
 	return hash;
 }
 
-RecursiveTypeDefinition::RecursiveTypeDefinition(const RecursiveTypeDefinition::Definitions& definitions)
+RecursiveTypeDefinition::RecursiveTypeDefinition(const RecursiveTypeDefinition::RecTypeDefs& definitions)
 	: Node(SUPPORT, hashRecursiveTypeDefinition(definitions)), definitions(definitions) { };
 
-RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, const RecursiveTypeDefinition::Definitions& definitions) {
+RecursiveTypeDefinitionPtr RecursiveTypeDefinition::get(NodeManager& manager, const RecursiveTypeDefinition::RecTypeDefs& definitions) {
 	return manager.get(RecursiveTypeDefinition(definitions));
 }
 
 RecursiveTypeDefinition* RecursiveTypeDefinition::clone(NodeManager& manager) const {
-	Definitions localDefinitions;
+	RecTypeDefs localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-		[&manager](const Definitions::value_type& cur) {
-			return RecursiveTypeDefinition::Definitions::value_type(manager.get(cur.first), manager.get(cur.second));
+		[&manager](const RecTypeDefs::value_type& cur) {
+			return RecursiveTypeDefinition::RecTypeDefs::value_type(manager.get(cur.first), manager.get(cur.second));
 	});
 	return new RecursiveTypeDefinition(localDefinitions);
 }
@@ -334,7 +334,7 @@ bool RecursiveTypeDefinition::equals(const Node& other) const {
 
 Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	std::for_each(definitions.begin(), definitions.end(), [&res](const Definitions::value_type& cur) {
+	std::for_each(definitions.begin(), definitions.end(), [&res](const RecTypeDefs::value_type& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
 	});
@@ -342,7 +342,7 @@ Node::OptionChildList RecursiveTypeDefinition::getChildNodes() const {
 }
 
 std::ostream& RecursiveTypeDefinition::printTo(std::ostream& out) const {
-	return out << "{" << join(", ", definitions, [](std::ostream& out, const Definitions::value_type& cur) {
+	return out << "{" << join(", ", definitions, [](std::ostream& out, const RecTypeDefs::value_type& cur) {
 		out << *cur.first << "=" << *cur.second;
 	}) << "}";
 }

@@ -70,7 +70,7 @@ std::size_t hash_value(const Statement& stmt) {
 BreakStmt::BreakStmt(): Statement(HASHVAL_BREAK) {}
 
 std::ostream& BreakStmt::printTo(std::ostream& out) const {
-	return out << "break;";
+	return out << "break";
 }
 
 bool BreakStmt::equalsStmt(const Statement&) const {
@@ -96,7 +96,7 @@ BreakStmtPtr BreakStmt::get(NodeManager& manager) {
 ContinueStmt::ContinueStmt() : Statement(HASHVAL_CONTINUE) {};
 
 std::ostream& ContinueStmt::printTo(std::ostream& out) const {
-	return out << "continue;";
+	return out << "continue";
 }
 
 bool ContinueStmt::equalsStmt(const Statement&) const {
@@ -130,7 +130,7 @@ ReturnStmt::ReturnStmt(const ExpressionPtr& returnExpression)
 }
 
 std::ostream& ReturnStmt::printTo(std::ostream& out) const {
-	return out << "return " << returnExpression << ";";
+	return out << "return " << *returnExpression;
 }
 
 bool ReturnStmt::equalsStmt(const Statement& stmt) const {
@@ -140,8 +140,9 @@ bool ReturnStmt::equalsStmt(const Statement& stmt) const {
 }
 
 Node::OptionChildList ReturnStmt::getChildNodes() const {
-	// does not have any sub-nodes
-	return OptionChildList(new ChildList());
+	OptionChildList res(new ChildList());
+	res->push_back(returnExpression);
+	return res;
 }
 
 ReturnStmt* ReturnStmt::clone(NodeManager& manager) const {
@@ -166,7 +167,7 @@ DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const Expressi
 }
 
 std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
-	return out << *varExpression->getType() << " " << *varExpression << " = " << *initExpression << ";";
+	return out << *varExpression->getType() << " " << *varExpression << " = " << *initExpression;
 }
 
 bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
@@ -204,7 +205,10 @@ CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
 	: Statement(hashCompoundStmt(stmts)), statements(stmts) { }
 
 std::ostream& CompoundStmt::printTo(std::ostream& out) const {
-	return out << "{\n" << join("\n", statements, print<deref<StatementPtr>>()) << "\n}\n";
+	if (statements.empty()) {
+		return out << "{}";
+	}
+	return out << "{" << join("; ", statements, print<deref<StatementPtr>>()) << ";}";
 }
 
 bool CompoundStmt::equalsStmt(const Statement& stmt) const {
@@ -253,7 +257,7 @@ WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
 }
 
 std::ostream& WhileStmt::printTo(std::ostream& out) const {
-	return out << "while(" << condition << ") " << body << ";";
+	return out << "while(" << *condition << ") " << *body;
 }
 	
 bool WhileStmt::equalsStmt(const Statement& stmt) const {
@@ -293,7 +297,7 @@ ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body
 	: Statement(hashForStmt(declaration, body, end, step)), declaration(declaration), body(body), end(end), step(step) {}
 	
 std::ostream& ForStmt::printTo(std::ostream& out) const {
-	return out << "for(" << declaration << ".." << end << ":" << step << ") " << body;
+	return out << "for(" << *declaration << " .. " << *end << " : " << *step << ") " << *body;
 }
 
 bool ForStmt::equalsStmt(const Statement& stmt) const {
@@ -312,8 +316,8 @@ Node::OptionChildList ForStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
 	res->push_back(declaration);
-	res->push_back(step);
 	res->push_back(end);
+	res->push_back(step);
 	res->push_back(body);
 	return res;
 }
@@ -342,7 +346,7 @@ IfStmt* IfStmt::clone(NodeManager& manager) const {
 }
 
 std::ostream& IfStmt::printTo(std::ostream& out) const {
-	return out << "if(" << condition << ") " << thenBody << "else " << elseBody << ";";
+	return out << "if(" << *condition << ") " << *thenBody << " else " << *elseBody;
 }
 
 bool IfStmt::equalsStmt(const Statement& stmt) const {
@@ -396,11 +400,11 @@ SwitchStmt* SwitchStmt::clone(NodeManager& manager) const {
 }
 
 std::ostream& SwitchStmt::printTo(std::ostream& out) const {
-	out << "switch(" << *switchExpr << ") ";
+	out << "switch(" << *switchExpr << ") [ ";
 	std::for_each(cases.cbegin(), cases.cend(), [&out](const Case& cur) { 
-		out << *(cur.first) << ": " << *(cur.second) << "\n";
+		out << "case " << *(cur.first) << ": " << *(cur.second) << " | ";
 	});
-	out << "default:" << *defaultCase << "\n";
+	out << "default: " << *defaultCase << " ]";
 	return out;
 }
 

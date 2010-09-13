@@ -72,6 +72,9 @@ DECLARE_NODE_TYPE(UnionExpr);
 DECLARE_NODE_TYPE(JobExpr);
 DECLARE_NODE_TYPE(LambdaExpr);
 
+DECLARE_NODE_TYPE(RecLambdaDefinition);
+DECLARE_NODE_TYPE(RecLambdaExpr);
+
 // Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
@@ -236,6 +239,155 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
+};
+
+
+class RecLambdaDefinition : public Node {
+
+public:
+	/**
+	 * The type used to model the body of of this definition.
+	 *
+	 * TODO: think about replacing the function body by a value, not a pointer?
+	 */
+	typedef std::unordered_map<VarExprPtr, LambdaExprPtr, hash_target<VarExprPtr>, equal_target<VarExprPtr>> RecFunDefs;
+
+private:
+
+	/**
+	 * The definitions forming the body of this recursive lambda definition.
+	 */
+	const RecFunDefs definitions;
+
+	/**
+	 * Creates a new instance of this type based on a copy of the handed in definition.
+	 */
+	RecLambdaDefinition(const RecFunDefs& definitions);
+
+	/**
+	 * Creates a clone / deep copy of this instance referencing instances maintained
+	 * by the given node manager.
+	 */
+	RecLambdaDefinition* clone(NodeManager& manager) const;
+
+protected:
+
+	/**
+	 * Compares this instance with the given node. In case it is representing the
+	 * same recursive function definitions, the return value will be true. In any
+	 * other case the test-result will be negative.
+	 *
+	 * @return true if equivalent (though possibly not identical), false otherwise
+	 */
+	virtual bool equals(const Node& other) const;
+
+	/**
+	 * Retrieves a list of all directly referenced nodes.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
+public:
+
+	/**
+	 * A static factory method to obtain a fresh pointer to a potentially shared instance
+	 * of a recursive lambda definition instance representing the given definitions.
+	 *
+	 * @param manager the manager to be used for obtaining a proper instance
+	 * @param definitions the definitions to be represented by the requested object
+	 * @return a pointer to the requested recursive definition
+	 */
+	static RecLambdaDefinitionPtr get(NodeManager& manager, const RecFunDefs& definitions);
+
+	/**
+	 * Retrieves the definitions of the recursive functions represented by this instance.
+	 */
+	const RecFunDefs& getDefinitions() {
+		return definitions;
+	}
+
+	/**
+	 * Obtains a pointer to the function body defining the recursive function represented
+	 * by the given variable within this recursive definition.
+	 *
+	 * @param variable the variable used to define the requested recursive function within
+	 * 				   this recursive function definition.
+	 * @return a copy of the internally maintained pointer to the actual function definition.
+	 */
+	const LambdaExprPtr getDefinitionOf(const VarExprPtr& variable) const;
+
+	/**
+	 * Prints a readable representation of this instance to the given output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return a reference to the stream
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+};
+
+
+class RecLambdaExpr : public Expression {
+
+	/**
+	 * The variable used within the recursive definition to describe the
+	 * recursive function to be described by this expression.
+	 */
+	const VarExprPtr variable;
+
+	/**
+	 * The definition body of this recursive type. Identical definitions may be
+	 * shared among recursive type definitions.
+	 */
+	const RecLambdaDefinitionPtr definition;
+
+	/**
+	 * A constructor for creating a new recursive lambda.
+	 *
+	 * @param variable the variable identifying the recursive function within the definition block
+	 * 				   to be represented by this expression.
+	 * @param definition the recursive definitions to be based on.
+	 */
+	RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition);
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual RecLambdaExpr* clone(NodeManager& manager) const;
+
+	/**
+	 * Obtains a list of all sub-nodes referenced by this AST node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this recursive lambda expression with the given expression. If they
+	 * are equivalent (though potentially not identical), true will be returned. Otherwise
+	 * the result will be negative.
+	 *
+	 * @param expr the expression to be compared to.
+	 * @return true if equivalent, false otherwise
+	 */
+	virtual bool equalsExpr(const Expression& expr) const;
+
+public:
+
+	/**
+	 * A factory method for obtaining a new recursive lambda expression instance.
+	 *
+	 * @param manager the manager which should be maintaining the new instance
+	 * @param variable the name of the variable used within the recursive lambda definition for representing the
+	 * 					   recursive function to be defined by the resulting expression.
+	 * @param definition the definition of the recursive lambda.
+	 */
+	static RecLambdaExprPtr get(NodeManager& manager, const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition);
+
+	/**
+	 * Prints a readable representation of this instance to the given output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return a reference to the stream
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 
