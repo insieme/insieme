@@ -185,7 +185,7 @@ ParamExpr* ParamExpr::clone(NodeManager& manager) const {
 }
 
 std::ostream& ParamExpr::printTo(std::ostream& out) const {
-	return out << *type << id;
+	return out << *type << " " << id;
 }
 
 ParamExprPtr ParamExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
@@ -224,7 +224,7 @@ Node::OptionChildList LambdaExpr::getChildNodes() const {
 }
 
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-	return out << "lambda(" << join(", ", params, print<deref<ExpressionPtr>>()) << ") { " << body << " }";
+	return out << "fun(" << join(", ", params, print<deref<ExpressionPtr>>()) << "){ " << *body << " }";
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
@@ -261,7 +261,7 @@ Node::OptionChildList TupleExpr::getChildNodes() const {
 }
 
 std::ostream& TupleExpr::printTo(std::ostream& out) const {
-	return out << "tuple(" << join(", ", expressions, print<deref<ExpressionPtr>>()) << ")";
+	return out << "tuple(" << join(",", expressions, print<deref<ExpressionPtr>>()) << ")";
 }
 
 
@@ -456,7 +456,7 @@ Node::OptionChildList CallExpr::getChildNodes() const {
 }
 
 std::ostream& CallExpr::printTo(std::ostream& out) const {
-	return out << functionExpr << "(" << join(", ", arguments) << ")";
+	return out << *functionExpr << "(" << join(", ", arguments, print<deref<ExpressionPtr>>()) << ")";
 }
 
 CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -598,5 +598,5 @@ RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VarExprPtr& vari
 }
 
 std::ostream& RecLambdaExpr::printTo(std::ostream& out) const {
-	return out << "rec fun " << *variable << "." << *definition;
+	return out << "rec " << *variable << "." << *definition;
 }

@@ -56,10 +56,6 @@ DECLARE_NODE_TYPE(Expression);
 
 DECLARE_NODE_TYPE(Literal);
 
-//DECLARE_NODE_TYPE(BoolLiteral);
-//DECLARE_NODE_TYPE(IntLiteral);
-//DECLARE_NODE_TYPE(FloatLiteral);
-
 DECLARE_NODE_TYPE(VarExpr);
 DECLARE_NODE_TYPE(ParamExpr);
 DECLARE_NODE_TYPE(CallExpr);
@@ -78,6 +74,17 @@ DECLARE_NODE_TYPE(RecLambdaExpr);
 // Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
+
+	/**
+	 * Allow the test case to access private methods.
+	 */
+	template<typename PT>
+	friend void basicExprTests(PT, const TypePtr&, const Node::ChildList& children = Node::ChildList());
+
+private:
+
+	virtual Expression* clone(NodeManager& manager) const = 0;
+
 protected:	
 
 	/** The type of the expression. */
@@ -163,7 +170,7 @@ public:
 	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
 
-
+// TODO: think about eliminating this (since it is no independent expression!)
 class ParamExpr : public VarExpr {
 	ParamExpr(const TypePtr& type, const Identifier& id);
 	virtual ParamExpr* clone(NodeManager& manager) const;

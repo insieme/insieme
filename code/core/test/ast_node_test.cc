@@ -47,22 +47,20 @@ namespace core {
 
 
 class DummyAnnotation : public Annotation {
-
-
-
+	// TODO: add annotations to basic tests ...
 };
 
-template<typename NodePtr>
-Node::ChildList toList(const vector<NodePtr>& list) {
+template<typename T>
+Node::ChildList toList(const vector<T>& list) {
 	Node::ChildList res;
 	std::copy(list.begin(), list.end(), back_inserter(res));
 	return res;
 }
 
-template<typename NodePtr>
-void basicNodeTests(NodePtr node, const Node::ChildList& children = Node::ChildList()) {
+template<typename NP>
+void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()) {
 
-	typedef typename NodePtr::element_type T;
+	typedef typename NP::element_type T;
 
 	// ------------ Node Ptr based tests -------------
 
@@ -85,6 +83,11 @@ void basicNodeTests(NodePtr node, const Node::ChildList& children = Node::ChildL
 	NodeManager manager;
 	T copy = T(*node);
 	T* clone = dynamic_cast<T*>(static_cast<const Node*>(&*node)->clone(manager));
+
+	const Node::ChildList& list = clone->getChildList();
+	std::for_each(list.begin(), list.end(), [&manager](const NodePtr& cur) {
+		EXPECT_TRUE(manager.addressesLocal(cur));
+	});
 
 	// check whether all are equal
 	T* all[] = { &*node, &copy, clone };
