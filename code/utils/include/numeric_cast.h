@@ -37,8 +37,7 @@
 #pragma once
 
 #include <boost/lexical_cast.hpp>
-#include <boost/concept_check.hpp>
-#include "boost/concept/requires.hpp"
+#include <boost/type_traits/is_integral.hpp>
 
 namespace {
 template <typename ElemT>
@@ -66,11 +65,12 @@ namespace insieme {
 namespace utils {
 
 template <class RetTy, class InTy>
-RetTy numeric_cast(const InTy& in) { return boost::lexical_cast<RetTy>(in); }
+RetTy numeric_cast(const InTy& in, typename boost::disable_if<boost::is_integral<RetTy>, int>::type = 0) {
+	return boost::lexical_cast<RetTy>(in);
+}
 
 template <class RetTy>
-BOOST_CONCEPT_REQUIRES( ((boost::Integer<RetTy>)),	(RetTy) )
-numeric_cast(const std::string& in) {
+RetTy numeric_cast(const std::string& in, typename boost::enable_if<boost::is_integral<RetTy>, int>::type = 0) {
 	// convert hexadecimal numbers
 	if( in.compare(0, 2, "0x") == 0 || in.compare(0, 3, "-0x") == 0 || in.compare(0, 2, "0X") == 0 || in.compare(0, 3, "-0X") == 0 )
 		return boost::lexical_cast<HexTo<RetTy>>( in );
@@ -79,6 +79,9 @@ numeric_cast(const std::string& in) {
 		return boost::lexical_cast<OctTo<RetTy>>( in );
 	return boost::lexical_cast<RetTy>( in );
 }
+
+//char numeric_cast(const std::string& in) { return numeric_cast<short>(in); }
+// unsigned char numeric_cast(const std::string& in) { return numeric_cast<unsigned short>(in, 0); }
 
 } // End utils namespace
 } // End insieme namespace
