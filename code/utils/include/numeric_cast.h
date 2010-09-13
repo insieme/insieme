@@ -38,6 +38,8 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/is_integral.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_array.hpp>
 
 namespace {
 template <typename ElemT>
@@ -64,21 +66,59 @@ struct OctTo {
 namespace insieme {
 namespace utils {
 
+template <class RetTy, class InTy, int Case>
+struct numeric_cast_impl {
+	static RetTy convert(const std::string& in);
+};
+
 template <class RetTy, class InTy>
-RetTy numeric_cast(const InTy& in, typename boost::disable_if<boost::is_integral<RetTy>, int>::type = 0) {
-	return boost::lexical_cast<RetTy>(in);
-}
+struct numeric_cast_impl<RetTy, InTy, 0> {
+
+	static RetTy convert(const InTy& in) {
+		return boost::lexical_cast<RetTy>(in);
+	}
+
+};
 
 template <class RetTy>
-RetTy numeric_cast(const std::string& in, typename boost::enable_if<boost::is_integral<RetTy>, int>::type = 0) {
-	// convert hexadecimal numbers
-	if( in.compare(0, 2, "0x") == 0 || in.compare(0, 3, "-0x") == 0 || in.compare(0, 2, "0X") == 0 || in.compare(0, 3, "-0X") == 0 )
-		return boost::lexical_cast<HexTo<RetTy>>( in );
-	// convert octal numbers
-	if( in.compare(0, 1, "0") == 0 || in.compare(0, 2, "-0") == 0)
-		return boost::lexical_cast<OctTo<RetTy>>( in );
-	return boost::lexical_cast<RetTy>( in );
+struct numeric_cast_impl<RetTy, std::string, 1> {
+
+	static RetTy convert(const std::string& in) {
+		// convert hexadecimal numbers
+		if( in.compare(0, 2, "0x") == 0 || in.compare(0, 3, "-0x") == 0 || in.compare(0, 2, "0X") == 0 || in.compare(0, 3, "-0X") == 0 )
+			return boost::lexical_cast<HexTo<RetTy>>( in );
+		// convert octal numbers
+		if( in.compare(0, 1, "0") == 0 || in.compare(0, 2, "-0") == 0)
+			return boost::lexical_cast<OctTo<RetTy>>( in );
+		return boost::lexical_cast<RetTy>( in );
+	}
+
+};
+
+template <class RetTy, class InTy>
+struct numeric_cast_impl<RetTy, InTy, 2>;
+
+template <class RetTy, class InTy>
+RetTy numeric_cast(const InTy& in) {
+	return numeric_cast_impl<RetTy, InTy,
+			boost::mpl::if_<
+				boost::is_array<InTy>,
+				boost::mpl::integral_c<size_t,2>,
+					typename boost::mpl::if_<
+					 	boost::mpl::bool_<boost::is_integral<RetTy>::value && boost::is_same<std::string, InTy>::value>,
+							boost::mpl::integral_c<size_t,1>,
+							boost::mpl::integral_c<size_t,0>>::type>::type::value>::convert(in);
+
 }
+
+template <class RetTy, class InTy>
+struct numeric_cast_impl<RetTy, InTy, 2> {
+
+	static RetTy convert(const InTy& in) {
+		return numeric_cast<RetTy>(std::string(in));
+	}
+
+};
 
 //char numeric_cast(const std::string& in) { return numeric_cast<short>(in); }
 // unsigned char numeric_cast(const std::string& in) { return numeric_cast<unsigned short>(in, 0); }
