@@ -483,6 +483,37 @@ TEST(TypeTest, StructType) {
 	basicTypeTests(structC, false, false, toList(typeListC));
 }
 
+TEST(TypeTest, RecStructType) {
+	// create a manager for this test
+	NodeManager manager;
+
+	// TODO: test whether order of definitions is important ... (it should not)
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	// create a simple recursive type uX.X (no actual type)
+	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+
+	StructType::Entries entriesA;
+	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(StructType::Entry(identB, RefType::get(manager, varX)));
+
+	StructTypePtr structA = StructType::get(manager, entriesA);
+
+	// create definition
+	RecTypeDefinition::RecTypeDefs definitions;
+	definitions.insert(std::make_pair(varX, structA));
+	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
+	EXPECT_EQ ( "{'X=struct<a:A,b:ref<'X>>}", toString(*definition) );
+
+	RecTypePtr type = RecType::get(manager, varX, definition);
+	EXPECT_EQ ( "rec 'X.{'X=struct<a:A,b:ref<'X>>}", toString(*type) );
+	basicTypeTests(type, true, false, toList(toVector<NodePtr>(varX, definition)));
+
+	EXPECT_EQ("struct<a:A,b:ref<'X>>", toString(*type->getDefinition()->getDefinitionOf(varX)));
+}
+
 TEST(TypeTest, UnionType) {
 
 	NodeManager manager;
