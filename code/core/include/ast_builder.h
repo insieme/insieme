@@ -92,8 +92,8 @@ public:
 
 	// -------------------------------- Expressions ---------------------------------
 
-	ExpressionPtr createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant) const;
-	ExpressionPtr createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs) const;
+	ExpressionPtr createExpr(const lang::OperatorPtr& op, const ExpressionPtr& operant) const;
+	ExpressionPtr createExpr(const ExpressionPtr& rhs, const lang::OperatorPtr& op, const ExpressionPtr& lhs) const;
 
 
 #include "ast_builder.inl"

@@ -142,59 +142,110 @@ ADD_CONST(BOOL_FALSE);
 
 // -------------------------------- Operator ------------------------------
 
-DEF_TYPE(Literal, UnaryOp);
-DEF_TYPE(Literal, BinaryOp);
+DEF_TYPE(Literal, Operator);
 
-#define ADD_UNARY_OP(Name) \
-		extern const UnaryOp OP_ ## Name ## _VAL; \
-		extern const UnaryOpPtr OP_ ## Name; \
-		extern const UnaryOpPtr OP_ ## Name ## _PTR; \
-
-#define ADD_BINARY_OP(Name) \
-		extern const BinaryOp OP_ ## Name ## _VAL; \
-		extern const BinaryOpPtr OP_ ## Name; \
-		extern const BinaryOpPtr OP_ ## Name ## _PTR; \
+#define ADD_OP(Name) \
+		extern const Operator OP_ ## Name ## _VAL; \
+		extern const OperatorPtr OP_ ## Name; \
+		extern const OperatorPtr OP_ ## Name ## _PTR; \
 
 ADD_TYPE(FunctionType, UNARY_BOOL_OP);
 ADD_TYPE(FunctionType, BINARY_BOOL_OP);
 
-ADD_UNARY_OP(BOOL_NOT);
-ADD_BINARY_OP(BOOL_AND);
+ADD_OP(BOOL_NOT);
+ADD_OP(BOOL_AND);
+ADD_OP(BOOL_EQ);
 
+// --- Arithmetic ---
 
 ADD_TYPE(FunctionType, BINARY_INT_OP);
 
-ADD_BINARY_OP(INT_ADD);
-ADD_BINARY_OP(INT_SUB);
-ADD_BINARY_OP(INT_MUL);
-ADD_BINARY_OP(INT_DIV);
-ADD_BINARY_OP(INT_MOD);
+ADD_OP(INT_ADD);
+ADD_OP(INT_SUB);
+ADD_OP(INT_MUL);
+ADD_OP(INT_DIV);
+ADD_OP(INT_MOD);
 
 ADD_TYPE(FunctionType, BINARY_UINT_OP);
 
-ADD_BINARY_OP(UINT_ADD);
-ADD_BINARY_OP(UINT_SUB);
-ADD_BINARY_OP(UINT_MUL);
-ADD_BINARY_OP(UINT_DIV);
-ADD_BINARY_OP(UINT_MOD);
+ADD_OP(UINT_ADD);
+ADD_OP(UINT_SUB);
+ADD_OP(UINT_MUL);
+ADD_OP(UINT_DIV);
+ADD_OP(UINT_MOD);
 
 ADD_TYPE(FunctionType, BINARY_REAL_OP);
 
-ADD_BINARY_OP(REAL_ADD);
-ADD_BINARY_OP(REAL_SUB);
-ADD_BINARY_OP(REAL_MUL);
-ADD_BINARY_OP(REAL_DIV);
+ADD_OP(REAL_ADD);
+ADD_OP(REAL_SUB);
+ADD_OP(REAL_MUL);
+ADD_OP(REAL_DIV);
 
+// --- Comparison ---
 
 ADD_TYPE(FunctionType, COMPARISON_INT_OP);
+
+ADD_OP(INT_EQ);
+ADD_OP(INT_NE);
+ADD_OP(INT_LT);
+ADD_OP(INT_GT);
+ADD_OP(INT_LE);
+ADD_OP(INT_GE);
+
 ADD_TYPE(FunctionType, COMPARISON_UINT_OP);
+
+ADD_OP(UINT_EQ);
+ADD_OP(UINT_NE);
+ADD_OP(UINT_LT);
+ADD_OP(UINT_GT);
+ADD_OP(UINT_LE);
+ADD_OP(UINT_GE);
+
 ADD_TYPE(FunctionType, COMPARISON_REAL_OP);
 
+ADD_OP(REAL_EQ);
+ADD_OP(REAL_NE);
+ADD_OP(REAL_LT);
+ADD_OP(REAL_GT);
+ADD_OP(REAL_LE);
+ADD_OP(REAL_GE);
+
+// --- Bitwise ---
+
+ADD_TYPE(FunctionType, BITWISE_INT_OP);
+
+ADD_OP(INT_NOT);
+ADD_OP(INT_AND);
+ADD_OP(INT_OR);
+ADD_OP(INT_XOR);
+
+ADD_TYPE(FunctionType, SHIFT_INT_OP);
+
+ADD_OP(INT_LEFT_SHIFT);
+ADD_OP(INT_RIGHT_SHIFT);
+
+ADD_TYPE(FunctionType, BITWISE_UINT_OP);
+
+ADD_OP(UINT_NOT);
+ADD_OP(UINT_AND);
+ADD_OP(UINT_OR);
+ADD_OP(UINT_XOR);
+
+ADD_TYPE(FunctionType, SHIFT_UINT_OP);
+
+ADD_OP(UINT_LEFT_SHIFT);
+ADD_OP(UINT_RIGHT_SHIFT);
 
 
-#undef ADD_UNARY_OP
-#undef ADD_BINARY_OP
+// --- References ---
 
+ADD_OP(REF_VAR);
+ADD_OP(REF_NEW);
+ADD_OP(REF_DELETE);
+ADD_OP(REF_ASSIGN);
+ADD_OP(REF_DEREF);
+
+#undef ADD_OP
 
 // -------------------------------- Statements ------------------------------
 
