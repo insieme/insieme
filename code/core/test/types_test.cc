@@ -514,6 +514,36 @@ TEST(TypeTest, RecStructType) {
 	EXPECT_EQ("struct<a:A,b:ref<'X>>", toString(*type->getDefinition()->getDefinitionOf(varX)));
 }
 
+TEST(TypeTest, RecStructTypeChain) {
+	// create a manager for this test
+	NodeManager manager;
+
+	// TODO: test whether order of definitions is important ... (it should not)
+	// struct A {
+	//	B* b;
+	// }
+	//
+	// struct B {
+	//  C* c;
+	// }
+	//
+	// struct C {
+	//  B* b;
+	// }
+	//
+//	Identifier identA("a");
+//	Identifier identB("b");
+//	Identifier identB("c");
+//
+//	// create a simple recursive type uX.X (no actual type)
+//	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+//
+//	StructType::Entries entriesA;
+//	entriesA.push_back(StructType::Entry(identB, RefType::get(manager, varX)));
+//
+//	StructTypePtr structA = StructType::get(manager, entriesA);
+}
+
 TEST(TypeTest, UnionType) {
 
 	NodeManager manager;

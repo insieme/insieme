@@ -44,6 +44,7 @@
 #include "statements.h"
 #include "container_utils.h"
 #include "lang_basic.h"
+#include "numeric_cast.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -109,6 +110,21 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 namespace insieme {
 namespace frontend {
 namespace conversion {
+
+/**
+ * Used to report recursive types
+ */
+class RecursiveTypeException: public std::exception {
+	Type* recTy;
+public:
+	RecursiveTypeException(Type* recTy): std::exception(), recTy(recTy) { }
+
+	const Type* getRecType() const { return recTy; }
+
+	const char *what() const throw () { return NULL; }
+	virtual ~RecursiveTypeException() throw() { }
+};
+
 
 class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
@@ -562,9 +578,14 @@ public:
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
-//	typedef std::map<Type*, TypeWrapper> TypeMap;
-//
-//	TypeMap typeMap;
+	typedef std::vector<Type*> TypeStack;
+	TypeStack typeStack;
+
+	typedef std::map<core::TypeVariablePtr, const Type*> RecTypeVarMap;
+	typedef std::map<const Type*, core::TypeVariablePtr> TypeRecVarMap;
+	TypeRecVarMap mapping;
+	map<const Type*, RecTypeVarMap> recTypeVarList;
+	map<const Type*, TypeWrapper> recTypeMap;
 
 public:
 	ClangTypeConverter(const ConversionFactory& fact): convFact( fact ) { }
@@ -751,9 +772,14 @@ public:
 
 	TypeWrapper VisitTagType(TagType* tagType) {
 		// lookup the type map to see if this type has been already converted
-//		TypeMap::const_iterator fit = typeMap.find(tagType);
-//		if(fit != typeMap.end())
-//			return fit->second;
+		TypeStack::iterator fit = std::find(typeStack.begin(), typeStack.end(), tagType);
+		if(fit != typeStack.end())
+			throw RecursiveTypeException(tagType);
+
+		// we add the type to the list of traversed types
+		typeStack.push_back(tagType);
+
+		TypeWrapper retTy;
 
 		// otherwise do the conversion
 		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
@@ -768,36 +794,104 @@ public:
 
 			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
 			if(tagDecl->getTagKind() == TagDecl::TK_enum) {
-
+				assert(false && "Enum types not supported yet");
 			} else {
 				// handle struct/union/class
 				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 				core::NamedCompositeType::Entries structElements;
-				std::for_each(recDecl->field_begin(), recDecl->field_end(), [ &structElements, this ]( RecordDecl::field_iterator::value_type curr ){
-					structElements.push_back(
-							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), this->Visit( curr->getType().getTypePtr() ).ref )
-					);
-				});
+				unsigned short typeVarId=0;
+				RecTypeVarMap definitions;
+				bool usesPartialType = false;
 
-				TypeWrapper retTy;
+				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
+					RecordDecl::field_iterator::value_type curr = *it;
+					Type* fieldType = curr->getType().getTypePtr();
+					map<const Type*, TypeWrapper>::const_iterator fit = recTypeMap.find(fieldType);
+					if(fit != recTypeMap.end()) {
+						// the current element uses a type recursively
+						// we introduce a TypeVariable as the type of the current field
+						structElements.push_back(core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), mapping.find(fieldType)->second) );
+					} else {
+						try {
+							structElements.push_back(
+									core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), Visit( fieldType ).ref)
+							);
+						} catch(const RecursiveTypeException& e) {
+
+							core::TypeVariablePtr recVar(NULL);
+							bool newVar = false;
+							if(mapping.find(e.getRecType()) == mapping.end()) {
+								recVar = core::TypeVariable::get(*this->convFact.mgr, "X" + utils::numeric_cast<std::string>(typeVarId++));
+								newVar = true;
+							} else
+								recVar = mapping.find(e.getRecType())->second;
+							// the current element uses a type recursively
+							// we introduce a TypeVariable as the type of the current field
+							structElements.push_back(core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), recVar) );
+
+							definitions.insert( std::make_pair(recVar,e.getRecType()) );
+							if ( newVar ) {
+								// add to the var map
+								mapping.insert( std::make_pair(e.getRecType(),recVar) );
+							}
+						}
+					}
+
+					// the type of one of the fields is referring to a type which is partially specified
+					usesPartialType = (this->recTypeMap.find(fieldType) != this->recTypeMap.end());
+				}
+
 				// class and struct are handled in the same way
-				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class )
+				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class ) {
+					if ( usesPartialType || !definitions.empty() ) {
+						// this type is using a pratially specified type, before building this type we try to see if we
+						// have enough information to build a recursive definition for the sub-type
+						recTypeMap.insert( std::make_pair(tagType, retTy) );
+					}
 					retTy = TypeWrapper( convFact.builder.structType( structElements ) );
-				else if( tagDecl->getTagKind() == TagDecl::TK_union )
+					DLOG(INFO) << retTy.ref;
+					if( !definitions.empty() ) {
+						// we are dealing with a recursive type
+						recTypeVarList.insert( std::make_pair(tagType, definitions) );
+					}
+
+					// if the type uses recursive types try to build a recursive type using the current knowledge
+
+				} else if( tagDecl->getTagKind() == TagDecl::TK_union )
 					retTy = TypeWrapper( convFact.builder.unionType( structElements ) );
 				else
 					assert(false);
-
-//				typeMap[tagType] = retTy;
-				return retTy;
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
 			DLOG(INFO) << convFact.builder.genericType( tagDecl->getNameAsString() )->toString();
-			return TypeWrapper( convFact.builder.genericType( tagDecl->getNameAsString() ) );
+			retTy = TypeWrapper( convFact.builder.genericType( tagDecl->getNameAsString() ) );
 		}
-		return TypeWrapper();
+		typeStack.pop_back();
+
+		if( !recTypeVarList.empty()) {
+			// we are exiting from a potentially recursive definition
+			// for each temporary recursive type created and stored in recTypeVarList a proper recursive definition has to be created,
+			// as at this point we are sure we have all the temporary type necessary to build the recursive definition, we can do it in any order
+
+			// identifying the cycle
+
+
+
+//			std::for_each(recTypeVarList.begin(), recTypeVarList.end(), [ this, &convFact ](map<const Type*,RecTypeVarMap>::value_type& curr) {
+//
+//				core::RecTypeDefinition::RecTypeDefs definitions;
+//				std::for_each(curr.second.begin(), curr.second.end(), [this, &definitions](RecTypeVarMap::value_type& curr){
+//					map<const Type*, TypeWrapper>::iterator fit = this->recTypeMap.find(curr.second);
+//					assert(fit != this->recTypeMap.end() && "Type is not in the map");
+//					definitions.insert( std::make_pair(curr.first, fit->second.ref) );
+//				});
+//				convFact.builder.recTypeDefinition(definitions);
+//			});
+
+		}
+		return retTy;
 	}
 
 	TypeWrapper VisitElaboratedType(ElaboratedType* elabType) {
