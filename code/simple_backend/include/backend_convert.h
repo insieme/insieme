@@ -163,7 +163,6 @@ public:
 		case TYPE:			name << "type"; break;
 		case EXPRESSION:	name << "expr"; break;
 		case STATEMENT:		name << "stat"; break;
-		case DEFINITION:	name << "defi"; break;
 		case PROGRAM:		name << "prog"; break;
 		}
 		name << "_" << num++;
@@ -202,11 +201,11 @@ public:
 	//	std::cout << *node << std::endl;
 	//}
 
-	void visitProgram(const ProgramPtr& ptr) {
-		for_each(ptr->getDefinitions(), [](const DefinitionPtr& def) {
-			
-		});
-	}
+	//void visitProgram(const ProgramPtr& ptr) {
+	//	for_each(ptr->getDefinitions(), [](const DefinitionPtr& def) {
+	//		
+	//	});
+	//}
 	
 	////////////////////////////////////////////////////////////////////////// Statements
 
