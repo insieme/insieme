@@ -58,7 +58,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	TypePtr unitType = build.getUnitType();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
-	auto printfDefinition = build.definition("printf", printfType, NULL, true);
+	auto printfDefinition = build.literal("printf", printfType);
 
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
@@ -67,12 +67,11 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
-	auto mainDefinition = build.definition("main", voidNullaryFunctionType, mainBody, false);
+	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
 
 	return build.createProgram(
-		toSet<Program::DefinitionSet>(printfDefinition, mainDefinition),
-		toSet<Program::EntryPointSet>(build.varExpr(voidNullaryFunctionType, "main"))
-		);
+		toSet<Program::EntryPointSet>(mainDefinition)
+	);
 }
 
 TEST(SimpleBackend, Basic) {

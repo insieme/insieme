@@ -46,8 +46,9 @@ namespace lang {
 
 
 #define ADD_TYPE(TYPE, NAME, VALUE) \
-	const TYPE TYPE_ ## NAME = VALUE; \
-	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME);
+	const TYPE TYPE_ ## NAME ## _VAL = VALUE; \
+	const TYPE ## Ptr TYPE_ ## NAME = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL); \
+	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL);
 
 
 const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
@@ -58,7 +59,7 @@ const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
 const Identifier TYPE_NAME_UNIT("unit");
 
 bool isUnitType(const Type& type) {
-	return type == TYPE_UNIT;
+	return type == TYPE_UNIT_VAL;
 }
 
 ADD_TYPE(UnitType, UNIT, GenericType(TYPE_NAME_UNIT));
@@ -68,7 +69,7 @@ ADD_TYPE(UnitType, UNIT, GenericType(TYPE_NAME_UNIT));
 const Identifier TYPE_NAME_BOOL("bool");
 
 bool isBoolType(const Type& type) {
-	return type == TYPE_BOOL;
+	return type == TYPE_BOOL_VAL;
 }
 
 ADD_TYPE(BoolType, BOOL, GenericType(TYPE_NAME_BOOL));
@@ -197,19 +198,32 @@ ADD_TYPE(RealType, REAL_8, getRealType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
 
 
+// -------------------------------- Constants ------------------------------
+
+#define ADD_CONST(NAME, VALUE) \
+	const Literal CONST_ ## NAME = VALUE; \
+	const LiteralPtr CONST_ ## NAME ## _PTR = LiteralPtr(&CONST_ ## NAME);
+
+ADD_CONST(UINT_ZERO, Literal(TYPE_UINT_1_PTR, "0"));
+ADD_CONST(UINT_ONE, Literal(TYPE_UINT_1_PTR, "1"));
+
+ADD_CONST(BOOL_TRUE, Literal(TYPE_BOOL_PTR, "true"));
+ADD_CONST(BOOL_FALSE, Literal(TYPE_BOOL_PTR, "false"));
+
+#undef ADD_CONST
+
 // -------------------------------- Operator ------------------------------
 
 #define ADD_UNARY_OP(Name, Type, Symbol) \
-		const UnaryOp OP_ ## Name (Type, Symbol); \
-		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name); \
-		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
-		const DefinitionPtr DEF_ ## Name ## _PTR = DefinitionPtr(&DEF_ ## Name); \
+		const UnaryOp OP_ ## Name ## _VAL(Type, Symbol); \
+		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+		const UnaryOpPtr OP_ ## Name = UnaryOpPtr(&OP_ ## Name ## _VAL); \
 
 #define ADD_BINARY_OP(Name, Type, Symbol) \
-		const BinaryOp OP_ ## Name (Type, Symbol); \
-		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name); \
-		const Definition DEF_ ## Name (Symbol, Type, true, NULL); \
-		const DefinitionPtr DEF_ ## Name ## _PTR = DefinitionPtr(&DEF_ ## Name); \
+		const BinaryOp OP_ ## Name ##_VAL(Type, Symbol); \
+		const BinaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+		const BinaryOpPtr OP_ ## Name = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+
 
 ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
 ADD_TYPE(TupleType, BOOL_PAIR, TupleType(TYPE_BOOL_PTR,TYPE_BOOL_PTR));
@@ -252,6 +266,12 @@ ADD_BINARY_OP(REAL_ADD, TYPE_BINARY_REAL_OP_PTR, "real.add");
 ADD_BINARY_OP(REAL_SUB, TYPE_BINARY_REAL_OP_PTR, "real.sub");
 ADD_BINARY_OP(REAL_MUL, TYPE_BINARY_REAL_OP_PTR, "real.mul");
 ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP_PTR, "real.div");
+
+
+ADD_TYPE(FunctionType, COMPARISON_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_BOOL_PTR)));
+ADD_TYPE(FunctionType, COMPARISON_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_BOOL_PTR)));
+ADD_TYPE(FunctionType, COMPARISON_REAL_OP, (FunctionType(TYPE_REAL_PAIR_PTR, TYPE_BOOL_PTR)));
+
 
 #undef ADD_UNARY_OP
 #undef ADD_BINARY_OP

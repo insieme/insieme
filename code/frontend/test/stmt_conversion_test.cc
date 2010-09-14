@@ -48,6 +48,15 @@ using namespace insieme::core;
 using namespace insieme::frontend;
 using namespace insieme::frontend::conversion;
 
+TEST(StmtConversion, HandleIntegerLiterals) {
+	using namespace clang;
+
+	ProgramPtr prog = Program::create();
+	ConversionFactory convFactory( prog->getNodeManager() );
+
+
+}
+
 TEST(TypeConversion, HandleForStmt) {
 //	using namespace clang;
 //

@@ -45,7 +45,7 @@
 #include "statements.h"
 #include "types.h"
 
-#include <boost/lexical_cast.hpp>
+#include <numeric_cast.h>
 
 namespace insieme {
 namespace core {
@@ -55,10 +55,6 @@ namespace core {
 DECLARE_NODE_TYPE(Expression);
 
 DECLARE_NODE_TYPE(Literal);
-
-//DECLARE_NODE_TYPE(BoolLiteral);
-//DECLARE_NODE_TYPE(IntLiteral);
-//DECLARE_NODE_TYPE(FloatLiteral);
 
 DECLARE_NODE_TYPE(VarExpr);
 DECLARE_NODE_TYPE(ParamExpr);
@@ -78,6 +74,17 @@ DECLARE_NODE_TYPE(RecLambdaExpr);
 // Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
+
+	/**
+	 * Allow the test case to access private methods.
+	 */
+	template<typename PT>
+	friend void basicExprTests(PT, const TypePtr&, const Node::ChildList& children = Node::ChildList());
+
+private:
+
+	virtual Expression* clone(NodeManager& manager) const = 0;
+
 protected:	
 
 	/** The type of the expression. */
@@ -114,19 +121,15 @@ public:
 
 class Literal : public Expression {
 
-	static std::size_t hashLiteral(std::size_t seed, const TypePtr& type, const string& value) {
-		boost::hash_combine(seed, type->hash());
-		boost::hash_combine(seed, boost::hash_value(value));
-		return seed;
-	}
 	const string value;
 
-protected:
+public:
 
-	Literal(const TypePtr& type, const string& value, const std::size_t& hashSeed) :
-		Expression(type,hashLiteral(hashSeed, type, value)), value(value) { }
+	Literal(const TypePtr& type, const string& value);
 
 	virtual ~Literal() {}
+
+protected:
 
 	bool equalsExpr(const Expression& expr) const {
 		const Literal& rhs = static_cast<const Literal&>(expr);
@@ -142,52 +145,13 @@ public:
 	}
 
 	template <class T>
-    const T getValueAs() const { return boost::lexical_cast<T>(value); }
+    const T getValueAs() const { return utils::numeric_cast<T>(value); }
 
 	const string& getValue() const { return value; }
 
 	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
 };
 
-//class IntLiteral : public Literal<int> {
-//	IntLiteral(const TypePtr& type, int val);
-//	virtual IntLiteral* clone(NodeManager& manager) const;
-//
-//public:
-//	static IntLiteralPtr get(NodeManager& manager, int value, unsigned short bytes = 4);
-//	static IntLiteralPtr get(NodeManager& manager, int value, const TypePtr& type);
-//	static IntLiteralPtr one(NodeManager& manager) { return get(manager, 1); }
-//	static IntLiteralPtr zero(NodeManager& manager) { return get(manager, 0); }
-//};
-//
-//class FloatLiteral : public Literal<double> {
-//	const string originalString;
-//
-//	FloatLiteral(const TypePtr& type, double val, const string& originalString);
-//	virtual FloatLiteral* clone(NodeManager& manager) const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	static FloatLiteralPtr get(NodeManager& manager, double value, unsigned short bytes = 8);
-//	static FloatLiteralPtr get(NodeManager& manager, const string& from, unsigned short bytes = 8);
-//	static FloatLiteralPtr get(NodeManager& manager, double value, const TypePtr& type);
-//	static FloatLiteralPtr get(NodeManager& manager, const string& from, const TypePtr& type);
-//};
-//
-//class BoolLiteral : public Literal<bool> {
-//	BoolLiteral(const TypePtr& type, bool val);
-//	virtual BoolLiteral* clone(NodeManager& manager) const;
-//public:
-//	static BoolLiteralPtr get(NodeManager& manager, bool value);
-//};
-
-//class StringLiteral : public Literal<std::string> {
-//	StringLiteral(const TypePtr& type, const std::string& val);
-//	virtual StringLiteral* clone(NodeManager& manager) const;
-//public:
-//	static StringLiteralPtr get(NodeManager& manager, const std::string& value);
-//};
 
 class VarExpr : public Expression {
 protected:
@@ -208,7 +172,7 @@ public:
 	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
 };
 
-
+// TODO: think about eliminating this (since it is no independent expression!)
 class ParamExpr : public VarExpr {
 	ParamExpr(const TypePtr& type, const Identifier& id);
 	virtual ParamExpr* clone(NodeManager& manager) const;

@@ -61,12 +61,23 @@ bool Expression::equals(const Node& stmt) const {
 
 // ------------------------------------- Literal ---------------------------------
 
+static std::size_t hashLiteral(const TypePtr& type, const string& value) {
+	std::size_t seed = HASHVAL_LITERAL;
+	boost::hash_combine(seed, type->hash());
+	boost::hash_combine(seed, boost::hash_value(value));
+	return seed;
+}
+
+Literal::Literal(const TypePtr& type, const string& value) :
+		Expression(type,::hashLiteral(type, value)), value(value) { }
+
+
 Literal* Literal::clone(NodeManager& manager) const {
-	return new Literal(manager.get(type), value, HASHVAL_LITERAL);
+	return new Literal(manager.get(type), value);
 }
 
 LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr& type) {
-	return manager.get( Literal(manager.get(type), value, HASHVAL_LITERAL) );
+	return manager.get( Literal(manager.get(type), value) );
 }
 
 // ------------------------------------- IntLiteral ---------------------------------
@@ -174,7 +185,7 @@ ParamExpr* ParamExpr::clone(NodeManager& manager) const {
 }
 
 std::ostream& ParamExpr::printTo(std::ostream& out) const {
-	return out << *type << id;
+	return out << *type << " " << id;
 }
 
 ParamExprPtr ParamExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
@@ -213,7 +224,7 @@ Node::OptionChildList LambdaExpr::getChildNodes() const {
 }
 
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-	return out << "lambda(" << join(", ", params, print<deref<ExpressionPtr>>()) << ") { " << body << " }";
+	return out << "fun(" << join(", ", params, print<deref<ExpressionPtr>>()) << "){ " << *body << " }";
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
@@ -250,7 +261,7 @@ Node::OptionChildList TupleExpr::getChildNodes() const {
 }
 
 std::ostream& TupleExpr::printTo(std::ostream& out) const {
-	return out << "tuple(" << join(", ", expressions, print<deref<ExpressionPtr>>()) << ")";
+	return out << "tuple(" << join(",", expressions, print<deref<ExpressionPtr>>()) << ")";
 }
 
 
@@ -404,7 +415,7 @@ JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, c
 
 const TypePtr& getReturnType(const ExpressionPtr& functionExpr) {
 	const TypePtr& type = functionExpr->getType();
-	assert( dynamic_cast<const FunctionType*>(&type) && "Non-function type expression used as operator within call Expression!");
+	assert( dynamic_cast<const FunctionType*>(&*type) && "Non-function type expression used as operator within call Expression!");
 
 	const FunctionType& funType = static_cast<const FunctionType&>(*type);
 	return funType.getReturnType();
@@ -445,7 +456,7 @@ Node::OptionChildList CallExpr::getChildNodes() const {
 }
 
 std::ostream& CallExpr::printTo(std::ostream& out) const {
-	return out << functionExpr << "(" << join(", ", arguments) << ")";
+	return out << *functionExpr << "(" << join(", ", arguments, print<deref<ExpressionPtr>>()) << ")";
 }
 
 CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -587,5 +598,5 @@ RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VarExprPtr& vari
 }
 
 std::ostream& RecLambdaExpr::printTo(std::ostream& out) const {
-	return out << "rec fun " << *variable << "." << *definition;
+	return out << "rec " << *variable << "." << *definition;
 }

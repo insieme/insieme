@@ -1,6 +1,6 @@
-HOME=/home/spellegrini/workspace/insieme2/
-SRC_DIR=/home/spellegrini/shared/llvm27-src/
-PREFIX_DIR=/home/spellegrini/shared/llvm27/
+HOME=/home/motonacciu/workspace/insieme2/
+SRC_DIR=/home/motonacciu/software/llvm27-src/
+PREFIX_DIR=/home/motonacciu/software/llvm27/
 
 mkdir llvm_build
 cd llvm_build
@@ -25,9 +25,9 @@ cd ..
 rm -R llvm_build
 
 cd $SRC_DIR
-LD_LIBRARY_PATH=/software/gcc450/lib64:/software/lib-gcc450/ CXX=/software/gcc450/bin/g++ CC=/software/gcc450/bin/gcc ./configure --prefix=$PREFIX_DIR --enable-shared --enable-debug-runtime 
-LD_LIBRARY_PATH=/software/gcc450/lib64:/software/lib-gcc450/ make REQUIRES_RTTI=1 clang-only -j8
-LD_LIBRARY_PATH=/software/gcc450/lib64:/software/lib-gcc450/ make install clang-only
+./configure --prefix=$PREFIX_DIR --enable-shared --enable-debug-runtime 
+make REQUIRES_RTTI=1 clang-only -j8
+make install clang-only
 
 # change alignof method defined in llvm in llvm_alignof for compatibility with C++0x
 python $HOME/scripts/llvm_alignof.py $PREFIX_DIR/include/

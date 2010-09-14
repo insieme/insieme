@@ -36,46 +36,26 @@
 
 #include <gtest/gtest.h>
 
-#include "container_utils.h"
-#include "definition.h"
+#include <iostream>
+#include "numeric_cast.h"
 
-using namespace insieme::core;
+using namespace std;
+using namespace insieme::utils;
 
-TEST(Definitions, Basic) {
 
-	NodeManager nodeManager;
+TEST(NumericConversion, FromString) {
 
-//	TypePtr typeA = GenericType::get(nodeManager, "A");
-//	TypePtr typeB = GenericType::get(nodeManager, "B");
-//	TypePtr typeR = GenericType::get(nodeManager, "R");
+	EXPECT_EQ(16, numeric_cast<int>(16));
+	EXPECT_EQ("16", numeric_cast<std::string>(16));
 
-	Identifier ident = "funA";
-//	Function::ParameterList list;
-//	list.push_back(Function::Parameter("a", typeA));
-//	list.push_back(Function::Parameter("b", typeB));
-//	FunctionPtr funA = Function::get(manager, ident, list, typeR);
-//
-//	TupleType::ElementTypeList elements;
-//	elements.push_back(typeA);
-//	elements.push_back(typeB);
-//	TupleTypePtr argumentA = TupleType::get(NodeManager, elements);
-//	FunctionTypePtr funAType = FunctionType::get(NodeManager, argumentA, typeR);
-//
-//	EXPECT_EQ ( funAType, funA->getType() );
-//
-//	FunctionPtr funB = Function::get(manager, ident, list);
-//	FunctionTypePtr funBType = FunctionType::get(NodeManager, argumentA, UnitType::get(NodeManager));
-//
-//	EXPECT_EQ ( funBType, funB->getType() );
-//
-//	FunctionPtr funC = Function::get(manager, ident, Function::ParameterList());
-//	FunctionTypePtr funCType = FunctionType::get(NodeManager,
-//			TupleType::get(NodeManager, TupleType::ElementTypeList()),
-//			UnitType::get(NodeManager));
-//
-//	EXPECT_EQ ( funCType, funC->getType() );
-//
-//	EXPECT_EQ ( "fun funA : (()->unit)", toString(*funC) );
+	EXPECT_EQ(16, numeric_cast<unsigned int>("16"));
+	EXPECT_EQ(16, numeric_cast<unsigned short>("0x10"));
+
+	EXPECT_EQ(-8, numeric_cast<int>("-8"));
+	EXPECT_EQ(-8, numeric_cast<short>("-010"));
+
+	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
+	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
+
+	EXPECT_EQ(0.007321l, numeric_cast<long double>("7.321E-3l"));
 }
-
-

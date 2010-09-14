@@ -111,6 +111,15 @@ inline Set toSet(const T& a, const T& b, const T& c, const T& d, const T& e) {
 	return res;
 }
 
+/**
+ * Converts the given container into a set.
+ */
+template<typename Set, typename Container>
+inline Set asSet(const Container& container) {
+	Set res;
+	std::copy(container.begin(), container.end(), inserter(res, res.end()));
+	return res;
+}
 
 /**
  * Computes the set-union (merge) of the given sets.

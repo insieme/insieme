@@ -45,11 +45,8 @@
 namespace insieme {
 namespace core {
 
-ProgramPtr ASTBuilder::createProgram(
-		const Program::DefinitionSet& definitions,
-		const Program::EntryPointSet& entryPoints) {
-
-	return Program::create(sharedManager, definitions, entryPoints);
+ProgramPtr ASTBuilder::createProgram(const Program::EntryPointSet& entryPoints) {
+	return Program::create(sharedManager, entryPoints);
 }
 
 // ------------------------------- Build Basic Types -------------------------

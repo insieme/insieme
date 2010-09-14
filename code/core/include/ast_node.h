@@ -74,7 +74,6 @@ enum NodeType {
 	TYPE, 			/* < to represent a (data) type  */
 	EXPRESSION,		/* < to represent expressions */
 	STATEMENT, 		/* < to represent statements */
-	DEFINITION,		/* < to represent definitions */
 	PROGRAM			/* < to represent entire programs */
 };
 
@@ -133,7 +132,7 @@ private:
 	/**
 	 * Retrieves a clone of this node, hence a newly allocated instance representing the same value
 	 * as the current instance. The new instance (and all its referenced nodes) should be maintained
-	 * by teh given manager.
+	 * by the given manager.
 	 *
 	 * @param manager the manager which should maintain all referenced nodes
 	 * @return a clone of this instance referencing elements maintained exclusively by the given manager
@@ -170,7 +169,7 @@ public:
 	 * retrieved list is valid as long as this node exists. Hence, during its destruction,
 	 * the returned list will also be eliminated.
 	 *
-	 * @return a reference to the inter
+	 * @return a reference to the internally maintained list of child nodes.
 	 */
 	const ChildList& getChildList() const;
 
@@ -188,7 +187,7 @@ public:
 	 * the same as would be printed in case the object is written into an
 	 * output stream.
 	 *
-	 * @return a string representation for this node instacne
+	 * @return a string representation for this node instance
 	 */
 	virtual string toString() const {
 		return ::toString(*this);
