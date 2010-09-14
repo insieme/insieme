@@ -84,6 +84,9 @@ public:
 		return hashCode;
 	}
 
+	operator const std::string& () { 
+		return name; 
+	}
 };
 
 // ---------------------------------------------- Utility Functions ------------------------------------
@@ -107,5 +110,4 @@ inline std::size_t hash_value(const Identifier& identifier) {
  * within test cases where equals values to be printable).
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& identifier);
-
 
