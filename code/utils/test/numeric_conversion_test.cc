@@ -54,4 +54,8 @@ TEST(NumericConversion, FromString) {
 	EXPECT_EQ(-8, numeric_cast<int>("-8"));
 	EXPECT_EQ(-8, numeric_cast<short>("-010"));
 
+	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
+	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
+
+	EXPECT_EQ(0.007321l, numeric_cast<long double>("7.321E-3l"));
 }

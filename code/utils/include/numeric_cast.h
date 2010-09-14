@@ -39,7 +39,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/is_integral.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 #include <boost/type_traits/is_array.hpp>
+#include <boost/type_traits/is_floating_point.hpp>
 
 namespace {
 template <typename ElemT>
@@ -80,8 +82,11 @@ struct numeric_cast_impl<RetTy, InTy, 0> {
 
 };
 
-template <class RetTy>
-struct numeric_cast_impl<RetTy, std::string, 1> {
+/**
+ * Called to convert from an input of string type (or string literal char [N]&) to an integral type
+ */
+template <class RetTy, class InTy>
+struct numeric_cast_impl<RetTy, InTy, 1> {
 
 	static RetTy convert(const std::string& in) {
 		// convert hexadecimal numbers
@@ -95,6 +100,27 @@ struct numeric_cast_impl<RetTy, std::string, 1> {
 
 };
 
+/**
+ * Called to convert from an input of string type (or string literal char [N]&) to an integral type
+ */
+template <class RetTy, class InTy>
+struct numeric_cast_impl<RetTy, InTy, 2> {
+
+	static RetTy convert(const std::string& in) {
+
+		if(in[in.size()-1] == 'f' || in[in.size()-1] == 'F') {
+			// treats as a float type
+			return boost::lexical_cast<float>(std::string(in.begin(), in.end()-1));
+		}
+		if(in[in.size()-1] == 'l' || in[in.size()-1] == 'L') {
+			// treats as a long double
+			return boost::lexical_cast<long double>(std::string(in.begin(), in.end()-1));
+		}
+		return boost::lexical_cast<RetTy>(in);
+	}
+
+};
+
 template <class RetTy, class InTy>
 struct numeric_cast_impl<RetTy, InTy, 2>;
 
@@ -102,26 +128,25 @@ template <class RetTy, class InTy>
 RetTy numeric_cast(const InTy& in) {
 	return numeric_cast_impl<RetTy, InTy,
 			boost::mpl::if_<
-				boost::is_array<InTy>,
-				boost::mpl::integral_c<size_t,2>,
-					typename boost::mpl::if_<
-					 	boost::mpl::bool_<boost::is_integral<RetTy>::value && boost::is_same<std::string, InTy>::value>,
-							boost::mpl::integral_c<size_t,1>,
-							boost::mpl::integral_c<size_t,0>>::type>::type::value>::convert(in);
+				// if the input if a string or a char literal we have to overwrite the boost::lexical_cast behavior
+				// in a way hexadecimal and octal integer digits are correctly handled and furthermore, the floating point
+				// suffixes f, F, l, L as well
+				boost::mpl::bool_<boost::is_same<std::string, InTy>::value || boost::is_convertible<InTy,std::string>::value>,
+				typename boost::mpl::if_<boost::is_integral<RetTy>,
+					// call the function which handle integral digits
+					boost::mpl::integral_c<size_t,1>,
+					typename boost::mpl::if_<boost::is_floating_point<RetTy>,
+						// call the function which handle floating digits
+						boost::mpl::integral_c<size_t,2>,
+						// otherwise boost::lexical_cast will be used
+						boost::mpl::integral_c<size_t,0>
+					>::type
+				>::type,
+				// use boost::lexical_cast for everything else
+				boost::mpl::integral_c<size_t,0>
+			>::type::value>::convert(in);
 
 }
-
-template <class RetTy, class InTy>
-struct numeric_cast_impl<RetTy, InTy, 2> {
-
-	static RetTy convert(const InTy& in) {
-		return numeric_cast<RetTy>(std::string(in));
-	}
-
-};
-
-//char numeric_cast(const std::string& in) { return numeric_cast<short>(in); }
-// unsigned char numeric_cast(const std::string& in) { return numeric_cast<unsigned short>(in, 0); }
 
 } // End utils namespace
 } // End insieme namespace
