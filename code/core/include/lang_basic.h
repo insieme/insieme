@@ -257,6 +257,13 @@ extern const NoOpStmtPtr STMT_NO_OP_PTR;
 #undef ADD_TYPE
 #undef DEF_TYPE
 
+// ---------------------------------- Utility -------------------------------
+
+bool isBuildIn(const Node* ptr);
+bool isBuildIn(const Node& node);
+bool isBuildIn(const NodePtr& ptr);
+
+
 } // end namespace: lang
 } // end namespace: core
 } // end namespace: insieme

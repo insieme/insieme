@@ -39,9 +39,9 @@
 namespace insieme {
 namespace c_info {
 
-core::StringKey<CNameAnnotation> CNameAnnotation::key("CNameAnnotationKey");
+const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
 
-core::StringKey<CRecNameAnnotation> CRecNameAnnotation::key("CRecNameAnnotationKey");
+const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
 
 
 void CRecNameAnnotation::addName(const core::Identifier& recVarName, const core::Identifier& cName ) {

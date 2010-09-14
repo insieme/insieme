@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include "annotation.h"
 #include "identifier.h"
@@ -52,11 +52,11 @@ class CNameAnnotation : public core::Annotation {
 	string name;
 
 public:
-	static core::StringKey<CNameAnnotation> key;
+	static const core::StringKey<CNameAnnotation> KEY;
 
 	CNameAnnotation(string name) : core::Annotation(), name(name) { }
 
-	const core::AnnotationKey* getKey() const { return &key; }
+	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
 /** Annotation class intended to keep the name(s) of recursive C types and functions.
@@ -65,13 +65,13 @@ public:
  ** */
 class CRecNameAnnotation : public core::Annotation {
 public:
-	typedef boost::unordered_map<core::Identifier, core::Identifier> NameMap;
+	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> NameMap;
 
 private:
 	NameMap nameMap;
 
 public:
-	static core::StringKey<CRecNameAnnotation> key;
+	static const core::StringKey<CRecNameAnnotation> KEY;
 
 	CRecNameAnnotation() : core::Annotation() { }
 
@@ -79,7 +79,7 @@ public:
 
 	void addName(const core::Identifier& recVarName, const core::Identifier& cName);
 
-	const core::AnnotationKey* getKey() const { return &key; }
+	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
 } // namespace c_info

@@ -35,6 +35,7 @@
  */
 
 #include <cassert>
+#include <unordered_set>
 
 #include "lang_basic.h"
 
@@ -341,6 +342,18 @@ ADD_OP(REF_ASSIGN, TYPE_OP_ASSIGN_PTR, "ref.assign");
 ADD_TYPE(FunctionType, OP_DEREF, (FunctionType(TYPE_REF_ALPHA_SINGLE_PTR, TYPE_ALPHA_PTR)));
 ADD_OP(REF_DEREF, TYPE_OP_DEREF_PTR, "ref.deref");
 
+
+// --- Array ---
+
+IntTypeParam intParamN = IntTypeParam::getVariableIntParam('n');
+
+//ADD_TYPE(ArrayType, ARRAY_GEN, (ArrayType(TYPE_ALPHA_PTR, intParamN)));
+//ADD_TYPE(VectorType, VEC_INT_GEN, (VectorType(TYPE_UINT_GEN_PTR, intParamN)));
+//
+//ADD_TYPE(TupleType, SUBSCRIPT_ARGUMENT, (TupleType(TYPE_ARRAY_GEN_PTR, TYPE_VEC_INT_GEN_PTR)));
+//ADD_TYPE(FunctionType, OP_ARRAY_SUBSCRIPT, (FunctionType(TYPE_SUBSCRIPT_ARGUMENT, TYPE_ALPHA_PTR)));
+
+
 #undef ADD_OP
 
 // -------------------------------- Statements ------------------------------
@@ -351,22 +364,35 @@ const NoOpStmtPtr STMT_NO_OP_PTR = NoOpStmtPtr(&STMT_NO_OP);
 
 // --------------------------------- Grouping -------------------------------
 
-//typedef typename boost::unordered_set<Node*> NodeSet;
-//
-//NodeSet createBuildInSet();
-//const NodeSet BUILD_IN_SET = createBuildInSet();
-//
-//
-//NodeSet createBuildInSet() {
-//	NodeSet res;
-//
-//	res.insert(&OP_BOOL_AND);
-//	res.insert(&OP_BOOL_AND);
-//	res.insert(&OP_BOOL_AND);
-//	res.insert(&OP_BOOL_AND);
-//
-//	return res;
-//}
+typedef typename std::unordered_set<const Node*, hash_target<const Node*>, equal_target<const Node*>> NodeSet;
+
+NodeSet createBuildInSet();
+const NodeSet BUILD_IN_SET = createBuildInSet();
+
+
+NodeSet createBuildInSet() {
+	NodeSet res;
+
+	res.insert(&TYPE_BOOL_VAL);
+	res.insert(&TYPE_UNIT_VAL);
+
+	return res;
+}
+
+// ---------------------------------- Utility -------------------------------
+
+bool isBuildIn(const Node* ptr) {
+	return BUILD_IN_SET.find(ptr) != BUILD_IN_SET.end();
+}
+
+bool isBuildIn(const Node& node) {
+	return isBuildIn(&node);
+}
+
+bool isBuildIn(const NodePtr& ptr) {
+	return isBuildIn(&*ptr);
+}
+
 
 } // end namespace: lang
 } // end namespace: core

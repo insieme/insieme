@@ -861,6 +861,8 @@ public:
  */
 class ArrayType: public SingleElementType {
 
+public:
+
 	/**
 	 * Creates a new instance of this class using the given parameters.
 	 *
@@ -868,6 +870,8 @@ class ArrayType: public SingleElementType {
 	 * @param dim the dimension of the represented array
 	 */
 	ArrayType(const TypePtr elementType, const unsigned short dim);
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.

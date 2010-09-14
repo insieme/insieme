@@ -34,3 +34,19 @@
  * regarding third party software licenses.
  */
 
+#include <gtest/gtest.h>
+
+#include "naming.h"
+
+namespace insieme {
+namespace c_info {
+
+TEST(Naming, Basic) {
+
+	insieme::core::Annotatable obj;
+
+	const CRecNameAnnotation annotation;
+}
+
+}
+}
