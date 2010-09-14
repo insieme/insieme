@@ -1,26 +1,27 @@
 #
-# Builds the insieme simple backend
+# Builds the insieme c_info library
 #
-project(insieme_simple_backend CXX)
+project(insieme_c_info CXX)
 
 include(../environment.cmake)
 
+# States that CMake required version must be >= 2.6
+cmake_minimum_required(VERSION 2.6)
+
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB insieme_simple_backend_srcs 	src/*.cpp )
-file(GLOB insieme_simple_backend_incs 	include/*.h )
+file(GLOB insieme_c_info_srcs 	src/*.cpp )
+file(GLOB insieme_c_info_incs 	include/*.h )
 
 # list all include paths
-include_directories( ${insieme_core_include_dir} )
-include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_c_info_include_dir} )
-include_directories( ${insieme_frontend_include_dir} )
-include_directories( ${insieme_simple_backend_include_dir} )
+include_directories( ${insieme_utils_include_dir} )
+include_directories( ${insieme_core_include_dir} )
 
 # Build the core library
-add_library(insieme_simple_backend ${insieme_simple_backend_srcs} ${insieme_simple_backend_incs} )
+add_library(insieme_c_info ${insieme_c_info_srcs} ${insieme_c_info_incs} )
 
 # add dependencies
-add_dependencies( insieme_simple_backend insieme_core insieme_utils )
+add_dependencies( insieme_c_info insieme_core insieme_utils )
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -32,10 +33,9 @@ foreach ( case_file ${test_cases})
 	
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_utils)
-	target_link_libraries(ut_${case_name} insieme_c_info)
-	target_link_libraries(ut_${case_name} insieme_simple_backend)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name})

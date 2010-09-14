@@ -35,6 +35,7 @@
  */
 
 #include <vector>
+#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -80,7 +81,9 @@ TEST(SimpleBackend, Basic) {
 	ASTBuilder build;
 	ProgramPtr prog = setupSampleProgram(build);
 
+	std::cout << "Start visit\n";
 	converter.visit(prog);
+	std::cout << "============\n" << converter.getCode() << "\n-----------\n";
 	
 	//EXPECT_EQ(*compound2, *compound);
 }

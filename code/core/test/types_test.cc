@@ -511,7 +511,7 @@ TEST(TypeTest, RecStructType) {
 	EXPECT_EQ ( "rec 'X.{'X=struct<a:A,b:ref<'X>>}", toString(*type) );
 	basicTypeTests(type, true, false, toList(toVector<NodePtr>(varX, definition)));
 
-	EXPECT_EQ("dd", type->getDefinition()->getDefinitionOf(varX));
+	EXPECT_EQ("struct<a:A,b:ref<'X>>", toString(*type->getDefinition()->getDefinitionOf(varX)));
 }
 
 TEST(TypeTest, UnionType) {
