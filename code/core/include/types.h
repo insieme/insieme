@@ -642,6 +642,8 @@ class RecType: public Type {
 
 public:
 
+	const RecTypeDefinitionPtr getDefinition() const { return definition; }
+
 	/**
 	 * A factory method for obtaining a new recursive type instance.
 	 *
