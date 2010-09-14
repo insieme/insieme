@@ -50,14 +50,14 @@ namespace utils {
 template<class Derived>
 class HashableImmutableData {
 
-protected:
-
 	/**
 	 * The hash value of this data element derived once during its construction. This value will be required
 	 * frequently, hence evaluating it once and reusing it helps reducing computational overhead. Since
 	 * instances are immutable, the hash does not have to be altered after the creation of a instance.
 	 */
-	const std::size_t hashCode;
+	std::size_t hashCode;
+
+protected:
 
 	/**
 	 * A hooker method to be implemented by sub-classes to compare instances with other
@@ -110,7 +110,7 @@ public:
 		}
 
 		// fast hash code test
-		if (hashCode != other.hashCode) {
+		if (hashCode != other.hash()) {
 			return false;
 		}
 

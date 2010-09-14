@@ -214,15 +214,10 @@ ADD_CONST(BOOL_FALSE, Literal(TYPE_BOOL_PTR, "false"));
 
 // -------------------------------- Operator ------------------------------
 
-#define ADD_UNARY_OP(Name, Type, Symbol) \
-		const UnaryOp OP_ ## Name ## _VAL(Type, Symbol); \
-		const UnaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name ## _VAL); \
-		const UnaryOpPtr OP_ ## Name = UnaryOpPtr(&OP_ ## Name ## _VAL); \
-
-#define ADD_BINARY_OP(Name, Type, Symbol) \
-		const BinaryOp OP_ ## Name ##_VAL(Type, Symbol); \
-		const BinaryOpPtr OP_ ## Name ## _PTR = UnaryOpPtr(&OP_ ## Name ## _VAL); \
-		const BinaryOpPtr OP_ ## Name = UnaryOpPtr(&OP_ ## Name ## _VAL); \
+#define ADD_OP(Name, Type, Symbol) \
+		const Operator OP_ ## Name ##_VAL(Type, Symbol); \
+		const OperatorPtr OP_ ## Name ## _PTR = OperatorPtr(&OP_ ## Name ## _VAL); \
+		const OperatorPtr OP_ ## Name = OperatorPtr(&OP_ ## Name ## _VAL); \
 
 
 ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
@@ -231,55 +226,147 @@ ADD_TYPE(TupleType, BOOL_PAIR, TupleType(TYPE_BOOL_PTR,TYPE_BOOL_PTR));
 ADD_TYPE(FunctionType, UNARY_BOOL_OP, (FunctionType(TYPE_BOOL_SINGLE_PTR, TYPE_BOOL_PTR)));
 ADD_TYPE(FunctionType, BINARY_BOOL_OP, (FunctionType(TYPE_BOOL_PAIR_PTR, TYPE_BOOL_PTR)));
 
-ADD_UNARY_OP(BOOL_NOT, TYPE_UNARY_BOOL_OP_PTR, "bool.not");
-ADD_BINARY_OP(BOOL_AND, TYPE_BINARY_BOOL_OP_PTR, "bool.and");
-ADD_BINARY_OP(BOOL_OR, TYPE_BINARY_BOOL_OP_PTR, "bool.or");
+ADD_OP(BOOL_NOT, TYPE_UNARY_BOOL_OP_PTR, "bool.not");
+ADD_OP(BOOL_AND, TYPE_BINARY_BOOL_OP_PTR, "bool.and");
+ADD_OP(BOOL_OR, TYPE_BINARY_BOOL_OP_PTR, "bool.or");
+ADD_OP(BOOL_EQ, TYPE_BINARY_BOOL_OP_PTR, "bool.eq");
+
 
 ADD_TYPE(TupleType, INT_SINGLE, TupleType(TYPE_INT_GEN_PTR));
 ADD_TYPE(TupleType, INT_PAIR, TupleType(TYPE_INT_GEN_PTR,TYPE_INT_GEN_PTR));
 
 ADD_TYPE(FunctionType, BINARY_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_INT_GEN_PTR)));
 
-ADD_BINARY_OP(INT_ADD, TYPE_BINARY_INT_OP_PTR, "int.add");
-ADD_BINARY_OP(INT_SUB, TYPE_BINARY_INT_OP_PTR, "int.sub");
-ADD_BINARY_OP(INT_MUL, TYPE_BINARY_INT_OP_PTR, "int.mul");
-ADD_BINARY_OP(INT_DIV, TYPE_BINARY_INT_OP_PTR, "int.div");
-ADD_BINARY_OP(INT_MOD, TYPE_BINARY_INT_OP_PTR, "int.mod");
+ADD_OP(INT_ADD, TYPE_BINARY_INT_OP_PTR, "int.add");
+ADD_OP(INT_SUB, TYPE_BINARY_INT_OP_PTR, "int.sub");
+ADD_OP(INT_MUL, TYPE_BINARY_INT_OP_PTR, "int.mul");
+ADD_OP(INT_DIV, TYPE_BINARY_INT_OP_PTR, "int.div");
+ADD_OP(INT_MOD, TYPE_BINARY_INT_OP_PTR, "int.mod");
 
 ADD_TYPE(TupleType, UINT_SINGLE, TupleType(TYPE_UINT_GEN_PTR));
 ADD_TYPE(TupleType, UINT_PAIR, TupleType(TYPE_UINT_GEN_PTR,TYPE_UINT_GEN_PTR));
 
 ADD_TYPE(FunctionType, BINARY_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UINT_GEN_PTR)));
 
-ADD_BINARY_OP(UINT_ADD, TYPE_BINARY_UINT_OP_PTR, "uint.add");
-ADD_BINARY_OP(UINT_SUB, TYPE_BINARY_UINT_OP_PTR, "uint.sub");
-ADD_BINARY_OP(UINT_MUL, TYPE_BINARY_UINT_OP_PTR, "uint.mul");
-ADD_BINARY_OP(UINT_DIV, TYPE_BINARY_UINT_OP_PTR, "uint.div");
-ADD_BINARY_OP(UINT_MOD, TYPE_BINARY_UINT_OP_PTR, "uint.mod");
+ADD_OP(UINT_ADD, TYPE_BINARY_UINT_OP_PTR, "uint.add");
+ADD_OP(UINT_SUB, TYPE_BINARY_UINT_OP_PTR, "uint.sub");
+ADD_OP(UINT_MUL, TYPE_BINARY_UINT_OP_PTR, "uint.mul");
+ADD_OP(UINT_DIV, TYPE_BINARY_UINT_OP_PTR, "uint.div");
+ADD_OP(UINT_MOD, TYPE_BINARY_UINT_OP_PTR, "uint.mod");
 
 ADD_TYPE(TupleType, REAL_SINGLE, TupleType(TYPE_REAL_GEN_PTR));
 ADD_TYPE(TupleType, REAL_PAIR, TupleType(TYPE_REAL_GEN_PTR,TYPE_REAL_GEN_PTR));
 
 ADD_TYPE(FunctionType, BINARY_REAL_OP, (FunctionType(TYPE_REAL_PAIR_PTR, TYPE_REAL_GEN_PTR)));
 
-ADD_BINARY_OP(REAL_ADD, TYPE_BINARY_REAL_OP_PTR, "real.add");
-ADD_BINARY_OP(REAL_SUB, TYPE_BINARY_REAL_OP_PTR, "real.sub");
-ADD_BINARY_OP(REAL_MUL, TYPE_BINARY_REAL_OP_PTR, "real.mul");
-ADD_BINARY_OP(REAL_DIV, TYPE_BINARY_REAL_OP_PTR, "real.div");
+ADD_OP(REAL_ADD, TYPE_BINARY_REAL_OP_PTR, "real.add");
+ADD_OP(REAL_SUB, TYPE_BINARY_REAL_OP_PTR, "real.sub");
+ADD_OP(REAL_MUL, TYPE_BINARY_REAL_OP_PTR, "real.mul");
+ADD_OP(REAL_DIV, TYPE_BINARY_REAL_OP_PTR, "real.div");
 
 
 ADD_TYPE(FunctionType, COMPARISON_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_BOOL_PTR)));
+
+ADD_OP(INT_EQ, TYPE_COMPARISON_INT_OP_PTR, "int.eq");
+ADD_OP(INT_NE, TYPE_COMPARISON_INT_OP_PTR, "int.ne");
+ADD_OP(INT_LT, TYPE_COMPARISON_INT_OP_PTR, "int.lt");
+ADD_OP(INT_GT, TYPE_COMPARISON_INT_OP_PTR, "int.gt");
+ADD_OP(INT_LE, TYPE_COMPARISON_INT_OP_PTR, "int.le");
+ADD_OP(INT_GE, TYPE_COMPARISON_INT_OP_PTR, "int.ge");
+
 ADD_TYPE(FunctionType, COMPARISON_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_BOOL_PTR)));
+
+ADD_OP(UINT_EQ, TYPE_COMPARISON_UINT_OP_PTR, "uint.eq");
+ADD_OP(UINT_NE, TYPE_COMPARISON_UINT_OP_PTR, "uint.ne");
+ADD_OP(UINT_LT, TYPE_COMPARISON_UINT_OP_PTR, "uint.lt");
+ADD_OP(UINT_GT, TYPE_COMPARISON_UINT_OP_PTR, "uint.gt");
+ADD_OP(UINT_LE, TYPE_COMPARISON_UINT_OP_PTR, "uint.le");
+ADD_OP(UINT_GE, TYPE_COMPARISON_UINT_OP_PTR, "uint.ge");
+
 ADD_TYPE(FunctionType, COMPARISON_REAL_OP, (FunctionType(TYPE_REAL_PAIR_PTR, TYPE_BOOL_PTR)));
 
+ADD_OP(REAL_EQ, TYPE_COMPARISON_REAL_OP_PTR, "real.eq");
+ADD_OP(REAL_NE, TYPE_COMPARISON_REAL_OP_PTR, "real.ne");
+ADD_OP(REAL_LT, TYPE_COMPARISON_REAL_OP_PTR, "real.lt");
+ADD_OP(REAL_GT, TYPE_COMPARISON_REAL_OP_PTR, "real.gt");
+ADD_OP(REAL_LE, TYPE_COMPARISON_REAL_OP_PTR, "real.le");
+ADD_OP(REAL_GE, TYPE_COMPARISON_REAL_OP_PTR, "real.ge");
 
-#undef ADD_UNARY_OP
-#undef ADD_BINARY_OP
+// --- Bitwise ---
+
+ADD_TYPE(FunctionType, BITWISE_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_INT_GEN_PTR)));
+
+ADD_OP(INT_NOT, TYPE_BITWISE_INT_OP_PTR, "int.not");
+ADD_OP(INT_AND, TYPE_BITWISE_INT_OP_PTR, "int.and");
+ADD_OP(INT_OR,  TYPE_BITWISE_INT_OP_PTR, "int.or");
+ADD_OP(INT_XOR, TYPE_BITWISE_INT_OP_PTR, "int.xor");
+
+ADD_TYPE(FunctionType, SHIFT_INT_OP, (FunctionType(TYPE_INT_PAIR_PTR, TYPE_INT_GEN_PTR)));
+
+ADD_OP(INT_LEFT_SHIFT, TYPE_SHIFT_INT_OP_PTR, "int.leftShift");
+ADD_OP(INT_RIGHT_SHIFT, TYPE_SHIFT_INT_OP_PTR, "int.rightShift");
+
+ADD_TYPE(FunctionType, BITWISE_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UINT_GEN_PTR)));
+
+ADD_OP(UINT_NOT, TYPE_BITWISE_UINT_OP_PTR, "uint.not");
+ADD_OP(UINT_AND, TYPE_BITWISE_UINT_OP_PTR, "uint.and");
+ADD_OP(UINT_OR,  TYPE_BITWISE_UINT_OP_PTR, "uint.or");
+ADD_OP(UINT_XOR, TYPE_BITWISE_UINT_OP_PTR, "uint.xor");
+
+ADD_TYPE(TupleType, INT_UINT_PAIR, (TupleType(TYPE_UINT_GEN_PTR,TYPE_INT_GEN_PTR)));
+ADD_TYPE(FunctionType, SHIFT_UINT_OP, (FunctionType(TYPE_INT_UINT_PAIR_PTR, TYPE_UINT_GEN_PTR)));
+
+ADD_OP(UINT_LEFT_SHIFT, TYPE_SHIFT_UINT_OP_PTR, "uint.leftShift");
+ADD_OP(UINT_RIGHT_SHIFT, TYPE_SHIFT_UINT_OP_PTR, "uint.rightShift");
+
+// --- References ---
+
+ADD_TYPE(TypeVariable, ALPHA, (TypeVariable("a")));
+ADD_TYPE(RefType, REF_ALPHA, (RefType(TYPE_ALPHA_PTR)));
+
+ADD_TYPE(TupleType, ALPHA_SINGLE, (TupleType(TYPE_ALPHA_PTR)));
+ADD_TYPE(TupleType, REF_ALPHA_SINGLE, (TupleType(TYPE_REF_ALPHA_PTR)));
+
+ADD_TYPE(FunctionType, OP_ALLOCATION, (FunctionType(TYPE_ALPHA_SINGLE_PTR, TYPE_REF_ALPHA_PTR)));
+
+ADD_OP(REF_VAR, TYPE_OP_ALLOCATION_PTR, "ref.var");
+ADD_OP(REF_NEW, TYPE_OP_ALLOCATION_PTR, "ref.new");
+
+ADD_TYPE(FunctionType, OP_FREE, (FunctionType(TYPE_REF_ALPHA_SINGLE_PTR, TYPE_UNIT_PTR)));
+ADD_OP(REF_DELETE, TYPE_OP_FREE_PTR, "ref.delete");
+
+ADD_TYPE(FunctionType, OP_ASSIGN, (FunctionType(TYPE_REF_ALPHA_SINGLE_PTR, TYPE_UNIT_PTR)));
+ADD_OP(REF_ASSIGN, TYPE_OP_ASSIGN_PTR, "ref.assign");
+
+ADD_TYPE(FunctionType, OP_DEREF, (FunctionType(TYPE_REF_ALPHA_SINGLE_PTR, TYPE_ALPHA_PTR)));
+ADD_OP(REF_DEREF, TYPE_OP_DEREF_PTR, "ref.deref");
+
+#undef ADD_OP
 
 // -------------------------------- Statements ------------------------------
 
 const NoOpStmt STMT_NO_OP(toVector<StatementPtr>());
 const NoOpStmtPtr STMT_NO_OP_PTR = NoOpStmtPtr(&STMT_NO_OP);
+
+
+// --------------------------------- Grouping -------------------------------
+
+//typedef typename boost::unordered_set<Node*> NodeSet;
+//
+//NodeSet createBuildInSet();
+//const NodeSet BUILD_IN_SET = createBuildInSet();
+//
+//
+//NodeSet createBuildInSet() {
+//	NodeSet res;
+//
+//	res.insert(&OP_BOOL_AND);
+//	res.insert(&OP_BOOL_AND);
+//	res.insert(&OP_BOOL_AND);
+//	res.insert(&OP_BOOL_AND);
+//
+//	return res;
+//}
 
 } // end namespace: lang
 } // end namespace: core

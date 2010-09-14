@@ -224,12 +224,16 @@ public:
  */
 class TypeVariable: public Type {
 
+public:
+
 	/**
 	 * Creates a new type variable using the given name.
 	 *
 	 * @param name the name of the type variable to be created
 	 */
 	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
+
+private:
 
 	/**
 	 * Creates a clone of this node.
@@ -960,6 +964,8 @@ public:
  */
 class RefType: public SingleElementType {
 
+public:
+
 	/**
 	 * A private constructor to create a new instance of this type class based on the
 	 * given element type.
@@ -968,6 +974,8 @@ class RefType: public SingleElementType {
 	 */
 	RefType(const TypePtr elementType) :
 		SingleElementType("ref", elementType) {}
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.

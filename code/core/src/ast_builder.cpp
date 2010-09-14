@@ -73,10 +73,10 @@ lang::RealTypePtr ASTBuilder::getRealType(unsigned short size) const {
 
 // ------------------------------- Build Expressions -------------------------
 
-ExpressionPtr ASTBuilder::createExpr(const lang::UnaryOpPtr& op, const ExpressionPtr& operant) const {
+ExpressionPtr ASTBuilder::createExpr(const lang::OperatorPtr& op, const ExpressionPtr& operant) const {
 	return CallExpr::get(manager, op, toVector(operant));
 }
-ExpressionPtr ASTBuilder::createExpr(const ExpressionPtr& rhs, const lang::BinaryOpPtr& op, const ExpressionPtr& lhs) const {
+ExpressionPtr ASTBuilder::createExpr(const ExpressionPtr& rhs, const lang::OperatorPtr& op, const ExpressionPtr& lhs) const {
 	return CallExpr::get(manager, op, toVector(rhs, lhs));
 }
 

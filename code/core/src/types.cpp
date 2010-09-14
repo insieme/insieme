@@ -355,6 +355,7 @@ const TypePtr RecTypeDefinition::getDefinitionOf(const TypeVariablePtr& variable
 	return (*it).second;
 }
 
+
 // ---------------------------------------- Rec Type ------------------------------
 
 

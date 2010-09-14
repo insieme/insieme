@@ -155,20 +155,22 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	LambdaExpr::ParamList param;
 	param.push_back(builder.paramExpr(lang::TYPE_UINT_4_PTR, "x"));
 
-	VarExprPtr lessOrEqual = builder.varExpr(lang::TYPE_COMPARISON_UINT_OP_PTR, "==");
-
 	VarExprPtr x = builder.varExpr(lang::TYPE_UINT_4_PTR, "x");
-	ExpressionPtr condition = builder.callExpr(lessOrEqual,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
+	ExpressionPtr condition = builder.callExpr(lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
 
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,
-			builder.returnStmt(builder.literal("true", lang::TYPE_BOOL_PTR)),
-			builder.returnStmt(builder.callExpr(oddVar, toVector<ExpressionPtr>(x))));
+			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
+			builder.returnStmt(
+					builder.callExpr(lang::OP_BOOL_NOT_PTR,
+							toVector<ExpressionPtr>(builder.callExpr(oddVar, toVector<ExpressionPtr>(x))))
+			)
+	);
 	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
 
 	// build odd body ...
 	StatementPtr oddBody = builder.ifStmt(condition,
-				builder.returnStmt(builder.literal("false", lang::TYPE_BOOL_PTR)),
+				builder.returnStmt(lang::CONST_BOOL_FALSE_PTR),
 				builder.returnStmt(
 						builder.callExpr(lang::OP_BOOL_NOT_PTR,
 								toVector<ExpressionPtr>(builder.callExpr(evenVar, toVector<ExpressionPtr>(x))))
@@ -200,8 +202,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 
 	EXPECT_NE ( even->hash(), odd->hash());
 
-	EXPECT_TRUE (toString(*even) == "rec even.{even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }, odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }}" ||
-			     toString(*even) == "rec even.{odd=fun(uint<4> x){ if(==(x, 0)) return false else return bool.not(even(x)) }, even=fun(uint<4> x){ if(==(x, 0)) return true else return odd(x) }}");
+	EXPECT_TRUE (toString(*even) == "rec even.{even=fun(uint<4> x){ if(uint.eq(x, 0)) return true else return bool.not(odd(x)) }, odd=fun(uint<4> x){ if(uint.eq(x, 0)) return false else return bool.not(even(x)) }}" ||
+			     toString(*even) == "rec even.{odd=fun(uint<4> x){ if(uint.eq(x, 0)) return false else return bool.not(even(x)) }, even=fun(uint<4> x){ if(uint.eq(x, 0)) return true else return bool.not(odd(x)) }}");
 }
 
 
