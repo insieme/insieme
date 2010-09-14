@@ -161,7 +161,11 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,
 			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
-			builder.returnStmt(builder.callExpr(oddVar, toVector<ExpressionPtr>(x))));
+			builder.returnStmt(
+					builder.callExpr(lang::OP_BOOL_NOT_PTR,
+							toVector<ExpressionPtr>(builder.callExpr(oddVar, toVector<ExpressionPtr>(x))))
+			)
+	);
 	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
 
 	// build odd body ...

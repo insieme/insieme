@@ -348,6 +348,26 @@ ADD_OP(REF_DEREF, TYPE_OP_DEREF_PTR, "ref.deref");
 const NoOpStmt STMT_NO_OP(toVector<StatementPtr>());
 const NoOpStmtPtr STMT_NO_OP_PTR = NoOpStmtPtr(&STMT_NO_OP);
 
+
+// --------------------------------- Grouping -------------------------------
+
+//typedef typename boost::unordered_set<Node*> NodeSet;
+//
+//NodeSet createBuildInSet();
+//const NodeSet BUILD_IN_SET = createBuildInSet();
+//
+//
+//NodeSet createBuildInSet() {
+//	NodeSet res;
+//
+//	res.insert(&OP_BOOL_AND);
+//	res.insert(&OP_BOOL_AND);
+//	res.insert(&OP_BOOL_AND);
+//	res.insert(&OP_BOOL_AND);
+//
+//	return res;
+//}
+
 } // end namespace: lang
 } // end namespace: core
 } // end namespace: insieme

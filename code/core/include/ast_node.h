@@ -215,7 +215,7 @@ public:
 		}
 
 		// fast hash code test
-		if (hashCode != other.hashCode) {
+		if (hash() != other.hash()) {
 			return false;
 		}
 

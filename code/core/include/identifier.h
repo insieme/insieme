@@ -41,6 +41,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "annotated_ptr.h"
+#include "hash_utils.h"
 #include "instance_manager.h"
 
 using std::string;
@@ -48,55 +49,35 @@ using std::string;
 namespace insieme {
 namespace core {
 
-class Identifier {
+class Identifier : public insieme::utils::HashableImmutableData<Identifier> {
 
 	// TODO: replace with flyweight!
 	string name;
 
-	std::size_t hashCode;
+public:
+
+	Identifier(const char* name) : HashableImmutableData<Identifier>(boost::hash_value(string(name))), name(string(name)) {}
+
+	Identifier(const string& name) : HashableImmutableData<Identifier>(boost::hash_value(name)), name(name) {}
+
+protected:
+
+	virtual bool equals(const Identifier& other) const {
+		// compare names
+		return name == other.name;
+	}
 
 public:
 
-	Identifier(const char* name_) : name(string(name_)), hashCode(boost::hash_value(name)) {}
-	Identifier(const string& name_) : name(name_), hashCode(boost::hash_value(name)) {}
-
-	const string& getName() const { return name; }
-
-	bool operator==(const Identifier& other) const {
-		// test for identity
-		if (this == &other) {
-			return true;
-		}
-
-		// slow name comparison
-		return name.compare(other.name) == 0;
-	}
-
-	bool operator!=(const Identifier& other) const {
-		return !(*this==other);
+	const string& getName() const {
+		return name;
 	}
 
 	bool operator<(const Identifier& other) const {
 		return name.compare(other.name) < 0;
 	}
 
-	std::size_t hash() const {
-		return hashCode;
-	}
-
 };
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-/**
- * Allows to compute the hash value of an identifier.
- *
- * @param identifier the identifier for which a hash value should be computed
- * @return the computed hash value
- */
-inline std::size_t hash_value(const Identifier& identifier) {
-	return identifier.hash();
-}
 
 } // end namespace core
 } // end namespace insieme
