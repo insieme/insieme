@@ -9,6 +9,7 @@ enable_testing()
 # include modules
 add_subdirectory( core )
 add_subdirectory( utils )
+add_subdirectory( c_info )
 add_subdirectory( frontend )
 add_subdirectory( simple_backend )
 add_subdirectory( driver )
