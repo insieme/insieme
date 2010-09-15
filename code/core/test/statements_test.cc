@@ -144,12 +144,12 @@ TEST(StatementsTest, RealLiterals) {
 	{
 		LiteralPtr floatLit = builder.literal("0.4", lang::TYPE_REAL_4_PTR);
 		float val = floatLit->getValueAs<float>();
-		// EXPECT_NE(val, 0.4);
+		EXPECT_FLOAT_EQ (val, 0.4);
 	}
 	{
 		LiteralPtr intLit = builder.literal("0.00001", lang::TYPE_REAL_8_PTR);
 		double val = intLit->getValueAs<double>();
-		// EXPECT_EQ(val, 0.00001);
+		EXPECT_DOUBLE_EQ (val, 0.00001);
 	}
 }
 

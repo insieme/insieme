@@ -8,6 +8,8 @@ include(../environment.cmake)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/driver_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/driver_config.h)
+
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB insieme_driver_srcs 	src/*.cpp )
 file(GLOB insieme_driver_incs 	include/*.h )
@@ -16,6 +18,7 @@ file(GLOB insieme_driver_incs 	include/*.h )
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
+include_directories( ${insieme_driver_include_dir} )
 
 # Build dummy executable
 add_executable( main src/main.cpp )
@@ -40,8 +43,12 @@ foreach ( case_file ${test_cases})
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_core)
+	target_link_libraries(ut_${case_name} insieme_frontend)
 	target_link_libraries(ut_${case_name} insieme_utils)
+	target_link_libraries(ut_${case_name} ${glog_LIB})
+	target_link_libraries(ut_${case_name} boost_program_options)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	
+	set(CONDUCT_MEMORY_CHECKS off)
 	add_unit_test(${case_name})
 endforeach(case_file)

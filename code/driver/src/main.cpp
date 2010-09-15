@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 	try {
 		for(std::vector<std::string>::const_iterator i = CommandLineOptions::InputFiles.begin(),
 													 e = CommandLineOptions::InputFiles.end(); i != e; ++i) {
-			fe::InsiemeTransUnit::ParseFile(*i, *program);
+			fe::InsiemeTransUnit::ParseFile(*i, program);
 		}
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;

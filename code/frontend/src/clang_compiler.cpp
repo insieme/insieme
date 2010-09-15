@@ -247,18 +247,21 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog, bool doConversion): mClang(file_name) {
-	conversion::IRConsumer cons(prog.getNodeManager(), doConversion);
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion): mClang(file_name), mProgram(prog) {
+	conversion::IRConsumer cons(prog, doConversion);
 
 	// register omp pragmas
 	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );
 
 	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, mPragmaList);
 
+
 	if( mClang.getDiagnostics().hasErrorOccurred() ) {
 		// errors are always fatal!
 		throw ClangParsingError(file_name);
 	}
+
+	mProgram = cons.getProgram();
 }
 
 } // End fronend namespace

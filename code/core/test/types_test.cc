@@ -189,8 +189,8 @@ TEST(TypeTest, Type_AllConcrete) {
 TEST(TypeTest, GenericType_AllConcrete) {
 
 	// create some integer type parameter
-	IntTypeParam var = 'p';
-	IntTypeParam con = (short unsigned)12;
+	IntTypeParam var = IntTypeParam::getVariableIntParam('p');
+	IntTypeParam con = IntTypeParam::getConcreteIntParam(12);
 	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
 
 	EXPECT_EQ ( IntTypeParam::VARIABLE, var.getType());
@@ -514,6 +514,36 @@ TEST(TypeTest, RecStructType) {
 	EXPECT_EQ("struct<a:A,b:ref<'X>>", toString(*type->getDefinition()->getDefinitionOf(varX)));
 }
 
+TEST(TypeTest, RecStructTypeChain) {
+	// create a manager for this test
+	NodeManager manager;
+
+	// TODO: test whether order of definitions is important ... (it should not)
+	// struct A {
+	//	B* b;
+	// }
+	//
+	// struct B {
+	//  C* c;
+	// }
+	//
+	// struct C {
+	//  B* b;
+	// }
+	//
+//	Identifier identA("a");
+//	Identifier identB("b");
+//	Identifier identB("c");
+//
+//	// create a simple recursive type uX.X (no actual type)
+//	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+//
+//	StructType::Entries entriesA;
+//	entriesA.push_back(StructType::Entry(identB, RefType::get(manager, varX)));
+//
+//	StructTypePtr structA = StructType::get(manager, entriesA);
+}
+
 TEST(TypeTest, UnionType) {
 
 	NodeManager manager;
@@ -572,7 +602,7 @@ TEST(TypeTest, ArrayType) {
 
 	// obtain array types
 	ArrayTypePtr arrayTypeA = ArrayType::get(manager, elementTypeA);
-	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, 3);
+	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
 
 	// check names
 	EXPECT_EQ ( "array<A,1>", arrayTypeA->getName() );
@@ -583,8 +613,8 @@ TEST(TypeTest, ArrayType) {
 	EXPECT_EQ ( elementTypeB, arrayTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, arrayTypeA->getDimension());
-	EXPECT_EQ ( 3, arrayTypeB->getDimension());
+	EXPECT_EQ ( 1, arrayTypeA->getDimension().getValue());
+	EXPECT_EQ ( 3, arrayTypeB->getDimension().getValue());
 
 	// check remaining type properties
 	basicTypeTests(arrayTypeA, true, false, toList(toVector(elementTypeA)));
@@ -599,8 +629,8 @@ TEST(TypeTest, VectorType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
-	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, 1);
-	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, 3);
+	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, IntTypeParam::getConcreteIntParam(1));
+	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
 
 	// check names
 	EXPECT_EQ ( "vector<A,1>", vectorTypeA->getName() );
@@ -611,8 +641,8 @@ TEST(TypeTest, VectorType) {
 	EXPECT_EQ ( elementTypeB, vectorTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, vectorTypeA->getSize());
-	EXPECT_EQ ( 3, vectorTypeB->getSize());
+	EXPECT_EQ ( 1, vectorTypeA->getSize().getValue());
+	EXPECT_EQ ( 3, vectorTypeB->getSize().getValue());
 
 	// check remaining type properties
 	basicTypeTests(vectorTypeA, true, false, toList(toVector(elementTypeA)));
@@ -627,8 +657,8 @@ TEST(TypeTest, ChannelType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
-	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, 1);
-	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, 3);
+	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, IntTypeParam::getConcreteIntParam(1));
+	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
 
 	// check names
 	EXPECT_EQ ( "channel<A,1>", channelTypeA->getName() );
@@ -639,8 +669,8 @@ TEST(TypeTest, ChannelType) {
 	EXPECT_EQ ( elementTypeB, channelTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, channelTypeA->getSize());
-	EXPECT_EQ ( 3, channelTypeB->getSize());
+	EXPECT_EQ ( 1, channelTypeA->getSize().getValue());
+	EXPECT_EQ ( 3, channelTypeB->getSize().getValue());
 
 	// check remaining type properties
 	basicTypeTests(channelTypeA, true, false, toList(toVector(elementTypeA)));
@@ -675,7 +705,7 @@ TEST(TypeTest, RefType) {
 TEST(TypeTest, IntTypeParam) {
 #ifndef WIN32
 	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), (std::size_t) 4);
+	EXPECT_LE (sizeof(IntTypeParam), 2*(std::size_t) sizeof(int*));
 #endif
 
 	// test toString format

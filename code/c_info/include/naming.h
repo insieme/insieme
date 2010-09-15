@@ -53,7 +53,7 @@ class CNameAnnotation : public core::Annotation {
 	const core::Identifier ident;
 
 public:
-	const static core::StringKey<CNameAnnotation> key;
+	static const core::StringKey<CNameAnnotation> KEY;
 
 	CNameAnnotation(const core::Identifier& ident) : core::Annotation(), ident(ident) { }
 	CNameAnnotation(const std::string& name) : core::Annotation(), ident(name) { }
@@ -61,7 +61,7 @@ public:
 	const core::Identifier& getIdent() const { return ident; }
 	const std::string& getName() const { return ident.getName(); }
 
-	const core::AnnotationKey* getKey() const { return &key; }
+	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
 /** Annotation class intended to keep the name(s) of recursive C types and functions.
@@ -76,7 +76,7 @@ private:
 	IdentMap identMap;
 
 public:
-	const static core::StringKey<CRecNameAnnotation> key;
+	static const core::StringKey<CRecNameAnnotation> KEY;
 
 	CRecNameAnnotation() : core::Annotation() { }
 
@@ -86,7 +86,7 @@ public:
 	const core::Identifier& getIdent(const core::Identifier& recVarName);
 	const std::string& getName(const core::Identifier& recVarName);
 
-	const core::AnnotationKey* getKey() const { return &key; }
+	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
 } // namespace c_info

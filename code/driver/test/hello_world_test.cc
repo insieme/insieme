@@ -34,27 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include "naming.h"
+#include <gtest/gtest.h>
 
-#include "identifier.h"
+#include "program.h"
 
-namespace insieme {
-namespace c_info {
+#include "clang_compiler.h"
+#include "driver_config.h"
 
-const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
-const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
+#include <glog/logging.h>
 
-void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
-	identMap.insert(std::make_pair(recVarName, cName));
-}
+#include <iostream>
 
-const core::Identifier& CRecNameAnnotation::getIdent(const core::Identifier& recVarName) {
-	return identMap[recVarName];
-}
+using namespace insieme::frontend;
+using namespace insieme::core;
 
-const std::string& CRecNameAnnotation::getName(const core::Identifier& recVarName) {
-	return identMap[recVarName].getName();
-}
+TEST(PragmaMatcherTest, HandleOmpParallel) {
 
-}
+	ProgramPtr program = Program::create();
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/hello_world.c", program, true);
+
+	LOG(INFO) << TU->getProgram();
 }

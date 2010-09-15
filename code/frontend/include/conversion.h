@@ -93,11 +93,14 @@ public:
  */
 class IRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
+	core::ProgramPtr   program;
 	ConversionFactory  fact;
-	bool mDoConversion;
+	bool 			   mDoConversion;
 
 public:
-	IRConsumer(insieme::core::SharedNodeManager dataMgr, bool doConversion=true) : mCtx(NULL), fact(dataMgr), mDoConversion(doConversion){ }
+	IRConsumer(insieme::core::ProgramPtr prog, bool doConversion=true) : mCtx(NULL), program(prog), fact(prog->getNodeManager()), mDoConversion(doConversion){ }
+
+	core::ProgramPtr getProgram() const { return program; }
 
 	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; fact.setClangContext(&Context); }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);

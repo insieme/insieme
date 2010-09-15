@@ -44,11 +44,14 @@
 #include "statements.h"
 #include "container_utils.h"
 #include "lang_basic.h"
+#include "numeric_cast.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
+
+#include <sstream>
 
 #include <glog/logging.h>
 
@@ -110,6 +113,21 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+/**
+ * Used to report recursive types
+ */
+class RecursiveTypeException: public std::exception {
+	Type* recTy;
+public:
+	RecursiveTypeException(Type* recTy): std::exception(), recTy(recTy) { }
+
+	const Type* getRecType() const { return recTy; }
+
+	const char *what() const throw () { return NULL; }
+	virtual ~RecursiveTypeException() throw() { }
+};
+
+
 class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
 
@@ -136,6 +154,13 @@ public:
 		);
 	}
 
+	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
+		std::ostringstream ss;
+		ss << "\"" << stringLit->getStrData() << "\"";
+		// todo: Handle escape characters
+		return ExprWrapper( convFact.builder.literal(ss.str(), convFact.builder.genericType(core::Identifier("string"))) );
+	}
+
 	// CXX Extension for boolean types
 	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
 		return ExprWrapper(
@@ -156,7 +181,22 @@ public:
 		return ExprWrapper( convFact.builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
 	}
 
-	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
+		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getCalleeDecl()) ) {
+			if( funcDecl->isExternC() ) {
+				const core::ASTBuilder& builder = convFact.builder;
+
+				vector< core::ExpressionPtr > args;
+				std::for_each(callExpr->arg_begin(), callExpr->arg_end(), [ &args, this ](Expr* currArg){ args.push_back( this->Visit(currArg).ref ); });
+				return ExprWrapper( convFact.builder.callExpr(
+						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ),
+						args) );
+			}
+			return ExprWrapper();
+		}
+		assert(false && "Call expression not referring to a function");
+	}
+
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
@@ -541,6 +581,7 @@ public:
 	FORWARD_VISITOR_CALL(IntegerLiteral)
 	FORWARD_VISITOR_CALL(FloatingLiteral)
 	FORWARD_VISITOR_CALL(CharacterLiteral)
+	FORWARD_VISITOR_CALL(StringLiteral)
 
 	FORWARD_VISITOR_CALL(BinaryOperator)
 	FORWARD_VISITOR_CALL(UnaryOperator)
@@ -562,9 +603,14 @@ public:
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
-//	typedef std::map<Type*, TypeWrapper> TypeMap;
-//
-//	TypeMap typeMap;
+	typedef std::vector<Type*> TypeStack;
+	TypeStack typeStack;
+
+	typedef std::map<core::TypeVariablePtr, const Type*> RecTypeVarMap;
+	typedef std::map<const Type*, core::TypeVariablePtr> TypeRecVarMap;
+	TypeRecVarMap mapping;
+	map<const Type*, RecTypeVarMap> recTypeVarList;
+	map<const Type*, TypeWrapper> recTypeMap;
 
 public:
 	ClangTypeConverter(const ConversionFactory& fact): convFact( fact ) { }
@@ -657,7 +703,7 @@ public:
 		size_t arrSize = *arrTy->getSize().getRawData();
 		TypeWrapper elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy.ref && "Conversion of array element type failed.");
-		return TypeWrapper( convFact.builder.vectorType( convFact.builder.refType(elemTy.ref), arrSize ) );
+		return TypeWrapper( convFact.builder.vectorType( convFact.builder.refType(elemTy.ref), core::IntTypeParam::getConcreteIntParam(arrSize) ) );
 	}
 
 	/**
@@ -751,9 +797,14 @@ public:
 
 	TypeWrapper VisitTagType(TagType* tagType) {
 		// lookup the type map to see if this type has been already converted
-//		TypeMap::const_iterator fit = typeMap.find(tagType);
-//		if(fit != typeMap.end())
-//			return fit->second;
+		TypeStack::iterator fit = std::find(typeStack.begin(), typeStack.end(), tagType);
+		if(fit != typeStack.end())
+			throw RecursiveTypeException(tagType);
+
+		// we add the type to the list of traversed types
+		typeStack.push_back(tagType);
+
+		TypeWrapper retTy;
 
 		// otherwise do the conversion
 		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
@@ -768,36 +819,104 @@ public:
 
 			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
 			if(tagDecl->getTagKind() == TagDecl::TK_enum) {
-
+				assert(false && "Enum types not supported yet");
 			} else {
 				// handle struct/union/class
 				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 				core::NamedCompositeType::Entries structElements;
-				std::for_each(recDecl->field_begin(), recDecl->field_end(), [ &structElements, this ]( RecordDecl::field_iterator::value_type curr ){
-					structElements.push_back(
-							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), this->Visit( curr->getType().getTypePtr() ).ref )
-					);
-				});
+				unsigned short typeVarId=0;
+				RecTypeVarMap definitions;
+				bool usesPartialType = false;
 
-				TypeWrapper retTy;
+				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
+					RecordDecl::field_iterator::value_type curr = *it;
+					Type* fieldType = curr->getType().getTypePtr();
+					map<const Type*, TypeWrapper>::const_iterator fit = recTypeMap.find(fieldType);
+					if(fit != recTypeMap.end()) {
+						// the current element uses a type recursively
+						// we introduce a TypeVariable as the type of the current field
+						structElements.push_back(core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), mapping.find(fieldType)->second) );
+					} else {
+						try {
+							structElements.push_back(
+									core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), Visit( fieldType ).ref)
+							);
+						} catch(const RecursiveTypeException& e) {
+
+							core::TypeVariablePtr recVar(NULL);
+							bool newVar = false;
+							if(mapping.find(e.getRecType()) == mapping.end()) {
+								recVar = core::TypeVariable::get(*this->convFact.mgr, "X" + utils::numeric_cast<std::string>(typeVarId++));
+								newVar = true;
+							} else
+								recVar = mapping.find(e.getRecType())->second;
+							// the current element uses a type recursively
+							// we introduce a TypeVariable as the type of the current field
+							structElements.push_back(core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), recVar) );
+
+							definitions.insert( std::make_pair(recVar,e.getRecType()) );
+							if ( newVar ) {
+								// add to the var map
+								mapping.insert( std::make_pair(e.getRecType(),recVar) );
+							}
+						}
+					}
+
+					// the type of one of the fields is referring to a type which is partially specified
+					usesPartialType = (this->recTypeMap.find(fieldType) != this->recTypeMap.end());
+				}
+
 				// class and struct are handled in the same way
-				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class )
+				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class ) {
+					if ( usesPartialType || !definitions.empty() ) {
+						// this type is using a pratially specified type, before building this type we try to see if we
+						// have enough information to build a recursive definition for the sub-type
+						recTypeMap.insert( std::make_pair(tagType, retTy) );
+					}
 					retTy = TypeWrapper( convFact.builder.structType( structElements ) );
-				else if( tagDecl->getTagKind() == TagDecl::TK_union )
+					DLOG(INFO) << retTy.ref;
+					if( !definitions.empty() ) {
+						// we are dealing with a recursive type
+						recTypeVarList.insert( std::make_pair(tagType, definitions) );
+					}
+
+					// if the type uses recursive types try to build a recursive type using the current knowledge
+
+				} else if( tagDecl->getTagKind() == TagDecl::TK_union )
 					retTy = TypeWrapper( convFact.builder.unionType( structElements ) );
 				else
 					assert(false);
-
-//				typeMap[tagType] = retTy;
-				return retTy;
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
 			DLOG(INFO) << convFact.builder.genericType( tagDecl->getNameAsString() )->toString();
-			return TypeWrapper( convFact.builder.genericType( tagDecl->getNameAsString() ) );
+			retTy = TypeWrapper( convFact.builder.genericType( tagDecl->getNameAsString() ) );
 		}
-		return TypeWrapper();
+		typeStack.pop_back();
+
+		if( !recTypeVarList.empty()) {
+			// we are exiting from a potentially recursive definition
+			// for each temporary recursive type created and stored in recTypeVarList a proper recursive definition has to be created,
+			// as at this point we are sure we have all the temporary type necessary to build the recursive definition, we can do it in any order
+
+			// identifying the cycle
+
+
+
+//			std::for_each(recTypeVarList.begin(), recTypeVarList.end(), [ this, &convFact ](map<const Type*,RecTypeVarMap>::value_type& curr) {
+//
+//				core::RecTypeDefinition::RecTypeDefs definitions;
+//				std::for_each(curr.second.begin(), curr.second.end(), [this, &definitions](RecTypeVarMap::value_type& curr){
+//					map<const Type*, TypeWrapper>::iterator fit = this->recTypeMap.find(curr.second);
+//					assert(fit != this->recTypeMap.end() && "Type is not in the map");
+//					definitions.insert( std::make_pair(curr.first, fit->second.ref) );
+//				});
+//				convFact.builder.recTypeDefinition(definitions);
+//			});
+
+		}
+		return retTy;
 	}
 
 	TypeWrapper VisitElaboratedType(ElaboratedType* elabType) {
@@ -870,18 +989,15 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			});
 			// this is a function decl
 			core::StatementPtr funcBody(NULL);
-			if(funcDecl->getBody())
+			if(funcDecl->getBody()) {
 				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
 
-			//
-			// FIXME: no idea what this does ...
-			// 		  doesn't break anything when being removed ...
-			// 		  I just drop it ..
-			//		  if somebody is missing it, fix it!
-			//
-//			core::DefinitionPtr IRFuncDecl = fact.getASTBuilder().definition(funcDecl->getNameAsString(), funcType,
-//					fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
-//			IRFuncDecl->printTo(std::cout);
+				core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+				// program.addDefinition(lambdaExpr);
+
+				if(funcDecl->isMain())
+					program = program->addEntryPoint(lambaExpr);
+			}
 
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();

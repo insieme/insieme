@@ -115,7 +115,7 @@ public:
 
 	string visitStructType(const StructTypePtr& ptr) {
 		string structName;
-		if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::key)) {
+		if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
 			structName = annotation->getName();
 		} else {
 			structName = nameGen.getName(ptr, "unnamed_struct");
@@ -339,7 +339,7 @@ public:
 	}
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr) {
-		if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::key)) { // originally a named C function
+		if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
 			// TODO 
 			// //cname->getName();
 		}

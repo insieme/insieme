@@ -20,7 +20,7 @@ include_directories( ${insieme_simple_backend_include_dir} )
 add_library(insieme_simple_backend ${insieme_simple_backend_srcs} ${insieme_simple_backend_incs} )
 
 # add dependencies
-add_dependencies( insieme_simple_backend insieme_core insieme_utils insieme_c_info )
+add_dependencies( insieme_simple_backend insieme_core insieme_c_info insieme_utils )
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -33,8 +33,8 @@ foreach ( case_file ${test_cases})
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_core)
-	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} insieme_c_info)
+	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} insieme_simple_backend)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	

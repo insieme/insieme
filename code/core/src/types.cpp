@@ -55,6 +55,10 @@ enum HashSeed {
 
 // -------------------------------- Integer Type Parameter ----------------------------
 
+const IntTypeParam IntTypeParam::ZERO = IntTypeParam::getConcreteIntParam(0);
+const IntTypeParam IntTypeParam::ONE  = IntTypeParam::getConcreteIntParam(1);
+const IntTypeParam IntTypeParam::INF  = IntTypeParam(INFINITE);
+
 bool IntTypeParam::operator==(const IntTypeParam& param) const {
 	// quick check on reference
 	if (this == &param) {
@@ -93,7 +97,7 @@ IntTypeParam IntTypeParam::getVariableIntParam(char symbol) {
 	return IntTypeParam(symbol);
 }
 
-IntTypeParam IntTypeParam::getConcreteIntParam(unsigned short value) {
+IntTypeParam IntTypeParam::getConcreteIntParam(std::size_t value) {
 	return IntTypeParam(value);
 }
 
@@ -514,34 +518,37 @@ UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 
 // ------------------------------------ Array Type ---------------------------
 
-ArrayType::ArrayType(const TypePtr elementType, const unsigned short dim) :
-	SingleElementType("array", elementType, toVector(IntTypeParam::getConcreteIntParam(dim))) {}
+ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParam& dim) :
+	SingleElementType("array", elementType, toVector(dim)) {}
 
 ArrayType* ArrayType::clone(NodeManager& manager) const {
 	return new ArrayType(manager.get(getElementType()), getDimension());
 }
 
-ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim) {
+ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim) {
 	return manager.get(ArrayType(elementType, dim));
 }
 
-const unsigned short ArrayType::getDimension() const {
-	return getIntTypeParameter()[0].getValue();
+const IntTypeParam ArrayType::getDimension() const {
+	return getIntTypeParameter()[0];
 }
 
 
 // ------------------------------------ Vector Type ---------------------------
 
-VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
-	return manager.get(VectorType(elementType, IntTypeParam::getConcreteIntParam(size)));
+VectorType::VectorType(const TypePtr& elementType, const IntTypeParam& size) :
+	SingleElementType("vector", elementType, toVector(size)) {}
+
+VectorType* VectorType::clone(NodeManager& manager) const {
+	return new VectorType(manager.get(getElementType()), getIntTypeParameter()[0]);
 }
 
 VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
 	return manager.get(VectorType(elementType, size));
 }
 
-const unsigned short VectorType::getSize() const {
-	return getIntTypeParameter()[0].getValue();
+const IntTypeParam VectorType::getSize() const {
+	return getIntTypeParameter()[0];
 }
 
 // ------------------------------------ Ref Type ---------------------------
@@ -550,18 +557,25 @@ RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
 	return manager.get(RefType(elementType));
 }
 
+RefType* RefType::clone(NodeManager& manager) const {
+	return new RefType(manager.get(getElementType()));
+}
+
 
 // ------------------------------------ Channel Type ---------------------------
 
-ChannelType::ChannelType(const TypePtr elementType, const unsigned short size) :
-	SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParam& size) :
+	SingleElementType("channel", elementType, toVector(size)) {}
 
+ChannelType* ChannelType::clone(NodeManager& manager) const {
+	return new ChannelType(manager.get(getElementType()), getSize());
+}
 
-ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
+ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
 	return manager.get(ChannelType(elementType, size));
 }
 
-const unsigned short ChannelType::getSize() const {
-	return getIntTypeParameter()[0].getValue();
+const IntTypeParam ChannelType::getSize() const {
+	return getIntTypeParameter()[0];
 }
 

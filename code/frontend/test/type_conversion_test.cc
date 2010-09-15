@@ -179,31 +179,71 @@ TEST(TypeConversion, HandleStructType) {
 
 TEST(TypeConversion, HandleRecursiveStructType) {
 
-//	ProgramPtr prog = Program::create();
-//	insieme::ConversionFactory convFactory( prog->getNodeManager() );
-//
-//	ClangCompiler clang;
-//	clang::BuiltinType charTy(clang::BuiltinType::SChar);
-//	clang::BuiltinType longTy(clang::BuiltinType::Long);
-//
-//	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
-//			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
-//
-//	clang::QualType declType = clang.getASTContext().getTagDeclType (decl);
-//
-//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-//			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(&charTy, 0)), 0, 0, false));
-//
-//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-//			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(&longTy,0), 0, 0, false));
-//
-//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-//			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
-//	decl->completeDefinition();
-//
-//	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
-//	EXPECT_TRUE(insiemeTy);
-//	EXPECT_EQ("struct<name:ref<char>,age:int<8>>,mate:ref<...>", insiemeTy->toString());
+	ProgramPtr prog = Program::create();
+	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	clang::BuiltinType charTy(clang::BuiltinType::SChar);
+	clang::BuiltinType longTy(clang::BuiltinType::Long);
+
+	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
+
+	clang::QualType declType = clang.getASTContext().getTagDeclType (decl);
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(&charTy, 0)), 0, 0, false));
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(&longTy,0), 0, 0, false));
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
+	decl->completeDefinition();
+
+	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("struct<name:ref<char>,age:int<8>,mate:'X0>", insiemeTy->toString());
+}
+
+TEST(TypeConversion, HandleMutualRecursiveStructType) {
+
+	ProgramPtr prog = Program::create();
+	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager() );
+
+	ClangCompiler clang;
+	clang::RecordDecl* declA = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("A"));
+	clang::RecordDecl* declB = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("B"));
+	clang::RecordDecl* declC = clang::RecordDecl::Create(clang.getASTContext(), clang::RecordDecl::TK_struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("C"));
+
+	declA->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declA, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("b"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
+
+	declA->completeDefinition();
+
+	declB->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declB, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("c"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declC)), 0, 0, false));
+
+	declB->completeDefinition();
+
+	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("b"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
+
+	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("a"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declA)), 0, 0, false));
+
+	declC->completeDefinition();
+
+	TypePtr insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declA).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	//EXPECT_EQ("struct<name:ref<char>,age:int<8>,mate:'X0>", insiemeTy->toString());
 }
 
 

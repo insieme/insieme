@@ -34,27 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "naming.h"
+extern int printf(char *);
 
-#include "identifier.h"
+int main(int argc, char* argv[]) {
 
-namespace insieme {
-namespace c_info {
+	printf("Hallo Insieme");
 
-const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
-const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
-
-void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
-	identMap.insert(std::make_pair(recVarName, cName));
-}
-
-const core::Identifier& CRecNameAnnotation::getIdent(const core::Identifier& recVarName) {
-	return identMap[recVarName];
-}
-
-const std::string& CRecNameAnnotation::getName(const core::Identifier& recVarName) {
-	return identMap[recVarName].getName();
-}
-
-}
 }
