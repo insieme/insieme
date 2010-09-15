@@ -37,13 +37,12 @@
 #include <gtest/gtest.h>
 
 #include "program.h"
-#include "iostream"
 #include "ast_visitor.h"
 #include "lang_basic.h"
 
 using namespace insieme::core;
 
-class SimpleVisitor : public ASTVisitor<SimpleVisitor> {
+class SimpleVisitor : public ASTVisitor<void> {
 
 public:
 	int countGenericTypes;
@@ -136,7 +135,7 @@ TEST(ASTVisitor, DispatcherTest) {
 }
 
 
-class CountingVisitor : public ASTVisitor<CountingVisitor, int> {
+class CountingVisitor : public ASTVisitor<int> {
 public:
 
 	int counter;
@@ -161,7 +160,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	NodeManager manager;
 	CountingVisitor visitor;
-	RecursiveProgramVisitor<int, CountingVisitor> recVisitor(visitor);
+	RecursiveASTVisitor<CountingVisitor> recVisitor(visitor);
 
 	ProgramPtr program = Program::create();
 
@@ -208,5 +207,46 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	visitor.reset();
 	recVisitor.visit(ifStmt);
 	EXPECT_EQ ( 6, visitor.counter );
+
+}
+
+
+
+TEST(ASTVisitor, VisitOnceASTVisitorTest) {
+
+	NodeManager manager;
+
+
+	// build a simple type sharing nodes
+	TypePtr shared = GenericType::get(manager, "shared");
+	NodePtr type = TupleType::get(manager, toVector(shared, shared));
+
+	// create a resulting list
+	vector<NodePtr> res;
+
+	// create a visitor collecting all nodes
+	auto collector = makeLambdaASTVisitor([&res](const NodePtr& cur) {
+		res.push_back(cur);
+	});
+
+//	// visit all recursively
+//	res.clear();
+//	RecursiveASTVisitor<decltype(collector)> recursive(collector);
+//	recursive.visit(type);
+//
+//	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+//
+//	// visit all, only once
+//	res.clear();
+//	VisitOnceASTVisitor<decltype(collector)> prefix(collector);
+//	prefix.visit(type);
+//
+//	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+//
+//	res.clear();
+//	VisitOnceASTVisitor<decltype(collector)> postfix(collector);
+//	postfix.visit(type);
+//
+//	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
 }

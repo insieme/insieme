@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <unordered_set>
 
 #include "annotated_ptr.h"
 #include "expressions.h"
@@ -48,20 +49,20 @@
 namespace insieme {
 namespace core {
 
-template<typename Derived, typename ReturnType = void>
+template<typename ReturnType = void>
 class ASTVisitor {
 
 #define DISPATCH(CLASS, PTR) \
-		static_cast<Derived*>(this)->dispatch ## CLASS(PTR)
+		dispatch ## CLASS(PTR)
 
 #define VISIT(CLASS, PTR) \
-		static_cast<Derived*>(this)->visit ## CLASS(PTR)
+		visit ## CLASS(PTR)
 
 public:
 
 	typedef ReturnType return_type;
 
-	ReturnType visit(const NodePtr& node) {
+	virtual ReturnType visit(const NodePtr& node) {
 		assert ( node && "Cannot visit NULL node!");
 		return DISPATCH(Node, node);
 	}
@@ -74,7 +75,7 @@ protected:
 
 	// ---------------- Dispatcher ---------------------------------
 
-	ReturnType dispatchNode(const NodePtr& node) {
+	virtual ReturnType dispatchNode(const NodePtr& node) {
 		assert (node && "Cannot dispatch NULL node!");
 
 		// dispatch node based on its type
@@ -96,7 +97,7 @@ protected:
 		return ReturnType();
 	}
 
-	ReturnType dispatchSupport(const NodePtr& node) {
+	virtual ReturnType dispatchSupport(const NodePtr& node) {
 		assert ( node && "Cannot dispatch NULL node!");
 
 		TRY_DISPATCH(node, RecTypeDefinition);
@@ -106,7 +107,7 @@ protected:
 		return ReturnType();
 	}
 
-	ReturnType dispatchStatement(const StatementPtr& statement) {
+	virtual ReturnType dispatchStatement(const StatementPtr& statement) {
 		assert ( statement && "Cannot dispatch NULL statement!");
 
 		TRY_DISPATCH(statement, BreakStmt);
@@ -125,12 +126,9 @@ protected:
 		return ReturnType();
 	}
 
-	ReturnType dispatchExpression(const ExpressionPtr& expression) {
+	virtual ReturnType dispatchExpression(const ExpressionPtr& expression) {
 		assert ( expression && "Cannot dispatch NULL expression!");
 
-//		TRY_DISPATCH(expression, IntLiteral);
-//		TRY_DISPATCH(expression, FloatLiteral);
-//		TRY_DISPATCH(expression, BoolLiteral);
 		TRY_DISPATCH(expression, Literal);
 		TRY_DISPATCH(expression, VarExpr);
 		TRY_DISPATCH(expression, ParamExpr);
@@ -147,7 +145,7 @@ protected:
 
 
 
-	ReturnType dispatchType(const TypePtr& type) {
+	virtual ReturnType dispatchType(const TypePtr& type) {
 		assert ( type && "Cannot dispatch NULL type!");
 
 		TRY_DISPATCH(type, TypeVariable);
@@ -160,7 +158,7 @@ protected:
 		return ReturnType();
 	}
 
-	ReturnType dispatchGenericType(const GenericTypePtr& type) {
+	virtual ReturnType dispatchGenericType(const GenericTypePtr& type) {
 		assert ( type && "Cannot dispatch NULL pointer to type!");
 
 		TRY_DISPATCH(type, ArrayType);
@@ -172,7 +170,7 @@ protected:
 		return VISIT(GenericType, type);
 	}
 
-	ReturnType dispatchVarExpr(const VarExprPtr& expression) {
+	virtual ReturnType dispatchVarExpr(const VarExprPtr& expression) {
 			assert ( expression && "Cannot dispatch NULL pointer!");
 
 			// try only sub-type
@@ -193,7 +191,7 @@ protected:
 	 */
 
 #define DISPATCH_TERMINAL(CLASS) \
-	inline ReturnType dispatch ## CLASS(const CLASS ## Ptr& ptr) { \
+	inline virtual ReturnType dispatch ## CLASS(const CLASS ## Ptr& ptr) { \
 		assert ( !!ptr && "Cannot dispatch NULL pointer!"); \
 		return VISIT(CLASS, ptr); \
 	}
@@ -224,9 +222,6 @@ protected:
 	DISPATCH_TERMINAL(IfStmt);
 	DISPATCH_TERMINAL(SwitchStmt);
 
-//	DISPATCH_TERMINAL(IntLiteral);
-//	DISPATCH_TERMINAL(FloatLiteral);
-//	DISPATCH_TERMINAL(BoolLiteral);
 	DISPATCH_TERMINAL(Literal);
 	DISPATCH_TERMINAL(ParamExpr);
 	DISPATCH_TERMINAL(LambdaExpr);
@@ -246,9 +241,9 @@ protected:
 	// ------------------ protected visitor methods -----------------------
 
 #define VISIT_NODE(CLASS, PARENT) \
-	inline ReturnType visit ## CLASS(const CLASS ## Ptr& ptr) { \
+	inline virtual ReturnType visit ## CLASS(const CLASS ## Ptr& ptr) { \
 		assert ( !!ptr && "Cannot visit NULL pointer!"); \
-		return static_cast<Derived*>(this)->visit ## PARENT(ptr); \
+		return visit ## PARENT(ptr); \
 	}
 
 	VISIT_NODE(Type, Node);
@@ -286,9 +281,6 @@ protected:
 
 	VISIT_NODE(Expression, Statement);
 
-//	VISIT_NODE(IntLiteral, Expression);
-//	VISIT_NODE(FloatLiteral, Expression);
-//	VISIT_NODE(BoolLiteral, Expression);
 	VISIT_NODE(Literal, Expression);
 	VISIT_NODE(VarExpr, Expression);
 	VISIT_NODE(ParamExpr, VarExpr);
@@ -304,7 +296,7 @@ protected:
 	/**
 	 * Implements a the base not visit.
 	 */
-	ReturnType visitNode(const NodePtr& node) {
+	virtual ReturnType visitNode(const NodePtr& node) {
 		// by default, do nothing
 		return ReturnType();
 	}
@@ -313,18 +305,18 @@ protected:
 };
 
 
-template<typename T>
-struct CurrentNodeOnly {
-	inline T operator()(const NodePtr& currentNode, T& currentNodeReturn, std::vector<T>& subNodeResult){
-		return currentNodeReturn;
-	}
-};
-
-template<>
-struct CurrentNodeOnly<void> {
-	inline void operator()(const NodePtr& currentNode, ...){
-	}
-};
+//template<typename T>
+//struct CurrentNodeOnly {
+//	inline T operator()(const NodePtr& currentNode, T& currentNodeReturn, std::vector<T>& subNodeResult){
+//		return currentNodeReturn;
+//	}
+//};
+//
+//template<>
+//struct CurrentNodeOnly<void> {
+//	inline void operator()(const NodePtr& currentNode, ...){
+//	}
+//};
 
 
 /**
@@ -333,8 +325,8 @@ struct CurrentNodeOnly<void> {
  * within every node, the sub-visitor's visit method will be invoked. Further, the results
  * of the visited nodes may be combined using a generic result combinator.
  */
-template<typename ReturnType, typename SubVisitor, typename ResultCombinator = CurrentNodeOnly<ReturnType>>
-class RecursiveProgramVisitor : public ASTVisitor<RecursiveProgramVisitor<ReturnType, SubVisitor>, ReturnType> {
+template<typename SubVisitor>
+class RecursiveASTVisitor : public ASTVisitor<void> {
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
@@ -344,35 +336,138 @@ class RecursiveProgramVisitor : public ASTVisitor<RecursiveProgramVisitor<Return
 	/**
 	 * The combinator used to combine the result value within complex nodes.
 	 */
-	ResultCombinator combinator;
+//	ResultCombinator combinator;
 
 public:
 
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	RecursiveProgramVisitor(SubVisitor& subVisitor) : subVisitor(subVisitor) {};
+	RecursiveASTVisitor(SubVisitor& subVisitor) : subVisitor(subVisitor) {};
 
 	/**
 	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
-	ReturnType visitNode(const NodePtr& node) {
+	void visitNode(const NodePtr& node) {
 
 		// visit current
-		ReturnType cur = subVisitor.visit(node);
+		subVisitor.visit(node);
 
 		// recursively visit all sub-nodes
 		const Node::ChildList& children = node->getChildList();
-		std::vector<ReturnType> results;
 		std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
-			results.push_back(this->visit(cur));
+			this->visit(cur);
 		});
-
-		// finally, combine results
-		return combinator(node, cur, results);
 	}
 };
+
+
+/**
+ * TODO: comment
+ */
+template<typename Lambda, typename ResultType = void>
+class LambdaASTVisitor : public ASTVisitor<ResultType> {
+
+	/**
+	 * The lambda to be applied to all nodes ...
+	 */
+	Lambda lambda;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given lambda.
+	 */
+	LambdaASTVisitor(Lambda lambda) : lambda(lambda) {};
+
+	/**
+	 * Visits the given node and applies it to the maintained lambda.
+	 */
+	ResultType visitNode(const NodePtr& node) {
+		// simply apply lambda ...
+		return lambda(node);
+	}
+};
+
+
+template<typename Lambda>
+LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
+	return LambdaASTVisitor<Lambda>(lambda);
+};
+
+
+/**
+ * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
+ * the
+ */
+template<typename SubVisitor = void>
+class VisitOnceASTVisitor : public ASTVisitor<void> {
+
+public:
+
+	enum Order {
+		PREFIX, /** < the nodes are visited in prefix order */
+		POSTFIX /** < the nodes are visited in postfix order */
+	};
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	SubVisitor& subVisitor;
+
+	/**
+	 * The order in which nodes are processed.
+	 */
+	Order order;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	VisitOnceASTVisitor(SubVisitor& subVisitor, Order order = PREFIX) : subVisitor(subVisitor), order(order) {};
+
+
+	/**
+	 * Visits
+	 */
+	virtual void visit(const NodePtr& node) {
+
+		std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> all;
+		ASTVisitor<void>* visitor;
+		auto lambdaVisitor = makeLambdaASTVisitor([&all, &visitor, &subVisitor, order](const NodePtr& node) {
+			// add current node to set ..
+			bool isNew = all.insert(node).second();
+			if (!isNew) {
+				return;
+			}
+
+			if (order == PREFIX) {
+				// visit current node
+				subVisitor.visit(node);
+			}
+
+			// visit all child nodes recursivelly
+			const Node::ChildList& children = node->getChildList();
+			std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
+				visitor->visit(cur);
+			});
+
+			if (order == POSTFIX) {
+				// visit current node
+				subVisitor.visit(node);
+			}
+		});
+
+		// update pointer ..
+		visitor = &lambdaVisitor;
+
+		// trigger the visit (only once)
+		visitor->visit(node);
+	}
+};
+
 
 } // end namespace core
 } // end namespace insieme

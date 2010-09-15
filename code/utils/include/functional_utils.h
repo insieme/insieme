@@ -42,6 +42,8 @@
 #include <boost/utility/enable_if.hpp>
 #include <hash_utils.h>
 
+struct empty {};
+
 template<typename T>
 struct id : public std::unary_function<T, T> {
 	T& operator()(const T& element) const { return element; }

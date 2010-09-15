@@ -149,6 +149,8 @@ ADD_CONST(UINT_ONE);
 ADD_CONST(BOOL_TRUE);
 ADD_CONST(BOOL_FALSE);
 
+ADD_CONST(NULL_PTR);
+
 #undef ADD_CONST
 
 // -------------------------------- Operator ------------------------------

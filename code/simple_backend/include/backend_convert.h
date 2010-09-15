@@ -92,7 +92,7 @@ public:
 /** Converts simple IR types to their corresponding C(++) representations.
  ** Examples of "simple" types are integers, booleans, reals and strings.
  ** */
-class SimpleTypeConverter : public ASTVisitor<SimpleTypeConverter, string> {
+class SimpleTypeConverter : public ASTVisitor<string> {
 	NameGenerator& nameGen;
 
 public:
@@ -188,7 +188,7 @@ public:
 
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
  ** */
-class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
+class ConvertVisitor : public ASTVisitor<> {
 	ConversionContext& cc;
 	NameGenerator& nameGen;
 	CodePtr defCodePtr;

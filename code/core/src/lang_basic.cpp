@@ -51,6 +51,8 @@ namespace lang {
 	const TYPE ## Ptr TYPE_ ## NAME = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL); \
 	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL);
 
+ADD_TYPE(TypeVariable, ALPHA, (TypeVariable("a")));
+
 
 // -------------------------------- Unit Type -------------------------------
 
@@ -221,6 +223,9 @@ ADD_CONST(UINT_ONE, Literal(TYPE_UINT_1_PTR, "1"));
 ADD_CONST(BOOL_TRUE, Literal(TYPE_BOOL_PTR, "true"));
 ADD_CONST(BOOL_FALSE, Literal(TYPE_BOOL_PTR, "false"));
 
+ADD_TYPE(RefType, REF_GEN, RefType(TYPE_ALPHA_PTR));
+ADD_CONST(NULL_PTR, Literal(TYPE_REF_GEN, "null"));
+
 #undef ADD_CONST
 
 // -------------------------------- Operator ------------------------------
@@ -332,7 +337,6 @@ ADD_OP(UINT_RIGHT_SHIFT, TYPE_SHIFT_UINT_OP_PTR, "uint.rightShift");
 
 // --- References ---
 
-ADD_TYPE(TypeVariable, ALPHA, (TypeVariable("a")));
 ADD_TYPE(RefType, REF_ALPHA, (RefType(TYPE_ALPHA_PTR)));
 
 ADD_TYPE(TupleType, ALPHA_SINGLE, (TupleType(TYPE_ALPHA_PTR)));
