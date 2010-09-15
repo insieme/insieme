@@ -46,6 +46,9 @@
 #include "ast_visitor.h"
 #include "statements.h"
 #include "program.h"
+#include "types.h"
+#include "lang_basic.h"
+#include "naming.h"
 
 #include "container_utils.h"
 #include "hash_utils.h"
@@ -53,12 +56,11 @@
 namespace insieme {
 namespace simple_backend {
 
-using namespace ::insieme::core;
+using namespace core;
 
-/**
- * A stream based on std::stringstream that keeps a level of indentation and automatically
- * applies it at every line break.
- */
+/** A stream based on std::stringstream that keeps a level of indentation and automatically
+ ** applies it at every line break.
+ ** */
 class CodeStream {
 public:
 	struct IndR { }; static IndR indR;
@@ -74,7 +76,6 @@ private:
 	template<typename T>
 	void append(const T& param) {
 		std::stringstream ssTmp;
-		// TODO fix operator lookup
 		ssTmp << param;
 		string tmp = ssTmp.str();
 		boost::replace_all(tmp, "\n", string("\n") + indentString);
@@ -108,10 +109,9 @@ CodeStream& operator<<(CodeStream& cstr, const T& param) {
 class CodeFragment;
 typedef std::shared_ptr<CodeFragment> CodePtr;
 
-/**
- * A code fragment encapsulates some generated source code (in the form of a CodeStream) and an 
- * (optional) list of code fragments it depends on.
- */
+/** A code fragment encapsulates some generated source code (in the form of a CodeStream) and an 
+ ** (optional) list of code fragments it depends on.
+ ** */
 class CodeFragment {
 
 	CodeStream cStream;
@@ -130,23 +130,11 @@ public:
 	CodeStream& getCodeStream() { return cStream; }
 };
 
-class TypeConverter : public ASTVisitor<TypeConverter, string> {
-public:
-	string visitStructType(const StructTypePtr& ptr) {
-		string ret = "struct " + ptr->getName() + "{\n";
-		for_each(ptr->getEntries(), [](const NamedCompositeType::Entry& entry) {
-			//entry.first
-		});
-		return ret;
-	}
-};
-
-/**
- * Generates unique names for anonymous AST nodes when required.
- * Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
- * for the same node in different circumstances. Names will, however, stay the same for unchanged 
- * programs over multiple runs of the compiler.
- */
+/** Generates unique names for anonymous AST nodes when required.
+ ** Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
+ ** for the same node in different circumstances. Names will, however, stay the same for unchanged 
+ ** programs over multiple runs of the compiler.
+ ** */
 class NameGenerator {
 	unsigned long num;
 
@@ -171,11 +159,51 @@ public:
 	} 
 };
 
+/** Converts IR types to their corresponding C(++) representations.
+ ** */
+class TypeConverter : public ASTVisitor<TypeConverter, string> {
+	NameGenerator& nameGen;
+
+public:
+	TypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
+
+	string visitGenericType(const GenericTypePtr& ptr) {
+		if(lang::isUnitType(*ptr)) {
+			return "void";
+		} else
+		if(lang::isIntType(*ptr)) {
+			return ptr->getName();
+		} else
+		if(lang::isBoolType(*ptr)) {
+			return "bool";
+		} else
+		if(lang::isRealType(*ptr)) {
+			return ptr->getName();
+		}
+		assert(0 && "Unhandled generic type.");
+	}
+
+	string visitStructType(const StructTypePtr& ptr) {
+		string structName;
+		if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::key)) {
+			structName = annotation->getName();
+		} else {
+			structName = nameGen.getName(ptr, "unnamed_struct");
+		}
+		std::ostringstream ret; // TODO use code stream
+		ret << "struct " << structName << " {\n";
+		for_each(ptr->getEntries(), [&ret, this](const NamedCompositeType::Entry& entry) {
+			ret << this->visit(entry.second) << " " << entry.first.getName() << ";";
+		});
+		return ret.str();
+	}
+};
+
 class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
 	CodeFragment defCodeFrag;
 	CodeStream& cStr;
-	TypeConverter typeConv;
 	NameGenerator nameGen;
+	TypeConverter typeConv;
 	
 	string printTypeName(const TypePtr& typ) {
 		// TODO print C type name for specified type to cStr
@@ -191,7 +219,7 @@ class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
 	}
 
 public:
-	ConvertVisitor() : cStr(defCodeFrag.getCodeStream()) { };
+	ConvertVisitor() : cStr(defCodeFrag.getCodeStream()), typeConv(nameGen) { };
 
 	string getCode() {
 		return cStr.getString();
@@ -201,11 +229,11 @@ public:
 	//	std::cout << *node << std::endl;
 	//}
 
-	//void visitProgram(const ProgramPtr& ptr) {
-	//	for_each(ptr->getDefinitions(), [](const DefinitionPtr& def) {
-	//		
-	//	});
-	//}
+	void visitProgram(const ProgramPtr& ptr) {
+		for_each(ptr->getEntryPoints(), [this](const ExpressionPtr& ep) {
+			this->visit(ep);
+		});
+	}
 	
 	////////////////////////////////////////////////////////////////////////// Statements
 
