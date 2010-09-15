@@ -57,7 +57,7 @@ add_library(insieme_frontend ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB} )
 
 # add dependencies
-add_dependencies( insieme_frontend insieme_core insieme_utils )
+add_dependencies( insieme_frontend insieme_core insieme_utils insieme_c_info )
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -73,6 +73,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_frontend)
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_utils)
+	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} boost_program_options)
 	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})

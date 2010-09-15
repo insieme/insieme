@@ -38,9 +38,35 @@
 
 namespace insieme {
 namespace simple_backend {
+	
+using namespace core;
 
-CodeStream::IndR CodeStream::indR;
-CodeStream::IndL CodeStream::indL;
+CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifier& ident) {
+	auto codeIt = functionMap.find(ident);
+	if(codeIt != functionMap.end()) {
+		return codeIt->second;
+	}
+	// generate a new function from the lambda expression
+	CodePtr cptr = std::make_shared<CodeFragment>(string("fun_codefragment_") + ident.getName());
+	CodeStream& cs = cptr->getCodeStream();
+	// write the function prototype
+
+	// generate the function body
+	//ConvertVisitor visitor(cptr);
+	//visitor.visit(lambda->getBody());
+}
+
+
+ConversionContext::ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog)
+{
+	ConvertedCode converted;
+	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
+		ConvertVisitor convVisitor(*this);
+		convVisitor.visit(ep);
+		converted.insert(std::make_pair(ep, convVisitor.getCode()));
+	});
+	return converted;
+}
 
 }
 }

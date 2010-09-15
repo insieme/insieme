@@ -40,8 +40,6 @@
 #include <assert.h>
 #include <unordered_map>
 
-#include <boost/algorithm/string/replace.hpp>
-
 #include "ast_node.h"
 #include "ast_visitor.h"
 #include "statements.h"
@@ -53,82 +51,13 @@
 #include "container_utils.h"
 #include "hash_utils.h"
 
+#include "code_management.h"
+
 namespace insieme {
 namespace simple_backend {
 
 using namespace core;
 
-/** A stream based on std::stringstream that keeps a level of indentation and automatically
- ** applies it at every line break.
- ** */
-class CodeStream {
-public:
-	struct IndR { }; static IndR indR;
-	struct IndL { }; static IndL indL;
-
-private:
-	std::stringstream ss;
-	string indentString;
-
-	template<typename T>
-	friend CodeStream& operator<<(CodeStream& cstr, const T& param);
-	
-	template<typename T>
-	void append(const T& param) {
-		std::stringstream ssTmp;
-		ssTmp << param;
-		string tmp = ssTmp.str();
-		boost::replace_all(tmp, "\n", string("\n") + indentString);
-		ss << tmp;
-	}
-	void append(IndR param) {
-		indentString += "\t";
-	}
-	void append(IndL param) {
-		assert(indentString.length()>0 && "Trying to indent below level 0");
-		indentString = indentString.substr(0, indentString.length()-1);
-	}
-
-public:
-	CodeStream() : indentString("") {
-	}
-
-	string getString() {
-		return ss.str();
-	}
-};
-
-template<typename T>
-CodeStream& operator<<(CodeStream& cstr, const T& param) {
-	cstr.append(param);
-	return cstr;
-}
-
-
-// Forward declarations
-class CodeFragment;
-typedef std::shared_ptr<CodeFragment> CodePtr;
-
-/** A code fragment encapsulates some generated source code (in the form of a CodeStream) and an 
- ** (optional) list of code fragments it depends on.
- ** */
-class CodeFragment {
-
-	CodeStream cStream;
-	string name;
-	std::vector<CodePtr> dependencies;
-
-public:
-	CodeFragment(const string& name = "unnamed") : name(name) {	}
-
-	CodePtr addDependency(const string& name = "unnamed") {
-		CodePtr newDep(new CodeFragment(name));
-		dependencies.push_back(newDep);
-		return newDep;
-	}
-
-	CodeStream& getCodeStream() { return cStream; }
-};
 
 /** Generates unique names for anonymous AST nodes when required.
  ** Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
@@ -159,13 +88,14 @@ public:
 	} 
 };
 
-/** Converts IR types to their corresponding C(++) representations.
+/** Converts simple IR types to their corresponding C(++) representations.
+ ** Examples of "simple" types are integers, booleans, reals and strings.
  ** */
-class TypeConverter : public ASTVisitor<TypeConverter, string> {
+class SimpleTypeConverter : public ASTVisitor<SimpleTypeConverter, string> {
 	NameGenerator& nameGen;
 
 public:
-	TypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
+	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
 
 	string visitGenericType(const GenericTypePtr& ptr) {
 		if(lang::isUnitType(*ptr)) {
@@ -199,11 +129,70 @@ public:
 	}
 };
 
-class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
-	CodeFragment defCodeFrag;
-	CodeStream& cStr;
+// TODO more sane depndency handling / move forward declaration
+class ConversionContext;
+
+/** Manages C type generation and lookup for IR types.
+ ** */
+class TypeManager {
+	ConversionContext& cc;
+
+public:
+	TypeManager(ConversionContext& conversionContext) : cc(conversionContext) { }
+
+	string getTypeName(const core::TypePtr type) {
+	}
+	string getTypeDecl(const core::TypePtr type) {
+	}
+	CodePtr getTypeDefinition(const core::TypePtr type) {
+	}
+};
+
+/** Manages C function generation and lookup for named lambda expressions.
+ ** */
+class FunctionManager {
+	ConversionContext& cc;
+
+public:
+	typedef std::unordered_map<Identifier, CodePtr, boost::hash<Identifier>> FunctionMap;
+
+private:
+	FunctionMap functionMap;
+
+public:
+	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
+
+	CodePtr getFunction(const core::LambdaExprPtr& lambda, const Identifier& ident);
+};
+
+/** Stores the persistent state objects required to perform a simple_backend conversion.
+ ** This includes a NameGenerator, a FunctionManager and a TypeManager.
+ ** */
+class ConversionContext {
 	NameGenerator nameGen;
-	TypeConverter typeConv;
+	TypeManager typeMan;
+	FunctionManager funcMan;
+
+public:
+	ConversionContext() : typeMan(*this), funcMan(*this) { }
+
+	typedef std::unordered_map<ExpressionPtr, CodePtr> ConvertedCode;
+
+	NameGenerator& getNameGen() { return nameGen; }
+	TypeManager& getTypeMan() { return typeMan; }
+	FunctionManager& getFuncMan() { return funcMan; }
+
+	ConvertedCode convert(const core::ProgramPtr& prog);
+};
+
+/** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
+ ** */
+class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
+	ConversionContext& cc;
+	NameGenerator& nameGen;
+	CodePtr defCodePtr;
+	CodeStream& cStr;
+	//TypeConverter typeConv;
 	
 	string printTypeName(const TypePtr& typ) {
 		// TODO print C type name for specified type to cStr
@@ -219,20 +208,19 @@ class ConvertVisitor : public ASTVisitor<ConvertVisitor> {
 	}
 
 public:
-	ConvertVisitor() : cStr(defCodeFrag.getCodeStream()), typeConv(nameGen) { };
+	//ConvertVisitor() : defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()), typeConv(nameGen) { };
+	//ConvertVisitor(const CodePtr& codePtr) : defCodePtr(codePtr), cStr(defCodePtr->getCodeStream()), typeConv(nameGen) { };
+	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
+		defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream())/*, typeConv(nameGen)*/ { };
 
-	string getCode() {
-		return cStr.getString();
-	}
+	CodePtr getCode() { return defCodePtr; }
 
 	//void visitNode(const NodePtr& node) {
 	//	std::cout << *node << std::endl;
 	//}
 
 	void visitProgram(const ProgramPtr& ptr) {
-		for_each(ptr->getEntryPoints(), [this](const ExpressionPtr& ep) {
-			this->visit(ep);
-		});
+		assert(0 && "ConvertVisitor should never encounter program node");
 	}
 	
 	////////////////////////////////////////////////////////////////////////// Statements
@@ -308,7 +296,6 @@ public:
 	void visitCallExpr(const CallExprPtr& ptr) {
 		const std::vector<ExpressionPtr>& args = ptr->getArguments();
 		visit(ptr->getFunctionExpr());
-		cStr << "(";
 		if(args.size()>0) {
 			visit(args.front());
 			for_each(args.cbegin()+1, args.cend(), [&, this](const ExpressionPtr& curArg) {
@@ -331,7 +318,7 @@ public:
 		if(localDecls.size() > 0) {
 			string structName = nameGen.getName(ptr, "jobLocalDecls");
 			string structVarName = structName + "__var";
-			CodePtr structCode = defCodeFrag.addDependency(structName);
+			CodePtr structCode = defCodePtr->addDependency(structName);
 			CodeStream& sCStr = structCode->getCodeStream();
 			// definition
 			sCStr << "struct " << structName << CodeStream::indR << " {\n";
@@ -352,7 +339,13 @@ public:
 	}
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr) {
-		// TODO when cname annotations are standardized
+		if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::key)) { // originally a named C function
+			// TODO 
+			// //cname->getName();
+		}
+		else { // an unnamed lambda
+			assert(0 && "Unnamed lambda not yet implemented");
+		}
 	}
 
 	void visitRecLambdaExpr(const LambdaExprPtr& ptr) {

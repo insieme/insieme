@@ -77,10 +77,6 @@ public:
 	bool operator<(const Identifier& other) const {
 		return name.compare(other.name) < 0;
 	}
-	
-	operator const std::string& () { 
-		return name;
-	}
 };
 
 } // end namespace core

@@ -20,7 +20,7 @@ include_directories( ${insieme_simple_backend_include_dir} )
 add_library(insieme_simple_backend ${insieme_simple_backend_srcs} ${insieme_simple_backend_incs} )
 
 # add dependencies
-add_dependencies( insieme_simple_backend insieme_core insieme_utils )
+add_dependencies( insieme_simple_backend insieme_core insieme_utils insieme_c_info )
 
 # enable tests for this project
 find_package(GTest REQUIRED)

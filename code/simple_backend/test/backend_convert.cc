@@ -36,6 +36,7 @@
 
 #include <vector>
 #include <iostream>
+#include <memory>
 
 #include <gtest/gtest.h>
 
@@ -44,9 +45,11 @@
 #include "ast_builder.h"
 #include "lang_basic.h"
 #include "set_utils.h"
+#include "naming.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
+using namespace insieme::c_info;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 
@@ -64,10 +67,12 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
 	ExpressionPtr intLiteral = build.literal("4", TYPE_INT_GEN_PTR);
-	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
+	auto invocation = build.callExpr(unitType, printfDefinition, toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
 	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
+	// TODO fix compilation error (ambiguity)
+	//mainDefinition.addAnnotation(std::make_shared<CNameAnnotation>("main"));
 
 	return build.createProgram(
 		toSet<Program::EntryPointSet>(mainDefinition)
@@ -76,14 +81,15 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 TEST(SimpleBackend, Basic) {
 
-	ConvertVisitor converter;
-
+	ConversionContext cc;
+	
 	ASTBuilder build;
 	ProgramPtr prog = setupSampleProgram(build);
 
 	std::cout << "Start visit\n";
-	converter.visit(prog);
-	std::cout << "============\n" << converter.getCode() << "\n-----------\n";
+	//converter.visit(prog);
+	cc.convert(prog);
+	//std::cout << "============\n" << cc.getCode() << "\n-----------\n";
 	
 	//EXPECT_EQ(*compound2, *compound);
 }

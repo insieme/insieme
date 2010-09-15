@@ -196,13 +196,14 @@ private:
 	virtual LambdaExpr* clone(NodeManager& manager) const;
 
 protected:
-
 	virtual bool equalsExpr(const Expression& expr) const;
-
 	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const StatementPtr& getBody() const { return body; }
+	const ParamList& getParams() const { return params; }
 
 	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
 };

@@ -56,6 +56,7 @@ public:
 	const static core::StringKey<CNameAnnotation> key;
 
 	CNameAnnotation(const core::Identifier& ident) : core::Annotation(), ident(ident) { }
+	CNameAnnotation(const std::string& name) : core::Annotation(), ident(name) { }
 
 	const core::Identifier& getIdent() const { return ident; }
 	const std::string& getName() const { return ident.getName(); }

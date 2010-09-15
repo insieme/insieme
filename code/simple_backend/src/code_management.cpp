@@ -34,28 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include "naming.h"
-
-#include "identifier.h"
+#include "code_management.h"
 
 namespace insieme {
-namespace c_info {
+namespace simple_backend {
 
-const core::StringKey<CNameAnnotation> CNameAnnotation::key("CNameAnnotationKey");
-const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::key("CRecNameAnnotationKey");
+const CodeStream::IndR CodeStream::indR = CodeStream::IndR();
+const CodeStream::IndL CodeStream::indL = CodeStream::IndL();
 
 
-void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
-	identMap.insert(std::make_pair(recVarName, cName));
+CodePtr CodeFragment::addDependency( const std::string& name /*= "unnamed"*/ ) {
+	CodePtr newDep(new CodeFragment(name));
+	dependencies.push_back(newDep);
+	return newDep;
 }
 
-const core::Identifier& CRecNameAnnotation::getIdent(const core::Identifier& recVarName) {
-	return identMap[recVarName];
-}
-
-const std::string& CRecNameAnnotation::getName(const core::Identifier& recVarName) {
-	return identMap[recVarName].getName();
-}
-
-}
-}
+} // namespace simple_backend
+} // namespace insieme
