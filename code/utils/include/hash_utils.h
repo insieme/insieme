@@ -36,6 +36,10 @@
 
 #pragma once
 
+#include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_convertible.hpp>
+
 namespace insieme {
 namespace utils {
 
@@ -143,16 +147,21 @@ inline std::size_t hash_value(const insieme::utils::HashableImmutableData<Derive
 
 namespace std
 {
+
+	// NOTE: isn't working - and solution is ugly
+	// see: http://stackoverflow.com/questions/1032973/how-to-partially-specialize-a-class-template-for-all-derived-types
+	// TODO: find a work-around
+
 	/**
 	 * A specialization of the std-hash struct to be used for realizing hashing of
 	 * HashableImmutableData within the std-based hashing data structures.
 	 */
-	template <typename Derived>
-	struct hash<insieme::utils::HashableImmutableData<Derived>> {
-		size_t operator()(const insieme::utils::HashableImmutableData<Derived>& instance) {
-			return instance.hash();
-		}
-	};
+//	template <typename Derived>
+//	struct hash<Derived, typename boost::enable_if<boost::is_base_of<insieme::utils::Hashable,Derived>, Derived>::type> : public std::unary_function<insieme::utils::Hashable, size_t> {
+//		size_t operator()(const insieme::utils::Hashable& instance) {
+//			return instance.hash();
+//		}
+//	};
 }
 
 

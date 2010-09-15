@@ -162,7 +162,7 @@ public:
 				&& "Annotation Type of Key does not match actual annotation!" );
 
 		// return pointer to result
-		return static_cast<const typename Key::annotation_type*>(&*(*pos).second);
+		return static_cast<typename Key::annotation_type*>(&*(*pos).second);
 	}
 
 	/**

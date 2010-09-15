@@ -185,7 +185,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	recVisitor.visit(program);
 	EXPECT_EQ ( 1, visitor.counter );
 
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector<IntTypeParam>('p'), type);
+	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
 
 	visitor.reset();
 	visitor.visit(type2);

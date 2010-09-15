@@ -36,16 +36,25 @@
 
 #include "naming.h"
 
+#include "identifier.h"
+
 namespace insieme {
 namespace c_info {
 
-core::StringKey<CNameAnnotation> CNameAnnotation::key("CNameAnnotationKey");
+const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
 
-core::StringKey<CRecNameAnnotation> CRecNameAnnotation::key("CRecNameAnnotationKey");
+const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
 
+void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
+	identMap.insert(std::make_pair(recVarName, cName));
+}
 
-void CRecNameAnnotation::addName(const core::Identifier& recVarName, const core::Identifier& cName ) {
-	nameMap.insert(std::make_pair(recVarName, cName));
+const core::Identifier& CRecNameAnnotation::getIdent(const core::Identifier& recVarName) {
+	return identMap[recVarName];
+}
+
+const std::string& CRecNameAnnotation::getName(const core::Identifier& recVarName) {
+	return identMap[recVarName].getName();
 }
 
 }
