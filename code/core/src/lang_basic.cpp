@@ -197,6 +197,11 @@ ADD_TYPE(RealType, REAL_8, getRealType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
 
+// ------------------------ Character and String Types -----------------------
+
+ADD_TYPE(GenericType, CHAR, GenericType("char"));
+ADD_TYPE(GenericType, WCHAR, GenericType("wchar"));
+
 // -------------------------------- Misc Types ------------------------------
 
 ADD_TYPE(GenericType, STRING, GenericType("string"));

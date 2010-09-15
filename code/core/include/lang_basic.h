@@ -128,7 +128,8 @@ ADD_TYPE(RealType, REAL_INF);
 
 // ------------------------ Character and String Types -----------------------
 
-
+ADD_TYPE(GenericType, CHAR);
+ADD_TYPE(GenericType, WCHAR);
 
 // -------------------------------- Misc Types ------------------------------
 

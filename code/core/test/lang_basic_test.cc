@@ -101,6 +101,11 @@ TEST(LangBasic, BuildInTest) {
 TEST(LangBasic, Subscript) {
 	NodeManager manager;
 
+//	EXPECT_EQ ("", toString(*lang::OP_VAR_LIST_PACK->getType()));
+//	EXPECT_EQ ("", toString(*lang::OP_VAR_LIST_PACK));
+//
+//	EXPECT_EQ ("", toString(*lang::TYPE_CHAR));
+//
 //	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT->getType()));
 //	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT));
 //	EXPECT_EQ ("", toString(*lang::OP_LENGTH_VAL.getType()));
