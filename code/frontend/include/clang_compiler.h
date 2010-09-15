@@ -164,18 +164,22 @@ class InsiemeTransUnit: public boost::noncopyable {
 	ClangCompiler mClang;
 	PragmaList mPragmaList;
 
-	InsiemeTransUnit(const std::string& file_name, const insieme::core::Program& prog, bool doConversion);
+	core::ProgramPtr mProgram;
+
+	InsiemeTransUnit(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion);
 public:
 
 	const PragmaList& getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
 
+	const core::ProgramPtr& getProgram() const { return mProgram; }
 	/**
 	 * Main entry method, it creates a translation unit starting from an input file
 	 */
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name, const insieme::core::Program& prog, bool doConversion=true) {
+	static InsiemeTransUnitPtr ParseFile(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion=true) {
 		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name, prog, doConversion));
 	}
+
 };
 
 } // End frontend namespace

@@ -51,6 +51,8 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
+#include <sstream>
+
 #include <glog/logging.h>
 
 using namespace clang;
@@ -152,6 +154,13 @@ public:
 		);
 	}
 
+	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
+		std::ostringstream ss;
+		ss << "\"" << stringLit->getStrData() << "\"";
+		// todo: Handle escape characters
+		return ExprWrapper( convFact.builder.literal(ss.str(), convFact.builder.genericType(core::Identifier("string"))) );
+	}
+
 	// CXX Extension for boolean types
 	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
 		return ExprWrapper(
@@ -172,7 +181,22 @@ public:
 		return ExprWrapper( convFact.builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
 	}
 
-	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
+		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getCalleeDecl()) ) {
+			if( funcDecl->isExternC() ) {
+				const core::ASTBuilder& builder = convFact.builder;
+
+				vector< core::ExpressionPtr > args;
+				std::for_each(callExpr->arg_begin(), callExpr->arg_end(), [ &args, this ](Expr* currArg){ args.push_back( this->Visit(currArg).ref ); });
+				return ExprWrapper( convFact.builder.callExpr(
+						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ),
+						args) );
+			}
+			return ExprWrapper();
+		}
+		assert(false && "Call expression not referring to a function");
+	}
+
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
@@ -964,18 +988,15 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			});
 			// this is a function decl
 			core::StatementPtr funcBody(NULL);
-			if(funcDecl->getBody())
+			if(funcDecl->getBody()) {
 				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
 
-			//
-			// FIXME: no idea what this does ...
-			// 		  doesn't break anything when being removed ...
-			// 		  I just drop it ..
-			//		  if somebody is missing it, fix it!
-			//
-//			core::DefinitionPtr IRFuncDecl = fact.getASTBuilder().definition(funcDecl->getNameAsString(), funcType,
-//					fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody), funcDecl->isExternC());
-//			IRFuncDecl->printTo(std::cout);
+				core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+				// program.addDefinition(lambdaExpr);
+
+				if(funcDecl->isMain())
+					program = program->addEntryPoint(lambaExpr);
+			}
 
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();
