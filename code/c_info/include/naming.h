@@ -37,6 +37,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <boost/functional/hash.hpp>
 
 #include "annotation.h"
 #include "identifier.h"
@@ -49,12 +50,15 @@ namespace c_info {
  ** for example with structs, unions or functions.
  ** */
 class CNameAnnotation : public core::Annotation {
-	string name;
+	const core::Identifier ident;
 
 public:
 	static const core::StringKey<CNameAnnotation> KEY;
 
-	CNameAnnotation(string name) : core::Annotation(), name(name) { }
+	CNameAnnotation(const core::Identifier& ident) : core::Annotation(), ident(ident) { }
+
+	const core::Identifier& getIdent() const { return ident; }
+	const std::string& getName() const { return ident.getName(); }
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };
@@ -65,19 +69,21 @@ public:
  ** */
 class CRecNameAnnotation : public core::Annotation {
 public:
-	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> NameMap;
+	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> IdentMap;
 
 private:
-	NameMap nameMap;
+	IdentMap identMap;
 
 public:
 	static const core::StringKey<CRecNameAnnotation> KEY;
 
 	CRecNameAnnotation() : core::Annotation() { }
 
-	NameMap& getNameMap() { return nameMap; }
+	IdentMap& getIdentMap() { return identMap; }
 
-	void addName(const core::Identifier& recVarName, const core::Identifier& cName);
+	void addIdent(const core::Identifier& recVarName, const core::Identifier& cName);
+	const core::Identifier& getIdent(const core::Identifier& recVarName);
+	const std::string& getName(const core::Identifier& recVarName);
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };

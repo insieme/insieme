@@ -55,6 +55,7 @@ class Identifier : public insieme::utils::HashableImmutableData<Identifier> {
 	string name;
 
 public:
+	Identifier() : HashableImmutableData<Identifier>(boost::hash_value(string("UNKNOWN_IDENT"))), name(string("UNKNOWN_IDENT")) {}
 
 	Identifier(const char* name) : HashableImmutableData<Identifier>(boost::hash_value(string(name))), name(string(name)) {}
 
@@ -76,7 +77,10 @@ public:
 	bool operator<(const Identifier& other) const {
 		return name.compare(other.name) < 0;
 	}
-
+	
+	operator const std::string& () { 
+		return name;
+	}
 };
 
 } // end namespace core
@@ -88,5 +92,4 @@ public:
  * within test cases where equals values to be printable).
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& identifier);
-
 
