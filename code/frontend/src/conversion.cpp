@@ -581,6 +581,7 @@ public:
 	FORWARD_VISITOR_CALL(IntegerLiteral)
 	FORWARD_VISITOR_CALL(FloatingLiteral)
 	FORWARD_VISITOR_CALL(CharacterLiteral)
+	FORWARD_VISITOR_CALL(StringLiteral)
 
 	FORWARD_VISITOR_CALL(BinaryOperator)
 	FORWARD_VISITOR_CALL(UnaryOperator)
