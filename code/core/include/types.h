@@ -450,6 +450,185 @@ public:
 	}
 };
 
+// ---------------------------------------- Integer Type Parameters ------------------------------
+
+/**
+ * Instances of this class represent the integer-type parameters.
+ *
+ * The type system supports two types of generic type parameters - other types (or variables) and integers.
+ * Integer parameters may be concrete values, variables (equal to type variables) or the infinite sigh.
+ */
+class IntTypeParam {
+public:
+	/**
+	 * An enumeration to determine the actual type of the integer parameter.
+	 */
+	typedef enum {
+		VARIABLE, CONCRETE, INFINITE
+	} Type;
+
+	/**
+	 * A predefined int-type-parameter constant representing the value 0
+	 */
+	static const IntTypeParam ZERO;
+
+	/**
+	 * A predefined int-type-parameter constant representing the value 1
+	 */
+	static const IntTypeParam ONE;
+
+	/**
+	 * A predefined int-type-parameter constant representing an infinite value.
+	 */
+	static const IntTypeParam INF;
+
+private:
+
+	/**
+	 * The type of the parameter represented by this instance.
+	 * 3 bits for compilers with unsigned enum
+	 */
+	Type type :3;
+
+	union {
+		/**
+		 * The value represented by the concrete type parameter.
+		 */
+		std::size_t value;
+
+		/**
+		 * The symbol used for the integer type variable.
+		 */
+		char symbol;
+	};
+
+private:
+
+	/**
+	 * A private constructor to create a variable integer type parameter.
+	 * The constructor is private to enforce the usage of static factory methods.
+	 *
+	 * @param symbol the symbol to be used for the integer type variable
+	 */
+	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {
+	}
+
+	/**
+	 * A private constructor to create a concrete integer type parameter.
+	 * The constructor is private to enforce the usage of static factory methods.
+	 *
+	 * @param value the value to be used for the concrete integer type parameter
+	 */
+	IntTypeParam(const std::size_t value) : type(CONCRETE), value(value) {}
+
+	/**
+	 * A private constructor to create a infinite integer type parameter.
+	 * The constructor is private to enforce the usage of static factory methods.
+	 */
+	IntTypeParam(const Type) :	type(INFINITE), value(0) {
+	}
+
+public:
+
+	/**
+	 * A factory method to obtain a integer type parameter variable.
+	 *
+	 * @param symbol the symbol to be used for the variable
+	 * @return an IntTypeParam representing a token for this variable.
+	 */
+	static IntTypeParam getVariableIntParam(char symbol);
+
+	/**
+	 * A factory method to obtain a concrete integer type parameter.
+	 *
+	 * @param value the value to be represented
+	 * @return an IntTypeParam representing a token for this value.
+	 */
+	static IntTypeParam getConcreteIntParam(std::size_t value);
+
+	/**
+	 * A factory method to obtain a integer type parameter representing
+	 * the infinite value.
+	 *
+	 * @return an IntTypeParam representing a token for the infinite value.
+	 */
+	static IntTypeParam getInfiniteIntParam();
+
+	/**
+	 * Tests whether all of the given integer type parameter are concrete.
+	 *
+	 * @param intTypeParams the list of parameters to be tested
+	 * @return true if all are concrete, false otherwise
+	 */
+	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
+
+	/**
+	 * Implements the equality operator for the IntTypeParam type.
+	 */
+	bool operator==(const IntTypeParam&) const;
+
+	/**
+	 * Provides a string representation for this token type.
+	 *
+	 * @return a string representation for this type.
+	 */
+	const string toString() const {
+		switch (type) {
+		case VARIABLE:
+			return ::toString(symbol);
+		case CONCRETE:
+			return ::toString(value);
+		case INFINITE:
+			return ::toString("Inf");
+		default:
+			throw std::runtime_error("Invalid parameter type discovered!");
+		}
+	}
+
+	/**
+	 * Determines whether this instance is representing a variable integer type
+	 * parameter or a concrete value.
+	 *
+	 * @return false if variable, true otherwise
+	 */
+	bool isConcrete() const {
+		return type != VARIABLE;
+	}
+
+	/**
+	 * Obtains the type of parameter this instance is.
+	 *
+	 * @return the type of int-type parameter
+	 *
+	 * @see Type
+	 */
+	Type getType() const {
+		return type;
+	}
+
+	/**
+	 * Obtains the value of a concrete int-type parameter. The value is only
+	 * properly defined in case the type is CONCRETE. Otherwise an assertion
+	 * violation will be triggered.
+	 */
+	std::size_t getValue() const {
+		// TODO: replace with an exception
+		assert( type == CONCRETE );
+		return value;
+	}
+
+	/**
+	 * Obtains the symbol of a variable int-type parameter. The symbol is only
+	 * properly defined in case the type is VARIABLE. Otherwise an assertion
+	 * violation will be triggered.
+	 */
+	char getSymbol() const {
+		// TODO: replace with an exception
+		assert( type == VARIABLE );
+		return symbol;
+	}
+};
+
 
 // ---------------------------------------- Generic Type ------------------------------
 
@@ -869,7 +1048,7 @@ public:
 	 * @param elementType the element type of this array
 	 * @param dim the dimension of the represented array
 	 */
-	ArrayType(const TypePtr elementType, const unsigned short dim);
+	ArrayType(const TypePtr& elementType, const IntTypeParam& dim = IntTypeParam::ONE);
 
 private:
 
@@ -891,14 +1070,14 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim = 1);
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim = IntTypeParam::ONE);
 
 	/**
 	 * Retrieves the dimension of the represented array.
 	 *
 	 * @return the dimension of the represented array type
 	 */
-	const unsigned short getDimension() const;
+	const IntTypeParam getDimension() const;
 };
 
 // --------------------------------- Vector Type ----------------------------
@@ -908,36 +1087,24 @@ public:
  */
 class VectorType : public SingleElementType {
 
+public:
+
 	/**
 	 * Creates a new instance of a vector type token using the given element and size parameter.
 	 *
 	 * @param elementType the element type of the new vector
 	 * @param size the size of the new vector
 	 */
-	VectorType(const TypePtr& elementType, const IntTypeParam& size) :
-		SingleElementType("vector", elementType, toVector(size)) {}
+	VectorType(const TypePtr& elementType, const IntTypeParam& size);
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual VectorType* clone(NodeManager& manager) const {
-		return new VectorType(manager.get(getElementType()), getIntTypeParameter()[0]);
-	}
+	virtual VectorType* clone(NodeManager& manager) const;
 
 public:
-
-	/**
-	 * A factory method allowing to obtain a pointer to a vector type representing
-	 * an instance managed by the given manager.
-	 *
-	 * @param manager 		the manager which should be responsible for maintaining the new
-	 * 				  		type instance and all its referenced elements.
-	 * @param elementType 	the type of element to be maintained within the vector
-	 * @param size 			the size of the requested vector
-	 * @return a pointer to a instance of the requested type. Multiple requests using
-	 * 		   the same parameters will lead to pointers addressing the same instance.
-	 */
-	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size);
 
 	/**
 	 * A factory method allowing to obtain a pointer to a vector type representing
@@ -957,7 +1124,7 @@ public:
 	 *
 	 * @return the size of the represented array type
 	 */
-	const unsigned short getSize() const;
+	const IntTypeParam getSize() const;
 };
 
 
@@ -976,7 +1143,7 @@ public:
 	 *
 	 * @param elementType the type the new type should reference to.
 	 */
-	RefType(const TypePtr elementType) :
+	RefType(const TypePtr& elementType) :
 		SingleElementType("ref", elementType) {}
 
 private:
@@ -984,9 +1151,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual RefType* clone(NodeManager& manager) const {
-		return new RefType(manager.get(getElementType()));
-	}
+	virtual RefType* clone(NodeManager& manager) const;
 
 public:
 
@@ -1011,6 +1176,8 @@ public:
  */
 class ChannelType: public SingleElementType {
 
+public:
+
 	/**
 	 * Creates a new channel.
 	 *
@@ -1019,13 +1186,14 @@ class ChannelType: public SingleElementType {
 	 * 						obtained within this channel until it starts blocking writte operations. If
 	 * 						set to 0, the channel will represent a handshake channel.
 	 */
-	ChannelType(const TypePtr elementType, const unsigned short size);
+	ChannelType(const TypePtr& elementType, const IntTypeParam& size);
+
+private:
+
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ChannelType* clone(NodeManager& manager) const {
-		return new ChannelType(manager.get(getElementType()), getSize());
-	}
+	virtual ChannelType* clone(NodeManager& manager) const;
 
 public:
 
@@ -1039,175 +1207,16 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size);
+	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size);
 
 	/**
 	 * Retrieves the (buffer) size of this channel.
 	 *
 	 * @return the buffer size of the channel
 	 */
-	const unsigned short getSize() const;
+	const IntTypeParam getSize() const;
 };
 
-
-// ---------------------------------------- Integer Type Parameters ------------------------------
-
-/**
- * Instances of this class represent the integer-type parameters.
- *
- * The type system supports two types of generic type parameters - other types (or variables) and integers.
- * Integer parameters may be concrete values, variables (equal to type variables) or the infinite sigh.
- */
-class IntTypeParam {
-public:
-	/**
-	 * An enumeration to determine the actual type of the integer parameter.
-	 */
-	typedef enum {
-		VARIABLE, CONCRETE, INFINITE
-	} Type;
-
-private:
-	/**
-	 * The type of the parameter represented by this instance.
-	 * 3 bits for compilers with unsigned enum
-	 */
-	Type type :3;
-
-	union {
-		/**
-		 * The value represented by the concrete type parameter.
-		 */
-		unsigned short value;
-
-		/**
-		 * The symbol used for the integer type variable.
-		 */
-		char symbol;
-	};
-
-public:
-
-	/**
-	 * A private constructor to create a variable integer type parameter.
-	 * The constructor is private to enforce the usage of static factory methods.
-	 *
-	 * @param symbol the symbol to be used for the integer type variable
-	 */
-	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {
-	}
-
-	/**
-	 * A private constructor to create a concrete integer type parameter.
-	 * The constructor is private to enforce the usage of static factory methods.
-	 *
-	 * @param value the value to be used for the concrete integer type parameter
-	 */
-	IntTypeParam(const unsigned short value) : type(CONCRETE), value(value) {
-	}
-
-private:
-
-	/**
-	 * A private constructor to create a infinite integer type parameter.
-	 * The constructor is private to enforce the usage of static factory methods.
-	 */
-	IntTypeParam(const Type) :	type(INFINITE), value(0) {
-	}
-
-public:
-
-	/**
-	 * Implements the equality operator for the IntTypeParam type.
-	 */
-	bool operator==(const IntTypeParam&) const;
-
-	/**
-	 * Provides a string representation for this token type.
-	 *
-	 * @return a string representation for this type.
-	 */
-	const string toString() const {
-		switch (type) {
-		case VARIABLE:
-			return ::toString(symbol);
-		case CONCRETE:
-			return ::toString(value);
-		case INFINITE:
-			return ::toString("Inf");
-		default:
-			throw std::runtime_error("Invalid parameter type discovered!");
-		}
-	}
-
-	/**
-	 * Determines whether this instance is representing a variable integer type
-	 * parameter or a concrete value.
-	 *
-	 * @return false if variable, true otherwise
-	 */
-	bool isConcrete() const {
-		return type != VARIABLE;
-	}
-
-public:
-
-	/**
-	 * A factory method to obtain a integer type parameter variable.
-	 *
-	 * @param symbol the symbol to be used for the variable
-	 * @return an IntTypeParam representing a token for this variable.
-	 */
-	static IntTypeParam getVariableIntParam(char symbol);
-
-	/**
-	 * A factory method to obtain a concrete integer type parameter.
-	 *
-	 * @param value the value to be represented
-	 * @return an IntTypeParam representing a token for this value.
-	 */
-	static IntTypeParam getConcreteIntParam(unsigned short value);
-
-	/**
-	 * A factory method to obtain a integer type parameter representing
-	 * the infinite value.
-	 *
-	 * @return an IntTypeParam representing a token for the infinite value.
-	 */
-	static IntTypeParam getInfiniteIntParam();
-
-	/**
-	 * Tests whether all of the given integer type parameter are concrete.
-	 *
-	 * @param intTypeParams the list of parameters to be tested
-	 * @return true if all are concrete, false otherwise
-	 */
-	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
-
-
-	/**
-	 * Obtains the type of parameter this instance is.
-	 *
-	 * @return the type of int-type parameter
-	 *
-	 * @see Type
-	 */
-	Type getType() const {
-		return type;
-	}
-
-	/**
-	 * Obtains the value of a concrete int-type parameter. The value is only
-	 * properly defined in case the type is CONCRETE. Otherwise an assertion
-	 * violation will be caused.
-	 */
-	unsigned short getValue() const {
-		// TODO: replace with an exception
-		assert( type == CONCRETE );
-		return value;
-	}
-
-};
 
 } // end namespace core
 } // end namespace insieme

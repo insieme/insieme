@@ -97,3 +97,11 @@ TEST(LangBasic, BuildInTest) {
 	EXPECT_FALSE( lang::isBuildIn(type) );
 	EXPECT_FALSE( lang::isBuildIn(*type) );
 }
+
+TEST(LangBasic, Subscript) {
+	NodeManager manager;
+
+//	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT->getType()));
+//	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT));
+//	EXPECT_EQ ("", toString(*lang::OP_LENGTH_VAL.getType()));
+}

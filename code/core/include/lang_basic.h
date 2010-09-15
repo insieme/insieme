@@ -126,6 +126,16 @@ ADD_TYPE(RealType, REAL_4);
 ADD_TYPE(RealType, REAL_8);
 ADD_TYPE(RealType, REAL_INF);
 
+// ------------------------ Character and String Types -----------------------
+
+
+
+// -------------------------------- Misc Types ------------------------------
+
+ADD_TYPE(GenericType, STRING);
+ADD_TYPE(GenericType, WSTRING);
+ADD_TYPE(GenericType, VAR_LIST);
+
 // -------------------------------- Constants ------------------------------
 
 #define ADD_CONST(NAME) \
@@ -244,6 +254,24 @@ ADD_OP(REF_NEW);
 ADD_OP(REF_DELETE);
 ADD_OP(REF_ASSIGN);
 ADD_OP(REF_DEREF);
+
+
+// --- Arrays ---
+ADD_OP(SUBSCRIPT);
+ADD_OP(LENGTH);
+
+
+// --- Channels ---
+//ADD_OP(SEND);
+//ADD_OP(TRY_SEND);
+//ADD_OP(RECV);
+//ADD_OP(TRY_RECV);
+//ADD_OP(EMPTY);
+
+// --- VAR_LIST packing ---
+
+ADD_OP(VAR_LIST_PACK);
+
 
 #undef ADD_OP
 

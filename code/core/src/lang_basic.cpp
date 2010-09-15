@@ -52,8 +52,6 @@ namespace lang {
 	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL);
 
 
-const IntTypeParam INT_TYPE_PARAM_INF = IntTypeParam::getInfiniteIntParam();
-
 // -------------------------------- Unit Type -------------------------------
 
 
@@ -98,11 +96,11 @@ int getNumBytes(const IntegerType& type) {
 
 
 IntType getIntType(unsigned short size) {
-	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam(size)));
+	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(size)));
 }
 
 IntType getGenIntType(char symbol) {
-	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam(symbol)));
+	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam(symbol)));
 }
 
 bool isIntType(const Type& type) {
@@ -126,17 +124,17 @@ ADD_TYPE(IntType, INT_1, getIntType(1));
 ADD_TYPE(IntType, INT_2, getIntType(2));
 ADD_TYPE(IntType, INT_4, getIntType(4));
 ADD_TYPE(IntType, INT_8, getIntType(8));
-ADD_TYPE(IntType, INT_INF, (GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
+ADD_TYPE(IntType, INT_INF, (GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
 
 const Identifier TYPE_NAME_UINT("uint");
 
 UIntType getUIntType(unsigned short size) {
-	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam(size)));
+	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(size)));
 }
 
 UIntType getGenUIntType(char symbol) {
-	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam(symbol)));
+	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam(symbol)));
 }
 
 bool isUIntType(const Type& type) {
@@ -160,7 +158,7 @@ ADD_TYPE(UIntType, UINT_1, getUIntType(1));
 ADD_TYPE(UIntType, UINT_2, getUIntType(2));
 ADD_TYPE(UIntType, UINT_4, getUIntType(4));
 ADD_TYPE(UIntType, UINT_8, getUIntType(8));
-ADD_TYPE(UIntType, UINT_INF, (GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
+ADD_TYPE(UIntType, UINT_INF, (GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
 
 // -------------------------------- Real Types ------------------------------
@@ -168,11 +166,11 @@ ADD_TYPE(UIntType, UINT_INF, (GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), t
 const Identifier TYPE_NAME_REAL("real");
 
 RealType getRealType(unsigned short size) {
-	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam(size)));
+	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(size)));
 }
 
 RealType getGenRealType(char symbol) {
-	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam(symbol)));
+	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam(symbol)));
 }
 
 bool isRealType(const Type& type) {
@@ -196,7 +194,14 @@ ADD_TYPE(RealType, REAL_1, getRealType(1));
 ADD_TYPE(RealType, REAL_2, getRealType(2));
 ADD_TYPE(RealType, REAL_4, getRealType(4));
 ADD_TYPE(RealType, REAL_8, getRealType(8));
-ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(INT_TYPE_PARAM_INF))));
+ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
+
+
+// -------------------------------- Misc Types ------------------------------
+
+ADD_TYPE(GenericType, STRING, GenericType("string"));
+ADD_TYPE(GenericType, WSTRING, GenericType("wstring"));
+ADD_TYPE(GenericType, VAR_LIST, GenericType("var_list"));
 
 
 // -------------------------------- Constants ------------------------------
@@ -347,12 +352,34 @@ ADD_OP(REF_DEREF, TYPE_OP_DEREF_PTR, "ref.deref");
 
 IntTypeParam intParamN = IntTypeParam::getVariableIntParam('n');
 
-//ADD_TYPE(ArrayType, ARRAY_GEN, (ArrayType(TYPE_ALPHA_PTR, intParamN)));
-//ADD_TYPE(VectorType, VEC_INT_GEN, (VectorType(TYPE_UINT_GEN_PTR, intParamN)));
-//
-//ADD_TYPE(TupleType, SUBSCRIPT_ARGUMENT, (TupleType(TYPE_ARRAY_GEN_PTR, TYPE_VEC_INT_GEN_PTR)));
-//ADD_TYPE(FunctionType, OP_ARRAY_SUBSCRIPT, (FunctionType(TYPE_SUBSCRIPT_ARGUMENT, TYPE_ALPHA_PTR)));
+ADD_TYPE(ArrayType, ARRAY_GEN, (ArrayType(TYPE_ALPHA_PTR, intParamN)));
+ADD_TYPE(VectorType, VEC_INT_GEN, (VectorType(TYPE_UINT_GEN_PTR, intParamN)));
 
+ADD_TYPE(TupleType, SUBSCRIPT_ARGUMENT, (TupleType(TYPE_ARRAY_GEN_PTR, TYPE_VEC_INT_GEN_PTR)));
+ADD_TYPE(FunctionType, OP_ARRAY_SUBSCRIPT, (FunctionType(TYPE_SUBSCRIPT_ARGUMENT, TYPE_ALPHA_PTR)));
+
+ADD_OP(SUBSCRIPT, TYPE_OP_ARRAY_SUBSCRIPT, "subscript");
+
+ADD_TYPE(TupleType, SINGLE_ARRAY_GEN, (TupleType(TYPE_ARRAY_GEN_PTR)));
+ADD_TYPE(FunctionType, OP_ARRAY_LENGTH, (FunctionType(TYPE_SINGLE_ARRAY_GEN_PTR, TYPE_INT_GEN_PTR)));
+ADD_OP(LENGTH, TYPE_OP_ARRAY_LENGTH, "length");
+
+// --- Channels ---
+
+ADD_TYPE(ChannelType, CHANNEL_GEN, (ChannelType(TYPE_ALPHA_PTR, IntTypeParam::getVariableIntParam('n'))));
+ADD_TYPE(TupleType, SINGLE_CHANNEL_GEN, (TupleType(TYPE_CHANNEL_GEN)));
+
+
+//ADD_TYPE(FunctionType, OP_SEND, (FunctionType(SINGLE_CHANNEL_GEN)));
+//ADD_OP(SEND);
+//ADD_OP(TRY_SEND);
+//ADD_OP(RECV);
+//ADD_OP(TRY_RECV);
+//ADD_OP(EMPTY);
+
+// --- VAR_LIST packing ---
+ADD_TYPE(FunctionType, OP_VAR_LIST_PACK, FunctionType(TYPE_ALPHA_PTR, TYPE_VAR_LIST_PTR));
+ADD_OP(VAR_LIST_PACK, TYPE_OP_VAR_LIST_PACK_PTR, "pack");
 
 #undef ADD_OP
 
