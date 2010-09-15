@@ -55,6 +55,7 @@ class Identifier : public insieme::utils::HashableImmutableData<Identifier> {
 	string name;
 
 public:
+	Identifier() : HashableImmutableData<Identifier>(boost::hash_value(string("UNKNOWN_IDENT"))), name(string("UNKNOWN_IDENT")) {}
 
 	Identifier(const char* name) : HashableImmutableData<Identifier>(boost::hash_value(string(name))), name(string(name)) {}
 
@@ -78,7 +79,7 @@ public:
 	}
 	
 	operator const std::string& () { 
-		return name; 
+		return name;
 	}
 };
 
