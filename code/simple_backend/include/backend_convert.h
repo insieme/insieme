@@ -50,6 +50,7 @@
 
 #include "container_utils.h"
 #include "hash_utils.h"
+#include "functional_utils.h"
 
 #include "code_management.h"
 
@@ -176,7 +177,7 @@ class ConversionContext {
 public:
 	ConversionContext() : typeMan(*this), funcMan(*this) { }
 
-	typedef std::unordered_map<ExpressionPtr, CodePtr> ConvertedCode;
+	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
 
 	NameGenerator& getNameGen() { return nameGen; }
 	TypeManager& getTypeMan() { return typeMan; }

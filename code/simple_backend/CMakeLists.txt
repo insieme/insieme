@@ -21,6 +21,7 @@ add_library(insieme_simple_backend ${insieme_simple_backend_srcs} ${insieme_simp
 
 # add dependencies
 add_dependencies( insieme_simple_backend insieme_core insieme_c_info insieme_utils )
+target_link_libraries(insieme_simple_backend insieme_c_info)
 
 # enable tests for this project
 find_package(GTest REQUIRED)
