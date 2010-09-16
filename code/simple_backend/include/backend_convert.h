@@ -130,7 +130,7 @@ public:
 	}
 };
 
-// TODO more sane depndency handling / move forward declaration
+// TODO more sane dependency handling / move forward declaration
 class ConversionContext;
 
 /** Manages C type generation and lookup for IR types.
@@ -141,12 +141,9 @@ class TypeManager {
 public:
 	TypeManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
-	string getTypeName(const core::TypePtr type) {
-	}
-	string getTypeDecl(const core::TypePtr type) {
-	}
-	CodePtr getTypeDefinition(const core::TypePtr type) {
-	}
+	string getTypeName(const core::TypePtr type);
+	string getTypeDecl(const core::TypePtr type);
+	CodePtr getTypeDefinition(const core::TypePtr type);
 };
 
 /** Manages C function generation and lookup for named lambda expressions.
@@ -294,18 +291,7 @@ public:
 
 	////////////////////////////////////////////////////////////////////////// Expressions
 
-	void visitCallExpr(const CallExprPtr& ptr) {
-		const std::vector<ExpressionPtr>& args = ptr->getArguments();
-		visit(ptr->getFunctionExpr());
-		if(args.size()>0) {
-			visit(args.front());
-			for_each(args.cbegin()+1, args.cend(), [&, this](const ExpressionPtr& curArg) {
-				this->cStr << ", ";
-				this->visit(curArg);
-			});
-		}
-		cStr << ")";
-	}
+	void visitCallExpr(const CallExprPtr& ptr);
 
 	void visitCastExpr(const CastExprPtr& ptr) {
 		cStr << "((" << printTypeName(ptr->getType()) << ")(";
@@ -339,25 +325,19 @@ public:
 		}
 	}
 
-	void visitLambdaExpr(const LambdaExprPtr& ptr) {
-		std::cout << "LAMBDA\n";
-		if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
-			std::cout << "HOLY\n";
-			// TODO 
-			// //cname->getName();
-		}
-		else { // an unnamed lambda
-			assert(0 && "Unnamed lambda not yet implemented");
-		}
-		std::cout << "//LAMBDA\n";
-	}
+	void visitLambdaExpr(const LambdaExprPtr& ptr);
 
 	void visitRecLambdaExpr(const LambdaExprPtr& ptr) {
 		// TODO when cname annotations are standardized
 	}
 
 	void visitLiteral(const LiteralPtr& ptr) {
-		cStr << ptr->getValue();
+		if(*ptr->getType() == lang::TYPE_STRING_VAL) {
+			cStr << "\"" << ptr->getValue() << "\"";
+		} 
+		else {
+			cStr << ptr->getValue();
+		}
 	}
 
 private:

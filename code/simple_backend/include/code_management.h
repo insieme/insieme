@@ -107,6 +107,7 @@ public:
 	CodeFragment(const std::string& name = "unnamed") : name(name) { }
 
 	CodePtr addDependency(const std::string& name = "unnamed");
+	void addDependency(const CodePtr& dep);
 	const std::vector<CodePtr>& getDependencies() const { return dependencies; };
 	const std::string& getName() { return name; }
 

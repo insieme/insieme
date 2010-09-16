@@ -54,6 +54,10 @@ CodePtr CodeFragment::addDependency( const std::string& name /*= "unnamed"*/ ) {
 	return newDep;
 }
 
+void CodeFragment::addDependency(const CodePtr& dep) {
+	dependencies.push_back(dep);
+}
+
 
 namespace depResolve {
 

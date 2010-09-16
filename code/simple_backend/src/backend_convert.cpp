@@ -36,6 +36,8 @@
 
 #include "backend_convert.h"
 
+#include "annotated_ptr.h"
+
 namespace insieme {
 namespace simple_backend {
 	
@@ -46,14 +48,23 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	if(codeIt != functionMap.end()) {
 		return codeIt->second;
 	}
-	// generate a new function from the lambda expression
-	CodePtr cptr = std::make_shared<CodeFragment>(string("fun_codefragment_") + ident.getName());
-	CodeStream& cs = cptr->getCodeStream();
-	// write the function prototype
 
+	auto funType = dynamic_pointer_cast<const FunctionType>(lambda->getType());
+
+	// generate a new function from the lambda expression
+	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident.getName());
+	CodeStream& cs = cptr->getCodeStream();
+	// write the function header
+	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident.getName() << "(";
+	// TODO handle arguments
+	cs << ") {" << CodeStream::indR << "\n";
 	// generate the function body
-	//ConvertVisitor visitor(cptr);
-	//visitor.visit(lambda->getBody());
+	ConvertVisitor visitor(cc);
+	visitor.visit(lambda->getBody());
+	cs << visitor.getCode()->getCodeStream().getString() << CodeStream::indL << "\n}\n\n";
+	// insert into function map and return
+	functionMap.insert(std::make_pair(ident, cptr));
+	return cptr;
 }
 
 
@@ -67,6 +78,51 @@ ConversionContext::ConvertedCode ConversionContext::convert(const core::ProgramP
 	});
 	return converted;
 }
+
+
+void ConvertVisitor::visitLambdaExpr( const LambdaExprPtr& ptr )
+{
+	if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
+		defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cname->getIdent()));
+		// TODO print function name
+	}
+	else { // an unnamed lambda
+		assert(0 && "Unnamed lambda not yet implemented");
+	}
+}
+
+void ConvertVisitor::visitCallExpr( const CallExprPtr& ptr )
+{
+	const std::vector<ExpressionPtr>& args = ptr->getArguments();
+	visit(ptr->getFunctionExpr());
+	cStr << "(";
+	if(args.size()>0) {
+		visit(args.front());
+		for_each(args.cbegin()+1, args.cend(), [&, this](const ExpressionPtr& curArg) {
+			this->cStr << ", ";
+			this->visit(curArg);
+		});
+	}
+	cStr << ")";
+}
+
+
+string TypeManager::getTypeName(const core::TypePtr type) {
+	SimpleTypeConverter conv(cc.getNameGen());
+	return conv.visit(type);
+	// TODO handle complex types
+}
+
+string TypeManager::getTypeDecl(const core::TypePtr type) {
+	//TODO
+	return string();
+}
+
+CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
+	//TODO
+	return CodePtr(NULL);
+}
+
 
 }
 }
