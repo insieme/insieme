@@ -34,10 +34,11 @@
  * regarding third party software licenses.
  */
 
-extern int printf(char *);
+extern int printf(char *, ...);
 
 int main(int argc, char* argv[]) {
 
-	printf("Hallo Insieme");
+	printf("Hallo Insieme, the number %d in compilers!", 1);
 
+	return 0;
 }

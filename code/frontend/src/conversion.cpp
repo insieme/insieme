@@ -778,6 +778,9 @@ public:
 			argTypes.clear();
 		}
 
+		if( funcTy->isVariadic() )
+			argTypes.push_back( core::lang::TYPE_VAR_LIST );
+
 		return TypeWrapper( builder.functionType( builder.tupleType(argTypes), retTy) );
 	}
 
