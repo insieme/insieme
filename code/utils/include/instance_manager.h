@@ -95,7 +95,6 @@ class InstanceManager : private boost::noncopyable {
 	 */
 	std::unordered_set<const T*, hash_target<const T*>, pointing_to_equal<const T*>> storage;
 
-
 	/**
 	 * A private method used to clone instances to be managed by this type.
 	 *

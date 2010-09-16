@@ -152,6 +152,160 @@ TEST(Annotation, ASTNode) {
 	GenericTypePtr ptr = GenericType::get(manager, "test");
 	ptr->addAnnotation(annotation);
 
+	EXPECT_TRUE ( ptr->contains(DummyAnnotation::DummyKey));
+}
+
+TEST(Annotation, CopyTests) {
+
+	// Just try to add an annotation to a AST node
+	auto annotation = std::make_shared<DummyAnnotation>(1);
+
+	// create first instance
+	Annotatable a;
+	a.addAnnotation(annotation);
+
+	// test copy constructor
+	Annotatable b(a);
+	EXPECT_TRUE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation::DummyKey));
+
+	auto annotation2 = std::make_shared<DummyAnnotation2>(2);
+	a.addAnnotation(annotation2);
+	EXPECT_TRUE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+
+	b.remAnnotation(DummyAnnotation::DummyKey);
+	EXPECT_FALSE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+
+	// test assignment
+	Annotatable c;
+	EXPECT_FALSE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation2::DummyKey));
+
+	c.addAnnotation(annotation);
+	EXPECT_FALSE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( c.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation2::DummyKey));
+
+	// assign a to c ... (annotations should now be shared)
+	c = a;
+	EXPECT_FALSE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( c.contains(DummyAnnotation2::DummyKey));
+
+	b.addAnnotation(annotation);
+	EXPECT_TRUE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( c.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( c.contains(DummyAnnotation2::DummyKey));
+
+	a.remAnnotation(DummyAnnotation::DummyKey);
+	EXPECT_FALSE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( c.contains(DummyAnnotation2::DummyKey));
+
+	c.remAnnotation(DummyAnnotation2::DummyKey);
+	EXPECT_FALSE ( a.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( a.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( b.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( c.contains(DummyAnnotation2::DummyKey));
+}
+
+
+TEST(Annotation, AnnotationsAndClone) {
+
+	NodeManager manager;
+
+	// simple migration between manager
+	GenericTypePtr type = GenericType::get(manager, "A");
+	type->addAnnotation(std::make_shared<DummyAnnotation>(1));
+	EXPECT_TRUE(type->contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type->contains(DummyAnnotation2::DummyKey));
+
+	NodeManager manager2;
+	GenericTypePtr type2 = manager2.get(type);
+	EXPECT_TRUE(type->contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type->contains(DummyAnnotation2::DummyKey));
+	//EXPECT_TRUE(type2->contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type2->contains(DummyAnnotation2::DummyKey));
+
+	// more deeply nested migration
+	GenericTypePtr base = GenericType::get(manager, "B");
+	GenericTypePtr derived = GenericType::get(manager, "D", toVector<TypePtr>(), toVector<IntTypeParam>(), base);
+
+	// => base pointer and pointer within derived type should be connected
+	base.addAnnotation(std::make_shared<DummyAnnotation>(12));
+	EXPECT_TRUE( base.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( derived->getBaseType().contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE( base.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( derived->getBaseType().contains(DummyAnnotation2::DummyKey));
+
+	// when migrating to another manager ...
+	GenericTypePtr derived2 = manager2.get(derived);
+
+}
+
+TEST(Annotation, CastTest) {
+
+	NodeManager manager;
+
+	// create a node
+	GenericTypePtr type = GenericType::get(manager, "A");
+	type.addAnnotation(std::make_shared<DummyAnnotation>(1));
+	EXPECT_TRUE(type.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type.contains(DummyAnnotation2::DummyKey));
+
+	// cast up ...
+	NodePtr node = type;
+	EXPECT_TRUE(node.contains(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(node.contains(DummyAnnotation2::DummyKey));
+
+	node.addAnnotation(std::make_shared<DummyAnnotation2>(12));
+	EXPECT_TRUE(type.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(node.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(node.contains(DummyAnnotation2::DummyKey));
+
+	// dynamic pointer cast
+	TypePtr type2 = dynamic_pointer_cast<const Type>(node);
+	EXPECT_TRUE(type.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(node.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(node.contains(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(type2.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type2.contains(DummyAnnotation2::DummyKey));
+
+	type2.remAnnotation(DummyAnnotation::DummyKey);
+	EXPECT_FALSE(type.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(node.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(node.contains(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(type2.contains(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type2.contains(DummyAnnotation2::DummyKey));
+
+
 }
 
 } // end namespace core

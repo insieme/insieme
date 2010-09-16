@@ -18,16 +18,18 @@ file(GLOB insieme_driver_incs 	include/*.h )
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
+include_directories( ${insieme_simple_backend_include_dir} )
+include_directories( ${insieme_c_info_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
 
 # Build dummy executable
 add_executable( main src/main.cpp )
 
 # add dependencies
-add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend )
+add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
 
 # register linked libraries
-target_link_libraries( main insieme_core insieme_utils insieme_frontend )
+target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
 
 # add boost_program_options library
 target_link_libraries( main boost_program_options ${glog_LIB})
@@ -44,6 +46,8 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_frontend)
+	target_link_libraries(ut_${case_name} insieme_simple_backend)
+	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} boost_program_options)

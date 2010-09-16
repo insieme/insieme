@@ -34,53 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <iostream>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/utility/enable_if.hpp>
-
-#include "annotation.h"
-#include "instance_ptr.h"
-#include "type_traits_utils.h"
+//OpenCL definitions
+#define __constant __attribute__((address_space(3)))
+#define __global __attribute__((address_space(2)))
+#define __local __attribute__((address_space(1)))
+#define __private __attribute__((address_space(0))) //default value
 
 
-namespace insieme {
-namespace core {
-
-template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
-public:
-	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
-
-	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
-		: InstancePtr<T>(from.ptr), Annotatable(from) { }
-};
-
-template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
-dynamic_pointer_cast(AnnotatedPtr<T> src) {
-	if(dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
-	}
-//	return NullInstance;
-	return NULL;
+__attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
+{
+    __local float* b;
+    __private int* d;
+    struct __attribute__((packed)) X
+    {
+        int b[3] __attribute__((aligned(8)));
+        short s __attribute__((packed));
+    };
+    
+    int x __attribute__ ((aligned(2)));
+    __attribute__((aligned(8))) int y;
+    
+    a[0] = 3.0f;
+    return;
 }
-
-} // end namespace core
-} // end namespace insieme
-
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const insieme::core::AnnotatedPtr<T>& ptr) {
-//	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
-	out << "AP(";
-	if (!!ptr) {
-		out << *ptr;
-	} else {
-		out << "NULL";
-	}
-	out << ")";
-	return out;
-}
-

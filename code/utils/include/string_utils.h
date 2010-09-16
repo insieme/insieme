@@ -93,6 +93,9 @@ std::ostream& operator<<(std::ostream& out, const Joinable<Container, Printer>& 
 	return out;
 }
 
+/** Joins the values in the collection to the stream separated by a supplied separator.
+ ** NOTE: When using C++0x lambdas to supply the printer *make sure* to provide the return type (usually std::ostream&) explicitly.
+ ** */
 template<typename Container, typename Printer>
 Joinable<Container, Printer> join(const string& separator, const Container& container, const Printer& printer) {
 	return Joinable<Container,Printer>(separator, container, printer);

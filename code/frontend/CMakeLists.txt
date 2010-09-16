@@ -28,7 +28,9 @@ include_directories(
 	${LLVM_HOME}/include 
 	${CLANG_SRC_HOME} 
 	${insieme_utils_include_dir} 
-	${insieme_core_include_dir} )
+	${insieme_core_include_dir} 
+	${insieme_c_info_include_dir} )
+	
 
 if(NOT MSVC)
 	find_library(clang_CompilerDriver_LIB 	NAMES CompilerDriver PATHS ${LLVM_HOME}/lib)

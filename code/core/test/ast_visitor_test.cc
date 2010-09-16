@@ -211,6 +211,60 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 }
 
 
+TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
+
+	// TODO: run recursive visitor test
+
+	NodeManager manager;
+	CountingVisitor visitor;
+
+	// create a Test CASE
+	TypePtr typeD = GenericType::get(manager, "D");
+	TypePtr typeE = GenericType::get(manager, "E");
+	TypePtr typeF = GenericType::get(manager, "F");
+
+	TypePtr typeB = GenericType::get(manager, "B", toVector(typeD, typeE));
+	TypePtr typeC = GenericType::get(manager, "C", toVector(typeF));
+
+	TypePtr typeA = GenericType::get(manager, "A", toVector(typeB, typeC));
+
+
+	// create a resulting list
+	vector<NodePtr> res;
+
+	// create a visitor collecting all nodes
+	auto collector = makeLambdaASTVisitor([&res](const NodePtr& cur) {
+		res.push_back(cur);
+	});
+
+	BreadthFirstASTVisitor<decltype(collector)> breadthVisitor(collector);
+
+	breadthVisitor.visit(typeA);
+	vector<NodePtr> expected;
+	expected.push_back(typeA);
+	expected.push_back(typeB);
+	expected.push_back(typeC);
+	expected.push_back(typeD);
+	expected.push_back(typeE);
+	expected.push_back(typeF);
+
+	EXPECT_EQ ( toString(expected), toString(res));
+	EXPECT_TRUE ( equals(expected, res));
+
+	res.clear();
+	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
+	visitAllBreadthFirst(typeA, collector);
+	EXPECT_TRUE ( equals(expected, res));
+
+	res.clear();
+	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
+	visitAllNodesBreadthFirst(typeA, [&res](const NodePtr& cur) {
+		res.push_back(cur);
+	});
+	EXPECT_TRUE ( equals(expected, res));
+
+}
+
 
 TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 
@@ -291,9 +345,21 @@ TEST(ASTVisitor, UtilitiesTest) {
 	visitAllNodes(type, fun);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
+	res.clear();
+	visitAllNodes(type, fun, true);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+
+	res.clear();
+	visitAllNodes(type, fun, false);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, shared, type), res));
+
 	// visit all, only once
 	res.clear();
 	visitAllNodesOnce(type, fun);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+
+	res.clear();
+	visitAllNodesOnce(type, fun, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();

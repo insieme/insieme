@@ -98,21 +98,7 @@ class SimpleTypeConverter : public ASTVisitor<string> {
 public:
 	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
 
-	string visitGenericType(const GenericTypePtr& ptr) {
-		if(lang::isUnitType(*ptr)) {
-			return "void";
-		} else
-		if(lang::isIntType(*ptr)) {
-			return ptr->getName();
-		} else
-		if(lang::isBoolType(*ptr)) {
-			return "bool";
-		} else
-		if(lang::isRealType(*ptr)) {
-			return ptr->getName();
-		}
-		assert(0 && "Unhandled generic type.");
-	}
+	string visitGenericType(const GenericTypePtr& ptr);
 
 	string visitStructType(const StructTypePtr& ptr) {
 		string structName;
@@ -130,7 +116,7 @@ public:
 	}
 };
 
-// TODO more sane depndency handling / move forward declaration
+// TODO more sane dependency handling / move forward declaration
 class ConversionContext;
 
 /** Manages C type generation and lookup for IR types.
@@ -141,12 +127,9 @@ class TypeManager {
 public:
 	TypeManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
-	string getTypeName(const core::TypePtr type) {
-	}
-	string getTypeDecl(const core::TypePtr type) {
-	}
-	CodePtr getTypeDefinition(const core::TypePtr type) {
-	}
+	string getTypeName(const core::TypePtr type);
+	string getTypeDecl(const core::TypePtr type);
+	CodePtr getTypeDefinition(const core::TypePtr type);
 };
 
 /** Manages C function generation and lookup for named lambda expressions.
@@ -164,6 +147,7 @@ public:
 	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
 	CodePtr getFunction(const core::LambdaExprPtr& lambda, const Identifier& ident);
+	CodePtr getFunctionLiteral(const core::FunctionTypePtr& type, const string& name);
 };
 
 /** Stores the persistent state objects required to perform a simple_backend conversion.
@@ -193,7 +177,6 @@ class ConvertVisitor : public ASTVisitor<> {
 	NameGenerator& nameGen;
 	CodePtr defCodePtr;
 	CodeStream& cStr;
-	//TypeConverter typeConv;
 	
 	string printTypeName(const TypePtr& typ) {
 		// TODO print C type name for specified type to cStr
@@ -209,10 +192,10 @@ class ConvertVisitor : public ASTVisitor<> {
 	}
 
 public:
-	//ConvertVisitor() : defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()), typeConv(nameGen) { };
-	//ConvertVisitor(const CodePtr& codePtr) : defCodePtr(codePtr), cStr(defCodePtr->getCodeStream()), typeConv(nameGen) { };
 	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
-		defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream())/*, typeConv(nameGen)*/ { };
+		defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()) { };
+	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()), 
+		defCodePtr(cptr), cStr(defCodePtr->getCodeStream()) { };
 
 	CodePtr getCode() { return defCodePtr; }
 
@@ -232,8 +215,11 @@ public:
 
 	void visitCompoundStmt(const CompoundStmtPtr& ptr) {
 		cStr << "{" << CodeStream::indR << "\n";
-		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { this->visit(ptr); });
-		cStr << CodeStream::indL << "}" << "\n";
+		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { 
+			this->visit(ptr); 
+			cStr << ";\n"; // TODO remove this if stmt/expr handling better
+		});
+		cStr << CodeStream::indL << "\n}" << "\n";
 	}
 
 	void visitContinueStmt(const ContinueStmtPtr& ptr) {
@@ -294,18 +280,7 @@ public:
 
 	////////////////////////////////////////////////////////////////////////// Expressions
 
-	void visitCallExpr(const CallExprPtr& ptr) {
-		const std::vector<ExpressionPtr>& args = ptr->getArguments();
-		visit(ptr->getFunctionExpr());
-		if(args.size()>0) {
-			visit(args.front());
-			for_each(args.cbegin()+1, args.cend(), [&, this](const ExpressionPtr& curArg) {
-				this->cStr << ", ";
-				this->visit(curArg);
-			});
-		}
-		cStr << ")";
-	}
+	void visitCallExpr(const CallExprPtr& ptr);
 
 	void visitCastExpr(const CastExprPtr& ptr) {
 		cStr << "((" << printTypeName(ptr->getType()) << ")(";
@@ -339,23 +314,13 @@ public:
 		}
 	}
 
-	void visitLambdaExpr(const LambdaExprPtr& ptr) {
-		if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
-			// TODO 
-			// //cname->getName();
-		}
-		else { // an unnamed lambda
-			assert(0 && "Unnamed lambda not yet implemented");
-		}
-	}
+	void visitLambdaExpr(const LambdaExprPtr& ptr);
 
 	void visitRecLambdaExpr(const LambdaExprPtr& ptr) {
 		// TODO when cname annotations are standardized
 	}
 
-	void visitLiteral(const LiteralPtr& ptr) {
-		cStr << ptr->getValue();
-	}
+	void visitLiteral(const LiteralPtr& ptr);
 
 private:
 	void internalVisitComposite(const NamedCompositeExprPtr& ptr) {

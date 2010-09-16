@@ -142,8 +142,6 @@ std::ostream& Program::printTo(std::ostream& out) const {
 		[&out](const ExpressionPtr& cur) {
 			out << *cur << endl;
 	});
-	out << endl;
-
 	out << "}" << endl;
 
 	return out;

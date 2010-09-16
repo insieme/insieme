@@ -35,9 +35,14 @@
  */
 
 #include <iostream>
+
 #include "expressions.h"
 #include "types.h"
 #include "statements.h"
+#include "backend_convert.h"
+#include "naming.h"
+
+#include "container_utils.h"
 
 #include "expressions.h"
 #include "string_utils.h"
@@ -67,52 +72,33 @@ int main(int argc, char** argv) {
 	LOG(INFO) << "Insieme compiler";
 	core::ProgramPtr program = core::Program::create();
 	try {
-		for(std::vector<std::string>::const_iterator i = CommandLineOptions::InputFiles.begin(),
-													 e = CommandLineOptions::InputFiles.end(); i != e; ++i) {
-			fe::InsiemeTransUnit::ParseFile(*i, program);
-		}
+		auto inputFiles = CommandLineOptions::InputFiles;
+//		auto inputFiles = toVector<std::string>("../code/driver/test/hello_world.c");
+		std::for_each(inputFiles.begin(), inputFiles.end(), [&](const std::string& file) {
+
+			LOG(INFO) << "Parsing File: " << file;
+			auto res = fe::InsiemeTransUnit::ParseFile(file, program);
+			insieme::core::ProgramPtr program = res->getProgram();
+			LOG(INFO) << "Parsed Program: " << std::endl << *program;
+
+			LOG(INFO) << "Has name annotation: " << ((program->contains(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
+
+			LOG(INFO) << "Converting to C++ ... ";
+			{ // TODO make one wrapper function for all of this
+				insieme::simple_backend::ConversionContext cc;
+
+				auto converted = cc.convert(program);
+				for_each(program->getEntryPoints(), [&converted](const insieme::core::ExpressionPtr& ep) {
+					LOG(INFO) << "---\n" << converted[ep];
+				});
+			}
+		});
+
+
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;
 	}
 
 	ShutdownGoogleLogging();
-
-//	vector<IntTypeParam> list;
-//	list.push_back(IntTypeParam::getInfiniteIntParam());
-//	list.push_back(IntTypeParam::getInfiniteIntParam());
-//	list.push_back(IntTypeParam::getVariableIntParam('a'));
-//
-//	list[0] = list[2];
-//
-////	cout << sizeof(IntTypeParam);
-//
-//
-//   cout << "Insieme (tm) compiler." << endl;
-//
-//
-//   std::vector<TypeRef> emptyRefs;
-//   std::vector<IntTypeParam> emptyInts;
-//
-//   TypeRef simple(new UserType("simple"));
-//
-//   cout << simple->toString()  << endl;
-//
-//   vector<TypeRef> v;
-//   v.push_back(simple);
-//   v.push_back(simple);
-//
-//   vector<IntTypeParam> p;
-//   p.push_back(IntTypeParam::getConcreteIntParam(12));
-//   p.push_back(IntTypeParam::getVariableIntParam('a'));
-//
-//   // works if construct is not private:
-////	p.push_back((IntTypeParam){IntTypeParam::CONCRETE, 12 });
-////	p.push_back((IntTypeParam){IntTypeParam::VARIABLE, 'a' });
-//
-//   UserType complex("complex", v, p, simple);
-//   cout << complex.toString() << endl;
-//
-//   UserType medium("medium", std::vector<TypeRef>(), p);
-//   cout << medium.toString() << endl;
 }
 
