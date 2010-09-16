@@ -55,9 +55,7 @@ using namespace insieme::simple_backend;
 
 ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
-	TypePtr stringType = build.genericType("string");
-	TypePtr varArgType = build.genericType("var_list");
-	TypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
+	TypePtr printfArgType = build.tupleType(toVector<TypePtr>(TYPE_STRING_PTR, TYPE_VAR_LIST_PTR));
 	TypePtr unitType = build.getUnitType();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
@@ -68,7 +66,8 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 	ExpressionPtr stringLiteral = build.literal("Hello World!", TYPE_STRING_PTR);
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
-	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
+	auto mainBody = build.compoundStmt(invocation);
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
 
 	mainLambda.addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
 

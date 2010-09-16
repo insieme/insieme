@@ -98,21 +98,7 @@ class SimpleTypeConverter : public ASTVisitor<string> {
 public:
 	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
 
-	string visitGenericType(const GenericTypePtr& ptr) {
-		if(lang::isUnitType(*ptr)) {
-			return "void";
-		} else
-		if(lang::isIntType(*ptr)) {
-			return ptr->getName();
-		} else
-		if(lang::isBoolType(*ptr)) {
-			return "bool";
-		} else
-		if(lang::isRealType(*ptr)) {
-			return ptr->getName();
-		}
-		assert(0 && "Unhandled generic type.");
-	}
+	string visitGenericType(const GenericTypePtr& ptr);
 
 	string visitStructType(const StructTypePtr& ptr) {
 		string structName;
@@ -161,6 +147,7 @@ public:
 	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
 	CodePtr getFunction(const core::LambdaExprPtr& lambda, const Identifier& ident);
+	CodePtr getFunctionLiteral(const core::FunctionTypePtr& type, const string& name);
 };
 
 /** Stores the persistent state objects required to perform a simple_backend conversion.
@@ -190,7 +177,6 @@ class ConvertVisitor : public ASTVisitor<> {
 	NameGenerator& nameGen;
 	CodePtr defCodePtr;
 	CodeStream& cStr;
-	//TypeConverter typeConv;
 	
 	string printTypeName(const TypePtr& typ) {
 		// TODO print C type name for specified type to cStr
@@ -206,10 +192,10 @@ class ConvertVisitor : public ASTVisitor<> {
 	}
 
 public:
-	//ConvertVisitor() : defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()), typeConv(nameGen) { };
-	//ConvertVisitor(const CodePtr& codePtr) : defCodePtr(codePtr), cStr(defCodePtr->getCodeStream()), typeConv(nameGen) { };
 	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
-		defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream())/*, typeConv(nameGen)*/ { };
+		defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()) { };
+	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()), 
+		defCodePtr(cptr), cStr(defCodePtr->getCodeStream()) { };
 
 	CodePtr getCode() { return defCodePtr; }
 
@@ -229,8 +215,11 @@ public:
 
 	void visitCompoundStmt(const CompoundStmtPtr& ptr) {
 		cStr << "{" << CodeStream::indR << "\n";
-		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { this->visit(ptr); });
-		cStr << CodeStream::indL << "}" << "\n";
+		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { 
+			this->visit(ptr); 
+			cStr << ";\n"; // TODO remove this if stmt/expr handling better
+		});
+		cStr << CodeStream::indL << "\n}" << "\n";
 	}
 
 	void visitContinueStmt(const ContinueStmtPtr& ptr) {
@@ -331,14 +320,7 @@ public:
 		// TODO when cname annotations are standardized
 	}
 
-	void visitLiteral(const LiteralPtr& ptr) {
-		if(*ptr->getType() == lang::TYPE_STRING_VAL) {
-			cStr << "\"" << ptr->getValue() << "\"";
-		} 
-		else {
-			cStr << ptr->getValue();
-		}
-	}
+	void visitLiteral(const LiteralPtr& ptr);
 
 private:
 	void internalVisitComposite(const NamedCompositeExprPtr& ptr) {
