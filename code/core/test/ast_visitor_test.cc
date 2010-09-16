@@ -250,6 +250,19 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 
 	EXPECT_EQ ( toString(expected), toString(res));
 	EXPECT_TRUE ( equals(expected, res));
+
+	res.clear();
+	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
+	visitAllBreadthFirst(typeA, collector);
+	EXPECT_TRUE ( equals(expected, res));
+
+	res.clear();
+	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
+	visitAllNodesBreadthFirst(typeA, [&res](const NodePtr& cur) {
+		res.push_back(cur);
+	});
+	EXPECT_TRUE ( equals(expected, res));
+
 }
 
 

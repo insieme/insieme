@@ -513,7 +513,7 @@ public:
  * @return the resulting visitor.
  */
 template<typename Lambda>
-LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
+inline LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
 	return LambdaASTVisitor<Lambda>(lambda);
 };
 
@@ -525,8 +525,8 @@ LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
  */
-template<typename Visitor>
-void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
+template<typename NodePtr, typename Visitor>
+inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
 	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
@@ -539,8 +539,8 @@ void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
  * @param root the root not to start the visiting from
  * @param lambda the lambda to be applied to all the nodes
  */
-template<typename Lambda>
-void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
+template<typename NodePtr, typename Lambda>
+inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
 	auto visitor = makeLambdaASTVisitor(lambda);
 	visitAll(root, visitor, preorder);
 }
@@ -554,8 +554,8 @@ void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
  * @param visitor the visitor to be visiting all the nodes
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
-template<typename Visitor>
-void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) {
+template<typename NodePtr, typename Visitor>
+inline void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) {
 	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
@@ -569,12 +569,39 @@ void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) {
  * @param lambda the lambda to be applied to all the nodes
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
-template<typename Lambda>
-void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true) {
+template<typename NodePtr, typename Lambda>
+inline void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true) {
 	auto visitor = makeLambdaASTVisitor(lambda);
 	visitAllOnce(root, visitor, preorder);
 }
 
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
+ * multiple times.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ */
+template<typename NodePtr, typename Visitor>
+inline void visitAllBreadthFirst(NodePtr& root, Visitor& visitor) {
+	BreadthFirstASTVisitor<decltype(visitor)> recVisitor(visitor);
+	recVisitor.visit(root);
+}
+
+/**
+ * The given lambda is recursively applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
+ * multiple times.
+ *
+ * @param root the root not to start the visiting from
+ * @param lambda the lambda to be applied to all the nodes
+ */
+template<typename NodePtr, typename Lambda>
+inline void visitAllNodesBreadthFirst(NodePtr& root, Lambda lambda) {
+	auto visitor = makeLambdaASTVisitor(lambda);
+	visitAllBreadthFirst(root, visitor);
+}
 
 } // end namespace core
 } // end namespace insieme
