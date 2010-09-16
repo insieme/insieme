@@ -340,13 +340,16 @@ public:
 	}
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr) {
+		std::cout << "LAMBDA\n";
 		if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
+			std::cout << "HOLY\n";
 			// TODO 
 			// //cname->getName();
 		}
 		else { // an unnamed lambda
 			assert(0 && "Unnamed lambda not yet implemented");
 		}
+		std::cout << "//LAMBDA\n";
 	}
 
 	void visitRecLambdaExpr(const LambdaExprPtr& ptr) {

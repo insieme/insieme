@@ -66,16 +66,14 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	TypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	ExpressionPtr intLiteral = build.literal("4", TYPE_INT_GEN_PTR);
-	auto invocation = build.callExpr(unitType, printfDefinition, toVector(intLiteral));
-	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
+	ExpressionPtr stringLiteral = build.literal("Hello World!", TYPE_STRING_PTR);
+	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
-	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
-	// TODO fix compilation error (ambiguity)
-	//mainDefinition.addAnnotation(std::make_shared<CNameAnnotation>("main"));
+	mainLambda.addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
 
 	return build.createProgram(
-		toSet<Program::EntryPointSet>(mainDefinition)
+		toSet<Program::EntryPointSet>(mainLambda)
 	);
 }
 
@@ -87,8 +85,12 @@ TEST(SimpleBackend, Basic) {
 	ProgramPtr prog = setupSampleProgram(build);
 
 	std::cout << "Start visit\n";
-	//converter.visit(prog);
-	cc.convert(prog);
+	auto converted = cc.convert(prog);
+
+	for_each(prog->getEntryPoints(), [&converted](const ExpressionPtr& ep) {
+		std::cout << "---\n" << converted[ep];
+	});
+
 	//std::cout << "============\n" << cc.getCode() << "\n-----------\n";
 	
 	//EXPECT_EQ(*compound2, *compound);
