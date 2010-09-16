@@ -56,6 +56,7 @@ CodePtr CodeFragment::addDependency( const std::string& name /*= "unnamed"*/ ) {
 
 void CodeFragment::addDependency(const CodePtr& dep) {
 	dependencies.push_back(dep);
+	//std::cout << "Added dependency " << dep->getName() << " to " << getName() << std::endl;
 }
 
 
@@ -69,7 +70,7 @@ namespace depResolve {
 
 	void addDeps(const CodePtr& cur, Graph& g, CodeVertexMap& vmap) {
 		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
-
+		
 		auto vertexGen = [&g, &vmap, &codePtrMap](const CodePtr& ptr) -> Vertex {
 			Vertex v;
 			auto insertionResult = vmap.insert(std::make_pair(&(*ptr), Vertex()));
@@ -124,7 +125,7 @@ std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodePt
 	std::vector<insieme::simple_backend::CodePtr> flatDeps;
 	insieme::simple_backend::depResolve::resolve(cp, flatDeps);
 	for_each(flatDeps, [&os](const insieme::simple_backend::CodePtr& cur) {
-		os << "// start code fragment :: " << cur->getName() << " //\n";
+		os << "\n// start code fragment :: " << cur->getName() << " //\n";
 		os << cur->getCodeStream().getString();
 	});
 	return os;

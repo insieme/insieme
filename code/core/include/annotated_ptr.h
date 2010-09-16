@@ -61,7 +61,7 @@ public:
 template<typename B, typename T>
 typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
 dynamic_pointer_cast(AnnotatedPtr<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
+	if(dynamic_cast<B*>(&(*src))) {
 		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
 	}
 //	return NullInstance;

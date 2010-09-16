@@ -360,6 +360,8 @@ protected:
 
 public:
 
+	const ElementTypeList& getElementTypes() const { return elementTypes; }
+
 	/**
 	 * This method provides a static factory method for this type of node. It will return
 	 * a tuple type pointer pointing toward a variable with the given name maintained by the

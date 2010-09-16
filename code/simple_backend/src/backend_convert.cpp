@@ -59,17 +59,31 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	// TODO handle arguments
 	cs << ") {" << CodeStream::indR << "\n";
 	// generate the function body
-	ConvertVisitor visitor(cc);
+	ConvertVisitor visitor(cc, cptr);
 	visitor.visit(lambda->getBody());
-	cs << visitor.getCode()->getCodeStream().getString() << CodeStream::indL << "\n}\n\n";
+	cs << CodeStream::indL << "\n}\n\n";
 	// insert into function map and return
 	functionMap.insert(std::make_pair(ident, cptr));
 	return cptr;
 }
 
+CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, const string& name) {
+	// TODO refactor duplication w/ above
+	CodePtr cptr = std::make_shared<CodeFragment>(string("fundecl_codefragment_") + name);
+	CodeStream& cs = cptr->getCodeStream();
+	cs << cc.getTypeMan().getTypeName(type->getReturnType()) << " " << name << "(";
+	auto argType = type->getArgumentType();
+	if(auto tupleArgType = dynamic_pointer_cast<const TupleType>(argType)) {
+		cs << join(", ", tupleArgType->getElementTypes(), [this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
+			return (o << this->cc.getTypeMan().getTypeName(cur));
+		});
+	} // TODO handle other argument types
+	cs << ");\n";
+	return cptr;
+}
 
-ConversionContext::ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog)
-{
+
+ConversionContext::ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 	ConvertedCode converted;
 	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
 		ConvertVisitor convVisitor(*this);
@@ -80,8 +94,7 @@ ConversionContext::ConvertedCode ConversionContext::convert(const core::ProgramP
 }
 
 
-void ConvertVisitor::visitLambdaExpr( const LambdaExprPtr& ptr )
-{
+void ConvertVisitor::visitLambdaExpr( const LambdaExprPtr& ptr ) {
 	if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
 		defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cname->getIdent()));
 		// TODO print function name
@@ -91,8 +104,7 @@ void ConvertVisitor::visitLambdaExpr( const LambdaExprPtr& ptr )
 	}
 }
 
-void ConvertVisitor::visitCallExpr( const CallExprPtr& ptr )
-{
+void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
 	visit(ptr->getFunctionExpr());
 	cStr << "(";
@@ -104,6 +116,22 @@ void ConvertVisitor::visitCallExpr( const CallExprPtr& ptr )
 		});
 	}
 	cStr << ")";
+}
+
+void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
+	auto typePtr = ptr->getType();
+	const string& val = ptr->getValue();
+	if(*typePtr == lang::TYPE_STRING_VAL) {
+		cStr << "\"" << val << "\"";
+	} 
+	else if(auto funType = dynamic_pointer_cast<const FunctionType>(typePtr)) {
+		auto funLiteralDeclCode = cc.getFuncMan().getFunctionLiteral(funType, val); 
+		defCodePtr->addDependency(funLiteralDeclCode);
+		cStr << val;
+	}
+	else {
+		cStr << val;
+	}
 }
 
 
@@ -123,6 +151,29 @@ CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
 	return CodePtr();
 }
 
+
+string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
+	if(lang::isUnitType(*ptr)) {
+		return "void";
+	} else
+	if(lang::isIntType(*ptr)) {
+		return ptr->getName();
+	} else
+	if(lang::isBoolType(*ptr)) {
+		return "bool";
+	} else
+	if(lang::isRealType(*ptr)) {
+		return ptr->getName();
+	}
+	if(*ptr == lang::TYPE_STRING_VAL) {
+		return "string";
+	}
+	if(*ptr == lang::TYPE_VAR_LIST_VAL) {
+		return "...";
+	}
+	assert(0 && "Unhandled generic type.");
+	return "unhandled_simple_type";
+}
 
 }
 }
