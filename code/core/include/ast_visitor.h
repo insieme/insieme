@@ -436,27 +436,27 @@ public:
 
 		std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> all;
 		ASTVisitor<void>* visitor;
-		auto lambdaVisitor = makeLambdaASTVisitor([&all, &visitor, &subVisitor, order](const NodePtr& node) {
+		auto lambdaVisitor = makeLambdaASTVisitor([&all, &visitor, this](const NodePtr& node) {
 			// add current node to set ..
-			bool isNew = all.insert(node).second();
+			bool isNew = all.insert(node).second;
 			if (!isNew) {
 				return;
 			}
 
-			if (order == PREFIX) {
+			if (this->order == PREFIX) {
 				// visit current node
-				subVisitor.visit(node);
+				this->subVisitor.visit(node);
 			}
 
-			// visit all child nodes recursivelly
+			// visit all child nodes recursively
 			const Node::ChildList& children = node->getChildList();
 			std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
 				visitor->visit(cur);
 			});
 
-			if (order == POSTFIX) {
+			if (this->order == POSTFIX) {
 				// visit current node
-				subVisitor.visit(node);
+				this->subVisitor.visit(node);
 			}
 		});
 

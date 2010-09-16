@@ -229,24 +229,24 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 		res.push_back(cur);
 	});
 
-//	// visit all recursively
-//	res.clear();
-//	RecursiveASTVisitor<decltype(collector)> recursive(collector);
-//	recursive.visit(type);
-//
-//	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
-//
-//	// visit all, only once
-//	res.clear();
-//	VisitOnceASTVisitor<decltype(collector)> prefix(collector);
-//	prefix.visit(type);
-//
-//	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
-//
-//	res.clear();
-//	VisitOnceASTVisitor<decltype(collector)> postfix(collector);
-//	postfix.visit(type);
-//
-//	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
+	// visit all recursively
+	res.clear();
+	RecursiveASTVisitor<decltype(collector)> recursive(collector);
+	recursive.visit(type);
+
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+
+	// visit all, only once
+	res.clear();
+	VisitOnceASTVisitor<decltype(collector)> prefix(collector);
+	prefix.visit(type);
+
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+
+	res.clear();
+	VisitOnceASTVisitor<decltype(collector)> postfix(collector);
+	postfix.visit(type);
+
+	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
 }

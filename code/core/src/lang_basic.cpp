@@ -400,7 +400,7 @@ const NoOpStmtPtr STMT_NO_OP_PTR = NoOpStmtPtr(&STMT_NO_OP);
 
 // --------------------------------- Grouping -------------------------------
 
-typedef typename std::unordered_set<const Node*, hash_target<const Node*>, equal_target<const Node*>> NodeSet;
+typedef std::unordered_set<const Node*, hash_target<const Node*>, equal_target<const Node*>> NodeSet;
 
 NodeSet createBuildInSet();
 const NodeSet BUILD_IN_SET = createBuildInSet();
