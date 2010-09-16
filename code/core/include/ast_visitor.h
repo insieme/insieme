@@ -379,7 +379,7 @@ public:
 	/**
 	 * Create a new visitor based on the given lambda.
 	 */
-	LambdaASTVisitor(Lambda lambda) : lambda(lambda) {};
+	LambdaASTVisitor(Lambda& lambda) : lambda(lambda) {};
 
 	/**
 	 * Visits the given node and applies it to the maintained lambda.
@@ -391,25 +391,12 @@ public:
 };
 
 
-template<typename Lambda>
-LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
-	return LambdaASTVisitor<Lambda>(lambda);
-};
-
-
 /**
  * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
  * the
  */
 template<typename SubVisitor = void>
 class VisitOnceASTVisitor : public ASTVisitor<void> {
-
-public:
-
-	enum Order {
-		PREFIX, /** < the nodes are visited in prefix order */
-		POSTFIX /** < the nodes are visited in postfix order */
-	};
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
@@ -419,14 +406,14 @@ public:
 	/**
 	 * The order in which nodes are processed.
 	 */
-	Order order;
+	bool preorder;
 
 public:
 
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	VisitOnceASTVisitor(SubVisitor& subVisitor, Order order = PREFIX) : subVisitor(subVisitor), order(order) {};
+	VisitOnceASTVisitor(SubVisitor& subVisitor, bool preorder = true) : subVisitor(subVisitor), preorder(preorder) {};
 
 
 	/**
@@ -443,7 +430,7 @@ public:
 				return;
 			}
 
-			if (this->order == PREFIX) {
+			if (this->preorder) {
 				// visit current node
 				this->subVisitor.visit(node);
 			}
@@ -454,7 +441,7 @@ public:
 				visitor->visit(cur);
 			});
 
-			if (this->order == POSTFIX) {
+			if (!this->preorder) {
 				// visit current node
 				this->subVisitor.visit(node);
 			}
@@ -467,6 +454,36 @@ public:
 		visitor->visit(node);
 	}
 };
+
+
+template<typename Lambda>
+LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
+	return LambdaASTVisitor<Lambda>(lambda);
+};
+
+template<typename Visitor>
+void visitAll(NodePtr& root, Visitor& visitor) {
+	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor);
+	recVisitor.visit(root);
+}
+
+template<typename Lambda>
+void visitAllNodes(NodePtr& root, Lambda lambda) {
+	auto visitor = makeLambdaASTVisitor(lambda);
+	visitAll(root, visitor);
+}
+
+template<typename Visitor>
+void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) {
+	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
+	recVisitor.visit(root);
+}
+
+template<typename Lambda>
+void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true) {
+	auto visitor = makeLambdaASTVisitor(lambda);
+	visitAllOnce(root, visitor, preorder);
+}
 
 
 } // end namespace core

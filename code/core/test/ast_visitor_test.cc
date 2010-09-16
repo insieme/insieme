@@ -143,7 +143,7 @@ public:
 	CountingVisitor() : counter(0) {};
 
 	int visitNode(const NodePtr& node) {
-		std::cout << *node << std::endl;
+		// std::cout << *node << std::endl;
 		return ++counter;
 	};
 
@@ -240,13 +240,64 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 	res.clear();
 	VisitOnceASTVisitor<decltype(collector)> prefix(collector);
 	prefix.visit(type);
-
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	VisitOnceASTVisitor<decltype(collector)> postfix(collector);
+	VisitOnceASTVisitor<decltype(collector)> postfix(collector, false);
 	postfix.visit(type);
 
+	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
+
+}
+
+TEST(ASTVisitor, UtilitiesTest) {
+
+	NodeManager manager;
+
+
+	// build a simple type sharing nodes
+	TypePtr shared = GenericType::get(manager, "shared");
+	NodePtr type = TupleType::get(manager, toVector(shared, shared));
+
+	// create a resulting list
+	vector<NodePtr> res;
+
+	// create a visitor collecting all nodes
+	auto collector = makeLambdaASTVisitor([&res](const NodePtr& cur) {
+		res.push_back(cur);
+	});
+
+	// visit all recursively
+	res.clear();
+	visitAll(type, collector);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+
+	// visit all, only once
+	res.clear();
+	visitAllOnce(type, collector);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+
+	res.clear();
+	visitAllOnce(type, collector, false);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
+
+
+	auto fun = [&res](const NodePtr& cur) {
+		res.push_back(cur);
+	};
+
+	// visit all recursively
+	res.clear();
+	visitAllNodes(type, fun);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+
+	// visit all, only once
+	res.clear();
+	visitAllNodesOnce(type, fun);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+
+	res.clear();
+	visitAllNodesOnce(type, fun, false);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
 }
