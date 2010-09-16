@@ -70,10 +70,10 @@ private:
 		boost::replace_all(tmp, "\n", std::string("\n") + indentString);
 		ss << tmp;
 	}
-	void append(IndR param) {
+	void append(IndR) {
 		indentString += "\t";
 	}
-	void append(IndL param) {
+	void append(IndL) {
 		assert(indentString.length()>0 && "Trying to indent below level 0");
 		indentString = indentString.substr(0, indentString.length()-1);
 	}
@@ -107,9 +107,13 @@ public:
 	CodeFragment(const std::string& name = "unnamed") : name(name) { }
 
 	CodePtr addDependency(const std::string& name = "unnamed");
+	const std::vector<CodePtr>& getDependencies() const { return dependencies; };
+	const std::string& getName() { return name; }
 
 	CodeStream& getCodeStream() { return cStream; }
 };
 
 } // namespace simple_backend
 } // namespace insieme
+
+std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodePtr& cp);

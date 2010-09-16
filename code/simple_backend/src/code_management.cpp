@@ -36,6 +36,11 @@
 
 #include "code_management.h"
 
+#include <boost/graph/topological_sort.hpp>
+#include <boost/graph/adjacency_list.hpp>
+
+#include "container_utils.h"
+
 namespace insieme {
 namespace simple_backend {
 
@@ -49,5 +54,74 @@ CodePtr CodeFragment::addDependency( const std::string& name /*= "unnamed"*/ ) {
 	return newDep;
 }
 
+
+namespace depResolve {
+
+	using namespace boost;
+
+	typedef adjacency_list<vecS, vecS, directedS, property<vertex_name_t, CodePtr>> Graph;
+	typedef graph_traits<Graph>::vertex_descriptor Vertex;
+	typedef std::map<CodeFragment*, Vertex> CodeVertexMap;
+
+	void addDeps(const CodePtr& cur, Graph& g, CodeVertexMap& vmap) {
+		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
+
+		auto vertexGen = [&g, &vmap, &codePtrMap](const CodePtr& ptr) -> Vertex {
+			Vertex v;
+			auto insertionResult = vmap.insert(std::make_pair(&(*ptr), Vertex()));
+			if(insertionResult.second) {
+				v = add_vertex(g);
+				codePtrMap[v] = ptr;
+				insertionResult.first->second = v;
+			} else {
+				v = insertionResult.first->second;
+			}
+			return v;
+		};
+		Vertex u = vertexGen(cur);
+
+		for_each(cur->getDependencies(), [&](const CodePtr& dep) {
+			Vertex v = vertexGen(dep);
+			add_edge(u, v, g);
+			addDeps(dep, g, vmap);
+		});
+
+	}
+
+	/** Internal helper function that resolves all dependencies of the input code fragment to a flat list.
+	 ** Fails in case of circular dependencies.
+	 ** */
+	void resolve(const CodePtr& code, std::vector<CodePtr>& result) {
+
+		Graph g;
+		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
+		CodeVertexMap vmap;
+
+		addDeps(code, g, vmap);
+		std::vector<Vertex> vResult;
+
+		try {
+			topological_sort(g, std::back_inserter(vResult));
+		}
+		catch(not_a_dag e) {
+			assert(0 && "Impossible to resolve cyclic dependencies.");
+		}
+
+		std::transform(vResult.cbegin(), vResult.cend(), std::back_inserter(result), [&](const Vertex& curV) {
+			return codePtrMap(curV);
+		});
+	}
+}
+
 } // namespace simple_backend
 } // namespace insieme
+
+std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodePtr& cp) {
+	std::vector<insieme::simple_backend::CodePtr> flatDeps;
+	insieme::simple_backend::depResolve::resolve(cp, flatDeps);
+	for_each(flatDeps, [&os](const insieme::simple_backend::CodePtr& cur) {
+		os << "// start code fragment :: " << cur->getName() << " //\n";
+		os << cur->getCodeStream().getString();
+	});
+	return os;
+}
