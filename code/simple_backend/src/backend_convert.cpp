@@ -120,7 +120,7 @@ string TypeManager::getTypeDecl(const core::TypePtr type) {
 
 CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
 	//TODO
-	return CodePtr(NULL);
+	return CodePtr();
 }
 
 

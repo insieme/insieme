@@ -34,6 +34,12 @@
  * regarding third party software licenses.
  */
 
+#include <sstream>
+
+#include <glog/logging.h>
+
+#include <memory>
+
 #include "conversion.h"
 
 #include "utils/types_lenght.h"
@@ -45,15 +51,13 @@
 #include "container_utils.h"
 #include "lang_basic.h"
 #include "numeric_cast.h"
+#include "naming.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
-#include <sstream>
-
-#include <glog/logging.h>
 
 using namespace clang;
 using namespace insieme;
@@ -993,10 +997,14 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
 
 				core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
-				// program.addDefinition(lambdaExpr);
 
-				if(funcDecl->isMain())
+				// annotate name of function
+				lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
+
+				if(funcDecl->isMain()) {
 					program = program->addEntryPoint(lambaExpr);
+					//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
+				}
 			}
 
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {

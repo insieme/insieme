@@ -54,8 +54,8 @@ public:
 	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
 
 	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) :
-		Annotatable(from), InstancePtr<T>(from.ptr) { }
+	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
+		: InstancePtr<T>(from.ptr), Annotatable(from) { }
 };
 
 template<typename B, typename T>

@@ -221,7 +221,7 @@ void scanStmt(clang::Stmt* stmt) {
 
 
     ProgramPtr program = Program::create();
-    InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/kernel_matcher.cl", *program, false);
+    InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/kernel_matcher.cl", program, false);
 
     clang::ASTContext& ctx = TU->getCompiler().getASTContext();
 
