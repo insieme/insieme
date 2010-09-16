@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <cassert>
 #include <unordered_set>
+#include <queue>
 
 #include "annotated_ptr.h"
 #include "expressions.h"
@@ -304,65 +305,6 @@ protected:
 #undef VISIT_NODE
 };
 
-
-//template<typename T>
-//struct CurrentNodeOnly {
-//	inline T operator()(const NodePtr& currentNode, T& currentNodeReturn, std::vector<T>& subNodeResult){
-//		return currentNodeReturn;
-//	}
-//};
-//
-//template<>
-//struct CurrentNodeOnly<void> {
-//	inline void operator()(const NodePtr& currentNode, ...){
-//	}
-//};
-
-
-/**
- * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
- * will recursively iterated depth first, pre-order through every visited node. Thereby,
- * within every node, the sub-visitor's visit method will be invoked. Further, the results
- * of the visited nodes may be combined using a generic result combinator.
- */
-template<typename SubVisitor>
-class RecursiveASTVisitor : public ASTVisitor<void> {
-
-	/**
-	 * The sub-visitor visiting all nodes recursively.
-	 */
-	SubVisitor& subVisitor;
-
-	/**
-	 * The combinator used to combine the result value within complex nodes.
-	 */
-//	ResultCombinator combinator;
-
-public:
-
-	/**
-	 * Create a new visitor based on the given sub-visitor.
-	 */
-	RecursiveASTVisitor(SubVisitor& subVisitor) : subVisitor(subVisitor) {};
-
-	/**
-	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
-	 * subtree rooted at this node.
-	 */
-	void visitNode(const NodePtr& node) {
-
-		// visit current
-		subVisitor.visit(node);
-
-		// recursively visit all sub-nodes
-		const Node::ChildList& children = node->getChildList();
-		std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
-			this->visit(cur);
-		});
-	}
-};
-
-
 /**
  * TODO: comment
  */
@@ -387,6 +329,114 @@ public:
 	ResultType visitNode(const NodePtr& node) {
 		// simply apply lambda ...
 		return lambda(node);
+	}
+};
+
+
+/**
+ * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
+ * will recursively iterated depth first, pre-order through every visited node. Thereby,
+ * within every node, the sub-visitor's visit method will be invoked. Further, the results
+ * of the visited nodes may be combined using a generic result combinator.
+ */
+template<typename SubVisitor>
+class RecursiveASTVisitor : public ASTVisitor<void> {
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	SubVisitor& subVisitor;
+
+	/**
+	 * The order in which nodes are processed.
+	 */
+	bool preorder;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	RecursiveASTVisitor(SubVisitor& subVisitor, bool preorder = true) : subVisitor(subVisitor), preorder(preorder) {};
+
+	/**
+	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * subtree rooted at this node.
+	 */
+	void visitNode(const NodePtr& node) {
+
+		// visit current (in case of a pre-order)
+		if (preorder) {
+			subVisitor.visit(node);
+		}
+
+		// recursively visit all sub-nodes
+		const Node::ChildList& children = node->getChildList();
+		std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
+			this->visit(cur);
+		});
+
+		// visit current (in case of a post-order)
+		if (!preorder) {
+			subVisitor.visit(node);
+		}
+	}
+};
+
+/**
+ * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
+ * will recursively iterated depth first, pre-order through every visited node. Thereby,
+ * within every node, the sub-visitor's visit method will be invoked. Further, the results
+ * of the visited nodes may be combined using a generic result combinator.
+ */
+template<typename SubVisitor>
+class BreadthFirstASTVisitor : public ASTVisitor<void> {
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	SubVisitor& subVisitor;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	BreadthFirstASTVisitor(SubVisitor& subVisitor) : subVisitor(subVisitor) {};
+
+	/**
+	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * subtree rooted at this node.
+	 */
+	void visitNode(const NodePtr& node) {
+
+		std::queue<NodePtr> queue;
+
+		ASTVisitor<void>* visitor;
+		auto lambdaVisitor = makeLambdaASTVisitor([&queue, &visitor, this](const NodePtr& node) {
+
+			// visit the current node
+			this->subVisitor.visit(node);
+
+			// add children of current node to the queue
+			auto children = node->getChildList();
+			std::for_each(children.begin(), children.end(), [&queue](const NodePtr& cur) {
+				queue.push(cur);
+			});
+
+			// proceed with next node in the queue
+			if (!queue.empty()) {
+				NodePtr next = queue.front();
+				queue.pop();
+				visitor->visit(next);
+			}
+		});
+
+		// update pointer ..
+		visitor = &lambdaVisitor;
+
+		// trigger the visit (only once)
+		visitor->visit(node);
 	}
 };
 
@@ -455,30 +505,70 @@ public:
 	}
 };
 
-
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * lambda function.
+ *
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @return the resulting visitor.
+ */
 template<typename Lambda>
 LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
 	return LambdaASTVisitor<Lambda>(lambda);
 };
 
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
+ * multiple times.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ */
 template<typename Visitor>
-void visitAll(NodePtr& root, Visitor& visitor) {
-	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor);
+void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
+	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
 
+/**
+ * The given lambda is recursively applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
+ * multiple times.
+ *
+ * @param root the root not to start the visiting from
+ * @param lambda the lambda to be applied to all the nodes
+ */
 template<typename Lambda>
-void visitAllNodes(NodePtr& root, Lambda lambda) {
+void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
 	auto visitor = makeLambdaASTVisitor(lambda);
-	visitAll(root, visitor);
+	visitAll(root, visitor, preorder);
 }
 
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
+ * only once.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ * @param preorder a flag indicating whether nodes should be visited in pre or post order
+ */
 template<typename Visitor>
 void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) {
 	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
 
+/**
+ * The given lambda is recursively applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
+ * only once.
+ *
+ * @param root the root not to start the visiting from
+ * @param lambda the lambda to be applied to all the nodes
+ * @param preorder a flag indicating whether nodes should be visited in pre or post order
+ */
 template<typename Lambda>
 void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true) {
 	auto visitor = makeLambdaASTVisitor(lambda);
