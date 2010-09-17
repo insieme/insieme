@@ -90,7 +90,7 @@ ProgramPtr Program::addEntryPoint(const ExpressionPtr& entryPoint) const {
 }
 
 ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(nodeManager, merge(this->entryPoints, nodeManager->getAll(entryPoints))), true);
+	return ProgramPtr(new Program(nodeManager, merge(this->entryPoints, migrateAllPtr(entryPoints, NULL, &*nodeManager))), true);
 }
 
 ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {

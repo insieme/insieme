@@ -221,6 +221,17 @@ public:
 	const AnnotationMap& getAnnotations() const {
 		return *map;
 	}
+
+	/**
+	 * By default, annotations between copies of the same Annotated object are shared.
+	 * To separated the connection between one annotated instance and a copy of it, this
+	 * method can be used. Internally it copies all the annotation to a new location and
+	 * updated the map pointer such that it is pointing to the new location.
+	 */
+	const void isolateAnnotations() const {
+		// create a new shared pointer pointing to a copy of the current map content
+		map = std::make_shared<AnnotationMap>(*map);
+	}
 };
 
 /**
