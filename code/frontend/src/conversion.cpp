@@ -58,6 +58,10 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/graphviz.hpp>
+
+using namespace boost;
 
 using namespace clang;
 using namespace insieme;
@@ -110,6 +114,78 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 //	DLOG(INFO) << "VALUE: " << string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
 	return string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
 }
+
+// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
+core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vector<core::StatementPtr>& stmtVect) {
+	if( stmtVect.size() == 1 )
+		return stmtVect.front();
+	return builder.compoundStmt(stmtVect);
+}
+
+class TypeDependencyGraph {
+
+	struct NameTy {
+		typedef vertex_property_tag kind;
+	};
+
+public:
+	typedef property<NameTy, std::string> NameProperty;
+	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NameProperty> NameDepGraph;
+
+	typedef typename boost::graph_traits<NameDepGraph>::vertex_descriptor vertex_descriptor;
+	typedef typename boost::graph_traits<NameDepGraph>::edge_descriptor edge_descriptor;
+
+	NameDepGraph graph;
+
+	TypeDependencyGraph() { }
+
+	void operator()(RecordDecl* tag, typename boost::graph_traits<NameDepGraph>::vertex_descriptor* parent = NULL ) {
+
+		boost::property_map<NameDepGraph, NameTy>::type name = get(NameTy(), graph);
+
+		boost::graph_traits<NameDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
+		for(boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph); vertCurrIt != vertEndIt; vertCurrIt++) {
+			if( boost::get(name, *vertCurrIt) == tag->getNameAsString() ) {
+				if(parent != NULL) {
+					// we have to add an edge between this node and the parent
+					boost::add_edge(*parent, *vertCurrIt, graph);
+				}
+				std :: cout << "found it!!\n";
+				return;
+			}
+		}
+
+		// this node is not inside the graph, we have to add it
+		vertex_descriptor v = boost::add_vertex(graph);
+
+		if(parent != NULL) {
+			// we have to add an edge between this node and the parent
+			boost::add_edge(*parent, v, graph);
+		}
+
+		std::cout <<"ADDING EDGE for type: " << tag->getNameAsString() << std::endl;
+		boost::put(name, v, tag->getNameAsString());
+
+		for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
+			const Type* fieldType = (*it)->getType().getTypePtr();
+			if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
+				fieldType = ptrTy->getPointeeType().getTypePtr();
+			else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
+				fieldType = refTy->getPointeeType().getTypePtr();
+
+			if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
+				assert(isa<RecordDecl>(tagTy->getDecl()));
+				(*this)( dyn_cast<RecordDecl>(tagTy->getDecl()), &v );
+			}
+		}
+	}
+
+
+	void print(std::ostream& out) {
+		boost::property_map<NameDepGraph, NameTy>::type name = get(NameTy(), graph);
+		boost::write_graphviz(out, graph, boost::make_label_writer(name));
+	}
+};
 
 } // End empty namespace
 
@@ -223,12 +299,6 @@ public:
 	}
 
 };
-
-core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vector<core::StatementPtr>& stmtVect) {
-	if( stmtVect.size() == 1 )
-		return stmtVect.front();
-	return builder.compoundStmt(stmtVect);
-}
 
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
@@ -831,6 +901,11 @@ public:
 				// handle struct/union/class
 				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
+
+				TypeDependencyGraph typeGraph;
+				typeGraph(recDecl);
+				typeGraph.print(std::cout);
+
 				core::NamedCompositeType::Entries structElements;
 				unsigned short typeVarId=0;
 				RecTypeVarMap definitions;
