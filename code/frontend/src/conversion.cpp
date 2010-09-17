@@ -777,7 +777,7 @@ public:
 			argTypes.push_back( this->Visit( currArgType.getTypePtr() ).ref );
 		} );
 
-		if( argTypes.size() == 1 && *argTypes.front() == insieme::core::lang::TYPE_UNIT_VAL) {
+		if( argTypes.size() == 1 && *argTypes.front() == core::lang::TYPE_UNIT_VAL) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
