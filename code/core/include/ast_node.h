@@ -37,6 +37,8 @@
 #pragma once
 
 #include <cassert>
+#include <boost/type_traits/remove_const.hpp>
+
 
 #include "annotated_ptr.h"
 #include "hash_utils.h"
@@ -61,7 +63,6 @@ namespace core {
  * Define root-node type.
  */
 DECLARE_NODE_TYPE(Node);
-
 
 class NodeManager;
 
@@ -125,6 +126,11 @@ private:
 	const NodeType nodeType;
 
 	/**
+	 * A pointer to the manager this instance is maintained by.
+	 */
+	const NodeManager* manager;
+
+	/**
 	 * The list of child nodes referenced by this node.
 	 */
 	mutable OptionChildList children;
@@ -147,7 +153,7 @@ protected:
 	 * @param nodeType the type of node to be created
 	 * @param hashCode the hash code of the new node
 	 */
-	Node(const NodeType& nodeType, const std::size_t& hashCode) : HashableImmutableData(hashCode), nodeType(nodeType) {
+	Node(const NodeType& nodeType, const std::size_t& hashCode) : HashableImmutableData(hashCode), nodeType(nodeType), manager(NULL) {
 		assert(isNodeType(nodeType) && "Given Node type is not valid!");
 	}
 
@@ -155,6 +161,16 @@ protected:
 	 * Requests a list of child nodes from the actual node implementation.
 	 */
 	virtual OptionChildList getChildNodes() const = 0;
+
+	/**
+	 * Obtains a pointer to the manager this instance is maintained by. In case
+	 * the instance is not maintained by any manager, the pointer will be NULL.
+	 *
+	 * @return a pointer to the manager maintaining this instance
+	 */
+	inline const NodeManager* getManager() const {
+		return manager;
+	}
 
 public:
 
@@ -235,6 +251,83 @@ public:
  */
 class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
 typedef std::shared_ptr<NodeManager> SharedNodeManager;
+
+
+/**
+ * Migrates the given pointer from the source to the target manager.
+ * The annotations within the pointer will be cloned as well, such that
+ * future modifications are not reflected.
+ *
+ * @param pointer the pointer to be cloned
+ * @param src the source node manager
+ * @param target the target node manger
+ */
+template<typename T>
+const T migratePtr(T& pointer, NodeManager* src, NodeManager* target) {
+	// check if there is actually anything to do
+	if (src == target) {
+		return pointer;
+	}
+
+	// => pointer is moved:
+	//   - annotations need to be cloned / isolated
+	//   - pointer needs to be updated
+
+	// copy resulting pointer ...
+	typename boost::remove_const<T>::type res = pointer;
+	// ... and isolate all annotations.
+	res.isolateAnnotations();
+
+	// get pointer within target
+	if (target) { // .. only if there is a target
+		res.ptr = target->get(pointer).ptr;
+	}
+	return res;
+}
+
+/**
+ * Clones all the pointer within the given range from the given source manager
+ * to the target manager. In case both are equivalent, nothing will actually be cloned.
+ *
+ * @param start the start of the range to be cloned
+ * @param end the end of the range to be cloned
+ * @param out an output iterator to which the resulting elements can be written
+ * @param src the source node manager
+ * @param target the target node manager
+ *
+ * @see template<typename T> static const T clonePtr(T&, NodeManager*, NodeManager*)
+ */
+template<typename InIter, typename OutIter>
+void migrateAllPtr(InIter start, InIter end, OutIter out, NodeManager* src, NodeManager* target) {
+	std::transform(start, end, out,
+		[&](const typename std::iterator_traits<InIter>::value_type& cur) {
+			return migratePtr(cur, src, target);
+	});
+}
+
+/**
+ * Clones all the pointer within the given container from the given source manager
+ * to the target manager. In case both are equivalent, nothing will actually be cloned.
+ *
+ * @param container the container containing all the pointers to be cloned
+ * @param src the source node manager
+ * @param target the target node manager
+ *
+ * @see template<typename T> static const T clonePtr(T&, NodeManager*, NodeManager*)
+ */
+template<typename Container>
+Container migrateAllPtr(const Container& container, NodeManager* src, NodeManager* target) {
+	// check whether there is something to do ...
+	if (src == target) {
+		// => nothing to do
+		return container;
+	}
+
+	// clone the content of the container
+	Container res;
+	migrateAllPtr(container.cbegin(), container.cend(), inserter(res, res.end()), src, target);
+	return res;
+}
 
 } // end namespace core
 } // end namespace insieme

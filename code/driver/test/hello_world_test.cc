@@ -40,18 +40,52 @@
 
 #include "clang_compiler.h"
 #include "driver_config.h"
+#include "backend_convert.h"
 
 #include <glog/logging.h>
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 using namespace insieme::frontend;
 using namespace insieme::core;
+using namespace insieme::c_info;
+using namespace insieme::utils::set;
+using namespace insieme::simple_backend;
+using namespace google;
 
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
-	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/hello_world.c", program, true);
+	// force logging to stderr
+	LogToStderr();
 
-	LOG(INFO) << TU->getProgram();
+	// Set severity level
+	SetStderrLogging(INFO);
+
+	ProgramPtr program = Program::create();
+
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/hello_world.c", program, true);
+	LOG(INFO) << "Done.";
+
+	program = TU->getProgram();
+	LOG(INFO) << "Printing the IR: " << program;
+
+	LOG(INFO) << "Converting IR to C...";
+
+	ConversionContext cc;
+	auto converted = cc.convert(program);
+
+	std::ostringstream ss;
+	for_each(program->getEntryPoints(), [&converted, &ss](const ExpressionPtr& ep) {
+		ss << converted[ep] << std::endl;
+	});
+
+	LOG(INFO) << "Printing converted code: " << ss.str();
+
+	std::fstream out( std::string(SRC_DIR) + "/hello_world.insieme.c");
+	out << ss.str();
+	out.close();
+
 }

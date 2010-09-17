@@ -268,8 +268,12 @@ public:
 			*out = this->get(cur);
 		}
 
+//		std::for_each(start, end, [&out, this](const typename std::iterator_traits<InIter>::value_type& cur) {
+//			*out = this->get(cur);
+//		});
+
 //		std::transform(start, end, out,
-//			[&](const typename std::iterator_traits<InIter>::value_type& cur) {
+//			[this](const typename std::iterator_traits<InIter>::value_type& cur) {
 //				return this->get(cur);
 //		});
 	}

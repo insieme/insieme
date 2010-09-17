@@ -35,16 +35,16 @@
  */
 
 //OpenCL definitions
-#define __constant __attribute__((address_space(3)))
-#define __global __attribute__((address_space(2)))
-#define __local __attribute__((address_space(1)))
 #define __private __attribute__((address_space(0))) //default value
+#define __local __attribute__((address_space(1)))
+#define __global __attribute__((address_space(2)))
+#define __constant __attribute__((address_space(3)))
 
 
 __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
 {
     __local float* b;
-    __private int* d;
+    __attribute__((address_space(0))) int* d;
     struct __attribute__((packed)) X
     {
         int b[3] __attribute__((aligned(8)));
@@ -54,6 +54,6 @@ __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __con
     int x __attribute__ ((aligned(2)));
     __attribute__((aligned(8))) int y;
     
-    a[0] = 3.0f;
+    b[0] = a[0];
     return;
 }

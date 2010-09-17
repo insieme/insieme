@@ -57,6 +57,19 @@ using namespace insieme::core;
     EXPECT_EQ(util::Line(loc, srcMgr), (size_t)line); \
     EXPECT_EQ(util::Column(loc, srcMgr), (size_t)col);
 
+enum AddressSpace {
+        PRIVATE,
+        LOCAL,
+        GLOBAL,
+        CONSTANT
+};
+
+const char* addressSpaceStr[] = {
+        "private",
+        "local",
+        "global",
+        "constant"
+};
 
 const char* kindStr[] = {
   "Alias",
@@ -190,9 +203,9 @@ void scanStmt(clang::Stmt* stmt) {
                     continue;
 
                 const Attr* attr = decl->getAttrs();
-                EXPECT_EQ(attr->getKind(), expectedKinds[matches++]);
+                EXPECT_EQ(expectedKinds[matches++], attr->getKind());
                 if(attr->getKind() == Attr::Kind::Aligned)
-                    EXPECT_EQ(((AlignedAttr*)attr)->getAlignment(), expectedParameters[args++]);
+                    EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment());
             }
             else {
                 clang::DeclGroupRef dgr = declstmt->getDeclGroup();
@@ -204,9 +217,9 @@ void scanStmt(clang::Stmt* stmt) {
                         continue;
 
                     const Attr* attr = declgroup[i]->getAttrs();
-                    EXPECT_EQ(attr->getKind(), expectedKinds[matches++]);
+                    EXPECT_EQ(expectedKinds[matches++], attr->getKind());
                     if(attr->getKind() == Attr::Kind::Aligned)
-                        EXPECT_EQ(((AlignedAttr*)attr)->getAlignment(), expectedParameters[args++]);
+                        EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment());
                     clang::Stmt* body = declgroup[i]->getBody();
                     if(body)
                         scanStmt(body);
@@ -228,16 +241,24 @@ void scanStmt(clang::Stmt* stmt) {
 // Check if memory spaces are as expected default, __global, __constant, __local, __private
 TEST(KernelMatcherTest, ReadMemorySpaces) {
     std::vector<clang::Type*> types = ctx.getTypes();
-    unsigned int expected_asp[] = {0, 2, 3, 1, 0};
+    unsigned int expected_asp[] = {GLOBAL, CONSTANT, LOCAL, PRIVATE};
     unsigned int asp = 0;
     for(size_t i = 0; i < types.size(); ++i)
     {
         clang::Type* t = types.at(i);
+
         if(t->isPointerType())
         {
             clang::QualType qt = t->getCanonicalTypeInternal();
+            //skip return Type of kernel function which has to be void
+            if(qt->isVoidPointerType())
+                continue;
 
-            EXPECT_EQ(t->getPointeeType().getAddressSpace(), expected_asp[asp++]);
+/*            const char* expected = addressSpaceStr[expected_asp[asp]];
+            const char* actual = addressSpaceStr[t->getPointeeType().getAddressSpace()];
+            fprintf(stderr, "%d address Spacse %s - %s\n", asp,  expected, actual); */
+
+            EXPECT_EQ(expected_asp[asp++], t->getPointeeType().getAddressSpace());
 //            std::cout << qt.getAsString() << " ADDRESS_SPACE: " << t->getPointeeType().getAddressSpace() << std::endl;
         }
     }
@@ -260,14 +281,15 @@ TEST(KernelMatcherTest, ReadAttributes) {
                 const clang::Attr* attr = func_decl->getAttrs();
 //                std::cout << kindStr[attr->getKind()] << std::endl;
 //                parseAttribute(attr);
-                EXPECT_EQ(attr->getKind(), Attr::Kind::ReqdWorkGroupSize);
+                EXPECT_EQ(Attr::Kind::ReqdWorkGroupSize, attr->getKind());
                 if(attr->getKind() == Attr::Kind::ReqdWorkGroupSize)
                 {
-                    EXPECT_EQ(((const ReqdWorkGroupSizeAttr*)attr)->getXDim(), 1);
-                    EXPECT_EQ(((const ReqdWorkGroupSizeAttr*)attr)->getYDim(), 2);
-                    EXPECT_EQ(((const ReqdWorkGroupSizeAttr*)attr)->getZDim(), 3);
+                    EXPECT_EQ(1, ((const ReqdWorkGroupSizeAttr*)attr)->getXDim());
+                    EXPECT_EQ(2, ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
+                    EXPECT_EQ(3, ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
                 }
             }
+
 /*
             std::cout << "is an aliasAttr: " << clang::AliasAttr::classof(attr) << std::endl;
             std::cout << "is an annotateAttr: " << clang::AnnotateAttr::classof(attr) << std::endl;
