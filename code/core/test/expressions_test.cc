@@ -226,7 +226,7 @@ void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& c
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*expression);
-	T* clone = dynamic_cast<T*>(static_cast<const Expression*>(&*expression)->clone(manager));
+	T* clone = dynamic_cast<T*>(static_cast<const Expression*>(&*expression)->createCloneUsing(manager));
 
 	// check whether all are equal
 	T* all[] = { &*expression, &copy, clone };

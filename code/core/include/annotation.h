@@ -78,6 +78,7 @@ public:
 	 * NOTE: best practice would be to use static variables to represent annotation keys
 	 */
 	virtual const AnnotationKey* getKey() const = 0;
+
 };
 
 
@@ -223,14 +224,27 @@ public:
 	}
 
 	/**
+	 * Replaces the currently assigned annotation map by the given annotations. This
+	 * modifications will not be reflected to other copies of this instance. After the
+	 * set, the maintained set of annotations will be disconnected from other copies
+	 * of this pointer.
+	 *
+	 * @param annotations the annotations to be assigned
+	 */
+	void setAnnotations(const AnnotationMap& annotations) const {
+		// copy annotation map ...
+		map = std::make_shared<AnnotationMap>(annotations);
+	}
+
+	/**
 	 * By default, annotations between copies of the same Annotated object are shared.
 	 * To separated the connection between one annotated instance and a copy of it, this
 	 * method can be used. Internally it copies all the annotation to a new location and
 	 * updated the map pointer such that it is pointing to the new location.
 	 */
 	const void isolateAnnotations() const {
-		// create a new shared pointer pointing to a copy of the current map content
-		map = std::make_shared<AnnotationMap>(*map);
+		// copy current annotations
+		setAnnotations(getAnnotations());
 	}
 };
 

@@ -115,7 +115,7 @@ private:
 	 * @param manager the manager this program should be cloned to
 	 * @return a pointer to the new program, cloned for the new manager
 	 */
-	virtual Program* clone(NodeManager& manager) const;
+	virtual Program* createCloneUsing(NodeManager& manager) const;
 
 protected:
 

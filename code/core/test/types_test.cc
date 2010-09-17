@@ -764,7 +764,7 @@ void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildLi
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*type);
-	T* clone = dynamic_cast<T*>(static_cast<const Type*>(&*type)->clone(manager));
+	T* clone = dynamic_cast<T*>(static_cast<const Type*>(&*type)->createCloneUsing(manager));
 
 	// check whether all are equal
 	T* all[] = { &*type, &copy, clone };
