@@ -9,12 +9,10 @@ enable_testing()
 # include modules
 add_subdirectory( core )
 add_subdirectory( utils )
+add_subdirectory( c_info )
 add_subdirectory( frontend )
+add_subdirectory( simple_backend )
 add_subdirectory( driver )
-
-# add dependencies
-add_dependencies( insieme_core insieme_utils insieme_frontend )
-
 
 #-- Add an Option to toggle the generation of the API documentation
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
@@ -25,7 +23,7 @@ if(BUILD_DOCUMENTATION)
 	endif()
 	#-- Configure the Template Doxyfile for our specific project
 	configure_file(Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile  @ONLY IMMEDIATE)
-
+	
 	#-- Add a custom target to run Doxygen when ever the project is built
 	add_custom_target (Docs ALL 
   		COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile

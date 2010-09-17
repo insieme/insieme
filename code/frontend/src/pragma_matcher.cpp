@@ -53,6 +53,16 @@ using namespace insieme::frontend;
 
 #include <sstream>
 
+namespace {
+void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
+	std::vector<std::string> list;
+	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
+
+	ss << boost::join(list, " | ");
+	ss << std::endl;
+}
+}
+
 namespace insieme {
 namespace frontend {
 
@@ -74,6 +84,18 @@ std::string ValueUnion::toStr() const {
 	else
 		rs << *get<std::string*>();
 	return rs.str();
+}
+
+MatchMap::MatchMap(const MatchMap& other) {
+
+	std::for_each(other.cbegin(), other.cend(), [ this ](const MatchMap::value_type& curr) {
+		(*this)[curr.first] = ValueList();
+		ValueList& currList = (*this)[curr.first];
+
+		std::for_each(curr.second.cbegin(), curr.second.cend(), [ &currList ](const ValueList::value_type& elem) {
+			currList.push_back( ValueUnionPtr( new ValueUnion(*elem, true) ) );
+		});
+	});
 }
 
 // ------------------------------------ ErrorStack ---------------------------
@@ -100,15 +122,6 @@ void ParserStack::discardPrevRecords(size_t recordId) {
 }
 
 const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const { return mRecords[recordId]; }
-
-void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
-	std::vector<std::string> list;
-	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
-
-	ss << boost::join(list, " | ");
-
-	ss << std::endl;
-}
 
 void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 	TextDiagnosticPrinter &tdc = (TextDiagnosticPrinter&) *pp.getDiagnostics().getClient();
@@ -241,7 +254,7 @@ std::string TokenToStr(const clang::Token& token) {
 	if (token.isLiteral()) {
 		return std::string(token.getLiteralData(), token.getLiteralData() + token.getLength());
 	} else {
-		return TokenToStr(token);
+		return TokenToStr(token.getKind());
 	}
 }
 

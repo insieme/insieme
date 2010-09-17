@@ -37,7 +37,8 @@
 #pragma once
 
 #include "pragma_handler.h"
-// #include "programs.h"
+#include "program.h"
+#include "ast_builder.h"
 
 #include "clang/AST/ASTConsumer.h"
 
@@ -48,20 +49,65 @@ class DeclGroupRef;
 }
 
 namespace insieme {
+namespace frontend {
+namespace conversion {
 
-// ------------------------------------ InsiemeIRConsumer ---------------------------
+class ClangStmtConverter;
+class ClangTypeConverter;
+class ClangExprConverter;
 
-class InsiemeIRConsumer: public clang::ASTConsumer {
+// ------------------------------------ ConversionFactory ---------------------------
+
+/**
+ * A factory used to convert clang AST nodes (i.e. statements, expressions and types) into Insieme IR nodes.
+ */
+class ConversionFactory {
+	core::SharedNodeManager  mgr;
+	const core::ASTBuilder   builder;
+	clang::ASTContext* clangCtx;
+
+	ClangTypeConverter* typeConv;
+	ClangExprConverter* exprConv;
+	ClangStmtConverter* stmtConv;
+
+	friend class ClangTypeConverter;
+	friend class ClangExprConverter;
+	friend class ClangStmtConverter;
+public:
+	ConversionFactory(core::SharedNodeManager mgr);
+
+	core::TypePtr 		ConvertType(const clang::Type& type);
+	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
+	core::ExpressionPtr ConvertExpr(const clang::Expr& expr);
+
+	const core::ASTBuilder&  getASTBuilder() const { return builder; }
+
+	void setClangContext(clang::ASTContext* ctx) { clangCtx = ctx; }
+
+	~ConversionFactory();
+};
+
+// ------------------------------------ IRConsumer ---------------------------
+/**
+ *
+ */
+class IRConsumer: public clang::ASTConsumer {
 	clang::ASTContext* mCtx;
-	// insieme::core::Program::SharedDataManager mDataMgr;
+	core::ProgramPtr   program;
+	ConversionFactory  fact;
+	bool 			   mDoConversion;
 
 public:
-	InsiemeIRConsumer(/*insieme::core::Program::SharedDataManager dataMgr*/) : mCtx(NULL)/*, mDataMgr(dataMgr)*/{ }
+	IRConsumer(insieme::core::ProgramPtr prog, bool doConversion=true) : mCtx(NULL), program(prog), fact(prog->getNodeManager()), mDoConversion(doConversion){ }
 
-	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; }
+	core::ProgramPtr getProgram() const { return program; }
+
+	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; fact.setClangContext(&Context); }
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
 	virtual void HandleTranslationUnit(clang::ASTContext &Ctx);
 };
 
-}
 
+} // End conversion namespace
+} // End frontend namespace
+} // End insieme namespace

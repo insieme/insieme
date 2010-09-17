@@ -76,6 +76,7 @@
 
 using namespace clang;
 using namespace insieme::frontend;
+using namespace insieme::core;
 
 ParserProxy* ParserProxy::currParser = NULL;
 
@@ -142,9 +143,26 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 	Consumer->HandleTranslationUnit(Ctx);
 	ParserProxy::discard();
 
-	S.dump();
+//	S.dump();
 }
 
+ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
+	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
+
+	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
+	Diagnostic* diags = new Diagnostic(diagClient);
+	pimpl->clang.setDiagnostics(diags);
+
+	pimpl->clang.createFileManager();
+	pimpl->clang.createSourceManager();
+
+	TargetOptions TO;
+	TO.Triple = llvm::sys::getHostTriple();
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
+
+	pimpl->clang.createPreprocessor();
+	pimpl->clang.createASTContext();
+}
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
 	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
@@ -173,10 +191,11 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	// Add default header
 	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false);
 	// add headers
-	for (std::vector<std::string>::const_iterator i = CommandLineOptions::IncludePaths.begin(),
-												  e = CommandLineOptions::IncludePaths.end(); i != e; ++i) {
-		pimpl->clang.getHeaderSearchOpts().AddPath( *i, clang::frontend::System, true, false);
-	}
+	std::for_each(CommandLineOptions::IncludePaths.begin(), CommandLineOptions::IncludePaths.end(),
+		[ pimpl ](std::string& curr) {
+			pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false);
+		}
+	);
 
 	TargetOptions TO;
 	TO.Triple = llvm::sys::getHostTriple();
@@ -200,18 +219,15 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		LO.Exceptions = 1;
 	}
 
-//	if(Flags::OpenCl) {
-//		// OpenCL has some additional defaults.
-//		LO.OpenCL = 1;
-//		LO.AltiVec = 1;
-//		LO.LaxVectorConversions = 1;
-//	}
+	// Enable OpenCL
+	LO.OpenCL = 1;
+	LO.AltiVec = 1;
+	LO.LaxVectorConversions = 1;
 
 	// set -D macros
-	for (std::vector<std::string>::const_iterator i = CommandLineOptions::Defs.begin(),
-												  e = CommandLineOptions::Defs.end(); i != e; ++i) {
-		pimpl->clang.getPreprocessorOpts().addMacroDef(*i);
-	}
+	std::for_each(CommandLineOptions::Defs.begin(), CommandLineOptions::Defs.end(), [ pimpl ](std::string& curr) {
+		pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
+	});
 
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
@@ -231,19 +247,21 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name /*, insieme::core::Program& prog*/): mClang(file_name) {
-	InsiemeIRConsumer cons; /*( prog.getDataManager()) */;
-	PragmaList PL;
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion): mClang(file_name), mProgram(prog) {
+	conversion::IRConsumer cons(prog, doConversion);
 
 	// register omp pragmas
 	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );
 
-	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, PL);
+	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, mPragmaList);
+
 
 	if( mClang.getDiagnostics().hasErrorOccurred() ) {
 		// errors are always fatal!
 		throw ClangParsingError(file_name);
 	}
+
+	mProgram = cons.getProgram();
 }
 
 } // End fronend namespace

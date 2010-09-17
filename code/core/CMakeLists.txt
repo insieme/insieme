@@ -15,19 +15,15 @@ file(GLOB insieme_core_incs 	include/*.h )
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_frontend_include_dir} )
 
+# automatically run the script for generating ASTBuilder interface
+execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb )
+         
 # Build the core library
 add_library(insieme_core ${insieme_core_srcs} ${insieme_core_incs} )
 
-# Build dummy executable
-# add_executable( main src/main.cpp )
-
-# register linked libraries
-# target_link_libraries( main insieme_core insieme_utils insieme_frontend )
-
-# add boost_program_options library
-# target_link_libraries( main boost_program_options )
+# add dependencies
+add_dependencies( insieme_core insieme_utils )
 
 # enable tests for this project
 find_package(GTest REQUIRED)

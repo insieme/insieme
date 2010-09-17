@@ -43,13 +43,15 @@
 #include "container_utils.h"
 #include "functional_utils.h"
 
+#include "ast_node_test.cc"
+
 using std::vector;
 
 namespace insieme {
 namespace core {
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children = vector<TypePtr>());
+void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children = Node::ChildList());
 
 TEST(TypeTest, NodeManager ) {
 
@@ -191,6 +193,9 @@ TEST(TypeTest, GenericType_AllConcrete) {
 	IntTypeParam con = IntTypeParam::getConcreteIntParam(12);
 	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
 
+	EXPECT_EQ ( IntTypeParam::VARIABLE, var.getType());
+	EXPECT_EQ ( IntTypeParam::CONCRETE, con.getType());
+
 	// check basic
 	EXPECT_FALSE ( var.isConcrete() );
 	EXPECT_TRUE ( con.isConcrete() );
@@ -271,19 +276,19 @@ TEST(TypeTest, GenericType) {
 		basicTypeTests(typeB, true, false);
 	}{
 		SCOPED_TRACE ( "typeC" );
-		basicTypeTests(typeC, false, false, toVector<TypePtr>(varA));
+		basicTypeTests(typeC, false, false, toVector<NodePtr>(varA));
 	}{
 		SCOPED_TRACE ( "typeD" );
 		basicTypeTests(typeD, false, false);
 	}{
 		SCOPED_TRACE ( "typeE" );
-		basicTypeTests(typeE, true, false, typeListA);
+		basicTypeTests(typeE, true, false, toList(typeListA));
 	}{
 		SCOPED_TRACE ( "typeF" );
-		basicTypeTests(typeF, true, false, toVector<TypePtr>(typeA));
+		basicTypeTests(typeF, true, false, toVector<NodePtr>(typeA));
 	}{
 		SCOPED_TRACE ( "typeG" );
-		vector<TypePtr> list(typeListA);
+		Node::ChildList list = toList(typeListA);
 		list.push_back(typeA);
 		basicTypeTests(typeG, true, false, list);
 	}
@@ -311,7 +316,6 @@ TEST(TypeTest, GenericType) {
 		}
 	}
 }
-
 
 TEST(TypeTest, TypeVariable) {
 
@@ -343,8 +347,8 @@ TEST(TypeTest, TupleType) {
 
 
 	// perform basic type tests
-	basicTypeTests(typeA, true, false, subTypesA);
-	basicTypeTests(typeB, true, false, subTypesB);
+	basicTypeTests(typeA, true, false, toList(subTypesA));
+	basicTypeTests(typeB, true, false, toList(subTypesB));
 
 }
 
@@ -372,8 +376,52 @@ TEST(TypeTest, FunctionType) {
 	subTypesB.push_back(resultB);
 
 	// perform basic type tests
-	basicTypeTests(funTypeA, true, true, subTypesA);
-	basicTypeTests(funTypeB, true, true, subTypesB);
+	basicTypeTests(funTypeA, true, true, toList(subTypesA));
+	basicTypeTests(funTypeB, true, true, toList(subTypesB));
+}
+
+TEST(TypeTest, RecType) {
+
+	// create a manager for this test
+	NodeManager manager;
+
+
+	// TODO: test whether order of definitions is important ... (it should not)
+
+	// create a simple recursive type uX.X (no actual type)
+	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+
+	// create definition
+	RecTypeDefinition::RecTypeDefs definitions;
+	definitions.insert(std::make_pair(varX, varX));
+	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
+	EXPECT_EQ ( "{'X='X}", toString(*definition) );
+
+
+	RecTypePtr type = RecType::get(manager, varX, definition);
+	EXPECT_EQ ( "rec 'X.{'X='X}", toString(*type) );
+	basicTypeTests(type, true, false, toList(toVector<NodePtr>(varX, definition)));
+
+
+	// create mutually recursive type
+	TypeVariablePtr varY = TypeVariable::get(manager, "Y");
+
+	definitions = RecTypeDefinition::RecTypeDefs();
+	definitions.insert(std::make_pair(varX, varY));
+	definitions.insert(std::make_pair(varY, varX));
+	definition = RecTypeDefinition::get(manager, definitions);
+	EXPECT_TRUE ( toString(*definition)=="{'Y='X, 'X='Y}" || toString(*definition)=="{'X='Y, 'Y='X}" );
+
+	RecTypePtr typeX = RecType::get(manager, varX, definition);
+	RecTypePtr typeY = RecType::get(manager, varY, definition);
+
+	EXPECT_NE ( typeX, typeY );
+	EXPECT_NE ( typeX, type );
+
+	EXPECT_TRUE ( toString(*typeX)=="rec 'X.{'Y='X, 'X='Y}" || toString(*typeX)=="rec 'X.{'X='Y, 'Y='X}" );
+
+	basicTypeTests(typeX, true, false, toList(toVector<NodePtr>(varX, definition)));
+	basicTypeTests(typeY, true, false, toList(toVector<NodePtr>(varY, definition)));
 }
 
 TEST(TypeTest, StructType) {
@@ -430,9 +478,70 @@ TEST(TypeTest, StructType) {
 			return cur.second;
 	});
 
-	basicTypeTests(structA, true, false, typeListA);
-	basicTypeTests(structB, true, false, typeListB);
-	basicTypeTests(structC, false, false, typeListC);
+	basicTypeTests(structA, true, false, toList(typeListA));
+	basicTypeTests(structB, true, false, toList(typeListB));
+	basicTypeTests(structC, false, false, toList(typeListC));
+}
+
+TEST(TypeTest, RecStructType) {
+	// create a manager for this test
+	NodeManager manager;
+
+	// TODO: test whether order of definitions is important ... (it should not)
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	// create a simple recursive type uX.X (no actual type)
+	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+
+	StructType::Entries entriesA;
+	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(StructType::Entry(identB, RefType::get(manager, varX)));
+
+	StructTypePtr structA = StructType::get(manager, entriesA);
+
+	// create definition
+	RecTypeDefinition::RecTypeDefs definitions;
+	definitions.insert(std::make_pair(varX, structA));
+	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
+	EXPECT_EQ ( "{'X=struct<a:A,b:ref<'X>>}", toString(*definition) );
+
+	RecTypePtr type = RecType::get(manager, varX, definition);
+	EXPECT_EQ ( "rec 'X.{'X=struct<a:A,b:ref<'X>>}", toString(*type) );
+	basicTypeTests(type, true, false, toList(toVector<NodePtr>(varX, definition)));
+
+	EXPECT_EQ("struct<a:A,b:ref<'X>>", toString(*type->getDefinition()->getDefinitionOf(varX)));
+}
+
+TEST(TypeTest, RecStructTypeChain) {
+	// create a manager for this test
+	NodeManager manager;
+
+	// TODO: test whether order of definitions is important ... (it should not)
+	// struct A {
+	//	B* b;
+	// }
+	//
+	// struct B {
+	//  C* c;
+	// }
+	//
+	// struct C {
+	//  B* b;
+	// }
+	//
+//	Identifier identA("a");
+//	Identifier identB("b");
+//	Identifier identB("c");
+//
+//	// create a simple recursive type uX.X (no actual type)
+//	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+//
+//	StructType::Entries entriesA;
+//	entriesA.push_back(StructType::Entry(identB, RefType::get(manager, varX)));
+//
+//	StructTypePtr structA = StructType::get(manager, entriesA);
 }
 
 TEST(TypeTest, UnionType) {
@@ -479,9 +588,9 @@ TEST(TypeTest, UnionType) {
 			return cur.second;
 	});
 
-	basicTypeTests(unionA, true, false, typeListA);
-	basicTypeTests(unionB, true, false, typeListB);
-	basicTypeTests(unionC, false, false, typeListC);
+	basicTypeTests(unionA, true, false, toList(typeListA));
+	basicTypeTests(unionB, true, false, toList(typeListB));
+	basicTypeTests(unionC, false, false, toList(typeListC));
 }
 
 TEST(TypeTest, ArrayType) {
@@ -493,7 +602,7 @@ TEST(TypeTest, ArrayType) {
 
 	// obtain array types
 	ArrayTypePtr arrayTypeA = ArrayType::get(manager, elementTypeA);
-	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, 3);
+	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
 
 	// check names
 	EXPECT_EQ ( "array<A,1>", arrayTypeA->getName() );
@@ -504,12 +613,12 @@ TEST(TypeTest, ArrayType) {
 	EXPECT_EQ ( elementTypeB, arrayTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, arrayTypeA->getDimension());
-	EXPECT_EQ ( 3, arrayTypeB->getDimension());
+	EXPECT_EQ ( 1, arrayTypeA->getDimension().getValue());
+	EXPECT_EQ ( 3, arrayTypeB->getDimension().getValue());
 
 	// check remaining type properties
-	basicTypeTests(arrayTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(arrayTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(arrayTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(arrayTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 TEST(TypeTest, VectorType) {
@@ -520,8 +629,8 @@ TEST(TypeTest, VectorType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
-	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, 1);
-	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, 3);
+	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, IntTypeParam::getConcreteIntParam(1));
+	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
 
 	// check names
 	EXPECT_EQ ( "vector<A,1>", vectorTypeA->getName() );
@@ -532,12 +641,12 @@ TEST(TypeTest, VectorType) {
 	EXPECT_EQ ( elementTypeB, vectorTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, vectorTypeA->getSize());
-	EXPECT_EQ ( 3, vectorTypeB->getSize());
+	EXPECT_EQ ( 1, vectorTypeA->getSize().getValue());
+	EXPECT_EQ ( 3, vectorTypeB->getSize().getValue());
 
 	// check remaining type properties
-	basicTypeTests(vectorTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(vectorTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(vectorTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(vectorTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 TEST(TypeTest, ChannelType) {
@@ -548,8 +657,8 @@ TEST(TypeTest, ChannelType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
-	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, 1);
-	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, 3);
+	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, IntTypeParam::getConcreteIntParam(1));
+	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
 
 	// check names
 	EXPECT_EQ ( "channel<A,1>", channelTypeA->getName() );
@@ -560,12 +669,12 @@ TEST(TypeTest, ChannelType) {
 	EXPECT_EQ ( elementTypeB, channelTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, channelTypeA->getSize());
-	EXPECT_EQ ( 3, channelTypeB->getSize());
+	EXPECT_EQ ( 1, channelTypeA->getSize().getValue());
+	EXPECT_EQ ( 3, channelTypeB->getSize().getValue());
 
 	// check remaining type properties
-	basicTypeTests(channelTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(channelTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(channelTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(channelTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 TEST(TypeTest, RefType) {
@@ -588,15 +697,15 @@ TEST(TypeTest, RefType) {
 	EXPECT_EQ ( elementTypeB, refTypeB->getElementType() );
 
 	// check remaining type properties
-	basicTypeTests(refTypeA, true, false, toVector(elementTypeA));
-	basicTypeTests(refTypeB, false, false, toVector(elementTypeB));
+	basicTypeTests(refTypeA, true, false, toList(toVector(elementTypeA)));
+	basicTypeTests(refTypeB, false, false, toList(toVector(elementTypeB)));
 }
 
 
 TEST(TypeTest, IntTypeParam) {
 #ifndef WIN32
 	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), (std::size_t) 4);
+	EXPECT_LE (sizeof(IntTypeParam), 2*(std::size_t) sizeof(int*));
 #endif
 
 	// test toString format
@@ -632,10 +741,15 @@ TEST(TypeTest, IntTypeParam) {
 	EXPECT_TRUE (inf == infb);
 }
 
+
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> children) {
+void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children) {
 
 	typedef typename PT::element_type T;
+
+	// ------------- Basic Node Tests ----------------
+
+	basicNodeTests(type, children);
 
 	// ------------ Type Ptr based tests -------------
 
@@ -645,17 +759,12 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 	// check function type
 	EXPECT_EQ( functional, type->isFunctionType() );
 
-	/* TODO:
-	// check children
-	EXPECT_TRUE ( children == *(type->getChildren()) );
-
-
 	// ------------ Type Token based tests -------------
 
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*type);
-	T* clone = dynamic_cast<T*>(dynamic_cast<const Type*>(&*type)->clone(manager));
+	T* clone = dynamic_cast<T*>(static_cast<const Type*>(&*type)->clone(manager));
 
 	// check whether all are equal
 	T* all[] = { &*type, &copy, clone };
@@ -685,11 +794,10 @@ void basicTypeTests(PT type, bool concrete, bool functional, vector<TypePtr> chi
 		EXPECT_EQ( functional, cur->isFunctionType() );
 
 		// check children
-		EXPECT_TRUE ( equals(children, *(cur->getChildren()), equal_target<TypePtr>()));
+		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<NodePtr>()) );
 	}
 
 	delete clone;
-	*/
 }
 
 } // end namespace core

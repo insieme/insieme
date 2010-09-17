@@ -49,39 +49,59 @@ using std::string;
 string format(const char* formatString, ...);
 
 template<typename T>
-string toString(T value) {
+string toString(const T& value) {
 	std::stringstream res;
 	res << value;
 	return res.str();
 }
 
+/**
+ * This functor can be used to print elements to an output stream.
+ */
+template<typename Extractor>
+struct print : public std::binary_function<std::ostream&, const typename Extractor::argument_type&, std::ostream&> {
+	Extractor extractor;
+	std::ostream& operator()(std::ostream& out, const typename Extractor::argument_type& cur) const {
+		return out << extractor(cur);
+	}
+};
 
-template<typename Container, typename Extractor>
+template<typename Container, typename Printer>
 struct Joinable {
 
 	const string& separator;
 	const Container& container;
-	const Extractor& extractor;
+	const Printer& printer;
 
-	Joinable(const string& separator, const Container& container, const Extractor& extractor) :
-		separator(separator), container(container), extractor(extractor) {};
+	Joinable(const string& separator, const Container& container, const Printer& printer) :
+		separator(separator), container(container), printer(printer) {};
 
 };
 
 
-template<typename Container, typename Extractor>
-std::ostream& operator<<(std::ostream& out, const Joinable<Container, Extractor>& joinable) {
+template<typename Container, typename Printer>
+std::ostream& operator<<(std::ostream& out, const Joinable<Container, Printer>& joinable) {
 	if(joinable.container.size() > 0) {
-		out << joinable.extractor(*joinable.container.cbegin());
-		std::for_each(joinable.container.cbegin()+1, joinable.container.cend(), [&](const typename Container::value_type& cur) {
-			out << joinable.separator << joinable.extractor(cur);
+		auto iter = joinable.container.cbegin();
+		joinable.printer(out, *iter);
+		++iter;
+		std::for_each(iter, joinable.container.cend(), [&](const typename Container::value_type& cur) {
+			out << joinable.separator;
+			joinable.printer(out, cur);
 		});
 	}
 	return out;
 }
 
+/** Joins the values in the collection to the stream separated by a supplied separator.
+ ** NOTE: When using C++0x lambdas to supply the printer *make sure* to provide the return type (usually std::ostream&) explicitly.
+ ** */
+template<typename Container, typename Printer>
+Joinable<Container, Printer> join(const string& separator, const Container& container, const Printer& printer) {
+	return Joinable<Container,Printer>(separator, container, printer);
+}
 
-template<typename Container, typename Extractor = id<const typename Container::value_type&>>
-Joinable<Container, Extractor> join(const string& separator, const Container& container, const Extractor& extractor = Extractor()) {
-	return Joinable<Container,Extractor>(separator, container, extractor);
+template<typename Container>
+Joinable<Container, print<id<const typename Container::value_type&>>> join(const string& separator, const Container& container) {
+	return Joinable<Container, print<id<const typename Container::value_type&>>>(separator, container, print<id<const typename Container::value_type&>>());
 }

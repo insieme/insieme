@@ -40,21 +40,20 @@
 #include <iterator>
 #include <map>
 #include <set>
+#include <unordered_map>
 #include <stdexcept>
 #include <string>
 #include <ostream>
 #include <vector>
-
 
 #include <boost/functional/hash.hpp>
 
 #include "ast_node.h"
 #include "annotated_ptr.h"
 #include "container_utils.h"
-#include "identifiers.h"
+#include "identifier.h"
 #include "instance_manager.h"
 #include "string_utils.h"
-#include "visitor.h"
 
 using std::string;
 using std::vector;
@@ -66,11 +65,13 @@ namespace core {
 // ------------------------------ Forward Declarations ------------------------------------
 
 DECLARE_NODE_TYPE(Type);
+
 DECLARE_NODE_TYPE(TypeVariable);
 
 DECLARE_NODE_TYPE(FunctionType);
 DECLARE_NODE_TYPE(TupleType);
 DECLARE_NODE_TYPE(GenericType);
+DECLARE_NODE_TYPE(RecGenericType);
 DECLARE_NODE_TYPE(NamedCompositeType);
 
 DECLARE_NODE_TYPE(ArrayType);
@@ -81,6 +82,8 @@ DECLARE_NODE_TYPE(ChannelType);
 DECLARE_NODE_TYPE(StructType);
 DECLARE_NODE_TYPE(UnionType);
 
+DECLARE_NODE_TYPE(RecTypeDefinition);
+DECLARE_NODE_TYPE(RecType);
 
 /**
  * This class is used to represent integer parameters of generic types.
@@ -99,13 +102,13 @@ class IntTypeParam;
  * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
  * both). Variable types can only be used as the input/output types of functions.
  */
-class Type: public Node, public Visitable<NodePtr> {
+class Type: public Node {
 
 	/**
 	 * Allow the test case to access private methods.
 	 */
 	template<typename PT>
-	friend void basicTypeTests(PT, bool, bool, vector<TypePtr> children = vector<TypePtr>());
+	friend void basicTypeTests(PT, bool, bool, const Node::ChildList& children = Node::ChildList());
 
 private:
 
@@ -128,6 +131,8 @@ private:
 	 */
 	const bool functionType;
 
+	virtual Type* clone(NodeManager& manager) const = 0;
+
 protected:
 
 	/**
@@ -140,7 +145,7 @@ protected:
 	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
 	 */
 	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
-		: Node(NodeType::TYPE,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) {}
+		: Node(TYPE,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
 
 public:
 
@@ -179,8 +184,8 @@ public:
 	 * the actual name of the type. Specific sub-types may override this method
 	 * to customize the representation.
 	 */
-	virtual string toString() const {
-		return getName();
+	std::ostream& printTo(std::ostream& out) const {
+		return (out << getName());
 	}
 
 	/**
@@ -194,20 +199,7 @@ public:
 		// convert (statically) and check the type name
 		const Type& ref = static_cast<const Type&>(other);
 		// TODO: improve this by eliminating the name!
-		return name.compare(ref.name) == 0;
-	}
-
-	/**
-	 * Retrieves references to types revered to by this type. The default implementation
-	 * returns and empty list. Sub-classes may override the method to return sub-types.
-	 *
-	 * The method is mainly used to ensure that all types referred to by one type are present
-	 * within the same type manager (to ensure their existence).
-	 *
-	 * @return a list containing all types this type is based on.
-	 */
-	virtual ChildList getChildren() const {
-		return makeChildList();
+		return name == ref.name;
 	}
 
 
@@ -232,12 +224,16 @@ public:
  */
 class TypeVariable: public Type {
 
+public:
+
 	/**
 	 * Creates a new type variable using the given name.
 	 *
 	 * @param name the name of the type variable to be created
 	 */
 	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
+
+private:
 
 	/**
 	 * Creates a clone of this node.
@@ -246,19 +242,51 @@ class TypeVariable: public Type {
 		return new TypeVariable(*this);
 	}
 
+protected:
+
+	/**
+	 * Creates a empty child list since this node represents a terminal node.
+	 */
+	virtual OptionChildList getChildNodes() const {
+		// return an option child list filled with an empty list
+		return OptionChildList(new ChildList());
+	}
+
 public:
 
+	static TypeVariable DotTy;
 	/**
 	 * This method provides a static factory method for this type of node. It will return
 	 * a type variable pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
 	 */
-	static TypeVariablePtr get(NodeManager& manager, const string& name) {
-		return manager.get(TypeVariable(name));
-	}
+	static TypeVariablePtr get(NodeManager& manager, const string& name);
 
 };
 
+// ---------------------------------------- Recursive type ------------------------------
+
+//class RecType: public Type {
+//	TypePtr innerTy;
+//
+//	RecType(const std::string& name, const TypePtr& ty): Type(name), innerTy(ty) { }
+//
+//	virtual RecType* clone(NodeManager& manager) const {
+//		return new RecType(getName(), manager.get(innerTy));
+//	}
+//protected:
+//	virtual OptionChildList getChildNodes() const {
+//		// return an option child list filled with an empty list
+//		return OptionChildList();
+//	}
+//public:
+//	TypePtr fold(const TypePtr& ty) { return TypePtr(NULL); }
+//	TypePtr unfold(const TypePtr& ty) { return TypePtr(NULL); }
+//
+//	std::string toString() const { return getName() + "|" + innerTy->toString() + "|"; }
+//
+//	static RecTypePtr get(NodeManager& manager, const std::string& name, const TypePtr& innerTy);
+//};
 
 // ---------------------------------------- A tuple type ------------------------------
 
@@ -291,11 +319,30 @@ private:
 	 */
 	static string buildNameString(const ElementTypeList& elementTypes);
 
+public:
+
+	/**
+	 * Creates a new, empty tuple type.
+	 */
+	TupleType();
+
+	/**
+	 * Creates a new tuple type based on the given element type(s).
+	 */
+	TupleType(const TypePtr&);
+
+	/**
+	 * Creates a new tuple type based on the given element type(s).
+	 */
+	TupleType(const TypePtr&, const TypePtr&);
+
 	/**
 	 * Creates a new tuple type based on the given element types.
 	 */
 	TupleType(const ElementTypeList& elementTypes) :
 		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
+
+private:
 
 	/**
 	 * Creates a clone of this node.
@@ -304,7 +351,16 @@ private:
 		return new TupleType(manager.getAll(elementTypes));
 	}
 
+protected:
+
+	/**
+	 * Creates a empty child list since this node represents a terminal node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
+
+	const ElementTypeList& getElementTypes() const { return elementTypes; }
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -314,14 +370,8 @@ public:
 	 * @param manager the manager to obtain the new type reference from
 	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
-	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes);
+	static TupleTypePtr get(NodeManager& manager, const ElementTypeList& elementTypes = ElementTypeList());
 
-	/**
-	 * Obtains a list of all types referenced by this tuple type.
-	 */
-	virtual ChildList getChildren() const {
-		return makeChildList(elementTypes);
-	}
 };
 
 // ---------------------------------------- Function Type ------------------------------
@@ -342,6 +392,8 @@ class FunctionType: public Type {
 	 */
 	const TypePtr returnType;
 
+public:
+
 	/**
 	 * Creates a new instance of this type based on the given in and output types.
 	 *
@@ -353,12 +405,19 @@ class FunctionType: public Type {
 		argumentType(argumentType), returnType(returnType) {
 	}
 
+protected:
+
 	/**
 	 * Creates a clone of this node.
 	 */
 	virtual FunctionType* clone(NodeManager& manager) const {
 		return new FunctionType(manager.get(argumentType), manager.get(returnType));
 	}
+
+	/**
+	 * Creates a empty child list since this node represents a terminal node.
+	 */
+	virtual OptionChildList getChildNodes() const;
 
 public:
 
@@ -375,17 +434,23 @@ public:
 	static FunctionTypePtr get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
 
 	/**
-	 * Obtains a list of all types referenced by this function type.
+	 * Obtains a reference to the internally maintained argument type.
+	 *
+	 * @return a reference to the argument type.
 	 */
-	virtual ChildList getChildren() const {
-		ChildList res = makeChildList();
-		res->push_back(argumentType);
-		res->push_back(returnType);
-		return res;
+	const TypePtr& getArgumentType() const {
+		return argumentType;
 	}
 
+	/**
+	 * Obtains a reference to the internally maintained result type.
+	 *
+	 * @return a reference to the result type.
+	 */
+	const TypePtr& getReturnType() const {
+		return returnType;
+	}
 };
-
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
@@ -396,13 +461,30 @@ public:
  * Integer parameters may be concrete values, variables (equal to type variables) or the infinite sigh.
  */
 class IntTypeParam {
-private:
+public:
 	/**
 	 * An enumeration to determine the actual type of the integer parameter.
 	 */
 	typedef enum {
 		VARIABLE, CONCRETE, INFINITE
 	} Type;
+
+	/**
+	 * A predefined int-type-parameter constant representing the value 0
+	 */
+	static const IntTypeParam ZERO;
+
+	/**
+	 * A predefined int-type-parameter constant representing the value 1
+	 */
+	static const IntTypeParam ONE;
+
+	/**
+	 * A predefined int-type-parameter constant representing an infinite value.
+	 */
+	static const IntTypeParam INF;
+
+private:
 
 	/**
 	 * The type of the parameter represented by this instance.
@@ -414,13 +496,15 @@ private:
 		/**
 		 * The value represented by the concrete type parameter.
 		 */
-		unsigned short value;
+		std::size_t value;
 
 		/**
 		 * The symbol used for the integer type variable.
 		 */
 		char symbol;
 	};
+
+private:
 
 	/**
 	 * A private constructor to create a variable integer type parameter.
@@ -437,8 +521,7 @@ private:
 	 *
 	 * @param value the value to be used for the concrete integer type parameter
 	 */
-	IntTypeParam(const unsigned short value) : type(CONCRETE), value(value) {
-	}
+	IntTypeParam(const std::size_t value) : type(CONCRETE), value(value) {}
 
 	/**
 	 * A private constructor to create a infinite integer type parameter.
@@ -448,6 +531,38 @@ private:
 	}
 
 public:
+
+	/**
+	 * A factory method to obtain a integer type parameter variable.
+	 *
+	 * @param symbol the symbol to be used for the variable
+	 * @return an IntTypeParam representing a token for this variable.
+	 */
+	static IntTypeParam getVariableIntParam(char symbol);
+
+	/**
+	 * A factory method to obtain a concrete integer type parameter.
+	 *
+	 * @param value the value to be represented
+	 * @return an IntTypeParam representing a token for this value.
+	 */
+	static IntTypeParam getConcreteIntParam(std::size_t value);
+
+	/**
+	 * A factory method to obtain a integer type parameter representing
+	 * the infinite value.
+	 *
+	 * @return an IntTypeParam representing a token for the infinite value.
+	 */
+	static IntTypeParam getInfiniteIntParam();
+
+	/**
+	 * Tests whether all of the given integer type parameter are concrete.
+	 *
+	 * @param intTypeParams the list of parameters to be tested
+	 * @return true if all are concrete, false otherwise
+	 */
+	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
 
 	/**
 	 * Implements the equality operator for the IntTypeParam type.
@@ -482,58 +597,40 @@ public:
 		return type != VARIABLE;
 	}
 
-public:
 	/**
-	 * A factory method to obtain a integer type parameter variable.
+	 * Obtains the type of parameter this instance is.
 	 *
-	 * @param symbol the symbol to be used for the variable
-	 * @return an IntTypeParam representing a token for this variable.
+	 * @return the type of int-type parameter
+	 *
+	 * @see Type
 	 */
-	static IntTypeParam getVariableIntParam(char symbol) {
-		return IntTypeParam(symbol);
+	Type getType() const {
+		return type;
 	}
-
-	/**
-	 * A factory method to obtain a concrete integer type parameter.
-	 *
-	 * @param value the value to be represented
-	 * @return an IntTypeParam representing a token for this value.
-	 */
-	static IntTypeParam getConcreteIntParam(unsigned short value) {
-		return IntTypeParam(value);
-	}
-
-	/**
-	 * A factory method to obtain a integer type parameter representing
-	 * the infinite value.
-	 *
-	 * @return an IntTypeParam representing a token for the infinite value.
-	 */
-	static IntTypeParam getInfiniteIntParam() {
-		return IntTypeParam(INFINITE);
-	}
-
-
-	/**
-	 * Tests whether all of the given integer type parameter are concrete.
-	 *
-	 * @param intTypeParams the list of parameters to be tested
-	 * @return true if all are concrete, false otherwise
-	 */
-	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
 
 	/**
 	 * Obtains the value of a concrete int-type parameter. The value is only
 	 * properly defined in case the type is CONCRETE. Otherwise an assertion
-	 * violation will be caused.
+	 * violation will be triggered.
 	 */
-	unsigned short getValue() const {
+	std::size_t getValue() const {
 		// TODO: replace with an exception
 		assert( type == CONCRETE );
 		return value;
 	}
 
+	/**
+	 * Obtains the symbol of a variable int-type parameter. The symbol is only
+	 * properly defined in case the type is VARIABLE. Otherwise an assertion
+	 * violation will be triggered.
+	 */
+	char getSymbol() const {
+		// TODO: replace with an exception
+		assert( type == VARIABLE );
+		return symbol;
+	}
 };
+
 
 // ---------------------------------------- Generic Type ------------------------------
 
@@ -544,8 +641,10 @@ public:
  */
 class GenericType: public Type {
 
-	// FIXME: should not be necessary
-	const string familyName;
+	/**
+	 * The name of this generic type.
+	 */
+	const Identifier familyName;
 
 	/**
 	 * The list of type parameters being part of this type specification.
@@ -564,7 +663,7 @@ class GenericType: public Type {
 	 */
 	const TypePtr baseType;
 
-protected:
+public:
 
 	/**
 	 * Creates an new generic type instance based on the given parameters.
@@ -574,10 +673,12 @@ protected:
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 	 * @param baseType		the base type of this generic type
 	 */
-	GenericType(const string& name,
+	GenericType(const Identifier& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
+
+protected:
 
 	/**
 	 * Creates a clone of this node.
@@ -585,6 +686,12 @@ protected:
 	virtual GenericType* clone(NodeManager& manager) const {
 		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
 	}
+
+	/**
+	 * Obtains a list of all type parameters and the optional base type
+	 * referenced by this generic type.
+	 */
+	virtual OptionChildList getChildNodes() const;
 
 public:
 
@@ -599,18 +706,17 @@ public:
 	 * @param baseType		the base type of this generic type
 	 */
 	static GenericTypePtr get(NodeManager& manager,
-			const string& name,
+			const Identifier& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
 
 	/**
-	 * Retrieves a list of all types referenced by this generic type. This
-	 * list includes the all type parameters and the base type.
-	 *
-	 * @return the set of all referenced types.
+	 * Obtains the family name of this generic type.
 	 */
-	virtual ChildList getChildren() const;
+	const Identifier& getFamilyName() const {
+		return familyName;
+	}
 
 	/**
 	 * Retrieves all type parameter associated to this generic type.
@@ -639,6 +745,102 @@ public:
 		return baseType;
 	}
 };
+
+// ---------------------------------------- Recursive Type ------------------------------
+
+
+class RecTypeDefinition : public Node {
+
+public:
+
+	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;
+
+private:
+
+	/**
+	 * The list of definitions this recursive type definition is consisting of.
+	 */
+	const RecTypeDefs definitions;
+
+	RecTypeDefinition(const RecTypeDefs& definitions);
+
+	RecTypeDefinition* clone(NodeManager& manager) const;
+
+protected:
+
+	virtual bool equals(const Node& other) const;
+
+	virtual OptionChildList getChildNodes() const;
+
+public:
+
+	static RecTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
+
+	const RecTypeDefs& getDefinitions() {
+		return definitions;
+	}
+
+	const TypePtr getDefinitionOf(const TypeVariablePtr& variable) const;
+
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+};
+
+/**
+ * This type connector allows to define recursive type within the IR language. Recursive
+ * types are types which are defined by referencing to their own type. The definition of
+ * a list may be consisting of a pair, where the first element is corresponding to a head
+ * element and the second to the remaining list. Therefore, a list is defined using its own
+ * type.
+ *
+ * This implementation allows to define mutually recursive data types, hence, situations
+ * in which the definition of multiple recursive types are interleaved.
+ */
+class RecType: public Type {
+
+	/**
+	 * The name of the type variable describing this type.
+	 */
+	const TypeVariablePtr typeVariable;
+
+	/**
+	 * The definition body of this recursive type. Identical definitions may be
+	 * shared among recursive type definitions.
+	 */
+	const RecTypeDefinitionPtr definition;
+
+
+	/**
+	 * A constructor for creating a new recursive type.
+	 */
+	RecType(const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition);
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual RecType* clone(NodeManager& manager) const;
+
+	/**
+	 * Obtains a list of all sub-nodes referenced by this AST node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
+public:
+
+	const RecTypeDefinitionPtr getDefinition() const { return definition; }
+
+	/**
+	 * A factory method for obtaining a new recursive type instance.
+	 *
+	 * @param manager the manager which should be maintaining the new instance
+	 * @param typeVariable the name of the variable used within the recursive type definition for representing the
+	 * 					   recursive type to be defined by the resulting type instance.
+	 * @param definition the definition of the recursive type.
+	 */
+	static RecTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition);
+
+};
+
 
 // --------------------------------- Named Composite Type ----------------------------
 
@@ -681,6 +883,12 @@ protected:
 
 	static Entries getEntriesFromManager(NodeManager& manager, Entries entries);
 
+
+	/**
+	 * Obtains a list of all child sub-types used within this struct.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
 public:
 
 	/**
@@ -692,26 +900,7 @@ public:
 		return entries;
 	}
 
-	/**
-	 * Retrieves the child types referenced by this generic type.
-	 *
-	 * @return the
-	 */
-	virtual ChildList getChildren() const {
-		auto res = makeChildList();
-
-		// add all referenced types
-		std::transform(entries.cbegin(), entries.cend(), back_inserter(*res),
-			[](const Entry& cur) {
-				return cur.second;
-		});
-
-		// return resulting type
-		return res;
-	}
-
 private:
-
 
 	/**
 	 * A static utility function composing the name of this type.
@@ -853,21 +1042,22 @@ public:
  */
 class ArrayType: public SingleElementType {
 
+public:
+
 	/**
 	 * Creates a new instance of this class using the given parameters.
 	 *
 	 * @param elementType the element type of this array
 	 * @param dim the dimension of the represented array
 	 */
-	ArrayType(const TypePtr elementType, const unsigned short dim) :
-		SingleElementType("array", elementType, toVector(IntTypeParam::getConcreteIntParam(dim))) {}
+	ArrayType(const TypePtr& elementType, const IntTypeParam& dim = IntTypeParam::ONE);
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ArrayType* clone(NodeManager& manager) const {
-		return new ArrayType(manager.get(getElementType()), getDimension());
-	}
+	virtual ArrayType* clone(NodeManager& manager) const;
 
 public:
 
@@ -882,18 +1072,14 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short dim = 1) {
-		return manager.get(ArrayType(elementType, dim));
-	}
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim = IntTypeParam::ONE);
 
 	/**
 	 * Retrieves the dimension of the represented array.
 	 *
 	 * @return the dimension of the represented array type
 	 */
-	const unsigned short getDimension() const {
-		return getIntTypeParameter()[0].getValue();
-	}
+	const IntTypeParam getDimension() const;
 };
 
 // --------------------------------- Vector Type ----------------------------
@@ -903,21 +1089,22 @@ public:
  */
 class VectorType : public SingleElementType {
 
+public:
+
 	/**
-	 * Creates a new instance of this class using the given parameters.
+	 * Creates a new instance of a vector type token using the given element and size parameter.
 	 *
-	 * @param elementType the element type of this vector
-	 * @param size the size of the new vector type
+	 * @param elementType the element type of the new vector
+	 * @param size the size of the new vector
 	 */
-	VectorType(const TypePtr elementType, const unsigned short size) :
-		SingleElementType("vector", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+	VectorType(const TypePtr& elementType, const IntTypeParam& size);
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual VectorType* clone(NodeManager& manager) const {
-		return new VectorType(manager.get(getElementType()), getSize());
-	}
+	virtual VectorType* clone(NodeManager& manager) const;
 
 public:
 
@@ -928,22 +1115,18 @@ public:
 	 * @param manager 		the manager which should be responsible for maintaining the new
 	 * 				  		type instance and all its referenced elements.
 	 * @param elementType 	the type of element to be maintained within the vector
-	 * @param dim 			the size of the requested vector
+	 * @param size 			the size of the requested vector
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
-		return manager.get(VectorType(elementType, size));
-	}
+	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size);
 
 	/**
 	 * Retrieves the size (=number of elements) of the represented vector type.
 	 *
 	 * @return the size of the represented array type
 	 */
-	const unsigned short getSize() const {
-		return getIntTypeParameter()[0].getValue();
-	}
+	const IntTypeParam getSize() const;
 };
 
 
@@ -954,21 +1137,23 @@ public:
  */
 class RefType: public SingleElementType {
 
+public:
+
 	/**
 	 * A private constructor to create a new instance of this type class based on the
 	 * given element type.
 	 *
 	 * @param elementType the type the new type should reference to.
 	 */
-	RefType(const TypePtr elementType) :
+	RefType(const TypePtr& elementType) :
 		SingleElementType("ref", elementType) {}
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual RefType* clone(NodeManager& manager) const {
-		return new RefType(manager.get(getElementType()));
-	}
+	virtual RefType* clone(NodeManager& manager) const;
 
 public:
 
@@ -982,17 +1167,18 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static RefTypePtr get(NodeManager& manager, const TypePtr& elementType) {
-		return manager.get(RefType(elementType));
-	}
+	static RefTypePtr get(NodeManager& manager, const TypePtr& elementType);
+
 };
 
-// --------------------------------- Reference Type ----------------------------
+// --------------------------------- Channel Type ----------------------------
 
 /**
  * This intrinsic reference type used to represent communication channels.
  */
 class ChannelType: public SingleElementType {
+
+public:
 
 	/**
 	 * Creates a new channel.
@@ -1002,15 +1188,14 @@ class ChannelType: public SingleElementType {
 	 * 						obtained within this channel until it starts blocking writte operations. If
 	 * 						set to 0, the channel will represent a handshake channel.
 	 */
-	ChannelType(const TypePtr elementType, const unsigned short size) :
-		SingleElementType("channel", elementType, toVector(IntTypeParam::getConcreteIntParam(size))) {}
+	ChannelType(const TypePtr& elementType, const IntTypeParam& size);
+
+private:
 
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ChannelType* clone(NodeManager& manager) const {
-		return new ChannelType(manager.get(getElementType()), getSize());
-	}
+	virtual ChannelType* clone(NodeManager& manager) const;
 
 public:
 
@@ -1024,40 +1209,19 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const unsigned short size) {
-		return manager.get(ChannelType(elementType, size));
-	}
+	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size);
 
 	/**
 	 * Retrieves the (buffer) size of this channel.
 	 *
 	 * @return the buffer size of the channel
 	 */
-	const unsigned short getSize() const {
-		return getIntTypeParameter()[0].getValue();
-	}
+	const IntTypeParam getSize() const;
 };
 
 
 } // end namespace core
 } // end namespace insieme
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-/**
- * Allows to compute the hash value of a type.
- *
- * @param type the type for which a hash value should be computed
- * @return the computed hash value
- */
-std::size_t hash_value(const insieme::core::Type& type);
-
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals expects values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Type& type);
 
 
 

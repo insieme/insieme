@@ -70,12 +70,12 @@ public:
 		return ptr==NULL;
 	}
 
-	const T& operator*() const {
+	T& operator*() const {
 		assert(ptr != NULL && "Illegal: dereferencing a NULL pointer!" );
 		return *ptr;
 	}
 
-	const T* operator->() const {
+	T* operator->() const {
 		return ptr;
 	}
 
@@ -151,4 +151,5 @@ std::ostream& operator<<(std::ostream& out, const InstancePtr<T>& ptr) {
 	out << ")";
 	return out;
 }
+
 

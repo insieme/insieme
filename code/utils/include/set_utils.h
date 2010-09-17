@@ -54,18 +54,70 @@ namespace utils {
 namespace set {
 
 /**
- * A factory method to obtain a set containing a single element. The type of set to be generated
- * has to be specified using a template parameter.
- *
- * @tparam Set the type of set to be created (has to be manually specified)
- * @tparam Element the type of element to be contained (should be automatically derived)
- * @param element the element to be present within the resulting set
- * @return a set containing the given element
+ * Creates a set containing no elements.
  */
 template<typename Set, typename Element>
-const Set toSet(const Element& element) {
+inline Set toSet() {
+	return Set();
+}
+
+/**
+ * Create a set containing a single element.
+ */
+template<typename Set, typename T>
+inline Set toSet(const T& a) {
+	Set res = toSet<Set,T>();
+	res.insert(a);
+	return res;
+}
+
+/**
+ * Create a set containing two elements.
+ */
+template<typename Set, typename T>
+inline Set toSet(const T& a, const T& b) {
+	Set res = toSet<Set>(a);
+	res.insert(b);
+	return res;
+}
+
+/**
+ * Create a set containing three elements.
+ */
+template<typename Set, typename T>
+inline Set toSet(const T& a, const T& b, const T& c) {
+	Set res = toSet<Set>(a,b);
+	res.insert(c);
+	return res;
+}
+
+/**
+ * Create a set containing four elements.
+ */
+template<typename Set, typename T>
+inline Set toSet(const T& a, const T& b, const T& c, const T& d) {
+	Set res = toSet<Set>(a,b,c);
+	res.insert(d);
+	return res;
+}
+
+/**
+ * Create a set containing five elements.
+ */
+template<typename Set, typename T>
+inline Set toSet(const T& a, const T& b, const T& c, const T& d, const T& e) {
+	Set res = toSet<Set>(a,b,c,d);
+	res.insert(e);
+	return res;
+}
+
+/**
+ * Converts the given container into a set.
+ */
+template<typename Set, typename Container>
+inline Set asSet(const Container& container) {
 	Set res;
-	res.insert(element);
+	std::copy(container.begin(), container.end(), inserter(res, res.end()));
 	return res;
 }
 
@@ -196,7 +248,7 @@ std::size_t computeHash(const Set& set) {
 } // end namespace: insieme
 
 /**
- * Allows to print unoredered sets including printable elements.
+ * Allows to print unordered sets including printable elements.
  *
  * @param out the stream to which the given vector should be printed to
  * @param container the vector to be printed
@@ -214,7 +266,7 @@ std::ostream& operator<<(std::ostream& out, const std::unordered_set<Element, Ha
 }
 
 /**
- * Allows to print unoredered sets including printable elements.
+ * Allows to print unordered sets including printable elements.
  *
  * @param out the stream to which the given vector should be printed to
  * @param container the vector to be printed

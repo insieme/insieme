@@ -37,12 +37,16 @@
 #pragma once
 
 #include <boost/functional/hash.hpp>
+#include <boost/type_traits/is_pointer.hpp>
+#include <boost/type_traits/remove_pointer.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <hash_utils.h>
 
-
+struct empty {};
 
 template<typename T>
 struct id : public std::unary_function<T, T> {
-	T operator()(T element) const { return element; }
+	T& operator()(const T& element) const { return element; }
 };
 
 
@@ -61,7 +65,7 @@ struct deref: public std::unary_function<const PointerType&, const typename Poin
  * @tparam PointerType the type of pointer to be compared
  */
 template<typename PointerType>
-struct equal_target: public std::binary_function<const PointerType&, const PointerType&, bool> {
+struct equal_target : public std::binary_function<const PointerType&, const PointerType&, bool> {
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
 	 * pointer type.
@@ -74,35 +78,84 @@ struct equal_target: public std::binary_function<const PointerType&, const Point
 	}
 };
 
+
+
 /**
  * This utility struct defines the function used to compute hash codes for pointers.
  * Thereby, the hash code is not computed using the pointer themselves. Instead, the
  * target they are pointing to is used to compute the value. In case the pointer is null,
  * 0 is returned as a hash value.
  *
- * @tparam T the type of element the used pointers are pointing to
+ * @tparam PointerType the type of the pointer to be hashed
+ */
+template<typename PointerType, typename Enabled = void>
+struct hash_target; // { /* default is not working */ };
+
+/**
+ * This partial template specialization of the hash_target struct is handling
+ * real pointers.
  */
 template<typename PointerType>
-struct hash_target: public std::unary_function<const PointerType, std::size_t> {
-	typedef typename PointerType::element_type element_type;
+struct hash_target<PointerType, typename boost::enable_if<boost::is_pointer<PointerType>>::type> {
+
+	/**
+	 * Derives the element type be removing the pointer extension.
+	 */
+	typedef typename boost::remove_pointer<PointerType>::type ElementType;
 
 	/**
 	 * This function is used to compute the hash of the actual target.
 	 */
-	boost::hash<element_type> hasher;
+	boost::hash<ElementType> hasher;
 
 	/**
 	 * Explicit Default constructor required by VC.
 	 */
-	hash_target() : hasher() {	}
+	hash_target() : hasher() {}
 
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to.
 	 */
 	std::size_t operator()(const PointerType p) const {
-		if (!!p) {
+		if (p) {
 			return hasher(*p);
 		}
 		return 0;
 	}
 };
+
+/**
+ * This partial template specialization of the hash_target struct is handling
+ * smart pointers.
+ */
+template<typename PointerType>
+struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<PointerType>>::type> {
+
+	/**
+	 * Obtains the element type from the smart pointer.
+	 */
+	typedef typename PointerType::element_type ElementType;
+
+	/**
+	 * This function is used to compute the hash of the actual target.
+	 */
+	boost::hash<ElementType> hasher;
+
+	/**
+	 * Explicit Default constructor required by VC.
+	 */
+	hash_target() : hasher() {}
+
+	/**
+	 * Computes the hash value of the given pointer based on the target it is pointing to.
+	 */
+	std::size_t operator()(const PointerType p) const {
+		if (p) {
+			return hasher(*p);
+		}
+		return 0;
+	}
+};
+
+
+

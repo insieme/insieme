@@ -38,11 +38,8 @@
 
 #include <algorithm>
 #include <iterator>
-#include <map>
 #include <memory>
-#include <set>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
 #include <utility>
@@ -52,8 +49,7 @@
 #include "container_utils.h"
 #include "instance_manager.h"
 #include "types.h"
-#include "visitor.h"
-#include "identifiers.h"
+#include "identifier.h"
 
 using std::string;
 using std::vector;
@@ -68,8 +64,6 @@ DECLARE_NODE_TYPE(VarExpr);
 // Forward Declarations { -----------------------------------------------------
 
 DECLARE_NODE_TYPE(Statement)
-
-DECLARE_NODE_TYPE(AtomicStmt) // TODO: implement atomic statement
 
 DECLARE_NODE_TYPE(BreakStmt)
 DECLARE_NODE_TYPE(ContinueStmt)
@@ -87,14 +81,18 @@ DECLARE_NODE_TYPE(SwitchStmt)
 
 // ------------------------------------- Statements ---------------------------------
 
-class Statement : public Node, public Visitable<NodePtr> {
+/**
+ * The abstract statement class provides the foundation for all AST nodes representing statements
+ * and expressions.
+ */
+class Statement : public Node {
 	// needs InstanceManager not NodeManager since base type calls clone
 	friend class InstanceManager<Statement, AnnotatedPtr>;
 	virtual Statement* clone(NodeManager& manager) const = 0;
 
 protected:
 
-	Statement(std::size_t hashCode) : Node(NodeType::STATEMENT, hashCode) {}
+	Statement(std::size_t hashCode, bool isExpr = false) : Node((isExpr)?EXPRESSION:STATEMENT, hashCode) {}
 
 	virtual bool equals(const Node& node) const;
 	virtual bool equalsStmt(const Statement& stmt) const = 0;
@@ -104,8 +102,6 @@ public:
 	typedef NodeManager Manager;
 
 	virtual ~Statement() {}
-	virtual void printTo(std::ostream& out) const = 0;
-	virtual ChildList getChildren() const;
 };
 
 class BreakStmt : public Statement {
@@ -114,9 +110,10 @@ class BreakStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static BreakStmtPtr get(NodeManager& manager);
 };
@@ -128,9 +125,10 @@ class ContinueStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	static ContinueStmtPtr get(NodeManager& manager);
 };
@@ -144,10 +142,10 @@ class ReturnStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	static ReturnStmtPtr get(NodeManager& manager, const ExpressionPtr& returnExpression);
 };
@@ -162,10 +160,13 @@ class DeclarationStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const VarExprPtr& getVarExpression() const { return varExpression; }
+	const ExpressionPtr& getInitialization() const { return initExpression; }
 
 	static DeclarationStmtPtr get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression);
 };
@@ -174,15 +175,17 @@ public:
 class CompoundStmt: public Statement {
 	const vector<StatementPtr> statements;
 
+public:
 	CompoundStmt(const vector<StatementPtr>& stmts);
+private:
 	virtual CompoundStmt* clone(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const StatementPtr& operator[](unsigned index) const;
 
@@ -201,10 +204,10 @@ class WhileStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getCondition() const { return condition; }
 	const StatementPtr& getBody() const { return body; }
@@ -222,17 +225,18 @@ class ForStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const DeclarationStmtPtr& getDeclaration() const { return declaration; }
 	const StatementPtr& getBody() const { return body; }
 	const ExpressionPtr& getEnd() const { return end; }
 	const ExpressionPtr& getStep() const { return step; }
 	
-	static ForStmtPtr get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step = NULL);
+	static ForStmtPtr get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
+			const ExpressionPtr& step);
 };
 
 class IfStmt: public Statement {
@@ -245,16 +249,17 @@ class IfStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	const ExpressionPtr& getCondition() const { return condition; }
 	const StatementPtr& getThenBody() const { return thenBody; }
 	const StatementPtr& getElseBody() const { return elseBody; }
 
-	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody = NULL);
+	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenBody);
+	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody);
 };
 
 class SwitchStmt: public Statement {
@@ -264,23 +269,24 @@ public:
 private:
 	const ExpressionPtr switchExpr;
 	const vector<Case> cases;
+	const StatementPtr defaultCase;
 
-	SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases);
+	SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase);
 	virtual SwitchStmt* clone(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
 
 public:
-	virtual void printTo(std::ostream& out) const;
-	virtual ChildList getChildren() const;
-	
-	SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases);
-};
+	virtual std::ostream& printTo(std::ostream& out) const;
 
-std::size_t hash_value(const insieme::core::Statement& stmt);
+	const ExpressionPtr& getSwitchExpr() const { return switchExpr; }
+	const vector<Case>& getCases() const { return cases; }
+	
+	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases);
+	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase);
+};
 
 } // end namespace core
 } // end namespace insieme
-
-std::ostream& operator<<(std::ostream& out, const insieme::core::Statement& stmt);

@@ -42,13 +42,22 @@
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "container_utils.h"
+#include "map_utils.h"
 #include "types.h"
 
 
 using namespace insieme::core;
 
+enum HashSeed {
+	RECURSIVE_DEFINITION
+};
+
 
 // -------------------------------- Integer Type Parameter ----------------------------
+
+const IntTypeParam IntTypeParam::ZERO = IntTypeParam::getConcreteIntParam(0);
+const IntTypeParam IntTypeParam::ONE  = IntTypeParam::getConcreteIntParam(1);
+const IntTypeParam IntTypeParam::INF  = IntTypeParam(INFINITE);
 
 bool IntTypeParam::operator==(const IntTypeParam& param) const {
 	// quick check on reference
@@ -84,6 +93,17 @@ bool IntTypeParam::allConcrete(const vector<IntTypeParam>& intTypeParams) {
 	return all(intTypeParams, [](const IntTypeParam& param) { return param.isConcrete(); });
 }
 
+IntTypeParam IntTypeParam::getVariableIntParam(char symbol) {
+	return IntTypeParam(symbol);
+}
+
+IntTypeParam IntTypeParam::getConcreteIntParam(std::size_t value) {
+	return IntTypeParam(value);
+}
+
+IntTypeParam IntTypeParam::getInfiniteIntParam() {
+	return IntTypeParam(INFINITE);
+}
 
 // ---------------------------------------- Type --------------------------------
 
@@ -100,7 +120,11 @@ bool Type::allConcrete(const vector<TypePtr>& elementTypes) {
 
 // -------------------------------------- Type Variable -------------------------------
 
+TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
+	return manager.get(TypeVariable(name));
+}
 
+TypeVariable TypeVariable::DotTy("@");
 
 // ---------------------------------------- Tuple Type --------------------------------
 
@@ -129,6 +153,23 @@ string TupleType::buildNameString(const ElementTypeList& elementTypes) {
 }
 
 /**
+ * Creates a new, empty tuple type.
+ */
+TupleType::TupleType() : Type(buildNameString(toVector<TypePtr>()), allConcrete(toVector<TypePtr>())), elementTypes(toVector<TypePtr>()) {}
+
+/**
+ * Creates a new tuple type based on the given element type(s).
+ */
+TupleType::TupleType(const TypePtr& a)
+	: Type(buildNameString(toVector<TypePtr>(a)), allConcrete(toVector<TypePtr>(a))), elementTypes(toVector<TypePtr>(a)) {}
+
+/**
+ * Creates a new tuple type based on the given element type(s).
+ */
+TupleType::TupleType(const TypePtr& a, const TypePtr& b)
+	: Type(buildNameString(toVector<TypePtr>(a,b)), allConcrete(toVector<TypePtr>(a,b))), elementTypes(toVector<TypePtr>(a,b)) {}
+
+/**
  * This method provides a static factory method for this type of node. It will return
  * a tuple type pointer pointing toward a variable with the given name maintained by the
  * given manager.
@@ -140,6 +181,11 @@ TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& element
 	return manager.get(TupleType(elementTypes));
 }
 
+Node::OptionChildList TupleType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	std::copy(elementTypes.cbegin(), elementTypes.cend(), back_inserter(*res));
+	return res;
+}
 
 // ---------------------------------------- Function Type ------------------------------
 
@@ -159,6 +205,13 @@ FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentT
 	return manager.get(FunctionType(argumentType, returnType));
 }
 
+Node::OptionChildList FunctionType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(argumentType);
+	res->push_back(returnType);
+	return res;
+}
+
 // ---------------------------------------- Generic Type ------------------------------
 
 /**
@@ -169,7 +222,7 @@ FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentT
  * @param intParams		the list of integer type parameters to be appended
  * @return a string representation of the type
  */
-string buildNameString(const string& name, const vector<TypePtr>& typeParams,
+string buildNameString(const Identifier& name, const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intParams) {
 
 	// create output buffer
@@ -189,10 +242,16 @@ string buildNameString(const string& name, const vector<TypePtr>& typeParams,
 	return res.str();
 }
 
+
+//// RECTYPE
+//RecTypePtr RecType::get(NodeManager& manager, const std::string& name, const TypePtr& innerTy) {
+//	return manager.get(RecType(name, innerTy));
+//}
+
 /**
  * Creates an new generic type instance based on the given parameters.
  */
-GenericType::GenericType(const string& name,
+GenericType::GenericType(const Identifier& name,
 		const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intTypeParams,
 		const TypePtr& baseType)
@@ -214,7 +273,7 @@ GenericType::GenericType(const string& name,
  * @param baseType		the base type of this generic type
  */
 GenericTypePtr GenericType::get(NodeManager& manager,
-			const string& name,
+			const Identifier& name,
 			const vector<TypePtr>& typeParams,
 			const vector<IntTypeParam>& intTypeParams,
 			const TypePtr& baseType) {
@@ -234,15 +293,116 @@ GenericTypePtr GenericType::get(NodeManager& manager,
  *
  * @return the
  */
-GenericType::ChildList GenericType::getChildren() const {
-	auto res = makeChildList(typeParams);
-
-	// further add base types
-	if (!!baseType) {
+Node::OptionChildList GenericType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	std::copy(typeParams.cbegin(), typeParams.cend(), back_inserter(*res));
+	if (baseType) {
 		res->push_back(baseType);
 	}
-
 	return res;
+}
+
+// ------------------------------------ Rec Definition ------------------------------
+
+std::size_t hashRecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions) {
+	std::size_t hash = RECURSIVE_DEFINITION;
+	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
+	return hash;
+}
+
+RecTypeDefinition::RecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions)
+	: Node(SUPPORT, hashRecTypeDefinition(definitions)), definitions(definitions) { };
+
+RecTypeDefinitionPtr RecTypeDefinition::get(NodeManager& manager, const RecTypeDefinition::RecTypeDefs& definitions) {
+	return manager.get(RecTypeDefinition(definitions));
+}
+
+RecTypeDefinition* RecTypeDefinition::clone(NodeManager& manager) const {
+	RecTypeDefs localDefinitions;
+	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
+		[&manager](const RecTypeDefs::value_type& cur) {
+			return RecTypeDefinition::RecTypeDefs::value_type(manager.get(cur.first), manager.get(cur.second));
+	});
+	return new RecTypeDefinition(localDefinitions);
+}
+
+bool RecTypeDefinition::equals(const Node& other) const {
+	// check type
+	if (typeid(other) != typeid(RecTypeDefinition)) {
+		return false;
+	}
+
+	const RecTypeDefinition& rhs = static_cast<const RecTypeDefinition&>(other);
+	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<TypePtr>());
+}
+
+Node::OptionChildList RecTypeDefinition::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	std::for_each(definitions.begin(), definitions.end(), [&res](const RecTypeDefs::value_type& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
+	});
+	return res;
+}
+
+std::ostream& RecTypeDefinition::printTo(std::ostream& out) const {
+	return out << "{" << join(", ", definitions, [](std::ostream& out, const RecTypeDefs::value_type& cur) {
+		out << *cur.first << "=" << *cur.second;
+	}) << "}";
+}
+
+const TypePtr RecTypeDefinition::getDefinitionOf(const TypeVariablePtr& variable) const {
+	auto it = definitions.find(variable);
+	if (it == definitions.end()) {
+		return TypePtr(NULL);
+	}
+	return (*it).second;
+}
+
+
+// ---------------------------------------- Rec Type ------------------------------
+
+
+string buildRecTypeName(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
+	// create output buffer
+	std::stringstream res;
+	res << "rec " << *variable << "." << *definition;
+	return res.str();
+}
+
+bool isConcreteRecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
+	// TODO: search for unbound type variables - if there are, return false - true otherwise
+	return true;
+}
+
+bool isRecFunctionType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definitions) {
+	TypePtr definition = definitions->getDefinitionOf(variable);
+	assert( definition && "No definition for given variable within definitions!");
+	return definition->isFunctionType();
+}
+
+
+// TODO: determine whether recursive type is concrete or function type ..
+RecType::RecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition)
+	: Type(buildRecTypeName(variable, definition),
+			isConcreteRecType(variable, definition),
+			isRecFunctionType(variable, definition)),
+			typeVariable(variable), definition(definition) { }
+
+
+RecType* RecType::clone(NodeManager& manager) const {
+	return new RecType(manager.get(typeVariable), manager.get(definition));
+}
+
+Node::OptionChildList RecType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(typeVariable);
+	res->push_back(definition);
+	return res;
+}
+
+RecTypePtr RecType::get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
+	return manager.get(RecType(typeVariable, definition));
 }
 
 
@@ -333,6 +493,12 @@ bool NamedCompositeType::allConcrete(const Entries& elements) {
 	});
 }
 
+Node::OptionChildList NamedCompositeType::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	projectToSecond(entries.cbegin(), entries.cend(), back_inserter(*res));
+	return res;
+}
+
 
 // ------------------------------------ Struct Type ---------------------------
 
@@ -344,29 +510,72 @@ StructTypePtr StructType::get(NodeManager& manager, const Entries& entries) {
 
 // ------------------------------------ Union Type ---------------------------
 
-
 UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
 	return manager.get(UnionType(NamedCompositeType::getEntriesFromManager(manager, entries)));
 }
 
-// ---------------------------------------------- Utility Functions ------------------------------------
 
-/**
- * Allows to compute the hash value of a type.
- *
- * @param type the type for which a hash value should be computed
- * @return the computed hash value
- */
-std::size_t hash_value(const Type& type) {
-	return type.hash();
+// ------------------------------------ Array Type ---------------------------
+
+ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParam& dim) :
+	SingleElementType("array", elementType, toVector(dim)) {}
+
+ArrayType* ArrayType::clone(NodeManager& manager) const {
+	return new ArrayType(manager.get(getElementType()), getDimension());
 }
 
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Type& type) {
-	out << type.toString();
-	return out;
+ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim) {
+	return manager.get(ArrayType(elementType, dim));
 }
+
+const IntTypeParam ArrayType::getDimension() const {
+	return getIntTypeParameter()[0];
+}
+
+
+// ------------------------------------ Vector Type ---------------------------
+
+VectorType::VectorType(const TypePtr& elementType, const IntTypeParam& size) :
+	SingleElementType("vector", elementType, toVector(size)) {}
+
+VectorType* VectorType::clone(NodeManager& manager) const {
+	return new VectorType(manager.get(getElementType()), getIntTypeParameter()[0]);
+}
+
+VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
+	return manager.get(VectorType(elementType, size));
+}
+
+const IntTypeParam VectorType::getSize() const {
+	return getIntTypeParameter()[0];
+}
+
+// ------------------------------------ Ref Type ---------------------------
+
+RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
+	return manager.get(RefType(elementType));
+}
+
+RefType* RefType::clone(NodeManager& manager) const {
+	return new RefType(manager.get(getElementType()));
+}
+
+
+// ------------------------------------ Channel Type ---------------------------
+
+ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParam& size) :
+	SingleElementType("channel", elementType, toVector(size)) {}
+
+ChannelType* ChannelType::clone(NodeManager& manager) const {
+	return new ChannelType(manager.get(getElementType()), getSize());
+}
+
+ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
+	return manager.get(ChannelType(elementType, size));
+}
+
+const IntTypeParam ChannelType::getSize() const {
+	return getIntTypeParameter()[0];
+}
+

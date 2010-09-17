@@ -56,18 +56,69 @@ using std::function;
 using boost::is_convertible;
 using boost::enable_if;
 
+/**
+ * Convenience function for std::for_each.
+ */
+template<typename Container, typename Functor>
+inline void for_each(const Container& c, const Functor& f) {
+	std::for_each(c.cbegin(), c.cend(), f);
+}
+
 
 /**
- * Creates a vector containing (a copy of) the single element provided as an argument.
- *
- * @tparam the type of element to be contained within the singleton vector
- * @param element the element to be included within the new vector
- *
- * @return a new vector instance containing a single element
+ * Create an empty vector containing no elements.
  */
 template<typename T>
-vector<T> toVector(T element) {
-	return vector<T> (1, element);
+inline vector<T> toVector() {
+	return vector<T> ();
+}
+
+/**
+ * Create a vector containing a single element.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a) {
+	return vector<T> (1, a);
+}
+
+/**
+ * Create a vector containing two elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b) {
+	vector<T> res = toVector(a);
+	res.push_back(b);
+	return res;
+}
+
+/**
+ * Create a vector containing three elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c) {
+	vector<T> res = toVector(a,b);
+	res.push_back(c);
+	return res;
+}
+
+/**
+ * Create a vector containing four elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d) {
+	vector<T> res = toVector(a,b,c);
+	res.push_back(d);
+	return res;
+}
+
+/**
+ * Create a vector containing five elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const T& e) {
+	vector<T> res = toVector(a,b,c,d);
+	res.push_back(e);
+	return res;
 }
 
 /**
@@ -119,6 +170,36 @@ inline bool equals(const ListA& a, const ListB& b) {
 	return equals(a, b, std::equal_to<const typename ListA::value_type&>());
 }
 
+/**
+ * Checks whether the given container an element being equal to the given value regarding
+ * the given comparison predicate.
+ *
+ * @tparam Container the type of container to be inspected
+ * @tparam Comparator the type of the comparison predicate
+ * @param container the container to be tested
+ * @param value the value to be searched
+ * @param comparator the comparator used to compare the given value with the elements within the container
+ * @return true if found, false otherwise
+ */
+template<class Container, typename Comparator>
+inline bool contains(const Container& container, const typename Container::value_type& value, const Comparator& comparator) {
+	return any(container, [&value, &comparator](const typename Container::value_type& cur){
+		return comparator(cur, value);
+	});
+}
+
+/**
+ * Checks whether the given container an element being equal to the given value (using operator==).
+ *
+ * @tparam Container the type of container to be inspected
+ * @param container the container to be tested
+ * @param value the value to be searched
+ * @return true if found, false otherwise
+ */
+template<class Container>
+inline bool contains(const Container& container, const typename Container::value_type& value) {
+	return contains(container, value, std::equal_to<const typename Container::value_type&>());
+}
 
 /** Checks whether a condition is true for all elements of the supplied iteration range.
  *

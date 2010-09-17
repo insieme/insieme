@@ -12,7 +12,10 @@ set ( insieme_core_include_dir 	${insieme_code_dir}/core/include )
 
 set ( insieme_utils_src_dir 	${insieme_code_dir}/utils/src )
 set ( insieme_utils_include_dir ${insieme_code_dir}/utils/include )
+set ( insieme_c_info_include_dir ${insieme_code_dir}/c_info/include )
 set ( insieme_frontend_include_dir ${insieme_code_dir}/frontend/include )
+set ( insieme_driver_include_dir ${insieme_code_dir}/driver/include )
+set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
 
 set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
 
@@ -38,10 +41,16 @@ find_library(pthread_LIB pthread)
 
 # Visual Studio customization
 if(MSVC) 
+	# enable minimal rebuild
+	add_definitions( /Gm )
+	# disable optimizations (compilation speed)
+	add_definitions( /Od )
 	# disable some warnings
 	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
 	# disable warning "assignment operator could not be generated"
 	add_definitions( /wd"4512" )
+	# disable warning "nonstandard extension: enum '[EnumName::ENUM]' used in qualified name"	
+	add_definitions( /wd"4482" )
 	# statically link with runtime library (required for gtest)
 	foreach(flag_var
 		CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
@@ -74,14 +83,17 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -Wall )
 endif()
 
+# Add debug symbols
+if (CMAKE_COMPILER_IS_GNUCXX)
+	add_definitions( -g )
+endif()
+
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
 
 	# add -all-valgrind target
-	if(NOT CONDUCT_MEMORY_CHECKS)
-		add_custom_target(valgrind)
-	endif(NOT CONDUCT_MEMORY_CHECKS)
+	add_custom_target(valgrind)
 
 	# define macro for adding tests
 	macro ( add_unit_test case_name )

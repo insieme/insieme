@@ -50,7 +50,7 @@ namespace frontend {
 namespace omp {
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
-	Pragma(startLoc, endLoc, name, mmap) {
+	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
 
 //	LOG(INFO) << "~~~PRAGMA~~~" << std::endl;
 //	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
