@@ -17,8 +17,6 @@ set ( insieme_frontend_include_dir ${insieme_code_dir}/frontend/include )
 set ( insieme_driver_include_dir ${insieme_code_dir}/driver/include )
 set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
 
-set ( CXXTEST_INCLUDE_DIR ${insieme_code_dir}/../thirdparty/cxxtest )
-
 # include boost headers
 find_package( Boost )
 include_directories( ${Boost_INCLUDE_DIRS} )
@@ -26,8 +24,8 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 # glog
 if(MSVC)
-	include_directories( $ENV{GLOG_HOME}/src/windows )
-	set(glog_LIB $ENV{GLOG_HOME}/Release/libglog_static.lib)
+	include_directories( ${GLOG_HOME}/src/windows )
+	set(glog_LIB ${GLOG_HOME}/Release/libglog_static.lib)
 else()
 	include_directories( $ENV{GLOG_HOME}/include )
 	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)

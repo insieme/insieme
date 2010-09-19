@@ -164,16 +164,24 @@ string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 	} else
 	if(lang::isRealType(*ptr)) {
 		return ptr->getName();
-	}
+	} else
 	if(*ptr == lang::TYPE_STRING_VAL) {
 		return "string";
-	}
+	} else
+	if(*ptr == lang::TYPE_CHAR_VAL) {
+		return "char";
+	} else
 	if(*ptr == lang::TYPE_VAR_LIST_VAL) {
 		return "...";
 	}
-	assert(0 && "Unhandled generic type.");
-	return "unhandled_simple_type";
+	//assert(0 && "Unhandled generic type.");
+	return string("[[unhandled_simple_type: ") + ptr->getName() + "]]";
 }
+
+string SimpleTypeConverter::visitRefType(const RefTypePtr& ptr) {
+	return visit(ptr->getElementType()) + "*";
+}
+
 
 }
 }

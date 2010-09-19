@@ -110,6 +110,7 @@ class InstanceManager : private boost::noncopyable {
 		const T* clone = orig->cloneTo(*static_cast<typename S::Manager*>(this));
 
 		// make sure clone is valid
+		using insieme::utils::hash_value; // required
 		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
 		assert( *orig == *clone && "Clone not equivalent to original!" );
 
