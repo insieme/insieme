@@ -257,9 +257,7 @@ public:
 		visit(ptr->getElseBody());
 	}
 
-	void visitReturnStmt(const ReturnStmtPtr& ptr) {
-		cStr << "return;\n";
-	}
+	void visitReturnStmt(const ReturnStmtPtr& ptr);
 
 	void visitSwitchStmt(const SwitchStmtPtr& ptr) {
 		cStr << "switch(";
