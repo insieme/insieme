@@ -56,7 +56,10 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	CodeStream& cs = cptr->getCodeStream();
 	// write the function header
 	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident.getName() << "(";
-	// TODO handle arguments
+	// handle arguments
+	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const ParamExprPtr& param) -> std::ostream& {
+		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << param->getIdentifier().getName());
+	});
 	cs << ") {" << CodeStream::indR << "\n";
 	// generate the function body
 	ConvertVisitor visitor(cc, cptr);
@@ -122,7 +125,10 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	auto typePtr = ptr->getType();
 	const string& val = ptr->getValue();
 	if(*typePtr == lang::TYPE_STRING_VAL) {
-		cStr << "\"" << val << "\"";
+		// TODO change once the decision is made how string literals should be represented int the ast
+		if(!(val.front() == '"' && val.back() == '"')) {
+			cStr << "\"" << val << "\"";
+		}
 	} 
 	else if(auto funType = dynamic_pointer_cast<const FunctionType>(typePtr)) {
 		auto funLiteralDeclCode = cc.getFuncMan().getFunctionLiteral(funType, val); 
