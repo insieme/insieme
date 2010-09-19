@@ -152,7 +152,7 @@ class BasicPragmaHandler: public clang::PragmaHandler {
 
 public:
 	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& pragma_matcher) :
-		PragmaHandler(name), base_name(base_name), pragma_matcher(pragma_matcher.copy()) {
+		PragmaHandler(name->getName().str()), base_name(base_name), pragma_matcher(pragma_matcher.copy()) {
 	}
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
@@ -168,8 +168,8 @@ public:
 			// will be "omp::barrier", the string is passed to the pragma constructur which store the value
 			std::ostringstream pragma_name;
 			pragma_name << base_name;
-			if (getName())
-				pragma_name << "::" << std::string(getName()->getNameStart(), getName()->getNameStart() + getName()->getLength());
+			if(!getName().empty())
+				pragma_name << "::" << getName().str();
 
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
 			// the pragma has been successfully parsed, now we have to instantiate the correct type which is associated to this pragma (T) and

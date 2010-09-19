@@ -40,7 +40,7 @@
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
 #include <clang/AST/Expr.h>
-#include "lib/Sema/Sema.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 
 #include <llvm/Support/raw_ostream.h>
@@ -148,7 +148,7 @@ void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Pars
 		err++;
 	} while(err < errStack.stackSize());
 	llvm::errs() << ss.str();
-	tdc.EmitCaretDiagnostic(errLoc, NULL, 0, pp.getSourceManager(), 0, 0, 80);
+	tdc.EmitCaretDiagnostic(errLoc, NULL, 0, pp.getSourceManager(), 0, 0, 80, 0, 0, 0);
 }
 
 // ------------------------------------ node ---------------------------
@@ -261,7 +261,7 @@ std::string TokenToStr(const clang::Token& token) {
 void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
 	if (!map_str.size())
 		return;
-	Action& A = ParserProxy::get().getParser()->getActions();
+	Sema& A = ParserProxy::get().getParser()->getActions();
 	switch (tok) {
 	case clang::tok::numeric_constant:
 		mmap[map_str].push_back(

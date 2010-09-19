@@ -109,8 +109,8 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 	DLOG(INFO) << insieme::frontend::util::Column(start, srcMgr);
 	std::pair<FileID, unsigned> startLocInfo = srcMgr.getDecomposedLoc( start);
 
-	std::pair<const char*, const char*> startBuffer = srcMgr.getBufferData(startLocInfo.first);
-	const char *strDataStart = startBuffer.first + startLocInfo.second;
+	llvm::StringRef startBuffer = srcMgr.getBufferData(startLocInfo.first);
+	const char *strDataStart = startBuffer.begin() + startLocInfo.second;
 //	DLOG(INFO) << "VALUE: " << string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
 	return string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
 }
@@ -236,7 +236,7 @@ public:
 
 	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
 		std::ostringstream ss;
-		ss << "\"" << stringLit->getStrData() << "\"";
+		ss << "\"" << stringLit->getString().str() << "\"";
 		// todo: Handle escape characters
 		return ExprWrapper( convFact.builder.literal(ss.str(), convFact.builder.genericType(core::Identifier("string"))) );
 	}
@@ -895,7 +895,7 @@ public:
 			assert(tagDecl->isDefinition() && "TagType is not a definition");
 
 			DLOG(INFO) << tagDecl->getKindName() << " " << tagDecl->getTagKind();
-			if(tagDecl->getTagKind() == TagDecl::TK_enum) {
+			if(tagDecl->getTagKind() == clang::TTK_Enum) {
 				assert(false && "Enum types not supported yet");
 			} else {
 				// handle struct/union/class
@@ -950,7 +950,7 @@ public:
 				}
 
 				// class and struct are handled in the same way
-				if( tagDecl->getTagKind() == TagDecl::TK_struct || tagDecl->getTagKind() ==  TagDecl::TK_class ) {
+				if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
 					if ( usesPartialType || !definitions.empty() ) {
 						// this type is using a pratially specified type, before building this type we try to see if we
 						// have enough information to build a recursive definition for the sub-type
@@ -965,7 +965,7 @@ public:
 
 					// if the type uses recursive types try to build a recursive type using the current knowledge
 
-				} else if( tagDecl->getTagKind() == TagDecl::TK_union )
+				} else if( tagDecl->getTagKind() == clang::TTK_Union )
 					retTy = TypeWrapper( convFact.builder.unionType( structElements ) );
 				else
 					assert(false);

@@ -40,8 +40,8 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#include "lib/Sema/Sema.h"
-#include "clang/Parse/Action.h"
+#include "clang/Sema/Sema.h"
+#include "clang/Sema/Ownership.h"
 
 using clang::SourceLocation;
 
@@ -75,20 +75,21 @@ public:
 	
 	void addPragma(PragmaPtr P);
 
-	OwningStmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R, MultiStmtArg Elts, bool isStmtExpr);
+	clang::StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr);
 								   
-	OwningStmtResult ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, DeclPtrTy CondVar, StmtArg ThenVal, SourceLocation ElseLoc, StmtArg ElseVal);
+	clang::StmtResult ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal, SourceLocation ElseLoc,
+								  clang::Stmt* ElseVal);
 
-	OwningStmtResult ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, StmtArg First, FullExprArg Second, DeclPtrTy SecondVar, FullExprArg Third,
-						  		  SourceLocation RParenLoc, StmtArg Body);
+	clang::StmtResult ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, clang::Stmt* First, FullExprArg Second, clang::Decl* SecondVar, FullExprArg Third,
+						  		  SourceLocation RParenLoc, clang::Stmt* Body);
 								  
-	DeclPtrTy ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D);
+	clang::Decl* ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D);
 	
-	DeclPtrTy ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, DeclPtrTy D);
+	clang::Decl* ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Decl* D);
 
-	DeclPtrTy ActOnFinishFunctionBody(DeclPtrTy Decl, StmtArg Body);
+	clang::Decl* ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body);
 	
-	DeclPtrTy ActOnDeclarator(clang::Scope *S, clang::Declarator &D);
+	clang::Decl* ActOnDeclarator(clang::Scope *S, clang::Declarator &D);
 
 	/**
 	 * Register the parsed pragma.

@@ -68,9 +68,10 @@
 #include "llvm/Config/config.h"
 
 #include "clang/Parse/Parser.h"
+#include "clang/AST/DeclGroup.h"
+#include "clang/Parse/ParseAST.h"
 
-#include "clang/Sema/ParseAST.h"
-#include "lib/Sema/Sema.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/ExternalSemaSource.h"
 
@@ -83,7 +84,7 @@ ParserProxy* ParserProxy::currParser = NULL;
 Expr* ParserProxy::ParseExpression(Preprocessor& PP) {
 	PP.Lex(mParser->Tok);
 
-	Parser::OwningExprResult ownedResult = mParser->ParseExpression();
+	Parser::ExprResult ownedResult = mParser->ParseExpression();
 	Expr* result = ownedResult.takeAs<Expr> ();
 	return result;
 }
@@ -104,7 +105,7 @@ Token& ParserProxy::ConsumeToken() {
 }
 
 clang::Scope* ParserProxy::CurrentScope() {
-	return mParser->CurScope;
+	return mParser->getCurScope();
 }
 
 Token& ParserProxy::CurrentToken() {
@@ -143,7 +144,7 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 	Consumer->HandleTranslationUnit(Ctx);
 	ParserProxy::discard();
 
-//	S.dump();
+	S.dump();
 }
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
@@ -177,7 +178,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
 	Diagnostic* diags = new Diagnostic(diagClient);
 	pimpl->clang.setDiagnostics(diags);
-	pimpl->clang.setDiagnosticClient(diagClient); // takes ownership of the diagClient pointer (no need for explicit delete)
+	// pimpl->clang.setDiagnosticClient(diagClient); // takes ownership of the diagClient pointer (no need for explicit delete)
 
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager();
@@ -189,11 +190,11 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.setInvocation(CI);
 
 	// Add default header
-	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false);
+	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false, false);
 	// add headers
 	std::for_each(CommandLineOptions::IncludePaths.begin(), CommandLineOptions::IncludePaths.end(),
 		[ pimpl ](std::string& curr) {
-			pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false);
+			pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
 		}
 	);
 

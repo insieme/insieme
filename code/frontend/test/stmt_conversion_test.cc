@@ -41,6 +41,7 @@
 #include "conversion.h"
 
 #include "clang/AST/Stmt.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 
 using namespace insieme::core;

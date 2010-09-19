@@ -36,12 +36,12 @@
 
 #include "pragma_handler.h"
 
+#include "clang/AST/Stmt.h"
 #include <llvm/Support/raw_ostream.h>
 
 using namespace clang;
 using namespace insieme::frontend;
 
-#include <iostream>
 namespace {
 
 std::string loc2string(const clang::SourceLocation& loc, const clang::SourceManager& sm) {
@@ -78,20 +78,18 @@ clang::Decl const* Pragma::getDecl() const {
 
 std::string Pragma::toStr(const clang::SourceManager& sm) const {
 	std::ostringstream ss;
-	ss << "(" << loc2string(getStartLocation(), sm) << ", " <<
-				 loc2string(getEndLocation(), sm) <<
-		  "),\n\t";
+	ss << "(" << loc2string(getStartLocation(), sm) << ", " << loc2string(getEndLocation(), sm) << "),\n\t";
 	if(isStatement())
 		ss << "Stmt -> ";
 	else
 		ss << "Decl -> ";
 	ss << "(";
-	if(isStatement() && getStatement())
-		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
-			  loc2string(getStatement()->getLocEnd(), sm);
-	else if(isDecl() && getDecl())
-		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
-			  loc2string(getDecl()->getLocEnd(), sm);
+//	if(isStatement() && getStatement())
+//		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
+//			  loc2string(getStatement()->getLocEnd(), sm);
+//	else if(isDecl() && getDecl())
+//		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
+//			  loc2string(getDecl()->getLocEnd(), sm);
 	ss << ")";
 	return ss.str();
 }
