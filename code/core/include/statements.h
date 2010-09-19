@@ -88,7 +88,7 @@ DECLARE_NODE_TYPE(SwitchStmt)
 class Statement : public Node {
 	// needs InstanceManager not NodeManager since base type calls clone
 	friend class InstanceManager<Statement, AnnotatedPtr>;
-	virtual Statement* clone(NodeManager& manager) const = 0;
+	virtual Statement* createCloneUsing(NodeManager& manager) const = 0;
 
 protected:
 
@@ -106,7 +106,7 @@ public:
 
 class BreakStmt : public Statement {
 	BreakStmt();
-	virtual BreakStmt* clone(NodeManager& manager) const;
+	virtual BreakStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -121,7 +121,7 @@ public:
 
 class ContinueStmt : public Statement {
 	ContinueStmt();
-	virtual ContinueStmt* clone(NodeManager& manager) const;
+	virtual ContinueStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -138,7 +138,7 @@ class ReturnStmt: public Statement {
 	const ExpressionPtr returnExpression;
 
 	ReturnStmt(const ExpressionPtr& returnExpression);
-	virtual ReturnStmt* clone(NodeManager& manager) const;
+	virtual ReturnStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -156,7 +156,7 @@ class DeclarationStmt : public Statement {
 	const ExpressionPtr initExpression;
 
 	DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression);
-	virtual DeclarationStmt* clone(NodeManager& manager) const;
+	virtual DeclarationStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -178,7 +178,7 @@ class CompoundStmt: public Statement {
 public:
 	CompoundStmt(const vector<StatementPtr>& stmts);
 private:
-	virtual CompoundStmt* clone(NodeManager& manager) const;
+	virtual CompoundStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -200,7 +200,7 @@ class WhileStmt: public Statement {
 	StatementPtr body;
 
 	WhileStmt(const ExpressionPtr& condition, const StatementPtr& body);
-	virtual WhileStmt* clone(NodeManager& manager) const;
+	virtual WhileStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -221,7 +221,7 @@ class ForStmt: public Statement {
 	ExpressionPtr end, step;
 
 	ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step);
-	virtual ForStmt* clone(NodeManager& manager) const;
+	virtual ForStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -245,7 +245,7 @@ class IfStmt: public Statement {
 	StatementPtr elseBody;
 	
 	IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody);
-	virtual IfStmt* clone(NodeManager& manager) const;
+	virtual IfStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -272,7 +272,7 @@ private:
 	const StatementPtr defaultCase;
 
 	SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase);
-	virtual SwitchStmt* clone(NodeManager& manager) const;
+	virtual SwitchStmt* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;

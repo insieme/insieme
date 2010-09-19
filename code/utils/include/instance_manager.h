@@ -103,18 +103,18 @@ class InstanceManager : private boost::noncopyable {
 	 * @return a pointer to a clone of the given instance of the same type
 	 */
 	template<class S>
-	typename boost::enable_if<boost::is_base_of<T,S>,S*>::type clone(const S* instance) {
+	typename boost::enable_if<boost::is_base_of<T,S>,const S*>::type clone(const S* instance) {
 		//  step 1 - cast to base type (since only this one allows us to clone it)
 		const T* orig = instance;
 		//  step 2 - clone
-		T* clone = orig->clone(*static_cast<typename S::Manager*>(this));
+		const T* clone = orig->cloneTo(*static_cast<typename S::Manager*>(this));
 
 		// make sure clone is valid
 		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
 		assert( *orig == *clone && "Clone not equivalent to original!" );
 
 		// step 2 - cast back to original type
-		return static_cast<S*>(clone);
+		return static_cast<const S*>(clone);
 	}
 
 public:
@@ -140,6 +140,9 @@ public:
 	 */
 	template<class S>
 	typename boost::enable_if<boost::is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S* instance) {
+
+		assert ( instance && "Instance must not be NULL!");
+
 		// test whether there is already an identical element
 		auto res = storage.find(instance);
 		if (res != storage.end()) {
@@ -148,7 +151,7 @@ public:
 		}
 
 		// clone element (to ensure private copy)
-		S* newElement = clone(instance);
+		const S* newElement = clone(instance);
 		auto check = storage.insert(newElement);
 
 		// ensure the element has really been added (hash and equals is properly implemented)

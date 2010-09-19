@@ -83,7 +83,7 @@ Node::OptionChildList BreakStmt::getChildNodes() const {
 	return OptionChildList(new ChildList());
 }
 
-BreakStmt* BreakStmt::clone(NodeManager&) const {
+BreakStmt* BreakStmt::createCloneUsing(NodeManager&) const {
 	return new BreakStmt();
 }
 
@@ -109,7 +109,7 @@ Node::OptionChildList ContinueStmt::getChildNodes() const {
 	return OptionChildList(new ChildList());
 }
 
-ContinueStmt* ContinueStmt::clone(NodeManager&) const {
+ContinueStmt* ContinueStmt::createCloneUsing(NodeManager&) const {
 	return new ContinueStmt();
 }
 
@@ -145,8 +145,8 @@ Node::OptionChildList ReturnStmt::getChildNodes() const {
 	return res;
 }
 
-ReturnStmt* ReturnStmt::clone(NodeManager& manager) const {
-	return new ReturnStmt(manager.get(*returnExpression));
+ReturnStmt* ReturnStmt::createCloneUsing(NodeManager& manager) const {
+	return new ReturnStmt(migratePtr(returnExpression, manager));
 }
 
 ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnExpression) {
@@ -176,8 +176,8 @@ bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
 	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
 }
 
-DeclarationStmt* DeclarationStmt::clone(NodeManager& manager) const {
-	return new DeclarationStmt(manager.get(*varExpression), manager.get(*initExpression));
+DeclarationStmt* DeclarationStmt::createCloneUsing(NodeManager& manager) const {
+	return new DeclarationStmt(migratePtr(varExpression, manager), migratePtr(initExpression, manager));
 }
 
 Node::OptionChildList DeclarationStmt::getChildNodes() const {
@@ -218,8 +218,8 @@ bool CompoundStmt::equalsStmt(const Statement& stmt) const {
 }
 
 
-CompoundStmt* CompoundStmt::clone(NodeManager& manager) const {
-	return new CompoundStmt(manager.getAll(statements));
+CompoundStmt* CompoundStmt::createCloneUsing(NodeManager& manager) const {
+	return new CompoundStmt(migrateAllPtr(statements, manager));
 }
 
 Node::OptionChildList CompoundStmt::getChildNodes() const {
@@ -266,8 +266,8 @@ bool WhileStmt::equalsStmt(const Statement& stmt) const {
 	return (*condition == *rhs.condition) && (*body == *rhs.body);
 }
 
-WhileStmt* WhileStmt::clone(NodeManager& manager) const {
-	return new WhileStmt(manager.get(*condition), manager.get(*body));
+WhileStmt* WhileStmt::createCloneUsing(NodeManager& manager) const {
+	return new WhileStmt(migratePtr(condition, manager), migratePtr(body, manager));
 }
 
 Node::OptionChildList WhileStmt::getChildNodes() const {
@@ -307,9 +307,13 @@ bool ForStmt::equalsStmt(const Statement& stmt) const {
 		&& (*end == *rhs.end) && (*step == *rhs.step);
 }
 
-ForStmt* ForStmt::clone(NodeManager& manager) const {
-	return new ForStmt(manager.get(*declaration), manager.get(*body),
-		manager.get(*end), manager.get(*step));
+ForStmt* ForStmt::createCloneUsing(NodeManager& manager) const {
+	return new ForStmt(
+			migratePtr(declaration, manager),
+			migratePtr(body, manager),
+			migratePtr(end, manager),
+			migratePtr(step, manager)
+	);
 }
 
 Node::OptionChildList ForStmt::getChildNodes() const {
@@ -341,8 +345,12 @@ IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, con
 	Statement(hashIfStmt(condition, thenBody, elseBody)), condition(condition), thenBody(thenBody), elseBody(elseBody) {
 }
 
-IfStmt* IfStmt::clone(NodeManager& manager) const {
-	return new IfStmt(manager.get(*condition), manager.get(*thenBody), manager.get(*elseBody));
+IfStmt* IfStmt::createCloneUsing(NodeManager& manager) const {
+	return new IfStmt(
+			migratePtr(condition, manager),
+			migratePtr(thenBody, manager),
+			migratePtr(elseBody, manager)
+	);
 }
 
 std::ostream& IfStmt::printTo(std::ostream& out) const {
@@ -391,10 +399,12 @@ SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& case
 	Statement(hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(switchExpr), cases(cases), defaultCase(defaultCase) {
 }
 
-SwitchStmt* SwitchStmt::clone(NodeManager& manager) const {
+SwitchStmt* SwitchStmt::createCloneUsing(NodeManager& manager) const {
 	vector<Case> localCases;
 	std::for_each(cases.cbegin(), cases.cend(), [&](const Case& cur) {
-		localCases.push_back(SwitchStmt::Case(manager.get(*cur.first), manager.get(*cur.second)));
+		localCases.push_back(SwitchStmt::Case(
+				this->migratePtr(cur.first, manager),
+				this->migratePtr(cur.second, manager)));
 	});
 	return new SwitchStmt( manager.get(*switchExpr), localCases, manager.get(*defaultCase) );
 }

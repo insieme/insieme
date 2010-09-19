@@ -62,6 +62,8 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 
 	typedef typename NP::element_type T;
 
+	SCOPED_TRACE( typeid(NP).name() );
+
 	// ------------ Node Ptr based tests -------------
 
 	// check children
@@ -82,7 +84,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*node);
-	T* clone = dynamic_cast<T*>(static_cast<const Node*>(&*node)->clone(manager));
+	T* clone = dynamic_cast<T*>(static_cast<const Node*>(&*node)->cloneTo(manager));
 
 	const Node::ChildList& list = clone->getChildList();
 	std::for_each(list.begin(), list.end(), [&manager](const NodePtr& cur) {

@@ -131,7 +131,7 @@ private:
 	 */
 	const bool functionType;
 
-	virtual Type* clone(NodeManager& manager) const = 0;
+	virtual Type* createCloneUsing(NodeManager& manager) const = 0;
 
 protected:
 
@@ -238,9 +238,7 @@ private:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TypeVariable* clone(NodeManager&) const {
-		return new TypeVariable(*this);
-	}
+	virtual TypeVariable* createCloneUsing(NodeManager&) const;
 
 protected:
 
@@ -263,30 +261,6 @@ public:
 	static TypeVariablePtr get(NodeManager& manager, const string& name);
 
 };
-
-// ---------------------------------------- Recursive type ------------------------------
-
-//class RecType: public Type {
-//	TypePtr innerTy;
-//
-//	RecType(const std::string& name, const TypePtr& ty): Type(name), innerTy(ty) { }
-//
-//	virtual RecType* clone(NodeManager& manager) const {
-//		return new RecType(getName(), manager.get(innerTy));
-//	}
-//protected:
-//	virtual OptionChildList getChildNodes() const {
-//		// return an option child list filled with an empty list
-//		return OptionChildList();
-//	}
-//public:
-//	TypePtr fold(const TypePtr& ty) { return TypePtr(NULL); }
-//	TypePtr unfold(const TypePtr& ty) { return TypePtr(NULL); }
-//
-//	std::string toString() const { return getName() + "|" + innerTy->toString() + "|"; }
-//
-//	static RecTypePtr get(NodeManager& manager, const std::string& name, const TypePtr& innerTy);
-//};
 
 // ---------------------------------------- A tuple type ------------------------------
 
@@ -347,9 +321,7 @@ private:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TupleType* clone(NodeManager& manager) const {
-		return new TupleType(manager.getAll(elementTypes));
-	}
+	virtual TupleType* createCloneUsing(NodeManager& manager) const;
 
 protected:
 
@@ -410,9 +382,7 @@ protected:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual FunctionType* clone(NodeManager& manager) const {
-		return new FunctionType(manager.get(argumentType), manager.get(returnType));
-	}
+	virtual FunctionType* createCloneUsing(NodeManager& manager) const;
 
 	/**
 	 * Creates a empty child list since this node represents a terminal node.
@@ -683,9 +653,7 @@ protected:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual GenericType* clone(NodeManager& manager) const {
-		return new GenericType(familyName, manager.getAll(typeParams), intParams, manager.get(baseType));
-	}
+	virtual GenericType* createCloneUsing(NodeManager& manager) const;
 
 	/**
 	 * Obtains a list of all type parameters and the optional base type
@@ -764,7 +732,7 @@ private:
 
 	RecTypeDefinition(const RecTypeDefs& definitions);
 
-	RecTypeDefinition* clone(NodeManager& manager) const;
+	RecTypeDefinition* createCloneUsing(NodeManager& manager) const;
 
 protected:
 
@@ -818,7 +786,7 @@ class RecType: public Type {
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual RecType* clone(NodeManager& manager) const;
+	virtual RecType* createCloneUsing(NodeManager& manager) const;
 
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
@@ -881,9 +849,6 @@ protected:
 	 */
 	NamedCompositeType(const string& prefix, const Entries& entries);
 
-	static Entries getEntriesFromManager(NodeManager& manager, Entries entries);
-
-
 	/**
 	 * Obtains a list of all child sub-types used within this struct.
 	 */
@@ -939,9 +904,7 @@ class StructType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual StructType* clone(NodeManager& manager) const {
-		return new StructType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
-	}
+	virtual StructType* createCloneUsing(NodeManager& manager) const;
 
 public:
 
@@ -978,9 +941,7 @@ class UnionType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnionType* clone(NodeManager& manager) const {
-		return new UnionType(NamedCompositeType::getEntriesFromManager(manager, getEntries()));
-	}
+	virtual UnionType* createCloneUsing(NodeManager& manager) const;
 
 public:
 
@@ -1057,7 +1018,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ArrayType* clone(NodeManager& manager) const;
+	virtual ArrayType* createCloneUsing(NodeManager& manager) const;
 
 public:
 
@@ -1104,7 +1065,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual VectorType* clone(NodeManager& manager) const;
+	virtual VectorType* createCloneUsing(NodeManager& manager) const;
 
 public:
 
@@ -1153,7 +1114,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual RefType* clone(NodeManager& manager) const;
+	virtual RefType* createCloneUsing(NodeManager& manager) const;
 
 public:
 
@@ -1195,7 +1156,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ChannelType* clone(NodeManager& manager) const;
+	virtual ChannelType* createCloneUsing(NodeManager& manager) const;
 
 public:
 

@@ -83,7 +83,7 @@ class Expression : public Statement {
 
 private:
 
-	virtual Expression* clone(NodeManager& manager) const = 0;
+	virtual Expression* createCloneUsing(NodeManager& manager) const = 0;
 
 protected:	
 
@@ -136,7 +136,7 @@ protected:
 		return (value == rhs.value);
 	}
 
-	virtual Literal* clone(NodeManager& manager) const;
+	virtual Literal* createCloneUsing(NodeManager& manager) const;
 
 public:
 
@@ -161,7 +161,7 @@ public:
 protected:
     VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode);
 
-	virtual VarExpr* clone(NodeManager& manager) const;
+	virtual VarExpr* createCloneUsing(NodeManager& manager) const;
 	bool equalsExpr(const Expression& expr) const;
 
 public:
@@ -175,7 +175,7 @@ public:
 // TODO: think about eliminating this (since it is no independent expression!)
 class ParamExpr : public VarExpr {
 	ParamExpr(const TypePtr& type, const Identifier& id);
-	virtual ParamExpr* clone(NodeManager& manager) const;
+	virtual ParamExpr* createCloneUsing(NodeManager& manager) const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -193,7 +193,7 @@ private:
 	const ParamList params;
 
 	LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body);
-	virtual LambdaExpr* clone(NodeManager& manager) const;
+	virtual LambdaExpr* createCloneUsing(NodeManager& manager) const;
 
 protected:
 	virtual bool equalsExpr(const Expression& expr) const;
@@ -235,7 +235,7 @@ private:
 	 * Creates a clone / deep copy of this instance referencing instances maintained
 	 * by the given node manager.
 	 */
-	RecLambdaDefinition* clone(NodeManager& manager) const;
+	RecLambdaDefinition* createCloneUsing(NodeManager& manager) const;
 
 protected:
 
@@ -319,7 +319,7 @@ class RecLambdaExpr : public Expression {
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual RecLambdaExpr* clone(NodeManager& manager) const;
+	virtual RecLambdaExpr* createCloneUsing(NodeManager& manager) const;
 
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
@@ -362,7 +362,7 @@ class TupleExpr : public Expression {
 	const vector<ExpressionPtr> expressions;
 
 	TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions);
-	virtual TupleExpr* clone(NodeManager& manager) const;
+	virtual TupleExpr* createCloneUsing(NodeManager& manager) const;
 
 protected:
 	bool equalsExpr(const Expression& expr) const;
@@ -399,7 +399,7 @@ public:
 
 class StructExpr : public NamedCompositeExpr {
 	StructExpr(const TypePtr& type, const Members& members);
-	virtual StructExpr* clone(NodeManager& manager) const;
+	virtual StructExpr* createCloneUsing(NodeManager& manager) const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -408,7 +408,7 @@ public:
 
 class UnionExpr : public NamedCompositeExpr {
 	UnionExpr(const TypePtr& type, const Members& members);
-	virtual UnionExpr* clone(NodeManager& manager) const;
+	virtual UnionExpr* createCloneUsing(NodeManager& manager) const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -429,7 +429,7 @@ private:
 
 	JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, 
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
-	virtual JobExpr* clone(NodeManager& manager) const;
+	virtual JobExpr* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
@@ -455,7 +455,7 @@ class CallExpr : public Expression {
 	CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 private:
-	virtual CallExpr* clone(NodeManager& manager) const;
+	virtual CallExpr* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
@@ -476,7 +476,7 @@ class CastExpr : public Expression {
 	const ExpressionPtr subExpression;
 
 	CastExpr(const TypePtr& type, const ExpressionPtr& subExpression);
-	virtual CastExpr* clone(NodeManager& manager) const;
+	virtual CastExpr* createCloneUsing(NodeManager& manager) const;
 	
 protected:
 	bool equalsExpr(const Expression& expr) const;
