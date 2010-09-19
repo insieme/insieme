@@ -98,6 +98,8 @@ class SimpleTypeConverter : public ASTVisitor<string> {
 public:
 	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
 
+	string visitRefType(const RefTypePtr& ptr);
+
 	string visitGenericType(const GenericTypePtr& ptr);
 
 	string visitStructType(const StructTypePtr& ptr) {
@@ -159,6 +161,8 @@ class ConversionContext {
 	FunctionManager funcMan;
 
 public:
+	// The following may produce warnings, but the use of the this pointer in this case is well specified
+	// (the base class initializers do not dereference it)
 	ConversionContext() : typeMan(*this), funcMan(*this) { }
 
 	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;

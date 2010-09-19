@@ -55,7 +55,7 @@ using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 using namespace google;
 
-TEST(PragmaMatcherTest, HandleOmpParallel) {
+TEST(DriverTest, HelloWorldTest) {
 
 	// force logging to stderr
 	LogToStderr();
