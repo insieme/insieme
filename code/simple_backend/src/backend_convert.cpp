@@ -56,7 +56,10 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	CodeStream& cs = cptr->getCodeStream();
 	// write the function header
 	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident.getName() << "(";
-	// TODO handle arguments
+	// handle arguments
+	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const ParamExprPtr& param) -> std::ostream& {
+		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << param->getIdentifier().getName());
+	});
 	cs << ") {" << CodeStream::indR << "\n";
 	// generate the function body
 	ConvertVisitor visitor(cc, cptr);
@@ -122,7 +125,12 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	auto typePtr = ptr->getType();
 	const string& val = ptr->getValue();
 	if(*typePtr == lang::TYPE_STRING_VAL) {
-		cStr << "\"" << val << "\"";
+		// TODO change once the decision is made how string literals should be represented int the AST
+		if(val.empty() || val[0] != '"' || val[val.length()-1] != '"') {
+			cStr << "\"" << val << "\"";
+		} else {
+			cStr << val;
+		}
 	} 
 	else if(auto funType = dynamic_pointer_cast<const FunctionType>(typePtr)) {
 		auto funLiteralDeclCode = cc.getFuncMan().getFunctionLiteral(funType, val); 
@@ -157,7 +165,15 @@ string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 		return "void";
 	} else
 	if(lang::isIntType(*ptr)) {
-		return ptr->getName();
+		// TODO better handling for int sizes
+		string qualifier = lang::isUIntType(*ptr) ? "unsigned " : "";
+		switch(lang::getNumBytes(*ptr)) {
+		case 1: return qualifier + "char";
+		case 2: return qualifier + "short";
+		case 4: return qualifier + "int";
+		case 8: return qualifier + "long";
+		default: return ptr->getName();
+		}
 	} else
 	if(lang::isBoolType(*ptr)) {
 		return "bool";

@@ -183,8 +183,7 @@ class ConvertVisitor : public ASTVisitor<> {
 	CodeStream& cStr;
 	
 	string printTypeName(const TypePtr& typ) {
-		// TODO print C type name for specified type to cStr
-		return "!Type";
+		return cc.getTypeMan().getTypeName(typ);
 	}
 
 	template<typename Functor>
