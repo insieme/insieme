@@ -147,6 +147,8 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const ExpressionPtr& getReturnExpr() const { return returnExpression; };
+
 	static ReturnStmtPtr get(NodeManager& manager, const ExpressionPtr& returnExpression);
 };
 

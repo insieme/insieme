@@ -88,4 +88,5 @@ TEST(DriverTest, HelloWorldTest) {
 	out << ss.str();
 	out.close();
 
+	LOG(INFO) << "Wrote source to " << SRC_DIR << "/hello_world.insieme.c" << std::endl;
 }
