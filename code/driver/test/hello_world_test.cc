@@ -84,7 +84,7 @@ TEST(DriverTest, HelloWorldTest) {
 
 	LOG(INFO) << "Printing converted code: " << ss.str();
 
-	std::fstream out( std::string(SRC_DIR) + "/hello_world.insieme.c");
+	std::ofstream out( std::string(SRC_DIR) + "/hello_world.insieme.c" );
 	out << ss.str();
 	out.close();
 
