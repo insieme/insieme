@@ -142,6 +142,16 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	}
 }
 
+void ConvertVisitor::visitReturnStmt( const ReturnStmtPtr& ptr )
+{
+	cStr << "return ";
+	if(*ptr->getReturnExpr()->getType() != lang::TYPE_UNIT_VAL) {
+		visit(ptr->getReturnExpr());
+	}
+	cStr << ";";
+}
+
+
 
 string TypeManager::getTypeName(const core::TypePtr type) {
 	SimpleTypeConverter conv(cc.getNameGen());
