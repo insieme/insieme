@@ -126,8 +126,10 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	const string& val = ptr->getValue();
 	if(*typePtr == lang::TYPE_STRING_VAL) {
 		// TODO change once the decision is made how string literals should be represented int the ast
-		if(!(val.front() == '"' && val.back() == '"')) {
+		if(val.empty() || *val.cbegin() != '"' || *val.cend() != '"') {
 			cStr << "\"" << val << "\"";
+		} else {
+			cStr << val;
 		}
 	} 
 	else if(auto funType = dynamic_pointer_cast<const FunctionType>(typePtr)) {
