@@ -218,6 +218,10 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("B"));
 	clang::RecordDecl* declC = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("C"));
+	clang::RecordDecl* declD = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("D"));
+	clang::RecordDecl* declE = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("E"));
 
 	declA->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declA, clang::SourceLocation(),
 			clang.getPreprocessor().getIdentifierInfo("b"),
@@ -239,7 +243,21 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 			clang.getPreprocessor().getIdentifierInfo("a"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declA)), 0, 0, false));
 
+	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("d"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declD)), 0, 0, false));
+
 	declC->completeDefinition();
+
+	declD->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declD, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("e"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declE)), 0, 0, false));
+	declD->completeDefinition();
+
+//	declE->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declE, clang::SourceLocation(),
+//			clang.getPreprocessor().getIdentifierInfo("b"),
+//			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
+//	declE->completeDefinition();
 
 	TypePtr insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declA).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);

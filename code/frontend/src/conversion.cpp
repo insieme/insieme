@@ -60,6 +60,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
+#include <boost/graph/strong_components.hpp>
 
 using namespace boost;
 
@@ -122,6 +123,7 @@ core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vect
 	return builder.compoundStmt(stmtVect);
 }
 
+
 class TypeDependencyGraph {
 
 	struct NameTy {
@@ -150,7 +152,6 @@ public:
 					// we have to add an edge between this node and the parent
 					boost::add_edge(*parent, *vertCurrIt, graph);
 				}
-				std :: cout << "found it!!\n";
 				return;
 			}
 		}
@@ -163,7 +164,6 @@ public:
 			boost::add_edge(*parent, v, graph);
 		}
 
-		std::cout <<"ADDING EDGE for type: " << tag->getNameAsString() << std::endl;
 		boost::put(name, v, tag->getNameAsString());
 
 		for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
@@ -180,6 +180,21 @@ public:
 		}
 	}
 
+	void strongComponents() {
+		std::vector<int> component(num_vertices(graph));
+		std::vector<vertex_descriptor> r_map(num_vertices(graph));
+		int num = boost::strong_components(graph, &component[0], boost::root_map(&r_map[0]));
+
+		boost::property_map<NameDepGraph, NameTy>::type name = get(NameTy(), graph);
+//		std::cout << "Total number of components: " << num << std::endl;
+		std::vector<int>::size_type i;
+		for (i = 0; i != component.size(); ++i) {
+			std::cout << "Vertex " << name[i] <<" is in component " << component[i] << " root: " << name[r_map[i]] << std::endl;
+		}
+
+
+	}
+
 
 	void print(std::ostream& out) {
 		boost::property_map<NameDepGraph, NameTy>::type name = get(NameTy(), graph);
@@ -188,6 +203,7 @@ public:
 };
 
 } // End empty namespace
+
 
 namespace insieme {
 namespace frontend {
@@ -905,6 +921,7 @@ public:
 				TypeDependencyGraph typeGraph;
 				typeGraph(recDecl);
 				typeGraph.print(std::cout);
+				typeGraph.strongComponents();
 
 				core::NamedCompositeType::Entries structElements;
 				unsigned short typeVarId=0;

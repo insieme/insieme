@@ -18,7 +18,7 @@ include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_core_include_dir} )
 
 # Build the core library
-add_library(insieme_c_info ${insieme_c_info_srcs} ${insieme_c_info_incs} )
+add_library(insieme_c_info SHARED ${insieme_c_info_srcs} ${insieme_c_info_incs} )
 
 # add dependencies
 add_dependencies( insieme_c_info insieme_core insieme_utils )
