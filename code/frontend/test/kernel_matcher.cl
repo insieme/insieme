@@ -40,15 +40,14 @@
 #define __global __attribute__((address_space(2)))
 #define __constant __attribute__((address_space(3)))
 
-
 __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
 {
     __local float* b;
-    __attribute__((address_space(0))) int* d;
+    __private int* d;
     struct __attribute__((packed)) X
     {
         int b[3] __attribute__((aligned(8)));
-        short s __attribute__((packed));
+        const short s __attribute__((packed));
     };
     
     int x __attribute__ ((aligned(2)));

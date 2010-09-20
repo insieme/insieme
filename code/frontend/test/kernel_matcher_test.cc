@@ -132,25 +132,25 @@ using namespace clang;
 const Attr* parseAttribute(const Attr* attr)
 {
     switch(attr->getKind()){
-    case AttributeList::AT_annotate:
+    case attr::Kind::Annotate:
     {
         const clang::AnnotateAttr* aa = (const AnnotateAttr*)attr;
         llvm::StringRef sr = aa->getAnnotation();
         std::cout << "annotation: " << sr.str() << std::endl;
         return aa;
     }
-    case AttributeList::AT_reqd_wg_size:
+    case attr::Kind::ReqdWorkGroupSize:
     {
         const ReqdWorkGroupSizeAttr* rwgsa = (const ReqdWorkGroupSizeAttr*)attr;
         std::cout << "ReqdWorkGroupSize: "  << rwgsa->getXDim() << rwgsa->getYDim() << rwgsa->getZDim() << std::endl;
         return rwgsa;
     }
-    case AttributeList::AT_packed:
+    case attr::Kind::Packed:
     {
         std::cout << "Packed" << std::endl;
         return (const PackedAttr*)attr;
     }
-    case AttributeList::AT_aligned:
+    case attr::Kind::Aligned:
     {
         const AlignedAttr* aa = (const AlignedAttr*)attr;
         // std::cout << "Aligned: "  << aa->getAlignment() << std::endl;
@@ -178,8 +178,8 @@ void checkForAttrs(clang::Decl* decl)
     }
 }
 
-void scanStmt(clang::Stmt* stmt) {
-	AttributeList::Kind expectedKinds[] = {AttributeList::AT_packed, AttributeList::AT_aligned, AttributeList::AT_aligned};
+void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
+	attr::Kind expectedKinds[] = {attr::Kind::Packed, attr::Kind::Aligned, attr::Kind::Aligned};
     unsigned int expectedParameters[] = {16, 64};
     unsigned int matches = 0, args = 0;
 
@@ -195,17 +195,21 @@ void scanStmt(clang::Stmt* stmt) {
 //                clang::CompoundStmt* cs = decl->getCompoundBody();
 
                 if(body)
-                    scanStmt(body);
-//                else
-  //                  fprintf(stderr, "bodyless ");
+                    scanStmt(body, ctx);
+                else
+//                    fprintf(stderr, "bodyless ");
 //                checkForAttrs(decl);
                 if(!decl->hasAttrs())
                     continue;
 
-                AttrVec attr = decl->getAttrs();
-//                EXPECT_EQ(expectedKinds[matches++], attr->getKind());
-//                if(attr->getKind() == Attr::Kind::Aligned)
-//                    EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment());
+
+                AttrVec attrvec = decl->getAttrs();
+                EXPECT_EQ(1, attrvec.size());
+                const Attr* attr = attrvec[0];
+                EXPECT_EQ(expectedKinds[matches++], attr->getKind());
+                if(attr->getKind() == attr::Kind::Aligned) {
+                    EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment(ctx));
+                }
             }
             else {
                 clang::DeclGroupRef dgr = declstmt->getDeclGroup();
@@ -216,13 +220,16 @@ void scanStmt(clang::Stmt* stmt) {
                     if(!declgroup[i]->hasAttrs())
                         continue;
 
-//                    const Attr* attr = declgroup[i]->getAttrs();
-//                    EXPECT_EQ(expectedKinds[matches++], attr->getKind());
-//                    if(attr->getKind() == Attr::Kind::Aligned)
-//                        EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment());
+                    const AttrVec attrvec = declgroup[i]->getAttrs();
+                    EXPECT_EQ(1, attrvec.size());
+                    const Attr* attr = attrvec[0];
+                    EXPECT_EQ(expectedKinds[matches++], attr->getKind());
+                    if(attr->getKind() == attr::Kind::Aligned){
+                        EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment(ctx));
+                    }
                     clang::Stmt* body = declgroup[i]->getBody();
                     if(body)
-                        scanStmt(body);
+                        scanStmt(body, ctx);
                 }
             }
         }
@@ -247,6 +254,23 @@ TEST(KernelMatcherTest, ReadMemorySpaces) {
     {
         clang::Type* t = types.at(i);
 
+/* does not work as expected
+        if(t->isStructureType())
+        {
+
+            const clang::RecordType* rt = t->getAsStructureType();
+            const clang::RecordDecl* rd = rt->getDecl();
+
+                printf("------------------> %d - %d\n", rt->hasUnsignedIntegerRepresentation(), rt->isAnyPointerType());
+                if(!rd->isEmbeddedInDeclarator()){
+                clang::Stmt* stmt = rd->getBody();
+                if(stmt)
+                scanStmt(stmt, ctx);
+            }
+        }
+*/
+
+        //read the address space attribute of all pointers
         if(t->isPointerType())
         {
             clang::QualType qt = t->getCanonicalTypeInternal();
@@ -278,16 +302,18 @@ TEST(KernelMatcherTest, ReadAttributes) {
             //Function declaration should have RequiredWorkGroupSize(1,2,3) attribute
             EXPECT_TRUE(func_decl->hasAttrs());
             if(func_decl->hasAttrs()) {
-//                const clang::Attr* attr = func_decl->getAttrs();
-////                std::cout << kindStr[attr->getKind()] << std::endl;
-////                parseAttribute(attr);
-//                EXPECT_EQ(Attr::Kind::ReqdWorkGroupSize, attr->getKind());
-//                if(attr->getKind() == Attr::Kind::ReqdWorkGroupSize)
-//                {
-//                    EXPECT_EQ(1, ((const ReqdWorkGroupSizeAttr*)attr)->getXDim());
-//                    EXPECT_EQ(2, ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
-//                    EXPECT_EQ(3, ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
-//                }
+                const clang::AttrVec attrVec = func_decl->getAttrs();
+                EXPECT_EQ(1, attrVec.size());
+                Attr* attr = attrVec[0];
+//                std::cout << kindStr[attr->getKind()] << std::endl;
+//                parseAttribute(attr);
+                EXPECT_EQ(attr::Kind::ReqdWorkGroupSize, attr->getKind());
+                if(attr->getKind() == attr::Kind::ReqdWorkGroupSize)
+                {
+                    EXPECT_EQ(1, ((const ReqdWorkGroupSizeAttr*)attr)->getXDim());
+                    EXPECT_EQ(2, ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
+                    EXPECT_EQ(3, ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
+                }
             }
 
 /*
@@ -310,6 +336,6 @@ TEST(KernelMatcherTest, ReadAttributes) {
                 continue; // skip functions declarations with no definition
             }
 
-            scanStmt(func_body);
+            scanStmt(func_body, ctx);
     }
 }
