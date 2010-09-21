@@ -936,8 +936,23 @@ public:
 		return TypeWrapper( convFact.builder.functionType( convFact.builder.tupleType(), retTy) );
 	}
 
-	TypeWrapper VisitTypedefType(TypedefType* elabType) {
-		assert(false && "TypedefType not yet handled!");
+	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
+		DLOG(INFO) << "Converting typedef: " << typedefType->getDecl()->getName().str();
+		typedefType->getDecl()->dump();
+		return Visit(typedefType->getDecl()->getUnderlyingType().getTypePtr());
+		// assert(false && "TypedefType not yet handled!");
+	}
+
+	TypeWrapper VisitTypeOfType(TypeOfType* typeOfType) {
+		// assert(false && "TypeOfType not yet handled!");
+		DLOG(ERROR) << "TypeOfType not yet handled";
+		return TypeWrapper( convFact.builder.getUnitType() );
+	}
+
+	TypeWrapper VisitTypeOfExprType(TypeOfExprType* typeOfType) {
+		// assert(false && "TypeOfExprType not yet handled!");
+		DLOG(ERROR) << "TypeOfExprType not yet handled";
+		return TypeWrapper( convFact.builder.getUnitType() );
 	}
 
 	TypeWrapper VisitTagType(TagType* tagType) {
@@ -1171,7 +1186,7 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			}
 
 		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-			LOG(INFO) << "Converted into: " << fact.ConvertType( *varDecl->getType().getTypePtr() )->toString();
+			// fact.ConvertType( *varDecl->getType().getTypePtr() );
 		}
 	}
 }
