@@ -203,7 +203,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<name:ref<char>,age:int<8>,mate:'X0>", insiemeTy->toString());
+	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<char>,age:int<8>,mate:ref<'Person>>}", insiemeTy->toString());
 }
 
 TEST(TypeConversion, HandleMutualRecursiveStructType) {
@@ -261,7 +261,23 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declA).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	//EXPECT_EQ("struct<name:ref<char>,age:int<8>,mate:'X0>", insiemeTy->toString());
+	EXPECT_EQ("rec 'A.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declB).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("rec 'B.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declC).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("rec 'C.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declD).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("struct<e:ref<E>>", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declE).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("E", insiemeTy->toString());
 }
 
 
