@@ -40,7 +40,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	target_link_libraries(ut_${case_name} ${xerces_LIB})
 	
-	if(${case_name} equals "xml_dump_test")
+	if(case_name EQUAL "xml_dump_test")
 		set(CONDUCT_MEMORY_CHECKS off)
 	endif()
 	
