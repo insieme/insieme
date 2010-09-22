@@ -284,7 +284,7 @@ class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
 
 	// Map for resolved lambda functions
-	typedef std::map<FunctionDecl*, core::LambdaExprPtr> LambdaExprMap;
+	typedef std::map<const FunctionDecl*, core::LambdaExprPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
 public:
@@ -355,7 +355,7 @@ public:
 			// the function is not extern, a lambdaExpr has to be created
 			assert(definition->hasBody() && "Function has no body!");
 
-			core::LambdaExprPre lambdaExpr( NULL );
+			core::LambdaExprPtr lambdaExpr( NULL );
 			// we lookup the lambda expr map to see if we already create a statement for this lambda expression
 			LambdaExprMap::const_iterator lit = lambdaExprCache.find(definition);
 			if(lit != lambdaExprCache.end())
@@ -370,7 +370,7 @@ public:
 					params.push_back( this->convFact.builder.paramExpr( paramTy, core::Identifier(currParam->getName()) ) );
 				});
 
-				core::LambdaExprPre lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *definition->getType().getTypePtr() ), params, body);
+				core::LambdaExprPtr lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *definition->getType().getTypePtr() ), params, body);
 				lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
 			}
 			return ExprWrapper(  );
@@ -1008,10 +1008,12 @@ public:
 		}
 
 		// check if the type is in the cache of already solved recursive types
-		RecTypeMap::const_iterator rit = recTypeCache.find(tagType);
-		if(rit != recTypeCache.end())
-			return TypeWrapper( rit->second );
-
+		// this is done only if we are not resolving a recursive sub type
+		if(!isRecSubType) {
+			RecTypeMap::const_iterator rit = recTypeCache.find(tagType);
+			if(rit != recTypeCache.end())
+				return TypeWrapper( rit->second );
+		}
 		// will store the converted type
 		core::TypePtr retTy(NULL);
 		DLOG(INFO) << "Converting TagType: " << tagType->getDecl()->getName().str();
