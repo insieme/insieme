@@ -45,12 +45,12 @@ using namespace insieme::utils;
 
 TEST(NumericConversion, FromString) {
 
-	EXPECT_EQ(16, numeric_cast<int>(16));
+	EXPECT_EQ(static_cast<int>(16), numeric_cast<int>(16));
 	EXPECT_EQ("16", numeric_cast<std::string>(16));
 
-	EXPECT_EQ(16, numeric_cast<unsigned int>("16"));
+	EXPECT_EQ(static_cast<unsigned int>(16), numeric_cast<unsigned int>("16"));
 	// hexadecimal number
-	EXPECT_EQ(16, numeric_cast<unsigned short>("0x10"));
+	EXPECT_EQ(static_cast<unsigned short>(16), numeric_cast<unsigned short>("0x10"));
 
 	EXPECT_EQ(-8, numeric_cast<int>("-8"));
 	// octal number

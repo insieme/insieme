@@ -341,12 +341,12 @@ public:
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			const core::ASTBuilder& builder = convFact.builder;
 
+			// collects the type of each argument of the expression
+			vector< core::ExpressionPtr > args;
+			std::for_each(callExpr->arg_begin(), callExpr->arg_end(), [ &args, this ](Expr* currArg){ args.push_back( this->Visit(currArg).ref ); });
+
 			const FunctionDecl* definition = NULL;
 			if( funcDecl->isExternC() || !funcDecl->hasBody(definition) ) {
-				// collects the type of each argument of the expression
-				vector< core::ExpressionPtr > args;
-				std::for_each(callExpr->arg_begin(), callExpr->arg_end(), [ &args, this ](Expr* currArg){ args.push_back( this->Visit(currArg).ref ); });
-
 				return ExprWrapper( convFact.builder.callExpr(
 						// in the case the function is extern, a literal is build
 						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ),
@@ -373,7 +373,7 @@ public:
 				core::LambdaExprPtr lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *definition->getType().getTypePtr() ), params, body);
 				lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
 			}
-			return ExprWrapper(  );
+			return ExprWrapper( builder.callExpr(lambdaExpr, args)  );
 		}
 		assert(false && "Call expression not referring to a function");
 	}
@@ -504,8 +504,8 @@ public:
 			// now the condition expression has to be converted into the following form:
 			// int a = 0;
 			// for(...; a=f(); ...) { }
-			const core::VarExprPtr& varExpr = declStmt->getVarExpression();
-			core::ExpressionPtr&& initExpr = convFact.ConvertExpr( *expr );
+//				const core::VarExprPtr& varExpr = declStmt->getVarExpression();
+//				core::ExpressionPtr&& initExpr = convFact.ConvertExpr( *expr );
 			// todo: build a binary expression
 			// condExpr = (varExpr = initExpr);
 		} else

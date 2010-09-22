@@ -124,17 +124,17 @@ TEST(StatementsTest, IntLiterals) {
 	{
 		LiteralPtr intLit = builder.literal("0x10", lang::TYPE_INT_2_PTR);
 		unsigned long val = intLit->getValueAs<unsigned long>();
-		EXPECT_EQ(val, 16);
+		EXPECT_EQ(static_cast<unsigned>(16), val);
 	}
 	{
 		LiteralPtr intLit = builder.literal("-0x10", lang::TYPE_INT_2_PTR);
 		short val = intLit->getValueAs<short>();
-		EXPECT_EQ(val, -16);
+		EXPECT_EQ(-16, val);
 	}
 	{
 		LiteralPtr intLit = builder.literal("010", lang::TYPE_INT_2_PTR);
 		unsigned short val = intLit->getValueAs<unsigned short>();
-		EXPECT_EQ(val, 8);
+		EXPECT_EQ(static_cast<unsigned>(8), val);
 	}
 }
 

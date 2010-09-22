@@ -71,43 +71,43 @@ void testMap() {
 
 	Map mapA;
 	Map mapB;
-	EXPECT_EQ ( 0, computeHash(mapA) );
-	EXPECT_EQ ( 0, computeHash(mapB) );
+	EXPECT_EQ ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_EQ ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_TRUE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapA.insert(std::make_pair(1,2));
-	EXPECT_NE ( 0, computeHash(mapA) );
-	EXPECT_EQ ( 0, computeHash(mapB) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_EQ ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapB.insert(std::make_pair(2,4));
-	EXPECT_NE ( 0, computeHash(mapA) );
-	EXPECT_NE ( 0, computeHash(mapB) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_NE ( computeHash(mapA), computeHash(mapB) );
 	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapB.erase(2);
-	EXPECT_NE ( 0, computeHash(mapA) );
-	EXPECT_EQ ( 0, computeHash(mapB) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_EQ ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapB.insert(std::make_pair(1,2));
-	EXPECT_NE ( 0, computeHash(mapA) );
-	EXPECT_NE ( 0, computeHash(mapB) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_EQ ( computeHash(mapA), computeHash(mapB) );
 	EXPECT_TRUE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapA.insert(std::make_pair(2,3));
 	mapB.insert(std::make_pair(2,3));
-	EXPECT_NE ( 0, computeHash(mapA) );
-	EXPECT_NE ( 0, computeHash(mapB) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_EQ ( computeHash(mapA), computeHash(mapB) );
 	EXPECT_TRUE ( insieme::utils::map::equal(mapA, mapB) );
 
 	mapA.erase(2);
 	mapA.insert(std::make_pair(2,2));
-	EXPECT_NE ( 0, computeHash(mapA) );
-	EXPECT_NE ( 0, computeHash(mapB) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapA) );
+	EXPECT_NE ( static_cast<size_t>(0), computeHash(mapB) );
 	EXPECT_NE ( computeHash(mapA), computeHash(mapB) );
 	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 }

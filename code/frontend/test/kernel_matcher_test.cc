@@ -204,7 +204,7 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
 
 
                 AttrVec attrvec = decl->getAttrs();
-                EXPECT_EQ(1, attrvec.size());
+                EXPECT_EQ(static_cast<unsigned>(1), attrvec.size());
                 const Attr* attr = attrvec[0];
                 EXPECT_EQ(expectedKinds[matches++], attr->getKind());
                 if(attr->getKind() == attr::Kind::Aligned) {
@@ -221,7 +221,7 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
                         continue;
 
                     const AttrVec attrvec = declgroup[i]->getAttrs();
-                    EXPECT_EQ(1, attrvec.size());
+                    EXPECT_EQ(static_cast<unsigned>(1), attrvec.size());
                     const Attr* attr = attrvec[0];
                     EXPECT_EQ(expectedKinds[matches++], attr->getKind());
                     if(attr->getKind() == attr::Kind::Aligned){
@@ -303,16 +303,16 @@ TEST(KernelMatcherTest, ReadAttributes) {
             EXPECT_TRUE(func_decl->hasAttrs());
             if(func_decl->hasAttrs()) {
                 const clang::AttrVec attrVec = func_decl->getAttrs();
-                EXPECT_EQ(1, attrVec.size());
+                EXPECT_EQ(static_cast<unsigned>(1), attrVec.size());
                 Attr* attr = attrVec[0];
 //                std::cout << kindStr[attr->getKind()] << std::endl;
 //                parseAttribute(attr);
                 EXPECT_EQ(attr::Kind::ReqdWorkGroupSize, attr->getKind());
                 if(attr->getKind() == attr::Kind::ReqdWorkGroupSize)
                 {
-                    EXPECT_EQ(1, ((const ReqdWorkGroupSizeAttr*)attr)->getXDim());
-                    EXPECT_EQ(2, ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
-                    EXPECT_EQ(3, ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
+                    EXPECT_EQ(static_cast<unsigned>(1), ((const ReqdWorkGroupSizeAttr*)attr)->getXDim());
+                    EXPECT_EQ(static_cast<unsigned>(2), ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
+                    EXPECT_EQ(static_cast<unsigned>(3), ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
                 }
             }
 

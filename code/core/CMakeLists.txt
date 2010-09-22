@@ -40,6 +40,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	
 	if(${case_name} MATCHES "xml_dump_test")
+		# Xerces has some memory leaks, so we disable the Valgrind check for xml_dump_test
 		target_link_libraries(ut_${case_name} ${xerces_LIB})
 		set(CONDUCT_MEMORY_CHECKS off)
 	else()
