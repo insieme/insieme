@@ -56,6 +56,12 @@ TEST(NumericConversion, FromString) {
 	// octal number
 	EXPECT_EQ(-8, numeric_cast<short>("-010"));
 
+	// memory address
+//	int a = 0, *ptr = &a;
+//	EXPECT_EQ("cc", numeric_cast<std::string>((size_t)ptr));
+
+	EXPECT_EQ("8", numeric_cast<std::string>('8'));
+
 	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
 	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
 

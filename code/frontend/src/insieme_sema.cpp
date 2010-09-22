@@ -127,7 +127,7 @@ const char* strbchr(const char* stream, char c) {
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R, MultiStmtArg Elts, bool isStmtExpr) {
-	DLOG(INFO) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+//	DLOG(INFO) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
 
 	/*
 	 * when pragmas are just after the beginning of a compound stmt, example:
@@ -141,8 +141,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocatio
 	 * the value of L (which contains the wrong location) with the correct value.
 	 *
 	 */
-	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
+//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
 
 	{
 	SourceLocation leftBracketLoc = SourceMgr.getInstantiationLoc(L);
@@ -156,8 +156,9 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocatio
 	}
 	// the same is done for the right bracket
 
-	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
+//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
+
 	{
 	SourceLocation rightBracketLoc = SourceMgr.getInstantiationLoc(R);
 	std::pair<FileID, unsigned> locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);

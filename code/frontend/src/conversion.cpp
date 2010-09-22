@@ -123,7 +123,19 @@ core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vect
 	return builder.compoundStmt(stmtVect);
 }
 
-class TypeDependencyGraph {
+std::ostream& operator<<(std::ostream& out, const FunctionDecl* funcDecl) {
+	return out << funcDecl->getNameAsString() << "(" << funcDecl->param_size() << ")";
+}
+
+std::ostream& operator<<(std::ostream& out, const Type* type) {
+	if(const TagType* tagType = dyn_cast<const TagType>(type))
+		return out << tagType->getDecl()->getNameAsString();
+	return out;
+}
+
+
+template <class T>
+class DependencyGraph {
 
 	struct NodeTy {
 		typedef vertex_property_tag kind;
@@ -133,80 +145,66 @@ class TypeDependencyGraph {
 	class label_writer {
 	public:
 		label_writer(NodeTy node) : node(node) { }
+
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=\"" << dyn_cast<const RecordType>(node[v])->getDecl()->getNameAsString() << "\"]";
+			out << "[label=\"" << node[v] << "\"]";
 		}
 	private:
 		NodeTy node;
 	};
 
+
 public:
-	typedef property<NodeTy, const Type*> NodeProperty;
+	typedef property<NodeTy, T> NodeProperty;
 	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty> NodeDepGraph;
 
 	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor VertexTy;
 	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor EdgeTy;
 
-	TypeDependencyGraph(): dirtyFlag(true), numComponents(0) { }
+	DependencyGraph(): dirtyFlag(true), numComponents(0) { }
 
 	/**
 	 * Finds the node inside the graph and returns the vertex id used to identify this node
 	 */
-	std::pair<bool,VertexTy> find(const Type* type) const {
-		boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
+	std::pair<bool,VertexTy> find(const T& type) const {
+		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
 
-		boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
+		typename boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
 		boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph);
-		auto fit = std::find_if(vertCurrIt, vertEndIt, [ type, &node ](VertexTy v){ return node[v] == type; });
+		auto fit = std::find_if(vertCurrIt, vertEndIt,
+				[ type, &node ] (VertexTy v) {
+					return node[v] == type;
+				});
 		if(fit != vertEndIt)
 			return std::make_pair(true,*fit);
 		return std::make_pair(false,0);
 	}
 
-	void HandleTagType(const TagType* tagType, const VertexTy& v) {
-		RecordDecl* tag = dyn_cast<RecordDecl>(tagType->getDecl());
-		for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
-			const Type* fieldType = (*it)->getType().getTypePtr();
-			if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
-				fieldType = ptrTy->getPointeeType().getTypePtr();
-			else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
-				fieldType = refTy->getPointeeType().getTypePtr();
-
-			if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
-				assert(isa<RecordDecl>(tagTy->getDecl()));
-				addTypeNode( tagTy, &v );
-			}
-		}
-	}
-
-	VertexTy addTypeNode(const Type* type, const VertexTy* parent = NULL ) {
+	VertexTy addNode(const T& type, const VertexTy* parent = NULL ) {
 		auto&& fit = find(type);
 		if(fit.first) {
 			// node was found
-			if(parent != NULL)
+			if(parent)
 				boost::add_edge(*parent, fit.second, graph);
 			return fit.second;
 		}
 
 		// this node is not inside the graph, we have to add it
 		VertexTy v = boost::add_vertex(graph);
-		if(parent != NULL) {
+		if(parent) {
 			// we have to add an edge between this node and the parent
 			boost::add_edge(*parent, v, graph);
 		}
 		dirtyFlag = true;
-		boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
 		boost::put(node, v, type);
-		if(isa<const TagType>(type)) {
-			HandleTagType(dyn_cast<const TagType>(type), v);
-			return v;
-		}
+		Handle(type, v);
 
-		assert(false && "Type not yet handled in graph type");
+		return v;
 	}
 
-	std::set<const Type*> getStronglyConnectedComponents(const Type* t) {
+	std::set<T> getStronglyConnectedComponents(const T& t) {
 		auto&& fit = find(t);
 		assert(fit.first && "Type node is not in the graph");
 
@@ -217,8 +215,8 @@ public:
 			updateStrongComponents();
 
 		// We return a set of Types which are connected with the input type t
-		std::set<const Type*> ret;
-		boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
+		std::set<T> ret;
+		typename boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
 		for (std::vector<size_t>::size_type i = 0, e = strongComponents.size(); i != e; ++i)
 			// we have check if the two nodes are in the same component
 			if((i != v && strongComponents[i] == strongComponents[v]) || (i == v && boost::edge(v, v, graph).second)) {
@@ -231,7 +229,7 @@ public:
 	}
 
 	void print(std::ostream& out) const {
-		boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
 		boost::write_graphviz(out, graph, label_writer<typename boost::property_map<NodeDepGraph, NodeTy>::const_type>(node));
 	}
 
@@ -248,6 +246,8 @@ private:
 		dirtyFlag = false;
 	}
 
+	void Handle(T type, const VertexTy& v);
+
 	NodeDepGraph graph;
 	bool dirtyFlag;
 	size_t numComponents;
@@ -256,8 +256,63 @@ private:
 
 };
 
+template <>
+void DependencyGraph<const Type*>::Handle(const Type* type, const VertexTy& v) {
+	assert(isa<const TagType>(type));
 
+	const TagType* tagType = dyn_cast<const TagType>(type);
+	RecordDecl* tag = dyn_cast<RecordDecl>(tagType->getDecl());
+	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
+		const Type* fieldType = (*it)->getType().getTypePtr();
+		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
+			fieldType = ptrTy->getPointeeType().getTypePtr();
+		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
+			fieldType = refTy->getPointeeType().getTypePtr();
 
+		if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
+			assert(isa<RecordDecl>(tagTy->getDecl()));
+			addNode( tagTy, &v );
+		}
+	}
+}
+
+struct CallExprVisitor: public StmtVisitor<CallExprVisitor> {
+
+	typedef std::set<const FunctionDecl*> CallGraph;
+	CallGraph callGraph;
+
+	CallExprVisitor() { }
+
+	CallGraph getCallGraph(const FunctionDecl* func) {
+		assert(func->hasBody() && "Function in the dependency graph has no body");
+
+		Visit(func->getBody());
+		return callGraph;
+	}
+
+	void VisitCallExpr(CallExpr* callExpr) {
+		const FunctionDecl* def;
+		if(callExpr->getDirectCallee()->hasBody(def))
+			callGraph.insert(def);
+	}
+
+	void VisitStmt(Stmt* stmt) {
+		std::for_each(stmt->child_begin(), stmt->child_end(),
+			[ this ](Stmt* curr) {
+				if(curr) this->Visit(curr);
+			});
+	}
+};
+
+template <>
+void DependencyGraph<const FunctionDecl*>::Handle(const FunctionDecl* func, const VertexTy& v) {
+	CallExprVisitor callExprVis;
+	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
+
+	std::for_each(graph.begin(), graph.end(),
+			[ this, v ](const FunctionDecl* currFunc) { this->addNode(currFunc, &v); }
+	);
+}
 
 } // End empty namespace
 
@@ -266,29 +321,26 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-/**
- * Used to report recursive types
- */
-class RecursiveTypeException: public std::exception {
-	Type* recTy;
-public:
-	RecursiveTypeException(Type* recTy): std::exception(), recTy(recTy) { }
-
-	const Type* getRecType() const { return recTy; }
-
-	const char *what() const throw () { return NULL; }
-	virtual ~RecursiveTypeException() throw() { }
-};
-
 class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
 
 	// Map for resolved lambda functions
-	typedef std::map<const FunctionDecl*, core::LambdaExprPtr> LambdaExprMap;
+	typedef std::map<const FunctionDecl*, ExprWrapper> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
+	DependencyGraph<const FunctionDecl*> funcDepGraph;
+
+
+	typedef std::map<const FunctionDecl*, core::VarExprPtr> RecVarExprMap;
+	RecVarExprMap recVarExprMap;
+	bool isRecSubType;
+
+	typedef std::map<const FunctionDecl*, core::TypePtr> RecTypeMap;
+	RecTypeMap recTypeCache;
+
+
 public:
-	ClangExprConverter(ConversionFactory& convFact): convFact(convFact) { }
+	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		return ExprWrapper(
@@ -337,45 +389,167 @@ public:
 		return ExprWrapper( convFact.builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
 	}
 
+	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
+		// the function is not extern, a lambdaExpr has to be created
+		assert(funcDecl->hasBody() && "Function has no body!");
+
+		if(!isRecSubType) {
+			// add this type to the type graph (if not present)
+			funcDepGraph.addNode(funcDecl);
+			funcDepGraph.print( std::cout );
+		}
+
+		// retrieve the strongly connected components for this type
+		std::set<const FunctionDecl*>&& components = funcDepGraph.getStronglyConnectedComponents( funcDecl );
+
+		if( !components.empty() ) {
+			// we are dealing with a recursive type
+			DLOG(INFO) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl <<
+						  "Number of components in the cycle: " << components.size();
+			std::for_each(components.begin(), components.end(),
+				[] (std::set<const FunctionDecl*>::value_type c) {
+					DLOG(INFO) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+				}
+			);
+
+			// we create a TypeVar for each type in the mutual dependence
+			recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
+					convFact.ConvertType( *funcDecl->getType().getTypePtr() ),
+					core::Identifier(funcDecl->getName())))
+			);
+
+			// when a subtype is resolved we aspect to already have these variables in the map
+			if(!isRecSubType) {
+				std::for_each(components.begin(), components.end(),
+					[ this ] (std::set<const FunctionDecl*>::value_type ty) {
+						// TODO: name cannot only rely on the function name but also, the number and type of the parameters has to be considered
+						this->recVarExprMap.insert( std::make_pair(ty,
+								this->convFact.builder.varExpr(convFact.ConvertType(*ty->getType().getTypePtr()), ty->getNameAsString())) );
+					}
+				);
+			}
+		}
+
+//		// we lookup the lambda expr map to see if we already create a statement for this lambda expression
+//		LambdaExprMap::const_iterator lit = lambdaExprCache.find(funcDecl);
+//		if( lit != lambdaExprCache.end() )
+//			return ExprWrapper( builder.callExpr(lit->second, args)  );
+
+		DLOG(INFO) << "CREATIGN LAMBDA: curr func: " << funcDecl->getNameAsString();
+
+		core::LambdaExprPtr lambdaExpr( NULL );
+		// this lambda is not yet in the map, we need to create it and add it to the cache
+		core::StatementPtr body = convFact.ConvertStmt( *funcDecl->getBody() );
+
+		vector<core::ParamExprPtr> params;
+		std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
+			[ &params, this ] (ParmVarDecl* currParam) {
+				core::TypePtr paramTy = this->convFact.ConvertType( *currParam->getOriginalType().getTypePtr() );
+				params.push_back( this->convFact.builder.paramExpr( paramTy, core::Identifier(currParam->getName()) ) );
+			}
+		);
+
+		const core::ASTBuilder& builder = convFact.builder;
+		lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *funcDecl->getType().getTypePtr() ), params, body);
+
+		if( !components.empty() ) {
+			// this is a recurive function call
+			if(isRecSubType) {
+				// if we are visiting a nested recursive type it means someone else will take care
+				// of building the rectype node, we just return an intermediate type
+				return lambdaExpr;
+			}
+
+			// we have to create a recursive type
+			funcDecl->dump();
+			RecVarExprMap::const_iterator tit = recVarExprMap.find(funcDecl);
+			assert(tit != recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
+			core::VarExprPtr recVarRef = tit->second;
+
+			core::RecLambdaDefinition::RecFunDefs definitions;
+			definitions.insert( std::make_pair(recVarRef, lambdaExpr) );
+
+			// We start building the recursive type. In order to avoid loop the visitor
+			// we have to change its behaviour and let him returns temporarely types
+			// when a sub recursive type is visited.
+			isRecSubType = true;
+
+			std::for_each(components.begin(), components.end(),
+				[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
+
+					DLOG(INFO) <<"REC";
+					RecVarExprMap::const_iterator tit = recVarExprMap.find(fd);
+					assert(tit != recVarExprMap.end() && "Recursive function has no TypeVar associated");
+					core::VarExprPtr var = tit->second;
+
+					// we remove the variable from the list in order to fool the solver,
+					// in this way it will create a descriptor for this type (and he will not return the TypeVar
+					// associated with this recursive type). This behaviour is enabled only when the isRecSubType
+					// flag is true
+					recVarExprMap.erase(fd);
+
+					definitions.insert( std::make_pair(var, core::dynamic_pointer_cast<const core::LambdaExpr>(this->VisitFunctionDecl(fd)) ) );
+
+					// reinsert the TypeVar in the map in order to solve the other recursive types
+					recVarExprMap.insert( std::make_pair(fd, var) );
+				}
+			);
+			// we reset the behavior of the solver
+			isRecSubType = false;
+			// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
+			// recVarExprMap.clear();
+
+			core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+
+			return builder.recLambdaExpr(recVarRef, definition);
+
+			// Once we solved this recursive type, we add to a cache of recursive types
+			// so next time we encounter it, we don't need to compute the graph
+			// recTypeCache.insert(std::make_pair(tagType, retTy));
+		}
+
+		return lambdaExpr;
+	}
+
 	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			const core::ASTBuilder& builder = convFact.builder;
 
 			// collects the type of each argument of the expression
 			vector< core::ExpressionPtr > args;
-			std::for_each(callExpr->arg_begin(), callExpr->arg_end(), [ &args, this ](Expr* currArg){ args.push_back( this->Visit(currArg).ref ); });
+			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
+				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg).ref ); }
+			);
 
 			const FunctionDecl* definition = NULL;
-			if( funcDecl->isExternC() || !funcDecl->hasBody(definition) ) {
+			if( !funcDecl->hasBody(definition) ) {
+				// in the case the function is extern, a literal is build
 				return ExprWrapper( convFact.builder.callExpr(
-						// in the case the function is extern, a literal is build
-						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ),
-						args) );
+						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ), args) );
 			}
-			// the function is not extern, a lambdaExpr has to be created
-			assert(definition->hasBody() && "Function has no body!");
 
-			core::LambdaExprPtr lambdaExpr( NULL );
-			// we lookup the lambda expr map to see if we already create a statement for this lambda expression
-			LambdaExprMap::const_iterator lit = lambdaExprCache.find(definition);
-			if(lit != lambdaExprCache.end())
-				lambdaExpr = lit->second;
-			else {
-				// this lambda is not yet in the map, we need to create it and add it to the cache
-				core::StatementPtr body = convFact.ConvertStmt(*definition->getBody());
-
-				vector< core::ParamExprPtr > params;
-				std::for_each(definition->param_begin(), definition->param_end(), [ &params, this ](ParmVarDecl* currParam){
-					core::TypePtr paramTy = this->convFact.ConvertType( *currParam->getOriginalType().getTypePtr() );
-					params.push_back( this->convFact.builder.paramExpr( paramTy, core::Identifier(currParam->getName()) ) );
-				});
-
-				core::LambdaExprPtr lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *definition->getType().getTypePtr() ), params, body);
-				lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
+			if(!recVarExprMap.empty()) {
+				// check if this type has a typevar already associated, in such case return it
+				RecVarExprMap::const_iterator fit = recVarExprMap.find(funcDecl);
+				if( fit != recVarExprMap.end() ) {
+					// we are resolving a parent recursive type, so we shouldn't
+					return ExprWrapper( builder.callExpr(fit->second, args) );
+				}
 			}
+
+			assert(definition && "No definition found for function");
+			core::ExpressionPtr lambdaExpr = VisitFunctionDecl(definition);
+
+			// Adding the C function name as annotation
+			lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
+
+			// Adding the lambda function to the list of converted functions
+			lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
+
+			DLOG(INFO) << "LAMDA FUNC: " << lambdaExpr;
 			return ExprWrapper( builder.callExpr(lambdaExpr, args)  );
 		}
-		assert(false && "Call expression not referring to a function");
+		assert(false && "Call expression not referring a function");
 	}
 
 	ExprWrapper VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
@@ -694,12 +868,14 @@ public:
 			//		 the switch body
 
 			if(CompoundStmt* compStmt = dyn_cast<CompoundStmt>(body)) {
-				std::for_each(compStmt->body_begin(), compStmt->body_end(), [ &retStmt, this ](Stmt* curr){
-					if(!isa<SwitchCase>(curr)) {
-						StmtWrapper&& visitedStmt = this->Visit(curr);
-						std::copy(visitedStmt.begin(), visitedStmt.end(), back_inserter(retStmt));
+				std::for_each(compStmt->body_begin(), compStmt->body_end(),
+					[ &retStmt, this ] (Stmt* curr) {
+						if(!isa<SwitchCase>(curr)) {
+							StmtWrapper&& visitedStmt = this->Visit(curr);
+							std::copy(visitedStmt.begin(), visitedStmt.end(), back_inserter(retStmt));
+						}
 					}
-				});
+				);
 			}
 		}
 		vector<core::SwitchStmt::Case> cases;
@@ -752,13 +928,14 @@ public:
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
 		vector<core::StatementPtr> stmtList;
 		std::for_each( compStmt->body_begin(), compStmt->body_end(),
-				[ &stmtList, this ](Stmt* stmt){
-					// A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted in multiple
-					// StatementPtr because an initialization list such as: int a,b=1; is converted into the following sequence of statements:
-					// int<a> a = 0; int<4> b = 1;
-					StmtWrapper&& convertedStmt = this->Visit(stmt);
-					std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
-				} );
+			[ &stmtList, this ] (Stmt* stmt) {
+				// A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted in multiple
+				// StatementPtr because an initialization list such as: int a,b=1; is converted into the following sequence of statements:
+				// int<a> a = 0; int<4> b = 1;
+				StmtWrapper&& convertedStmt = this->Visit(stmt);
+				std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+			}
+		);
 		return StmtWrapper( convFact.builder.compoundStmt(stmtList) );
 	}
 
@@ -776,7 +953,9 @@ public:
 	FORWARD_VISITOR_CALL(CallExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
-		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ](Stmt* stmt){ this->Visit(stmt); } );
+		std::for_each( stmt->child_begin(), stmt->child_end(),
+			[ this ] (Stmt* stmt) { this->Visit(stmt); }
+		);
 		return StmtWrapper();
 	}
 };
@@ -787,7 +966,7 @@ public:
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
-	TypeDependencyGraph typeGraph;
+	DependencyGraph<const Type*> typeGraph;
 
 	typedef std::map<const Type*, core::TypeVariablePtr> TypeRecVarMap;
 	TypeRecVarMap recVarMap;
@@ -953,9 +1132,11 @@ public:
 		assert(retTy && "Function has no return type!");
 
 		core::TupleType::ElementTypeList argTypes;
-		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(), [ &argTypes, this ](const QualType& currArgType){
-			argTypes.push_back( this->Visit( currArgType.getTypePtr() ).ref );
-		} );
+		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
+			[ &argTypes, this ] (const QualType& currArgType) {
+				argTypes.push_back( this->Visit( currArgType.getTypePtr() ).ref );
+			}
+		);
 
 		if( argTypes.size() == 1 && *argTypes.front() == core::lang::TYPE_UNIT_VAL) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
@@ -1036,7 +1217,7 @@ public:
 
 				if(!isRecSubType) {
 					// add this type to the type graph (if not present)
-					typeGraph.addTypeNode(tagDecl->getTypeForDecl());
+					typeGraph.addNode(tagDecl->getTypeForDecl());
 				}
 
 				// retrieve the strongly connected componenets for this type
@@ -1046,10 +1227,12 @@ public:
 					// we are dealing with a recursive type
 					DLOG(INFO) << "Analyzing RecordDecl: " << recDecl->getNameAsString() << std::endl <<
 												  "Number of components in the cycle: " << components.size();
-					std::for_each(components.begin(), components.end(), [](std::set<const Type*>::value_type c){
-						assert(isa<const TagType>(c));
-						DLOG(INFO) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
-					});
+					std::for_each(components.begin(), components.end(),
+						[] (std::set<const Type*>::value_type c) {
+							assert(isa<const TagType>(c));
+							DLOG(INFO) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
+						}
+					);
 
 //					typeGraph.print(std::cout);
 
@@ -1058,12 +1241,14 @@ public:
 
 					// when a subtype is resolved we aspect to already have these variables in the map
 					if(!isRecSubType) {
-						std::for_each(components.begin(), components.end(), [ this ](std::set<const Type*>::value_type ty){
-							const TagType* tagTy = dyn_cast<const TagType>(ty);
-							assert(tagTy && "Type is not of TagType type");
+						std::for_each(components.begin(), components.end(),
+							[ this ] (std::set<const Type*>::value_type ty) {
+								const TagType* tagTy = dyn_cast<const TagType>(ty);
+								assert(tagTy && "Type is not of TagType type");
 
-							this->recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
-						});
+								this->recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
+							}
+						);
 					}
 				}
 
@@ -1101,25 +1286,27 @@ public:
 					// when a sub recursive type is visited.
 					isRecSubType = true;
 
-					std::for_each(components.begin(), components.end(), [ this, &definitions ](std::set<const Type*>::value_type ty){
-						const TagType* tagTy = dyn_cast<const TagType>(ty);
-						assert(tagTy && "Type is not of TagType type");
+					std::for_each(components.begin(), components.end(),
+						[ this, &definitions ] (std::set<const Type*>::value_type ty) {
+							const TagType* tagTy = dyn_cast<const TagType>(ty);
+							assert(tagTy && "Type is not of TagType type");
 
-						TypeRecVarMap::const_iterator tit = recVarMap.find(ty);
-						assert(tit != recVarMap.end() && "Recursive type has no TypeVar associated");
-						core::TypeVariablePtr var = tit->second;
+							TypeRecVarMap::const_iterator tit = recVarMap.find(ty);
+							assert(tit != recVarMap.end() && "Recursive type has no TypeVar associated");
+							core::TypeVariablePtr var = tit->second;
 
-						// we remove the variable from the list in order to fool the solver,
-						// in this way it will create a descriptor for this type (and he will not return the TypeVar
-						// associated with this recursive type). This behaviour is enabled only when the isRecSubType
-						// flag is true
-						recVarMap.erase(ty);
+							// we remove the variable from the list in order to fool the solver,
+							// in this way it will create a descriptor for this type (and he will not return the TypeVar
+							// associated with this recursive type). This behaviour is enabled only when the isRecSubType
+							// flag is true
+							recVarMap.erase(ty);
 
-						definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty)).ref) );
+							definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty)).ref) );
 
-						// reinsert the TypeVar in the map in order to solve the other recursive types
-						recVarMap.insert( std::make_pair(tagTy, var) );
-					});
+							// reinsert the TypeVar in the map in order to solve the other recursive types
+							recVarMap.insert( std::make_pair(tagTy, var) );
+						}
+					);
 					// we reset the behavior of the solver
 					isRecSubType = false;
 					// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
@@ -1218,11 +1405,12 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 
 			// paramlist
 			core::LambdaExpr::ParamList funcParamList;
-			std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [&funcParamList, &fact](ParmVarDecl* currParam){
-				funcParamList.push_back(
-						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString())
-				);
-			});
+			std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
+				[&funcParamList, &fact] (ParmVarDecl* currParam) {
+					funcParamList.push_back(
+						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
+				}
+			);
 			// this is a function decl
 			core::StatementPtr funcBody(NULL);
 			if(funcDecl->getBody()) {
