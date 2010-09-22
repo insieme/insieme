@@ -39,5 +39,9 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	
+	if(${case_name} equals "xml_dump_test")
+		set(CONDUCT_MEMORY_CHECKS off)
+	endif()
+	
 	add_unit_test(${case_name})
 endforeach(case_file)

@@ -256,6 +256,9 @@ private:
 
 };
 
+
+
+
 } // End empty namespace
 
 
@@ -277,9 +280,12 @@ public:
 	virtual ~RecursiveTypeException() throw() { }
 };
 
-
 class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
+
+	// Map for resolved lambda functions
+	typedef std::map<FunctionDecl*, core::LambdaExprPtr> LambdaExprMap;
+	LambdaExprMap lambdaExprCache;
 
 public:
 	ClangExprConverter(ConversionFactory& convFact): convFact(convFact) { }
@@ -332,19 +338,54 @@ public:
 	}
 
 	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
-		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getCalleeDecl()) ) {
-			if( funcDecl->isExternC() ) {
-				const core::ASTBuilder& builder = convFact.builder;
+		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
+			const core::ASTBuilder& builder = convFact.builder;
 
+			const FunctionDecl* definition = NULL;
+			if( funcDecl->isExternC() || !funcDecl->hasBody(definition) ) {
+				// collects the type of each argument of the expression
 				vector< core::ExpressionPtr > args;
 				std::for_each(callExpr->arg_begin(), callExpr->arg_end(), [ &args, this ](Expr* currArg){ args.push_back( this->Visit(currArg).ref ); });
+
 				return ExprWrapper( convFact.builder.callExpr(
+						// in the case the function is extern, a literal is build
 						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ),
 						args) );
 			}
-			return ExprWrapper();
+			// the function is not extern, a lambdaExpr has to be created
+			assert(definition->hasBody() && "Function has no body!");
+
+			core::LambdaExprPre lambdaExpr( NULL );
+			// we lookup the lambda expr map to see if we already create a statement for this lambda expression
+			LambdaExprMap::const_iterator lit = lambdaExprCache.find(definition);
+			if(lit != lambdaExprCache.end())
+				lambdaExpr = lit->second;
+			else {
+				// this lambda is not yet in the map, we need to create it and add it to the cache
+				core::StatementPtr body = convFact.ConvertStmt(*definition->getBody());
+
+				vector< core::ParamExprPtr > params;
+				std::for_each(definition->param_begin(), definition->param_end(), [ &params, this ](ParmVarDecl* currParam){
+					core::TypePtr paramTy = this->convFact.ConvertType( *currParam->getOriginalType().getTypePtr() );
+					params.push_back( this->convFact.builder.paramExpr( paramTy, core::Identifier(currParam->getName()) ) );
+				});
+
+				core::LambdaExprPre lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *definition->getType().getTypePtr() ), params, body);
+				lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
+			}
+			return ExprWrapper(  );
 		}
 		assert(false && "Call expression not referring to a function");
+	}
+
+	ExprWrapper VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+		//todo: CXX extensions
+		assert(false && "CXXMemberCallExpr not yet handled");
+	}
+
+	ExprWrapper VisitCXXOperatorCallExprr(clang::CXXOperatorCallExpr* callExpr) {
+		//todo: CXX extensions
+		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
 
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
@@ -367,7 +408,6 @@ public:
 		// todo: C++ check whether this is a reference to a class field, or method (function).
 		assert(false && "DeclRefExpr not supported!");
 	}
-
 };
 
 #define FORWARD_VISITOR_CALL(StmtTy) \
@@ -751,8 +791,10 @@ class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 
 	typedef std::map<const Type*, core::TypeVariablePtr> TypeRecVarMap;
 	TypeRecVarMap recVarMap;
-
 	bool isRecSubType;
+
+	typedef std::map<const Type*, core::TypePtr> RecTypeMap;
+	RecTypeMap recTypeCache;
 
 public:
 	ClangTypeConverter(const ConversionFactory& fact): convFact( fact ), isRecSubType(false) { }
@@ -951,8 +993,8 @@ public:
 
 	TypeWrapper VisitTypeOfExprType(TypeOfExprType* typeOfType) {
 		// assert(false && "TypeOfExprType not yet handled!");
-		DLOG(ERROR) << "TypeOfExprType not yet handled";
-		return TypeWrapper( convFact.builder.getUnitType() );
+		// DLOG(ERROR) << "TypeOfExprType not yet handled";
+		return Visit( typeOfType->getUnderlyingExpr()->getType().getTypePtr() );
 	}
 
 	TypeWrapper VisitTagType(TagType* tagType) {
@@ -964,6 +1006,12 @@ public:
 				return TypeWrapper( fit->second );
 			}
 		}
+
+		// check if the type is in the cache of already solved recursive types
+		RecTypeMap::const_iterator rit = recTypeCache.find(tagType);
+		if(rit != recTypeCache.end())
+			return TypeWrapper( rit->second );
+
 		// will store the converted type
 		core::TypePtr retTy(NULL);
 		DLOG(INFO) << "Converting TagType: " << tagType->getDecl()->getName().str();
@@ -1078,6 +1126,10 @@ public:
 					core::RecTypeDefinitionPtr definition = convFact.builder.recTypeDefinition(definitions);
 
 					retTy = convFact.builder.recType(recTypeVar, definition);
+
+					// Once we solved this recursive type, we add to a cache of recursive types
+					// so next time we encounter it, we don't need to compute the graph
+					recTypeCache.insert(std::make_pair(tagType, retTy));
 				}
 
 				// Adding the name of the C struct as annotation
@@ -1185,9 +1237,10 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 				}
 			}
 
-		}else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-			// fact.ConvertType( *varDecl->getType().getTypePtr() );
 		}
+//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+//			fact.ConvertType( *varDecl->getType().getTypePtr() );
+//		}
 	}
 }
 
