@@ -297,7 +297,7 @@ TEST(TypeConversion, HandleFunctionType) {
 	BuiltinType doubleTy(BuiltinType::Double);
 	BuiltinType floatTy(BuiltinType::Float);
 	{
-		QualType argTy[] = { QualType(&doubleTy, 0), ctx.getPointerType(QualType(&floatTy, 0)) };
+//		QualType argTy[] = { QualType(&doubleTy, 0), ctx.getPointerType(QualType(&floatTy, 0)) };
 		//QualType funcTy = ctx.getFunctionType(QualType(&intTy, 0), argTy, 2, false, 0, false, false, 0, NULL, CallingConv::CC_Default);
 
 		// convert into IR type
