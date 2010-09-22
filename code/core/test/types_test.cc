@@ -613,8 +613,8 @@ TEST(TypeTest, ArrayType) {
 	EXPECT_EQ ( elementTypeB, arrayTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, arrayTypeA->getDimension().getValue());
-	EXPECT_EQ ( 3, arrayTypeB->getDimension().getValue());
+	EXPECT_EQ ( static_cast<unsigned>(1), arrayTypeA->getDimension().getValue());
+	EXPECT_EQ ( static_cast<unsigned>(3), arrayTypeB->getDimension().getValue());
 
 	// check remaining type properties
 	basicTypeTests(arrayTypeA, true, false, toList(toVector(elementTypeA)));
@@ -641,8 +641,8 @@ TEST(TypeTest, VectorType) {
 	EXPECT_EQ ( elementTypeB, vectorTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, vectorTypeA->getSize().getValue());
-	EXPECT_EQ ( 3, vectorTypeB->getSize().getValue());
+	EXPECT_EQ ( static_cast<unsigned>(1), vectorTypeA->getSize().getValue());
+	EXPECT_EQ ( static_cast<unsigned>(3), vectorTypeB->getSize().getValue());
 
 	// check remaining type properties
 	basicTypeTests(vectorTypeA, true, false, toList(toVector(elementTypeA)));
@@ -669,8 +669,8 @@ TEST(TypeTest, ChannelType) {
 	EXPECT_EQ ( elementTypeB, channelTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( 1, channelTypeA->getSize().getValue());
-	EXPECT_EQ ( 3, channelTypeB->getSize().getValue());
+	EXPECT_EQ ( static_cast<unsigned>(1), channelTypeA->getSize().getValue());
+	EXPECT_EQ ( static_cast<unsigned>(3), channelTypeB->getSize().getValue());
 
 	// check remaining type properties
 	basicTypeTests(channelTypeA, true, false, toList(toVector(elementTypeA)));

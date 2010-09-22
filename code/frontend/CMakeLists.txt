@@ -18,15 +18,10 @@ if(NOT DEFINED LLVM_HOME)
 	set (LLVM_HOME $ENV{LLVM_HOME})
 endif()
 
-if(NOT DEFINED CLANG_SRC_HOME) 
-	set (CLANG_SRC_HOME $ENV{CLANG_SRC_HOME})
-endif()
-
 # add include directory
 include_directories( 
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${LLVM_HOME}/include 
-	${CLANG_SRC_HOME}/include
 	${insieme_utils_include_dir} 
 	${insieme_core_include_dir} 
 	${insieme_c_info_include_dir} )
@@ -68,11 +63,10 @@ if(NOT MSVC)
 						 
 else()
 	set(clang_LIBs )
-	set(llvm_LIBs  )
 endif() 
 
 # build the frontend library
-add_library(insieme_frontend ${insieme_frontend_srcs} ${insieme_frontend_incs} )
+add_library(insieme_frontend SHARED ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB})
 
 # add dependencies

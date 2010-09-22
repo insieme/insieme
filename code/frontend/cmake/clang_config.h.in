@@ -35,6 +35,6 @@
  */
 
 #pragma once
-#define CLANG_SYSTEM_INCLUDE_FOLDER "$ENV{LLVM_HOME}/lib/clang/1.1/include/"
+#define CLANG_SYSTEM_INCLUDE_FOLDER "$ENV{LLVM_HOME}/lib/clang/2.8/include/"
 #define SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"
 

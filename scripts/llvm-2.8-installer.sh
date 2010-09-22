@@ -1,4 +1,8 @@
-PREFIX = /home/motonacciu/software/llvm28
+PREFIX=/home/spellegrini/shared/llvm28
+
+export LD_LIBRARY_PATH=/software/lib-gcc450:/software/gcc450/lib64
+export CXX=/software/gcc450/bin/g++
+export CC=/software/gcc450/bin/gcc
 
 wget http://dps.uibk.ac.at/~spellegrini/llvm-2.8.tar.bz2
 tar -xf llvm-2.8.tar.bz2

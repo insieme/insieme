@@ -20,7 +20,7 @@ include_directories( ${insieme_utils_include_dir} )
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb )
          
 # Build the core library
-add_library(insieme_core ${insieme_core_srcs} ${insieme_core_incs} )
+add_library(insieme_core SHARED ${insieme_core_srcs} ${insieme_core_incs} )
 
 # add dependencies
 add_dependencies( insieme_core insieme_utils )
@@ -38,6 +38,14 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
+	
+	if(${case_name} MATCHES "xml_dump_test")
+		# Xerces has some memory leaks, so we disable the Valgrind check for xml_dump_test
+		target_link_libraries(ut_${case_name} ${xerces_LIB})
+		set(CONDUCT_MEMORY_CHECKS off)
+	else()
+		set(CONDUCT_MEMORY_CHECKS on)
+	endif()
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

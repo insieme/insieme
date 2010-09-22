@@ -84,7 +84,7 @@ TEST(Annotation, Basic) {
 //	EXPECT_DEATH( target.addAnnotation(DummyAnnotationPtr()), ".*Cannot add NULL annotation!.*");
 
 	// check annotations
-	EXPECT_EQ ( 0, target.getAnnotations().size() );
+	EXPECT_EQ ( static_cast<size_t>(0), target.getAnnotations().size() );
 	EXPECT_TRUE ( NULL == target.getAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( NULL == target.getAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE(target.contains(DummyAnnotation::DummyKey));
@@ -93,7 +93,7 @@ TEST(Annotation, Basic) {
 	DummyAnnotationPtr dummyA(new DummyAnnotation(1));
 
 	target.addAnnotation(dummyA);
-	EXPECT_EQ ( 1, target.getAnnotations().size());
+	EXPECT_EQ ( static_cast<size_t>(1), target.getAnnotations().size());
 	EXPECT_EQ ( dummyA->value, target.getAnnotation(DummyAnnotation::DummyKey)->value);
 	EXPECT_EQ ( &*dummyA, target.getAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( target.contains(DummyAnnotation::DummyKey) );
@@ -104,7 +104,7 @@ TEST(Annotation, Basic) {
 
 	DummyAnnotationPtr dummyB(new DummyAnnotation(2));
 	target.addAnnotation(dummyB);
-	EXPECT_EQ ( 1, target.getAnnotations().size());
+	EXPECT_EQ ( static_cast<size_t>(1), target.getAnnotations().size());
 	EXPECT_EQ ( dummyB->value, target.getAnnotation(DummyAnnotation::DummyKey)->value);
 	EXPECT_EQ ( &*dummyB, target.getAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( target.contains(DummyAnnotation::DummyKey) );
@@ -114,7 +114,7 @@ TEST(Annotation, Basic) {
 
 	DummyAnnotation2Ptr dummyC(new DummyAnnotation2(123));
 	target.addAnnotation(dummyC);
-	EXPECT_EQ ( 2, target.getAnnotations().size());
+	EXPECT_EQ ( static_cast<size_t>(2), target.getAnnotations().size());
 	EXPECT_EQ ( dummyB->value, target.getAnnotation(DummyAnnotation::DummyKey)->value);
 	EXPECT_EQ ( &*dummyB, target.getAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( target.contains(DummyAnnotation::DummyKey) );
@@ -125,7 +125,7 @@ TEST(Annotation, Basic) {
 
 	// test removing annotation
 	target.remAnnotation(DummyAnnotation::DummyKey);
-	EXPECT_EQ ( 1, target.getAnnotations().size());
+	EXPECT_EQ ( static_cast<size_t>(1), target.getAnnotations().size());
 	EXPECT_TRUE ( NULL == target.getAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( target.contains(DummyAnnotation::DummyKey) );
 
@@ -134,7 +134,7 @@ TEST(Annotation, Basic) {
 	EXPECT_TRUE ( target.contains(DummyAnnotation2::DummyKey) );
 
 	target.remAnnotation(DummyAnnotation2::DummyKey);
-	EXPECT_EQ ( 0, target.getAnnotations().size());
+	EXPECT_EQ ( static_cast<size_t>(0), target.getAnnotations().size());
 	EXPECT_TRUE ( NULL == target.getAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( target.contains(DummyAnnotation::DummyKey) );
 

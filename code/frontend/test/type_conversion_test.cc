@@ -203,7 +203,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<name:ref<char>,age:int<8>,mate:'X0>", insiemeTy->toString());
+	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<char>,age:int<8>,mate:ref<'Person>>}", insiemeTy->toString());
 }
 
 TEST(TypeConversion, HandleMutualRecursiveStructType) {
@@ -218,6 +218,10 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("B"));
 	clang::RecordDecl* declC = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("C"));
+	clang::RecordDecl* declD = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("D"));
+	clang::RecordDecl* declE = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("E"));
 
 	declA->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declA, clang::SourceLocation(),
 			clang.getPreprocessor().getIdentifierInfo("b"),
@@ -239,11 +243,41 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 			clang.getPreprocessor().getIdentifierInfo("a"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declA)), 0, 0, false));
 
+	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("d"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declD)), 0, 0, false));
+
 	declC->completeDefinition();
+
+	declD->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declD, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("e"),
+			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declE)), 0, 0, false));
+	declD->completeDefinition();
+
+//	declE->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declE, clang::SourceLocation(),
+//			clang.getPreprocessor().getIdentifierInfo("b"),
+//			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
+//	declE->completeDefinition();
 
 	TypePtr insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declA).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	//EXPECT_EQ("struct<name:ref<char>,age:int<8>,mate:'X0>", insiemeTy->toString());
+	EXPECT_EQ("rec 'A.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declB).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("rec 'B.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declC).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("rec 'C.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declD).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("struct<e:ref<E>>", insiemeTy->toString());
+
+	insiemeTy = convFactory.ConvertType( *clang.getASTContext().getTagDeclType(declE).getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("E", insiemeTy->toString());
 }
 
 
@@ -263,7 +297,7 @@ TEST(TypeConversion, HandleFunctionType) {
 	BuiltinType doubleTy(BuiltinType::Double);
 	BuiltinType floatTy(BuiltinType::Float);
 	{
-		QualType argTy[] = { QualType(&doubleTy, 0), ctx.getPointerType(QualType(&floatTy, 0)) };
+//		QualType argTy[] = { QualType(&doubleTy, 0), ctx.getPointerType(QualType(&floatTy, 0)) };
 		//QualType funcTy = ctx.getFunctionType(QualType(&intTy, 0), argTy, 2, false, 0, false, false, 0, NULL, CallingConv::CC_Default);
 
 		// convert into IR type

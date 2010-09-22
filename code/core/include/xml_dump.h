@@ -38,6 +38,7 @@
 #include "ast_visitor.h"
 #include "lang_basic.h"
 #include "types.h"
+#include <xercesc/dom/DOM.hpp>
 
 using namespace insieme::core;
 

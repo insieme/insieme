@@ -31,6 +31,11 @@ else()
 	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
 endif()
 
+# xerces
+include_directories( $ENV{XERCES_HOME}/include )
+find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
+
+
 # lookup perl
 find_package( Perl )
 

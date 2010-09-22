@@ -68,16 +68,16 @@ TEST(Enums, LongString) {
     //The strings should be the identifier and the ord should be counting
     //Note: Though tested here, it could be considered as implementation detail
     EXPECT_EQ("EINS", name(eins));
-    EXPECT_EQ(0, ord(eins));
+    EXPECT_EQ(static_cast<unsigned>(0), ord(eins));
 
     EXPECT_EQ("ZWEI", name(zwei));
-    EXPECT_EQ(1, ord(zwei));
+    EXPECT_EQ(static_cast<unsigned>(1), ord(zwei));
 
     EXPECT_EQ("KOENIG", name(koenig));
-    EXPECT_EQ(12, ord(koenig));
+    EXPECT_EQ(static_cast<unsigned>(12), ord(koenig));
 
     EXPECT_EQ("AS", name(as));
-    EXPECT_EQ(13, ord(as));
+    EXPECT_EQ(static_cast<unsigned>(13), ord(as));
 
     //Those values should be seperate!
     EXPECT_NE(eins, zwei);
@@ -94,10 +94,10 @@ TEST(Enums, TwoElements) {
     testInt o = ONE;
 
     EXPECT_EQ("ZERO", name(z));
-    EXPECT_EQ(0, ord(z));
+    EXPECT_EQ(static_cast<unsigned>(0), ord(z));
 
     EXPECT_EQ("ONE", name(o));
-    EXPECT_EQ(1, ord(o));
+    EXPECT_EQ(static_cast<unsigned>(1), ord(o));
 
     EXPECT_NE(z, o);
 }
@@ -132,7 +132,7 @@ TEST(Enums, UnderScore) {
 //Tests the counting
 TEST(Enums, Counting) {
     testCard tc;
-    EXPECT_EQ(14, count(tc));
+    EXPECT_EQ(static_cast<unsigned>(14), count(tc));
 }
 
 //Tests the tc++
@@ -141,7 +141,7 @@ TEST(Enums, ForLoopPP) {
     for(testCard tc = min(tc); tc != max(tc); tc++) {
         j++;
     }
-    EXPECT_EQ(14, j);
+    EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
 //Tests the ++tc
@@ -150,7 +150,7 @@ TEST(Enums, PPForLoop) {
     for(testCard tc = min(tc); tc != max(tc); ++tc) {
         j++;
     }
-    EXPECT_EQ(14, j);
+    EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
 //Tests the tc--
@@ -159,7 +159,7 @@ TEST(Enums, ForLoopMM) {
     for(testCard tc = max(tc); tc-- != min(tc); ) {
         j++;
     }
-    EXPECT_EQ(14, j);
+    EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
 //Tests the --tc
@@ -168,7 +168,7 @@ TEST(Enums, MMForLoop) {
     for(testCard tc = max(tc); --tc >= min(tc); ) {
         j++;
     }
-    EXPECT_EQ(14, j);
+    EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
 //Tests the function fromName
@@ -187,5 +187,5 @@ TEST(Enums, FromName) {
     EXPECT_NE(z, o);
     //EXPECT_EQ(z, testIntMIN); //WTF: '0' breaked the gTest Suite!
     EXPECT_EQ(z, max(z));
-    EXPECT_EQ(1, o);
+    EXPECT_EQ(static_cast<unsigned>(1), o);
 }
