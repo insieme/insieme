@@ -34,80 +34,41 @@
  * regarding third party software licenses.
  */
 
-#include "program.h"
+#include <xercesc/util/XercesDefs.hpp>
 #include "ast_visitor.h"
-#include "lang_basic.h"
-#include "types.h"
-#include <xercesc/dom/DOM.hpp>
 
-using namespace insieme::core;
+XERCES_CPP_NAMESPACE_BEGIN
+class DOMElement;
+class DOMImplementation;
+class DOMDocument;
+XERCES_CPP_NAMESPACE_END
+
+namespace insieme {
+namespace core {
 
 class XmlVisitor : public ASTVisitor<void> {
 
 public:
 	std::ostream& xmlStream;
+	xercesc::DOMImplementation* impl;
+	xercesc::DOMDocument* doc;
+	xercesc::DOMElement* rootElem;
+	std::string temp;
 
 public:
-	XmlVisitor(std::ostream& stream = std::cout) : xmlStream (stream) {}
+	XmlVisitor(std::ostream& stream = std::cout);
+	
+	~XmlVisitor();
 
-	void visitGenericType(const GenericTypePtr& cur) {
-		xmlStream << "<genType id = \"" << (std::size_t)&*cur << "\">\n";
+	void visitGenericType(const GenericTypePtr& cur);
+	
+	void visitExpression(const ExpressionPtr& cur);
 
-		xmlStream << "\t<familyName> " << (cur->getFamilyName()).getName() << " </familyName>\n";
+	void visitArrayType(const ArrayTypePtr& cur);
 
-		// baseType
-		if (const TypePtr base = cur->getBaseType()){
-			xmlStream << "\t<baseType>\n";
-			xmlStream << "\t\t<typePtr ref = \"" << (std::size_t)&*base << "\">\n";
-
-			// all the edge annotations
-
-			xmlStream << "\t\t</typePtr>\n";
-			xmlStream << "\t</baseType>\n";
-		}
-
-		// typeParams
-		xmlStream << "\t<typeParams>\n";
-		const vector< TypePtr > param = cur->getTypeParameter();
-		for(vector < TypePtr >::const_iterator iter = param.begin(); iter != param.end(); ++iter){
-			xmlStream << "\t\t<typePtr ref = \"" << (std::size_t)&*(*iter) << "\">\n";
-			// all the edge annotations
-			xmlStream << "\t\t</typePtr>\n";
-		}
-		xmlStream << "\t</typeParams>\n";
-
-		// intTypeParams
-		xmlStream << "\t<intTypeParams>\n";
-		const vector< IntTypeParam > intParam = cur->getIntTypeParameter();
-		for(vector < IntTypeParam>::const_iterator iter = intParam.begin(); iter != intParam.end(); ++iter){
-			xmlStream << "\t\t<intTypeParam type = \"";
-			switch (iter->getType()) {
-				case IntTypeParam::VARIABLE:
-					xmlStream << "variable\" value = \"" << iter->getSymbol()<< "\">\n";
-					break;
-				case IntTypeParam::CONCRETE:
-					xmlStream << "concrete\" value = \"" << iter->getValue()<< "\">\n";
-					break;
-				case IntTypeParam::INFINITE:
-					xmlStream << "infinite\">\n";
-					break;
-				default:
-					xmlStream << "Invalid parameter\">\n";
-					break;
-			}
-		}
-		xmlStream << "\t</intTypeParams>\n";
-		xmlStream << "</genType>\n";
-	}
-
-	void visitExpression(const ExpressionPtr& cur) {
-
-	}
-
-	void visitArrayType(const ArrayTypePtr& cur) {
-	}
-
-	void visitRefType(const RefTypePtr& cur) {
-
-	}
+	void visitRefType(const RefTypePtr& cur);
 };
+
+} // end namespace core
+} // end namespace insieme
+

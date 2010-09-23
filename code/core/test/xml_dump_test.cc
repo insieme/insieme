@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 #include <xml_dump.h>
 
+using namespace insieme::core;
+
 TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager;
 	XmlVisitor visitor;
