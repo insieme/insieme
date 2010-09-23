@@ -49,14 +49,14 @@ namespace core {
 class XmlVisitor : public ASTVisitor<void> {
 
 public:
-	std::ostream& xmlStream;
+	//std::ostream& xmlStream;
 	xercesc::DOMImplementation* impl;
 	xercesc::DOMDocument* doc;
 	xercesc::DOMElement* rootElem;
-	std::string temp;
+	std::string outputFile;
 
 public:
-	XmlVisitor(std::ostream& stream = std::cout);
+	XmlVisitor(const std::string fileName = "");
 	
 	~XmlVisitor();
 
