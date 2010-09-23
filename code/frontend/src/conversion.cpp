@@ -316,7 +316,7 @@ void DependencyGraph<const FunctionDecl*>::Handle(const FunctionDecl* func, cons
 	);
 }
 
-vector<core::ExpressionPtr> tryPack(core::FunctionTypePtr funcTy, const vector<core::ExpressionPtr>& args) {
+vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const vector<core::ExpressionPtr>& args) {
 
 	// check if the function type ends with a VAR_LIST type
 	core::TupleTypePtr argTy = core::dynamic_pointer_cast<const core::TupleType>(funcTy->getArgumentType());
@@ -335,11 +335,71 @@ vector<core::ExpressionPtr> tryPack(core::FunctionTypePtr funcTy, const vector<c
 		// we copy the first N-1 arguments, the remaining will be unpacked
 		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
 
-		// TODO: PACK!
-		assert(false && "Lambda parameter packing is not supported!");
+		vector<core::ExpressionPtr> toPack;
+		std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+
+		ret.push_back( builder.callExpr(core::lang::OP_VAR_LIST_PACK_PTR, toPack) );
+		return ret;
 	}
 	return args;
 }
+
+core::lang::OperatorPtr getOperator(const core::ASTBuilder& builder, core::TypePtr opTy, clang::BinaryOperatorKind opKind) {
+
+	std::ostringstream ss;
+	ss << opTy->getName() << ".";
+
+	switch(opKind) {
+	case BO_PtrMemD:
+	case BO_PtrMemI:
+		break;
+
+	case BO_Mul: ss << "mul"; break;
+	case BO_Div: ss << "div"; break;
+	case BO_Rem: ss << "mod"; break;
+	case BO_Add: ss << "add"; break;
+	case BO_Sub: ss << "sub"; break;
+	case BO_Shl: ss << "shl"; break;
+	case BO_Shr: ss << "shr"; break;
+
+	case BO_LT:	 ss << "lt"; break;
+	case BO_GT:  ss << "gt"; break;
+	case BO_LE:  ss << "le"; break;
+	case BO_GE:  ss << "ge"; break;
+	case BO_EQ:  ss << "eq"; break;
+	case BO_NE:	 ss << "ne"; break;
+
+	case BO_And: 	ss << "and"; break;
+	case BO_Xor: 	ss << "xor"; break;
+	case BO_Or:  	ss << "or"; break;
+	case BO_LAnd: 	ss << "land"; break;
+	case BO_LOr:  	ss << "lor"; break;
+
+	case BO_Assign:		ss << "assign"; break;
+	case BO_MulAssign:  ss << "mul.assign"; break;
+	case BO_DivAssign:  ss << "div.assign"; break;
+	case BO_RemAssign:  ss << "mod.assign"; break;
+	case BO_AddAssign:  ss << "add.assign"; break;
+	case BO_SubAssign:  ss << "sub.assign"; break;
+	case BO_ShlAssign:  ss << "shl.assign"; break;
+	case BO_ShrAssign:  ss << "shr.assign"; break;
+	case BO_AndAssign:  ss << "and.assign"; break;
+	case BO_XorAssign:  ss << "xor.assign"; break;
+	case BO_OrAssign:   ss << "or.assign"; break;
+
+	case BO_Comma:		ss << "comma"; break;
+
+	default:
+		assert(false && "Operator not supported");
+	}
+
+	// create Pair type
+	core::TupleType::ElementTypeList tupleTypeList = { opTy, opTy };
+	return builder.literal( ss.str(), builder.functionType(builder.tupleType(tupleTypeList), opTy));
+
+
+}
+
 
 } // End empty namespace
 
@@ -434,7 +494,7 @@ public:
 			DLOG(INFO) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl <<
 						  "Number of components in the cycle: " << components.size();
 			std::for_each(components.begin(), components.end(),
-				[] (std::set<const FunctionDecl*>::value_type c) {
+				[ ] (std::set<const FunctionDecl*>::value_type c) {
 					DLOG(INFO) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
 				}
 			);
@@ -569,7 +629,7 @@ public:
 			core::FunctionTypePtr funcTy =
 					core::dynamic_pointer_cast<const core::FunctionType>( convFact.ConvertType( *funcDecl->getType().getTypePtr() ) );
 
-			vector< core::ExpressionPtr >&& packedArgs = tryPack(funcTy, args);
+			vector< core::ExpressionPtr >&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
 			const FunctionDecl* definition = NULL;
 			if( !funcDecl->hasBody(definition) ) {
@@ -620,8 +680,15 @@ public:
 	}
 
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  {
+		const core::ExpressionPtr& rhs = Visit(binOp->getRHS()).ref;
+		const core::ExpressionPtr& lhs = Visit(binOp->getLHS()).ref;
 
-		return ExprWrapper( EmptyExpr(convFact.builder) );
+		const core::TypePtr& exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
+
+		const core::lang::OperatorPtr& opFunc = getOperator(convFact.builder, exprTy, binOp->getOpcode());
+
+		// build a callExpr with the 2 arguments
+		return ExprWrapper( convFact.builder.callExpr(opFunc, { lhs, rhs }) );
 	}
 
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
