@@ -56,7 +56,7 @@ public:
 	std::string outputFile;
 
 public:
-	XmlVisitor(const std::string fileName = "");
+	XmlVisitor(const std::string fileName = std::string());
 	
 	~XmlVisitor();
 

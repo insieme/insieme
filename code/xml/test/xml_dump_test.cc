@@ -41,7 +41,7 @@ using namespace insieme::core;
 
 TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager;
-	XmlVisitor visitor("xmlDump1.xml");
+	XmlVisitor visitor;
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);

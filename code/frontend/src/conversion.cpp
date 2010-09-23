@@ -316,6 +316,31 @@ void DependencyGraph<const FunctionDecl*>::Handle(const FunctionDecl* func, cons
 	);
 }
 
+vector<core::ExpressionPtr> tryPack(core::FunctionTypePtr funcTy, const vector<core::ExpressionPtr>& args) {
+
+	// check if the function type ends with a VAR_LIST type
+	core::TupleTypePtr argTy = core::dynamic_pointer_cast<const core::TupleType>(funcTy->getArgumentType());
+	assert(argTy && "Function argument is of not type TupleType");
+
+	const core::TupleType::ElementTypeList& elements = argTy->getElementTypes();
+	// if the tuple type is empty it means we cannot pack any of the arguments
+	if(elements.empty() || elements.size() == args.size())
+		return args;
+
+	vector<core::ExpressionPtr> ret;
+	if(elements.back() == core::lang::TYPE_VAR_LIST) {
+		assert(args.size() >= elements.size()-1 && "Function called with fewer arguments than necessary");
+		// last type is a var_list, we have to do the packing of arguments
+
+		// we copy the first N-1 arguments, the remaining will be unpacked
+		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
+
+		// TODO: PACK!
+		assert(false && "Lambda parameter packing is not supported!");
+	}
+	return args;
+}
+
 } // End empty namespace
 
 
@@ -541,11 +566,18 @@ public:
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg).ref ); }
 			);
 
+			core::FunctionTypePtr funcTy =
+					core::dynamic_pointer_cast<const core::FunctionType>( convFact.ConvertType( *funcDecl->getType().getTypePtr() ) );
+
+			vector< core::ExpressionPtr >&& packedArgs = tryPack(funcTy, args);
+
 			const FunctionDecl* definition = NULL;
 			if( !funcDecl->hasBody(definition) ) {
 				// in the case the function is extern, a literal is build
+
 				return ExprWrapper( convFact.builder.callExpr(
-						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ), args) );
+						builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs)
+				);
 			}
 
 			if(!recVarExprMap.empty()) {
@@ -554,7 +586,7 @@ public:
 				if( fit != recVarExprMap.end() ) {
 					// DLOG(INFO) << "Returning mapped var for function " << definition->getNameAsString();
 					// we are resolving a parent recursive type, so we shouldn't
-					return ExprWrapper( builder.callExpr(fit->second, args) );
+					return ExprWrapper( builder.callExpr(fit->second, packedArgs) );
 				}
 			}
 
@@ -572,7 +604,7 @@ public:
 
 			// Adding the lambda function to the list of converted functions
 			lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
-			return ExprWrapper( builder.callExpr(lambdaExpr, args)  );
+			return ExprWrapper( builder.callExpr(lambdaExpr, packedArgs)  );
 		}
 		assert(false && "Call expression not referring a function");
 	}
@@ -587,7 +619,11 @@ public:
 		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
 
-	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  {
+
+		return ExprWrapper( EmptyExpr(convFact.builder) );
+	}
+
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
 
@@ -1389,19 +1425,19 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), bui
 		stmtConv(new ClangStmtConverter(*this)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
+//	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
 //	type.dump();
 	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-	DLOG(INFO) << "Converting stmt:";
+//	DLOG(INFO) << "Converting stmt:";
 //	stmt.dump();
 	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
 }
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
-	DLOG(INFO) << "Converting expression:";
+//	DLOG(INFO) << "Converting expression:";
 //	expr.dump();
 	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
 }
@@ -1422,15 +1458,15 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			// finds a definition of this function if any
-			for(auto it = funcDecl->redecls_begin(), end = funcDecl->redecls_end(); it!=end; ++it)
-				if((*it)->isThisDeclarationADefinition())
-					funcDecl = (*it)->getCanonicalDecl();
+			const FunctionDecl* definition = NULL;
+			// if this function is just a declaration, and it has no definition, we just skip it
+			if(!funcDecl->hasBody(definition))
+				continue;
 
-			core::TypePtr funcType = fact.ConvertType( *funcDecl->getType().getTypePtr() );
-
+			core::TypePtr funcType = fact.ConvertType( *definition->getType().getTypePtr() );
 			// paramlist
 			core::LambdaExpr::ParamList funcParamList;
-			std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
+			std::for_each(definition->param_begin(), definition->param_end(),
 				[&funcParamList, &fact] (ParmVarDecl* currParam) {
 					funcParamList.push_back(
 						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
@@ -1438,21 +1474,18 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			);
 			// this is a function decl
 			core::StatementPtr funcBody(NULL);
-			if(funcDecl->getBody()) {
-				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
+			assert(definition->getBody() && "Function Definition has no body");
 
-				core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
-
-				// annotate name of function
-				lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
-
-				if(funcDecl->isMain()) {
-					program = program->addEntryPoint(lambaExpr);
-					//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
-				}
+			funcBody = fact.ConvertStmt( *definition->getBody() );
+			core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+			// annotate name of function
+			lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
+			if(definition->isMain()) {
+				program = program->addEntryPoint(lambaExpr);
+				//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
 			}
-
 		}
+
 //		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 //			fact.ConvertType( *varDecl->getType().getTypePtr() );
 //		}
