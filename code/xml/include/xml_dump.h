@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include <xercesc/util/XercesDefs.hpp>
 #include "ast_visitor.h"
+#include <xercesc/util/XercesDefs.hpp>
 
 XERCES_CPP_NAMESPACE_BEGIN
 class DOMElement;

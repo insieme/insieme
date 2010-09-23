@@ -62,6 +62,8 @@
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/strong_components.hpp>
 
+#include <boost/algorithm/string.hpp>
+
 using namespace boost;
 
 using namespace clang;
@@ -325,22 +327,18 @@ class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
 
 	// Map for resolved lambda functions
-	typedef std::map<const FunctionDecl*, ExprWrapper> LambdaExprMap;
+	typedef std::map<const FunctionDecl*, core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
 	DependencyGraph<const FunctionDecl*> funcDepGraph;
 
-
 	typedef std::map<const FunctionDecl*, core::VarExprPtr> RecVarExprMap;
 	RecVarExprMap recVarExprMap;
 	bool isRecSubType;
-
-	typedef std::map<const FunctionDecl*, core::TypePtr> RecTypeMap;
-	RecTypeMap recTypeCache;
-
+	core::VarExprPtr currVar;
 
 public:
-	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false) { }
+	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		return ExprWrapper(
@@ -363,10 +361,11 @@ public:
 	}
 
 	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
-		std::ostringstream ss;
-		ss << "\"" << stringLit->getString().str() << "\"";
 		// todo: Handle escape characters
-		return ExprWrapper( convFact.builder.literal(ss.str(), convFact.builder.genericType(core::Identifier("string"))) );
+		return ExprWrapper( convFact.builder.literal(
+				GetStringFromStream(convFact.clangCtx->getSourceManager(), stringLit->getExprLoc()),
+				convFact.builder.genericType(core::Identifier("string")))
+		);
 	}
 
 	// CXX Extension for boolean types
@@ -392,11 +391,14 @@ public:
 	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 		// the function is not extern, a lambdaExpr has to be created
 		assert(funcDecl->hasBody() && "Function has no body!");
+//		DLOG(INFO) << "Visiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
+//				   << "\t isRecSubType: " << isRecSubType << std::endl
+//				   << "\t empty map: " << recVarExprMap.size();
 
 		if(!isRecSubType) {
 			// add this type to the type graph (if not present)
 			funcDepGraph.addNode(funcDecl);
-			funcDepGraph.print( std::cout );
+//			funcDepGraph.print( std::cout );
 		}
 
 		// retrieve the strongly connected components for this type
@@ -412,22 +414,46 @@ public:
 				}
 			);
 
-			// we create a TypeVar for each type in the mutual dependence
-			recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
-					convFact.ConvertType( *funcDecl->getType().getTypePtr() ),
-					core::Identifier(funcDecl->getName())))
-			);
+			if(!isRecSubType) {
+				// we create a TypeVar for each type in the mutual dependence
+				recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
+						convFact.ConvertType( *funcDecl->getType().getTypePtr() ),
+						core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )))
+				);
+			} else {
+				// we expect the var name to be in currVar
+				recVarExprMap.insert(std::make_pair(funcDecl, currVar));
+			}
 
 			// when a subtype is resolved we aspect to already have these variables in the map
 			if(!isRecSubType) {
 				std::for_each(components.begin(), components.end(),
-					[ this ] (std::set<const FunctionDecl*>::value_type ty) {
-						// TODO: name cannot only rely on the function name but also, the number and type of the parameters has to be considered
-						this->recVarExprMap.insert( std::make_pair(ty,
-								this->convFact.builder.varExpr(convFact.ConvertType(*ty->getType().getTypePtr()), ty->getNameAsString())) );
+					[ this ] (std::set<const FunctionDecl*>::value_type fd) {
+
+						// we count how many variables in the map refers to overloaded versions of the same function
+						// this can happen when a function get overloaded and the cycle of recursion can happen between
+						// the overloaded version, we need unique variable for each version of the function
+						size_t num_of_overloads = std::count_if(this->recVarExprMap.begin(), this->recVarExprMap.end(),
+							[ &fd ] (RecVarExprMap::value_type curr) {
+								return fd->getName() == curr.first->getName();
+							} );
+
+						std::stringstream recVarName( boost::to_upper_copy(fd->getNameAsString()) );
+						if(num_of_overloads)
+							recVarName << num_of_overloads;
+
+						this->recVarExprMap.insert( std::make_pair(fd,
+								this->convFact.builder.varExpr(convFact.ConvertType(*fd->getType().getTypePtr()),recVarName.str())) );
 					}
 				);
 			}
+
+//			DLOG(INFO) << "MAP: ";
+//			std::for_each(recVarExprMap.begin(), recVarExprMap.end(),
+//				[] (RecVarExprMap::value_type c) {
+//					DLOG(INFO) << "\t" << c.first->getNameAsString() << "[" << (size_t) c.first << "]";
+//				}
+//			);
 		}
 
 //		// we lookup the lambda expr map to see if we already create a statement for this lambda expression
@@ -435,9 +461,9 @@ public:
 //		if( lit != lambdaExprCache.end() )
 //			return ExprWrapper( builder.callExpr(lit->second, args)  );
 
-		DLOG(INFO) << "CREATIGN LAMBDA: curr func: " << funcDecl->getNameAsString();
+//		DLOG(INFO) << "CREATIGN LAMBDA: curr func: " << funcDecl->getNameAsString();
 
-		core::LambdaExprPtr lambdaExpr( NULL );
+		core::ExpressionPtr retLambdaExpr( NULL );
 		// this lambda is not yet in the map, we need to create it and add it to the cache
 		core::StatementPtr body = convFact.ConvertStmt( *funcDecl->getBody() );
 
@@ -450,24 +476,24 @@ public:
 		);
 
 		const core::ASTBuilder& builder = convFact.builder;
-		lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *funcDecl->getType().getTypePtr() ), params, body);
+		retLambdaExpr = builder.lambdaExpr( convFact.ConvertType( *funcDecl->getType().getTypePtr() ), params, body);
 
 		if( !components.empty() ) {
 			// this is a recurive function call
 			if(isRecSubType) {
 				// if we are visiting a nested recursive type it means someone else will take care
 				// of building the rectype node, we just return an intermediate type
-				return lambdaExpr;
+				return retLambdaExpr;
 			}
 
 			// we have to create a recursive type
-			funcDecl->dump();
+//			funcDecl->dump();
 			RecVarExprMap::const_iterator tit = recVarExprMap.find(funcDecl);
 			assert(tit != recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
 			core::VarExprPtr recVarRef = tit->second;
 
 			core::RecLambdaDefinition::RecFunDefs definitions;
-			definitions.insert( std::make_pair(recVarRef, lambdaExpr) );
+			definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
 
 			// We start building the recursive type. In order to avoid loop the visitor
 			// we have to change its behaviour and let him returns temporarely types
@@ -477,38 +503,32 @@ public:
 			std::for_each(components.begin(), components.end(),
 				[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
 
-					DLOG(INFO) <<"REC";
 					RecVarExprMap::const_iterator tit = recVarExprMap.find(fd);
 					assert(tit != recVarExprMap.end() && "Recursive function has no TypeVar associated");
-					core::VarExprPtr var = tit->second;
+					currVar = tit->second;
 
 					// we remove the variable from the list in order to fool the solver,
 					// in this way it will create a descriptor for this type (and he will not return the TypeVar
 					// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 					// flag is true
 					recVarExprMap.erase(fd);
-
-					definitions.insert( std::make_pair(var, core::dynamic_pointer_cast<const core::LambdaExpr>(this->VisitFunctionDecl(fd)) ) );
+					definitions.insert( std::make_pair(currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->VisitFunctionDecl(fd)) ) );
 
 					// reinsert the TypeVar in the map in order to solve the other recursive types
-					recVarExprMap.insert( std::make_pair(fd, var) );
+					recVarExprMap.insert( std::make_pair(fd, currVar) );
+					currVar = NULL;
 				}
 			);
 			// we reset the behavior of the solver
 			isRecSubType = false;
 			// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
-			// recVarExprMap.clear();
+			recVarExprMap.clear();
 
 			core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
-
-			return builder.recLambdaExpr(recVarRef, definition);
-
-			// Once we solved this recursive type, we add to a cache of recursive types
-			// so next time we encounter it, we don't need to compute the graph
-			// recTypeCache.insert(std::make_pair(tagType, retTy));
+			retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
 		}
 
-		return lambdaExpr;
+		return retLambdaExpr;
 	}
 
 	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
@@ -530,11 +550,18 @@ public:
 
 			if(!recVarExprMap.empty()) {
 				// check if this type has a typevar already associated, in such case return it
-				RecVarExprMap::const_iterator fit = recVarExprMap.find(funcDecl);
+				RecVarExprMap::const_iterator fit = recVarExprMap.find(definition);
 				if( fit != recVarExprMap.end() ) {
+					// DLOG(INFO) << "Returning mapped var for function " << definition->getNameAsString();
 					// we are resolving a parent recursive type, so we shouldn't
 					return ExprWrapper( builder.callExpr(fit->second, args) );
 				}
+			}
+
+			if(!isRecSubType) {
+				LambdaExprMap::const_iterator fit = lambdaExprCache.find(definition);
+				if(fit != lambdaExprCache.end())
+					return fit->second;
 			}
 
 			assert(definition && "No definition found for function");
@@ -545,8 +572,6 @@ public:
 
 			// Adding the lambda function to the list of converted functions
 			lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
-
-			DLOG(INFO) << "LAMDA FUNC: " << lambdaExpr;
 			return ExprWrapper( builder.callExpr(lambdaExpr, args)  );
 		}
 		assert(false && "Call expression not referring a function");
