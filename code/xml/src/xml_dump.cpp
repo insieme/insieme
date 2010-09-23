@@ -71,8 +71,8 @@ public:
 
 }
 
-//XmlVisitor::XmlVisitor(ostream& stream) : xmlStream (stream) {
-XmlVisitor::XmlVisitor(const string fileName) : outputFile (fileName) {
+//XmlWriter::XmlWriter(ostream& stream) : xmlStream (stream) {
+XmlWriter::XmlWriter(const string fileName) : outputFile (fileName) {
 	try {
 		XMLPlatformUtils::Initialize();
 	}
@@ -88,7 +88,7 @@ XmlVisitor::XmlVisitor(const string fileName) : outputFile (fileName) {
 	rootElem = doc->getDocumentElement();
 }
 
-XmlVisitor::~XmlVisitor() {
+XmlWriter::~XmlWriter() {
 	DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
 	DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
 	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
@@ -114,7 +114,7 @@ XmlVisitor::~XmlVisitor() {
 	XMLPlatformUtils::Terminate();
 }
 
-void XmlVisitor::visitGenericType(const GenericTypePtr& cur) {
+void XmlWriter::visitGenericType(const GenericTypePtr& cur) {
 	DOMElement*	genType = doc->createElement(toUnicode("genType"));
 	genType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
 	genType->setAttribute(toUnicode("familyName"), toUnicode(cur->getFamilyName().getName()));
@@ -170,11 +170,16 @@ void XmlVisitor::visitGenericType(const GenericTypePtr& cur) {
 	}
 }
 
-void XmlVisitor::visitExpression(const ExpressionPtr& cur) {
+void XmlWriter::visitExpression(const ExpressionPtr& cur) {
 }
 
-void XmlVisitor::visitArrayType(const ArrayTypePtr& cur) {
+void XmlWriter::visitArrayType(const ArrayTypePtr& cur) {
 }
 
-void XmlVisitor::visitRefType(const RefTypePtr& cur) {
+void XmlWriter::visitRefType(const RefTypePtr& cur) {
 }
+
+void insieme::core::xmlWrite(const NodePtr& root, const std::string fileName){
+	XmlWriter visitor(fileName);
+	visitAllOnce(root, visitor);
+};

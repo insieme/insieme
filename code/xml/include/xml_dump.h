@@ -46,7 +46,7 @@ XERCES_CPP_NAMESPACE_END
 namespace insieme {
 namespace core {
 
-class XmlVisitor : public ASTVisitor<void> {
+class XmlWriter : public ASTVisitor<void> {
 
 public:
 	//std::ostream& xmlStream;
@@ -56,9 +56,9 @@ public:
 	std::string outputFile;
 
 public:
-	XmlVisitor(const std::string fileName = std::string());
+	XmlWriter(const std::string fileName = std::string());
 	
-	~XmlVisitor();
+	~XmlWriter();
 
 	void visitGenericType(const GenericTypePtr& cur);
 	
@@ -68,6 +68,8 @@ public:
 
 	void visitRefType(const RefTypePtr& cur);
 };
+
+void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
 
 } // end namespace core
 } // end namespace insieme

@@ -41,13 +41,11 @@ using namespace insieme::core;
 
 TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager;
-	XmlVisitor visitor;
-
 	GenericTypePtr type = GenericType::get(manager, "int");
 	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
 
 	NodePtr root = type2;
-	visitAllOnce(root, visitor);
 
-	//EXPECT_EQ ( "int", visitor.xmlString );
+	//xmlWrite(root, "dump1.xml");
+	xmlWrite(root);
 }
