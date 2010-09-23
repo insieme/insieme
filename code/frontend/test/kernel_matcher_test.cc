@@ -58,6 +58,16 @@ using namespace insieme::core;
     EXPECT_EQ(util::Line(loc, srcMgr), (size_t)line); \
     EXPECT_EQ(util::Column(loc, srcMgr), (size_t)col);
 
+/*old version for __attribute((address_space(x)))
+const char* addressSpaceStr[] = {
+        "private",
+        "local",
+        "global",
+        "constant"
+};*/
+
+// new version for __attribute((annotate("x")))
+
 enum AddressSpace {
         PRIVATE,
         LOCAL,
@@ -65,67 +75,83 @@ enum AddressSpace {
         CONSTANT
 };
 
-const char* addressSpaceStr[] = {
-        "private",
-        "local",
-        "global",
-        "constant"
+const llvm::StringRef addrStr [] = {
+    llvm::StringRef("__private"),
+    llvm::StringRef("__local"),
+    llvm::StringRef("__global"),
+    llvm::StringRef("__constant")
 };
 
+//counter for address matching function
+unsigned int addressSpaceMatches = 0;
+
 const char* kindStr[] = {
-  "Alias",
-  "Aligned",
-  "AlwaysInline",
-  "AnalyzerNoReturn", // Clang-specific.
-  "Annotate",
-  "AsmLabel", // Represent GCC asm label extension.
-  "BaseCheck",
-  "Blocks",
-  "CDecl",
-  "Cleanup",
-  "Const",
-  "Constructor",
-  "Deprecated",
-  "Destructor",
-  "FastCall",
-  "Final",
-  "Format",
-  "FormatArg",
-  "GNUInline",
-  "Hiding",
-  "IBOutletKind", // Clang-specific. Use "Kind" suffix to not conflict w/ macro.
-  "IBActionKind", // Clang-specific. Use "Kind" suffix to not conflict w/ macro.
-  "Malloc",
-  "NoDebug",
-  "NoInline",
-  "NonNull",
-  "NoReturn",
-  "NoThrow",
-  "ObjCException",
-  "ObjCNSObject",
-  "Override",
-  "CFReturnsRetained",      // Clang/Checker-specific.
-  "CFReturnsNotRetained",   // Clang/Checker-specific.
-  "NSReturnsRetained",      // Clang/Checker-specific.
-  "NSReturnsNotRetained",   // Clang/Checker-specific.
-  "Overloadable", // Clang-specific
-  "Packed",
-  "PragmaPack",
-  "Pure",
-  "Regparm",
-  "ReqdWorkGroupSize",   // OpenCL-specific
-  "Section",
-  "Sentinel",
-  "StdCall",
-  "TransparentUnion",
-  "Unavailable",
-  "Unused",
-  "Used",
-  "Visibility",
-  "WarnUnusedResult",
-  "Weak",
-  "WeakImport",
-  "WeakRef"
+        "Alias",
+        "AlignMac68k",
+        "Aligned",
+        "AlwaysInline",
+        "AnalyzerNoReturn",
+        "Annotate",
+        "AsmLabel",
+        "BaseCheck",
+        "Blocks",
+        "CDecl",
+        "CFReturnsNotRetained",
+        "CFReturnsRetained",
+        "CarriesDependency",
+        "Cleanup",
+        "Const",
+        "Constructor",
+        "DLLExport",
+        "DLLImport",
+        "Deprecated",
+        "Destructor",
+        "FastCall",
+        "Final",
+        "Format",
+        "FormatArg",
+        "GNUInline",
+        "Hiding",
+        "IBAction",
+        "IBOutlet",
+        "IBOutletCollection",
+        "InitPriority",
+        "MSP430Interrupt",
+        "Malloc",
+        "MaxFieldAlignment",
+        "NSReturnsNotRetained",
+        "NSReturnsRetained",
+        "NoDebug",
+        "NoInline",
+        "NoInstrumentFunction",
+        "NoReturn",
+        "NoThrow",
+        "NonNull",
+        "ObjCException",
+        "ObjCNSObject",
+        "Overloadable",
+        "Override",
+        "Ownership",
+        "Packed",
+        "Pascal",
+        "Pure",
+        "Regparm",
+        "ReqdWorkGroupSize",
+        "Section",
+        "Sentinel",
+        "StdCall",
+        "ThisCall",
+        "TransparentUnion",
+        "Unavailable",
+        "Unused",
+        "Used",
+        "VecReturn",
+        "Visibility",
+        "WarnUnusedResult",
+        "Weak",
+        "WeakImport",
+        "WeakRef",
+        "X86ForceAlignArgPointer"
 };
 
 //attribute specific handlers to get attribute parameters
@@ -208,9 +234,31 @@ bool scanStruct(RecordDecl* decl){
     return true;
 }
 
-void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
+void checkAddressSpace(const Attr* attr, unsigned int& matches){
+    //expected address spaces: GLOBAL, CONSTANT, LOCAL, PRIVATE
+    llvm::StringRef expected[6] = {addrStr[GLOBAL], addrStr[CONSTANT], addrStr[LOCAL], addrStr[PRIVATE],
+            addrStr[LOCAL], addrStr[PRIVATE]};
+
+    const clang::AnnotateAttr* aa = (const AnnotateAttr*)attr;
+    llvm::StringRef sr = aa->getAnnotation();
+
+//    std::cout << expected[matches].str() << " - " << sr.str() << std::endl;
+
+    EXPECT_EQ(expected[matches++].str(), sr.str());
+}
+
+void checkAttributes(const Attr* attr, ASTContext& ctx, unsigned int& matches, unsigned int& args){
     attr::Kind expectedKinds[] = {attr::Kind::Packed, attr::Kind::Aligned, attr::Kind::Aligned};
     unsigned int expectedParameters[] = {16, 64};
+
+    EXPECT_EQ(expectedKinds[matches++], attr->getKind());
+
+    if(attr->getKind() == attr::Kind::Aligned) {
+        EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment(ctx));
+    }
+}
+
+void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
     unsigned int matches = 0, args = 0;
 
     for(clang::StmtIterator si = stmt->child_begin(), se = stmt->child_end(); si != se; ++si) {
@@ -247,12 +295,15 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
                     continue;
 
                 AttrVec attrvec = decl->getAttrs();
-                EXPECT_EQ(static_cast<unsigned>(1), attrvec.size());
-                const Attr* attr = attrvec[0];
-                EXPECT_EQ(expectedKinds[matches++], attr->getKind());
-                if(attr->getKind() == attr::Kind::Aligned) {
-                    EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment(ctx));
+
+                for(Attr *const*ai = attrvec.begin(), *const*ae = attrvec.end(); ai != ae; ++ai)
+                {
+                    if((*ai)->getKind() == attr::Kind::Annotate)
+                        checkAddressSpace(*ai, addressSpaceMatches);
+                    else
+                        checkAttributes(*ai, ctx, matches, args);
                 }
+
             }
             else {
                 clang::DeclGroupRef dgr = declstmt->getDeclGroup();
@@ -264,12 +315,16 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
                         continue;
 
                     const AttrVec attrvec = declgroup[i]->getAttrs();
+
                     EXPECT_EQ(static_cast<unsigned>(1), attrvec.size());
-                    const Attr* attr = attrvec[0];
-                    EXPECT_EQ(expectedKinds[matches++], attr->getKind());
-                    if(attr->getKind() == attr::Kind::Aligned){
-                        EXPECT_EQ(expectedParameters[args++], ((AlignedAttr*)attr)->getAlignment(ctx));
+                    for(Attr *const*ai = attrvec.begin(), *const*ae = attrvec.end(); ai != ae; ++ai)
+                    {
+                        if((*ai)->getKind() == attr::Kind::Annotate)
+                            checkAddressSpace(*ai, addressSpaceMatches);
+                        else
+                            checkAttributes(*ai, ctx, matches, args);
                     }
+
                     clang::Stmt* body = declgroup[i]->getBody();
                     if(body) {
                         printf("parsing stmt %s\n", body->getStmtClassName());
@@ -304,7 +359,7 @@ TEST(KernelMatcherTest, CheckBuildinVector) {
 
             //check the size of the vector
             if(evt->getTypeClass() == clang::Type::TypeClass::ExtVector)
-                EXPECT_EQ(static_cast<size_t>(4), evt->getNumElements());
+                EXPECT_EQ(static_cast<unsigned>(4), evt->getNumElements());
 
             EXPECT_TRUE(evt->isAccessorWithinNumElements('w'));
         }
@@ -312,14 +367,15 @@ TEST(KernelMatcherTest, CheckBuildinVector) {
 }
 
 // Check if memory spaces are as expected default, __global, __constant, __local, __private
+/* moved to new version using __attribute((annotate("x")))
 TEST(KernelMatcherTest, ReadMemorySpaces) {
-    unsigned int expected_asp[] = {GLOBAL, CONSTANT, LOCAL, PRIVATE};
+    unsigned int expected_asp[] = {GLOBAL, CONSTANT, LOCAL, PRIVATE, 0, 0, 0};
     unsigned int asp = 0;
     for(size_t i = 0; i < types.size(); ++i)
     {
         clang::Type* t = types.at(i);
 
-/* does not work as expected - now done by ScanStruct
+*//* does not work as expected - now done by ScanStruct
         if(t->isStructureType())
         {
 
@@ -333,25 +389,25 @@ TEST(KernelMatcherTest, ReadMemorySpaces) {
                 scanStmt(stmt, ctx);
             }
         }
-*/
-
+*//*
+clang::QualType qt = t->getCanonicalTypeInternal();
         //read the address space attribute of all pointers
-        if(t->isPointerType())
-        {
+        if(t->isPointerType()) {
             clang::QualType qt = t->getCanonicalTypeInternal();
             //skip return Type of kernel function which has to be void
             if(qt->isVoidPointerType())
                 continue;
-
-/*            const char* expected = addressSpaceStr[expected_asp[asp]];
+            printf("pointee: %d!!!", qt.getAddressSpace());
+*//*
+            const char* expected = addressSpaceStr[expected_asp[asp]];
             const char* actual = addressSpaceStr[t->getPointeeType().getAddressSpace()];
-            fprintf(stderr, "%d address Spacse %s - %s\n", asp,  expected, actual); */
-
+            fprintf(stderr, "%d address Spacse %s - %s\n", asp,  expected, actual);
+*//*
             EXPECT_EQ(expected_asp[asp++], t->getPointeeType().getAddressSpace());
 //            std::cout << qt.getAsString() << " ADDRESS_SPACE: " << t->getPointeeType().getAddressSpace() << std::endl;
         }
     }
-}
+}*/
 
 // Check the given attributes
 TEST(KernelMatcherTest, ReadAttributes) {
@@ -364,11 +420,11 @@ TEST(KernelMatcherTest, ReadAttributes) {
             // Top-level Function declaration
             clang::FunctionDecl* func_decl = dyn_cast<clang::FunctionDecl>(*I);
 
-            //Function declaration should have RequiredWorkGroupSize(1,2,3) attribute
+            //Function declaration should have RequiredWorkGroupSize(1,2,3) and annotate("__kernel") attribute
             EXPECT_TRUE(func_decl->hasAttrs());
             if(func_decl->hasAttrs()) {
                 const clang::AttrVec attrVec = func_decl->getAttrs();
-                EXPECT_EQ(static_cast<unsigned>(1), attrVec.size());
+                EXPECT_EQ(static_cast<unsigned>(2), attrVec.size());
                 Attr* attr = attrVec[0];
 //                std::cout << kindStr[attr->getKind()] << std::endl;
 //                parseAttribute(attr);
@@ -379,6 +435,31 @@ TEST(KernelMatcherTest, ReadAttributes) {
                     EXPECT_EQ(static_cast<unsigned>(2), ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
                     EXPECT_EQ(static_cast<unsigned>(3), ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
                 }
+
+                //get annotate string
+                attr = attrVec[1];
+                AnnotateAttr* aa = (AnnotateAttr*)attr;
+                llvm::StringRef sr = aa->getAnnotation();
+
+                //convert string to char[] and make sure that "kernel" is converted to "__kernel"
+                char fctModifier[16];
+                fctModifier[0] = '_';
+                fctModifier[1] = '_';
+
+                int offset = 0;
+
+                if(sr[0] == '_' && sr[1] == '_')
+                {
+                    offset = 2;
+                }
+                for(int i = 0; i < 6; ++i)
+                {
+                    fctModifier[i+2] = sr[i+offset];
+                }
+                fctModifier[8] = '\0';
+
+                EXPECT_STREQ("__kernel", fctModifier);
+//                printf("second attr kind: %s(%s)\n", kindStr[attr->getKind()], fctModifier);
             }
 
 /*
@@ -392,6 +473,19 @@ TEST(KernelMatcherTest, ReadAttributes) {
             std::cout << "hi" << std::endl;
             std::cout << kindStr[attr2->getKind()] << std::endl;
 */
+
+            //check address space of arguments
+            for(unsigned int i = 0; i < func_decl->getNumParams(); ++i)
+            {
+                clang::ParmVarDecl* pd = func_decl->getParamDecl(i);
+                AttrVec attrvec = pd->getAttrs();
+                for(Attr *const*ai = attrvec.begin(), *const*ae = attrvec.end(); ai != ae; ++ai)
+                {
+                    EXPECT_EQ(attr::Kind::Annotate, (*ai)->getKind());
+                    if((*ai)->getKind() == attr::Kind::Annotate)
+                        checkAddressSpace(*ai, addressSpaceMatches);
+                }
+           }
 
             clang::Stmt* func_body = func_decl->getBody();
             EXPECT_TRUE(func_body);

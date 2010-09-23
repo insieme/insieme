@@ -35,18 +35,34 @@
  */
 
 //OpenCL definitions
-#define __private __attribute__((address_space(0))) //default value
+/*#define __private __attribute__((address_space(0))) //default value
+#define private __attribute__((address_space(0)))
 #define __local __attribute__((address_space(1)))
+#define local __attribute__((address_space(1)))
 #define __global __attribute__((address_space(2)))
+#define global __attribute__((address_space(2)))
 #define __constant __attribute__((address_space(3)))
+#define constant __attribute__((address_space(3)))*/
 
-typedef int int4 __attribute__((ext_vector_type(4)));
+#define __private __attribute__((annotate("__private"))) //default value
+#define private __attribute__((annotate("__private")))
+#define __local __attribute__((annotate("__local")))
+#define local __attribute__((annotate("__local")))
+#define __global __attribute__((annotate("__global")))
+#define global __attribute__((annotate("__global")))
+#define __constant __attribute__((annotate("__constant")))
+#define constant __attribute__((annotate("__constant")))
 
-__attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
+#define __kernel __attribute__((annotate("__kernel")))
+#define kernel __attribute__((annotate("__kernel")))
+
+typedef __attribute__((ext_vector_type(4))) int int4;
+
+__kernel __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
 {
-    __local float* b;
+    local float* b;
     __private int* d;
-    struct __attribute__((packed)) X
+    struct local __attribute__((packed)) X
     {
         int e[3] __attribute__((aligned(8)));
         const short s __attribute__((packed));
@@ -59,6 +75,9 @@ __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __con
     t.x = 5;
     int o = t.s0;
     b[0] = a[0];
+
+    __private float fltarr[5];
+
 
     return;
 }
