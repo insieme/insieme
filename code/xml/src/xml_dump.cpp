@@ -54,20 +54,19 @@ namespace {
 #define toUnicode(str) XStr(str).unicodeForm()
 
 class XStr {
-	private:
-		XMLCh* fUnicodeForm;
-	public:
-		XStr(const string& toTranscode) {
-			fUnicodeForm = XMLString::transcode(toTranscode.c_str());
-		}
+	XMLCh* fUnicodeForm;
+public:
+	XStr(const string& toTranscode) {
+		fUnicodeForm = XMLString::transcode(toTranscode.c_str());
+	}
 
-		~XStr() {
-			XMLString::release(&fUnicodeForm);
-		}
+	~XStr() {
+		XMLString::release(&fUnicodeForm);
+	}
 
-		const XMLCh* unicodeForm() const {
-			return fUnicodeForm;
-		} 
+	const XMLCh* unicodeForm() const {
+		return fUnicodeForm;
+	}
 };
 
 }
@@ -89,7 +88,7 @@ XmlVisitor::XmlVisitor(const string fileName) : outputFile (fileName) {
 	rootElem = doc->getDocumentElement();
 }
 
-XmlVisitor::~XmlVisitor(){
+XmlVisitor::~XmlVisitor() {
 	DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
 	DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
 	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
@@ -97,15 +96,13 @@ XmlVisitor::~XmlVisitor(){
 	if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
            serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
 
-	XMLFormatTarget *myFormTarget;
-	
+	XMLFormatTarget* myFormTarget = NULL;
 	if (!outputFile.empty()){
 		myFormTarget=new LocalFileFormatTarget(outputFile.c_str());
-		std::cout << "primo caso";}
-	else {
+	} else {
 		myFormTarget=new StdOutFormatTarget();
-		std::cout << "secondo caso";
 	}
+
 	theOutputDesc->setByteStream(myFormTarget);
 
 	theSerializer->write(doc, theOutputDesc);
@@ -123,7 +120,7 @@ void XmlVisitor::visitGenericType(const GenericTypePtr& cur) {
 	genType->setAttribute(toUnicode("familyName"), toUnicode(cur->getFamilyName().getName()));
 	rootElem->appendChild(genType);
 
-	if (const TypePtr base = cur->getBaseType()){
+	if (const TypePtr base = cur->getBaseType()) {
 		DOMElement*	baseType = doc->createElement(toUnicode("baseType"));
 		genType->appendChild(baseType);
 	
@@ -137,8 +134,8 @@ void XmlVisitor::visitGenericType(const GenericTypePtr& cur) {
 	DOMElement*	typeParams = doc->createElement(toUnicode("typeParams"));
 	genType->appendChild(typeParams);
 
-	const vector< TypePtr > param = cur->getTypeParameter();
-	for(vector < TypePtr >::const_iterator iter = param.begin(); iter != param.end(); ++iter){
+	const vector< TypePtr >& param = cur->getTypeParameter();
+	for(vector< TypePtr >::const_iterator iter = param.begin(); iter != param.end(); ++iter) {
 		DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
 		typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)&*(*iter))));			
 		typeParams->appendChild(typePtr);
@@ -149,26 +146,26 @@ void XmlVisitor::visitGenericType(const GenericTypePtr& cur) {
 	DOMElement*	intTypeParams = doc->createElement(toUnicode("intTypeParams"));
 	genType->appendChild(intTypeParams);
 
-	const vector<IntTypeParam> intParam = cur->getIntTypeParameter();
-	for(vector <IntTypeParam>::const_iterator iter = intParam.begin(); iter != intParam.end(); ++iter){
+	const vector<IntTypeParam>& intParam = cur->getIntTypeParameter();
+	for(vector <IntTypeParam>::const_iterator iter = intParam.begin(); iter != intParam.end(); ++iter) {
 	
 		DOMElement*	intTypeParam = doc->createElement(toUnicode("intTypeParam"));
 		intTypeParams->appendChild(intTypeParam);
 		switch (iter->getType()) {
-			case IntTypeParam::VARIABLE:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("variable"));
-				intTypeParam->setAttribute(toUnicode("value"), toUnicode(numeric_cast<string>(iter->getSymbol())));
-				break;
-			case IntTypeParam::CONCRETE:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("concrete"));
-				intTypeParam->setAttribute(toUnicode("value"), toUnicode(numeric_cast<string>(iter->getSymbol())));
-				break;
-			case IntTypeParam::INFINITE:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("infinite"));
-				break;
-			default:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("Invalid Parameter"));
-				break;
+		case IntTypeParam::VARIABLE:
+			intTypeParam->setAttribute(toUnicode("type"), toUnicode("variable"));
+			intTypeParam->setAttribute(toUnicode("value"), toUnicode(numeric_cast<string>(iter->getSymbol())));
+			break;
+		case IntTypeParam::CONCRETE:
+			intTypeParam->setAttribute(toUnicode("type"), toUnicode("concrete"));
+			intTypeParam->setAttribute(toUnicode("value"), toUnicode(numeric_cast<string>(iter->getSymbol())));
+			break;
+		case IntTypeParam::INFINITE:
+			intTypeParam->setAttribute(toUnicode("type"), toUnicode("infinite"));
+			break;
+		default:
+			intTypeParam->setAttribute(toUnicode("type"), toUnicode("Invalid Parameter"));
+			break;
 		}
 	}
 }
