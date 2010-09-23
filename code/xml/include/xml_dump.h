@@ -34,3 +34,43 @@
  * regarding third party software licenses.
  */
 
+#include "ast_visitor.h"
+#include <xercesc/util/XercesDefs.hpp>
+
+XERCES_CPP_NAMESPACE_BEGIN
+class DOMElement;
+class DOMImplementation;
+class DOMDocument;
+XERCES_CPP_NAMESPACE_END
+
+namespace insieme {
+namespace core {
+
+class XmlWriter : public ASTVisitor<void> {
+
+public:
+	//std::ostream& xmlStream;
+	xercesc::DOMImplementation* impl;
+	xercesc::DOMDocument* doc;
+	xercesc::DOMElement* rootElem;
+	std::string outputFile;
+
+public:
+	XmlWriter(const std::string fileName = std::string());
+	
+	~XmlWriter();
+
+	void visitGenericType(const GenericTypePtr& cur);
+	
+	void visitExpression(const ExpressionPtr& cur);
+
+	void visitArrayType(const ArrayTypePtr& cur);
+
+	void visitRefType(const RefTypePtr& cur);
+};
+
+void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
+
+} // end namespace core
+} // end namespace insieme
+

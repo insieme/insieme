@@ -1,7 +1,7 @@
 #
-# Builds the insieme core library
+# Builds the insieme c_info library
 #
-project(insieme_core CXX)
+project(insieme_xml CXX)
 
 include(../environment.cmake)
 
@@ -9,21 +9,21 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB insieme_core_srcs 	src/*.cpp )
-file(GLOB insieme_core_incs 	include/*.h )
+file(GLOB insieme_xml_srcs 	src/*.cpp )
+file(GLOB insieme_xml_incs 	include/*.h )
 
 # list all include paths
-include_directories( ${insieme_core_include_dir} )
+include_directories( ${insieme_xml_include_dir} )
+include_directories( ${insieme_c_info_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
+include_directories( ${insieme_core_include_dir} )
 
-# automatically run the script for generating ASTBuilder interface
-execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb )
-         
 # Build the core library
-add_library(insieme_core SHARED ${insieme_core_srcs} ${insieme_core_incs} )
+add_library(insieme_xml SHARED ${insieme_xml_srcs} ${insieme_xml_incs} )
 
 # add dependencies
-add_dependencies( insieme_core insieme_utils)
+add_dependencies( insieme_xml insieme_core insieme_utils )
+target_link_libraries(insieme_xml ${xerces_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -35,9 +35,14 @@ foreach ( case_file ${test_cases})
 	
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_utils)
+	target_link_libraries(ut_${case_name} insieme_xml)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
+	target_link_libraries(ut_${case_name} ${xerces_LIB})
+	
+	set(CONDUCT_MEMORY_CHECKS off)
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

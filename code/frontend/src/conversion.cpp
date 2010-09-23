@@ -62,6 +62,8 @@
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/strong_components.hpp>
 
+#include <boost/algorithm/string.hpp>
+
 using namespace boost;
 
 using namespace clang;
@@ -314,6 +316,91 @@ void DependencyGraph<const FunctionDecl*>::Handle(const FunctionDecl* func, cons
 	);
 }
 
+vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const vector<core::ExpressionPtr>& args) {
+
+	// check if the function type ends with a VAR_LIST type
+	core::TupleTypePtr argTy = core::dynamic_pointer_cast<const core::TupleType>(funcTy->getArgumentType());
+	assert(argTy && "Function argument is of not type TupleType");
+
+	const core::TupleType::ElementTypeList& elements = argTy->getElementTypes();
+	// if the tuple type is empty it means we cannot pack any of the arguments
+	if(elements.empty() || elements.size() == args.size())
+		return args;
+
+	vector<core::ExpressionPtr> ret;
+	if(elements.back() == core::lang::TYPE_VAR_LIST) {
+		assert(args.size() >= elements.size()-1 && "Function called with fewer arguments than necessary");
+		// last type is a var_list, we have to do the packing of arguments
+
+		// we copy the first N-1 arguments, the remaining will be unpacked
+		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
+
+		vector<core::ExpressionPtr> toPack;
+		std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+
+		ret.push_back( builder.callExpr(core::lang::OP_VAR_LIST_PACK_PTR, toPack) );
+		return ret;
+	}
+	return args;
+}
+
+core::lang::OperatorPtr getOperator(const core::ASTBuilder& builder, core::TypePtr opTy, clang::BinaryOperatorKind opKind) {
+
+	std::ostringstream ss;
+	ss << opTy->getName() << ".";
+
+	switch(opKind) {
+	case BO_PtrMemD:
+	case BO_PtrMemI:
+		break;
+
+	case BO_Mul: ss << "mul"; break;
+	case BO_Div: ss << "div"; break;
+	case BO_Rem: ss << "mod"; break;
+	case BO_Add: ss << "add"; break;
+	case BO_Sub: ss << "sub"; break;
+	case BO_Shl: ss << "shl"; break;
+	case BO_Shr: ss << "shr"; break;
+
+	case BO_LT:	 ss << "lt"; break;
+	case BO_GT:  ss << "gt"; break;
+	case BO_LE:  ss << "le"; break;
+	case BO_GE:  ss << "ge"; break;
+	case BO_EQ:  ss << "eq"; break;
+	case BO_NE:	 ss << "ne"; break;
+
+	case BO_And: 	ss << "and"; break;
+	case BO_Xor: 	ss << "xor"; break;
+	case BO_Or:  	ss << "or"; break;
+	case BO_LAnd: 	ss << "land"; break;
+	case BO_LOr:  	ss << "lor"; break;
+
+	case BO_Assign:		ss << "assign"; break;
+	case BO_MulAssign:  ss << "mul.assign"; break;
+	case BO_DivAssign:  ss << "div.assign"; break;
+	case BO_RemAssign:  ss << "mod.assign"; break;
+	case BO_AddAssign:  ss << "add.assign"; break;
+	case BO_SubAssign:  ss << "sub.assign"; break;
+	case BO_ShlAssign:  ss << "shl.assign"; break;
+	case BO_ShrAssign:  ss << "shr.assign"; break;
+	case BO_AndAssign:  ss << "and.assign"; break;
+	case BO_XorAssign:  ss << "xor.assign"; break;
+	case BO_OrAssign:   ss << "or.assign"; break;
+
+	case BO_Comma:		ss << "comma"; break;
+
+	default:
+		assert(false && "Operator not supported");
+	}
+
+	// create Pair type
+	core::TupleType::ElementTypeList tupleTypeList = { opTy, opTy };
+	return builder.literal( ss.str(), builder.functionType(builder.tupleType(tupleTypeList), opTy));
+
+
+}
+
+
 } // End empty namespace
 
 
@@ -325,22 +412,18 @@ class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
 
 	// Map for resolved lambda functions
-	typedef std::map<const FunctionDecl*, ExprWrapper> LambdaExprMap;
+	typedef std::map<const FunctionDecl*, core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
 	DependencyGraph<const FunctionDecl*> funcDepGraph;
 
-
 	typedef std::map<const FunctionDecl*, core::VarExprPtr> RecVarExprMap;
 	RecVarExprMap recVarExprMap;
 	bool isRecSubType;
-
-	typedef std::map<const FunctionDecl*, core::TypePtr> RecTypeMap;
-	RecTypeMap recTypeCache;
-
+	core::VarExprPtr currVar;
 
 public:
-	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false) { }
+	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		return ExprWrapper(
@@ -363,10 +446,11 @@ public:
 	}
 
 	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
-		std::ostringstream ss;
-		ss << "\"" << stringLit->getString().str() << "\"";
 		// todo: Handle escape characters
-		return ExprWrapper( convFact.builder.literal(ss.str(), convFact.builder.genericType(core::Identifier("string"))) );
+		return ExprWrapper( convFact.builder.literal(
+				GetStringFromStream(convFact.clangCtx->getSourceManager(), stringLit->getExprLoc()),
+				convFact.builder.genericType(core::Identifier("string")))
+		);
 	}
 
 	// CXX Extension for boolean types
@@ -392,11 +476,14 @@ public:
 	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 		// the function is not extern, a lambdaExpr has to be created
 		assert(funcDecl->hasBody() && "Function has no body!");
+//		DLOG(INFO) << "Visiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
+//				   << "\t isRecSubType: " << isRecSubType << std::endl
+//				   << "\t empty map: " << recVarExprMap.size();
 
 		if(!isRecSubType) {
 			// add this type to the type graph (if not present)
 			funcDepGraph.addNode(funcDecl);
-			funcDepGraph.print( std::cout );
+//			funcDepGraph.print( std::cout );
 		}
 
 		// retrieve the strongly connected components for this type
@@ -407,27 +494,51 @@ public:
 			DLOG(INFO) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl <<
 						  "Number of components in the cycle: " << components.size();
 			std::for_each(components.begin(), components.end(),
-				[] (std::set<const FunctionDecl*>::value_type c) {
+				[ ] (std::set<const FunctionDecl*>::value_type c) {
 					DLOG(INFO) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
 				}
 			);
 
-			// we create a TypeVar for each type in the mutual dependence
-			recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
-					convFact.ConvertType( *funcDecl->getType().getTypePtr() ),
-					core::Identifier(funcDecl->getName())))
-			);
+			if(!isRecSubType) {
+				// we create a TypeVar for each type in the mutual dependence
+				recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
+						convFact.ConvertType( *funcDecl->getType().getTypePtr() ),
+						core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )))
+				);
+			} else {
+				// we expect the var name to be in currVar
+				recVarExprMap.insert(std::make_pair(funcDecl, currVar));
+			}
 
 			// when a subtype is resolved we aspect to already have these variables in the map
 			if(!isRecSubType) {
 				std::for_each(components.begin(), components.end(),
-					[ this ] (std::set<const FunctionDecl*>::value_type ty) {
-						// TODO: name cannot only rely on the function name but also, the number and type of the parameters has to be considered
-						this->recVarExprMap.insert( std::make_pair(ty,
-								this->convFact.builder.varExpr(convFact.ConvertType(*ty->getType().getTypePtr()), ty->getNameAsString())) );
+					[ this ] (std::set<const FunctionDecl*>::value_type fd) {
+
+						// we count how many variables in the map refers to overloaded versions of the same function
+						// this can happen when a function get overloaded and the cycle of recursion can happen between
+						// the overloaded version, we need unique variable for each version of the function
+						size_t num_of_overloads = std::count_if(this->recVarExprMap.begin(), this->recVarExprMap.end(),
+							[ &fd ] (RecVarExprMap::value_type curr) {
+								return fd->getName() == curr.first->getName();
+							} );
+
+						std::stringstream recVarName( boost::to_upper_copy(fd->getNameAsString()) );
+						if(num_of_overloads)
+							recVarName << num_of_overloads;
+
+						this->recVarExprMap.insert( std::make_pair(fd,
+								this->convFact.builder.varExpr(convFact.ConvertType(*fd->getType().getTypePtr()),recVarName.str())) );
 					}
 				);
 			}
+
+//			DLOG(INFO) << "MAP: ";
+//			std::for_each(recVarExprMap.begin(), recVarExprMap.end(),
+//				[] (RecVarExprMap::value_type c) {
+//					DLOG(INFO) << "\t" << c.first->getNameAsString() << "[" << (size_t) c.first << "]";
+//				}
+//			);
 		}
 
 //		// we lookup the lambda expr map to see if we already create a statement for this lambda expression
@@ -435,9 +546,9 @@ public:
 //		if( lit != lambdaExprCache.end() )
 //			return ExprWrapper( builder.callExpr(lit->second, args)  );
 
-		DLOG(INFO) << "CREATIGN LAMBDA: curr func: " << funcDecl->getNameAsString();
+//		DLOG(INFO) << "CREATIGN LAMBDA: curr func: " << funcDecl->getNameAsString();
 
-		core::LambdaExprPtr lambdaExpr( NULL );
+		core::ExpressionPtr retLambdaExpr( NULL );
 		// this lambda is not yet in the map, we need to create it and add it to the cache
 		core::StatementPtr body = convFact.ConvertStmt( *funcDecl->getBody() );
 
@@ -450,24 +561,24 @@ public:
 		);
 
 		const core::ASTBuilder& builder = convFact.builder;
-		lambdaExpr = builder.lambdaExpr( convFact.ConvertType( *funcDecl->getType().getTypePtr() ), params, body);
+		retLambdaExpr = builder.lambdaExpr( convFact.ConvertType( *funcDecl->getType().getTypePtr() ), params, body);
 
 		if( !components.empty() ) {
 			// this is a recurive function call
 			if(isRecSubType) {
 				// if we are visiting a nested recursive type it means someone else will take care
 				// of building the rectype node, we just return an intermediate type
-				return lambdaExpr;
+				return retLambdaExpr;
 			}
 
 			// we have to create a recursive type
-			funcDecl->dump();
+//			funcDecl->dump();
 			RecVarExprMap::const_iterator tit = recVarExprMap.find(funcDecl);
 			assert(tit != recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
 			core::VarExprPtr recVarRef = tit->second;
 
 			core::RecLambdaDefinition::RecFunDefs definitions;
-			definitions.insert( std::make_pair(recVarRef, lambdaExpr) );
+			definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
 
 			// We start building the recursive type. In order to avoid loop the visitor
 			// we have to change its behaviour and let him returns temporarely types
@@ -477,38 +588,32 @@ public:
 			std::for_each(components.begin(), components.end(),
 				[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
 
-					DLOG(INFO) <<"REC";
 					RecVarExprMap::const_iterator tit = recVarExprMap.find(fd);
 					assert(tit != recVarExprMap.end() && "Recursive function has no TypeVar associated");
-					core::VarExprPtr var = tit->second;
+					currVar = tit->second;
 
 					// we remove the variable from the list in order to fool the solver,
 					// in this way it will create a descriptor for this type (and he will not return the TypeVar
 					// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 					// flag is true
 					recVarExprMap.erase(fd);
-
-					definitions.insert( std::make_pair(var, core::dynamic_pointer_cast<const core::LambdaExpr>(this->VisitFunctionDecl(fd)) ) );
+					definitions.insert( std::make_pair(currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->VisitFunctionDecl(fd)) ) );
 
 					// reinsert the TypeVar in the map in order to solve the other recursive types
-					recVarExprMap.insert( std::make_pair(fd, var) );
+					recVarExprMap.insert( std::make_pair(fd, currVar) );
+					currVar = NULL;
 				}
 			);
 			// we reset the behavior of the solver
 			isRecSubType = false;
 			// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
-			// recVarExprMap.clear();
+			recVarExprMap.clear();
 
 			core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
-
-			return builder.recLambdaExpr(recVarRef, definition);
-
-			// Once we solved this recursive type, we add to a cache of recursive types
-			// so next time we encounter it, we don't need to compute the graph
-			// recTypeCache.insert(std::make_pair(tagType, retTy));
+			retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
 		}
 
-		return lambdaExpr;
+		return retLambdaExpr;
 	}
 
 	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
@@ -521,20 +626,34 @@ public:
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg).ref ); }
 			);
 
+			core::FunctionTypePtr funcTy =
+					core::dynamic_pointer_cast<const core::FunctionType>( convFact.ConvertType( *funcDecl->getType().getTypePtr() ) );
+
+			vector< core::ExpressionPtr >&& packedArgs = tryPack(convFact.builder, funcTy, args);
+
 			const FunctionDecl* definition = NULL;
 			if( !funcDecl->hasBody(definition) ) {
 				// in the case the function is extern, a literal is build
+
 				return ExprWrapper( convFact.builder.callExpr(
-						builder.literal( funcDecl->getNameAsString(), convFact.ConvertType( *funcDecl->getType().getTypePtr() ) ), args) );
+						builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs)
+				);
 			}
 
 			if(!recVarExprMap.empty()) {
 				// check if this type has a typevar already associated, in such case return it
-				RecVarExprMap::const_iterator fit = recVarExprMap.find(funcDecl);
+				RecVarExprMap::const_iterator fit = recVarExprMap.find(definition);
 				if( fit != recVarExprMap.end() ) {
+					// DLOG(INFO) << "Returning mapped var for function " << definition->getNameAsString();
 					// we are resolving a parent recursive type, so we shouldn't
-					return ExprWrapper( builder.callExpr(fit->second, args) );
+					return ExprWrapper( builder.callExpr(fit->second, packedArgs) );
 				}
+			}
+
+			if(!isRecSubType) {
+				LambdaExprMap::const_iterator fit = lambdaExprCache.find(definition);
+				if(fit != lambdaExprCache.end())
+					return fit->second;
 			}
 
 			assert(definition && "No definition found for function");
@@ -545,9 +664,7 @@ public:
 
 			// Adding the lambda function to the list of converted functions
 			lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
-
-			DLOG(INFO) << "LAMDA FUNC: " << lambdaExpr;
-			return ExprWrapper( builder.callExpr(lambdaExpr, args)  );
+			return ExprWrapper( builder.callExpr(lambdaExpr, packedArgs)  );
 		}
 		assert(false && "Call expression not referring a function");
 	}
@@ -562,7 +679,18 @@ public:
 		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
 
-	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  {
+		const core::ExpressionPtr& rhs = Visit(binOp->getRHS()).ref;
+		const core::ExpressionPtr& lhs = Visit(binOp->getLHS()).ref;
+
+		const core::TypePtr& exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
+
+		const core::lang::OperatorPtr& opFunc = getOperator(convFact.builder, exprTy, binOp->getOpcode());
+
+		// build a callExpr with the 2 arguments
+		return ExprWrapper( convFact.builder.callExpr(opFunc, { lhs, rhs }) );
+	}
+
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
 
@@ -1364,19 +1492,19 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), bui
 		stmtConv(new ClangStmtConverter(*this)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
+//	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
 //	type.dump();
 	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-	DLOG(INFO) << "Converting stmt:";
+//	DLOG(INFO) << "Converting stmt:";
 //	stmt.dump();
 	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
 }
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
-	DLOG(INFO) << "Converting expression:";
+//	DLOG(INFO) << "Converting expression:";
 //	expr.dump();
 	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
 }
@@ -1397,15 +1525,15 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			// finds a definition of this function if any
-			for(auto it = funcDecl->redecls_begin(), end = funcDecl->redecls_end(); it!=end; ++it)
-				if((*it)->isThisDeclarationADefinition())
-					funcDecl = (*it)->getCanonicalDecl();
+			const FunctionDecl* definition = NULL;
+			// if this function is just a declaration, and it has no definition, we just skip it
+			if(!funcDecl->hasBody(definition))
+				continue;
 
-			core::TypePtr funcType = fact.ConvertType( *funcDecl->getType().getTypePtr() );
-
+			core::TypePtr funcType = fact.ConvertType( *definition->getType().getTypePtr() );
 			// paramlist
 			core::LambdaExpr::ParamList funcParamList;
-			std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
+			std::for_each(definition->param_begin(), definition->param_end(),
 				[&funcParamList, &fact] (ParmVarDecl* currParam) {
 					funcParamList.push_back(
 						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
@@ -1413,21 +1541,18 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			);
 			// this is a function decl
 			core::StatementPtr funcBody(NULL);
-			if(funcDecl->getBody()) {
-				funcBody = fact.ConvertStmt( *funcDecl->getBody() );
+			assert(definition->getBody() && "Function Definition has no body");
 
-				core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
-
-				// annotate name of function
-				lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
-
-				if(funcDecl->isMain()) {
-					program = program->addEntryPoint(lambaExpr);
-					//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
-				}
+			funcBody = fact.ConvertStmt( *definition->getBody() );
+			core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+			// annotate name of function
+			lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
+			if(definition->isMain()) {
+				program = program->addEntryPoint(lambaExpr);
+				//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
 			}
-
 		}
+
 //		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 //			fact.ConvertType( *varDecl->getType().getTypePtr() );
 //		}

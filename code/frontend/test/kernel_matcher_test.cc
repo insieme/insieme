@@ -304,7 +304,7 @@ TEST(KernelMatcherTest, CheckBuildinVector) {
 
             //check the size of the vector
             if(evt->getTypeClass() == clang::Type::TypeClass::ExtVector)
-                EXPECT_EQ(4, evt->getNumElements());
+                EXPECT_EQ(static_cast<size_t>(4), evt->getNumElements());
 
             EXPECT_TRUE(evt->isAccessorWithinNumElements('w'));
         }
