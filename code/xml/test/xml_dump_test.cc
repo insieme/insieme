@@ -46,9 +46,9 @@ TEST(XmlTest, GenericTypeTest) {
 
 	NodePtr root = type2;
 
-	xmlWrite(root, "dump1.xml");
-	//xmlWrite(root);
+	//xmlWrite(root, "dump1.xml");
+	xmlWrite(root);
 	//getchar();
-	bool validate = true;
-	xmlRead("dump1.xml", validate);
+	//bool validate = true;
+	//xmlRead("dump1.xml", validate);
 }
