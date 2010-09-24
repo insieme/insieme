@@ -784,29 +784,29 @@ public:
 			return ExprWrapper(
 				// build a tuple expression
 				builder.tupleExpr(
-				{ 	// ref.assign(a int.add(a, 1))
+				std::vector<core::ExpressionPtr>( { 	// ref.assign(a int.add(a, 1))
 					builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
 						{
 							subExpr, // ref<a'> a
 							builder.callExpr(
 								( additive ? core::lang::OP_INT_ADD_PTR:core::lang::OP_INT_SUB_PTR ),
-									{ subExpr, core::lang::CONST_UINT_ONE_PTR }
+									std::vector<core::ExpressionPtr>({ subExpr, core::lang::CONST_UINT_ONE_PTR })
 							) // a - 1
 						}
 					),
 					(post ? // if is post increment/decrement
 						builder.callExpr(
 							( additive ? core::lang::OP_INT_SUB_PTR:core::lang::OP_INT_ADD_PTR ),
-							{
+							std::vector<core::ExpressionPtr>({
 								builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ), // ref.deref(a)
-								core::lang::CONST_UINT_ONE_PTR
-							}
+								core::lang::CONST_UINT_ONE_PTR // 1
+							})
 						)
 						: // else
 						builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} )
 					)
-				}
-			) ) ;
+				}))
+			) ;
 		// &a
 		case UO_AddrOf:
 		// *a
