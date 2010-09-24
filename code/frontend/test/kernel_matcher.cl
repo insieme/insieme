@@ -34,19 +34,13 @@
  * regarding third party software licenses.
  */
 
-//OpenCL definitions
-#define __private __attribute__((address_space(0))) //default value
-#define __local __attribute__((address_space(1)))
-#define __global __attribute__((address_space(2)))
-#define __constant __attribute__((address_space(3)))
+#include "../include/ocl/ocl_device.h"
 
-typedef int int4 __attribute__((ext_vector_type(4)));
-
-__attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
+__kernel __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
 {
-    __local float* b;
+    local float* b;
     __private int* d;
-    struct __attribute__((packed)) X
+    struct local __attribute__((packed)) X
     {
         int e[3] __attribute__((aligned(8)));
         const short s __attribute__((packed));
@@ -56,9 +50,13 @@ __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __con
     __attribute__((aligned(8))) int y;
 
     int4 t = {1, 2, 3, 4};
-    t.x = 5;
+
+    t.x = get_global_id(0);
     int o = t.s0;
     b[0] = a[0];
+
+    __private float fltarr[5];
+
 
     return;
 }
