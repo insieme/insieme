@@ -68,6 +68,16 @@ const char* addressSpaceStr[] = {
 
 // new version for __attribute((annotate("x")))
 
+class Addresses {
+public:
+    const llvm::StringRef Private;
+    const llvm::StringRef Local;
+    const llvm::StringRef Global;
+    const llvm::StringRef Constant;
+
+    Addresses() : Private("__private"), Local("__local"), Global("__global"), Constant("__constant") {};
+};
+
 enum AddressSpace {
         PRIVATE,
         LOCAL,
@@ -235,9 +245,10 @@ bool scanStruct(RecordDecl* decl){
 }
 
 void checkAddressSpace(const Attr* attr, unsigned int& matches){
+    Addresses addresses;
     //expected address spaces: GLOBAL, CONSTANT, LOCAL, PRIVATE
     llvm::StringRef expected[6] = {addrStr[GLOBAL], addrStr[CONSTANT], addrStr[LOCAL], addrStr[PRIVATE],
-            addrStr[LOCAL], addrStr[PRIVATE]};
+            addrStr[LOCAL], addresses.Private};
 
     const clang::AnnotateAttr* aa = (const AnnotateAttr*)attr;
     llvm::StringRef sr = aa->getAnnotation();
@@ -346,22 +357,25 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
     clang::ASTContext& ctx = TU->getCompiler().getASTContext();
     std::vector<clang::Type*> types = ctx.getTypes();
 
-//Check the size of the int4 variable
+//Check the size of the variable
 TEST(KernelMatcherTest, CheckBuildinVector) {
     for(size_t i = 0; i < types.size(); ++i)
     {
         clang::Type* t = types.at(i);
 
-        if(t->isVectorType())
+        if(t->isVectorType() && t->hasIntegerRepresentation())
         {
+
             clang::ExtVectorType* evt = (clang::ExtVectorType*)t;
-//            printf("found a vector %s: %d\n",t->getTypeClassName(), evt->isIntegerType());
-
+            clang::QualType qt = evt->getCanonicalTypeInternal();
+            qt.dump();
+            clang::ExtVectorType* evt2 = (clang::ExtVectorType*)(qt.getTypePtr());
+//            printf("------------>found a vector %s: %d\n",t->getTypeClassName(), evt2->getNumElements());
             //check the size of the vector
-            if(evt->getTypeClass() == clang::Type::TypeClass::ExtVector)
-                EXPECT_EQ(static_cast<unsigned>(4), evt->getNumElements());
+            if(evt->getTypeClass() == clang::Type::TypeClass::Typedef)
+                EXPECT_EQ(static_cast<unsigned int>(4), evt2->getNumElements());
 
-            EXPECT_TRUE(evt->isAccessorWithinNumElements('w'));
+//            EXPECT_TRUE(evt->isAccessorWithinNumElements('w'));
         }
     }
 }
@@ -419,6 +433,10 @@ TEST(KernelMatcherTest, ReadAttributes) {
 
             // Top-level Function declaration
             clang::FunctionDecl* func_decl = dyn_cast<clang::FunctionDecl>(*I);
+
+            //parse only the kernlel function kfct
+            if(!func_decl->getName().equals(llvm::StringRef("kfct")))
+                continue;
 
             //Function declaration should have RequiredWorkGroupSize(1,2,3) and annotate("__kernel") attribute
             EXPECT_TRUE(func_decl->hasAttrs());

@@ -34,29 +34,7 @@
  * regarding third party software licenses.
  */
 
-//OpenCL definitions
-/*#define __private __attribute__((address_space(0))) //default value
-#define private __attribute__((address_space(0)))
-#define __local __attribute__((address_space(1)))
-#define local __attribute__((address_space(1)))
-#define __global __attribute__((address_space(2)))
-#define global __attribute__((address_space(2)))
-#define __constant __attribute__((address_space(3)))
-#define constant __attribute__((address_space(3)))*/
-
-#define __private __attribute__((annotate("__private"))) //default value
-#define private __attribute__((annotate("__private")))
-#define __local __attribute__((annotate("__local")))
-#define local __attribute__((annotate("__local")))
-#define __global __attribute__((annotate("__global")))
-#define global __attribute__((annotate("__global")))
-#define __constant __attribute__((annotate("__constant")))
-#define constant __attribute__((annotate("__constant")))
-
-#define __kernel __attribute__((annotate("__kernel")))
-#define kernel __attribute__((annotate("__kernel")))
-
-typedef __attribute__((ext_vector_type(4))) int int4;
+#include "../include/ocl/ocl_device.h"
 
 __kernel __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
 {
@@ -72,7 +50,8 @@ __kernel __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float *
     __attribute__((aligned(8))) int y;
 
     int4 t = {1, 2, 3, 4};
-    t.x = 5;
+
+    t.x = get_global_id(0);
     int o = t.s0;
     b[0] = a[0];
 
