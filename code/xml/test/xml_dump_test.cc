@@ -48,4 +48,7 @@ TEST(XmlTest, GenericTypeTest) {
 
 	//xmlWrite(root, "dump1.xml");
 	xmlWrite(root);
+	//getchar();
+	//bool validate = true;
+	//xmlRead("dump1.xml", validate);
 }

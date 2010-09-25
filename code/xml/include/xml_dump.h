@@ -49,7 +49,6 @@ namespace core {
 class XmlWriter : public ASTVisitor<void> {
 
 public:
-	//std::ostream& xmlStream;
 	xercesc::DOMImplementation* impl;
 	xercesc::DOMDocument* doc;
 	xercesc::DOMElement* rootElem;
@@ -69,7 +68,23 @@ public:
 	void visitRefType(const RefTypePtr& cur);
 };
 
+class XmlReader {
+
+public:
+	//xercesc::DOMImplementation* impl;
+	//xercesc::DOMDocument* doc;
+	//xercesc::DOMElement* rootElem;
+	//std::string outputFile;
+
+public:
+	XmlReader(const std::string fileName, const bool validate);
+	
+	~XmlReader();
+};
+
 void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
+
+void xmlRead(const std::string fileName, const bool validate);
 
 } // end namespace core
 } // end namespace insieme

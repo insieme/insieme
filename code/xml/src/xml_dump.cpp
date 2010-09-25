@@ -34,12 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include <xercesc/util/PlatformUtils.hpp>
-#include <xercesc/util/XMLString.hpp>
 #include <xercesc/dom/DOM.hpp>
+#include <xercesc/util/XMLString.hpp>
+#include <xercesc/util/PlatformUtils.hpp>
 #include <xercesc/util/OutOfMemoryException.hpp>
 #include <xercesc/framework/StdOutFormatTarget.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/parsers/XercesDOMParser.hpp>
+#include <xercesc/sax/HandlerBase.hpp>
+
+// DELETE
+#include <xercesc/util/XMLUni.hpp>
+//
+
+
 
 #include "xml_dump.h"
 
@@ -71,7 +79,10 @@ public:
 
 }
 
-//XmlWriter::XmlWriter(ostream& stream) : xmlStream (stream) {
+
+
+// ------------------------------------ XmlWriter ---------------------------
+
 XmlWriter::XmlWriter(const string fileName) : outputFile (fileName) {
 	try {
 		XMLPlatformUtils::Initialize();
@@ -93,9 +104,11 @@ XmlWriter::~XmlWriter() {
 	DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
 	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
 	
+	theOutputDesc->setEncoding(toUnicode("ISO-8859-1"));
+	
 	if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
-           serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-
+		serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
+		
 	XMLFormatTarget* myFormTarget = NULL;
 	if (!outputFile.empty()){
 		myFormTarget=new LocalFileFormatTarget(outputFile.c_str());
@@ -109,7 +122,8 @@ XmlWriter::~XmlWriter() {
 	
 	theOutputDesc->release();
 	theSerializer->release();
-
+	delete myFormTarget;
+	
 	doc->release();
 	XMLPlatformUtils::Terminate();
 }
@@ -179,7 +193,89 @@ void XmlWriter::visitArrayType(const ArrayTypePtr& cur) {
 void XmlWriter::visitRefType(const RefTypePtr& cur) {
 }
 
+
+// ------------------------------------ XmlReader ---------------------------
+
+XmlReader::XmlReader(const std::string fileName, const bool validate){
+	XMLPlatformUtils::Initialize();
+	bool error = false;
+	XercesDOMParser *parser = new XercesDOMParser;
+	if (parser) {
+		parser->setValidationScheme(XercesDOMParser::Val_Auto);
+		parser->setDoNamespaces(false);
+		parser->setDoSchema(false);
+		
+		parser->setCreateEntityReferenceNodes(false);
+		try	{
+			parser->parse(fileName.c_str());
+			error = parser->getErrorCount() != 0;
+			if (error) {
+				std::cerr << "Parsing " << fileName.c_str();
+				std::cerr << " error count: " << error << std::endl;
+			}
+		}
+		catch (const DOMException& e) {
+			std::cerr << "DOM Exception parsing ";
+			std::cerr << " reports: ";
+			if (e.msg) {
+				char *strMsg = XMLString::transcode(e.msg);
+				std::cerr << strMsg << std::endl;
+				XMLString::release(&strMsg);
+			}
+	  		else {
+				std::cerr << e.code << std::endl;
+			}
+			error = true;
+		}
+		catch (const XMLException& e) {
+			std::cerr << "XML Exception parsing ";
+			std::cerr << fileName.c_str();
+			std::cerr << " reports: ";
+			std::cerr << e.getMessage() << std::endl;
+			error = true;
+		}
+		catch (const SAXException& e) {
+			std::cerr << "SAX Exception parsing ";
+			std::cerr << fileName.c_str();
+			std::cerr << " reports: ";
+			std::cerr << e.getMessage() << std::endl;
+			error = true;
+		}
+		catch (...) {
+			std::cerr << "An exception parsing ";
+			std::cerr << fileName.c_str() << std::endl;
+		 	error = true;
+		}
+		if (!error) {
+			DOMNode* doc = parser->getDocument();
+			XMLCh tempStr[3] = {chLatin_L, chLatin_S, chNull};
+			DOMImplementation *impl          = DOMImplementationRegistry::getDOMImplementation(tempStr);
+			DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
+			DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
+
+			XMLFormatTarget* myFormTarget = new StdOutFormatTarget();
+			theOutputDesc->setByteStream(myFormTarget);
+	
+			theSerializer->write(doc, theOutputDesc);
+			theOutputDesc->release();
+			theSerializer->release();
+		}
+	}
+	XMLPlatformUtils::Terminate();
+}
+
+XmlReader::~XmlReader(){}
+
+
+
+
+// -------------------------Xml Write - Read - Validate----------------------
+
 void insieme::core::xmlWrite(const NodePtr& root, const std::string fileName){
 	XmlWriter visitor(fileName);
 	visitAllOnce(root, visitor);
+};
+
+void insieme::core::xmlRead(const std::string fileName, const bool validate){
+	XmlReader reader(fileName, validate);
 };

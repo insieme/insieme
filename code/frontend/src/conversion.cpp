@@ -109,13 +109,13 @@ insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder)
 // unfortunately clang only keeps the location of the beginning of the literal
 // so the end has to be found manually
 std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
-	DLOG(INFO) << insieme::frontend::util::Column(start, srcMgr);
-	std::pair<FileID, unsigned> startLocInfo = srcMgr.getDecomposedLoc( start);
-
+	// we use the getDecomposedSpellingLoc() method because in case we read macros values
+	// we have to read the expanded value
+	std::pair<FileID, unsigned> startLocInfo = srcMgr.getDecomposedSpellingLoc(start);
 	llvm::StringRef startBuffer = srcMgr.getBufferData(startLocInfo.first);
 	const char *strDataStart = startBuffer.begin() + startLocInfo.second;
 //	DLOG(INFO) << "VALUE: " << string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
-	return string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
+	return string(strDataStart, clang::Lexer::MeasureTokenLength(srcMgr.getSpellingLoc(start), srcMgr, clang::LangOptions()));
 }
 
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
@@ -344,62 +344,14 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 	return args;
 }
 
-core::lang::OperatorPtr getOperator(const core::ASTBuilder& builder, core::TypePtr opTy, clang::BinaryOperatorKind opKind) {
-
-	std::ostringstream ss;
-	ss << opTy->getName() << ".";
-
-	switch(opKind) {
-	case BO_PtrMemD:
-	case BO_PtrMemI:
-		break;
-
-	case BO_Mul: ss << "mul"; break;
-	case BO_Div: ss << "div"; break;
-	case BO_Rem: ss << "mod"; break;
-	case BO_Add: ss << "add"; break;
-	case BO_Sub: ss << "sub"; break;
-	case BO_Shl: ss << "shl"; break;
-	case BO_Shr: ss << "shr"; break;
-
-	case BO_LT:	 ss << "lt"; break;
-	case BO_GT:  ss << "gt"; break;
-	case BO_LE:  ss << "le"; break;
-	case BO_GE:  ss << "ge"; break;
-	case BO_EQ:  ss << "eq"; break;
-	case BO_NE:	 ss << "ne"; break;
-
-	case BO_And: 	ss << "and"; break;
-	case BO_Xor: 	ss << "xor"; break;
-	case BO_Or:  	ss << "or"; break;
-	case BO_LAnd: 	ss << "land"; break;
-	case BO_LOr:  	ss << "lor"; break;
-
-	case BO_Assign:		ss << "assign"; break;
-	case BO_MulAssign:  ss << "mul.assign"; break;
-	case BO_DivAssign:  ss << "div.assign"; break;
-	case BO_RemAssign:  ss << "mod.assign"; break;
-	case BO_AddAssign:  ss << "add.assign"; break;
-	case BO_SubAssign:  ss << "sub.assign"; break;
-	case BO_ShlAssign:  ss << "shl.assign"; break;
-	case BO_ShrAssign:  ss << "shr.assign"; break;
-	case BO_AndAssign:  ss << "and.assign"; break;
-	case BO_XorAssign:  ss << "xor.assign"; break;
-	case BO_OrAssign:   ss << "or.assign"; break;
-
-	case BO_Comma:		ss << "comma"; break;
-
-	default:
-		assert(false && "Operator not supported");
-	}
-
-	// create Pair type
-	core::TupleType::ElementTypeList tupleTypeList = { opTy, opTy };
-	return builder.literal( ss.str(), builder.functionType(builder.tupleType(tupleTypeList), opTy));
-
-
+std::string getOperationType(const core::TypePtr& type) {
+	using namespace core::lang;
+	if(isIntType(*type)) 	return "int";
+	if(isUIntType(*type))	return "uint";
+	if(isBoolType(*type))	return "bool";
+	if(isRealType(*type))	return "real";
+	assert(false && "Type not supported");
 }
-
 
 } // End empty namespace
 
@@ -426,6 +378,7 @@ public:
 	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
+		intLit->dump();
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(
@@ -469,8 +422,17 @@ public:
 		);
 	}
 
+	ExprWrapper VisitParenExpr(clang::ParenExpr* parExpr) {
+		return Visit( parExpr->getSubExpr() );
+	}
+
 	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
-		return ExprWrapper( convFact.builder.castExpr( convFact.ConvertType( *castExpr->getType().getTypePtr() ), Visit(castExpr->getSubExpr()).ref ) );
+		core::TypePtr type = convFact.ConvertType( *castExpr->getType().getTypePtr() );
+		DLOG(INFO) << "CAST type: " << type;
+		core::ExpressionPtr subExpr = Visit(castExpr->getSubExpr()).ref;
+		castExpr->getSubExpr()->dump();
+		DLOG(INFO) << "CAST subExpr " << subExpr;
+		return ExprWrapper( convFact.builder.castExpr( type, subExpr ) );
 	}
 
 	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
@@ -680,25 +642,206 @@ public:
 	}
 
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  {
-		const core::ExpressionPtr& rhs = Visit(binOp->getRHS()).ref;
+		const core::ASTBuilder& builder = convFact.builder;
+
+		core::ExpressionPtr rhs = Visit(binOp->getRHS()).ref;
 		const core::ExpressionPtr& lhs = Visit(binOp->getLHS()).ref;
 
-		const core::TypePtr& exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
+		// if the binary operator is a comma separated expression, we convert it into
+		// a tuple expression and return it
+		if( binOp->getOpcode() == BO_Comma)
+			return ExprWrapper( builder.tupleExpr({ lhs, rhs }) );
 
-		const core::lang::OperatorPtr& opFunc = getOperator(convFact.builder, exprTy, binOp->getOpcode());
+		core::TypePtr exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
+
+		// create Pair type
+		core::TupleTypePtr tupleTy = builder.tupleType( { exprTy, exprTy } );
+		std::string opType = getOperationType(exprTy);
+
+		// we take care of compound operators first,
+		// we rewrite the RHS expression in a normal form, i.e.:
+		// a op= b  ---->  a = a op b
+		std::string op;
+		switch( binOp->getOpcode() ) {
+		// a *= b
+		case BO_MulAssign: op = "mul"; break;
+		// a /= b
+		case BO_DivAssign: op = "div"; break;
+		// a %= b
+		case BO_RemAssign: op = "mod"; break;
+		// a += b
+		case BO_AddAssign: op = "add"; break;
+		// a -= b
+		case BO_SubAssign: op = "sub"; break;
+		// a <<= b
+		case BO_ShlAssign: op = "shl"; break;
+		// a >>= b
+		case BO_ShrAssign: op = "shr"; break;
+		// a &= b
+		case BO_AndAssign: op = "and"; break;
+		// a |= b
+		case BO_OrAssign: op = "or"; break;
+		// a ^= b
+		case BO_XorAssign: op = "xor"; break;
+		default:
+			break;
+		}
+
+		if( !op.empty() ) {
+			// The operator is a compound operator, we substitute the RHS expression with the expanded one
+			const core::lang::OperatorPtr& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
+			rhs = builder.callExpr(opFunc, { lhs, rhs });
+		}
+
+		switch( binOp->getOpcode() ) {
+		case BO_PtrMemD:
+		case BO_PtrMemI:
+			assert(false && "Operator not yet supported!");
+
+		// a * b
+		case BO_Mul: 	op = "mul";  break;
+		// a / b
+		case BO_Div: 	op = "div";  break;
+		// a % b
+		case BO_Rem: 	op = "mod";  break;
+		// a + b
+		case BO_Add: 	op = "add";  break;
+		// a - b
+		case BO_Sub: 	op = "sub";  break;
+		// a << b
+		case BO_Shl: 	op = "shl";  break;
+		// a >> b
+		case BO_Shr: 	op = "shr";  break;
+		// a & b
+		case BO_And: 	op = "and";  break;
+		// a ^ b
+		case BO_Xor: 	op = "xor";  break;
+		// a | b
+		case BO_Or:  	op = "or"; 	 break;
+
+		// Logic operators
+
+		// a && b
+		case BO_LAnd: 	op = "land"; break;
+		// a || b
+		case BO_LOr:  	op = "lor";  break;
+		// a < b
+		case BO_LT:	 	op = "lt";   break;
+		// a > b
+		case BO_GT:  	op = "gt";   break;
+		// a <= b
+		case BO_LE:  	op = "le";   break;
+		// a >= b
+		case BO_GE:  	op = "ge";   break;
+		// a == b
+		case BO_EQ:  	op = "eq";   break;
+		// a != b
+		case BO_NE:	 	op = "ne";   break;
+
+		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
+		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
+		case BO_Assign:
+			DLOG(INFO) << lhs->getType();
+			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			exprTy = lhs->getType();
+			opType = "ref";
+			op = "assign"; break;
+
+		default:
+			assert(false && "Operator not supported");
+		}
+
+		const core::lang::OperatorPtr& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
 		// build a callExpr with the 2 arguments
 		return ExprWrapper( convFact.builder.callExpr(opFunc, { lhs, rhs }) );
 	}
 
-	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) { return ExprWrapper(EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) {
+		const core::ASTBuilder& builder = convFact.builder;
+		core::ExpressionPtr subExpr = Visit(unOp->getSubExpr()).ref;
+
+		bool additive = false;
+		bool post = false;
+		switch(unOp->getOpcode()) {
+		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
+		// a++ ==> (a=a+1, a-1) // FIXME? Does it need to be ATOMIC?
+		// a-- ==> (a=a-1, a+1)
+		// a++
+		case UO_PostInc:
+			additive = true;
+		// a--
+		case UO_PostDec:
+			post = true;
+
+		// ++a
+		case UO_PreInc:
+			additive = true;
+		// --a
+		case UO_PreDec:
+			assert( core::dynamic_pointer_cast<const core::RefType>(subExpr->getType()) && "LHS operand must of type ref<a'>." );
+			return ExprWrapper(
+				// build a tuple expression
+				builder.tupleExpr(
+				std::vector<core::ExpressionPtr>( { 	// ref.assign(a int.add(a, 1))
+					builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
+						std::vector<core::ExpressionPtr>({
+							subExpr, // ref<a'> a
+							builder.callExpr(
+								( additive ? core::lang::OP_INT_ADD_PTR:core::lang::OP_INT_SUB_PTR ),
+									std::vector<core::ExpressionPtr>({ subExpr, core::lang::CONST_UINT_ONE_PTR })
+							) // a - 1
+						})
+					),
+					(post ? // if is post increment/decrement
+						builder.callExpr(
+							( additive ? core::lang::OP_INT_SUB_PTR:core::lang::OP_INT_ADD_PTR ),
+							std::vector<core::ExpressionPtr>({
+								builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ), // ref.deref(a)
+								core::lang::CONST_UINT_ONE_PTR // 1
+							})
+						)
+						: // else
+						builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} )
+					)
+				}))
+			) ;
+		// &a
+		case UO_AddrOf:
+		// *a
+		case UO_Deref:
+
+		// +a
+		case UO_Plus:
+		// -a
+		case UO_Minus:
+		// ~a
+		case UO_Not:
+		// !a
+		case UO_LNot:
+
+		case UO_Real:
+		case UO_Imag:
+		case UO_Extension:
+		default:
+			assert(false && "Unary operator not supported");
+		}
+		return ExprWrapper( subExpr );
+	}
+
+
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
 
 	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		const core::ASTBuilder& builder = convFact.builder;
 		// check whether this is a reference to a variable
-		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
-			core::TypePtr&& varTy = convFact.ConvertType( *declRef->getType().getTypePtr() );
+		if(Decl* varDecl = declRef->getDecl()) {
+			core::TypePtr varTy = convFact.ConvertType( *declRef->getType().getTypePtr() );
+			// FIXME: is this correct?
+			if(!core::dynamic_pointer_cast<const core::RefType>(varTy))
+				varTy = builder.refType(varTy);
+
 			core::Identifier id( declRef->getDecl()->getNameAsString() );
 			// if this variable is declared in a method signature
 			if(isa<ParmVarDecl>(varDecl)) {
@@ -726,7 +869,10 @@ public:
 
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
-		core::TypePtr type = convFact.ConvertType( *varDecl->getType().getTypePtr() );
+
+		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'>
+		// successive dataflow analysis could be used to restrict the access to this variable
+		core::TypePtr type = convFact.builder.refType( convFact.ConvertType( *varDecl->getType().getTypePtr() ) );
 
 		// initialization value
 		core::ExpressionPtr initExpr(NULL);
@@ -742,7 +888,7 @@ public:
 				initExpr = convFact.builder.literal("0", type);
 			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
 				// initialize pointer/reference types with the null value
-				//todo
+				initExpr = core::lang::CONST_NULL_PTR_PTR;
 			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
 				//todo
 			} else if ( ty.isBooleanType() ) {
@@ -852,7 +998,7 @@ public:
 
 		LOG(INFO) << "ForStmt initExpr: " << initExpr;
 
-		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr.getSingleStmt());
+		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 		assert(declStmt && "Falied loop init expression conversion");
 		retStmt.push_back( builder.forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref) );
 		if(retStmt.size() == 1)
@@ -1081,9 +1227,7 @@ public:
 	FORWARD_VISITOR_CALL(CallExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
-		std::for_each( stmt->child_begin(), stmt->child_end(),
-			[ this ] (Stmt* stmt) { this->Visit(stmt); }
-		);
+		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });
 		return StmtWrapper();
 	}
 };
@@ -1492,19 +1636,19 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), bui
 		stmtConv(new ClangStmtConverter(*this)) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-//	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
+	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
 //	type.dump();
 	return typeConv->Visit(const_cast<Type*>(&type)).ref;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-//	DLOG(INFO) << "Converting stmt:";
+	DLOG(INFO) << "Converting stmt:";
 //	stmt.dump();
 	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
 }
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
-//	DLOG(INFO) << "Converting expression:";
+	DLOG(INFO) << "Converting expression:";
 //	expr.dump();
 	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
 }
