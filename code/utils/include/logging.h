@@ -34,64 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include "utils/source_locations.h"
+#pragma once
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
+#include <glog/logging.h>
+#include "cmd_line_utils.h"
 
-#include <clang/Basic/SourceLocation.h>
-#include <clang/Basic/SourceManager.h>
-#include <sstream>
+using namespace google;
 
-using namespace std;
-using namespace clang;
+// we remove the Google Log DVLOG and VLOG macro
+#undef VLOG
+#undef DVLOG
+#undef VLOG_IS_ON
+
+#define VLOG(level) 		LOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
+#define DVLOG(level) 		DLOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
+
+#define VLOG_IS_ON(level) 	( (level) <= CommandLineOptions::Verbosity )
 
 namespace insieme {
-namespace frontend {
-namespace util {
+namespace utils {
 
-string FileName(SourceLocation const& l, SourceManager const& sm) {
-	PresumedLoc pl = sm.getPresumedLoc(l);
-	return string(pl.getFilename());
-}
+void InitLogger(char* progName, google::LogSeverity level, bool enableFailureHandler);
 
-string FileId(SourceLocation const& l, SourceManager const& sm) {
-	string fn = FileName(l, sm);
-	for(size_t i=0; i<fn.length(); ++i)
-		switch(fn[i]) {
-			case '/':
-			case '\\':
-			case '>':
-			case '.':
-				fn[i] = '_';
-		}
-	return fn;
-}
-
-unsigned Line(SourceLocation const& l, SourceManager const& sm) {
-	PresumedLoc pl = sm.getPresumedLoc(l);
-	return pl.getLine();
-}
-
-std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, SourceManager const& sm) {
-	return std::make_pair(Line(r.getBegin(), sm), Line(r.getEnd(), sm));
-}
-
-unsigned Column(SourceLocation const& l, SourceManager const& sm) {
-	PresumedLoc pl = sm.getPresumedLoc(l);
-	return pl.getColumn();
-}
-
-std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager const& sm) {
-	return std::make_pair(Column(r.getBegin(), sm), Column(r.getEnd(), sm));
-}
-
-std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm) {
-	std::ostringstream ss;
-	ss << FileName(l, sm) << ":" << Line(l,sm) << ":" << Column(l,sm);
-	return ss.str();
-}
-
-} // End util namespace
-} // End frontend namespace
+} // End utils namespace
 } // End insieme namespace

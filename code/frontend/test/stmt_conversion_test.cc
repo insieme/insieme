@@ -55,7 +55,6 @@ TEST(StmtConversion, HandleIntegerLiterals) {
 	ProgramPtr prog = Program::create();
 	ConversionFactory convFactory( prog->getNodeManager() );
 
-
 }
 
 TEST(TypeConversion, HandleForStmt) {

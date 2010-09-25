@@ -44,7 +44,6 @@
 #include "clang_config.h"
 
 #include "omp/omp_pragma.h"
-#include <iostream>
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"

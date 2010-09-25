@@ -60,6 +60,8 @@ unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
 std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
 
+std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm);
+
 } // End util namespace
 } // End frontend namespace
 } // End insieme namespace
