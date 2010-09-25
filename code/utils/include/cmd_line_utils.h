@@ -48,9 +48,12 @@ struct CommandLineOptions {
 	static bool var_name;
 #define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 	static var_type var_name;
+#define INT_OPTION(opt_name, opt_id, var_name, def_value, var_help) \
+	static int var_name;
 #include "options.inc"
 #undef FLAG
 #undef OPTION
+#undef INT_OPTION
 	// avoid constructing instances of CommandLineOptions
 	CommandLineOptions() { }
 public:

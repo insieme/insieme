@@ -35,11 +35,9 @@
  */
 
 #include <sstream>
-
-#include <glog/logging.h>
-
 #include <memory>
 
+#include "logging.h"
 #include "conversion.h"
 
 #include "utils/types_lenght.h"
@@ -378,7 +376,6 @@ public:
 	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
-		intLit->dump();
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(
@@ -427,25 +424,25 @@ public:
 	}
 
 	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
-		core::TypePtr type = convFact.ConvertType( *castExpr->getType().getTypePtr() );
-		DLOG(INFO) << "CAST type: " << type;
-		core::ExpressionPtr subExpr = Visit(castExpr->getSubExpr()).ref;
-		castExpr->getSubExpr()->dump();
-		DLOG(INFO) << "CAST subExpr " << subExpr;
+		const core::TypePtr& type = convFact.ConvertType( *castExpr->getType().getTypePtr() );
+		const core::ExpressionPtr& subExpr = Visit(castExpr->getSubExpr()).ref;
 		return ExprWrapper( convFact.builder.castExpr( type, subExpr ) );
 	}
 
 	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 		// the function is not extern, a lambdaExpr has to be created
 		assert(funcDecl->hasBody() && "Function has no body!");
-//		DLOG(INFO) << "Visiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
-//				   << "\t isRecSubType: " << isRecSubType << std::endl
-//				   << "\t empty map: " << recVarExprMap.size();
+
+		DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
+				 << "\tIsRecSubType: " << isRecSubType << std::endl
+				 << "\tEmpty map: "    << recVarExprMap.size();
 
 		if(!isRecSubType) {
 			// add this type to the type graph (if not present)
 			funcDepGraph.addNode(funcDecl);
-//			funcDepGraph.print( std::cout );
+			if( VLOG_IS_ON(2) ) {
+				funcDepGraph.print( std::cout );
+			}
 		}
 
 		// retrieve the strongly connected components for this type
@@ -453,11 +450,11 @@ public:
 
 		if( !components.empty() ) {
 			// we are dealing with a recursive type
-			DLOG(INFO) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl <<
-						  "Number of components in the cycle: " << components.size();
+			DVLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
+					 << "Number of components in the cycle: " << components.size();
 			std::for_each(components.begin(), components.end(),
 				[ ] (std::set<const FunctionDecl*>::value_type c) {
-					DLOG(INFO) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+					DVLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
 				}
 			);
 
@@ -741,7 +738,6 @@ public:
 		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
-			DLOG(INFO) << lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
@@ -829,7 +825,6 @@ public:
 		}
 		return ExprWrapper( subExpr );
 	}
-
 
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
 
@@ -1625,32 +1620,49 @@ private:
 		}
 		assert(false && "TagType not supported");
 	}
-
 };
 
 // ------------------------------------ ConversionFactory ---------------------------
 
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), builder(mgr),
-		typeConv(new ClangTypeConverter(*this)),
-		exprConv(new ClangExprConverter(*this)),
-		stmtConv(new ClangStmtConverter(*this)) { }
+		typeConv( new ClangTypeConverter(*this) ),
+		exprConv( new ClangExprConverter(*this) ),
+		stmtConv( new ClangStmtConverter(*this) ) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-	DLOG(INFO) << "Converting type of class:" << type.getTypeClassName();
-//	type.dump();
-	return typeConv->Visit(const_cast<Type*>(&type)).ref;
+	DVLOG(1) << "Start converting type of class: '" << type.getTypeClassName() << "']:";
+	if( VLOG_IS_ON(2) ) {
+		DVLOG(2) << "Dump of clang type: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		type.dump();
+	}
+	core::TypePtr ty = typeConv->Visit(const_cast<Type*>(&type)).ref;
+	DVLOG(1) << "Converted into insieme 'type': ";
+	DVLOG(1) << "\t" << *ty;
+	return ty;
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-	DLOG(INFO) << "Converting stmt:";
-//	stmt.dump();
-	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
+	DVLOG(1) << "Start converting statement [class: '" << stmt.getStmtClassName() << "']:";
+	if( VLOG_IS_ON(2) ) {
+		DVLOG(2) << "Dump of clang statement: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		stmt.dump();
+	}
+	core::StatementPtr s = stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
+	DVLOG(1) << "Converted into insieme 'statement': ";
+	DVLOG(1) << "\t" << *s;
+	return s;
 }
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
-	DLOG(INFO) << "Converting expression:";
-//	expr.dump();
-	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
+	DVLOG(1) << "Start converting expression [class: '" << expr.getStmtClassName() << "']:";
+	if( VLOG_IS_ON(2) ) {
+		DVLOG(2) << "Dump of clang expression: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		expr.dump();
+	}
+	core::ExpressionPtr e = exprConv->Visit(const_cast<Expr*>(&expr)).ref;
+	DVLOG(1) << "Converted into insieme 'expression': ";
+	DVLOG(1) << "\t" << *e;
+	return e;
 }
 
 ConversionFactory::~ConversionFactory() {
@@ -1668,11 +1680,17 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+			DVLOG(1) << "##########################################################################";
+			DVLOG(1) << "## Encountred function declaration '" << funcDecl->getNameAsString() << "': "
+					 << frontend::util::location( funcDecl->getLocStart(), mCtx->getSourceManager() );
+
 			// finds a definition of this function if any
 			const FunctionDecl* definition = NULL;
 			// if this function is just a declaration, and it has no definition, we just skip it
 			if(!funcDecl->hasBody(definition))
 				continue;
+
+			DVLOG(1) << "\t* Converting body";
 
 			core::TypePtr funcType = fact.ConvertType( *definition->getType().getTypePtr() );
 			// paramlist
