@@ -120,27 +120,8 @@ if (NOT MEMORY_CHECK_SETUP)
 		else(CONDUCT_MEMORY_CHECKS)
 			# add normal test
 			add_test(ut_${case_name} ut_${case_name})
-
-			# no valgrind support in MSVC
-			if(NOT MSVC)
-				# add valgrind as seperated target
-				add_custom_target(valgrind_${case_name})
-				add_custom_command(TARGET valgrind_${case_name} 
-					COMMAND valgrind
-						--leak-check=full
-						--show-reachable=yes
-						--track-fds=yes
-						--error-exitcode=1
-						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
-					WORKING_DIRECTORY
-						${CMAKE_CURRENT_BINARY_DIR}
-				)
-				add_dependencies(valgrind valgrind_${case_name})
-			endif(NOT MSVC)
 		endif(CONDUCT_MEMORY_CHECKS)
 	endmacro(add_unit_test)
-
 
 endif (NOT MEMORY_CHECK_SETUP)
 
