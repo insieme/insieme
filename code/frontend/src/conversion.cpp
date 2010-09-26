@@ -42,6 +42,8 @@
 
 #include "utils/types_lenght.h"
 #include "utils/source_locations.h"
+#include "utils/dep_graph.h"
+
 #include "program.h"
 #include "ast_node.h"
 #include "types.h"
@@ -55,10 +57,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
-
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graphviz.hpp>
-#include <boost/graph/strong_components.hpp>
 
 #include <boost/algorithm/string.hpp>
 
@@ -123,197 +121,8 @@ core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vect
 	return builder.compoundStmt(stmtVect);
 }
 
-std::ostream& operator<<(std::ostream& out, const FunctionDecl* funcDecl) {
-	return out << funcDecl->getNameAsString() << "(" << funcDecl->param_size() << ")";
-}
-
-std::ostream& operator<<(std::ostream& out, const Type* type) {
-	if(const TagType* tagType = dyn_cast<const TagType>(type))
-		return out << tagType->getDecl()->getNameAsString();
-	return out;
-}
-
-
-template <class T>
-class DependencyGraph {
-
-	struct NodeTy {
-		typedef vertex_property_tag kind;
-	};
-
-	template <class NodeTy>
-	class label_writer {
-	public:
-		label_writer(NodeTy node) : node(node) { }
-
-		template <class VertexOrEdge>
-		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=\"" << node[v] << "\"]";
-		}
-	private:
-		NodeTy node;
-	};
-
-
-public:
-	typedef property<NodeTy, T> NodeProperty;
-	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty> NodeDepGraph;
-
-	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor VertexTy;
-	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor EdgeTy;
-
-	DependencyGraph(): dirtyFlag(true), numComponents(0) { }
-
-	/**
-	 * Finds the node inside the graph and returns the vertex id used to identify this node
-	 */
-	std::pair<bool,VertexTy> find(const T& type) const {
-		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
-
-		typename boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
-		boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph);
-		auto fit = std::find_if(vertCurrIt, vertEndIt,
-				[ type, &node ] (VertexTy v) {
-					return node[v] == type;
-				});
-		if(fit != vertEndIt)
-			return std::make_pair(true,*fit);
-		return std::make_pair(false,0);
-	}
-
-	VertexTy addNode(const T& type, const VertexTy* parent = NULL ) {
-		auto&& fit = find(type);
-		if(fit.first) {
-			// node was found
-			if(parent)
-				boost::add_edge(*parent, fit.second, graph);
-			return fit.second;
-		}
-
-		// this node is not inside the graph, we have to add it
-		VertexTy v = boost::add_vertex(graph);
-		if(parent) {
-			// we have to add an edge between this node and the parent
-			boost::add_edge(*parent, v, graph);
-		}
-		dirtyFlag = true;
-		typename boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
-		boost::put(node, v, type);
-		Handle(type, v);
-
-		return v;
-	}
-
-	std::set<T> getStronglyConnectedComponents(const T& t) {
-		auto&& fit = find(t);
-		assert(fit.first && "Type node is not in the graph");
-
-		VertexTy v = fit.second;
-
-		// We update the information of strongly connected components in the case the graph has been changed
-		if(dirtyFlag)
-			updateStrongComponents();
-
-		// We return a set of Types which are connected with the input type t
-		std::set<T> ret;
-		typename boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
-		for (std::vector<size_t>::size_type i = 0, e = strongComponents.size(); i != e; ++i)
-			// we have check if the two nodes are in the same component
-			if((i != v && strongComponents[i] == strongComponents[v]) || (i == v && boost::edge(v, v, graph).second)) {
-				// in the case we are comparing the same node, we add it to the result only if there is an explicit
-				// link from the node to itself
-				ret.insert(node[i]);
-			}
-
-		return ret;
-	}
-
-	void print(std::ostream& out) const {
-		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
-		boost::write_graphviz(out, graph, label_writer<typename boost::property_map<NodeDepGraph, NodeTy>::const_type>(node));
-	}
-
-private:
-
-	/**
-	 * Calls the boost::strong_component() algorithm on the graph, this should be done only if the graph has been changed (thus
-	 * the dirtyFlag is true).
-	 */
-	void updateStrongComponents() {
-		strongComponents.resize( num_vertices(graph) );
-		rootMap.resize( num_vertices(graph) );
-		numComponents = boost::strong_components(graph, &strongComponents[0], boost::root_map(&rootMap[0]));
-		dirtyFlag = false;
-	}
-
-	void Handle(T type, const VertexTy& v);
-
-	NodeDepGraph graph;
-	bool dirtyFlag;
-	size_t numComponents;
-	std::vector<size_t> strongComponents;
-	std::vector<VertexTy> rootMap;
-
-};
-
-template <>
-void DependencyGraph<const Type*>::Handle(const Type* type, const VertexTy& v) {
-	assert(isa<const TagType>(type));
-
-	const TagType* tagType = dyn_cast<const TagType>(type);
-	RecordDecl* tag = dyn_cast<RecordDecl>(tagType->getDecl());
-	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
-		const Type* fieldType = (*it)->getType().getTypePtr();
-		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
-			fieldType = ptrTy->getPointeeType().getTypePtr();
-		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
-			fieldType = refTy->getPointeeType().getTypePtr();
-
-		if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
-			assert(isa<RecordDecl>(tagTy->getDecl()));
-			addNode( tagTy, &v );
-		}
-	}
-}
-
-struct CallExprVisitor: public StmtVisitor<CallExprVisitor> {
-
-	typedef std::set<const FunctionDecl*> CallGraph;
-	CallGraph callGraph;
-
-	CallExprVisitor() { }
-
-	CallGraph getCallGraph(const FunctionDecl* func) {
-		assert(func->hasBody() && "Function in the dependency graph has no body");
-
-		Visit(func->getBody());
-		return callGraph;
-	}
-
-	void VisitCallExpr(CallExpr* callExpr) {
-		const FunctionDecl* def;
-		if(callExpr->getDirectCallee()->hasBody(def))
-			callGraph.insert(def);
-	}
-
-	void VisitStmt(Stmt* stmt) {
-		std::for_each(stmt->child_begin(), stmt->child_end(),
-			[ this ](Stmt* curr) {
-				if(curr) this->Visit(curr);
-			});
-	}
-};
-
-template <>
-void DependencyGraph<const FunctionDecl*>::Handle(const FunctionDecl* func, const VertexTy& v) {
-	CallExprVisitor callExprVis;
-	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
-
-	std::for_each(graph.begin(), graph.end(),
-			[ this, v ](const FunctionDecl* currFunc) { this->addNode(currFunc, &v); }
-	);
-}
-
+// in case the the last argument of the function is a var_arg, we try pack the exceeding arguments with the pack
+// operation provided by the IR.
 vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const vector<core::ExpressionPtr>& args) {
 
 	// check if the function type ends with a VAR_LIST type
@@ -344,15 +153,14 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 
 std::string getOperationType(const core::TypePtr& type) {
 	using namespace core::lang;
-	if(isIntType(*type)) 	return "int";
 	if(isUIntType(*type))	return "uint";
+	if(isIntType(*type)) 	return "int";
 	if(isBoolType(*type))	return "bool";
 	if(isRealType(*type))	return "real";
 	assert(false && "Type not supported");
 }
 
 } // End empty namespace
-
 
 namespace insieme {
 namespace frontend {
@@ -365,7 +173,7 @@ class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	typedef std::map<const FunctionDecl*, core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
-	DependencyGraph<const FunctionDecl*> funcDepGraph;
+	utils::DependencyGraph<const FunctionDecl*> funcDepGraph;
 
 	typedef std::map<const FunctionDecl*, core::VarExprPtr> RecVarExprMap;
 	RecVarExprMap recVarExprMap;
@@ -500,13 +308,6 @@ public:
 //			);
 		}
 
-//		// we lookup the lambda expr map to see if we already create a statement for this lambda expression
-//		LambdaExprMap::const_iterator lit = lambdaExprCache.find(funcDecl);
-//		if( lit != lambdaExprCache.end() )
-//			return ExprWrapper( builder.callExpr(lit->second, args)  );
-
-//		DLOG(INFO) << "CREATIGN LAMBDA: curr func: " << funcDecl->getNameAsString();
-
 		core::ExpressionPtr retLambdaExpr( NULL );
 		// this lambda is not yet in the map, we need to create it and add it to the cache
 		core::StatementPtr body = convFact.ConvertStmt( *funcDecl->getBody() );
@@ -531,7 +332,6 @@ public:
 			}
 
 			// we have to create a recursive type
-//			funcDecl->dump();
 			RecVarExprMap::const_iterator tit = recVarExprMap.find(funcDecl);
 			assert(tit != recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
 			core::VarExprPtr recVarRef = tit->second;
@@ -593,7 +393,6 @@ public:
 			const FunctionDecl* definition = NULL;
 			if( !funcDecl->hasBody(definition) ) {
 				// in the case the function is extern, a literal is build
-
 				return ExprWrapper( convFact.builder.callExpr(
 						builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs)
 				);
@@ -603,7 +402,6 @@ public:
 				// check if this type has a typevar already associated, in such case return it
 				RecVarExprMap::const_iterator fit = recVarExprMap.find(definition);
 				if( fit != recVarExprMap.end() ) {
-					// DLOG(INFO) << "Returning mapped var for function " << definition->getNameAsString();
 					// we are resolving a parent recursive type, so we shouldn't
 					return ExprWrapper( builder.callExpr(fit->second, packedArgs) );
 				}
@@ -826,7 +624,10 @@ public:
 		return ExprWrapper( subExpr );
 	}
 
-	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) { return ExprWrapper( EmptyExpr(convFact.builder) ); }
+	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
+		// todo:
+		return ExprWrapper( EmptyExpr(convFact.builder) );
+	}
 
 	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		const core::ASTBuilder& builder = convFact.builder;
@@ -916,20 +717,18 @@ public:
 
 	StmtWrapper VisitForStmt(ForStmt* forStmt) {
 		const core::ASTBuilder& builder = convFact.builder;
+		VLOG(2) << "@ ForStmt";
 
 		StmtWrapper retStmt;
 		StmtWrapper&& body = Visit(forStmt->getBody());
-
-		LOG(INFO) << "ForStmt body: " << body;
+		VLOG(2) << "\t-> ForStmt body: " << body;
 
 		ExprWrapper&& incExpr = convFact.ConvertExpr( *forStmt->getInc() );
 		// Determine the induction variable
 		// analyze the incExpr looking for the induction variable for this loop
-
-		LOG(INFO) << "ForStmt incExpr: " << incExpr.ref;
+		VLOG(2) << "\t-> ForStmt incExpr: " << *incExpr.ref;
 
 		ExprWrapper condExpr;
-
 		if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
 			assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
 			// the for loop has a variable declared in the condition part, e.g.
@@ -954,7 +753,7 @@ public:
 		} else
 			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
 
-		LOG(INFO) << "ForStmt condExpr: " << condExpr.ref;
+		VLOG(2) << "\t-> ForStmt condExpr: " << *condExpr.ref;
 
 		Stmt* initStmt = forStmt->getInit();
 		// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
@@ -990,27 +789,24 @@ public:
 		}
 
 		// We are in the case where we are sure there is exactly 1 element in the initialization expression
-
-		LOG(INFO) << "ForStmt initExpr: " << initExpr;
+		VLOG(2) << "\t-> ForStmt initExpr: " << initExpr;
 
 		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 		assert(declStmt && "Falied loop init expression conversion");
 		retStmt.push_back( builder.forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref) );
-		if(retStmt.size() == 1)
-			return retStmt.front();
-		// we have to create a CompoundStmt
-		return StmtWrapper( builder.compoundStmt(retStmt) );
+
+		return StmtWrapper( tryAggregateStmts(builder, retStmt) );
 	}
 
 	StmtWrapper VisitIfStmt(IfStmt* ifStmt) {
 		const core::ASTBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
+		VLOG(2) << "@ IfStmt";
 		core::StatementPtr thenBody = tryAggregateStmts( builder, Visit( ifStmt->getThen() ) );
 		assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
 
-		DLOG(INFO) << "IfStmt then body: " << thenBody;
-
+		VLOG(2) << "\t-> IfStmt 'then' body: " << *thenBody;
 		core::ExpressionPtr condExpr(NULL);
 		if( VarDecl* condVarDecl = ifStmt->getConditionVariable() ) {
 			assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
@@ -1031,7 +827,7 @@ public:
 			condExpr = convFact.ConvertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the IfStmt");
-		DLOG(INFO) << "IfStmt condition expression: " << condExpr;
+		VLOG(2) << "\t-> IfStmt 'condition' expression: " << *condExpr;
 
 		core::StatementPtr elseBody(NULL);
 		// check for else statement
@@ -1042,7 +838,7 @@ public:
 			elseBody = builder.compoundStmt();
 		}
 		assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
-		DLOG(INFO) << "IfStmt else body: " << elseBody;
+		VLOG(2) << "\t-> IfStmt 'else' body: " << *elseBody;
 
 		// adding the ifstmt to the list of returned stmts
 		retStmt.push_back( builder.ifStmt(condExpr, thenBody, elseBody) );
@@ -1058,11 +854,11 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
+		VLOG(2) << "@ WhileStmt";
 		core::StatementPtr body = tryAggregateStmts( builder, Visit( whileStmt->getBody() ) );
 		assert(body && "Couldn't convert body of the WhileStmt");
 
-		DLOG(INFO) << "WhileStmt then body: " << body;
-
+		VLOG(2) << "\t-> WhileStmt body: " << body;
 		core::ExpressionPtr condExpr(NULL);
 		if( VarDecl* condVarDecl = whileStmt->getConditionVariable() ) {
 			assert(whileStmt->getCond() == NULL && "WhileStmt condition cannot contains both a variable declaration and an expression");
@@ -1074,7 +870,8 @@ public:
 			// { int a = 0; while(a = expr){ } }
 			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null temporarily
-			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt =
+					core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
 			condVarDecl->setInit(expr);
 
 			retStmt.push_back( declStmt );
@@ -1088,7 +885,7 @@ public:
 			condExpr = convFact.ConvertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
-		DLOG(INFO) << "WhileStmt condition expression: " << condExpr;
+		VLOG(2) << "\t-> WhileStmt 'condition' expression: " << condExpr;
 
 		// adding the WhileStmt to the list of returned stmts
 		retStmt.push_back( builder.whileStmt(condExpr, body) );
@@ -1104,6 +901,7 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
+		VLOG(2) << "@ SwitchStmt";
 		core::ExpressionPtr condExpr(NULL);
 		if( VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
 			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
@@ -1233,7 +1031,7 @@ public:
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
-	DependencyGraph<const Type*> typeGraph;
+	utils::DependencyGraph<const Type*> typeGraph;
 
 	typedef std::map<const Type*, core::TypeVariablePtr> TypeRecVarMap;
 	TypeRecVarMap recVarMap;
@@ -1630,7 +1428,7 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), bui
 		stmtConv( new ClangStmtConverter(*this) ) { }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-	DVLOG(1) << "Start converting type of class: '" << type.getTypeClassName() << "']:";
+	DVLOG(1) << "Start converting type [class: '" << type.getTypeClassName() << "']:";
 	if( VLOG_IS_ON(2) ) {
 		DVLOG(2) << "Dump of clang type: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		type.dump();
@@ -1642,7 +1440,8 @@ core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 }
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-	DVLOG(1) << "Start converting statement [class: '" << stmt.getStmtClassName() << "']:";
+	DVLOG(1) << "Start converting statement [class: '" << stmt.getStmtClassName() << "'] {" <<
+			utils::location(stmt.getLocStart(), clangCtx->getSourceManager()) << "}: ";
 	if( VLOG_IS_ON(2) ) {
 		DVLOG(2) << "Dump of clang statement: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		stmt.dump();
@@ -1654,7 +1453,8 @@ core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
 }
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
-	DVLOG(1) << "Start converting expression [class: '" << expr.getStmtClassName() << "']:";
+	DVLOG(1) << "Start converting expression [class: '" << expr.getStmtClassName() << "'] {" <<
+			utils::location(expr.getLocStart(), clangCtx->getSourceManager()) << "}: ";
 	if( VLOG_IS_ON(2) ) {
 		DVLOG(2) << "Dump of clang expression: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		expr.dump();
@@ -1681,8 +1481,8 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			DVLOG(1) << "##########################################################################";
-			DVLOG(1) << "## Encountred function declaration '" << funcDecl->getNameAsString() << "': "
-					 << frontend::util::location( funcDecl->getLocStart(), mCtx->getSourceManager() );
+			DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
+					 << frontend::utils::location( funcDecl->getLocStart(), mCtx->getSourceManager() );
 
 			// finds a definition of this function if any
 			const FunctionDecl* definition = NULL;

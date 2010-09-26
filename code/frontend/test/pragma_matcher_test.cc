@@ -52,8 +52,8 @@ using namespace insieme::frontend;
 using namespace insieme::core;
 
 #define CHECK_LOCATION(loc, srcMgr, line, col) \
-	EXPECT_EQ(util::Line(loc, srcMgr), (size_t)line); \
-	EXPECT_EQ(util::Column(loc, srcMgr), (size_t)col);
+	EXPECT_EQ(utils::Line(loc, srcMgr), (size_t)line); \
+	EXPECT_EQ(utils::Column(loc, srcMgr), (size_t)col);
 
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 

@@ -34,6 +34,10 @@
  * regarding third party software licenses.
  */
 
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
 #include "insieme_sema.h"
 
 #include "pragma_handler.h"
@@ -48,7 +52,7 @@
 
 using namespace clang;
 using namespace insieme::frontend;
-using namespace insieme::frontend::util;
+using namespace insieme::frontend::utils;
 
 namespace {
 

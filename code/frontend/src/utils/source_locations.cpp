@@ -48,7 +48,7 @@ using namespace clang;
 
 namespace insieme {
 namespace frontend {
-namespace util {
+namespace utils {
 
 string FileName(SourceLocation const& l, SourceManager const& sm) {
 	PresumedLoc pl = sm.getPresumedLoc(l);
