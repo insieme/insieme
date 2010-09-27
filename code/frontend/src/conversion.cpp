@@ -52,6 +52,7 @@
 #include "lang_basic.h"
 #include "numeric_cast.h"
 #include "naming.h"
+#include "ocl_annotations.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -1502,6 +1503,39 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 				}
 			);
 			// this is a function decl
+
+
+            //check Attributes of the function definition
+            if(definition->hasAttrs()) {
+                const clang::AttrVec attrVec = funcDecl->getAttrs();
+
+                for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
+                    Attr* attr = *I;
+//                    printf("Attribute \n");
+                    if(attr->getKind() == attr::Kind::Annotate) {
+//                        printf("    Annotate\n");
+                        //get annotate string
+                        AnnotateAttr* aa = (AnnotateAttr*)attr;
+                        llvm::StringRef sr = aa->getAnnotation();
+
+                        //check if it is an OpenCL kernel function
+                        if(sr.compare(llvm::StringRef("__kernel")) == 0) {
+//                            printf("        Kernel\n");
+                            DVLOG(1) << "is OpenCL kernel function";
+
+                            funcType.addAnnotation(std::make_shared<insieme::c_info::OclKernelFctAnnotation>());
+                        }
+                    }
+                    if(attr->getKind() == attr::Kind::ReqdWorkGroupSize) {
+                        funcType.addAnnotation(std::make_shared<insieme::c_info::OclWorkGroupSizeAnnotation>(
+                                ((ReqdWorkGroupSizeAttr*)attr)->getXDim(),
+                                ((ReqdWorkGroupSizeAttr*)attr)->getYDim(),
+                                ((ReqdWorkGroupSizeAttr*)attr)->getZDim()));
+
+                    }
+                }
+            }
+
 			core::StatementPtr funcBody(NULL);
 			assert(definition->getBody() && "Function Definition has no body");
 
