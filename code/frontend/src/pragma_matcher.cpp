@@ -124,6 +124,9 @@ void ParserStack::discardPrevRecords(size_t recordId) {
 const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const { return mRecords[recordId]; }
 
 void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
+
+	using namespace insieme::frontend::utils;
+
 	TextDiagnosticPrinter &tdc = (TextDiagnosticPrinter&) *pp.getDiagnostics().getClient();
 
 	std::string str;
@@ -136,7 +139,7 @@ void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Pars
 	size_t err, ferr = errStack.getFirstValidRecord();
 	err = ferr;
 	SourceLocation errLoc = errStack.getRecord(err).front().loc;
-	ss << "at location (" << frontend::util::Line(errLoc, pp.getSourceManager()) << ":" << frontend::util::Column(errLoc, pp.getSourceManager()) << ") ";
+	ss << "at location (" << Line(errLoc, pp.getSourceManager()) << ":" << Column(errLoc, pp.getSourceManager()) << ") ";
 	bool first = true;
 	do {
 		if(!errStack.getRecord(err).empty() && errStack.getRecord(err).front().loc == errLoc) {

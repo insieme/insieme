@@ -50,7 +50,7 @@
 
 #include "clang_compiler.h"
 
-#include <glog/logging.h>
+#include "logging.h"
 
 using namespace std;
 using namespace google;
@@ -60,14 +60,7 @@ namespace core = insieme::core;
 int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
-
-	InitGoogleLogging(argv[0]);
-
-	// force logging to stderr
-	LogToStderr();
-
-	// Set severity level
-	SetStderrLogging(INFO);
+	insieme::utils::InitLogger(argv[0], INFO, true);
 
 	LOG(INFO) << "Insieme compiler";
 	core::ProgramPtr program = core::Program::create();
@@ -82,7 +75,6 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
 			LOG(INFO) << "Has name annotation: " << ((program->contains(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
-
 			LOG(INFO) << "Converting to C++ ... ";
 			{ // TODO make one wrapper function for all of this
 				insieme::simple_backend::ConversionContext cc;

@@ -36,32 +36,25 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
-#include <iterator>
+#include <glog/logging.h>
+#include "cmd_line_utils.h"
 
-/**
- * The CommandLineOptions is a container for input arguments to the Insieme compiler.
- */
-struct CommandLineOptions {
-#define FLAG(opt_name, opt_id, var_name, var_help) \
-	static bool var_name;
-#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
-	static var_type var_name;
-#define INT_OPTION(opt_name, opt_id, var_name, def_value, var_help) \
-	static int var_name;
-#include "options.inc"
-#undef FLAG
-#undef OPTION
-#undef INT_OPTION
-	// avoid constructing instances of CommandLineOptions
-	CommandLineOptions() { }
-public:
-	/**
-	 * This method reads the input arguments from the command line and parses them. The values are then stored inside
-	 * the static references of the CommandLineOptions class.
-	 *
-	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
-	 */
-	static void Parse(int argc, char** argv, bool debug=false);
-};
+using namespace google;
+
+// we remove the Google Log DVLOG and VLOG macro
+#undef VLOG
+#undef DVLOG
+#undef VLOG_IS_ON
+
+#define VLOG(level) 		LOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
+#define DVLOG(level) 		DLOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
+
+#define VLOG_IS_ON(level) 	( (level) <= CommandLineOptions::Verbosity )
+
+namespace insieme {
+namespace utils {
+
+void InitLogger(char* progName, google::LogSeverity level, bool enableFailureHandler);
+
+} // End utils namespace
+} // End insieme namespace

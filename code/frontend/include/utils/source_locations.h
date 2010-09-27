@@ -46,7 +46,7 @@ class SourceManager;
 
 namespace insieme {
 namespace frontend {
-namespace util {
+namespace utils {
 
 std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
@@ -60,7 +60,9 @@ unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
 std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
 
-} // End util namespace
+std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm);
+
+} // End utils namespace
 } // End frontend namespace
 } // End insieme namespace
 

@@ -54,9 +54,12 @@ namespace po = boost::program_options;
 	bool CommandLineOptions::var_name = false;
 #define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 	var_type CommandLineOptions::var_name;
+#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
+	int CommandLineOptions::var_name;
 #include "options.inc"
 #undef FLAG
 #undef OPTION
+#undef INT_OPTION
 
 namespace {
 ostream& operator<<(ostream& out, const vector<string>& argList) {
@@ -86,6 +89,8 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 
 	#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 		(opt_name, po::value< var_type >(), var_help)
+	#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
+		(opt_name, po::value< int >(&CommandLineOptions::var_name)->default_value(def_val), var_help)
 	#define FLAG(opt_name, opt_id, var_name, var_help) \
 		(opt_name, var_help)
 	// Declare a group of options that will be allowed on the command line
@@ -94,6 +99,7 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 	;
 	#undef OPTION
 	#undef FLAG
+	#undef INT_OPTION
 
 	po::variables_map varsMap;
 
@@ -106,12 +112,15 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 		if( debug ) {
 			cout << "(DEBUG) Command line arguments: " << endl;
 			#define FLAG(opt_name, opt_id, var_name, var_help) \
-		varsMap.count(opt_id) && cout << "\t--" << opt_id << endl;
+				varsMap.count(opt_id) && cout << "\t--" << opt_id << endl;
 			#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 				varsMap.count(opt_id) && cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< var_type >() << endl;
+			#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
+				cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< int >() << endl;
 			#include "options.inc"
 			#undef OPTION
 			#undef FLAG
+			#undef INT_OPTION
 		}
 
 		// assign the value to the class fields
@@ -119,8 +128,10 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 			(varsMap.count(opt_id)) ? CommandLineOptions::var_name = true : CommandLineOptions::var_name = false;
 		#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 			if(varsMap.count(opt_id)) CommandLineOptions::var_name = varsMap[opt_id].as< var_type >();
+		#define INT_OPTION(opt_name, opt_id, var_name, var_type, var_help)
 		#include "options.inc"
 		#undef OPTION
+		#undef INT_OPTION
 		#undef FLAG
 
 		// Handle immediate flags (like --help or --version)
