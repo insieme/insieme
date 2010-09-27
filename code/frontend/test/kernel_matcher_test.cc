@@ -64,18 +64,6 @@ const char* addressSpaceStr[] = {
         "local",
         "global",
         "constant"
-};*/
-
-// new version for __attribute((annotate("x")))
-
-class Addresses {
-public:
-    const llvm::StringRef Private;
-    const llvm::StringRef Local;
-    const llvm::StringRef Global;
-    const llvm::StringRef Constant;
-
-    Addresses() : Private("__private"), Local("__local"), Global("__global"), Constant("__constant") {};
 };
 
 enum AddressSpace {
@@ -90,6 +78,19 @@ const llvm::StringRef addrStr [] = {
     llvm::StringRef("__local"),
     llvm::StringRef("__global"),
     llvm::StringRef("__constant")
+};
+*/
+
+// new version for __attribute((annotate("x")))
+
+class AddrSpace {
+public:
+    const llvm::StringRef Private;
+    const llvm::StringRef Local;
+    const llvm::StringRef Global;
+    const llvm::StringRef Constant;
+
+    AddrSpace() : Private("__private"), Local("__local"), Global("__global"), Constant("__constant") {};
 };
 
 //counter for address matching function
@@ -245,10 +246,10 @@ bool scanStruct(RecordDecl* decl){
 }
 
 void checkAddressSpace(const Attr* attr, unsigned int& matches){
-    Addresses addresses;
+    AddrSpace addrspace;
     //expected address spaces: GLOBAL, CONSTANT, LOCAL, PRIVATE
-    llvm::StringRef expected[6] = {addrStr[GLOBAL], addrStr[CONSTANT], addrStr[LOCAL], addrStr[PRIVATE],
-            addrStr[LOCAL], addresses.Private};
+    llvm::StringRef expected[6] = {addrspace.Global, addrspace.Constant, addrspace.Local, addrspace.Private,
+            addrspace.Local, addrspace.Private};
 
     const clang::AnnotateAttr* aa = (const AnnotateAttr*)attr;
     llvm::StringRef sr = aa->getAnnotation();
