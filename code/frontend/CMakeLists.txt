@@ -44,8 +44,6 @@ if(NOT MSVC)
 	find_library(clang_Parse_LIB 		  		NAMES clangParse 				PATHS ${LLVM_HOME}/lib)
 	find_library(clang_Serialization_LIB   NAMES clangSerialization 	PATHS ${LLVM_HOME}/lib)
 	
-	find_library(llvm_LIB   NAMES LLVM-2.8rc 	PATHS ${LLVM_HOME}/lib)
-	
 	set(clang_LIBs    ${clang_clang_LIB}
 							${clang_Index_LIB} 
 							${clang_Checker_LIB}
@@ -61,8 +59,9 @@ if(NOT MSVC)
 						 	${clang_Serialization_LIB}
 						 	${clang_Analysis_LIB} 	
 						 	${clang_Basic_LIB}
-						 	${llvm_LIB}	
 	)
+	
+	find_library(llvm_LIB   NAMES LLVM-2.8rc 	PATHS ${LLVM_HOME}/lib)
 						 
 else()
 	set(clang_LIBs )
@@ -94,6 +93,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${clang_LIBs})
 	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
+	target_link_libraries(ut_${case_name} #{${llvm_LIB})
 	
 	set(CONDUCT_MEMORY_CHECKS off)
 	
