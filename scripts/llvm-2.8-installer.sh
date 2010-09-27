@@ -1,19 +1,29 @@
-PREFIX=/home/spellegrini/shared/llvm28
+PREFIX=/home/motonacciu/software/llvm-2.8
 
-export LD_LIBRARY_PATH=/software/lib-gcc450:/software/gcc450/lib64
-export CXX=/software/gcc450/bin/g++
-export CC=/software/gcc450/bin/gcc
+# export LD_LIBRARY_PATH=/software/lib-gcc450:/software/gcc450/lib64
+export CXX="/home/motonacciu/software/distcc311/bin/distcc g++"
+export CC="/home/motonacciu/software/distcc311/bin/distcc gcc"
 
-wget http://dps.uibk.ac.at/~spellegrini/llvm-2.8.tar.bz2
-tar -xf llvm-2.8.tar.bz2
-cd llvm-2.8/
+# download llvm 
+wget http://llvm.org/pre-releases/2.8/llvmCore-2.8-rc2.src.tar.gz
+tar -xf llvmCore-2.8-rc2.src.tar.gz
+
+# change dire into tools
+cd llvmCore-2.8-rc2.src/tools
+
+# download clang
+wget http://llvm.org/pre-releases/2.8/clang-2.8-rc2.src.tar.gz
+tar -xf clang-2.8-rc2.src.tar.gz
+mv clang-2.8-rc2.src clang
+cd ../
 patch -p1  < ../insieme-2.8.patch
 
 ./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=yes --enable-debug-runtime=yes --enable-debug-symbols=yes --enable-optimized=no
 # --enable-doxygen=yes
 
-make REQUIRES_RTTI=1 clang-only -j2
+make REQUIRES_RTTI=1 clang-only -j16
 make clang-only install
 
-python ../llvm_alignof.py $PREFIX/include
-
+cd ../
+rm -R llvmCore-2.8-rc2.src
+python llvm_alignof.py $PREFIX/include

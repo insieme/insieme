@@ -36,22 +36,18 @@
 
 #pragma once
 
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
 #include "clang_compiler.h"
 #include "pragma_matcher.h"
 #include "insieme_sema.h"
+
+#include <memory>
+#include <sstream>
+#include <map>
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>
 
 #include "clang/Parse/Parser.h"
-
-#include <memory>
-#include <sstream>
-#include <map>
 
 #include <glog/logging.h>
 

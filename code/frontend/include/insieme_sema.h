@@ -36,6 +36,10 @@
 
 #pragma once
 
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Ownership.h"
 
