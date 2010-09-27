@@ -93,7 +93,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${clang_LIBs})
 	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
-	target_link_libraries(ut_${case_name} #{${llvm_LIB})
+	target_link_libraries(ut_${case_name} ${llvm_LIB})
 	
 	set(CONDUCT_MEMORY_CHECKS off)
 	
