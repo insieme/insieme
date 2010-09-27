@@ -45,10 +45,16 @@ TEST(XmlTest, GenericTypeTest) {
 	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
 
 	NodePtr root = type2;
-
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", false);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	
 	//xmlWrite(root, "dump1.xml");
-	xmlWrite(root);
-	//getchar();
-	//bool validate = true;
-	//xmlRead("dump1.xml", validate);
+	//xmlRead("dump1.xml", false);
 }

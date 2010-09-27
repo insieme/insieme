@@ -46,45 +46,35 @@ XERCES_CPP_NAMESPACE_END
 namespace insieme {
 namespace core {
 
-class XmlWriter : public ASTVisitor<void> {
-
+class XmlUtil {
 public:
 	xercesc::DOMImplementation* impl;
 	xercesc::DOMDocument* doc;
 	xercesc::DOMElement* rootElem;
-	std::string outputFile;
 
 public:
-	XmlWriter(const std::string fileName = std::string());
+	XmlUtil();
 	
-	~XmlWriter();
-
-	void visitGenericType(const GenericTypePtr& cur);
+	~XmlUtil();
 	
-	void visitExpression(const ExpressionPtr& cur);
-
-	void visitArrayType(const ArrayTypePtr& cur);
-
-	void visitRefType(const RefTypePtr& cur);
+	void convertXmlToDom(const string fileName, const bool validate);
+	
+	void convertDomToXml(const string fileName);
+	
+	void convertDomToIr();
+	
+	void convertIrToDom(const NodePtr& node);
+	
+	string convertDomToString();
+	
 };
 
-class XmlReader {
-
-public:
-	//xercesc::DOMImplementation* impl;
-	//xercesc::DOMDocument* doc;
-	//xercesc::DOMElement* rootElem;
-	//std::string outputFile;
-
-public:
-	XmlReader(const std::string fileName, const bool validate);
-	
-	~XmlReader();
-};
 
 void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
 
 void xmlRead(const std::string fileName, const bool validate);
+
+void xmlValidate();
 
 } // end namespace core
 } // end namespace insieme
