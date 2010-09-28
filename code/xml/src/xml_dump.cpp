@@ -238,15 +238,16 @@ void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
 		error_handler eh;
 		parser->getDomConfig ()->setParameter (XMLUni::fgDOMErrorHandler, &eh);
 		
-		if (!parser->loadGrammar ("schema.xsd", Grammar::SchemaGrammarType, true)) {
-			cerr << "ERROR: Unable to load schema.xsd" << endl;
-			return;
-		}
+		if (validate) {
+			if (!parser->loadGrammar ("schema.xsd", Grammar::SchemaGrammarType, true)) {
+				cerr << "ERROR: Unable to load schema.xsd" << endl;
+				return;
+			}
 
-		if (eh.failed ()){
-			return;
+			if (eh.failed ()){
+				return;
+			}
 		}
-		
 		if (doc) doc->release();
 		doc = parser->parseURI(fileName.c_str());
 		if (eh.failed ()){
