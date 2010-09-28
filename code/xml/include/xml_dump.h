@@ -41,6 +41,7 @@ XERCES_CPP_NAMESPACE_BEGIN
 class DOMElement;
 class DOMImplementation;
 class DOMDocument;
+class DOMLSParser;
 XERCES_CPP_NAMESPACE_END
 
 namespace insieme {
@@ -51,6 +52,7 @@ public:
 	xercesc::DOMImplementation* impl;
 	xercesc::DOMDocument* doc;
 	xercesc::DOMElement* rootElem;
+	xercesc::DOMLSParser* parser;
 
 public:
 	XmlUtil();

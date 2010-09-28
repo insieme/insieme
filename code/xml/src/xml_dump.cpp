@@ -149,9 +149,35 @@ public:
 	}
 };
 
+class error_handler: public DOMErrorHandler {
+private:
+	bool failed_;
+
+public:
+	error_handler () : failed_ (false) {}
+
+	bool failed () const { return failed_; }
+
+	virtual bool handleError (const xercesc::DOMError& e){
+		bool warn (e.getSeverity() == DOMError::DOM_SEVERITY_WARNING);
+		if (!warn) failed_ = true;
+	
+		DOMLocator* loc (e.getLocation ());
+	
+		char* uri (XMLString::transcode (loc->getURI ()));
+		char* msg (XMLString::transcode (e.getMessage ()));
+	
+		cerr << uri << ":" 
+			<< loc->getLineNumber () << ":" << loc->getColumnNumber () << " "
+			<< (warn ? "warning: " : "error: ") << msg << endl;
+
+		XMLString::release (&uri);
+		XMLString::release (&msg);
+		return true;
+	}
+};
+
 }
-
-
 
 // ------------------------------------ XmlUtil ----------------------------
 
@@ -171,56 +197,63 @@ XmlUtil::XmlUtil(){
 }
 
 XmlUtil::~XmlUtil(){
+	if (parser) parser->release();
 	if (doc) doc->release();
 	XMLPlatformUtils::Terminate();
 }
 
 void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
-	bool error = false;
-	XercesDOMParser *parser = new XercesDOMParser;
+	((DOMImplementationLS*)impl)->createLSSerializer();
+	parser = ((DOMImplementationLS*)impl)->createLSParser (DOMImplementationLS::MODE_SYNCHRONOUS, 0);
+	
+	// remove the old DOM
+	if (doc) {
+		doc->release();
+		doc = NULL;
+	}
+	
 	if (parser) {
-		parser->setValidationScheme(XercesDOMParser::Val_Auto);
-		parser->setDoNamespaces(false);
-		parser->setDoSchema(false);
+		DOMConfiguration* conf (parser->getDomConfig ());
+
+		conf->setParameter (XMLUni::fgDOMComments, false);
+		conf->setParameter (XMLUni::fgDOMDatatypeNormalization, true);
+		conf->setParameter (XMLUni::fgDOMEntities, false);
+		conf->setParameter (XMLUni::fgDOMNamespaces, true);
+		conf->setParameter (XMLUni::fgDOMElementContentWhitespace, false);
+
+		// Enable validation.
+		conf->setParameter (XMLUni::fgDOMValidate, validate);
+		conf->setParameter (XMLUni::fgXercesSchema, validate);
+		conf->setParameter (XMLUni::fgXercesSchemaFullChecking, false);
+
+		// Use the loaded grammar during parsing.
+		conf->setParameter (XMLUni::fgXercesUseCachedGrammarInParse, true);
+
+		// Don't load schemas from any other source
+		conf->setParameter (XMLUni::fgXercesLoadSchema, false);
+
+		// We will release the DOM document ourselves.
+		conf->setParameter (XMLUni::fgXercesUserAdoptsDOMDocument, true);
+
+		error_handler eh;
+		parser->getDomConfig ()->setParameter (XMLUni::fgDOMErrorHandler, &eh);
 		
-		parser->setCreateEntityReferenceNodes(false);
-		try	{
-			parser->parse(fileName.c_str());
-			error = parser->getErrorCount() != 0;
-			if (error) {
-				cerr << "Parsing " << fileName.c_str() << " error count: ";
-				cerr << error << std::endl;
-			}
+		if (!parser->loadGrammar ("schema.xsd", Grammar::SchemaGrammarType, true)) {
+			cerr << "ERROR: Unable to load schema.xsd" << endl;
+			return;
 		}
-		catch (const DOMException& e) {
-			cerr << "DOM Exception parsing reports: ";
-			if (e.msg) {
-				char *strMsg = XMLString::transcode(e.msg);
-				std::cerr << strMsg << std::endl;
-				XMLString::release(&strMsg);
-			}
-	  		else {
-				cerr << e.code << std::endl;
-			}
-			error = true;
+
+		if (eh.failed ()){
+			return;
 		}
-		catch (const XMLException& e) {
-			cerr << "XML Exception parsing " << fileName.c_str() << " reports: ";
-			cerr << e.getMessage() << std::endl;
-			error = true;
-		}
-		catch (const SAXException& e) {
-			cerr << "SAX Exception parsing " << fileName.c_str() << " reports: ";
-			cerr << e.getMessage() << std::endl;
-			error = true;
-		}
-		catch (...) {
-			cerr << "An exception parsing " << fileName.c_str() << std::endl;
-		 	error = true;
-		}
-		if (!error) {
-			if (doc) doc->release();
-			doc = parser->getDocument();
+		
+		if (doc) doc->release();
+		doc = parser->parseURI(fileName.c_str());
+		if (eh.failed ()){
+			doc->release();
+			doc = NULL;
+			cerr << "ERROR: found problem during parsing" << endl;
+			return;
 		}
 	}
 }
@@ -229,8 +262,6 @@ void XmlUtil::convertDomToXml(const string outputFile){
 	DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
 	DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
 	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
-	
-	theOutputDesc->setEncoding(toUnicode("ISO-8859-1"));
 	
 	if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
 		serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
@@ -253,23 +284,31 @@ void XmlUtil::convertDomToXml(const string outputFile){
 void XmlUtil::convertDomToIr(){}
 
 void XmlUtil::convertIrToDom(const NodePtr& node){
-	if (doc) doc->release();
+	if (doc) {
+		doc->release();
+		doc = NULL;
+	}
 	doc = impl->createDocument(0, toUnicode("Inspire"),0);
 	XmlVisitor visitor(doc);
 	visitAllOnce(node, visitor);
 }
 
 string XmlUtil::convertDomToString(){
-	DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
-	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
+	if (doc){
+		DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
+		DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
 	
-	if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
-		serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
+		if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
+			serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
 
-	string stringDump = XMLString::transcode (theSerializer->writeToString(doc));
+		string stringDump = XMLString::transcode (theSerializer->writeToString(doc));
 	
-	theSerializer->release();
-	return stringDump;
+		theSerializer->release();
+		return stringDump;
+	}
+	else {
+		return "DOM is empty";
+	}
 }
 
 
