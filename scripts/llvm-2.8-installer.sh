@@ -25,5 +25,5 @@ make REQUIRES_RTTI=1 clang-only -j16
 make clang-only install
 
 cd ../
-rm -R llvmCore-2.8-rc2.src
+# rm -R llvmCore-2.8-rc2.src
 python llvm_alignof.py $PREFIX/include

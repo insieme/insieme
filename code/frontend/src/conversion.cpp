@@ -185,6 +185,7 @@ public:
 	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
+		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(
@@ -195,6 +196,7 @@ public:
 	}
 
 	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
+		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(
@@ -205,6 +207,7 @@ public:
 	}
 
 	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
+		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		// todo: Handle escape characters
 		return ExprWrapper( convFact.builder.literal(
 				GetStringFromStream(convFact.clangCtx->getSourceManager(), stringLit->getExprLoc()),
@@ -214,6 +217,7 @@ public:
 
 	// CXX Extension for boolean types
 	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
+		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(GetStringFromStream(convFact.clangCtx->getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR)
@@ -221,6 +225,7 @@ public:
 	}
 
 	ExprWrapper VisitCharacterLiteral(CharacterLiteral* charLit) {
+		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(GetStringFromStream(convFact.clangCtx->getSourceManager(), charLit->getExprLoc()),
@@ -579,42 +584,48 @@ public:
 			return ExprWrapper(
 				// build a tuple expression
 				builder.tupleExpr(
-				std::vector<core::ExpressionPtr>( { 	// ref.assign(a int.add(a, 1))
+				{ 	// ref.assign(a int.add(a, 1))
 					builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
-						std::vector<core::ExpressionPtr>({
+						{
 							subExpr, // ref<a'> a
 							builder.callExpr(
 								( additive ? core::lang::OP_INT_ADD_PTR:core::lang::OP_INT_SUB_PTR ),
 									std::vector<core::ExpressionPtr>({ subExpr, core::lang::CONST_UINT_ONE_PTR })
 							) // a - 1
-						})
+						}
 					),
 					(post ? // if is post increment/decrement
 						builder.callExpr(
 							( additive ? core::lang::OP_INT_SUB_PTR:core::lang::OP_INT_ADD_PTR ),
-							std::vector<core::ExpressionPtr>({
+							{
 								builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ), // ref.deref(a)
 								core::lang::CONST_UINT_ONE_PTR // 1
-							})
+							}
 						)
 						: // else
 						builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} )
 					)
-				}))
+				})
 			) ;
 		// &a
 		case UO_AddrOf:
+			assert(false && "Conversion of AddressOf operator '&' not supported");
 		// *a
 		case UO_Deref:
-
+			return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
 		// +a
 		case UO_Plus:
+			// just return the subexpression
+			return ExprWrapper( subExpr );
 		// -a
 		case UO_Minus:
+			assert(false && "Conversion of unary operator '-' not supported");
 		// ~a
 		case UO_Not:
+			assert(false && "Conversion of unary operator '~' not supported");
 		// !a
 		case UO_LNot:
+			assert(false && "Conversion of unary operator '!' not supported");
 
 		case UO_Real:
 		case UO_Imag:
@@ -677,12 +688,12 @@ public:
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else {
 			Type& ty = *varDecl->getType().getTypePtr();
-			if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
-				// in case of floating types we initialize with a zero value
-				initExpr = convFact.builder.literal("0.0", type);
-			} else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+			if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
 				// initialize integer value
 				initExpr = convFact.builder.literal("0", type);
+			} else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+				// in case of floating types we initialize with a zero value
+				initExpr = convFact.builder.literal("0.0", type);
 			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
 				// initialize pointer/reference types with the null value
 				initExpr = core::lang::CONST_NULL_PTR_PTR;
@@ -722,12 +733,12 @@ public:
 
 		StmtWrapper retStmt;
 		StmtWrapper&& body = Visit(forStmt->getBody());
-		VLOG(2) << "\t-> ForStmt body: " << body;
+		VLOG(2) << "ForStmt body: " << body;
 
 		ExprWrapper&& incExpr = convFact.ConvertExpr( *forStmt->getInc() );
 		// Determine the induction variable
 		// analyze the incExpr looking for the induction variable for this loop
-		VLOG(2) << "\t-> ForStmt incExpr: " << *incExpr.ref;
+		VLOG(2) << "ForStmt incExpr: " << *incExpr.ref;
 
 		ExprWrapper condExpr;
 		if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
@@ -754,7 +765,7 @@ public:
 		} else
 			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
 
-		VLOG(2) << "\t-> ForStmt condExpr: " << *condExpr.ref;
+		VLOG(2) << "ForStmt condExpr: " << *condExpr.ref;
 
 		Stmt* initStmt = forStmt->getInit();
 		// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
@@ -790,7 +801,7 @@ public:
 		}
 
 		// We are in the case where we are sure there is exactly 1 element in the initialization expression
-		VLOG(2) << "\t-> ForStmt initExpr: " << initExpr;
+		VLOG(2) << "ForStmt initExpr: " << initExpr;
 
 		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 		assert(declStmt && "Falied loop init expression conversion");
@@ -807,7 +818,7 @@ public:
 		core::StatementPtr thenBody = tryAggregateStmts( builder, Visit( ifStmt->getThen() ) );
 		assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
 
-		VLOG(2) << "\t-> IfStmt 'then' body: " << *thenBody;
+		VLOG(2) << "IfStmt 'then' body: " << *thenBody;
 		core::ExpressionPtr condExpr(NULL);
 		if( VarDecl* condVarDecl = ifStmt->getConditionVariable() ) {
 			assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
@@ -828,7 +839,7 @@ public:
 			condExpr = convFact.ConvertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the IfStmt");
-		VLOG(2) << "\t-> IfStmt 'condition' expression: " << *condExpr;
+		VLOG(2) << "IfStmt 'condition' expression: " << *condExpr;
 
 		core::StatementPtr elseBody(NULL);
 		// check for else statement
@@ -839,7 +850,7 @@ public:
 			elseBody = builder.compoundStmt();
 		}
 		assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
-		VLOG(2) << "\t-> IfStmt 'else' body: " << *elseBody;
+		VLOG(2) << "IfStmt 'else' body: " << *elseBody;
 
 		// adding the ifstmt to the list of returned stmts
 		retStmt.push_back( builder.ifStmt(condExpr, thenBody, elseBody) );
@@ -859,7 +870,7 @@ public:
 		core::StatementPtr body = tryAggregateStmts( builder, Visit( whileStmt->getBody() ) );
 		assert(body && "Couldn't convert body of the WhileStmt");
 
-		VLOG(2) << "\t-> WhileStmt body: " << body;
+		VLOG(2) << "WhileStmt body: " << body;
 		core::ExpressionPtr condExpr(NULL);
 		if( VarDecl* condVarDecl = whileStmt->getConditionVariable() ) {
 			assert(whileStmt->getCond() == NULL && "WhileStmt condition cannot contains both a variable declaration and an expression");
@@ -886,7 +897,7 @@ public:
 			condExpr = convFact.ConvertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
-		VLOG(2) << "\t-> WhileStmt 'condition' expression: " << condExpr;
+		VLOG(2) << "WhileStmt 'condition' expression: " << condExpr;
 
 		// adding the WhileStmt to the list of returned stmts
 		retStmt.push_back( builder.whileStmt(condExpr, body) );
@@ -985,13 +996,8 @@ public:
 	// the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the visitor is not called on his subnodes
 	StmtWrapper VisitSwitchCase(SwitchCase* caseStmt) { assert(false && "Visitor is visiting a 'case' stmt (cannot compute)"); }
 
-	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) {
-		return StmtWrapper( convFact.builder.breakStmt() );
-	}
-
-	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) {
-		return StmtWrapper( convFact.builder.continueStmt() );
-	}
+	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) { return StmtWrapper( convFact.builder.breakStmt() ); }
+	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) { return StmtWrapper( convFact.builder.continueStmt() ); }
 
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
 		vector<core::StatementPtr> stmtList;
@@ -1029,6 +1035,9 @@ public:
 #define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
+/**
+ * Converts a clang type to an IR type
+ */
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
@@ -1226,21 +1235,19 @@ public:
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
-		DLOG(INFO) << "Converting typedef: " << typedefType->getDecl()->getName().str();
-		typedefType->getDecl()->dump();
-		return Visit(typedefType->getDecl()->getUnderlyingType().getTypePtr());
-		// assert(false && "TypedefType not yet handled!");
+		core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
+
+		// Adding the name of the typedef as annotation
+		subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
+		return TypeWrapper( subType );
 	}
 
 	TypeWrapper VisitTypeOfType(TypeOfType* typeOfType) {
 		// assert(false && "TypeOfType not yet handled!");
-		DLOG(ERROR) << "TypeOfType not yet handled";
 		return TypeWrapper( convFact.builder.getUnitType() );
 	}
 
 	TypeWrapper VisitTypeOfExprType(TypeOfExprType* typeOfType) {
-		// assert(false && "TypeOfExprType not yet handled!");
-		// DLOG(ERROR) << "TypeOfExprType not yet handled";
 		return Visit( typeOfType->getUnderlyingExpr()->getType().getTypePtr() );
 	}
 
@@ -1290,15 +1297,17 @@ public:
 				std::set<const Type*>&& components = typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
 
 				if( !components.empty() ) {
-					// we are dealing with a recursive type
-					DLOG(INFO) << "Analyzing RecordDecl: " << recDecl->getNameAsString() << std::endl <<
-												  "Number of components in the cycle: " << components.size();
-					std::for_each(components.begin(), components.end(),
-						[] (std::set<const Type*>::value_type c) {
-							assert(isa<const TagType>(c));
-							DLOG(INFO) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
-						}
-					);
+					if(VLOG_IS_ON(2)) {
+						// we are dealing with a recursive type
+						VLOG(2) << "Analyzing RecordDecl: " << recDecl->getNameAsString() << std::endl
+								<< "Number of components in the cycle: " << components.size();
+						std::for_each(components.begin(), components.end(),
+							[] (std::set<const Type*>::value_type c) {
+								assert(isa<const TagType>(c));
+								VLOG(2) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
+							}
+						);
+					}
 
 //					typeGraph.print(std::cout);
 

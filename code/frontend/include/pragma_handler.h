@@ -143,12 +143,12 @@ private:
  */
 template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
-	std::string base_name;
 	node* pragma_matcher;
+	std::string base_name;
 
 public:
-	BasicPragmaHandler(std::string const& base_name, clang::IdentifierInfo* name, node const& pragma_matcher) :
-		PragmaHandler(name->getName().str()), base_name(base_name), pragma_matcher(pragma_matcher.copy()) {
+	BasicPragmaHandler(clang::IdentifierInfo* name, node const& pragma_matcher, std::string const& base_name = std::string()) :
+		PragmaHandler(name->getName().str()), pragma_matcher(pragma_matcher.copy()), base_name(base_name) {
 	}
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
@@ -187,9 +187,19 @@ public:
 struct PragmaHandlerFactory {
 
 	template<class T>
-	static clang::PragmaHandler* CreatePragmaHandler(const char* base_name, clang::IdentifierInfo* name, node const& re) {
-		return new BasicPragmaHandler<T> (base_name, name, re);
+	static clang::PragmaHandler* CreatePragmaHandler(clang::IdentifierInfo* name, node const& re, const std::string& base_name = std::string()) {
+		return new BasicPragmaHandler<T> (name, re, base_name);
 	}
+};
+
+/**
+ * Pragma used for testing purposes
+ */
+class TestPragma: public Pragma {
+	std::string expected;
+public:
+	TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+	std::string getExpected() const { return expected; }
 };
 
 } // End frontend namespace

@@ -38,6 +38,7 @@
 
 #include "clang/AST/Stmt.h"
 #include <llvm/Support/raw_ostream.h>
+#include <clang/AST/Expr.h>
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -84,12 +85,12 @@ std::string Pragma::toStr(const clang::SourceManager& sm) const {
 	else
 		ss << "Decl -> ";
 	ss << "(";
-//	if(isStatement() && getStatement())
-//		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
-//			  loc2string(getStatement()->getLocEnd(), sm);
-//	else if(isDecl() && getDecl())
-//		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
-//			  loc2string(getDecl()->getLocEnd(), sm);
+	if(isStatement() && getStatement())
+		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
+			  loc2string(getStatement()->getLocEnd(), sm);
+	else if(isDecl() && getDecl())
+		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
+			  loc2string(getDecl()->getLocEnd(), sm);
 	ss << ")";
 	return ss.str();
 }
@@ -98,6 +99,16 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
 		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
+
+TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
+	Pragma(startLoc, endLoc, type) {
+
+	MatchMap::const_iterator fit = mmap.find("expected");
+	if(fit != mmap.end()) {
+		expected = *fit->second.front()->get<std::string*>();
+	}
+}
+
 
 } // End frontend namespace
 } // End insieme namespace

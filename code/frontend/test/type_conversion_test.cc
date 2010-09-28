@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include "clang_config.h"
 
 #include "program.h"
 #include "clang_compiler.h"
@@ -348,4 +349,24 @@ TEST(TypeConversion, HandleArrayType) {
 
 }
 
+TEST(TypeConversion, FileTest) {
+	ProgramPtr program = Program::create();
+	ConversionFactory convFactory( program->getNodeManager() );
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", program);
+
+	const PragmaList& pl = TU->getPragmaList();
+	convFactory.setClangContext(&TU->getCompiler().getASTContext());
+
+	std::for_each(pl.begin(), pl.end(),
+		[ &convFactory ](const PragmaPtr curr) {
+			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
+			if(tp->isStatement())
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertStmt( *tp->getStatement() )->toString() + '\"' );
+			else {
+				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
+				assert(td && "Decl is not of type typedecl");
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertType( *td->getTypeForDecl() )->toString() + '\"' );
+			}
+	});
+}
 

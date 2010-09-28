@@ -344,28 +344,44 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //}
 
 clang::Decl* InsiemeSema::ActOnDeclarator(Scope *S, Declarator &D) {
-	// DEBUG("{InsiemeSema}: ActOnDeclarator()");
+	// DLOG(INFO) << "{InsiemeSema}: ActOnDeclarator()";
 	clang::Decl* ret = Sema::ActOnDeclarator(S, D);
 
 	if (isInsideFunctionDef)
 		return ret;
 
-	if (VarDecl* VD = dyn_cast<VarDecl>(ret)) {
-		PragmaList matched;
-		std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
+	PragmaList matched;
+	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
 
-		while (I != E && isAfterRange(VD->getSourceRange(), (*I)->getStartLocation(), SourceMgr))
-			++I;
+	while (I != E && isAfterRange(ret->getSourceRange(), (*I)->getStartLocation(), SourceMgr))
+		++I;
 
-		while (I != E) {
-			(*I)->setDecl(VD);
-			matched.push_back(*I);
-			++I;
-		}
-		EraseMatchedPragmas(pimpl->pending_pragma, matched);
+	while (I != E) {
+		(*I)->setDecl(ret);
+		matched.push_back(*I);
+		++I;
 	}
-	// VarDecl* = Sema::ActOnDeclarator
+	EraseMatchedPragmas(pimpl->pending_pragma, matched);
+
 	return ret;
+}
+
+void InsiemeSema::ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc) {
+	DLOG(INFO) << "{InsiemeSema}: ActOnTagFinishDefinition()";
+
+	Sema::ActOnTagFinishDefinition(S, TagDecl, RBraceLoc);
+	PragmaList matched;
+	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
+
+	while (I != E && isAfterRange(TagDecl->getSourceRange(), (*I)->getStartLocation(), SourceMgr))
+		++I;
+
+	while (I != E) {
+		(*I)->setDecl(TagDecl);
+		matched.push_back(*I);
+		++I;
+	}
+	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 }
 
 void InsiemeSema::addPragma(PragmaPtr P) {

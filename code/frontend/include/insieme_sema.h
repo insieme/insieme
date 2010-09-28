@@ -91,6 +91,9 @@ public:
 	
 	clang::Decl* ActOnDeclarator(clang::Scope *S, clang::Declarator &D);
 
+
+	void ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc);
+
 	/**
 	 * Register the parsed pragma.
 	 */
