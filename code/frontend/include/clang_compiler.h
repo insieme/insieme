@@ -64,7 +64,7 @@ class Expr;
 
 /**
  * This is a proxy class which enables the access to internal clang features, i.e. Parser.
- * The main scope of this class is to handle the parsing of #pragma(s) of the input file
+ * The main scope of this class is to handle the parsing of pragma(s) of the input file
  */
 class ParserProxy {
 	static ParserProxy* currParser;

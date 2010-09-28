@@ -143,13 +143,16 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 	S.dump();
 }
 
+void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOptions& diagOpts) {
+	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
+	Diagnostic* diags = new Diagnostic(diagClient);
+	clang.setDiagnostics(diags);
+}
+
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
 
-	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
-	Diagnostic* diags = new Diagnostic(diagClient);
-	pimpl->clang.setDiagnostics(diags);
-
+	setDiagnosticClient(pimpl->clang, pimpl->diagOpts);
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager();
 
@@ -170,11 +173,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->diagOpts.ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
 	pimpl->diagOpts.TabStop = 4;
 
-	// Create diagnostic client
-	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), pimpl->diagOpts);
-	Diagnostic* diags = new Diagnostic(diagClient);
-	pimpl->clang.setDiagnostics(diags);
-	// pimpl->clang.setDiagnosticClient(diagClient); // takes ownership of the diagClient pointer (no need for explicit delete)
+	setDiagnosticClient(pimpl->clang, pimpl->diagOpts);
 
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager();
