@@ -76,7 +76,7 @@ void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
 
 void xmlRead(const std::string fileName, const bool validate);
 
-void xmlValidate();
+void xmlValidate(const std::string fileName);
 
 } // end namespace core
 } // end namespace insieme

@@ -329,6 +329,7 @@ void insieme::core::xmlRead(const string fileName, const bool validate){
 	//xml.convertDomToIr();
 };
 
-void xmlValidate(){
-
+void insieme::core::xmlValidate(const string fileName){
+	XmlUtil xml;
+	xml.convertXmlToDom(fileName, true);
 };
