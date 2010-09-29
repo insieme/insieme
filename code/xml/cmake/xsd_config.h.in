@@ -34,28 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-#include <xml_dump.h>
+#pragma once
+#define XML_SCHEMA_DIR std::string("${CMAKE_CURRENT_SOURCE_DIR}/schema/")
 
-using namespace insieme::core;
-
-TEST(XmlTest, GenericTypeTest) {
-	NodeManager manager;
-	GenericTypePtr type = GenericType::get(manager, "int");
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
-
-	NodePtr root = type2;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	std::cout << s1;
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	std::cout << s2;
-	EXPECT_EQ (s1, s2);
-	
-	//xmlWrite(root, "dump1.xml");
-	//xmlRead("dump1.xml", false);
-}

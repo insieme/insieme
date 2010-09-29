@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+<xs:simpleType name="A_intTypeParam_type">
+	<xs:restriction base="xs:string">
+		<xs:enumeration value="variable"/>
+		<xs:enumeration value="concrete"/>
+		<xs:enumeration value="infinite"/>
+	</xs:restriction>
+</xs:simpleType>
+
+<xs:complexType name="T_typePtr">
+	<xs:attribute name="ref" type="xs:positiveInteger" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_baseType">
+	<xs:all>
+		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_typeParams">
+	<xs:sequence>
+		<xs:element name="typePtr" type="T_typePtr" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="T_intTypeParams">
+	<xs:all>
+		<xs:element name="intTypeParam" type="T_intTypeParam" minOccurs="0"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_intTypeParam">
+	<xs:attribute name="type" type="A_intTypeParam_type" use="required"/>
+	<xs:attribute name="value" type="xs:string" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_genType">
+	<xs:all>
+		<xs:element name="baseType" type="T_baseType" minOccurs="0"/>
+		<xs:element name="typeParams" type="T_typeParams" minOccurs="0"/>
+		<xs:element name="intTypeParams" type="T_intTypeParams" minOccurs="0"/>		
+	</xs:all>
+		<xs:attribute name="familyName" type="xs:string" use="required"/>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_Inspire">
+	<xs:sequence>
+		<xs:element name="genType" type="T_genType" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:element name="Inspire" type="T_Inspire"/>
+
+</xs:schema>

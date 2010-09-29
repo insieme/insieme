@@ -45,6 +45,7 @@
 #include <xercesc/util/XMLUni.hpp>
 
 #include "xml_dump.h"
+#include "xsd_config.h"
 
 using namespace insieme::core;
 using namespace insieme::utils;
@@ -239,7 +240,7 @@ void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
 		parser->getDomConfig ()->setParameter (XMLUni::fgDOMErrorHandler, &eh);
 		
 		if (validate) {
-			if (!parser->loadGrammar ("schema.xsd", Grammar::SchemaGrammarType, true)) {
+			if (!parser->loadGrammar ((XML_SCHEMA_DIR + "schema.xsd").c_str(), Grammar::SchemaGrammarType, true)) {
 				cerr << "ERROR: Unable to load schema.xsd" << endl;
 				return;
 			}
