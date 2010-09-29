@@ -195,6 +195,7 @@ XmlUtil::XmlUtil(){
 	impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
 	doc = NULL;
 	rootElem = NULL;
+	parser = NULL;
 }
 
 XmlUtil::~XmlUtil(){
