@@ -98,6 +98,99 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 	bool isSingleStmt() const { return size() == 1; }
 };
 
+void convertClangAttributes(VarDecl* varDecl, insieme::core::ParamExprPtr type) {
+    if(varDecl->hasAttrs()) {
+        const AttrVec attrVec = varDecl->getAttrs();
+
+        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
+            Attr* attr = *I;
+            if(attr->getKind() == attr::Kind::Annotate) {
+                llvm::StringRef sr = ((AnnotateAttr*)attr)->getAnnotation();
+
+                //check if the declaration has attribute __private
+                if(sr.compare(llvm::StringRef("__private")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+                    continue;
+                }
+
+                //check if the declaration has attribute __local
+                if(sr.compare(llvm::StringRef("__local")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __global
+                if(sr.compare(llvm::StringRef("__global")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __constant
+                if(sr.compare(llvm::StringRef("__constant")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
+                    continue;
+                }
+                DVLOG(1) << "Found unexpected annotation";
+            }
+            else
+                DVLOG(1) << "Found unexpected attribute";
+        }
+    }
+
+}
+
+//TODO merge those two!!!
+void convertClangAttributes(VarDecl* varDecl, core::TypePtr type) {
+    if(varDecl->hasAttrs()) {
+        const AttrVec attrVec = varDecl->getAttrs();
+
+        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
+            Attr* attr = *I;
+            if(attr->getKind() == attr::Kind::Annotate) {
+                llvm::StringRef sr = ((AnnotateAttr*)attr)->getAnnotation();
+
+                //check if the declaration has attribute __private
+                if(sr.compare(llvm::StringRef("__private")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+                    continue;
+                }
+
+                //check if the declaration has attribute __local
+                if(sr.compare(llvm::StringRef("__local")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __global
+                if(sr.compare(llvm::StringRef("__global")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __constant
+                if(sr.compare(llvm::StringRef("__constant")) == 0) {
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
+                    continue;
+                }
+                DVLOG(1) << "Found unexpected annotation";
+            }
+            else
+                DVLOG(1) << "Found unexpected attribute";
+        }
+    }
+
+}
+
+
+
 insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
 	return builder.literal("0", core::lang::TYPE_INT_GEN_PTR);
 }
@@ -704,6 +797,10 @@ public:
 				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
 			}
 		}
+
+        /*-------------------------><-----------------------*/
+        convertClangAttributes(varDecl, type);
+
 		// todo: initialization for declarations with no initialization value
 		return StmtWrapper( convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
 	}
@@ -1509,6 +1606,10 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 				[&funcParamList, &fact] (ParmVarDecl* currParam) {
 					funcParamList.push_back(
 						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
+
+                    //port clang attributes to IR annotations
+                    convertClangAttributes(currParam, funcParamList.back());
+
 				}
 			);
 			// this is a function decl
