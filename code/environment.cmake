@@ -101,7 +101,18 @@ if (NOT MEMORY_CHECK_SETUP)
 
 	# define macro for adding tests
 	macro ( add_unit_test case_name )
-		if(CONDUCT_MEMORY_CHECKS)
+		
+		# take value from environment variable
+		set(USE_VALGRIND ${CONDUCT_MEMORY_CHECKS})
+
+		# check whether there was a 2nd argument
+		if(${ARGC} GREATER 1)
+			# use last argument as a valgrind flag
+			set(USE_VALGRIND ${ARG2})
+		endif(${ARGC} GREATER 1)
+		
+		# add test case
+		if(USE_VALGRIND)
 			# no valgrind support in MSVC 
 			if(NOT MSVC)
 				# add valgrind as a test
@@ -117,10 +128,10 @@ if (NOT MEMORY_CHECK_SETUP)
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
 			endif(NOT MSVC)
-		else(CONDUCT_MEMORY_CHECKS)
+		else(USE_VALGRIND)
 			# add normal test
 			add_test(ut_${case_name} ut_${case_name})
-		endif(CONDUCT_MEMORY_CHECKS)
+		endif(USE_VALGRIND)
 	endmacro(add_unit_test)
 
 endif (NOT MEMORY_CHECK_SETUP)
