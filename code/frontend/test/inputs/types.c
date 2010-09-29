@@ -47,13 +47,13 @@ void basic_type_test() {
 
 	char d = 'a';
 
-	#pragma test "ref<ref<unit>> e = null"
+	#pragma test "ref<ref<unit>> e = 0"
 	void* e;
 
 	#pragma test "ref<real<4>> f = 0.00f"
 	float f = 0.00f;
 
-	#pragma test "ref<real<8>> g = 0.0"
+	#pragma test "ref<real<8>> g = 0"
 	double g;
 }
 
