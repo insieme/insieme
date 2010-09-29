@@ -35,7 +35,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <xml_dump.h>
+#include <xml_utils.h>
 
 using namespace insieme::core;
 
@@ -49,11 +49,11 @@ TEST(XmlTest, GenericTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	std::cout << s1;
+	//std::cout << s1;
 	xml.convertDomToXml("dump1.xml");
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
-	std::cout << s2;
+	//std::cout << s2;
 	EXPECT_EQ (s1, s2);
 	
 	//xmlWrite(root, "dump1.xml");

@@ -44,7 +44,7 @@
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/util/XMLUni.hpp>
 
-#include "xml_dump.h"
+#include "xml_utils.h"
 #include "xsd_config.h"
 
 using namespace insieme::core;
