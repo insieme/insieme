@@ -538,8 +538,11 @@ public:
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  {
 		const core::ASTBuilder& builder = convFact.builder;
 
-		core::ExpressionPtr rhs = Visit(binOp->getRHS()).ref;
+		VLOG(2) << "@ Converting BinaryOperator: ";
+ 		core::ExpressionPtr rhs = Visit(binOp->getRHS()).ref;
 		const core::ExpressionPtr& lhs = Visit(binOp->getLHS()).ref;
+		VLOG(2) << " LHS: " << *lhs;
+		VLOG(2) << " RHS: " << *rhs;
 
 		// if the binary operator is a comma separated expression, we convert it into
 		// a tuple expression and return it
@@ -635,8 +638,9 @@ public:
 		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
+			VLOG(2) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+//			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			op = "assign"; break;
@@ -732,8 +736,14 @@ public:
 	}
 
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
-		// todo:
-		return ExprWrapper( EmptyExpr(convFact.builder) );
+		core::ExpressionPtr base = Visit( arraySubExpr->getBase() ).ref;
+		core::ExpressionPtr idx = Visit( arraySubExpr->getIdx() ).ref;
+//		DLOG(INFO) << *base->getType();
+
+//		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
+//				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) && "Base expression of array subscript is not a vector/array type.");
+
+		return ExprWrapper( convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx })) );
 	}
 
 	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
@@ -757,6 +767,61 @@ public:
 		assert(false && "DeclRefExpr not supported!");
 	}
 };
+
+namespace {
+
+//===------------------------- VarRefFinder -------------------------===//
+// Find reference to variables in generic statements (or blocks).
+struct VarRefFinder: public clang::StmtVisitor<VarRefFinder>, std::set<const clang::VarDecl*> {
+
+	VarRefFinder(const Expr* expr){
+		VisitStmt(const_cast<Expr*>(expr));
+	}
+
+	void VisitDeclRefExpr(DeclRefExpr *DR){
+		if(VarDecl* VD = dyn_cast<VarDecl>(DR->getDecl())){
+			insert(VD);
+		}
+	}
+
+	void VisitStmt(Stmt* stmt){
+		std::for_each(stmt->child_begin(), stmt->child_end(),
+			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); });
+	}
+};
+
+struct LoopAnalyzer {
+
+	struct LoopHelper {
+		DeclRefExpr* inductionVar;
+	};
+
+	const clang::ForStmt* forStmt;
+	LoopHelper loopHelper;
+
+	LoopAnalyzer(const clang::ForStmt* forStmt): forStmt(forStmt) {
+
+		typedef std::set<clang::VarDecl*> VarDeclSet;
+		// an induction variable of a loop should appear in both the condition and increment expressions
+
+		VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
+		VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
+
+		// do an intersection
+		VarDeclSet intersect;
+		std::set_intersection(incExprVars.begin(), incExprVars.end(), condExprVars.begin(), condExprVars.end(), intersect.begin());
+
+	}
+
+	/**
+	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
+	 */
+	DeclRefExpr* getInductionVar() {
+
+	}
+};
+
+}
 
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
@@ -798,6 +863,8 @@ public:
 				// boolean values are initialized to false
 				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
 			}
+			// TODO: each type should be initialized accordingly, what about arrays/vectors
+			initExpr = core::lang::CONST_UINT_ZERO_PTR;
 		}
 
         /*-------------------------><-----------------------*/
