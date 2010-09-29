@@ -609,9 +609,11 @@ public:
 			) ;
 		// &a
 		case UO_AddrOf:
-			assert(false && "Conversion of AddressOf operator '&' not supported");
+			// assert(false && "Conversion of AddressOf operator '&' not supported");
+			return ExprWrapper( subExpr );
 		// *a
 		case UO_Deref:
+			// return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
 			return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
 		// +a
 		case UO_Plus:
