@@ -185,6 +185,7 @@ public:
 XmlUtil::XmlUtil(){
 	try {
 		XMLPlatformUtils::Initialize();
+		impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
 	}
 	catch(const XMLException& toCatch)
 	{
@@ -192,7 +193,6 @@ XmlUtil::XmlUtil(){
 		XERCES_STD_QUALIFIER cerr << "Error during Xerces-c Initialization.\n" << "  Exception message:" << pMsg;
 		XMLString::release(&pMsg);
 	}
-	impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
 	doc = NULL;
 	rootElem = NULL;
 	parser = NULL;
