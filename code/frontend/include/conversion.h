@@ -92,13 +92,14 @@ public:
  *
  */
 class IRConsumer: public clang::ASTConsumer {
-	clang::ASTContext* mCtx;
-	core::ProgramPtr   program;
-	ConversionFactory  fact;
-	bool 			   mDoConversion;
+	const ClangCompiler& comp;
+	clang::ASTContext*   mCtx;
+	core::ProgramPtr     program;
+	ConversionFactory    fact;
+	bool 			     mDoConversion;
 
 public:
-	IRConsumer(insieme::core::ProgramPtr prog, bool doConversion=true) : mCtx(NULL), program(prog), fact(prog->getNodeManager()), mDoConversion(doConversion){ }
+	IRConsumer(const ClangCompiler& clang, insieme::core::ProgramPtr prog, bool doConversion=true) : comp(comp), mCtx(NULL), program(prog), fact(prog->getNodeManager()), mDoConversion(doConversion){ }
 
 	core::ProgramPtr getProgram() const { return program; }
 

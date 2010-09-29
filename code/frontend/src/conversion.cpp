@@ -800,26 +800,26 @@ struct LoopAnalyzer {
 	const clang::ForStmt* forStmt;
 	LoopHelper loopHelper;
 
-	LoopAnalyzer(const clang::ForStmt* forStmt): forStmt(forStmt) {
-
-		typedef std::set<clang::VarDecl*> VarDeclSet;
-		// an induction variable of a loop should appear in both the condition and increment expressions
-
-		VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
-		VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
-
-		// do an intersection
-		VarDeclSet intersect;
-		std::set_intersection(incExprVars.begin(), incExprVars.end(), condExprVars.begin(), condExprVars.end(), intersect.begin());
-
-	}
-
-	/**
-	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
-	 */
-	DeclRefExpr* getInductionVar() {
-
-	}
+//	LoopAnalyzer(const clang::ForStmt* forStmt): forStmt(forStmt) {
+//
+//		typedef std::set<clang::VarDecl*> VarDeclSet;
+//		// an induction variable of a loop should appear in both the condition and increment expressions
+//
+//		VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
+//		VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
+//
+//		// do an intersection
+//		VarDeclSet intersect;
+//		std::set_intersection(incExprVars.begin(), incExprVars.end(), condExprVars.begin(), condExprVars.end(), intersect.begin());
+//
+//	}
+//
+//	/**
+//	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
+//	 */
+//	DeclRefExpr* getInductionVar() {
+//
+//	}
 };
 
 }
