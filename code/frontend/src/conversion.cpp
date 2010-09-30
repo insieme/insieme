@@ -44,6 +44,8 @@
 #include "utils/source_locations.h"
 #include "utils/dep_graph.h"
 
+#include "analysis/loop_analyzer.h"
+
 #include "program.h"
 #include "ast_node.h"
 #include "types.h"
@@ -769,61 +771,6 @@ public:
 	}
 };
 
-namespace {
-
-//===------------------------- VarRefFinder -------------------------===//
-// Find reference to variables in generic statements (or blocks).
-struct VarRefFinder: public clang::StmtVisitor<VarRefFinder>, std::set<const clang::VarDecl*> {
-
-	VarRefFinder(const Expr* expr){
-		VisitStmt(const_cast<Expr*>(expr));
-	}
-
-	void VisitDeclRefExpr(DeclRefExpr *DR){
-		if(VarDecl* VD = dyn_cast<VarDecl>(DR->getDecl())){
-			insert(VD);
-		}
-	}
-
-	void VisitStmt(Stmt* stmt){
-		std::for_each(stmt->child_begin(), stmt->child_end(),
-			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); });
-	}
-};
-
-struct LoopAnalyzer {
-
-	struct LoopHelper {
-		DeclRefExpr* inductionVar;
-	};
-
-	const clang::ForStmt* forStmt;
-	LoopHelper loopHelper;
-
-//	LoopAnalyzer(const clang::ForStmt* forStmt): forStmt(forStmt) {
-//
-//		typedef std::set<clang::VarDecl*> VarDeclSet;
-//		// an induction variable of a loop should appear in both the condition and increment expressions
-//
-//		VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
-//		VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
-//
-//		// do an intersection
-//		VarDeclSet intersect;
-//		std::set_intersection(incExprVars.begin(), incExprVars.end(), condExprVars.begin(), condExprVars.end(), intersect.begin());
-//
-//	}
-//
-//	/**
-//	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
-//	 */
-//	DeclRefExpr* getInductionVar() {
-//
-//	}
-};
-
-}
-
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
@@ -902,7 +849,10 @@ public:
 		StmtWrapper&& body = Visit(forStmt->getBody());
 		VLOG(2) << "ForStmt body: " << body;
 
-		ExprWrapper&& incExpr = convFact.ConvertExpr( *forStmt->getInc() );
+		// Analyze loop for induction variable
+		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
+
+		ExprWrapper&& incExpr = loopAnalysis.getIncrExpr();
 		// Determine the induction variable
 		// analyze the incExpr looking for the induction variable for this loop
 		VLOG(2) << "ForStmt incExpr: " << *incExpr.ref;

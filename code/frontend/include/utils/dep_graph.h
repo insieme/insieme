@@ -74,8 +74,8 @@ public:
 	typedef boost::property<NodeTy, T> NodeProperty;
 	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty> NodeDepGraph;
 
-	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor VertexTy;
-	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor EdgeTy;
+	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor 	VertexTy;
+	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor 	EdgeTy;
 
 	DependencyGraph(): dirtyFlag(true), numComponents(0) { }
 
