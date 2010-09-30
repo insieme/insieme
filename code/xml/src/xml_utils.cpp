@@ -136,6 +136,34 @@ public:
 			}
 		}
 	}
+	
+	void visitFunctionType(const FunctionTypePtr& cur){
+		DOMElement*	functionType = doc->createElement(toUnicode("functionType"));
+		functionType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
+		rootElem->appendChild(functionType);
+		
+		if (const TypePtr argument = cur->getArgumentType()) {
+			DOMElement*	argumentType = doc->createElement(toUnicode("argumentType"));
+			functionType->appendChild(argumentType);
+
+			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
+			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*argument))));			
+			argumentType->appendChild(typePtr);
+
+			// all the edge annotations
+		}
+		
+		if (const TypePtr returnT = cur->getReturnType()) {
+			DOMElement*	returnType = doc->createElement(toUnicode("returnType"));
+			functionType->appendChild(returnType);
+
+			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
+			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*returnT))));			
+			returnType->appendChild(typePtr);
+
+			// all the edge annotations
+		}	
+	}
 
 	void visitExpression(const ExpressionPtr& cur) {
 	

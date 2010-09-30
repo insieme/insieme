@@ -50,6 +50,27 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+
+<xs:complexType name="T_argumentType">
+	<xs:all>
+		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_returnType">
+	<xs:all>
+		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_functionType">
+	<xs:all>
+		<xs:element name="argumentType" type="T_argumentType" minOccurs="0"/>
+		<xs:element name="returnType" type="T_returnType" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_rootNode">
 	<xs:all>
 		<xs:element name="nodePtr" type="T_nodePtr" minOccurs="1"/>
@@ -59,6 +80,7 @@
 <xs:group name="G_nodeGroup">
 	<xs:choice>
 		<xs:element name="genType" type="T_genType"/>
+		<xs:element name="functionType" type="T_functionType"/>
 	</xs:choice>
 </xs:group>
 

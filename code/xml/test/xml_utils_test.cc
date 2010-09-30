@@ -41,10 +41,17 @@ using namespace insieme::core;
 
 TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager;
-	GenericTypePtr type = GenericType::get(manager, "int");
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
-
-	NodePtr root = type2;
+	//GenericTypePtr type = GenericType::get(manager, "int");
+	//GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
+	//NodePtr root = type2;
+	
+	//TypeVariablePtr varA = TypeVariable::get(manager, "alpha");
+	//GenericTypePtr type1 = GenericType::get(manager, "C", toVector<TypePtr>(varA));
+	
+	GenericTypePtr type1 = GenericType::get(manager, "int");
+	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type1), toVector(IntTypeParam::getVariableIntParam('p')), type1);
+	FunctionTypePtr funType1 = FunctionType::get(manager, type1, type2);
+	NodePtr root = funType1;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);
@@ -55,7 +62,6 @@ TEST(XmlTest, GenericTypeTest) {
 	string s2 = xml.convertDomToString();
 	//std::cout << s2;
 	EXPECT_EQ (s1, s2);
-	
 	//xmlWrite(root, "dump1.xml");
 	//xmlRead("dump1.xml", false);
 	//xmlValidate("dump1.xml");
