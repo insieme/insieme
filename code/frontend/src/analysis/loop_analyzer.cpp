@@ -50,8 +50,10 @@
 using namespace clang;
 
 namespace {
-//===------------------------- VarRefFinder -------------------------===//
-// Find reference to variables in generic statements (or blocks).
+
+/**
+ * Returns the list of variables referenced within an expression
+ */
 struct VarRefFinder: public clang::StmtVisitor<VarRefFinder>, insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
 
 	VarRefFinder(const Expr* expr){
@@ -69,6 +71,7 @@ struct VarRefFinder: public clang::StmtVisitor<VarRefFinder>, insieme::frontend:
 			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); });
 	}
 };
+
 }
 
 namespace insieme {
