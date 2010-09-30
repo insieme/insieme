@@ -13,6 +13,10 @@
 	<xs:attribute name="ref" type="xs:positiveInteger" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_nodePtr">
+	<xs:attribute name="ref" type="xs:positiveInteger" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_baseType">
 	<xs:all>
 		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
@@ -28,7 +32,7 @@
 <xs:complexType name="T_intTypeParams">
 	<xs:all>
 		<xs:element name="intTypeParam" type="T_intTypeParam" minOccurs="0"/>
-	</xs:all>	
+	</xs:all>
 </xs:complexType>
 
 <xs:complexType name="T_intTypeParam">
@@ -46,12 +50,25 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
-<xs:complexType name="T_Inspire">
+<xs:complexType name="T_rootNode">
+	<xs:all>
+		<xs:element name="nodePtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>
+</xs:complexType>
+
+<xs:group name="G_nodeGroup">
+	<xs:choice>
+		<xs:element name="genType" type="T_genType"/>
+	</xs:choice>
+</xs:group>
+
+<xs:complexType name="T_inspire">
 	<xs:sequence>
-		<xs:element name="genType" type="T_genType" maxOccurs="unbounded"/>
+		<xs:element name="rootNode" type="T_rootNode" minOccurs="1" maxOccurs="1"/>
+	    <xs:group ref="G_nodeGroup" maxOccurs="unbounded"/>
 	</xs:sequence>
 </xs:complexType>
 
-<xs:element name="Inspire" type="T_Inspire"/>
+<xs:element name="inspire" type="T_inspire"/>
 
 </xs:schema>
