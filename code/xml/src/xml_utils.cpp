@@ -291,7 +291,14 @@ void XmlUtil::convertIrToDom(const NodePtr& node){
 		doc->release();
 		doc = NULL;
 	}
-	doc = impl->createDocument(0, toUnicode("Inspire"),0);
+	doc = impl->createDocument(0, toUnicode("inspire"),0);
+	DOMElement*	rootNode = doc->createElement(toUnicode("rootNode"));
+	(doc->getDocumentElement())->appendChild(rootNode);
+	
+	DOMElement*	nodePtr = doc->createElement(toUnicode("nodePtr"));
+	nodePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*node))));			
+	rootNode->appendChild(nodePtr);
+	
 	XmlVisitor visitor(doc);
 	visitAllOnce(node, visitor);
 }
