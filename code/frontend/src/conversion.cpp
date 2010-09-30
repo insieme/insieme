@@ -62,6 +62,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include <boost/algorithm/string.hpp>
 
 using namespace boost;
@@ -100,100 +101,6 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 
 	bool isSingleStmt() const { return size() == 1; }
 };
-
-
-/* Function to convert Clang attributes of declarations to IR annotations (local version)
- * currently used for:
- * OpenCL address spaces
- */
-void convertClangAttributes(VarDecl* varDecl, core::TypePtr type) {
-
-    if(varDecl->hasAttrs()) {
-        const AttrVec attrVec = varDecl->getAttrs();
-
-        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
-            Attr* attr = *I;
-            if(attr->getKind() == attr::Kind::Annotate) {
-                std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
-
-                //check if the declaration has attribute __private
-                if(sr.compare(llvm::StringRef("__private")) == 0) {
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
-                    continue;
-                }
-
-                //check if the declaration has attribute __local
-                if(sr.compare(llvm::StringRef("__local")) == 0) {
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
-                    continue;
-                }
-
-                //check if the declaration has attribute __global
-                assert(sr.compare(llvm::StringRef("__global")) == 0 &&
-                        "Address space __global not allowed for local variables");
-
-                //check if the declaration has attribute __constant
-                assert(sr.compare(llvm::StringRef("__constant")) == 0 &&
-                        "Address space __constant not allowed for local variables");
-
-                DVLOG(1) << "Found unexpected annotation";
-            }
-            else
-                DVLOG(1) << "Found unexpected attribute";
-        }
-    }
-}
-
-/* Function to convert Clang attributes of declarations to IR annotations (arguments version)
- * currently used for:
- * OpenCL address spaces
- */
-void convertClangAttributes(ParmVarDecl* varDecl, const core::ParamExpr* param) {
-
-    if(varDecl->hasAttrs()) {
-        const AttrVec attrVec = varDecl->getAttrs();
-
-        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
-            Attr* attr = *I;
-            if(attr->getKind() == attr::Kind::Annotate) {
-                std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
-
-                //check if the declaration has attribute __private
-                if(sr.compare(llvm::StringRef("__private")) == 0) {
-                    param->addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
-                    continue;
-                }
-
-                //check if the declaration has attribute __local
-                if(sr.compare(llvm::StringRef("__local")) == 0) {
-                    param->addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
-                    continue;
-                }
-
-                //check if the declaration has attribute __global
-                if(sr.compare(llvm::StringRef("__global")) == 0) {
-                    param->addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
-                    continue;
-                }
-
-                //check if the declaration has attribute __constant
-                if(sr.compare(llvm::StringRef("__constant")) == 0) {
-                    param->addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
-                    continue;
-                }
-                DVLOG(1) << "Found unexpected annotation";
-            }
-            else
-                DVLOG(1) << "Found unexpected attribute";
-        }
-    }
-}
 
 insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
 	return builder.literal("0", core::lang::TYPE_INT_GEN_PTR);
@@ -950,7 +857,7 @@ public:
 		}
 
         /*-------------------------><-----------------------*/
-        convertClangAttributes(varDecl, type);
+        convFact.convertClangAttributes(varDecl, type);
 
 		// todo: initialization for declarations with no initialization value
 		return StmtWrapper( convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr ) );
@@ -1702,10 +1609,19 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), builder(mgr),
-		typeConv( new ClangTypeConverter(*this) ),
-		exprConv( new ClangExprConverter(*this) ),
-		stmtConv( new ClangStmtConverter(*this) ) { }
+//This constructor should be used for testing only!
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), builder(mgr), comp(comp),
+        typeConv( new ClangTypeConverter(*this) ),
+        exprConv( new ClangExprConverter(*this) ),
+        stmtConv( new ClangStmtConverter(*this) )
+        {
+            VLOG(1) << "Compilerless version should only be used for testing!";
+        }
+
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang): mgr(mgr), builder(mgr), comp(clang),
+        typeConv( new ClangTypeConverter(*this) ),
+        exprConv( new ClangExprConverter(*this) ),
+        stmtConv( new ClangStmtConverter(*this) ){ }
 
 core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 	DVLOG(1) << "Start converting type [class: '" << type.getTypeClassName() << "']:";
@@ -1745,6 +1661,141 @@ core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
 	return e;
 }
 
+/* Function to convert Clang attributes of declarations to IR annotations (local version)
+ * currently used for:
+ * OpenCL address spaces
+ */
+void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr type) {
+    if(varDecl->hasAttrs()) {
+        const AttrVec attrVec = varDecl->getAttrs();
+
+        std::ostringstream ss;
+        try {
+        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
+            Attr* attr = *I;
+            if(attr->getKind() == attr::Kind::Annotate) {
+                std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
+
+                //check if the declaration has attribute __private
+                if(sr.compare(llvm::StringRef("__private")) == 0) {
+                    DVLOG(2) << "           OpenCL address space __private";
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+                    continue;
+                }
+
+                //check if the declaration has attribute __local
+                if(sr.compare(llvm::StringRef("__local")) == 0) {
+                    DVLOG(2) << "           OpenCL address space __local";
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __global
+                if(sr.compare(llvm::StringRef("__global")) == 0) {
+                    ss << "Address space __global not allowed for local variable";
+                    throw &ss;
+                }
+
+                //check if the declaration has attribute __constant
+                if(sr.compare(llvm::StringRef("__constant")) == 0) {
+                    ss << "Address space __constant not allowed for local variable";
+                    throw &ss;
+                }
+
+                ss << "Unexpected annotation " << sr;
+
+                throw &ss;
+            }
+            else
+                ss << "Unexpected attribute";
+                throw &ss;
+        }}
+        catch(std::ostringstream *errMsg) {
+            //show errors if unexpected patterns were found
+            Diagnostic& diag = comp.getDiagnostics();
+            TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
+            SourceManager& manager = comp.getSourceManager();
+            SourceLocation errLoc = varDecl->getLocStart();
+
+            *errMsg << " at location (" << insieme::frontend::utils::Line(errLoc, manager) << ":" <<
+                    frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
+            llvm::errs() << (*errMsg).str();
+            tdc->EmitCaretDiagnostic(errLoc, NULL, 0, manager, 0, 0, 80, 0, 0, 0);
+        }
+    }
+}
+
+/* Function to convert Clang attributes of declarations to IR annotations (arguments version)
+ * currently used for:
+ * OpenCL address spaces
+ */
+void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypePtr type) {
+    if(varDecl->hasAttrs()) {
+        const AttrVec attrVec = varDecl->getAttrs();
+
+        std::ostringstream ss;
+        try {
+        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
+            Attr* attr = *I;
+            if(attr->getKind() == attr::Kind::Annotate) {
+                std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
+
+                //check if the declaration has attribute __private
+                if(sr.compare(llvm::StringRef("__private")) == 0) {
+                    DVLOG(2) << "           OpenCL address space __private";
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+                    continue;
+                }
+
+                //check if the declaration has attribute __local
+                if(sr.compare(llvm::StringRef("__local")) == 0) {
+                    DVLOG(2) << "           OpenCL address space __local";
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __global
+                if(sr.compare(llvm::StringRef("__global")) == 0) {
+                    DVLOG(2) << "           OpenCL address space __global";
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
+                    continue;
+                }
+
+                //check if the declaration has attribute __constant
+                if(sr.compare(llvm::StringRef("__constant")) == 0) {
+                    DVLOG(2) << "           OpenCL address space __constant";
+                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
+                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
+                    continue;
+                }
+                ss << "Unexpected annotation " << sr;
+
+                throw &ss;
+            }
+            else
+                ss << "Unexpected attribute";
+                throw &ss;
+        }}
+        catch(std::ostringstream *errMsg) {
+            //show errors if unexpected patterns were found
+            Diagnostic& diag = comp.getDiagnostics();
+            TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
+            SourceManager& manager = comp.getSourceManager();
+            SourceLocation errLoc = varDecl->getLocStart();
+
+            *errMsg << " at location (" << insieme::frontend::utils::Line(errLoc, manager) << ":" <<
+                    frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
+            llvm::errs() << (*errMsg).str();
+            tdc->EmitCaretDiagnostic(errLoc, NULL, 0, manager, 0, 0, 80, 0, 0, 0);
+        }
+    }
+}
+
 ConversionFactory::~ConversionFactory() {
 	delete typeConv;
 	delete stmtConv;
@@ -1781,7 +1832,7 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
 
                     //port clang attributes to IR annotations
-                    convertClangAttributes(currParam, funcParamList.back().ptr);
+                    fact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
 
 				}
 			);
