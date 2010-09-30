@@ -65,6 +65,7 @@ class ConversionFactory {
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
 	clang::ASTContext* clangCtx;
+    const ClangCompiler& comp;
 
 	ClangTypeConverter* typeConv;
 	ClangExprConverter* exprConv;
@@ -74,7 +75,10 @@ class ConversionFactory {
 	friend class ClangExprConverter;
 	friend class ClangStmtConverter;
 public:
+//Should be used for testing only
 	ConversionFactory(core::SharedNodeManager mgr);
+
+	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);// : comp(clang) { }
 
 	core::TypePtr 		ConvertType(const clang::Type& type);
 	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
@@ -83,6 +87,10 @@ public:
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 
 	void setClangContext(clang::ASTContext* ctx) { clangCtx = ctx; }
+
+	void convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type);
+    void convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type);
+
 
 	~ConversionFactory();
 };
@@ -99,7 +107,8 @@ class IRConsumer: public clang::ASTConsumer {
 	bool 			     mDoConversion;
 
 public:
-	IRConsumer(const ClangCompiler& clang, insieme::core::ProgramPtr prog, bool doConversion=true) : comp(comp), mCtx(NULL), program(prog), fact(prog->getNodeManager()), mDoConversion(doConversion){ }
+	IRConsumer(const ClangCompiler& clang, insieme::core::ProgramPtr prog, bool doConversion=true) : comp(clang),
+	    mCtx(NULL), program(prog), fact(prog->getNodeManager(), clang), mDoConversion(doConversion){ }
 
 	core::ProgramPtr getProgram() const { return program; }
 
