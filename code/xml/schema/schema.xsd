@@ -1,34 +1,26 @@
 <?xml version="1.0"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-<xs:simpleType name="A_intTypeParam_type">
-	<xs:restriction base="xs:string">
-		<xs:enumeration value="variable"/>
-		<xs:enumeration value="concrete"/>
-		<xs:enumeration value="infinite"/>
-	</xs:restriction>
-</xs:simpleType>
-
-<xs:complexType name="T_typePtr">
-	<xs:attribute name="ref" type="xs:positiveInteger" use="required"/>
-</xs:complexType>
-
+<!-- NodePtr -->
 <xs:complexType name="T_nodePtr">
 	<xs:attribute name="ref" type="xs:positiveInteger" use="required"/>
 </xs:complexType>
 
-<xs:complexType name="T_baseType">
+<xs:complexType name="T_uniqueNodePtr">
 	<xs:all>
-		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
+		<xs:element name="typePtr" type="T_nodePtr" minOccurs="1"/>
 	</xs:all>	
 </xs:complexType>
 
-<xs:complexType name="T_typeParams">
+<xs:complexType name="T_listNodePtr">
 	<xs:sequence>
-		<xs:element name="typePtr" type="T_typePtr" minOccurs="0" maxOccurs="unbounded"/>
+		<xs:element name="typePtr" type="T_nodePtr" minOccurs="0" maxOccurs="unbounded"/>
 	</xs:sequence>
 </xs:complexType>
 
+
+
+<!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
 	<xs:all>
 		<xs:element name="intTypeParam" type="T_intTypeParam" minOccurs="0"/>
@@ -40,33 +32,31 @@
 	<xs:attribute name="value" type="xs:string" use="required"/>
 </xs:complexType>
 
+<xs:simpleType name="A_intTypeParam_type">
+	<xs:restriction base="xs:string">
+		<xs:enumeration value="variable"/>
+		<xs:enumeration value="concrete"/>
+		<xs:enumeration value="infinite"/>
+	</xs:restriction>
+</xs:simpleType>
+
+
+
+<!-- All IR Node -->
 <xs:complexType name="T_genType">
 	<xs:all>
-		<xs:element name="baseType" type="T_baseType" minOccurs="0"/>
-		<xs:element name="typeParams" type="T_typeParams" minOccurs="0"/>
+		<xs:element name="baseType" type="T_uniqueNodePtr" minOccurs="0"/>
+		<xs:element name="typeParams" type="T_listNodePtr" minOccurs="0"/>
 		<xs:element name="intTypeParams" type="T_intTypeParams" minOccurs="0"/>		
 	</xs:all>
 		<xs:attribute name="familyName" type="xs:string" use="required"/>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
-
-<xs:complexType name="T_argumentType">
-	<xs:all>
-		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
-	</xs:all>	
-</xs:complexType>
-
-<xs:complexType name="T_returnType">
-	<xs:all>
-		<xs:element name="typePtr" type="T_typePtr" minOccurs="1"/>
-	</xs:all>	
-</xs:complexType>
-
 <xs:complexType name="T_functionType">
 	<xs:all>
-		<xs:element name="argumentType" type="T_argumentType" minOccurs="0"/>
-		<xs:element name="returnType" type="T_returnType" minOccurs="0"/>
+		<xs:element name="argumentType" type="T_uniqueNodePtr" minOccurs="0"/>
+		<xs:element name="returnType" type="T_uniqueNodePtr" minOccurs="0"/>
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
