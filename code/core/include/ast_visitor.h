@@ -154,6 +154,9 @@ protected:
 		TRY_DISPATCH(type, TupleType);
 		TRY_DISPATCH(type, GenericType);
 		TRY_DISPATCH(type, RecType);
+		
+		TRY_DISPATCH(type, StructType);
+		TRY_DISPATCH(type, UnionType);
 
 		assert ( false && "Cannot dispatch unknown type pointer." );
 		return ReturnType();

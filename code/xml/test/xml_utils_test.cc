@@ -41,28 +41,82 @@ using namespace insieme::core;
 
 TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager;
-	//GenericTypePtr type = GenericType::get(manager, "int");
-	//GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
-	//NodePtr root = type2;
+
+	GenericTypePtr type1 = GenericType::get(manager, "int");
+	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type1), toVector(IntTypeParam::getVariableIntParam('p')), type1);
 	
-	//TypeVariablePtr varA = TypeVariable::get(manager, "alpha");
-	//GenericTypePtr type1 = GenericType::get(manager, "C", toVector<TypePtr>(varA));
+	NodePtr root = type1;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, FunctionTypeTest) {
+	NodeManager manager;
 	
 	GenericTypePtr type1 = GenericType::get(manager, "int");
 	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type1), toVector(IntTypeParam::getVariableIntParam('p')), type1);
+	
 	FunctionTypePtr funType1 = FunctionType::get(manager, type1, type2);
+	
 	NodePtr root = funType1;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	//std::cout << s1;
 	xml.convertDomToXml("dump1.xml");
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
-	//std::cout << s2;
 	EXPECT_EQ (s1, s2);
-	//xmlWrite(root, "dump1.xml");
-	//xmlRead("dump1.xml", false);
-	//xmlValidate("dump1.xml");
+}
+
+TEST(XmlTest, StructTypeTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	StructType::Entries entriesA;
+	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(StructType::Entry(identB, GenericType::get(manager, "B")));
+
+	StructTypePtr structA = StructType::get(manager, entriesA);
+	
+	NodePtr root = structA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, UnionTypeTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	UnionType::Entries entriesA;
+	entriesA.push_back(UnionType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(UnionType::Entry(identB, GenericType::get(manager, "B")));
+
+	UnionTypePtr unionA = UnionType::get(manager, entriesA);
+	
+	NodePtr root = unionA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
 }
