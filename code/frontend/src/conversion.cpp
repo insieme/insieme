@@ -191,50 +191,47 @@ public:
 	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
-		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(
-						GetStringFromStream(convFact.clangCtx->getSourceManager(), intLit->getExprLoc()),
+						GetStringFromStream( convFact.clangComp.getSourceManager(), intLit->getExprLoc()),
 						convFact.ConvertType( *intLit->getType().getTypePtr() )
 				)
 		);
 	}
 
 	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
-		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
 				convFact.builder.literal(
-						GetStringFromStream(convFact.clangCtx->getSourceManager(), floatLit->getExprLoc()),
+						GetStringFromStream( convFact.clangComp.getSourceManager(), floatLit->getExprLoc()),
 						convFact.ConvertType( *floatLit->getType().getTypePtr())
 				)
 		);
 	}
 
 	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
-		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		// todo: Handle escape characters
 		return ExprWrapper( convFact.builder.literal(
-				GetStringFromStream(convFact.clangCtx->getSourceManager(), stringLit->getExprLoc()),
+				GetStringFromStream( convFact.clangComp.getSourceManager(), stringLit->getExprLoc()),
 				convFact.builder.genericType(core::Identifier("string")))
 		);
 	}
 
 	// CXX Extension for boolean types
 	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
-		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
-				convFact.builder.literal(GetStringFromStream(convFact.clangCtx->getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR)
+				convFact.builder.literal(
+					GetStringFromStream(convFact.clangComp.getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR)
 		);
 	}
 
 	ExprWrapper VisitCharacterLiteral(CharacterLiteral* charLit) {
-		assert(convFact.clangCtx && "ConversionFactory doesn't own a ClangContext.");
 		return ExprWrapper(
 				// retrieve the string representation from the source code
-				convFact.builder.literal(GetStringFromStream(convFact.clangCtx->getSourceManager(), charLit->getExprLoc()),
+				convFact.builder.literal(
+					GetStringFromStream(convFact.clangComp.getSourceManager(), charLit->getExprLoc()),
 						(charLit->isWide() ? convFact.builder.genericType("wchar") : convFact.builder.genericType("char")) )
 		);
 	}
@@ -832,23 +829,30 @@ public:
 
 		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 		if( !declStmt ) {
-			// the init expression is not a declaration stmt
+			// the init expression is not a declaration stmt, it could be a situation where it is an assignment operation:
+			// for( i=0; ...)
+			core::ExpressionPtr init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
+
+			assert(init);
+
 			// we have to define a new induction variable for the loop and replace every instance in the loop with the new variable
-			VLOG(2) << "Sobstituing loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString();
-			VLOG(2) << body.getSingleStmt();
-			core::VarExprPtr newVar = builder.varExpr(core::lang::TYPE_INT_4_PTR, core::Identifier("__it"));
+			std::string varName = std::string("__") + loopAnalysis.getInductionVar()->getNameAsString();
+			VLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
+					<< " with variable: " << varName;
 
-			core::DeclarationStmtPtr declNewVar = builder.declarationStmt(core::lang::TYPE_INT_4_PTR, core::Identifier("__it"), core::lang::CONST_UINT_ZERO_PTR);
+			core::TypePtr varTy = convFact.ConvertType( *loopAnalysis.getInductionVar()->getType().getTypePtr() );
+			core::VarExprPtr newVar = builder.varExpr(varTy, core::Identifier(varName));
 
+			declStmt = builder.declarationStmt( builder.refType(varTy), core::Identifier(varName), core::lang::CONST_UINT_ZERO_PTR );
+
+			VLOG(2) << "Printing body: " << body;
 
 			core::NodePtr ret = core::transform::replaceNode(convFact.builder, body.getSingleStmt(),
-					builder.varExpr(builder.refType(core::lang::TYPE_INT_4_PTR), core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())),
+					builder.varExpr(varTy, core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())),
 					newVar);
 
-			VLOG(2) << ret;
-
+			// replace the body with the newly modified one
 			body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-
 		}
 
 		assert(declStmt && "Falied loop init expression conversion");
@@ -1058,6 +1062,10 @@ public:
 			}
 		);
 		return StmtWrapper( convFact.builder.compoundStmt(stmtList) );
+	}
+
+	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
+		return StmtWrapper( core::lang::STMT_NO_OP_PTR );
 	}
 
 	FORWARD_VISITOR_CALL(IntegerLiteral)
@@ -1479,16 +1487,7 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-//This constructor should be used for testing only!
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr): mgr(mgr), builder(mgr), comp(comp),
-        typeConv( new ClangTypeConverter(*this) ),
-        exprConv( new ClangExprConverter(*this) ),
-        stmtConv( new ClangStmtConverter(*this) )
-        {
-            VLOG(1) << "Compilerless version should only be used for testing!";
-        }
-
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang): mgr(mgr), builder(mgr), comp(clang),
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang): mgr(mgr), builder(mgr), clangComp(clang),
         typeConv( new ClangTypeConverter(*this) ),
         exprConv( new ClangExprConverter(*this) ),
         stmtConv( new ClangStmtConverter(*this) ){ }
@@ -1507,7 +1506,7 @@ core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
 
 core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
 	DVLOG(1) << "Start converting statement [class: '" << stmt.getStmtClassName() << "'] {" <<
-			utils::location(stmt.getLocStart(), clangCtx->getSourceManager()) << "}: ";
+			utils::location(stmt.getLocStart(), clangComp.getSourceManager()) << "}: ";
 	if( VLOG_IS_ON(2) ) {
 		DVLOG(2) << "Dump of clang statement: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		stmt.dump();
@@ -1520,7 +1519,7 @@ core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
 
 core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
 	DVLOG(1) << "Start converting expression [class: '" << expr.getStmtClassName() << "'] {" <<
-			utils::location(expr.getLocStart(), clangCtx->getSourceManager()) << "}: ";
+			utils::location(expr.getLocStart(), clangComp.getSourceManager()) << "}: ";
 	if( VLOG_IS_ON(2) ) {
 		DVLOG(2) << "Dump of clang expression: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		expr.dump();
@@ -1584,9 +1583,9 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
         }}
         catch(std::ostringstream *errMsg) {
             //show errors if unexpected patterns were found
-            Diagnostic& diag = comp.getDiagnostics();
+            Diagnostic& diag = clangComp.getDiagnostics();
             TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
-            SourceManager& manager = comp.getSourceManager();
+            SourceManager& manager = clangComp.getSourceManager();
             SourceLocation errLoc = varDecl->getLocStart();
 
             *errMsg << " at location (" << insieme::frontend::utils::Line(errLoc, manager) << ":" <<
@@ -1653,9 +1652,9 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
         }}
         catch(std::ostringstream *errMsg) {
             //show errors if unexpected patterns were found
-            Diagnostic& diag = comp.getDiagnostics();
+            Diagnostic& diag = clangComp.getDiagnostics();
             TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
-            SourceManager& manager = comp.getSourceManager();
+            SourceManager& manager = clangComp.getSourceManager();
             SourceLocation errLoc = varDecl->getLocStart();
 
             *errMsg << " at location (" << insieme::frontend::utils::Line(errLoc, manager) << ":" <<
@@ -1683,7 +1682,7 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			DVLOG(1) << "##########################################################################";
 			DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
-					 << frontend::utils::location( funcDecl->getLocStart(), mCtx->getSourceManager() );
+					 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
 
 			// finds a definition of this function if any
 			const FunctionDecl* definition = NULL;
@@ -1693,17 +1692,16 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 
 			DVLOG(1) << "\t* Converting body";
 
-			core::TypePtr funcType = fact.ConvertType( *definition->getType().getTypePtr() );
+			core::TypePtr funcType = mFact.ConvertType( *definition->getType().getTypePtr() );
 			// paramlist
 			core::LambdaExpr::ParamList funcParamList;
 			std::for_each(definition->param_begin(), definition->param_end(),
-				[&funcParamList, &fact] (ParmVarDecl* currParam) {
+				[&funcParamList, &mFact] (ParmVarDecl* currParam) {
 					funcParamList.push_back(
-						fact.getASTBuilder().paramExpr( fact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
+						mFact.getASTBuilder().paramExpr( mFact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
 
                     //port clang attributes to IR annotations
-                    fact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
-
+					mFact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
 				}
 			);
 			// this is a function decl
@@ -1743,12 +1741,12 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			core::StatementPtr funcBody(NULL);
 			assert(definition->getBody() && "Function Definition has no body");
 
-			funcBody = fact.ConvertStmt( *definition->getBody() );
-			core::ExpressionPtr lambaExpr = fact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+			funcBody = mFact.ConvertStmt( *definition->getBody() );
+			core::ExpressionPtr lambaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
 			// annotate name of function
 			lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
 			if(definition->isMain()) {
-				program = program->addEntryPoint(lambaExpr);
+				mProgram = mProgram->addEntryPoint(lambaExpr);
 				//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
 			}
 		}

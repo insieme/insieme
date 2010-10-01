@@ -146,6 +146,7 @@ NodeWrapper NodeCloner::visitSwitchStmt(const core::SwitchStmtPtr& switchStmt) {
 
 NodeWrapper NodeCloner::visitCallExpr(const core::CallExprPtr& callExpr) {
 	vector<core::ExpressionPtr> args;
+
 	std::for_each(callExpr->getArguments().begin(), callExpr->getArguments().end(),
 		[ this, &args ](const core::ExpressionPtr& curr){
 			args.push_back(EXPR_REF( this->visit(curr) ));
@@ -156,7 +157,17 @@ NodeWrapper NodeCloner::visitCallExpr(const core::CallExprPtr& callExpr) {
 
 NodeWrapper NodeCloner::visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) {
 
-	return NodeWrapper();
+	LambdaExpr::ParamList params;
+	std::for_each(lambdaExpr->getParams().begin(), lambdaExpr->getParams().end(),
+		[ this, &params ](const core::ParamExprPtr& curr){
+			params.push_back(
+				dynamic_pointer_cast<const ParamExpr>( this->visit(curr).ref )
+			);
+		});
+
+	StatementPtr body = STMT_REF( visit(lambdaExpr->getBody()) );
+
+	return NodeWrapper(	builder.lambdaExpr(lambdaExpr->getType(), params, body) );
 
 }
 
