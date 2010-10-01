@@ -57,6 +57,8 @@
 #include "ocl_annotations.h"
 #include "ast_visitor.h"
 
+#include "transform/node_replacer.h"
+
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
@@ -679,139 +681,6 @@ public:
 	}
 };
 
-namespace {
-
-struct NodeWrapper {
-	core::NodePtr ref;
-
-	NodeWrapper(): ref(NULL) { }
-	NodeWrapper(const core::NodePtr& n): ref(n) { }
-};
-
-#define CHECK_EQUALS(currStmt) \
-	if(*(currStmt) == *(toReplace)) \
-		return NodeWrapper(replacement);
-
-class ReplaceNodeVisitor : public core::ASTVisitor<NodeWrapper> {
-
-	const core::ASTBuilder& builder;
-	const core::NodePtr& toReplace;
-	const core::NodePtr& replacement;
-
-public:
-
-	core::NodePtr ret;
-
-	ReplaceNodeVisitor(const core::ASTBuilder& builder, const core::NodePtr& root, const core::NodePtr& toReplace, const core::NodePtr& replacement):
-		builder(builder), toReplace(toReplace), replacement(replacement), ret(NULL) {
-		ret = visit(root).ref;
-	}
-
-	NodeWrapper visitBreakStmt(const core::BreakStmtPtr& breakStmt) {
-		return NodeWrapper((*breakStmt == *toReplace) ? replacement : breakStmt);
-	}
-
-	NodeWrapper visitContinueStmt(const core::ContinueStmtPtr& contStmt) {
-		return NodeWrapper( (*contStmt == *toReplace) ? replacement : contStmt );
-	}
-
-	NodeWrapper visitReturnStmt(const core::ReturnStmtPtr& retStmt) {
-		CHECK_EQUALS(retStmt);
-		return NodeWrapper(
-				builder.returnStmt( core::dynamic_pointer_cast<const core::Expression>( visit(retStmt->getReturnExpr()).ref ) )
-			);
-	}
-
-	NodeWrapper visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		CHECK_EQUALS(declStmt);
-		return NodeWrapper(
-				builder.declarationStmt(
-						declStmt->getVarExpression()->getType(),
-						core::dynamic_pointer_cast<const core::VarExpr>(visit(declStmt->getVarExpression()).ref)->getIdentifier(),
-						core::dynamic_pointer_cast<const core::Expression>(visit(declStmt->getInitialization()).ref)
-				)
-			);
-	}
-
-	NodeWrapper visitCompoundStmt(const core::CompoundStmtPtr& compStmt) {
-		CHECK_EQUALS(compStmt);
-
-		vector<core::StatementPtr> stmts;
-		std::for_each(compStmt->getChildList().begin(), compStmt->getChildList().end(),
-			[ this, &stmts ](core::NodePtr curr){
-				stmts.push_back(core::dynamic_pointer_cast<const core::Statement>(this->visit(curr).ref));
-			});
-		return NodeWrapper( builder.compoundStmt(stmts) );
-	}
-
-	NodeWrapper visitWhileStmt(const core::WhileStmtPtr& whileStmt) {
-		return NodeWrapper();
-	}
-
-	NodeWrapper visitForStmt(const core::ForStmtPtr& forStmt) {
-		CHECK_EQUALS(forStmt);
-
-		return NodeWrapper( builder.forStmt(
-				core::dynamic_pointer_cast<const core::DeclarationStmt>(visit(forStmt->getDeclaration()).ref),
-				core::dynamic_pointer_cast<const core::Expression>(visit(forStmt->getBody()).ref),
-				core::dynamic_pointer_cast<const core::Expression>(visit(forStmt->getEnd()).ref),
-				core::dynamic_pointer_cast<const core::Expression>(visit(forStmt->getStep()).ref) )
-		);
-	}
-
-	NodeWrapper visitIfStmt(const core::IfStmtPtr& declStmt) {
-		return NodeWrapper();
-	}
-
-	NodeWrapper visitSwitchStmt(const core::SwitchStmtPtr& declStmt) {
-		return NodeWrapper();
-	}
-
-	NodeWrapper visitLiteral(const core::LiteralPtr& lit) {
-		return NodeWrapper((*lit == *toReplace) ? replacement : lit);
-	}
-
-	NodeWrapper visitVarExpr(const core::VarExprPtr& varExpr) {
-		return NodeWrapper((*varExpr == *toReplace) ? replacement : varExpr);
-	}
-
-	NodeWrapper visitParamExpr(const core::ParamExprPtr& paramExpr) {
-		return NodeWrapper((*paramExpr == *toReplace) ? replacement : paramExpr);
-	}
-
-//	VISIT_NODE(LambdaExpr, Expression);
-
-	NodeWrapper visitCallExpr(const core::CallExprPtr& callExpr) {
-		CHECK_EQUALS(callExpr);
-
-		vector<core::ExpressionPtr> args;
-		std::for_each(callExpr->getArguments().begin(), callExpr->getArguments().end(),
-			[ this, &args ](const core::ExpressionPtr& curr){
-				args.push_back(core::dynamic_pointer_cast<const core::Expression>( this->visit(curr).ref ));
-			});
-
-		return NodeWrapper(
-			builder.callExpr(callExpr->getType(), core::dynamic_pointer_cast<const core::Expression>(visit(callExpr->getFunctionExpr()).ref), args)
-		);
-	}
-
-	NodeWrapper visitCastExpr(const core::CastExprPtr& castExpr) {
-		CHECK_EQUALS(castExpr);
-
-		return NodeWrapper(
-			builder.castExpr(castExpr->getType(),
-			core::dynamic_pointer_cast<const core::Expression>(visit(castExpr->getSubExpression()).ref))
-		);
-	}
-
-//	VISIT_NODE(UnionExpr, Expression);
-//	VISIT_NODE(StructExpr, Expression);
-//	VISIT_NODE(JobExpr, Expression);
-};
-
-}
-
-
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
@@ -971,13 +840,14 @@ public:
 
 			core::DeclarationStmtPtr declNewVar = builder.declarationStmt(core::lang::TYPE_INT_4_PTR, core::Identifier("__it"), core::lang::CONST_UINT_ZERO_PTR);
 
-			ReplaceNodeVisitor replVis(convFact.builder, body.getSingleStmt(),
+
+			core::NodePtr ret = core::transform::replaceNode(convFact.builder, body.getSingleStmt(),
 					builder.varExpr(builder.refType(core::lang::TYPE_INT_4_PTR), core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())),
 					newVar);
-			VLOG(2) << "DONE";
-			VLOG(2) << replVis.ret;
 
-			body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(replVis.ret) );
+			VLOG(2) << ret;
+
+			body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 
 		}
 

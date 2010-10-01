@@ -40,9 +40,9 @@
 #include <cassert>
 
 #include "annotated_ptr.h"
-#include "definitions.h"
+// #include "definition.h"
 #include "expressions.h"
-#include "programs.h"
+#include "program.h"
 #include "statements.h"
 #include "types.h"
 

@@ -285,6 +285,7 @@ public:
 
 	const ExpressionPtr& getSwitchExpr() const { return switchExpr; }
 	const vector<Case>& getCases() const { return cases; }
+	const StatementPtr& getDefaultCase() const { return defaultCase; }
 	
 	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases);
 	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase);
