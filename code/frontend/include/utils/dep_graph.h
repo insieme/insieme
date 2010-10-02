@@ -50,6 +50,10 @@ namespace utils {
 std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl);
 std::ostream& operator<<(std::ostream& out, const clang::Type* type);
 
+/**
+ * Utility class used to build the dependencies between types and functions.
+ * Uses boost::graph to compute the strong connected components.
+ */
 template <class T>
 class DependencyGraph {
 

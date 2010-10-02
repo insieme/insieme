@@ -54,21 +54,22 @@ namespace {
 /**
  * Returns the list of variables referenced within an expression
  */
-struct VarRefFinder: public clang::StmtVisitor<VarRefFinder>, insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
+struct VarRefFinder: public StmtVisitor<VarRefFinder>, insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
 
-	VarRefFinder(const Expr* expr){
-		VisitStmt(const_cast<Expr*>(expr));
+	VarRefFinder(const Expr* expr) {
+		VisitStmt( const_cast<Expr*>(expr) );
 	}
 
-	void VisitDeclRefExpr(DeclRefExpr *DR){
-		if(VarDecl* VD = dyn_cast<VarDecl>(DR->getDecl())){
-			insert(VD);
+	void VisitDeclRefExpr(DeclRefExpr *declRef) {
+		if(VarDecl* varDec = dyn_cast<VarDecl>(declRef->getDecl())) {
+			insert(varDec);
 		}
 	}
 
-	void VisitStmt(Stmt* stmt){
+	void VisitStmt(Stmt* stmt) {
 		std::for_each(stmt->child_begin(), stmt->child_end(),
-			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); });
+			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); }
+		);
 	}
 };
 
@@ -78,14 +79,14 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL}){
+LoopAnalyzer::LoopAnalyzer(const ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL}) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression
 	handleIncrExpr(forStmt);
 }
 
-void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
+void LoopAnalyzer::findInductionVariable(const ForStmt* forStmt) {
 	// an induction variable of a loop should appear in both the condition and increment expressions
 	VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
 	VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
@@ -107,8 +108,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	}
 }
 
-
-void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
+void LoopAnalyzer::handleIncrExpr(const ForStmt* forStmt) {
 	assert(loopHelper.inductionVar && "Loop induction variable not found, impossible to handle increment expression.");
 
 	if( const UnaryOperator* unOp = dyn_cast<const UnaryOperator>(forStmt->getInc()) ) {
@@ -140,10 +140,10 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 	}
 }
 
-void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
+void LoopAnalyzer::handleCondExpr(const ForStmt* forStmt) {
+	// analyze the condition expression
 
 }
-
 
 } // End analysis namespace
 } // End froentend namespace

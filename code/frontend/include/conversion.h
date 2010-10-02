@@ -76,9 +76,9 @@ class ConversionFactory {
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);
 
-	core::TypePtr 		ConvertType(const clang::Type& type);
-	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
-	core::ExpressionPtr ConvertExpr(const clang::Expr& expr);
+	core::TypePtr 		ConvertType(const clang::Type& type) const;
+	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt) const;
+	core::ExpressionPtr ConvertExpr(const clang::Expr& expr) const;
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 

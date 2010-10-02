@@ -171,11 +171,12 @@ std::string getOperationType(const core::TypePtr& type) {
 
 
 #define START_LOG_EXPR_CONVERSION(expr) \
-	DVLOG(1) << "********************************************************************************\n"; \
-	DVLOG(1) << "Converting expression [class: '" << expr->getStmtClassName() << "']"; \
-	DVLOG(1) << "-> at location: (" << utils::location(expr->getLocStart(), convFact.clangComp.getSourceManager()) << "): "; \
+	DVLOG(1) << "\n****************************************************************************************\n" \
+			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
+			 << "-> at location: (" << utils::location(expr->getLocStart(), convFact.clangComp.getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang expression: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+		DVLOG(2) << "Dump of clang expression: \n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		expr->dump(); \
 	}
 
@@ -715,16 +716,17 @@ public:
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
 #define START_LOG_STMT_CONVERSION(stmt) \
-	DVLOG(1) << "********************************************************************************\n"; \
-	DVLOG(1) << "Converting statement [class: '" << stmt->getStmtClassName() << "']"; \
-	DVLOG(1) << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.clangComp.getSourceManager()) << "): "; \
+	DVLOG(1) << "\n****************************************************************************************\n" \
+			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
+			 << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.clangComp.getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang statement: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+		DVLOG(2) << "Dump of clang statement:\n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		stmt->dump(convFact.clangComp.getSourceManager()); \
 	}
 
 #define END_LOG_STMT_CONVERSION(stmt) \
-	DVLOG(1) << "Converted into IR stmt: "; \
+	DVLOG(1) << "Converted 'statement' into IR stmt: "; \
 	DVLOG(1) << "\t" << *stmt;
 
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
@@ -736,11 +738,12 @@ public:
 	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
 
 		// logging
-		DVLOG(1) << "********************************************************************************\n";
-		DVLOG(1) << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']";
-		DVLOG(1) << "-> at location: (" << utils::location(varDecl->getLocation(), convFact.clangComp.getSourceManager()) << "): ";
+		DVLOG(1) << "\n****************************************************************************************\n"
+				 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
+				 << "-> at location: (" << utils::location(varDecl->getLocation(), convFact.clangComp.getSourceManager()) << "): ";
 		if( VLOG_IS_ON(2) ) { \
-			DVLOG(2) << "Dump of clang VarDecl: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+			DVLOG(2) << "Dump of clang VarDecl: \n"
+					 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 			varDecl->dump();
 		}
 
@@ -1165,15 +1168,16 @@ public:
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 #define START_LOG_TYPE_CONVERSION(type) \
-	DVLOG(1) << "********************************************************************************\n"; \
-	DVLOG(1) << "Converting statement [class: '" << (type)->getTypeClassName() << "']"; \
+	DVLOG(1) << "\n****************************************************************************************\n" \
+			 << "Converting type [class: '" << (type)->getTypeClassName() << "']"; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang type: \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+		DVLOG(2) << "Dump of clang type: \n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		type->dump(); \
 	}
 
 #define END_LOG_TYPE_CONVERSION(type) \
-	DVLOG(1) << "Converted into IR type: "; \
+	DVLOG(1) << "Converted 'type' into IR type: "; \
 	DVLOG(1) << "\t" << *type;
 
 /**
@@ -1607,21 +1611,22 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang): mgr(mgr), builder(mgr), clangComp(clang),
-        typeConv( new ClangTypeConverter(*this) ),
-        exprConv( new ClangExprConverter(*this) ),
-        stmtConv( new ClangStmtConverter(*this) ){ }
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang):
+	mgr(mgr),  builder(mgr),  clangComp(clang),
+	typeConv( new ClangTypeConverter(*this) ),
+	exprConv( new ClangExprConverter(*this) ),
+	stmtConv( new ClangStmtConverter(*this) ) { }
 
-core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) {
-	return typeConv->Visit(const_cast<Type*>(&type)).ref;
+core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) const {
+	return typeConv->Visit( const_cast<Type*>(&type) ).ref;
 }
 
-core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) {
-	return stmtConv->Visit(const_cast<Stmt*>(&stmt)).getSingleStmt();
+core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) const {
+	return stmtConv->Visit( const_cast<Stmt*>(&stmt) ).getSingleStmt();
 }
 
-core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) {
-	return exprConv->Visit(const_cast<Expr*>(&expr)).ref;
+core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) const {
+	return exprConv->Visit( const_cast<Expr*>(&expr) ).ref;
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (local version)
