@@ -135,7 +135,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case BO_SubAssign:
 			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getLHS() );
 		default:
-			assert(false && "Binary operator not supported in increment expression");
+			assert(false && "BinaryOperator not supported in increment expression");
 		}
 	}
 }
