@@ -67,6 +67,35 @@ public:
 	const XMLCh* unicodeForm() const { return fUnicodeForm; }
 };
 
+class XmlElement {
+private:
+	DOMDocument* doc;
+	DOMElement* base;
+	
+public:
+	DOMElement* node () {return base;}
+	
+	XmlElement(string name, DOMDocument* docp) {
+		doc = docp;
+		base = doc->createElement(toUnicode(name));
+	}
+	
+	XmlElement operator<<(XmlElement childNode) {
+		base->appendChild(childNode.base);
+		return childNode;
+	}
+	
+	void addAttr(string id, string value) {
+		base->setAttribute(toUnicode(id), toUnicode(value));
+	}
+	
+	void addText(string text) {
+		DOMText* textNode = doc->createTextNode(toUnicode(text));
+		base->appendChild(textNode);
+	}
+};
+
+
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
 	DOMElement* rootElem;
@@ -80,138 +109,133 @@ public:
 	~XmlVisitor(){}
 
 	void visitGenericType(const GenericTypePtr& cur) {
-		DOMElement*	genType = doc->createElement(toUnicode("genType"));
-		genType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
-		genType->setAttribute(toUnicode("familyName"), toUnicode(cur->getFamilyName().getName()));
-		rootElem->appendChild(genType);
+		XmlElement genType("genType", doc);
+		genType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		genType.addAttr("familyName", cur->getFamilyName().getName());
+		rootElem->appendChild(genType.node());
 
 		if (const TypePtr base = cur->getBaseType()) {
-			DOMElement*	baseType = doc->createElement(toUnicode("baseType"));
-			genType->appendChild(baseType);
+			XmlElement baseType("baseType", doc);
+			genType << baseType;
 
-			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
-			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*base))));			
-			baseType->appendChild(typePtr);
+			XmlElement typePtr("typePtr", doc);
+			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*base)));		
+			baseType << typePtr;
 
 			// all the edge annotations
 		}
 
-		DOMElement*	typeParams = doc->createElement(toUnicode("typeParams"));
-		genType->appendChild(typeParams);
+		XmlElement typeParams("typeParams", doc);
+		genType << typeParams;
 
 		const vector<TypePtr>& param = cur->getTypeParameter();
 		for(vector<TypePtr>::const_iterator iter = param.begin(); iter != param.end(); ++iter) {
-			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
-			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)&*(*iter))));			
-			typeParams->appendChild(typePtr);
+			XmlElement typePtr("typePtr", doc);
+			typePtr.addAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+			typeParams << typePtr;
 
 			// all the annotations
 		}
 
-		DOMElement*	intTypeParams = doc->createElement(toUnicode("intTypeParams"));
-		genType->appendChild(intTypeParams);
+		XmlElement intTypeParams("intTypeParams", doc);
+		genType << intTypeParams;
 
 		const vector<IntTypeParam>& intParam = cur->getIntTypeParameter();
 		for(vector<IntTypeParam>::const_iterator iter = intParam.begin(); iter != intParam.end(); ++iter) {
 
-			DOMElement*	intTypeParam = doc->createElement(toUnicode("intTypeParam"));
-			intTypeParams->appendChild(intTypeParam);
+			XmlElement intTypeParam("intTypeParam", doc);
+			intTypeParams << intTypeParam;
 			switch (iter->getType()) {
 			case IntTypeParam::VARIABLE:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("variable"));
-				intTypeParam->setAttribute(toUnicode("value"), toUnicode(numeric_cast<string>(iter->getSymbol())));
+				intTypeParam.addAttr("type", "variable");
+				intTypeParam.addAttr("value", numeric_cast<string>(iter->getSymbol()));
 				break;
 			case IntTypeParam::CONCRETE:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("concrete"));
-				intTypeParam->setAttribute(toUnicode("value"), toUnicode(numeric_cast<string>(iter->getSymbol())));
+				intTypeParam.addAttr("type", "concrete");
+				intTypeParam.addAttr("value", numeric_cast<string>(iter->getSymbol()));
 				break;
 			case IntTypeParam::INFINITE:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("infinite"));
+				intTypeParam.addAttr("type", "infinite");
 				break;
 			default:
-				intTypeParam->setAttribute(toUnicode("type"), toUnicode("Invalid Parameter"));
+				intTypeParam.addAttr("type", "Invalid Parameter");
 				break;
 			}
 		}
 	}
 	
 	void visitFunctionType(const FunctionTypePtr& cur){
-		DOMElement*	functionType = doc->createElement(toUnicode("functionType"));
-		functionType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
-		rootElem->appendChild(functionType);
+		XmlElement functionType("functionType", doc);
+		functionType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem->appendChild(functionType.node());
 		
 		if (const TypePtr argument = cur->getArgumentType()) {
-			DOMElement*	argumentType = doc->createElement(toUnicode("argumentType"));
-			functionType->appendChild(argumentType);
+			XmlElement argumentType("argumentType", doc);
+			functionType << argumentType;
 
-			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
-			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*argument))));			
-			argumentType->appendChild(typePtr);
+			XmlElement typePtr("typePtr", doc);
+			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
+			argumentType << typePtr;
 
 			// all the edge annotations
 		}
 		
 		if (const TypePtr returnT = cur->getReturnType()) {
-			DOMElement*	returnType = doc->createElement(toUnicode("returnType"));
-			functionType->appendChild(returnType);
+			XmlElement returnType("returnType", doc);
+			functionType << returnType;
 
-			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
-			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*returnT))));			
-			returnType->appendChild(typePtr);
+			XmlElement typePtr("typePtr", doc);
+			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
+			returnType << typePtr;
 
 			// all the edge annotations
-		}	
+		}
 	}
 	
 	void visitStructType(const StructTypePtr& cur) {
-		DOMElement*	structType = doc->createElement(toUnicode("structType"));
-		structType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
-		rootElem->appendChild(structType);
-		
-		DOMElement*	entries = doc->createElement(toUnicode("entries"));
-		structType->appendChild(entries);
+		XmlElement structType("structType",doc);
+		structType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem->appendChild(structType.node());
+		XmlElement entries("entries", doc);
+		structType << entries;
 		
 		const vector<NamedCompositeType::Entry> entriesVec = cur->getEntries ();
 		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
-			DOMElement* entry = doc->createElement(toUnicode("entry"));
-			entries->appendChild(entry);
+			XmlElement entry("entry", doc);
+			entries << entry;
 			
-			DOMElement*	id = doc->createElement(toUnicode("id"));			
-			entry->appendChild(id);
+			XmlElement id("id", doc);			
+			id.addText((iter->first).getName());
+			entry << id;
 			
-			DOMText* idValue = doc->createTextNode(toUnicode((iter->first).getName()));
-			id->appendChild(idValue);
-			
-			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
-			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*iter->second))));			
-			entry->appendChild(typePtr);
+			XmlElement typePtr("typePtr", doc);
+			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
+			entry << typePtr;
 			
 			// all the annotations
 		}
 	}
 	
 	void visitUnionType(const UnionTypePtr& cur) {
-		DOMElement*	unionType = doc->createElement(toUnicode("unionType"));
-		unionType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
-		rootElem->appendChild(unionType);
+		XmlElement unionType("unionType", doc);
+		unionType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem->appendChild(unionType.node());
 		
-		DOMElement*	entries = doc->createElement(toUnicode("entries"));
-		unionType->appendChild(entries);
+		XmlElement entries("entries",doc);
+		unionType << entries;
 		
 		const vector<NamedCompositeType::Entry> entriesVec = cur->getEntries ();
 		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
-			DOMElement* entry = doc->createElement(toUnicode("entry"));
-			entries->appendChild(entry);
+			XmlElement entry("entry", doc);
+			entries << entry;
 			
-			DOMElement*	id = doc->createElement(toUnicode("id"));			
-			entry->appendChild(id);
-			
-			DOMText* idValue = doc->createTextNode(toUnicode((iter->first).getName()));
-			id->appendChild(idValue);
-			
-			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
-			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*iter->second))));			
-			entry->appendChild(typePtr);
+			XmlElement id("id", doc);
+			id.addText((iter->first).getName());			
+			entry << id;
+
+			XmlElement typePtr("typePtr", doc);
+			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
+			entry << typePtr;
 			
 			// all the annotations
 		}
