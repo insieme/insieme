@@ -87,6 +87,13 @@ struct TypeWrapper: public IRWrapper<core::TypePtr> {
 	TypeWrapper(const core::TypePtr& type): IRWrapper<core::TypePtr>(type) { }
 };
 
+struct VectorWrapper: public TypeWrapper {
+    const core::VectorType vecType;
+//    VectorWrapper(): vecType(0, 0), TypeWrapper() { }
+    VectorWrapper(const core::TypePtr& type, const core::IntTypeParam& numElements):
+        TypeWrapper(&vecType), vecType(type, numElements){ }
+};
+
 struct ExprWrapper: public IRWrapper<core::ExpressionPtr> {
 	ExprWrapper(): IRWrapper<core::ExpressionPtr>() { }
 	ExprWrapper(const core::ExpressionPtr& expr): IRWrapper<core::ExpressionPtr>(expr) { }
@@ -1400,13 +1407,66 @@ public:
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
-		START_LOG_TYPE_CONVERSION(typedefType);
-		core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
 
-		// Adding the name of the typedef as annotation
-		subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
-		END_LOG_TYPE_CONVERSION( subType );
-		return TypeWrapper( subType );
+        Type* t = typedefType->getDecl()->getUnderlyingType().getTypePtr();
+        //special treatment for OpenCL vector types
+        if(t->getTypeClass() == Type::TypeClass::ExtVector){
+            const core::ASTBuilder& builder = convFact.builder;
+
+            clang::ExtVectorType* evt = (clang::ExtVectorType*)t;
+
+            // get the number of elements
+            size_t num = evt->getNumElements();
+            core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
+
+            // get vector datatype
+            const QualType qt = evt->getElementType();
+            BuiltinType* buldInTy = (BuiltinType*)qt->getUnqualifiedDesugaredType();
+            switch(buldInTy->getKind()) {
+
+                // integer types
+                case BuiltinType::UShort:
+                    return VectorWrapper( builder.getUIntType( SHORT_LENGTH ), numElem );
+                case BuiltinType::Short:
+                    return VectorWrapper( builder.getIntType( SHORT_LENGTH ), numElem );
+                case BuiltinType::UInt:
+                    return VectorWrapper( builder.getUIntType( INT_LENGTH ), numElem );
+                case BuiltinType::Int:
+                    return VectorWrapper( builder.getIntType( INT_LENGTH ), numElem );
+                case BuiltinType::ULongLong:
+                    return VectorWrapper( builder.getUIntType( LONG_LONG_LENGTH ), numElem );
+                case BuiltinType::LongLong:
+                    return VectorWrapper( builder.getIntType( LONG_LONG_LENGTH ), numElem );
+/* not supported at the moment
+                    return VectorWrapper( builder.getUIntType( 16 ), numElem );
+                case BuiltinType::Int128:
+                    return VectorWrapper( builder.getIntType( 16 ), numElem ); */
+
+                // real types
+                case BuiltinType::Float:
+                    return VectorWrapper( builder.getRealType( FLOAT_LENGTH ), numElem );
+/* not supported at the moment
+                case BuiltinType::Double:
+                    return VectorWrapper( builder.getRealType( DOUBLE_LENGTH ), numElem );
+                case BuiltinType::LongDouble:
+                    return VectorWrapper( builder.getRealType( LONG_DOUBLE_LENGTH ), numElem );*/
+
+                default:
+                    throw "unsupported OpenCL vector type"; //todo introduce exception class
+            }
+            assert(false && "OpenCL vector type conversion not supported!");
+
+            return TypeWrapper();
+        }
+        else {
+            core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
+
+            // Adding the name of the typedef as annotation
+            subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
+            END_LOG_TYPE_CONVERSION( subType ); 
+            return TypeWrapper( subType );
+        }
+
 	}
 
 	TypeWrapper VisitTypeOfType(TypeOfType* typeOfType) {
