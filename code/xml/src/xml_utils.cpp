@@ -68,42 +68,43 @@ public:
 };
 
 class XmlElement {
-private:
 	DOMDocument* doc;
-	DOMElement* base;
+	DOMNode* base;
 	
 public:
-	DOMElement* node () {return base;}
+	void setBase (DOMNode* node) {base = node;}
 	
 	XmlElement(string name, DOMDocument* docp) {
 		doc = docp;
 		base = doc->createElement(toUnicode(name));
 	}
 	
+	XmlElement() {}
+	
 	XmlElement operator<<(XmlElement childNode) {
-		base->appendChild(childNode.base);
+		dynamic_cast<DOMElement*>(base)->appendChild(childNode.base);
 		return childNode;
 	}
 	
 	void addAttr(string id, string value) {
-		base->setAttribute(toUnicode(id), toUnicode(value));
+		dynamic_cast<DOMElement*>(base)->setAttribute(toUnicode(id), toUnicode(value));
 	}
 	
 	void addText(string text) {
 		DOMText* textNode = doc->createTextNode(toUnicode(text));
-		base->appendChild(textNode);
+		dynamic_cast<DOMElement*>(base)->appendChild(textNode);
 	}
 };
 
 
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
-	DOMElement* rootElem;
+	XmlElement rootElem;
 
 public:
 	XmlVisitor(DOMDocument* udoc){
 		doc = udoc;
-		rootElem = doc->getDocumentElement();
+		rootElem.setBase(doc->getDocumentElement());
 	}
 	
 	~XmlVisitor(){}
@@ -112,7 +113,7 @@ public:
 		XmlElement genType("genType", doc);
 		genType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		genType.addAttr("familyName", cur->getFamilyName().getName());
-		rootElem->appendChild(genType.node());
+		rootElem << genType;
 
 		if (const TypePtr base = cur->getBaseType()) {
 			XmlElement baseType("baseType", doc);
@@ -167,7 +168,7 @@ public:
 	void visitFunctionType(const FunctionTypePtr& cur){
 		XmlElement functionType("functionType", doc);
 		functionType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
-		rootElem->appendChild(functionType.node());
+		rootElem << functionType;
 		
 		if (const TypePtr argument = cur->getArgumentType()) {
 			XmlElement argumentType("argumentType", doc);
@@ -195,7 +196,7 @@ public:
 	void visitStructType(const StructTypePtr& cur) {
 		XmlElement structType("structType",doc);
 		structType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
-		rootElem->appendChild(structType.node());
+		rootElem << structType;
 		XmlElement entries("entries", doc);
 		structType << entries;
 		
@@ -219,7 +220,7 @@ public:
 	void visitUnionType(const UnionTypePtr& cur) {
 		XmlElement unionType("unionType", doc);
 		unionType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
-		rootElem->appendChild(unionType.node());
+		rootElem << unionType;
 		
 		XmlElement entries("entries",doc);
 		unionType << entries;
