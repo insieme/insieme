@@ -68,8 +68,6 @@ public:
 };
 
 class XmlVisitor : public ASTVisitor<void> {
-
-public:
 	DOMDocument* doc;
 	DOMElement* rootElem;
 
@@ -233,7 +231,6 @@ public:
 };
 
 class error_handler: public DOMErrorHandler {
-private:
 	bool failed_;
 
 public:
