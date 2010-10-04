@@ -59,13 +59,12 @@ class ClangExprConverter;
 // ------------------------------------ ConversionFactory ---------------------------
 
 /**
- * A factory used to convert clang AST nodes (i.e. statements, expressions and types) into Insieme IR nodes.
+ * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
 class ConversionFactory {
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
-	clang::ASTContext* clangCtx;
-    const ClangCompiler& comp;
+    const ClangCompiler& 	 clangComp;
 
 	ClangTypeConverter* typeConv;
 	ClangExprConverter* exprConv;
@@ -75,22 +74,16 @@ class ConversionFactory {
 	friend class ClangExprConverter;
 	friend class ClangStmtConverter;
 public:
-//Should be used for testing only
-	ConversionFactory(core::SharedNodeManager mgr);
+	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);
 
-	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);// : comp(clang) { }
-
-	core::TypePtr 		ConvertType(const clang::Type& type);
-	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt);
-	core::ExpressionPtr ConvertExpr(const clang::Expr& expr);
+	core::TypePtr 		ConvertType(const clang::Type& type) const;
+	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt) const;
+	core::ExpressionPtr ConvertExpr(const clang::Expr& expr) const;
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 
-	void setClangContext(clang::ASTContext* ctx) { clangCtx = ctx; }
-
 	void convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type);
     void convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type);
-
 
 	~ConversionFactory();
 };
@@ -100,19 +93,19 @@ public:
  *
  */
 class IRConsumer: public clang::ASTConsumer {
-	const ClangCompiler& comp;
-	clang::ASTContext*   mCtx;
-	core::ProgramPtr     program;
-	ConversionFactory    fact;
+	const ClangCompiler& mClangComp;
+	core::ProgramPtr     mProgram;
+	ConversionFactory    mFact;
 	bool 			     mDoConversion;
 
 public:
-	IRConsumer(const ClangCompiler& clang, insieme::core::ProgramPtr prog, bool doConversion=true) : comp(clang),
-	    mCtx(NULL), program(prog), fact(prog->getNodeManager(), clang), mDoConversion(doConversion){ }
+	IRConsumer(const ClangCompiler& clangComp, insieme::core::ProgramPtr prog, bool doConversion=true) :
+		mClangComp(clangComp), mProgram(prog), mFact(prog->getNodeManager(), clangComp), mDoConversion(doConversion){ }
 
-	core::ProgramPtr getProgram() const { return program; }
+	core::ProgramPtr getProgram() const { return mProgram; }
 
-	virtual void Initialize(clang::ASTContext &Context) { mCtx = &Context; fact.setClangContext(&Context); }
+	virtual void Initialize(clang::ASTContext &Context) { }
+
 	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
 	virtual void HandleTranslationUnit(clang::ASTContext &Ctx);
 };

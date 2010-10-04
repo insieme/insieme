@@ -57,7 +57,8 @@ using namespace insieme::frontend::conversion;
 TEST(TypeConversion, HandleBuildinType) {
 
 	ProgramPtr prog = Program::create();
-	ConversionFactory convFactory( prog->getNodeManager() );
+	ClangCompiler clangComp;
+	ConversionFactory convFactory( prog->getNodeManager(), clangComp);
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -108,9 +109,10 @@ TEST(TypeConversion, HandlePointerType) {
 	using namespace clang;
 
 	ProgramPtr prog = Program::create();
-	ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
+
+	ConversionFactory convFactory( prog->getNodeManager(), clang );
+
 	BuiltinType intTy(BuiltinType::Int);
 	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
 
@@ -125,9 +127,9 @@ TEST(TypeConversion, HandleReferenceType) {
 	using namespace clang;
 
 	ProgramPtr prog = Program::create();
-	ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
+	ConversionFactory convFactory( prog->getNodeManager(), clang);
+
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
 
@@ -142,9 +144,9 @@ TEST(TypeConversion, HandleStructType) {
 	using namespace clang;
 
 	ProgramPtr prog = Program::create();
-	ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
+	ConversionFactory convFactory( prog->getNodeManager(), clang);
+
 	SourceLocation emptyLoc;
 
 	BuiltinType charTy(BuiltinType::SChar);
@@ -181,9 +183,9 @@ TEST(TypeConversion, HandleStructType) {
 TEST(TypeConversion, HandleRecursiveStructType) {
 
 	ProgramPtr prog = Program::create();
-	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
+	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager(), clang );
+
 	clang::BuiltinType charTy(clang::BuiltinType::SChar);
 	clang::BuiltinType longTy(clang::BuiltinType::Long);
 
@@ -210,9 +212,9 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 TEST(TypeConversion, HandleMutualRecursiveStructType) {
 
 	ProgramPtr prog = Program::create();
-	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
+	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager(), clang );
+
 	clang::RecordDecl* declA = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("A"));
 	clang::RecordDecl* declB = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
@@ -286,11 +288,10 @@ TEST(TypeConversion, HandleFunctionType) {
 	using namespace clang;
 
 	ProgramPtr prog = Program::create();
-	ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
-	ASTContext& ctx = clang.getASTContext();
+	ConversionFactory convFactory( prog->getNodeManager(), clang );
 
+	ASTContext& ctx = clang.getASTContext();
 	// Defines a function with the following prototype:
 	// int f(double a, float* b)
 
@@ -323,9 +324,9 @@ TEST(TypeConversion, HandleArrayType) {
 	using namespace clang;
 
 	ProgramPtr prog = Program::create();
-	ConversionFactory convFactory( prog->getNodeManager() );
-
 	ClangCompiler clang;
+	ConversionFactory convFactory( prog->getNodeManager(), clang );
+
 	ASTContext& ctx = clang.getASTContext();
 
 	// Check constant arrays: i.e. int a[4];
@@ -351,11 +352,10 @@ TEST(TypeConversion, HandleArrayType) {
 
 TEST(TypeConversion, FileTest) {
 	ProgramPtr program = Program::create();
-	ConversionFactory convFactory( program->getNodeManager() );
 	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", program);
+	ConversionFactory convFactory( program->getNodeManager(), TU->getCompiler() );
 
 	const PragmaList& pl = TU->getPragmaList();
-	convFactory.setClangContext(&TU->getCompiler().getASTContext());
 
 	std::for_each(pl.begin(), pl.end(),
 		[ &convFactory ](const PragmaPtr curr) {

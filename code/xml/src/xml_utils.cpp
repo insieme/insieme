@@ -101,8 +101,8 @@ public:
 		DOMElement*	typeParams = doc->createElement(toUnicode("typeParams"));
 		genType->appendChild(typeParams);
 
-		const vector< TypePtr >& param = cur->getTypeParameter();
-		for(vector< TypePtr >::const_iterator iter = param.begin(); iter != param.end(); ++iter) {
+		const vector<TypePtr>& param = cur->getTypeParameter();
+		for(vector<TypePtr>::const_iterator iter = param.begin(); iter != param.end(); ++iter) {
 			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
 			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)&*(*iter))));			
 			typeParams->appendChild(typePtr);
@@ -114,7 +114,7 @@ public:
 		genType->appendChild(intTypeParams);
 
 		const vector<IntTypeParam>& intParam = cur->getIntTypeParameter();
-		for(vector <IntTypeParam>::const_iterator iter = intParam.begin(); iter != intParam.end(); ++iter) {
+		for(vector<IntTypeParam>::const_iterator iter = intParam.begin(); iter != intParam.end(); ++iter) {
 
 			DOMElement*	intTypeParam = doc->createElement(toUnicode("intTypeParam"));
 			intTypeParams->appendChild(intTypeParam);
@@ -163,6 +163,60 @@ public:
 
 			// all the edge annotations
 		}	
+	}
+	
+	void visitStructType(const StructTypePtr& cur) {
+		DOMElement*	structType = doc->createElement(toUnicode("structType"));
+		structType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
+		rootElem->appendChild(structType);
+		
+		DOMElement*	entries = doc->createElement(toUnicode("entries"));
+		structType->appendChild(entries);
+		
+		const vector<NamedCompositeType::Entry> entriesVec = cur->getEntries ();
+		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
+			DOMElement* entry = doc->createElement(toUnicode("entry"));
+			entries->appendChild(entry);
+			
+			DOMElement*	id = doc->createElement(toUnicode("id"));			
+			entry->appendChild(id);
+			
+			DOMText* idValue = doc->createTextNode(toUnicode((iter->first).getName()));
+			id->appendChild(idValue);
+			
+			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
+			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*iter->second))));			
+			entry->appendChild(typePtr);
+			
+			// all the annotations
+		}
+	}
+	
+	void visitUnionType(const UnionTypePtr& cur) {
+		DOMElement*	unionType = doc->createElement(toUnicode("unionType"));
+		unionType->setAttribute(toUnicode("id"), toUnicode(numeric_cast<string>((size_t)(&*cur))));
+		rootElem->appendChild(unionType);
+		
+		DOMElement*	entries = doc->createElement(toUnicode("entries"));
+		unionType->appendChild(entries);
+		
+		const vector<NamedCompositeType::Entry> entriesVec = cur->getEntries ();
+		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
+			DOMElement* entry = doc->createElement(toUnicode("entry"));
+			entries->appendChild(entry);
+			
+			DOMElement*	id = doc->createElement(toUnicode("id"));			
+			entry->appendChild(id);
+			
+			DOMText* idValue = doc->createTextNode(toUnicode((iter->first).getName()));
+			id->appendChild(idValue);
+			
+			DOMElement*	typePtr = doc->createElement(toUnicode("typePtr"));
+			typePtr->setAttribute(toUnicode("ref"), toUnicode(numeric_cast<string>((size_t)(&*iter->second))));			
+			entry->appendChild(typePtr);
+			
+			// all the annotations
+		}
 	}
 
 	void visitExpression(const ExpressionPtr& cur) {
