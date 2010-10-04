@@ -1407,7 +1407,7 @@ public:
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
-<<<<<<< HEAD:code/frontend/src/conversion.cpp
+
         Type* t = typedefType->getDecl()->getUnderlyingType().getTypePtr();
         //special treatment for OpenCL vector types
         if(t->getTypeClass() == Type::TypeClass::ExtVector){
