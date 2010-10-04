@@ -90,6 +90,8 @@ public:
 	lang::UIntTypePtr getUIntType(unsigned short size) const;
 	lang::RealTypePtr getRealType(unsigned short size) const;
 
+	VectorTypePtr getVector(const TypePtr& type, const IntTypeParam& numElements) const;
+
 	// -------------------------------- Expressions ---------------------------------
 
 	ExpressionPtr createExpr(const lang::OperatorPtr& op, const ExpressionPtr& operant) const;

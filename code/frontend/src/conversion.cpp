@@ -87,11 +87,13 @@ struct TypeWrapper: public IRWrapper<core::TypePtr> {
 	TypeWrapper(const core::TypePtr& type): IRWrapper<core::TypePtr>(type) { }
 };
 
+// OBSOLETE
 struct VectorWrapper: public TypeWrapper {
-    const core::VectorType vecType;
+    core::VectorTypePtr vecType;
 //    VectorWrapper(): vecType(0, 0), TypeWrapper() { }
     VectorWrapper(const core::TypePtr& type, const core::IntTypeParam& numElements):
-        TypeWrapper(&vecType), vecType(type, numElements){ }
+        TypeWrapper(type), vecType(new core::VectorType (type, numElements))
+        { DVLOG(1) << "Should not be used at the moment"; }
 };
 
 struct ExprWrapper: public IRWrapper<core::ExpressionPtr> {
@@ -1426,17 +1428,17 @@ public:
 
                 // integer types
                 case BuiltinType::UShort:
-                    return VectorWrapper( builder.getUIntType( SHORT_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getRealType( SHORT_LENGTH ), numElem));
                 case BuiltinType::Short:
-                    return VectorWrapper( builder.getIntType( SHORT_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getIntType( SHORT_LENGTH ), numElem ));
                 case BuiltinType::UInt:
-                    return VectorWrapper( builder.getUIntType( INT_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getUIntType( INT_LENGTH ), numElem ));
                 case BuiltinType::Int:
-                    return VectorWrapper( builder.getIntType( INT_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getIntType( INT_LENGTH ), numElem ));
                 case BuiltinType::ULongLong:
-                    return VectorWrapper( builder.getUIntType( LONG_LONG_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getUIntType( LONG_LONG_LENGTH ), numElem ));
                 case BuiltinType::LongLong:
-                    return VectorWrapper( builder.getIntType( LONG_LONG_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getIntType( LONG_LONG_LENGTH ), numElem ));
 /* not supported at the moment
                     return VectorWrapper( builder.getUIntType( 16 ), numElem );
                 case BuiltinType::Int128:
@@ -1444,7 +1446,7 @@ public:
 
                 // real types
                 case BuiltinType::Float:
-                    return VectorWrapper( builder.getRealType( FLOAT_LENGTH ), numElem );
+                    return TypeWrapper( builder.getVector( builder.getRealType( FLOAT_LENGTH ), numElem));
 /* not supported at the moment
                 case BuiltinType::Double:
                     return VectorWrapper( builder.getRealType( DOUBLE_LENGTH ), numElem );
