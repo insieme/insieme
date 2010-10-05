@@ -771,11 +771,17 @@ public:
 
 		// initialization value
 		core::ExpressionPtr initExpr(NULL);
-		if( varDecl->getInit() )
+
+		if( varDecl->getInit() ) {
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
-		else {
+		}
+		else{
 			Type& ty = *varDecl->getType().getTypePtr();
-			if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+			std::cout << "Type: " << ty.getTypeClassName() << std::endl;
+			if (ty.isExtVectorType() || ty.isConstantArrayType()) {
+			    //TODO init routine for vectors
+			}
+			else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
 				// initialize integer value
 				initExpr = convFact.builder.literal("0", type);
 			} else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
@@ -1428,7 +1434,8 @@ public:
         size_t num = vecTy->getNumElements();
         core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
 
-        return TypeWrapper( convFact.builder.vectorType( subType, numElem));
+        //note: members of OpenCL vectors are always modifiable
+        return TypeWrapper( convFact.builder.vectorType( convFact.builder.refType(subType), numElem));
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
