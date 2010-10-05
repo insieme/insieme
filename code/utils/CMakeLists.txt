@@ -16,7 +16,7 @@ file(GLOB insieme_utils_incs	include/*.h )
 include_directories(include)
 
 # build the utils library
-add_library(insieme_utils ${insieme_utils_srcs} ${insieme_utils_incs} )
+add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_incs} )
 
 # enable tests for this project
 find_package(GTest REQUIRED)

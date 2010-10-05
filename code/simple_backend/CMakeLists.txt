@@ -17,7 +17,7 @@ include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
 
 # Build the core library
-add_library(insieme_simple_backend SHARED ${insieme_simple_backend_srcs} ${insieme_simple_backend_incs} )
+add_library(insieme_simple_backend ${LINKING_TYPE} ${insieme_simple_backend_srcs} ${insieme_simple_backend_incs} )
 
 # add dependencies
 add_dependencies( insieme_simple_backend insieme_core insieme_c_info insieme_utils )

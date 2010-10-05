@@ -25,7 +25,7 @@ include_directories( ${XERCES_INCLUDE_DIRS} )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/xsd_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/xsd_config.h)
 
 # Build the core library
-add_library(insieme_xml SHARED ${insieme_xml_srcs} ${insieme_xml_incs} )
+add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} )
 
 # add dependencies
 add_dependencies( insieme_xml insieme_core insieme_utils )

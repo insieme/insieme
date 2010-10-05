@@ -92,6 +92,11 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -g )
 endif()
 
+# Optionally build shared libraries
+if(NOT LINKING_TYPE)
+	set(LINKING_TYPE SHARED)
+endif(NOT LINKING_TYPE)
+
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
