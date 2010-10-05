@@ -71,11 +71,6 @@ lang::RealTypePtr ASTBuilder::getRealType(unsigned short size) const {
 	return manager.get(lang::getRealType(size));
 }
 
-
-VectorTypePtr ASTBuilder::getVector(const TypePtr& type, const IntTypeParam& numElements) const {
-    return VectorType::get(manager, type, numElements);
-}
-
 // ------------------------------- Build Expressions -------------------------
 
 ExpressionPtr ASTBuilder::createExpr(const lang::OperatorPtr& op, const ExpressionPtr& operant) const {
