@@ -760,7 +760,7 @@ public:
 
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
-std::cout << "trallala " << clangType.isConstQualified();
+
 
 		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
         // it is not declared as const
@@ -870,7 +870,7 @@ std::cout << "trallala " << clangType.isConstQualified();
 			// todo: build a binary expression
 			// condExpr = (varExpr = initExpr);
 		} else
-			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
+			condExpr = loopAnalysis.getCondExpr();
 
 		VLOG(2) << "ForStmt condExpr: " << *condExpr.ref;
 
@@ -1218,7 +1218,7 @@ public:
 	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
 		const core::ASTBuilder& builder = convFact.builder;
-std::cout << "asdfasf " << buldInTy->desugar().isConstQualified() << std::endl;
+
 		switch(buldInTy->getKind()) {
 		case BuiltinType::Void:
 			return TypeWrapper( builder.getUnitType() );
@@ -1419,18 +1419,16 @@ std::cout << "asdfasf " << buldInTy->desugar().isConstQualified() << std::endl;
 //	}
 
 	TypeWrapper VisitExtVectorType(ExtVectorType* vecTy) {
-        const core::ASTBuilder& builder = convFact.builder;
+       // get vector datatype
+        const QualType qt = vecTy->getElementType();
+        BuiltinType* buildInTy = (BuiltinType*)qt->getUnqualifiedDesugaredType();
+        core::TypePtr subType = Visit(buildInTy).ref;
 
         // get the number of elements
         size_t num = vecTy->getNumElements();
         core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
 
-        // get vector datatype
-        const QualType qt = vecTy->getElementType();
-        BuiltinType* buildInTy = (BuiltinType*)qt->getUnqualifiedDesugaredType();
-        core::TypePtr subType = Visit(buildInTy).ref;
-
-        return TypeWrapper( builder.vectorType( subType, numElem));
+        return TypeWrapper( convFact.builder.vectorType( subType, numElem));
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {

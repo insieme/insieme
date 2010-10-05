@@ -61,6 +61,7 @@ class LoopAnalyzer {
 	struct LoopHelper {
 		const clang::VarDecl* 			inductionVar;
 		insieme::core::ExpressionPtr 	incrExpr;
+		insieme::core::ExpressionPtr	condExpr;
 	};
 
 	const ConversionFactory& 	convFact;
@@ -80,6 +81,8 @@ public:
 	const clang::VarDecl* getInductionVar() const { return loopHelper.inductionVar; }
 
 	insieme::core::ExpressionPtr getIncrExpr() const { return loopHelper.incrExpr; }
+
+	insieme::core::ExpressionPtr getCondExpr() const { return loopHelper.condExpr; }
 };
 
 } // End analysis namespace
