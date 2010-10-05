@@ -79,11 +79,13 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-LoopAnalyzer::LoopAnalyzer(const ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL}) {
+LoopAnalyzer::LoopAnalyzer(const ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL, NULL}) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression
 	handleIncrExpr(forStmt);
+	// we look for the condition expression
+	handleCondExpr(forStmt);
 }
 
 void LoopAnalyzer::findInductionVariable(const ForStmt* forStmt) {
@@ -142,7 +144,15 @@ void LoopAnalyzer::handleIncrExpr(const ForStmt* forStmt) {
 
 void LoopAnalyzer::handleCondExpr(const ForStmt* forStmt) {
 	// analyze the condition expression
-
+	const Expr* cond = forStmt->getCond();
+	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
+		assert(isa<const DeclRefExpr>(binOp->getLHS()));
+		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
+		assert(lhs->getDecl() == loopHelper.inductionVar);
+		loopHelper.condExpr = convFact.ConvertExpr( *binOp->getRHS() );
+		return;
+	}
+	assert(false && "Loop condition not in normal form");
 
 }
 

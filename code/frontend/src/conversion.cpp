@@ -866,7 +866,7 @@ public:
 			// todo: build a binary expression
 			// condExpr = (varExpr = initExpr);
 		} else
-			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
+			condExpr = loopAnalysis.getCondExpr();
 
 		VLOG(2) << "ForStmt condExpr: " << *condExpr.ref;
 
@@ -1412,7 +1412,7 @@ public:
 //	}
 
 	TypeWrapper VisitExtVectorType(ExtVectorType* vecTy) {
-
+		return TypeWrapper();
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
