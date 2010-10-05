@@ -46,38 +46,29 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-
-#include "parsys.h"
 #include <time.h>
 
-double func(int x, int y){
+double init_func(int x, int y) {
 	return 40 * sin((double)(16 * (2 * x - 1) * y));
 }
 
-#define N 1000
+#define N 100
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
 	clock_t start_t, end_t;
 	double setup_time, elapsed_time;
-
 	start_t = clock();
 
 	// init matrix
 	float u[N][N], tmp[N][N], f[N][N], res[N][N];
-//	create_matrix(&u, N, N); // 	create matrix U
 	memset(u, 0, N*N);    // 	initialize it with zeros
-
-//	create_matrix(&tmp, N, N); // create matrix TMP
 
 	// init F
 	memset(f, 0, N*N);
-
 	for (int i=0; i<N; i++){
 		for (int j=0; j<N; j++)
-			f[i][j] = func(i, j);
+			f[i][j] = init_func(i, j);
 	}
-
-//	create_matrix(&res, N, N); // create RES matrix
 
 	double comm_time = 0;
 	double comp_time = 0;
@@ -93,25 +84,24 @@ int main(int argc, char** argv){
 #endif
 	start_t = clock();
 
-	for(int it=0; it<100; it++){
-		memset(0, 0, N*N); // clean previus tmp array
+	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for
-		for (int i=1; i < N-1; i++){
+		for (int i=1; i < N-1; i++) {
 			 for (int j=1; j < N-1; j++)
 				 tmp[i][j] = (double)1/4 * (u[i-1][j] + u[i][j+1] + u[i][j-1] + u[i+1][j] - factor * f[i][j]);
 		}
-		memcpy(u, tmp, N * N);
+		memcpy(u, tmp, N*N);
 
 		// calc the residuo
-		for (int i=1; i<N-1; i++){
+		for (int i=1; i<N-1; i++) {
 			for (int j=1; j<N-1; j++)
 				res[i][j] = f[i][j] - 4 * u[i][j] + u[i-1][j] + u[i+1][j] + u[i][j-1] + u[i][j+1];
 		}
 
 		// normalize
 		double norm = 0;
-		// #pragma omp for private(j)
+		// #pragma omp for private(j) reduction(norm:+)
 		for (int i=1; i<N-1; i++)
 			for (int j=1; j<N-1; j++)
 				norm += pow( res[i][j], 2 );
@@ -122,11 +112,5 @@ int main(int argc, char** argv){
 	end_t = clock();
 	elapsed_time = (double)(end_t-start_t)/CLOCKS_PER_SEC;
 
-	printf("%d, %0.2f, %0.2f, %0.2f", N, setup_time + elapsed_time, setup_time, elapsed_time);
-
-	free_matrix(u);
-	free_matrix(f);
-	free_matrix(tmp);
-	free_matrix(res);
-	printf("\n");
+	printf("%d, %0.2f, %0.2f, %0.2f\n", N, setup_time + elapsed_time, setup_time, elapsed_time);
 }
