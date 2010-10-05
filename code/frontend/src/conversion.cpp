@@ -1408,6 +1408,13 @@ public:
 		return TypeWrapper( retTy );
 	}
 
+//	TypeWrapper VisitVectorType(VectorType* vecTy) {
+//	}
+
+	TypeWrapper VisitExtVectorType(ExtVectorType* vecTy) {
+
+	}
+
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
 
         Type* t = typedefType->getDecl()->getUnderlyingType().getTypePtr();
