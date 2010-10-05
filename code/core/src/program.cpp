@@ -56,7 +56,7 @@ std::size_t hash(const Program::EntryPointSet& entryPoints) {
 	return insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
 }
 
-Program* Program::createCloneUsing(NodeManager& manager) const {
+Program* Program::createCloneUsing(NodeManager&) const {
 //	return new Program(SharedNodeManager(NULL), manager.getAll(definitions), manager.getAll(entryPoints));
 	assert ( false && "Programs cannot be migrated between manager!");
 	return NULL;
@@ -149,7 +149,7 @@ std::ostream& Program::printTo(std::ostream& out) const {
 
 
 
-std::vector<GenericTypePtr> getAllGenericTypes(const Program& program) {
+std::vector<GenericTypePtr> getAllGenericTypes(const Program&) {
 
 	std::vector<GenericTypePtr> res;
 

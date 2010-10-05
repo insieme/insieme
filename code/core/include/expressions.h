@@ -95,7 +95,7 @@ protected:
 	virtual bool equals(const Node& stmt) const;
 	virtual bool equalsExpr(const Expression& expr) const = 0;
 
-	virtual bool equalsStmt(const Statement& stmt) const {
+	virtual bool equalsStmt(const Statement&) const {
 		assert( false && "Should not be compared with a statement!");
 		return false;
 	}

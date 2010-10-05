@@ -34,16 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include <stdarg.h>
+#include "string_utils.h"
 
 #include <algorithm>
 
-#include <boost/algorithm/string/join.hpp>
+#include <stdarg.h>
 
-#include "string_utils.h"
- 
- string format(const char* formatString, ...)
- {
+string format(const char* formatString, ...) {
 	va_list arglist;
 	va_start(arglist, formatString);
 	const unsigned BUFFER_SIZE = 2048;
@@ -52,4 +49,3 @@
 	va_end(arglist);
 	return string(buffer);
 }
-
