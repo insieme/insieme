@@ -69,30 +69,27 @@ public:
 
 class XmlElement {
 	DOMDocument* doc;
-	DOMNode* base;
+	DOMElement* base;
 	
 public:
-	void setBase (DOMNode* node) {base = node;}
+	XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
+	XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
 	
-	XmlElement(string name, DOMDocument* docp) {
-		doc = docp;
-		base = doc->createElement(toUnicode(name));
-	}
-	
-	XmlElement() {}
-	
-	XmlElement operator<<(XmlElement childNode) {
-		dynamic_cast<DOMElement*>(base)->appendChild(childNode.base);
+	XmlElement& operator<<(XmlElement& childNode) {
+		base->appendChild(childNode.base);
 		return childNode;
 	}
 	
-	void addAttr(string id, string value) {
-		dynamic_cast<DOMElement*>(base)->setAttribute(toUnicode(id), toUnicode(value));
+	XmlElement& addAttr(const string& id, const string& value) {
+		base->setAttribute(toUnicode(id), toUnicode(value));
+		return *this;
 	}
 	
-	void addText(string text) {
+	XmlElement& addText(const string& text) {
+		assert(doc != NULL && "Attempt to create text on a root node");
 		DOMText* textNode = doc->createTextNode(toUnicode(text));
-		dynamic_cast<DOMElement*>(base)->appendChild(textNode);
+		base->appendChild(textNode);
+		return *this;
 	}
 };
 
@@ -102,12 +99,9 @@ class XmlVisitor : public ASTVisitor<void> {
 	XmlElement rootElem;
 
 public:
-	XmlVisitor(DOMDocument* udoc){
-		doc = udoc;
-		rootElem.setBase(doc->getDocumentElement());
-	}
+	XmlVisitor(DOMDocument* udoc): doc(udoc), rootElem(doc->getDocumentElement()) { }
 	
-	~XmlVisitor(){}
+	~XmlVisitor() { }
 
 	void visitGenericType(const GenericTypePtr& cur) {
 		XmlElement genType("genType", doc);

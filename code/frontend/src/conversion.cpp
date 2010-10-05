@@ -761,9 +761,13 @@ public:
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 
-		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'>
+
+		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
+        // it is not declared as const
 		// successive dataflow analysis could be used to restrict the access to this variable
-		core::TypePtr type = convFact.builder.refType( convFact.ConvertType( *varDecl->getType().getTypePtr() ) );
+        core::TypePtr type = clangType.isConstQualified() ?
+            convFact.ConvertType( *varDecl->getType().getTypePtr() ) :
+            convFact.builder.refType( convFact.ConvertType( *varDecl->getType().getTypePtr() ) );
 
 		// initialization value
 		core::ExpressionPtr initExpr(NULL);
@@ -866,7 +870,7 @@ public:
 			// todo: build a binary expression
 			// condExpr = (varExpr = initExpr);
 		} else
-			condExpr = convFact.ConvertExpr( *forStmt->getCond() );
+			condExpr = loopAnalysis.getCondExpr();
 
 		VLOG(2) << "ForStmt condExpr: " << *condExpr.ref;
 
@@ -1408,74 +1412,32 @@ public:
 		return TypeWrapper( retTy );
 	}
 
+/*
+ * Not used at the moment
+ */
 //	TypeWrapper VisitVectorType(VectorType* vecTy) {
 //	}
 
 	TypeWrapper VisitExtVectorType(ExtVectorType* vecTy) {
+       // get vector datatype
+        const QualType qt = vecTy->getElementType();
+        BuiltinType* buildInTy = (BuiltinType*)qt->getUnqualifiedDesugaredType();
+        core::TypePtr subType = Visit(buildInTy).ref;
 
+        // get the number of elements
+        size_t num = vecTy->getNumElements();
+        core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
+
+        return TypeWrapper( convFact.builder.vectorType( subType, numElem));
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
+        core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
 
-        Type* t = typedefType->getDecl()->getUnderlyingType().getTypePtr();
-        //special treatment for OpenCL vector types
-        if(t->getTypeClass() == Type::TypeClass::ExtVector){
-            const core::ASTBuilder& builder = convFact.builder;
-
-            clang::ExtVectorType* evt = (clang::ExtVectorType*)t;
-
-            // get the number of elements
-            size_t num = evt->getNumElements();
-            core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
-
-            // get vector datatype
-            const QualType qt = evt->getElementType();
-            BuiltinType* buldInTy = (BuiltinType*)qt->getUnqualifiedDesugaredType();
-            switch(buldInTy->getKind()) {
-
-                // integer types
-                case BuiltinType::UShort:
-                    return TypeWrapper( builder.getVector( builder.getRealType( SHORT_LENGTH ), numElem));
-                case BuiltinType::Short:
-                    return TypeWrapper( builder.getVector( builder.getIntType( SHORT_LENGTH ), numElem ));
-                case BuiltinType::UInt:
-                    return TypeWrapper( builder.getVector( builder.getUIntType( INT_LENGTH ), numElem ));
-                case BuiltinType::Int:
-                    return TypeWrapper( builder.getVector( builder.getIntType( INT_LENGTH ), numElem ));
-                case BuiltinType::ULongLong:
-                    return TypeWrapper( builder.getVector( builder.getUIntType( LONG_LONG_LENGTH ), numElem ));
-                case BuiltinType::LongLong:
-                    return TypeWrapper( builder.getVector( builder.getIntType( LONG_LONG_LENGTH ), numElem ));
-/* not supported at the moment
-                    return VectorWrapper( builder.getUIntType( 16 ), numElem );
-                case BuiltinType::Int128:
-                    return VectorWrapper( builder.getIntType( 16 ), numElem ); */
-
-                // real types
-                case BuiltinType::Float:
-                    return TypeWrapper( builder.getVector( builder.getRealType( FLOAT_LENGTH ), numElem));
-/* not supported at the moment
-                case BuiltinType::Double:
-                    return VectorWrapper( builder.getRealType( DOUBLE_LENGTH ), numElem );
-                case BuiltinType::LongDouble:
-                    return VectorWrapper( builder.getRealType( LONG_DOUBLE_LENGTH ), numElem );*/
-
-                default:
-                    throw "unsupported OpenCL vector type"; //todo introduce exception class
-            }
-            assert(false && "OpenCL vector type conversion not supported!");
-
-            return TypeWrapper();
-        }
-        else {
-            core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
-
-            // Adding the name of the typedef as annotation
-            subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
-            END_LOG_TYPE_CONVERSION( subType ); 
-            return TypeWrapper( subType );
-        }
-
+        // Adding the name of the typedef as annotation
+        subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
+        END_LOG_TYPE_CONVERSION( subType );
+        return TypeWrapper( subType );
 	}
 
 	TypeWrapper VisitTypeOfType(TypeOfType* typeOfType) {
