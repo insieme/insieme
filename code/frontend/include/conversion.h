@@ -57,7 +57,6 @@ class ClangTypeConverter;
 class ClangExprConverter;
 
 // ------------------------------------ ConversionFactory ---------------------------
-
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
@@ -65,6 +64,7 @@ class ConversionFactory {
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;
+    PragmaStmtMap 	 	 	 pragmaMap;
 
 	ClangTypeConverter* typeConv;
 	ClangExprConverter* exprConv;
@@ -82,6 +82,8 @@ public:
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 
+	void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
+
 	void convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type);
     void convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type);
 
@@ -96,11 +98,12 @@ class IRConsumer: public clang::ASTConsumer {
 	const ClangCompiler& mClangComp;
 	core::ProgramPtr     mProgram;
 	ConversionFactory    mFact;
+	const PragmaList&	 pragmaList;
 	bool 			     mDoConversion;
 
 public:
-	IRConsumer(const ClangCompiler& clangComp, insieme::core::ProgramPtr prog, bool doConversion=true) :
-		mClangComp(clangComp), mProgram(prog), mFact(prog->getNodeManager(), clangComp), mDoConversion(doConversion){ }
+	IRConsumer(const ClangCompiler& clangComp, insieme::core::ProgramPtr prog, const PragmaList& pragmaList, bool doConversion=true) :
+		mClangComp(clangComp), mProgram(prog), mFact(prog->getNodeManager(), clangComp), pragmaList(pragmaList), mDoConversion(doConversion){ }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 

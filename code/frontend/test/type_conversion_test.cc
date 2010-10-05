@@ -352,7 +352,7 @@ TEST(TypeConversion, HandleArrayType) {
 
 TEST(TypeConversion, FileTest) {
 	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", program);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", program, false);
 	ConversionFactory convFactory( program->getNodeManager(), TU->getCompiler() );
 
 	const PragmaList& pl = TU->getPragmaList();

@@ -100,6 +100,28 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
 
+PragmaStmtMap::PragmaStmtMap(const PragmaList& pList) {
+	for(PragmaList::const_iterator it=pList.begin(), end=pList.end(); it != end; ++it) {
+		if((*it)->isStatement())
+			stmtMap.insert( std::make_pair((*it)->getStatement(), *it) );
+		else
+			declMap.insert( std::make_pair((*it)->getDecl(), *it) );
+	}
+}
+
+const PragmaPtr PragmaStmtMap::operator[](const clang::Stmt* stmt) const {
+	auto fit = stmtMap.find(stmt);
+	if(fit != stmtMap.end())
+		return fit->second;
+	return PragmaPtr();
+}
+const PragmaPtr PragmaStmtMap::operator[](const clang::Decl* decl) const {
+	auto fit = declMap.find(decl);
+	if(fit != declMap.end())
+		return fit->second;
+	return PragmaPtr();
+}
+
 TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
 	Pragma(startLoc, endLoc, type) {
 

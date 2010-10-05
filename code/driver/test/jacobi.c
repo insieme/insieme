@@ -107,6 +107,8 @@ int main(int argc, char** argv) {
 				norm += pow( res[i][j], 2 );
 
 		resv = sqrt(norm)/(N-1);
+
+		#pragma omp barrier
 	}
 
 	end_t = clock();

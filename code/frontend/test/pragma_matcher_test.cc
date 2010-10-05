@@ -85,7 +85,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 		// check the omp parallel is empty
 		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_TRUE(omp->mMap.empty());
+		EXPECT_TRUE(omp->getMap().empty());
 	}
 
 	// CHECK SECOND PRAGMA
@@ -109,9 +109,11 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 		// check the omp parallel is empty
 		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_FALSE(omp->mMap.empty());
+		EXPECT_FALSE(omp->getMap().empty());
 
-		ValueList& values = omp->mMap["private"];
+		auto fit = omp->getMap().find("private");
+		EXPECT_TRUE( fit != omp->getMap().end() );
+		const ValueList& values = fit->second;
 		// only 1 variable in the private construct
 		EXPECT_EQ(values.size(), (size_t) 2);
 
@@ -130,8 +132,10 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		}
 
 		// check default(shared)
-		EXPECT_FALSE(omp->mMap["default"].empty());
-		EXPECT_EQ(*omp->mMap["default"][0]->get<std::string*>(), "shared");
+		auto dit = omp->getMap().find("default");
+		EXPECT_TRUE(dit != omp->getMap().end());
+		EXPECT_FALSE(dit->second.empty());
+		EXPECT_EQ(*dit->second[0]->get<std::string*>(), "shared");
 	}
 }
 
@@ -165,12 +169,14 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		// check the omp parallel is empty
 		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_FALSE(omp->mMap.empty());
+		EXPECT_FALSE(omp->getMap().empty());
 
 		// look for 'for' keyword in the map
-		EXPECT_TRUE(omp->mMap.find("for") != omp->mMap.end());
+		EXPECT_TRUE(omp->getMap().find("for") != omp->getMap().end());
 
-		ValueList& values = omp->mMap["private"];
+		auto fit = omp->getMap().find("private");
+		EXPECT_TRUE(fit != omp->getMap().end());
+		const ValueList& values = fit->second;
 		// only 1 variable in the private construct
 		EXPECT_EQ(values.size(), (size_t) 1);
 
@@ -203,7 +209,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		// check empty map
 		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_TRUE(omp->mMap.empty());
+		EXPECT_TRUE(omp->getMap().empty());
 	}
 
 	// pragma is at location [(13:3) - (14:14)]
@@ -228,7 +234,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// check the omp parallel is empty
 		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
 
-		ValueList& values = omp->mMap["firstprivate"];
+		auto fit = omp->getMap().find("firstprivate");
+		EXPECT_TRUE(fit != omp->getMap().end());
+		const ValueList& values = fit->second;
 		// only 1 variable in the private construct
 		EXPECT_EQ(values.size(), (size_t) 1);
 
@@ -240,7 +248,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		}
 
 		// look for 'nowait' keyword in the map
-		EXPECT_TRUE(omp->mMap.find("nowait") != omp->mMap.end());
+		EXPECT_TRUE(omp->getMap().find("nowait") != omp->getMap().end());
 	}
 
 	// pragma is at location [(16:5) - (16:24)]

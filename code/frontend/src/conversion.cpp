@@ -771,9 +771,11 @@ public:
 
 		// initialization value
 		core::ExpressionPtr initExpr(NULL);
-		if( varDecl->getInit() )
+		if( varDecl->getInit() ) {
+			DLOG(INFO) <<"Init expr: " <<  varDecl->getInit();
+			varDecl->getInit()->dump();
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
-		else {
+		} else {
 			Type& ty = *varDecl->getType().getTypePtr();
 			if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
 				// initialize integer value
@@ -1155,7 +1157,16 @@ public:
 	}
 
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
-		return StmtWrapper( core::lang::STMT_NO_OP_PTR );
+		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
+
+		const PragmaPtr pragma = convFact.pragmaMap[nullStmt];
+		if(pragma) {
+			// there is a pragma attached
+			VLOG(1) << "Statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
+		}
+		// retStmt.addAnnotation();
+
+		return StmtWrapper( retStmt );
 	}
 
 	FORWARD_VISITOR_CALL(IntegerLiteral)
@@ -1643,7 +1654,7 @@ private:
 // ------------------------------------ ConversionFactory ---------------------------
 
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang):
-	mgr(mgr),  builder(mgr),  clangComp(clang),
+	mgr(mgr),  builder(mgr), clangComp(clang),
 	typeConv( new ClangTypeConverter(*this) ),
 	exprConv( new ClangExprConverter(*this) ),
 	stmtConv( new ClangStmtConverter(*this) ) { }
@@ -1807,6 +1818,9 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	if(!mDoConversion)
 		return;
 
+	// update the map
+	mFact.updatePragmaMap(pragmaList);
+
 	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
@@ -1887,7 +1901,9 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	}
 }
 
-void IRConsumer::HandleTranslationUnit (ASTContext &Ctx) { }
+void IRConsumer::HandleTranslationUnit (ASTContext &Ctx) {
+
+}
 
 } // End conversion namespace
 } // End frontend namespace
