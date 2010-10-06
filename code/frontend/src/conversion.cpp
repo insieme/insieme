@@ -1900,11 +1900,11 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			assert(definition->getBody() && "Function Definition has no body");
 
 			funcBody = mFact.ConvertStmt( *definition->getBody() );
-			core::ExpressionPtr lambaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+			core::ExpressionPtr lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
 			// annotate name of function
-			lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
+			lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
 			if(definition->isMain()) {
-				mProgram = mProgram->addEntryPoint(lambaExpr);
+				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
 				//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
 			}
 		}

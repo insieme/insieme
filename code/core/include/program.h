@@ -53,8 +53,9 @@
 namespace insieme {
 namespace core {
 
-// forward declaration of the program class
-class ProgramPtr;
+// forward declaration of the program class and pointer
+DECLARE_NODE_TYPE(Program);
+
 
 class ASTBuilder;
 
@@ -81,11 +82,6 @@ public:
 private:
 
 	/**
-	 * The shared data manager used to maintain nodes within this AST.
-	 */
-	const SharedNodeManager nodeManager;
-
-	/**
 	 * This set contains the list of expressions to be exported to the context
 	 * program. Hence, the code which can be reached starting from those points
 	 * has to be considered. In case elements of this list represent functions,
@@ -104,7 +100,7 @@ private:
 	 * @param nodeManager a shared node manager to be used to maintain definitions, AST nodes and types.
 	 * @param entryPoints the list of entry points the program is supporting.
 	 */
-	Program(SharedNodeManager nodeManager, const EntryPointSet& entryPoints);
+	Program(const EntryPointSet& entryPoints);
 
 	/**
 	 * Implements the clone method defined by the Base Node class. However,
@@ -135,27 +131,19 @@ public:
 	 * 		   pointer, hence the allocated memory will be automatically cleared as soon as the last
 	 * 		   copy is gone.
 	 */
-	static ProgramPtr create(const EntryPointSet& entryPoints = EntryPointSet());
+	static ProgramPtr create(NodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet());
 
-	static ProgramPtr create(const SharedNodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet());
+	static ProgramPtr addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
 
-	ProgramPtr addEntryPoint(const ExpressionPtr& point) const;
-
-	ProgramPtr addEntryPoints(const EntryPointSet& points) const;
+	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
 
 	const EntryPointSet& getEntryPoints() const {
 		return entryPoints;
 	}
 
-	ProgramPtr remEntryPoint(const ExpressionPtr& point) const;
+	static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
 
-	ProgramPtr remEntryPoints(const EntryPointSet& points) const;
-
-	SharedNodeManager getNodeManager() const {
-		return nodeManager;
-	}
-
-	ASTBuilder getASTBuilder() const;
+	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
 
 	/**
 	 * Implements equals for the program type. Two programs are considered
@@ -173,46 +161,6 @@ public:
 	//   - no duplicates in switch
 	//   - no duplicates in names composite types
 
-};
-
-/**
- * The Program Pointer class is an extended variant of the annotated pointer.
- * It can be set up to maintain a shared pointer to its referenced program. In
- * case the last program Pointer with a shared semantic is eliminated, the
- * the referenced program will be freed.
- */
-class ProgramPtr : public AnnotatedPtr<const Program> {
-
-	/**
-	 * The additional shared pointer used to maintain an optional reference count for
-	 * the referenced program. If the shared-feature should not be used, this pointer
-	 * will point to NULL.
-	 */
-	std::shared_ptr<const Program> program;
-
-public:
-
-	/**
-	 * Creates a new program pointer referencing the given program. The boolean
-	 * flag allows to determine whether the smart-pointer feature should be enabled.
-	 *
-	 * @param ptr the program to be referenced
-	 * @param shared if set to true, the referenced program will be deleted as soon
-	 * 				 as the last copy of this pointer is removed. If set to false,
-	 * 				 this pointer behavior equals any other annotated pointer.
-	 */
-	ProgramPtr(const Program* ptr, bool shared = false)
-		: AnnotatedPtr<const Program>(ptr), program((shared)?ptr:NULL) {}
-
-	/**
-	 * A implicit conversion constructor to convert a compatible annotated pointer
-	 * into a program pointer. The automatic memory management of the resulting
-	 * shared pointer is never enabled.
-	 *
-	 * @param pointer the pointer to be converted.
-	 */
-	ProgramPtr(const AnnotatedPtr<const Program>& pointer)
-		: AnnotatedPtr<const Program>(pointer) {};
 };
 
 } // end namespace core

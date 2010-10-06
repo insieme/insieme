@@ -351,9 +351,9 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
     }
 }
 
-
-    ProgramPtr program = Program::create();
-    InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/kernel_matcher.cl", program, false);
+	SharedNodeManager manager = std::make_shared<NodeManager>();
+    ProgramPtr program = Program::create(*manager);
+    InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/kernel_matcher.cl", manager, program, false);
 
     clang::ASTContext& ctx = TU->getCompiler().getASTContext();
     std::vector<clang::Type*> types = ctx.getTypes();

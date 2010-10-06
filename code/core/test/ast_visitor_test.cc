@@ -78,7 +78,7 @@ TEST(ASTVisitor, DispatcherTest) {
 	NodeManager manager;
 	SimpleVisitor visitor;
 
-	ProgramPtr program = Program::create();
+	ProgramPtr program = Program::create(manager);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );
 	EXPECT_EQ ( 0, visitor.countExpressions );
@@ -162,7 +162,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	CountingVisitor visitor;
 	RecursiveASTVisitor<CountingVisitor> recVisitor(visitor);
 
-	ProgramPtr program = Program::create();
+	ProgramPtr program = Program::create(manager);
 
 	visitor.reset();
 	visitor.visit(program);
