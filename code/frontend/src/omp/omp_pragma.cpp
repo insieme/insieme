@@ -40,12 +40,17 @@
 #include "pragma_matcher.h"
 
 #include <clang/Lex/Pragma.h>
+#include <clang/AST/Stmt.h>
+#include <clang/AST/Expr.h>
+#include "conversion.h"
 
 #include <glog/logging.h>
 
 #include <iostream>
 
 using namespace std;
+
+using namespace insieme::c_info::omp;
 
 namespace insieme {
 namespace frontend {
@@ -68,16 +73,16 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 	using namespace insieme::frontend::tok;
 
 	// if(scalar-expression)
-	auto if_expr 		   = kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;
+	auto if_expr 		   	= kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;
 
 	// default(shared | none)
-	auto def			   = Tok<clang::tok::kw_default>() >> l_paren >> ( kwd("shared") | kwd("none") )["default"] >> r_paren;
+	auto def			   	= Tok<clang::tok::kw_default>() >> l_paren >> ( kwd("shared") | kwd("none") )["default"] >> r_paren;
 
 	// identifier *(, identifier)
-	auto identifier_list   = identifier >> *(~comma >> identifier);
+	auto identifier_list   	= identifier >> *(~comma >> identifier);
 
 	// private(list)
-	auto private_clause    =  kwd("private") >> l_paren >> identifier_list["private"] >> r_paren;
+	auto private_clause    	=  kwd("private") >> l_paren >> identifier_list["private"] >> r_paren;
 
 	// firstprivate(list)
 	auto firstprivate_clause = kwd("firstprivate") >> l_paren >> identifier_list["firstprivate"] >> r_paren;
@@ -86,10 +91,10 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> identifier_list["lastprivate"] >> r_paren;
 
 
-	auto op 			  = tok::plus | tok::minus; // TODO: add more
+	auto op 			  	= tok::plus | tok::minus; // TODO: add more
 
 	// reduction(operator: list)
-	auto reduction_clause = kwd("reduction") >> l_paren >> op >> colon >> identifier_list >> r_paren;
+	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >> identifier_list["reduction"] >> r_paren;
 
 	auto parallel_clause =  ( 	// if(scalar-expression)
 								if_expr
@@ -122,17 +127,17 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 
 	auto for_clause_list = !(for_clause >> *( !comma >> for_clause ));
 
-	auto sections_clause = ( 	// private(list)
-									private_clause
-								| 	// firstprivate(list)
-									firstprivate_clause
-								|	// lastprivate(list)
-									lastprivate_clause
-								|	// reduction(operator: list)
-									reduction_clause
-								| 	// nowait
-									kwd("nowait")
-								);
+	auto sections_clause =  ( 	// private(list)
+								private_clause
+							| 	// firstprivate(list)
+								firstprivate_clause
+							|	// lastprivate(list)
+								lastprivate_clause
+							|	// reduction(operator: list)
+								reduction_clause
+							| 	// nowait
+								kwd("nowait")
+							);
 
 	auto sections_clause_list = !(sections_clause >> *( !comma >> sections_clause ));
 
@@ -181,46 +186,180 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 
 	// Add an handler for pragma omp parallel:
 	// #pragma omp parallel [clause[ [, ]clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpParallel>(pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp"));
 
 	// omp for
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpFor>(pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp"));
 
 	// #pragma omp sections [clause[[,] clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpSections>(pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp"));
 
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("section"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpSection>(pp.getIdentifierInfo("section"), tok::eom, "omp"));
 
 	// omp single
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpSingle>(pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp"));
 
 	// #pragma omp task [clause[[,] clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpTask>(pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp"));
 
 	// #pragma omp master new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("master"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpMaster>(pp.getIdentifierInfo("master"), tok::eom, "omp"));
 
 	// #pragma omp critical [(name)] new-line
-	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("critical"),
+	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpCritical>(pp.getIdentifierInfo("critical"),
 					!(l_paren >> identifier /*TODO */ >> r_paren) >> tok::eom, "omp"));
 
 	//#pragma omp barrier new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("barrier"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpBarrier>(pp.getIdentifierInfo("barrier"), tok::eom, "omp"));
 
 	// #pragma omp taskwait newline
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("taskwait"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpTaskWait>(pp.getIdentifierInfo("taskwait"), tok::eom, "omp"));
 
 	// #pragma omp atimic newline
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("atomic"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpAtomic>(pp.getIdentifierInfo("atomic"), tok::eom, "omp"));
 
 	// #pragma omp flush [(list)] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpFlush>(pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp"));
 
 	// #pragma omp ordered new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("ordered"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpOrdered>(pp.getIdentifierInfo("ordered"), tok::eom, "omp"));
 
 	// #pragma omp threadprivate(list) new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragma>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
+}
+
+/**
+ * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
+ */
+IdentifierList::VarList handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
+
+	auto fit = mmap.find(key);
+	if(fit == mmap.end())
+		return IdentifierList::VarList();
+
+	const ValueList& vars = fit->second;
+	IdentifierList::VarList varList;
+	for(ValueList::const_iterator it = vars.begin(), end = vars.end(); it != end; ++it) {
+		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
+		assert(varIdent && "Clause not containing var exps");
+
+		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
+		assert(refVarIdent && "Clause not containing a DeclRefExpr");
+
+		core::VarExprPtr varExpr = core::dynamic_pointer_cast<const core::VarExpr>(fact.ConvertExpr( *refVarIdent ));
+		assert(varExpr && "Conversion to Insieme node failed!");
+		varList.push_back( varExpr );
+	}
+	return varList;
+}
+
+// reduction(operator: list)
+OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+	auto fit = mmap.find("reduction");
+	if(fit == mmap.end())
+		return OmpReductionPtr();
+
+	// we have a reduction
+	// check the operator
+	auto opIt = mmap.find("reduction_op");
+	assert(opIt != mmap.end() && "Reduction clause doesn't contains an operator");
+	const ValueList& op = opIt->second;
+	assert(op.size() == 1);
+
+	std::string opStr = *op.front()->get<std::string*>();
+
+	IdentifierList::VarList&& vars = handleIdentifierList(mmap, "reduction", fact);
+	return OmpReductionPtr(new OmpReduction(opStr, vars));
+}
+
+OmpAnnotationPtr OmpParallel::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	return OmpAnnotationPtr();
+
+}
+
+OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFactory& fact) const {
+	// check for private clause
+	IdentifierList::VarList&& privateList = handleIdentifierList(getMap(), "private", fact);
+	OmpPrivatePtr privateClause = privateList.empty() ? OmpPrivatePtr() : OmpPrivatePtr( new OmpPrivate(privateList) );
+	// check for firstprivate clause
+	IdentifierList::VarList&& firstPrivateList = handleIdentifierList(getMap(), "firstprivate", fact);
+	OmpFirstPrivatePtr firstPrivateClause = firstPrivateList.empty() ? OmpFirstPrivatePtr() : OmpFirstPrivatePtr( new OmpFirstPrivate(firstPrivateList) );
+	// check for lastprivate clause
+	IdentifierList::VarList&& lastPrivateList = handleIdentifierList(getMap(), "lastprivate", fact);
+	OmpLastPrivatePtr lastPrivateClause = lastPrivateList.empty() ? OmpLastPrivatePtr() : OmpLastPrivatePtr( new OmpLastPrivate(lastPrivateList) );
+	// check for reduction clause
+	OmpReductionPtr reductionClause = handleReductionClause(getMap(), fact);
+
+	return OmpAnnotationPtr( new c_info::omp::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause) );
+}
+
+OmpAnnotationPtr OmpSections::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpSection::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpSingle::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpMaster::toAnnotation(conversion::ConversionFactory& fact) const {
+	return OmpAnnotationPtr( new c_info::omp::OmpMaster );
+}
+
+OmpAnnotationPtr OmpCritical::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
+	return OmpAnnotationPtr( new c_info::omp::OmpBarrier );
+}
+
+OmpAnnotationPtr OmpTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpFlush::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
+}
+
+OmpAnnotationPtr OmpThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	// We need to check if the
+	return OmpAnnotationPtr();
 }
 
 } // End omp namespace
