@@ -44,8 +44,10 @@ class DOMDocument;
 class DOMLSParser;
 XERCES_CPP_NAMESPACE_END
 
+using namespace insieme::core;
+
 namespace insieme {
-namespace core {
+namespace xml{
 
 class XmlUtil {
 public:
@@ -78,6 +80,17 @@ void xmlRead(const std::string fileName, const bool validate);
 
 void xmlValidate(const std::string fileName);
 
-} // end namespace core
+/*#define XML_CONVERTER(className_, toXML_, fromXML_) \
+	NodeType convert ## className_ ## ToXML(const Annotation& ann, DOMDocument* doc) { \
+	className_ annotation = dynamic_cast<const className_>(ann); \
+	XmlElement node("annotation", doc); \
+	node.setAttr("type", className_); \
+	toXML_; \
+	return annotationType; } \
+	shared_ptr<Annotation> convert ## className_ ## FromXML(const DOMElement& node) { \
+	fromXML_; } \
+	XMLConverter::get().register(#className_, & convert ## className_ ## ToXML, & convert ## className_ ## FromXML);*/
+
+} // end namespace xml
 } // end namespace insieme
 
