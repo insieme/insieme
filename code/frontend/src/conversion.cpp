@@ -54,7 +54,7 @@
 #include "lang_basic.h"
 #include "numeric_cast.h"
 #include "naming.h"
-#include "ocl_annotations.h"
+#include "ocl/ocl_annotations.h"
 #include "ast_visitor.h"
 
 #include "omp/omp_pragma.h"
@@ -1703,16 +1703,16 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
                 //check if the declaration has attribute __private
                 if(sr.compare(llvm::StringRef("__private")) == 0) {
                     DVLOG(2) << "           OpenCL address space __private";
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+                    type.addAnnotation(std::make_shared<insieme::frontend::OclAddressSpaceAnnotation>(
+                            insieme::frontend::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
                     continue;
                 }
 
                 //check if the declaration has attribute __local
                 if(sr.compare(llvm::StringRef("__local")) == 0) {
                     DVLOG(2) << "           OpenCL address space __local";
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+                    type.addAnnotation(std::make_shared<insieme::frontend::OclAddressSpaceAnnotation>(
+                            insieme::frontend::OclAddressSpaceAnnotation::addressSpace::LOCAL));
                     continue;
                 }
 
@@ -1769,32 +1769,32 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
                 //check if the declaration has attribute __private
                 if(sr.compare(llvm::StringRef("__private")) == 0) {
                     DVLOG(2) << "           OpenCL address space __private";
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+                    type.addAnnotation(std::make_shared<insieme::frontend::OclAddressSpaceAnnotation>(
+                            insieme::frontend::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
                     continue;
                 }
 
                 //check if the declaration has attribute __local
                 if(sr.compare(llvm::StringRef("__local")) == 0) {
                     DVLOG(2) << "           OpenCL address space __local";
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+                    type.addAnnotation(std::make_shared<insieme::frontend::OclAddressSpaceAnnotation>(
+                            insieme::frontend::OclAddressSpaceAnnotation::addressSpace::LOCAL));
                     continue;
                 }
 
                 //check if the declaration has attribute __global
                 if(sr.compare(llvm::StringRef("__global")) == 0) {
                     DVLOG(2) << "           OpenCL address space __global";
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
+                    type.addAnnotation(std::make_shared<insieme::frontend::OclAddressSpaceAnnotation>(
+                            insieme::frontend::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
                     continue;
                 }
 
                 //check if the declaration has attribute __constant
                 if(sr.compare(llvm::StringRef("__constant")) == 0) {
                     DVLOG(2) << "           OpenCL address space __constant";
-                    type.addAnnotation(std::make_shared<insieme::c_info::OclAddressSpaceAnnotation>(
-                            insieme::c_info::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
+                    type.addAnnotation(std::make_shared<insieme::frontend::OclAddressSpaceAnnotation>(
+                            insieme::frontend::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
                     continue;
                 }
                 ss << "Unexpected annotation " << sr;
@@ -1883,11 +1883,11 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 //                            printf("        Kernel\n");
                             DVLOG(1) << "is OpenCL kernel function";
 
-                            funcType.addAnnotation(std::make_shared<insieme::c_info::OclKernelFctAnnotation>());
+                            funcType.addAnnotation(std::make_shared<insieme::frontend::OclKernelFctAnnotation>());
                         }
                     }
                     if(attr->getKind() == attr::Kind::ReqdWorkGroupSize) {
-                        funcType.addAnnotation(std::make_shared<insieme::c_info::OclWorkGroupSizeAnnotation>(
+                        funcType.addAnnotation(std::make_shared<insieme::frontend::OclWorkGroupSizeAnnotation>(
                                 ((ReqdWorkGroupSizeAttr*)attr)->getXDim(),
                                 ((ReqdWorkGroupSizeAttr*)attr)->getYDim(),
                                 ((ReqdWorkGroupSizeAttr*)attr)->getZDim()));
