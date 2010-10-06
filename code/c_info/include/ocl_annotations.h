@@ -57,6 +57,8 @@ public:
 
     const core::AnnotationKey* getKey() const { return &KEY; }
 
+	const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
+
     void setKernelFct(bool isKernelFct);
 
     bool isKernelFct();
@@ -77,6 +79,8 @@ public:
         core::Annotation(), xDim(x), yDim(y), zDim(z) { }
 
     const core::AnnotationKey* getKey() const { return &KEY; }
+
+	const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
 
     unsigned int getXdim();
     unsigned int getYdim();
@@ -103,6 +107,8 @@ private:
     addressSpace as;
 public:
     static const core::StringKey<OclAddressSpaceAnnotation> KEY;
+
+	const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
 
     OclAddressSpaceAnnotation() : core::Annotation(), as(addressSpace::PRIVATE) { }
 

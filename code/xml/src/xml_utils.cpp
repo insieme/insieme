@@ -53,7 +53,7 @@ using namespace std;
 
 XERCES_CPP_NAMESPACE_USE
 
-namespace {
+//namespace {
 
 #define toUnicode(str) XStr(str).unicodeForm()
 
@@ -93,6 +93,46 @@ public:
 	}
 };
 
+class XmlConverter{
+	map<const string, XmlElement&(*)(const Annotation&, DOMDocument*)> IrToDomConvertMap;
+	map<const string, shared_ptr<Annotation>(*)(const DOMElement&)> DomToIrConvertMap;
+	static XmlConverter* instance_ptr;
+public:
+	static XmlConverter& get(){
+		if (instance_ptr == NULL) {
+			instance_ptr = new XmlConverter;
+		}
+		return *instance_ptr;
+	}
+	
+	shared_ptr<Annotation> domToIrAnnotation (const DOMElement& ann) {
+		char* type (XMLString::transcode (ann.getAttribute(toUnicode("type"))));
+		return DomToIrConvertMap[type](ann);
+	}
+	
+	XmlElement& irToDomAnnotation (const Annotation& ann, DOMDocument* doc) {
+		const string type = ann.getAnnotationName();
+		return IrToDomConvertMap[type](ann, doc);
+	}
+	
+	void registerAnnotation(string name, 
+							XmlElement&(*toXml)(const Annotation&, DOMDocument*), 
+							shared_ptr<Annotation>(*fromXml)(const DOMElement&)) {
+		IrToDomConvertMap[name] = toXml;
+		DomToIrConvertMap[name] = fromXml;
+	}
+};
+
+/*#define XML_CONVERTER(className_, toXML_, fromXML_) \
+	NodeType convert ## className_ ## ToXML(const Annotation& ann, DOMDocument* doc) { \
+	className_ annotation = dynamic_cast<const className_>(ann); \
+	XmlElement node("annotation", doc); \
+	node.setAttr("type", className_); \
+	toXML_; \
+	return annotationType; } \
+	shared_ptr<Annotation> convert ## className_ ## FromXML(const DOMElement& node) { \
+	fromXML_; } \
+	XMLConverter::get().register(#className_, & convert ## className_ ## ToXML, & convert ## className_ ## FromXML);*/
 
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
@@ -276,7 +316,7 @@ public:
 	}
 };
 
-}
+//}
 
 // ------------------------------------ XmlUtil ----------------------------
 
