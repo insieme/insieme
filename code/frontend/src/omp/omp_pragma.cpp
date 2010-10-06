@@ -50,27 +50,14 @@
 
 using namespace std;
 
-using namespace insieme::c_info::omp;
-
 namespace insieme {
 namespace frontend {
 namespace omp {
 
-OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
-	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
-
-//	LOG(INFO) << "~~~PRAGMA~~~" << std::endl;
-//	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
-//		LOG(INFO) << "KEYWORD: " << i->first << ":" << std::endl;
-//		for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
-//			LOG(INFO) << (*i2)->toStr() << ", ";
-//		LOG(INFO) << std::endl;
-//	}
-}
-
-void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
+void registerPragmaHandlers(clang::Preprocessor& pp) {
 	using namespace insieme::frontend;
 	using namespace insieme::frontend::tok;
+	using namespace insieme::frontend::omp::pragma;
 
 	// if(scalar-expression)
 	auto if_expr 		   	= kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;
@@ -120,6 +107,7 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 							|	firstprivate_clause
 							|	lastprivate_clause
 							|	reduction_clause
+								// schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
 							|	(kwd("schedule") >> l_paren >> kind["schedule"] >> !( comma >> expr["chunk_size"] ) >> r_paren)
 							|	(kwd("collapse") >> l_paren >> expr["collapse"] >> r_paren)
 							|	kwd("nowait")
@@ -228,17 +216,30 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
 }
 
+namespace pragma {
+
+OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
+	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
+
+//	LOG(INFO) << "~~~PRAGMA~~~" << std::endl;
+//	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
+//		LOG(INFO) << "KEYWORD: " << i->first << ":" << std::endl;
+//		for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
+//			LOG(INFO) << (*i2)->toStr() << ", ";
+//		LOG(INFO) << std::endl;
+//	}
+}
 /**
  * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
  */
-IdentifierList::VarList handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
+omp::annotation::IdentifierList::VarList handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
 
 	auto fit = mmap.find(key);
 	if(fit == mmap.end())
-		return IdentifierList::VarList();
+		return omp::annotation::IdentifierList::VarList();
 
 	const ValueList& vars = fit->second;
-	IdentifierList::VarList varList;
+	omp::annotation::IdentifierList::VarList varList;
 	for(ValueList::const_iterator it = vars.begin(), end = vars.end(); it != end; ++it) {
 		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
 		assert(varIdent && "Clause not containing var exps");
@@ -254,7 +255,9 @@ IdentifierList::VarList handleIdentifierList(const MatchMap& mmap, const std::st
 }
 
 // reduction(operator: list)
-OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+	using namespace omp::annotation;
+
 	auto fit = mmap.find("reduction");
 	if(fit == mmap.end())
 		return OmpReductionPtr();
@@ -266,19 +269,50 @@ OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::Conversi
 	const ValueList& op = opIt->second;
 	assert(op.size() == 1);
 
-	std::string opStr = *op.front()->get<std::string*>();
+	std::string* opStr = op.front()->get<std::string*>();
+	assert(opStr && "Reduction clause with no operator");
 
 	IdentifierList::VarList&& vars = handleIdentifierList(mmap, "reduction", fact);
-	return OmpReductionPtr(new OmpReduction(opStr, vars));
+	return OmpReductionPtr(new OmpReduction(*opStr, vars));
 }
 
-OmpAnnotationPtr OmpParallel::toAnnotation(conversion::ConversionFactory& fact) const {
+// schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
+omp::annotation::OmpSchedulePtr handleScheduleClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+	using namespace omp::annotation;
 
-	return OmpAnnotationPtr();
+	auto fit = mmap.find("schedule");
+	if(fit == mmap.end())
+		return OmpSchedulePtr();
+
+	// we have a schedule clause
+	const ValueList& kind = fit->second;
+	assert(kind.size() == 1);
+	std::string* kindStr = kind.front()->get<std::string*>();
+
+	// check for chunk_size expression
+	auto cit = mmap.find("chunk_size");
+	core::ExpressionPtr chunkSize = NULL;
+
+	if(cit != mmap.end()) {
+		// we have a chunk_size expression
+		const ValueList& chunkExprCont = cit->second;
+		assert(chunkExprCont.size() == 1);
+		clang::Expr* chunkExpr = dyn_cast<clang::Expr>(chunkExprCont.front()->get<clang::Stmt*>());
+		assert(chunkExpr && "OpenMP schedule clause chunk expression is not of type clang::Expr");
+		chunkSize = fact.ConvertExpr( *chunkExpr );
+	}
+
+	return OmpSchedulePtr( new OmpSchedule(OmpSchedule::STATIC, chunkSize) );
+}
+
+omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::ConversionFactory& fact) const {
+
+	return omp::annotation::OmpAnnotationPtr();
 
 }
 
-OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFactory& fact) const {
+	using namespace omp::annotation;
 	// check for private clause
 	IdentifierList::VarList&& privateList = handleIdentifierList(getMap(), "private", fact);
 	OmpPrivatePtr privateClause = privateList.empty() ? OmpPrivatePtr() : OmpPrivatePtr( new OmpPrivate(privateList) );
@@ -290,78 +324,80 @@ OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFactory& fact) const
 	OmpLastPrivatePtr lastPrivateClause = lastPrivateList.empty() ? OmpLastPrivatePtr() : OmpLastPrivatePtr( new OmpLastPrivate(lastPrivateList) );
 	// check for reduction clause
 	OmpReductionPtr reductionClause = handleReductionClause(getMap(), fact);
+	OmpSchedulePtr scheduleClause = handleScheduleClause(getMap(), fact);
 
-	return OmpAnnotationPtr( new c_info::omp::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause) );
+	return OmpAnnotationPtr( new annotation::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause) );
 }
 
-OmpAnnotationPtr OmpSections::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpSections::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpSection::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpSection::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpSingle::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpSingle::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpMaster::toAnnotation(conversion::ConversionFactory& fact) const {
-	return OmpAnnotationPtr( new c_info::omp::OmpMaster );
+omp::annotation::OmpAnnotationPtr OmpMaster::toAnnotation(conversion::ConversionFactory& fact) const {
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpMaster );
 }
 
-OmpAnnotationPtr OmpCritical::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
-	return OmpAnnotationPtr( new c_info::omp::OmpBarrier );
+omp::annotation::OmpAnnotationPtr OmpBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpBarrier );
 }
 
-OmpAnnotationPtr OmpTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpFlush::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpFlush::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
-OmpAnnotationPtr OmpThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
+omp::annotation::OmpAnnotationPtr OmpThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
 
 	// We need to check if the
-	return OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr();
 }
 
+} // End pragma namespace
 } // End omp namespace
 } // End frontend namespace
 } // End insieme namespace

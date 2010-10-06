@@ -247,7 +247,7 @@ InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, insieme::core::
 	conversion::IRConsumer cons(mClang, prog, mPragmaList, doConversion);
 
 	// register omp pragmas
-	omp::OmpPragma::RegisterPragmaHandlers( mClang.getPreprocessor() );
+	omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
 	mClang.getPreprocessor().AddPragmaHandler(
 			PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(mClang.getPreprocessor().getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom));

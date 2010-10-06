@@ -37,11 +37,13 @@
 #include "omp/omp_annotation.h"
 
 namespace insieme {
-namespace c_info {
+namespace frontend {
 namespace omp {
+namespace annotation {
 
 const core::StringKey<OmpAnnotationPtr> OmpAnnotation::KEY("OpenMP");
 
+} // End annotation namespace
 } // End omp namespace
-} // End c_info namespace
+} // End frontend namespace
 } // End insieme namespace
