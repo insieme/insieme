@@ -124,8 +124,6 @@ public:
 
     OclAddressSpaceAnnotation() : OclAnnotation(), as(addressSpace::PRIVATE) { }
 
-    OclAddressSpaceAnnotation(addressSpace space) : core::Annotation(), as(space) { }
-
     OclAddressSpaceAnnotation(addressSpace space) : OclAnnotation(), as(space) { }
 
     bool setAddressSpace(addressSpace newAs);
