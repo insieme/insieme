@@ -56,9 +56,10 @@ using namespace insieme::frontend::conversion;
 
 TEST(TypeConversion, HandleBuildinType) {
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clangComp;
-	ConversionFactory convFactory( prog->getNodeManager(), clangComp);
+	ConversionFactory convFactory( shared, clangComp);
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -108,10 +109,11 @@ TEST(TypeConversion, HandlePointerType) {
 
 	using namespace clang;
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
 
-	ConversionFactory convFactory( prog->getNodeManager(), clang );
+	ConversionFactory convFactory( shared, clang );
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
@@ -126,9 +128,11 @@ TEST(TypeConversion, HandleReferenceType) {
 
 	using namespace clang;
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
+
 	ClangCompiler clang;
-	ConversionFactory convFactory( prog->getNodeManager(), clang);
+	ConversionFactory convFactory( shared, clang);
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
@@ -143,9 +147,10 @@ TEST(TypeConversion, HandleStructType) {
 
 	using namespace clang;
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( prog->getNodeManager(), clang);
+	ConversionFactory convFactory( shared, clang);
 
 	SourceLocation emptyLoc;
 
@@ -182,9 +187,10 @@ TEST(TypeConversion, HandleStructType) {
 
 TEST(TypeConversion, HandleRecursiveStructType) {
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
-	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager(), clang );
+	ConversionFactory convFactory( shared, clang);
 
 	clang::BuiltinType charTy(clang::BuiltinType::SChar);
 	clang::BuiltinType longTy(clang::BuiltinType::Long);
@@ -211,9 +217,10 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 TEST(TypeConversion, HandleMutualRecursiveStructType) {
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
-	insieme::frontend::conversion::ConversionFactory convFactory( prog->getNodeManager(), clang );
+	ConversionFactory convFactory( shared, clang);
 
 	clang::RecordDecl* declA = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("A"));
@@ -287,9 +294,10 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 TEST(TypeConversion, HandleFunctionType) {
 	using namespace clang;
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( prog->getNodeManager(), clang );
+	ConversionFactory convFactory( shared, clang);
 
 	ASTContext& ctx = clang.getASTContext();
 	// Defines a function with the following prototype:
@@ -323,9 +331,10 @@ TEST(TypeConversion, HandleFunctionType) {
 TEST(TypeConversion, HandleArrayType) {
 	using namespace clang;
 
-	ProgramPtr prog = Program::create();
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( prog->getNodeManager(), clang );
+	ConversionFactory convFactory( shared, clang);
 
 	ASTContext& ctx = clang.getASTContext();
 
@@ -351,9 +360,11 @@ TEST(TypeConversion, HandleArrayType) {
 }
 
 TEST(TypeConversion, FileTest) {
-	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", program, false);
-	ConversionFactory convFactory( program->getNodeManager(), TU->getCompiler() );
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr program = Program::create(*shared);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", shared, program, false);
+	ConversionFactory convFactory( shared, TU->getCompiler() );
 
 	const PragmaList& pl = TU->getPragmaList();
 

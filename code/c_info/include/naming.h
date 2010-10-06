@@ -60,6 +60,7 @@ public:
 
 	const core::Identifier& getIdent() const { return ident; }
 	const std::string& getName() const { return ident.getName(); }
+	const std::string getAnnotationName() const {return "CNameAnnotation";}
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };
@@ -85,6 +86,7 @@ public:
 	void addIdent(const core::Identifier& recVarName, const core::Identifier& cName);
 	const core::Identifier& getIdent(const core::Identifier& recVarName);
 	const std::string& getName(const core::Identifier& recVarName);
+	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };

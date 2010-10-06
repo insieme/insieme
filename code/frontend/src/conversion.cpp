@@ -89,15 +89,6 @@ struct TypeWrapper: public IRWrapper<core::TypePtr> {
 	TypeWrapper(const core::TypePtr& type): IRWrapper<core::TypePtr>(type) { }
 };
 
-// OBSOLETE
-struct VectorWrapper: public TypeWrapper {
-    core::VectorTypePtr vecType;
-//    VectorWrapper(): vecType(0, 0), TypeWrapper() { }
-    VectorWrapper(const core::TypePtr& type, const core::IntTypeParam& numElements):
-        TypeWrapper(type), vecType(new core::VectorType (type, numElements))
-        { DVLOG(1) << "Should not be used at the moment"; }
-};
-
 struct ExprWrapper: public IRWrapper<core::ExpressionPtr> {
 	ExprWrapper(): IRWrapper<core::ExpressionPtr>() { }
 	ExprWrapper(const core::ExpressionPtr& expr): IRWrapper<core::ExpressionPtr>(expr) { }
@@ -952,8 +943,8 @@ public:
 		if(pragma) {
 			// there is a pragma attached
 			VLOG(1) << "For statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
-			const frontend::omp::OmpPragma& ompPragma = dynamic_cast<const frontend::omp::OmpPragma&>(*pragma);
-			retStmt.getSingleStmt()->addAnnotation( ompPragma.toAnnotation(convFact) );
+			const omp::pragma::OmpPragma& ompPragma = dynamic_cast<const omp::pragma::OmpPragma&>(*pragma);
+			retStmt.getSingleStmt().addAnnotation( ompPragma.toAnnotation(convFact) );
 		}
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
@@ -1900,11 +1891,11 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 			assert(definition->getBody() && "Function Definition has no body");
 
 			funcBody = mFact.ConvertStmt( *definition->getBody() );
-			core::ExpressionPtr lambaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+			core::ExpressionPtr lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
 			// annotate name of function
-			lambaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
+			lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
 			if(definition->isMain()) {
-				mProgram = mProgram->addEntryPoint(lambaExpr);
+				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
 				//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
 			}
 		}

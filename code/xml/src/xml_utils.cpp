@@ -49,11 +49,12 @@
 
 using namespace insieme::core;
 using namespace insieme::utils;
+using namespace insieme::xml;
 using namespace std;
 
 XERCES_CPP_NAMESPACE_USE
 
-namespace {
+//namespace {
 
 #define toUnicode(str) XStr(str).unicodeForm()
 
@@ -93,6 +94,32 @@ public:
 	}
 };
 
+class XmlConverter{
+	map<const string, XmlElement&(*)(const Annotation&, DOMDocument*)> IrToDomConvertMap;
+	map<const string, shared_ptr<Annotation>(*)(const DOMElement&)> DomToIrConvertMap;
+public:
+	static XmlConverter& get(){
+		static XmlConverter instance;
+		return instance;
+	}
+	
+	shared_ptr<Annotation> domToIrAnnotation (const DOMElement& ann) {
+		char* type (XMLString::transcode (ann.getAttribute(toUnicode("type"))));
+		return DomToIrConvertMap[type](ann);
+	}
+	
+	XmlElement& irToDomAnnotation (const Annotation& ann, DOMDocument* doc) {
+		const string type = ann.getAnnotationName();
+		return IrToDomConvertMap[type](ann, doc);
+	}
+	
+	void registerAnnotation(string name, 
+							XmlElement&(*toXml)(const Annotation&, DOMDocument*), 
+							shared_ptr<Annotation>(*fromXml)(const DOMElement&)) {
+		IrToDomConvertMap[name] = toXml;
+		DomToIrConvertMap[name] = fromXml;
+	}
+};
 
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
@@ -276,7 +303,7 @@ public:
 	}
 };
 
-}
+//}
 
 // ------------------------------------ XmlUtil ----------------------------
 
@@ -423,19 +450,19 @@ string XmlUtil::convertDomToString(){
 
 // -------------------------Xml Write - Read - Validate----------------------
 
-void insieme::core::xmlWrite(const NodePtr& node, const string fileName){
+void insieme::xml::xmlWrite(const NodePtr& node, const string fileName){
 	XmlUtil xml;
 	xml.convertIrToDom(node);
 	xml.convertDomToXml(fileName);
 };
 
-void insieme::core::xmlRead(const string fileName, const bool validate){
+void insieme::xml::xmlRead(const string fileName, const bool validate){
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, validate);
 	//xml.convertDomToIr();
 };
 
-void insieme::core::xmlValidate(const string fileName){
+void insieme::xml::xmlValidate(const string fileName){
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, true);
 };

@@ -300,7 +300,7 @@ protected:
 	/**
 	 * Implements a the base not visit.
 	 */
-	virtual ReturnType visitNode(const NodePtr& node) {
+	virtual ReturnType visitNode(const NodePtr&) {
 		// by default, do nothing
 		return ReturnType();
 	}

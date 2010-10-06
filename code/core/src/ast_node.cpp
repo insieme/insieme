@@ -55,3 +55,11 @@ const insieme::core::Node::ChildList& insieme::core::Node::getChildList() const 
 	}
 	return *children;
 }
+
+void* insieme::core::Node::operator new(size_t size) {
+	return ::operator new(size);
+}
+
+void insieme::core::Node::operator delete(void* ptr) {
+	return ::operator delete(ptr);
+}

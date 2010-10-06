@@ -166,7 +166,7 @@ class InsiemeTransUnit: public boost::noncopyable {
 
 	core::ProgramPtr mProgram;
 
-	InsiemeTransUnit(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion);
+	InsiemeTransUnit(const std::string& file_name, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, bool doConversion);
 public:
 
 	const PragmaList& getPragmaList() const { return mPragmaList; }
@@ -176,8 +176,8 @@ public:
 	/**
 	 * Main entry method, it creates a translation unit starting from an input file
 	 */
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion=true) {
-		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name, prog, doConversion));
+	static InsiemeTransUnitPtr ParseFile(const std::string& file_name, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, bool doConversion=true) {
+		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name, manager, prog, doConversion));
 	}
 
 };

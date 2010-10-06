@@ -68,7 +68,7 @@ else()
 endif() 
 
 # build the frontend library
-add_library(insieme_frontend SHARED ${insieme_frontend_srcs} ${insieme_frontend_incs} )
+add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB})
 
 # add dependencies

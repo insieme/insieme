@@ -86,8 +86,8 @@ CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, c
 }
 
 
-ConversionContext::ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
-	ConvertedCode converted;
+ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
+	ConvertedCode converted(prog);
 	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
 		ConvertVisitor convVisitor(*this);
 		convVisitor.visit(ep);
@@ -209,5 +209,16 @@ string SimpleTypeConverter::visitRefType(const RefTypePtr& ptr) {
 }
 
 
+const ProgramPtr& ConvertedCode::getProgram() const {
+	return fromProg;
 }
+
+}
+}
+
+std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
+	for_each(code.getProgram()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
+		out << "---\n" << *code.find(ep);
+	});
+	return out;
 }
