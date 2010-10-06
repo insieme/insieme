@@ -165,7 +165,7 @@ class Node : public insieme::utils::HashableImmutableData<Node>,  public Annotat
 	 * Allow the instance manager to access the private clone method.
 	 */
 	friend class InstanceManager<Node, AnnotatedPtr>;
-
+	
 public:
 
 	/**
@@ -245,6 +245,13 @@ private:
 	virtual Node* createCloneUsing(NodeManager& manager) const = 0;
 
 protected:
+
+	template<class T> friend class std::shared_ptr;
+
+	static void* operator new(size_t);
+	//void operator delete(void*, size_t); // TODO
+	//static void* operator new[](size_t); // TODO GCC
+	//void operator delete[](void*, size_t);
 
 	/**
 	 * Construct a new node instance based on the essential features.
