@@ -36,12 +36,52 @@
 
 #include <gtest/gtest.h>
 
-#include "ocl_annotations.h"
+#include "ocl/ocl_annotations.h"
 
 namespace insieme {
-namespace c_info {
+namespace frontend {
 
+bool testKernelFct(OclKernelFctAnnotation kernel) {
+    return kernel.isKernelFct();
+}
+
+void testWorkGroupSize(OclWorkGroupSizeAnnotation wgs, int* param){
+    param[0] = wgs.getXdim();
+    param[1] = wgs.getYdim();
+    param[2] = wgs.getZdim();
+}
+
+OclAddressSpaceAnnotation::addressSpace testAddressSpace(OclAddressSpaceAnnotation space){
+    return space.getAddressSpace();
+}
+/* TODO fixme
 TEST(ocl_properties, DefaultInitialization) {
+
+    core::Annotatable function;
+
+    const OclKernelFctAnnotationPtr kernel;
+
+    const OclAddressSpaceAnnotationPtr space;
+
+//    const OclWorkGroupSizeAnnotationPtr wgs;
+
+//    printf("trallalal %d %d %d\n", wgs->getXdim(), wgs->getYdim(), wgs->getZdim());
+
+    function.addAnnotation(kernel);
+//    function.addAnnotation(wgs);
+
+    function.getAnnotation(OclAnnotation::KEY);
+//    EXPECT_TRUE(testKernelFct(function.getAnnotation(OclAnnotation::KEY)));
+
+    EXPECT_EQ(OclAddressSpaceAnnotation::addressSpace::PRIVATE, space.getAddressSpace());
+
+    EXPECT_EQ(1, wgs.getXdim());
+    EXPECT_EQ(2, wgs.getYdim());
+    EXPECT_EQ(3, wgs.getZdim());
+
+}*/
+
+TEST(ocl_properties, oldVersion) {
 
     insieme::core::Annotatable obj;
 
