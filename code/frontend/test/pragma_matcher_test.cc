@@ -84,7 +84,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 9, 2);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
 		EXPECT_TRUE(omp->getMap().empty());
 	}
 
@@ -108,7 +108,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 13, 4);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
 		EXPECT_FALSE(omp->getMap().empty());
 
 		auto fit = omp->getMap().find("private");
@@ -168,7 +168,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 9, 2);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
 		EXPECT_FALSE(omp->getMap().empty());
 
 		// look for 'for' keyword in the map
@@ -182,7 +182,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef =  dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
+			clang::DeclRefExpr* varRef = dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
 			ASSERT_TRUE(varRef);
 			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
 		}
@@ -208,7 +208,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 18, 2);
 
 		// check empty map
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
 		EXPECT_TRUE(omp->getMap().empty());
 	}
 
@@ -232,7 +232,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 17, 3);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
 
 		auto fit = omp->getMap().find("firstprivate");
 		EXPECT_TRUE(fit != omp->getMap().end());

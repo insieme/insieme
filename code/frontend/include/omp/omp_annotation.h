@@ -45,14 +45,16 @@
 	typedef std::shared_ptr<Type> Type##Ptr;
 
 namespace insieme {
-namespace c_info {
+namespace frontend {
 namespace omp {
+namespace annotation {
 
 DEFINE_TYPE(OmpAnnotation);
 DEFINE_TYPE(OmpPrivate);
 DEFINE_TYPE(OmpFirstPrivate);
 DEFINE_TYPE(OmpLastPrivate);
 DEFINE_TYPE(OmpReduction);
+DEFINE_TYPE(OmpSchedule);
 DEFINE_TYPE(OmpFor);
 
 class OmpAnnotation : public core::Annotation {
@@ -98,14 +100,26 @@ public:
 	OmpLastPrivate(const VarList& varList) : IdentifierList(varList) { }
 };
 
-class OmpIf: public OmpAnnotation { };
-
-class OmpReduction: public IdentifierList{
+class OmpReduction: public IdentifierList {
 	std::string op;
 public:
 	OmpReduction(const std::string& op, const VarList& vars): IdentifierList(vars), op(op) { }
 	const std::string& getOperator() const { return op; }
 };
+
+class OmpSchedule {
+public:
+	enum Kind { STATIC, DYNAMIC, GUIDED, AUTO, RUNTIME };
+
+	OmpSchedule(const Kind& kind, const core::ExpressionPtr& chunkExpr): kind(kind), chunkExpr(chunkExpr) { }
+	const Kind& getKind() const { return kind; }
+	const core::ExpressionPtr& getChunkSizeExpr() const { return chunkExpr; }
+private:
+	Kind kind;
+	core::ExpressionPtr chunkExpr;
+};
+
+class OmpIf: public OmpAnnotation { };
 
 class OmpMaster: public OmpAnnotation {
 public:
@@ -118,19 +132,36 @@ public:
 class OmpFor: public OmpAnnotation {
 	OmpPrivatePtr 		privateClause;
 	OmpFirstPrivatePtr 	firstPrivateClause;
-	OmpLastPrivatePtr 	lastPrivateCluase;
+	OmpLastPrivatePtr 	lastPrivateClause;
 	OmpReductionPtr		reductionClause;
+	OmpSchedulePtr		scheduleClause;
 public:
-	OmpFor(const OmpPrivatePtr& privateClause, const OmpFirstPrivatePtr& firstPrivateClause, const OmpLastPrivatePtr& lastPrivateCluase,
-			const OmpReductionPtr& reductionClause):
-		privateClause(privateClause), firstPrivateClause(firstPrivateClause), lastPrivateCluase(lastPrivateCluase), reductionClause(reductionClause) { }
+	OmpFor(const OmpPrivatePtr& privateClause, const OmpFirstPrivatePtr& firstPrivateClause,
+			const OmpLastPrivatePtr& lastPrivateClause, const OmpReductionPtr& reductionClause,
+			const OmpSchedulePtr& scheduleClause) :
+		privateClause(privateClause), firstPrivateClause(firstPrivateClause),
+		lastPrivateClause(lastPrivateClause), reductionClause(reductionClause),
+		scheduleClause(scheduleClause) { }
 
 	bool hasPrivate() { return static_cast<bool>(privateClause); }
 	const OmpPrivatePtr& getPrivate() { return privateClause; }
 
+	bool hasFirstPrivate() { return static_cast<bool>(firstPrivateClause); }
+	const OmpFirstPrivatePtr& getFirstPrivate() { return firstPrivateClause; }
+
+	bool hasLastPrivate() { return static_cast<bool>(lastPrivateClause); }
+	const OmpLastPrivatePtr& getLastPrivate() { return lastPrivateClause; }
+
+	bool hasReduction() { return static_cast<bool>(reductionClause); }
+	const OmpReductionPtr& getReduction() { return reductionClause; }
+
+	bool hasSchedule() { return static_cast<bool>(scheduleClause); }
+	const OmpSchedulePtr& getSchedule() { return scheduleClause; }
+
 
 };
 
+} // End annotation namespace
 } // End omp namespace
-} // End c_info namespace
+} // End frontend namespace
 } // End insieme namespace

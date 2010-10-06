@@ -952,8 +952,8 @@ public:
 		if(pragma) {
 			// there is a pragma attached
 			VLOG(1) << "For statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
-			const frontend::omp::OmpPragma& ompPragma = dynamic_cast<const frontend::omp::OmpPragma&>(*pragma);
-			retStmt.getSingleStmt()->addAnnotation( ompPragma.toAnnotation(convFact) );
+			const omp::pragma::OmpPragma& ompPragma = dynamic_cast<const omp::pragma::OmpPragma&>(*pragma);
+			retStmt.getSingleStmt().addAnnotation( ompPragma.toAnnotation(convFact) );
 		}
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
