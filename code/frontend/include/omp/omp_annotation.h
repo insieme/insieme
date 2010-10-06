@@ -62,11 +62,13 @@ public:
 
     OmpAnnotation() : core::Annotation() { }
     const core::AnnotationKey* getKey() const { return &KEY; }
+	const std::string getAnnotationName() const { return "OmpAnnotation"; }
 };
 
 class OmpBarrier: public OmpAnnotation {
 public:
 	OmpBarrier() : OmpAnnotation() { }
+	const std::string getAnnotationName() const { return "OmpBarrier"; }
 };
 
 /**
@@ -110,6 +112,8 @@ private:
 class OmpMaster: public OmpAnnotation {
 public:
 	OmpMaster() : OmpAnnotation() { }
+	const std::string getAnnotationName() const { return "OmpMaster"; }
+	
 };
 
 /**
@@ -131,6 +135,8 @@ public:
 			const VarListPtr& sharedClause, const VarListPtr& copyinClaus, const OmpReductionPtr& reductionClause) :
 				ifClause(ifClause), numThreadClause(numThreadClause), defaultClause(defaultClause), privateClause(privateClause),
 				firstPrivateClause(firstPrivateClause), sharedClause(sharedClause), copyinClause(copyinClause), reductionClause(reductionClause) { }
+	
+	const std::string getAnnotationName() const { return "OmpParallel"; }
 };
 
 
@@ -173,6 +179,8 @@ public:
 	const core::ExpressionPtr& getCollapse() { return collapseExpr; }
 
 	bool hasNoWait() { return noWait; }
+	
+	const std::string getAnnotationName() const { return "OmpFor"; }
 };
 
 } // End annotation namespace

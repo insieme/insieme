@@ -54,6 +54,10 @@ public:
 	virtual AnnotationKey* getKey() const {
 		return &DummyKey;
 	}
+	
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation"; 
+	}
 };
 
 class DummyAnnotation2 : public Annotation {
@@ -64,6 +68,10 @@ public:
 
 	virtual AnnotationKey* getKey() const {
 		return &DummyKey;
+	}
+	
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation2"; 
 	}
 };
 
