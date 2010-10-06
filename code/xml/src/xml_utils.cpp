@@ -96,13 +96,10 @@ public:
 class XmlConverter{
 	map<const string, XmlElement&(*)(const Annotation&, DOMDocument*)> IrToDomConvertMap;
 	map<const string, shared_ptr<Annotation>(*)(const DOMElement&)> DomToIrConvertMap;
-	static XmlConverter* instance_ptr;
 public:
 	static XmlConverter& get(){
-		if (instance_ptr == NULL) {
-			instance_ptr = new XmlConverter;
-		}
-		return *instance_ptr;
+		static XmlConverter instance;
+		return instance;
 	}
 	
 	shared_ptr<Annotation> domToIrAnnotation (const DOMElement& ann) {
