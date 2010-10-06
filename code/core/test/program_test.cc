@@ -90,7 +90,7 @@ TEST(Program, ProgramData) {
 
 	// check some basic properties
 	EXPECT_EQ ( 0, manager.size() );
-	EXPECT_EQ ( 0, programManager.size() );
+	EXPECT_EQ ( 1, programManager.size() );
 
 	EXPECT_TRUE (program->getEntryPoints().empty());
 

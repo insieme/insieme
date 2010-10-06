@@ -56,10 +56,8 @@ std::size_t hash(const Program::EntryPointSet& entryPoints) {
 	return insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
 }
 
-Program* Program::createCloneUsing(NodeManager&) const {
-//	return new Program(SharedNodeManager(NULL), manager.getAll(definitions), manager.getAll(entryPoints));
-	assert ( false && "Programs cannot be migrated between manager!");
-	return NULL;
+Program* Program::createCloneUsing(NodeManager& manager) const {
+	return new Program(migrateAllPtr(entryPoints, manager));
 }
 
 /**

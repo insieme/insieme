@@ -57,8 +57,9 @@ using namespace insieme::core;
 
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
-	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/omp_parallel.c", program, false);
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr program = Program::create(*shared);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/omp_parallel.c", shared, program, false);
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());
@@ -141,8 +142,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
-	ProgramPtr program = Program::create();
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/omp_for.c", program, false);
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	ProgramPtr program = Program::create(*shared);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/omp_for.c", shared, program, false);
 	const PragmaList& pl = TU->getPragmaList();
 
 	EXPECT_FALSE(pl.empty());

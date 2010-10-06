@@ -35,6 +35,7 @@
  */
 
 #include <iostream>
+#include <memory>
 
 #include "expressions.h"
 #include "types.h"
@@ -63,14 +64,16 @@ int main(int argc, char** argv) {
 	insieme::utils::InitLogger(argv[0], INFO, true);
 
 	LOG(INFO) << "Insieme compiler";
-	core::ProgramPtr program = core::Program::create();
+
+	core::SharedNodeManager manager = std::make_shared<core::NodeManager>();
+	core::ProgramPtr program = core::Program::create(*manager);
 	try {
 		auto inputFiles = CommandLineOptions::InputFiles;
 //		auto inputFiles = toVector<std::string>("../code/driver/test/hello_world.c");
 		std::for_each(inputFiles.begin(), inputFiles.end(), [&](const std::string& file) {
 
 			LOG(INFO) << "Parsing File: " << file;
-			auto res = fe::InsiemeTransUnit::ParseFile(file, program);
+			auto res = fe::InsiemeTransUnit::ParseFile(file, manager, program);
 			insieme::core::ProgramPtr program = res->getProgram();
 			LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
