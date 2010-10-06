@@ -152,6 +152,19 @@ public:
 	CodePtr getFunctionLiteral(const core::FunctionTypePtr& type, const string& name);
 };
 
+
+/** A map from Entry points to Code sections returned by ConversionContext::convert.
+ ** Can be printed to any output stream
+ ** */
+class ConvertedCode : public std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> { 
+	ProgramPtr fromProg;
+public:
+	ConvertedCode(const ProgramPtr& fromProg) : std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>>(), 
+		fromProg(fromProg) { }
+	const ProgramPtr& getProgram() const;
+};
+
+
 /** Stores the persistent state objects required to perform a simple_backend conversion.
  ** This includes a NameGenerator, a FunctionManager and a TypeManager.
  ** */
@@ -164,8 +177,8 @@ public:
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
 	// (the base class initializers do not dereference it)
 	ConversionContext() : typeMan(*this), funcMan(*this) { }
-
-	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
+	
+	//typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
 
 	NameGenerator& getNameGen() { return nameGen; }
 	TypeManager& getTypeMan() { return typeMan; }
@@ -363,3 +376,5 @@ public:
 
 } // namespace simple_backend
 } // namespace insieme
+
+std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code);
