@@ -304,18 +304,18 @@ omp::annotation::OmpSchedulePtr handleScheduleClause(const MatchMap& mmap, conve
 	// we have a schedule clause
 	const ValueList& kind = fit->second;
 	assert(kind.size() == 1);
-	std::string* kindStr = kind.front()->get<std::string*>();
+	std::string& kindStr = *kind.front()->get<std::string*>();
 
 	OmpSchedule::Kind k;
-	if(*kindStr == "static")
+	if(kindStr == "static")
 		k = OmpSchedule::STATIC;
-	else if (*kindStr == "dynamic")
+	else if (kindStr == "dynamic")
 		k = OmpSchedule::DYNAMIC;
-	else if (*kindStr == "guided")
+	else if (kindStr == "guided")
 		k = OmpSchedule::GUIDED;
-	else if (*kindStr == "auto")
+	else if (kindStr == "auto")
 		k = OmpSchedule::AUTO;
-	else if (*kindStr == "runtime")
+	else if (kindStr == "runtime")
 		k = OmpSchedule::RUNTIME;
 	else
 		assert(false && "Unsupported scheduling kind");
@@ -340,12 +340,12 @@ omp::annotation::OmpDefaultPtr handleDefaultClause(const MatchMap& mmap, convers
 	// we have a schedule clause
 	const ValueList& kind = fit->second;
 	assert(kind.size() == 1);
-	std::string* kindStr = kind.front()->get<std::string*>();
+	std::string& kindStr = *kind.front()->get<std::string*>();
 
 	OmpDefault::Kind k;
-	if(*kindStr == "shared")
+	if(kindStr == "shared")
 		k = OmpDefault::SHARED;
-	else if(*kindStr == "none")
+	else if(kindStr == "none")
 		k = OmpDefault::NONE;
 	else
 		assert(false && "Unsupported default kind");
@@ -382,6 +382,10 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 	// check for reduction clause
 	OmpReductionPtr reductionClause = handleReductionClause(map, fact);
 
+	if(hasKeyword(map, "for")) {
+		// this is a parallel for
+
+	}
 	return OmpAnnotationPtr(
 			new omp::annotation::OmpParallel(ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause, reductionClause)
 	);
