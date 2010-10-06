@@ -34,13 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "omp_annotation.h"
+#include "omp/omp_annotation.h"
 
 namespace insieme {
 namespace c_info {
 namespace omp {
 
-const core::StringKey<OmpAnnotation> OmpAnnotation::KEY("OpenMP");
+const core::StringKey<OmpAnnotationPtr> OmpAnnotation::KEY("OpenMP");
 
 } // End omp namespace
 } // End c_info namespace

@@ -40,60 +40,95 @@
 #include "expressions.h"
 #include <memory.h>
 
+#define DEFINE_TYPE(Type) \
+	class Type; \
+	typedef std::shared_ptr<Type> Type##Ptr;
+
 namespace insieme {
 namespace c_info {
 namespace omp {
 
+DEFINE_TYPE(OmpAnnotation);
+DEFINE_TYPE(OmpPrivate);
+DEFINE_TYPE(OmpFirstPrivate);
+DEFINE_TYPE(OmpLastPrivate);
+DEFINE_TYPE(OmpReduction);
+DEFINE_TYPE(OmpFor);
+
 class OmpAnnotation : public core::Annotation {
 public:
-    static const core::StringKey<OmpAnnotation> KEY;
+    static const core::StringKey<OmpAnnotationPtr> KEY;
 
     OmpAnnotation() : core::Annotation() { }
     const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
-typedef std::shared_ptr<OmpAnnotation> OmpAnnotationPtr;
-
-class OmpCompoundAnnotation: public OmpAnnotation {
-public:
-	typedef std::vector<OmpAnnotationPtr> AnnotationVect;
-
-	OmpCompoundAnnotation(): OmpAnnotation() { }
-
-protected:
-	AnnotationVect children;
-};
-
-class OmpParallel: public OmpCompoundAnnotation { };
-
-class OmpFor: public OmpCompoundAnnotation { };
+class OmpParallel: public OmpAnnotation { };
 
 class OmpBarrier: public OmpAnnotation {
 public:
 	OmpBarrier() : OmpAnnotation() { }
 };
 
-class OmpPrivate: public OmpAnnotation {
+/**
+ * Holds a list of identifiers
+ */
+class IdentifierList {
 public:
 	typedef std::vector<core::VarExprPtr> VarList;
 
-	OmpPrivate(const VarList& varList) : OmpAnnotation(), varList(varList) { }
+	IdentifierList(const VarList& varList) : varList(varList) { }
 	const VarList& getVarList() const { return varList; }
 private:
 	VarList varList;
 };
 
-class OmpFirstPrivate: public OmpAnnotation { };
+class OmpPrivate: public IdentifierList {
+public:
+	OmpPrivate(const VarList& varList) : IdentifierList(varList) { }
+};
 
-class OmpLastPrivate: public OmpAnnotation { };
+class OmpFirstPrivate: public IdentifierList {
+public:
+	OmpFirstPrivate(const VarList& varList) : IdentifierList(varList) { }
+};
+
+class OmpLastPrivate: public IdentifierList {
+public:
+	OmpLastPrivate(const VarList& varList) : IdentifierList(varList) { }
+};
 
 class OmpIf: public OmpAnnotation { };
 
-class OmpReduction: public OmpAnnotation { };
+class OmpReduction: public IdentifierList{
+	std::string op;
+public:
+	OmpReduction(const std::string& op, const VarList& vars): IdentifierList(vars), op(op) { }
+	const std::string& getOperator() const { return op; }
+};
 
 class OmpMaster: public OmpAnnotation {
 public:
 	OmpMaster() : OmpAnnotation() { }
+};
+
+/**
+ * OpenMP for
+ */
+class OmpFor: public OmpAnnotation {
+	OmpPrivatePtr 		privateClause;
+	OmpFirstPrivatePtr 	firstPrivateClause;
+	OmpLastPrivatePtr 	lastPrivateCluase;
+	OmpReductionPtr		reductionClause;
+public:
+	OmpFor(const OmpPrivatePtr& privateClause, const OmpFirstPrivatePtr& firstPrivateClause, const OmpLastPrivatePtr& lastPrivateCluase,
+			const OmpReductionPtr& reductionClause):
+		privateClause(privateClause), firstPrivateClause(firstPrivateClause), lastPrivateCluase(lastPrivateCluase), reductionClause(reductionClause) { }
+
+	bool hasPrivate() { return static_cast<bool>(privateClause); }
+	const OmpPrivatePtr& getPrivate() { return privateClause; }
+
+
 };
 
 } // End omp namespace

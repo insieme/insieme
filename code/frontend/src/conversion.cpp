@@ -57,6 +57,8 @@
 #include "ocl_annotations.h"
 #include "ast_visitor.h"
 
+#include "omp/omp_pragma.h"
+
 #include "transform/node_replacer.h"
 
 #include "clang/AST/ASTConsumer.h"
@@ -945,6 +947,15 @@ public:
 		assert(declStmt && "Falied loop init expression conversion");
 		retStmt.push_back( builder.forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref) );
 		retStmt = tryAggregateStmts(builder, retStmt);
+
+		const PragmaPtr pragma = convFact.pragmaMap[forStmt];
+		if(pragma) {
+			// there is a pragma attached
+			VLOG(1) << "For statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
+			const frontend::omp::OmpPragma& ompPragma = dynamic_cast<const frontend::omp::OmpPragma&>(*pragma);
+			retStmt.getSingleStmt()->addAnnotation( ompPragma.toAnnotation(convFact) );
+		}
+
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 		return retStmt;
 	}

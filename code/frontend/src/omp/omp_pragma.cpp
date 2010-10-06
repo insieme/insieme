@@ -94,7 +94,7 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 	auto op 			  	= tok::plus | tok::minus; // TODO: add more
 
 	// reduction(operator: list)
-	auto reduction_clause 	= kwd("reduction") >> l_paren >> op >> colon >> identifier_list >> r_paren;
+	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >> identifier_list["reduction"] >> r_paren;
 
 	auto parallel_clause =  ( 	// if(scalar-expression)
 								if_expr
@@ -228,23 +228,48 @@ void OmpPragma::RegisterPragmaHandlers(clang::Preprocessor& pp) {
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
 }
 
-OmpAnnotationPtr handlePrivateClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+/**
+ * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
+ */
+IdentifierList::VarList handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
 
-	auto fit = mmap.find("private");
+	auto fit = mmap.find(key);
 	if(fit == mmap.end())
-		return OmpAnnotationPtr();
+		return IdentifierList::VarList();
 
 	const ValueList& vars = fit->second;
-
-	OmpPrivate::VarList varList;
+	IdentifierList::VarList varList;
 	for(ValueList::const_iterator it = vars.begin(), end = vars.end(); it != end; ++it) {
-		clang::Stmt* varIdent = (*it)->take<clang::Stmt*>();
-		assert(varIdent && "Private clause not containing var exps");
+		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
+		assert(varIdent && "Clause not containing var exps");
+
 		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
-		assert(refVarIdent && "Private clause not containing a DeclRefExpr");
-		varList.push_back( core::dynamic_pointer_cast<const core::VarExpr>(fact.ConvertExpr( *refVarIdent )) );
+		assert(refVarIdent && "Clause not containing a DeclRefExpr");
+
+		core::VarExprPtr varExpr = core::dynamic_pointer_cast<const core::VarExpr>(fact.ConvertExpr( *refVarIdent ));
+		assert(varExpr && "Conversion to Insieme node failed!");
+		varList.push_back( varExpr );
 	}
-	return OmpAnnotationPtr( new OmpPrivate(varList) );
+	return varList;
+}
+
+// reduction(operator: list)
+OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+	auto fit = mmap.find("reduction");
+	if(fit == mmap.end())
+		return OmpReductionPtr();
+
+	// we have a reduction
+	// check the operator
+	auto opIt = mmap.find("reduction_op");
+	assert(opIt != mmap.end() && "Reduction clause doesn't contains an operator");
+	const ValueList& op = opIt->second;
+	assert(op.size() == 1);
+
+	std::string opStr = *op.front()->get<std::string*>();
+
+	IdentifierList::VarList&& vars = handleIdentifierList(mmap, "reduction", fact);
+	return OmpReductionPtr(new OmpReduction(opStr, vars));
 }
 
 OmpAnnotationPtr OmpParallel::toAnnotation(conversion::ConversionFactory& fact) const {
@@ -254,9 +279,19 @@ OmpAnnotationPtr OmpParallel::toAnnotation(conversion::ConversionFactory& fact) 
 }
 
 OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFactory& fact) const {
+	// check for private clause
+	IdentifierList::VarList&& privateList = handleIdentifierList(getMap(), "private", fact);
+	OmpPrivatePtr privateClause = privateList.empty() ? OmpPrivatePtr() : OmpPrivatePtr( new OmpPrivate(privateList) );
+	// check for firstprivate clause
+	IdentifierList::VarList&& firstPrivateList = handleIdentifierList(getMap(), "firstprivate", fact);
+	OmpFirstPrivatePtr firstPrivateClause = firstPrivateList.empty() ? OmpFirstPrivatePtr() : OmpFirstPrivatePtr( new OmpFirstPrivate(firstPrivateList) );
+	// check for lastprivate clause
+	IdentifierList::VarList&& lastPrivateList = handleIdentifierList(getMap(), "lastprivate", fact);
+	OmpLastPrivatePtr lastPrivateClause = lastPrivateList.empty() ? OmpLastPrivatePtr() : OmpLastPrivatePtr( new OmpLastPrivate(lastPrivateList) );
+	// check for reduction clause
+	OmpReductionPtr reductionClause = handleReductionClause(getMap(), fact);
 
-	// We need to check if the
-	return OmpAnnotationPtr();
+	return OmpAnnotationPtr( new c_info::omp::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause) );
 }
 
 OmpAnnotationPtr OmpSections::toAnnotation(conversion::ConversionFactory& fact) const {
