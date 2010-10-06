@@ -20,7 +20,7 @@ include_directories( ${insieme_utils_include_dir} )
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb )
          
 # Build the core library
-add_library(insieme_core SHARED ${insieme_core_srcs} ${insieme_core_incs} )
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} )
 
 # add dependencies
 add_dependencies( insieme_core insieme_utils)

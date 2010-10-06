@@ -85,12 +85,6 @@ TEST(SimpleBackend, Basic) {
 
 	std::cout << "Start visit\n";
 	auto converted = cc.convert(prog);
+	std::cout << "Converted code:\n" << converted;
 
-	for_each(prog->getEntryPoints(), [&converted](const ExpressionPtr& ep) {
-		std::cout << "---\n" << converted[ep];
-	});
-
-	//std::cout << "============\n" << cc.getCode() << "\n-----------\n";
-	
-	//EXPECT_EQ(*compound2, *compound);
 }

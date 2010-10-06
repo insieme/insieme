@@ -78,6 +78,8 @@ public:
 	 * NOTE: best practice would be to use static variables to represent annotation keys
 	 */
 	virtual const AnnotationKey* getKey() const = 0;
+	
+	virtual const std::string getAnnotationName() const = 0;
 
 };
 
