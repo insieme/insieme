@@ -89,15 +89,6 @@ struct TypeWrapper: public IRWrapper<core::TypePtr> {
 	TypeWrapper(const core::TypePtr& type): IRWrapper<core::TypePtr>(type) { }
 };
 
-// OBSOLETE
-struct VectorWrapper: public TypeWrapper {
-    core::VectorTypePtr vecType;
-//    VectorWrapper(): vecType(0, 0), TypeWrapper() { }
-    VectorWrapper(const core::TypePtr& type, const core::IntTypeParam& numElements):
-        TypeWrapper(type), vecType(new core::VectorType (type, numElements))
-        { DVLOG(1) << "Should not be used at the moment"; }
-};
-
 struct ExprWrapper: public IRWrapper<core::ExpressionPtr> {
 	ExprWrapper(): IRWrapper<core::ExpressionPtr>() { }
 	ExprWrapper(const core::ExpressionPtr& expr): IRWrapper<core::ExpressionPtr>(expr) { }
