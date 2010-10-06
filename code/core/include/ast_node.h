@@ -249,7 +249,7 @@ protected:
 	template<class T> friend class std::shared_ptr;
 
 	static void* operator new(size_t);
-	//void operator delete(void*, size_t); // TODO
+	void operator delete(void*);
 	//static void* operator new[](size_t); // TODO GCC
 	//void operator delete[](void*, size_t);
 
