@@ -58,7 +58,9 @@ TEST(ocl_properties, DefaultInitialization) {
     EXPECT_EQ(static_cast<unsigned int>(1), aMap.size());
 
     std::shared_ptr<insieme::core::Annotation> oa = (*aMap.find(&OclBaseAnnotation::KEY)).second;
-    EXPECT_TRUE(std::dynamic_pointer_cast<OclBaseAnnotation>(oa));
+
+    //does not work in Hudson
+//    EXPECT_TRUE(std::dynamic_pointer_cast<OclBaseAnnotation>(oa));
 
     if(ocl::OclBaseAnnotationPtr oclKernelAnnotation = std::dynamic_pointer_cast<ocl::OclBaseAnnotation>(oa)) {
         for(size_t i = 0; i < oclKernelAnnotation->getNumAnnotations(); ++i) {
@@ -72,6 +74,8 @@ TEST(ocl_properties, DefaultInitialization) {
             }
         }
     }
+    else
+        EXPECT_TRUE(false);
 
 
 
