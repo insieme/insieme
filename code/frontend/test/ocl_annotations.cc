@@ -51,7 +51,7 @@ TEST(ocl_properties, DefaultInitialization) {
     functionAnnotation.push_back(std::make_shared<ocl::OclKernelFctAnnotation>());
     functionAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(1,2,3));
 
-    std::make_shared<ocl::OclBaseAnnotation>(functionAnnotation);
+    function.addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(functionAnnotation));
 
     core::AnnotationMap aMap = function.getAnnotations();
 
