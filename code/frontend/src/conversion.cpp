@@ -58,7 +58,6 @@
 #include "ast_visitor.h"
 
 #include "omp/omp_pragma.h"
-
 #include "transform/node_replacer.h"
 
 #include "clang/AST/ASTConsumer.h"
@@ -941,13 +940,7 @@ public:
 		assert(irFor && "Created for statement is not valid");
 
 		// handle eventual pragmas attached to the Clang node
-		const PragmaPtr pragma = convFact.pragmaMap[forStmt];
-		if(pragma) {
-			// there is a pragma attached
-			VLOG(1) << "For statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
-			const omp::pragma::OmpPragma& ompPragma = dynamic_cast<const omp::pragma::OmpPragma&>(*pragma);
-			irFor.addAnnotation( ompPragma.toAnnotation(convFact) );
-		}
+		frontend::omp::attachOmpAnnotation(irFor, forStmt, convFact);
 
 		retStmt.push_back( irFor );
 		retStmt = tryAggregateStmts(builder, retStmt);

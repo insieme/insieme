@@ -183,7 +183,7 @@ public:
 /**
  * OpenMP 'parallel' clause
  */
-class OmpParallel: public OmpAnnotation, public OmpCommonImpl, public OmpParallelImpl {
+class OmpParallel: public OmpAnnotation, private OmpCommonImpl, private OmpParallelImpl {
 public:
 	OmpParallel(const core::ExpressionPtr& ifClause, const core::ExpressionPtr& numThreadClause,
 			const OmpDefaultPtr& defaultClause, const VarListPtr& privateClause, const VarListPtr& firstPrivateClause,
@@ -195,7 +195,7 @@ public:
 /**
  * OpenMP 'for' clause
  */
-class OmpFor: public OmpAnnotation, public OmpCommonImpl, public OmpForImpl {
+class OmpFor: public OmpAnnotation, private OmpCommonImpl, private OmpForImpl {
 	VarListPtr			privateClause;
 	VarListPtr			firstPrivateClause;
 	OmpReductionPtr		reductionClause;
@@ -211,7 +211,7 @@ public:
 /**
  * OpenMP 'parallel for' clause
  */
-class OmpParallelFor: public OmpAnnotation, public OmpCommonImpl, public OmpParallelImpl, public OmpForImpl {
+class OmpParallelFor: public OmpAnnotation, private OmpCommonImpl, private OmpParallelImpl, private OmpForImpl {
 public:
 	OmpParallelFor(const core::ExpressionPtr& ifClause, const core::ExpressionPtr& numThreadClause,
 				const OmpDefaultPtr& defaultClause, const VarListPtr& privateClause, const VarListPtr& firstPrivateClause,

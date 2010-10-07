@@ -35,6 +35,7 @@
  */
 
 #include "omp/omp_pragma.h"
+#include "omp/omp_annotation.h"
 
 #include "pragma_handler.h"
 #include "pragma_matcher.h"
@@ -216,6 +217,18 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// #pragma omp threadprivate(list) new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
+}
+
+void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
+	const PragmaPtr pragma = fact.getPragmaMap()[clangNode];
+	if(pragma) {
+		// there is a pragma attached
+		const omp::pragma::OmpPragma* ompPragma = dynamic_cast<const omp::pragma::OmpPragma*>(&*pragma);
+		if(ompPragma) {
+			VLOG(1) << "Statement has an OpenMP pragma attached";
+			irNode.addAnnotation( ompPragma->toAnnotation(fact) );
+		}
+	}
 }
 
 namespace pragma {
