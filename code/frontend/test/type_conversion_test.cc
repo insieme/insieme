@@ -157,8 +157,8 @@ TEST(TypeConversion, HandleStructType) {
 
 	SourceLocation emptyLoc;
 
-	BuiltinType charTy(BuiltinType::SChar);
-	BuiltinType ushortTy(BuiltinType::UShort);
+	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
+	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
 
 	// create a struct:
 	// struct Person {
@@ -170,11 +170,11 @@ TEST(TypeConversion, HandleStructType) {
 
 	// creates 'char* name' field
 	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(&charTy, 0)), 0, 0, false));
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
 
 	// creates 'unsigned short age' field
 	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-			clang.getPreprocessor().getIdentifierInfo("age"), QualType(&ushortTy,0), 0, 0, false));
+			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
 
 	decl->completeDefinition ();
 
@@ -195,8 +195,8 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
 
-	clang::BuiltinType charTy(clang::BuiltinType::SChar);
-	clang::BuiltinType longTy(clang::BuiltinType::Long);
+	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
+	clang::BuiltinType* longTy = new clang::BuiltinType(clang::BuiltinType::Long);
 
 	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
 			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
@@ -204,10 +204,10 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	clang::QualType declType = clang.getASTContext().getTagDeclType (decl);
 
 	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(&charTy, 0)), 0, 0, false));
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(charTy, 0)), 0, 0, false));
 
 	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(&longTy,0), 0, 0, false));
+			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(longTy,0), 0, 0, false));
 
 	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
 			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
@@ -306,12 +306,12 @@ TEST(TypeConversion, HandleFunctionType) {
 	// Defines a function with the following prototype:
 	// int f(double a, float* b)
 
-	BuiltinType intTy(BuiltinType::Int);
-	BuiltinType doubleTy(BuiltinType::Double);
-	BuiltinType floatTy(BuiltinType::Float);
+	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
+	BuiltinType* doubleTy = new BuiltinType(BuiltinType::Double);
+	BuiltinType* floatTy = new BuiltinType(BuiltinType::Float);
 	{
-		QualType argTy[] = { QualType(&doubleTy, 0), ctx.getPointerType(QualType(&floatTy, 0)) };
-		QualType funcTy = ctx.getFunctionType(QualType(&intTy, 0), argTy, 2, false, 0, false, false, 0, NULL,
+		QualType argTy[] = { QualType(doubleTy, 0), ctx.getPointerType(QualType(floatTy, 0)) };
+		QualType funcTy = ctx.getFunctionType(QualType(intTy, 0), argTy, 2, false, 0, false, false, 0, NULL,
 				clang::FunctionType::ExtInfo(false, 0, CallingConv::CC_Default));
 
 		// convert into IR type
@@ -322,7 +322,7 @@ TEST(TypeConversion, HandleFunctionType) {
 	// check conversion of function with no prototype
 	// int f()
 	{
-		QualType funcTy = ctx.getFunctionNoProtoType(QualType(&intTy, 0));
+		QualType funcTy = ctx.getFunctionNoProtoType(QualType(intTy, 0));
 
 		// convert into IR type
 		TypePtr insiemeTy = convFactory.ConvertType( *funcTy.getTypePtr() );
@@ -342,18 +342,18 @@ TEST(TypeConversion, HandleArrayType) {
 	ASTContext& ctx = clang.getASTContext();
 
 	// Check constant arrays: i.e. int a[4];
-	BuiltinType intTy(BuiltinType::Int);
+	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
 	{
-		QualType arrayTy = ctx.getConstantArrayType(QualType(&intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
+		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
 		TypePtr insiemeTy = convFactory.ConvertType( *arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("vector<ref<int<4>>,8>", insiemeTy->toString());
 	}
 
 	// check incomplete array types: char* arr[]
-	BuiltinType charTy(BuiltinType::SChar);
+	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
 	{
-		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(&charTy, 0)), clang::ArrayType::Normal, 0);
+		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
 		TypePtr insiemeTy = convFactory.ConvertType( *arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("ref<array<ref<ref<char>>,1>>", insiemeTy->toString());
