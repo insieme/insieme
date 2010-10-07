@@ -53,73 +53,8 @@ using namespace insieme::xml;
 using namespace std;
 
 XERCES_CPP_NAMESPACE_USE
-
-//namespace {
-
-#define toUnicode(str) XStr(str).unicodeForm()
-
-class XStr {
-	XMLCh* fUnicodeForm;
-public:
-	XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
-
-	~XStr() { XMLString::release(&fUnicodeForm); }
-
-	const XMLCh* unicodeForm() const { return fUnicodeForm; }
-};
-
-class XmlElement {
-	DOMDocument* doc;
-	DOMElement* base;
 	
-public:
-	XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
-	XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
-	
-	XmlElement& operator<<(XmlElement& childNode) {
-		base->appendChild(childNode.base);
-		return childNode;
-	}
-	
-	XmlElement& addAttr(const string& id, const string& value) {
-		base->setAttribute(toUnicode(id), toUnicode(value));
-		return *this;
-	}
-	
-	XmlElement& addText(const string& text) {
-		assert(doc != NULL && "Attempt to create text on a root node");
-		DOMText* textNode = doc->createTextNode(toUnicode(text));
-		base->appendChild(textNode);
-		return *this;
-	}
-};
-
-class XmlConverter{
-	map<const string, XmlElement&(*)(const Annotation&, DOMDocument*)> IrToDomConvertMap;
-	map<const string, shared_ptr<Annotation>(*)(const DOMElement&)> DomToIrConvertMap;
-public:
-	static XmlConverter& get(){
-		static XmlConverter instance;
-		return instance;
-	}
-	
-	shared_ptr<Annotation> domToIrAnnotation (const DOMElement& ann) {
-		char* type (XMLString::transcode (ann.getAttribute(toUnicode("type"))));
-		return DomToIrConvertMap[type](ann);
-	}
-	
-	XmlElement& irToDomAnnotation (const Annotation& ann, DOMDocument* doc) {
-		const string type = ann.getAnnotationName();
-		return IrToDomConvertMap[type](ann, doc);
-	}
-	
-	void registerAnnotation(string name, 
-							XmlElement&(*toXml)(const Annotation&, DOMDocument*), 
-							shared_ptr<Annotation>(*fromXml)(const DOMElement&)) {
-		IrToDomConvertMap[name] = toXml;
-		DomToIrConvertMap[name] = fromXml;
-	}
-};
+// ------------------------------------ XmlVisitor ----------------------------	
 
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
@@ -132,8 +67,8 @@ public:
 
 	void visitGenericType(const GenericTypePtr& cur) {
 		XmlElement genType("genType", doc);
-		genType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
-		genType.addAttr("familyName", cur->getFamilyName().getName());
+		genType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		genType.setAttr("familyName", cur->getFamilyName().getName());
 		rootElem << genType;
 
 		if (const TypePtr base = cur->getBaseType()) {
@@ -141,7 +76,7 @@ public:
 			genType << baseType;
 
 			XmlElement typePtr("typePtr", doc);
-			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*base)));		
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*base)));		
 			baseType << typePtr;
 
 			// all the edge annotations
@@ -153,7 +88,7 @@ public:
 		const vector<TypePtr>& param = cur->getTypeParameter();
 		for(vector<TypePtr>::const_iterator iter = param.begin(); iter != param.end(); ++iter) {
 			XmlElement typePtr("typePtr", doc);
-			typePtr.addAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
 			typeParams << typePtr;
 
 			// all the annotations
@@ -169,18 +104,18 @@ public:
 			intTypeParams << intTypeParam;
 			switch (iter->getType()) {
 			case IntTypeParam::VARIABLE:
-				intTypeParam.addAttr("type", "variable");
-				intTypeParam.addAttr("value", numeric_cast<string>(iter->getSymbol()));
+				intTypeParam.setAttr("type", "variable");
+				intTypeParam.setAttr("value", numeric_cast<string>(iter->getSymbol()));
 				break;
 			case IntTypeParam::CONCRETE:
-				intTypeParam.addAttr("type", "concrete");
-				intTypeParam.addAttr("value", numeric_cast<string>(iter->getSymbol()));
+				intTypeParam.setAttr("type", "concrete");
+				intTypeParam.setAttr("value", numeric_cast<string>(iter->getSymbol()));
 				break;
 			case IntTypeParam::INFINITE:
-				intTypeParam.addAttr("type", "infinite");
+				intTypeParam.setAttr("type", "infinite");
 				break;
 			default:
-				intTypeParam.addAttr("type", "Invalid Parameter");
+				intTypeParam.setAttr("type", "Invalid Parameter");
 				break;
 			}
 		}
@@ -188,7 +123,7 @@ public:
 	
 	void visitFunctionType(const FunctionTypePtr& cur){
 		XmlElement functionType("functionType", doc);
-		functionType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		functionType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << functionType;
 		
 		if (const TypePtr argument = cur->getArgumentType()) {
@@ -196,7 +131,7 @@ public:
 			functionType << argumentType;
 
 			XmlElement typePtr("typePtr", doc);
-			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
 			argumentType << typePtr;
 
 			// all the edge annotations
@@ -207,7 +142,7 @@ public:
 			functionType << returnType;
 
 			XmlElement typePtr("typePtr", doc);
-			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
 			returnType << typePtr;
 
 			// all the edge annotations
@@ -216,7 +151,7 @@ public:
 	
 	void visitStructType(const StructTypePtr& cur) {
 		XmlElement structType("structType",doc);
-		structType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		structType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << structType;
 		XmlElement entries("entries", doc);
 		structType << entries;
@@ -227,11 +162,11 @@ public:
 			entries << entry;
 			
 			XmlElement id("id", doc);			
-			id.addText((iter->first).getName());
+			id.setText((iter->first).getName());
 			entry << id;
 			
 			XmlElement typePtr("typePtr", doc);
-			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
 			entry << typePtr;
 			
 			// all the annotations
@@ -240,7 +175,7 @@ public:
 	
 	void visitUnionType(const UnionTypePtr& cur) {
 		XmlElement unionType("unionType", doc);
-		unionType.addAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		unionType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << unionType;
 		
 		XmlElement entries("entries",doc);
@@ -252,11 +187,11 @@ public:
 			entries << entry;
 			
 			XmlElement id("id", doc);
-			id.addText((iter->first).getName());			
+			id.setText((iter->first).getName());			
 			entry << id;
 
 			XmlElement typePtr("typePtr", doc);
-			typePtr.addAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
 			entry << typePtr;
 			
 			// all the annotations
@@ -303,7 +238,70 @@ public:
 	}
 };
 
-//}
+
+
+// ------------------------------------ XmlElement ----------------------------
+
+XmlElement::XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
+XmlElement::XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
+	
+XmlElement& XmlElement::operator<<(XmlElement& childNode) {
+	base->appendChild(childNode.base);
+	return childNode;
+}
+
+XmlElement& XmlElement::setAttr(const string& id, const string& value) {
+	base->setAttribute(toUnicode(id), toUnicode(value));
+	return *this;
+}
+
+string XmlElement::getAttr(const string& id) const {
+	char* ctype (XMLString::transcode (base->getAttribute(toUnicode(id))));
+	string type(ctype);
+	XMLString::release(&ctype);	
+	return type;
+}
+
+XmlElement& XmlElement::setText(const string& text) {
+	assert(doc != NULL && "Attempt to create text on a root node");
+	DOMText* textNode = doc->createTextNode(toUnicode(text));
+	base->appendChild(textNode);
+	return *this;
+}
+
+// ------------------------------------ XStr ----------------------------
+
+XStr::XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
+
+XStr::~XStr() { XMLString::release(&fUnicodeForm); }
+
+const XMLCh* XStr::unicodeForm() { return fUnicodeForm; }
+
+
+// ------------------------------------ XmlConverter ----------------------------
+
+XmlConverter& XmlConverter::get(){
+	static XmlConverter instance;
+	return instance;
+}
+
+shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) {
+	string type = el.getAttr("type");
+	return DomToIrConvertMap[type](el);
+}
+
+XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, DOMDocument* doc) {
+	const string type = ann.getAnnotationName();
+	return IrToDomConvertMap[type](ann, doc);
+}
+
+void* XmlConverter::registerAnnotation(string name, 
+						XmlElement&(*toXml)(const Annotation&, DOMDocument*), 
+						shared_ptr<Annotation>(*fromXml)(const XmlElement&)) {
+	IrToDomConvertMap[name] = toXml;
+	DomToIrConvertMap[name] = fromXml;
+	return NULL;
+}
 
 // ------------------------------------ XmlUtil ----------------------------
 
@@ -450,19 +448,19 @@ string XmlUtil::convertDomToString(){
 
 // -------------------------Xml Write - Read - Validate----------------------
 
-void insieme::xml::xmlWrite(const NodePtr& node, const string fileName){
+void insieme::xml::xmlWrite(const NodePtr& node, const string fileName) {
 	XmlUtil xml;
 	xml.convertIrToDom(node);
 	xml.convertDomToXml(fileName);
 };
 
-void insieme::xml::xmlRead(const string fileName, const bool validate){
+void insieme::xml::xmlRead(const string fileName, const bool validate) {
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, validate);
 	//xml.convertDomToIr();
 };
 
-void insieme::xml::xmlValidate(const string fileName){
+void insieme::xml::xmlValidate(const string fileName) {
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, true);
 };
