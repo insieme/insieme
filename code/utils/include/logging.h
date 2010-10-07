@@ -54,7 +54,7 @@ using namespace google;
 namespace insieme {
 namespace utils {
 
-void InitLogger(char* progName, google::LogSeverity level, bool enableFailureHandler);
+void InitLogger(const char* progName, google::LogSeverity level, bool enableFailureHandler);
 
 } // End utils namespace
 } // End insieme namespace

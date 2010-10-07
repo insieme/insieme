@@ -39,7 +39,7 @@
 namespace insieme {
 namespace utils {
 
-void InitLogger(char* progName, google::LogSeverity level, bool enableFailureHandler) {
+void InitLogger(const char* progName, google::LogSeverity level, bool enableFailureHandler) {
 	// Configure the logger
 	InitGoogleLogging(progName);
 
