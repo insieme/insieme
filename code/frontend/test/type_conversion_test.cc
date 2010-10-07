@@ -54,7 +54,8 @@ using namespace insieme::frontend::conversion;
 	{ clang::Type* builtin = new clang::BuiltinType(clang::BuiltinType::TypeName); \
 	TypePtr convType = convFactory.ConvertType( *builtin ); \
 	EXPECT_TRUE(convType); \
-	EXPECT_EQ(InsiemeTypeDesc, convType->getName());  }
+	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); \
+	operator delete (builtin); }
 
 TEST(TypeConversion, HandleBuildinType) {
 
@@ -186,6 +187,8 @@ TEST(TypeConversion, HandleStructType) {
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("struct<name:ref<char>,age:uint<2>>", insiemeTy->toString());
 
+	operator delete (charTy);
+	operator delete (ushortTy);
 }
 
 TEST(TypeConversion, HandleRecursiveStructType) {
@@ -216,54 +219,48 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	TypePtr insiemeTy = convFactory.ConvertType( *declType.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<char>,age:int<8>,mate:ref<'Person>>}", insiemeTy->toString());
+
+	operator delete (charTy);
+	operator delete (longTy);
 }
 
 TEST(TypeConversion, HandleMutualRecursiveStructType) {
+	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
+	SourceLocation emptyLoc;
 
-	clang::RecordDecl* declA = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("A"));
-	clang::RecordDecl* declB = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("B"));
-	clang::RecordDecl* declC = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("C"));
-	clang::RecordDecl* declD = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("D"));
-	clang::RecordDecl* declE = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("E"));
+	RecordDecl* declA = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL, emptyLoc, clang.getPreprocessor().getIdentifierInfo("A"));
+	RecordDecl* declB = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL,	emptyLoc, clang.getPreprocessor().getIdentifierInfo("B"));
+	RecordDecl* declC = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL,	emptyLoc, clang.getPreprocessor().getIdentifierInfo("C"));
+	RecordDecl* declD = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL,	emptyLoc, clang.getPreprocessor().getIdentifierInfo("D"));
+	RecordDecl* declE = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL, emptyLoc, clang.getPreprocessor().getIdentifierInfo("E"));
 
-	declA->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declA, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("b"),
+	declA->addDecl(FieldDecl::Create(clang.getASTContext(), declA, emptyLoc, clang.getPreprocessor().getIdentifierInfo("b"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
 
 	declA->completeDefinition();
 
-	declB->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declB, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("c"),
+	declB->addDecl(FieldDecl::Create(clang.getASTContext(), declB, emptyLoc, clang.getPreprocessor().getIdentifierInfo("c"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declC)), 0, 0, false));
 
 	declB->completeDefinition();
 
-	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("b"),
+	declC->addDecl(FieldDecl::Create(clang.getASTContext(), declC, emptyLoc, clang.getPreprocessor().getIdentifierInfo("b"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
 
-	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("a"),
+	declC->addDecl(FieldDecl::Create(clang.getASTContext(), declC, emptyLoc, clang.getPreprocessor().getIdentifierInfo("a"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declA)), 0, 0, false));
 
-	declC->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declC, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("d"),
+	declC->addDecl(FieldDecl::Create(clang.getASTContext(), declC, emptyLoc, clang.getPreprocessor().getIdentifierInfo("d"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declD)), 0, 0, false));
 
 	declC->completeDefinition();
 
-	declD->addDecl(clang::FieldDecl::Create(clang.getASTContext(), declD, clang::SourceLocation(),
-			clang.getPreprocessor().getIdentifierInfo("e"),
+	declD->addDecl(FieldDecl::Create(clang.getASTContext(), declD, emptyLoc, clang.getPreprocessor().getIdentifierInfo("e"),
 			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declE)), 0, 0, false));
 	declD->completeDefinition();
 
@@ -329,6 +326,10 @@ TEST(TypeConversion, HandleFunctionType) {
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("(()->int<4>)", insiemeTy->toString());
 	}
+
+	operator delete (intTy);
+	operator delete (doubleTy);
+	operator delete (floatTy);
 }
 
 TEST(TypeConversion, HandleArrayType) {
@@ -349,6 +350,7 @@ TEST(TypeConversion, HandleArrayType) {
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("vector<ref<int<4>>,8>", insiemeTy->toString());
 	}
+	operator delete (intTy);
 
 	// check incomplete array types: char* arr[]
 	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
@@ -358,6 +360,8 @@ TEST(TypeConversion, HandleArrayType) {
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("ref<array<ref<ref<char>>,1>>", insiemeTy->toString());
 	}
+	operator delete (charTy);
+
 	// ... check variable array and dependent array sizes
 
 }
