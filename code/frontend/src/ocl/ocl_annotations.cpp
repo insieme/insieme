@@ -38,8 +38,9 @@
 
 namespace insieme {
 namespace frontend {
+namespace ocl {
 
-const core::StringKey<OclAnnotationPtr> OclAnnotation::KEY("OpenCL");
+const core::StringKey<OclBaseAnnotation> OclBaseAnnotation::KEY("OpenCL");
 
 void OclKernelFctAnnotation::setKernelFct(bool isKernelFct) {
     kf = isKernelFct;
@@ -76,5 +77,6 @@ OclAddressSpaceAnnotation::addressSpace OclAddressSpaceAnnotation::getAddressSpa
     return as;
 }
 
+} // namespace ocl
 } // namespace insieme
 } // namespace c_info

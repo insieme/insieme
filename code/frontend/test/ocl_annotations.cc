@@ -40,66 +40,54 @@
 
 namespace insieme {
 namespace frontend {
+namespace ocl {
 
-bool testKernelFct(OclKernelFctAnnotation kernel) {
-    return kernel.isKernelFct();
-}
-
-void testWorkGroupSize(OclWorkGroupSizeAnnotation wgs, int* param){
-    param[0] = wgs.getXdim();
-    param[1] = wgs.getYdim();
-    param[2] = wgs.getZdim();
-}
-
-OclAddressSpaceAnnotation::addressSpace testAddressSpace(OclAddressSpaceAnnotation space){
-    return space.getAddressSpace();
-}
-/* TODO fixme
 TEST(ocl_properties, DefaultInitialization) {
 
     core::Annotatable function;
 
-    const OclKernelFctAnnotationPtr kernel;
+    ocl::OclBaseAnnotation::OclAnnotationList functionAnnotation;
 
-    const OclAddressSpaceAnnotationPtr space;
+    functionAnnotation.push_back(std::make_shared<ocl::OclKernelFctAnnotation>());
+    functionAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(1,2,3));
 
-//    const OclWorkGroupSizeAnnotationPtr wgs;
+    std::make_shared<ocl::OclBaseAnnotation>(functionAnnotation);
 
-//    printf("trallalal %d %d %d\n", wgs->getXdim(), wgs->getYdim(), wgs->getZdim());
+    core::AnnotationMap aMap = function.getAnnotations();
 
-    function.addAnnotation(kernel);
-//    function.addAnnotation(wgs);
+    EXPECT_EQ(static_cast<unsigned int>(1), aMap.size());
 
-    function.getAnnotation(OclAnnotation::KEY);
-//    EXPECT_TRUE(testKernelFct(function.getAnnotation(OclAnnotation::KEY)));
+    std::shared_ptr<insieme::core::Annotation> oa = (*aMap.find(&OclBaseAnnotation::KEY)).second;
+    EXPECT_TRUE(std::dynamic_pointer_cast<OclBaseAnnotation>(oa));
 
-    EXPECT_EQ(OclAddressSpaceAnnotation::addressSpace::PRIVATE, space.getAddressSpace());
+    if(ocl::OclBaseAnnotationPtr oclKernelAnnotation = std::dynamic_pointer_cast<ocl::OclBaseAnnotation>(oa)) {
+        for(size_t i = 0; i < oclKernelAnnotation->getNumAnnotations(); ++i) {
+            ocl::OclAnnotationPtr ocl = oclKernelAnnotation->getAnnotationByIndex(i);
+            if(ocl::OclKernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::OclKernelFctAnnotation>(ocl))
+                EXPECT_TRUE(kf->isKernelFct());
+            if(ocl::OclWorkGroupSizeAnnotationPtr wgs = std::dynamic_pointer_cast<ocl::OclWorkGroupSizeAnnotation>(ocl)) {
+                EXPECT_EQ(static_cast<unsigned int>(1), wgs->getXdim());
+                EXPECT_EQ(static_cast<unsigned int>(2), wgs->getYdim());
+                EXPECT_EQ(static_cast<unsigned int>(3), wgs->getZdim());
+            }
+        }
+    }
+
+
+
+/*
+
+    const OclAddressSpaceAnnotationPtr space(new OclAddressSpaceAnnotation());
+    if(OclKernelFctAnnotationPtr s = std::dynamic_pointer_cast<OclKernelFctAnnotation>(oa))
 
     EXPECT_EQ(1, wgs.getXdim());
     EXPECT_EQ(2, wgs.getYdim());
     EXPECT_EQ(3, wgs.getZdim());
 
-}*/
-
-TEST(ocl_properties, oldVersion) {
-
-    insieme::core::Annotatable obj;
-
-    OclKernelFctAnnotation function;
-
-    EXPECT_TRUE(function.isKernelFct());
-
-    OclAddressSpaceAnnotation space;
-
     EXPECT_EQ(OclAddressSpaceAnnotation::addressSpace::PRIVATE, space.getAddressSpace());
-
-    OclWorkGroupSizeAnnotation wgs(1,2,3);
-
-    EXPECT_EQ(static_cast<unsigned short>(1), wgs.getXdim());
-    EXPECT_EQ(static_cast<unsigned short>(2), wgs.getYdim());
-    EXPECT_EQ(static_cast<unsigned short>(3), wgs.getZdim());
-
+    */
 }
 
-}
-}
+} //namespace ocl
+} //namespace frontend
+} //namespace insieme

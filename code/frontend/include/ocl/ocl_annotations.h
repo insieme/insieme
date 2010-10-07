@@ -44,20 +44,35 @@
 
 namespace insieme {
 namespace frontend {
+namespace ocl {
 
+DEFINE_TYPE(OclBaseAnnotation);
 DEFINE_TYPE(OclAnnotation);
 DEFINE_TYPE(OclKernelFctAnnotation);
 DEFINE_TYPE(OclWorkGroupSizeAnnotation);
 DEFINE_TYPE(OclAddressSpaceAnnotation);
 
+class OclBaseAnnotation : public core::Annotation {
+public:
+    typedef std::vector<OclAnnotationPtr> OclAnnotationList;
+    static const core::StringKey<OclBaseAnnotation> KEY;
+
+    OclBaseAnnotation(OclAnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
+    const core::AnnotationKey* getKey() const { return &KEY; }
+    const std::string getAnnotationName() const { return "OmpAnnotation"; }
+    const size_t getNumAnnotations() const { return annotationList.size(); }
+    const OclAnnotationPtr getAnnotationByIndex(size_t idx) const { return annotationList.at(idx); }
+private:
+    OclAnnotationList annotationList;
+
+};
+
+
 /** Base class for OpenCL related annotations
  ** */
-class OclAnnotation : public core::Annotation {
-public:
-    static const core::StringKey<OclAnnotationPtr> KEY;
-
-    OclAnnotation() : core::Annotation() {  }
-    const core::AnnotationKey* getKey() const { return &KEY; }
+class OclAnnotation {
+    //needed to make OclAnnotation polymorphic
+    virtual const std::string getAnnotationName() const { return "OclAnnotation"; };
 };
 
 
@@ -92,7 +107,7 @@ public:
     OclWorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
         OclAnnotation(), xDim(x), yDim(y), zDim(z) { }
 
-	const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
+    const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
 
     unsigned int getXdim() const;
     unsigned int getYdim() const;
@@ -131,6 +146,6 @@ public:
     addressSpace getAddressSpace() const;
 };
 
-
+} // namespace ocl
 } // namespace c_info
 } // namespace insieme
