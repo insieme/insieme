@@ -68,7 +68,6 @@ public:
 class OmpBarrier: public OmpAnnotation {
 public:
 	OmpBarrier() : OmpAnnotation() { }
-	const std::string getAnnotationName() const { return "OmpBarrier"; }
 };
 
 /**
@@ -112,8 +111,6 @@ private:
 class OmpMaster: public OmpAnnotation {
 public:
 	OmpMaster() : OmpAnnotation() { }
-
-	const std::string getAnnotationName() const { return "OmpMaster"; }
 };
 
 class OmpForImpl {
@@ -193,8 +190,6 @@ public:
 			const VarListPtr& sharedClause, const VarListPtr& copyinClause, const OmpReductionPtr& reductionClause) :
 		OmpCommonImpl(privateClause, firstPrivateClause, reductionClause),
 		OmpParallelImpl(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause) { }
-
-	const std::string getAnnotationName() const { return "OmpParallel"; }
 };
 
 /**
@@ -211,8 +206,6 @@ public:
 			const OmpSchedulePtr& scheduleClause, const core::ExpressionPtr& collapseExpr, bool noWait) :
 		OmpCommonImpl(privateClause, firstPrivateClause, reductionClause),
 		OmpForImpl(lastPrivateClause, scheduleClause, collapseExpr, noWait) { }
-
-	const std::string getAnnotationName() const { return "OmpFor"; }
 };
 
 /**
@@ -227,8 +220,6 @@ public:
 			OmpCommonImpl(privateClause, firstPrivateClause, reductionClause),
 			OmpParallelImpl(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
 			OmpForImpl(lastPrivateClause, scheduleClause, collapseExpr, noWait) { }
-
-	const std::string getAnnotationName() const { return "OmpParallelFor"; }
 };
 
 /**

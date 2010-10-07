@@ -156,6 +156,11 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager();
 
+	// A compiler invocation object has to be created in order for the diagnostic object to work
+	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
+	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
+	pimpl->clang.setInvocation(CI);
+
 	TargetOptions TO;
 	TO.Triple = llvm::sys::getHostTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );

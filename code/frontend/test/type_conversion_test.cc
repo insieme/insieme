@@ -59,7 +59,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	ProgramPtr prog = Program::create(*shared);
 	ClangCompiler clangComp;
-	ConversionFactory convFactory( shared, clangComp);
+	ConversionFactory convFactory( shared, clangComp );
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
