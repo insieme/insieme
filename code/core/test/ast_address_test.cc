@@ -57,7 +57,7 @@ TEST(NodeAddressTest, Basic) {
 	NodeAddress addrRoot(root);
 	EXPECT_TRUE(addrRoot);
 	EXPECT_TRUE(addrRoot.isValid());
-	EXPECT_EQ(1, addrRoot.getDepth());
+	EXPECT_EQ(static_cast<unsigned short>(1), addrRoot.getDepth());
 
 	EXPECT_EQ(root, addrRoot.getAddressedNode());
 	EXPECT_EQ(root, addrRoot.getRootNode());
@@ -69,7 +69,7 @@ TEST(NodeAddressTest, Basic) {
 	NodeAddress addrA = addrRoot.getChildAddress(typeA);
 	EXPECT_TRUE(addrA);
 	EXPECT_TRUE(addrA.isValid());
-	EXPECT_EQ(2, addrA.getDepth());
+	EXPECT_EQ(static_cast<unsigned short>(2), addrA.getDepth());
 
 	EXPECT_EQ(typeA, addrA.getAddressedNode());
 	EXPECT_EQ(root, addrA.getRootNode());
@@ -85,7 +85,7 @@ TEST(NodeAddressTest, Basic) {
 	NodeAddress addrA2 = addrA.getChildAddress(type2);
 	EXPECT_TRUE(addrA2);
 	EXPECT_TRUE(addrA2.isValid());
-	EXPECT_EQ(3, addrA2.getDepth());
+	EXPECT_EQ(static_cast<unsigned short>(3), addrA2.getDepth());
 
 	EXPECT_EQ(type2, addrA2.getAddressedNode());
 	EXPECT_EQ(root, addrA2.getRootNode());

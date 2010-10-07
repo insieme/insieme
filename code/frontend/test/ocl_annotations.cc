@@ -95,9 +95,9 @@ TEST(ocl_properties, oldVersion) {
 
     OclWorkGroupSizeAnnotation wgs(1,2,3);
 
-    EXPECT_EQ(1, wgs.getXdim());
-    EXPECT_EQ(2, wgs.getYdim());
-    EXPECT_EQ(3, wgs.getZdim());
+    EXPECT_EQ(static_cast<unsigned short>(1), wgs.getXdim());
+    EXPECT_EQ(static_cast<unsigned short>(2), wgs.getYdim());
+    EXPECT_EQ(static_cast<unsigned short>(3), wgs.getZdim());
 
 }
 
