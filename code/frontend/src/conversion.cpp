@@ -936,16 +936,21 @@ public:
 		}
 
 		assert(declStmt && "Falied loop init expression conversion");
-		retStmt.push_back( builder.forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref) );
-		retStmt = tryAggregateStmts(builder, retStmt);
+		// We finally create the IR ForStmt
+		core::ForStmtPtr irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr.ref, incExpr.ref);
+		assert(irFor && "Created for statement is not valid");
 
+		// handle eventual pragmas attached to the Clang node
 		const PragmaPtr pragma = convFact.pragmaMap[forStmt];
 		if(pragma) {
 			// there is a pragma attached
 			VLOG(1) << "For statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
 			const omp::pragma::OmpPragma& ompPragma = dynamic_cast<const omp::pragma::OmpPragma&>(*pragma);
-			retStmt.getSingleStmt().addAnnotation( ompPragma.toAnnotation(convFact) );
+			irFor.addAnnotation( ompPragma.toAnnotation(convFact) );
 		}
+
+		retStmt.push_back( irFor );
+		retStmt = tryAggregateStmts(builder, retStmt);
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 		return retStmt;

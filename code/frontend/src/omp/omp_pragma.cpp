@@ -223,12 +223,12 @@ namespace pragma {
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
 	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
 
-//	LOG(INFO) << "~~~PRAGMA~~~" << std::endl;
+//	DLOG(INFO) << "~~~PRAGMA~~~" << std::endl;
 //	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
-//		LOG(INFO) << "KEYWORD: " << i->first << ":" << std::endl;
+//		DLOG(INFO) << "KEYWORD: " << i->first << ":" << std::endl;
 //		for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
-//			LOG(INFO) << (*i2)->toStr() << ", ";
-//		LOG(INFO) << std::endl;
+//			DLOG(INFO) << (*i2)->toStr() << ", ";
+//		DLOG(INFO) << std::endl;
 //	}
 }
 /**
@@ -384,10 +384,24 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 
 	if(hasKeyword(map, "for")) {
 		// this is a parallel for
+		VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
+		// check for schedule clause
+		OmpSchedulePtr scheduleClause = handleScheduleClause(map, fact);
+		// check for collapse cluase
+		core::ExpressionPtr	collapseClause = handleSingleExpression(map, "collapse", fact);
+		// check for nowait keyword
+		bool noWait = hasKeyword(map, "nowait");
 
+		return OmpAnnotationPtr(
+			new omp::annotation::OmpParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
+					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
+					scheduleClause, collapseClause, noWait)
+		);
 	}
+
 	return OmpAnnotationPtr(
-			new omp::annotation::OmpParallel(ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause, reductionClause)
+			new omp::annotation::OmpParallel(ifClause, numThreadsClause, defaultClause, privateClause,
+					firstPrivateClause, sharedClause, copyinClause, reductionClause)
 	);
 
 }

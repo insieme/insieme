@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
-		#pragma omp for private(resv) reduction(+: resv)
+		#pragma omp parallel for private(resv) reduction(+: resv)
 		for (int i=1; i < N-1; i++) {
 			 for (int j=1; j < N-1; j++)
 				 tmp[i][j] = (double)1/4 * (u[i-1][j] + u[i][j+1] + u[i][j-1] + u[i+1][j] - factor * f[i][j]);
