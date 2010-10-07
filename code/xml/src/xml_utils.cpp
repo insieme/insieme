@@ -49,6 +49,7 @@
 
 using namespace insieme::core;
 using namespace insieme::utils;
+using namespace insieme::xml;
 using namespace std;
 
 XERCES_CPP_NAMESPACE_USE
@@ -119,17 +120,6 @@ public:
 		DomToIrConvertMap[name] = fromXml;
 	}
 };
-
-/*#define XML_CONVERTER(className_, toXML_, fromXML_) \
-	NodeType convert ## className_ ## ToXML(const Annotation& ann, DOMDocument* doc) { \
-	className_ annotation = dynamic_cast<const className_>(ann); \
-	XmlElement node("annotation", doc); \
-	node.setAttr("type", className_); \
-	toXML_; \
-	return annotationType; } \
-	shared_ptr<Annotation> convert ## className_ ## FromXML(const DOMElement& node) { \
-	fromXML_; } \
-	XMLConverter::get().register(#className_, & convert ## className_ ## ToXML, & convert ## className_ ## FromXML);*/
 
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
@@ -460,19 +450,19 @@ string XmlUtil::convertDomToString(){
 
 // -------------------------Xml Write - Read - Validate----------------------
 
-void insieme::core::xmlWrite(const NodePtr& node, const string fileName){
+void insieme::xml::xmlWrite(const NodePtr& node, const string fileName){
 	XmlUtil xml;
 	xml.convertIrToDom(node);
 	xml.convertDomToXml(fileName);
 };
 
-void insieme::core::xmlRead(const string fileName, const bool validate){
+void insieme::xml::xmlRead(const string fileName, const bool validate){
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, validate);
 	//xml.convertDomToIr();
 };
 
-void insieme::core::xmlValidate(const string fileName){
+void insieme::xml::xmlValidate(const string fileName){
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, true);
 };

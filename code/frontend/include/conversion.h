@@ -81,6 +81,7 @@ public:
 	core::ExpressionPtr ConvertExpr(const clang::Expr& expr) const;
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
+	core::SharedNodeManager getNodeManager() const { return mgr; }
 
 	void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
 
@@ -102,8 +103,8 @@ class IRConsumer: public clang::ASTConsumer {
 	bool 			     mDoConversion;
 
 public:
-	IRConsumer(const ClangCompiler& clangComp, insieme::core::ProgramPtr prog, const PragmaList& pragmaList, bool doConversion=true) :
-		mClangComp(clangComp), mProgram(prog), mFact(prog->getNodeManager(), clangComp), pragmaList(pragmaList), mDoConversion(doConversion){ }
+	IRConsumer(const ClangCompiler& clangComp, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, const PragmaList& pragmaList, bool doConversion=true) :
+		mClangComp(clangComp), mProgram(prog), mFact(manager, clangComp), pragmaList(pragmaList), mDoConversion(doConversion){ }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 

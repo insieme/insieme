@@ -246,12 +246,33 @@ private:
 
 protected:
 
-	template<class T> friend class std::shared_ptr;
-
+	/**
+	 * Defines the new operator to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
 	static void* operator new(size_t);
-	//void operator delete(void*, size_t); // TODO
-	//static void* operator new[](size_t); // TODO GCC
-	//void operator delete[](void*, size_t);
+
+	/**
+	 * Defines the delete operator to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	void operator delete(void*);
+
+	/**
+	 * Defines the new operator for arrays to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	static void* operator new[](size_t);
+
+	/**
+	 * Defines the delete operator for arrays to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	void operator delete[](void*, size_t);
 
 	/**
 	 * Construct a new node instance based on the essential features.

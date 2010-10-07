@@ -63,10 +63,11 @@ TEST(DriverTest, HelloWorldTest) {
 	// Set severity level
 	SetStderrLogging(INFO);
 
-	ProgramPtr program = Program::create();
+	SharedNodeManager sharedManager = std::make_shared<NodeManager>();
+	ProgramPtr program = Program::create(*sharedManager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/hello_world.c", program, true);
+	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/hello_world.c", sharedManager, program, true);
 	LOG(INFO) << "Done.";
 
 	program = TU->getProgram();

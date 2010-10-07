@@ -85,12 +85,12 @@ TEST(Program, ProgramData) {
 	NodeManager manager;
 
 	// start with empty program
-	ProgramPtr program = Program::create();
-	NodeManager& programManager = *program->getNodeManager();
+	NodeManager programManager;
+	ProgramPtr program = Program::create(programManager);
 
 	// check some basic properties
 	EXPECT_EQ ( 0, manager.size() );
-	EXPECT_EQ ( 0, programManager.size() );
+	EXPECT_EQ ( 1, programManager.size() );
 
 	EXPECT_TRUE (program->getEntryPoints().empty());
 
@@ -102,7 +102,7 @@ TEST(Program, ProgramData) {
 	ExpressionPtr entryB = VarExpr::get(manager, typeInt, "b");
 	ExpressionPtr entryC = VarExpr::get(manager, typeDouble, "c");
 
-	program = program->addEntryPoint(entryA);
+	program = Program::addEntryPoint(programManager, program, entryA);
 	EXPECT_NE (entryA , *program->getEntryPoints().begin());
 	EXPECT_EQ (toSet<Program::EntryPointSet>(programManager.get(entryA)), program->getEntryPoints());
 
@@ -111,7 +111,7 @@ TEST(Program, ProgramData) {
 	entrySet.insert(entryB);
 	entrySet.insert(entryC);
 
-	program = program->addEntryPoints(entrySet);
+	program = Program::addEntryPoints(programManager, program, entrySet);
 	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
 
 	const Program::EntryPointSet& points = program->getEntryPoints();

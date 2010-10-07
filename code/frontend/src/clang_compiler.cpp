@@ -243,8 +243,8 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, insieme::core::ProgramPtr prog, bool doConversion): mClang(file_name), mProgram(prog) {
-	conversion::IRConsumer cons(mClang, prog, mPragmaList, doConversion);
+InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, bool doConversion): mClang(file_name), mProgram(prog) {
+	conversion::IRConsumer cons(mClang, manager, prog, mPragmaList, doConversion);
 
 	// register omp pragmas
 	omp::registerPragmaHandlers( mClang.getPreprocessor() );

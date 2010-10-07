@@ -38,53 +38,65 @@
 
 #include "annotation.h"
 
+#define DEFINE_TYPE(Type) \
+    class Type; \
+    typedef std::shared_ptr<Type> Type##Ptr;
+
 namespace insieme {
-namespace c_info {
+namespace frontend {
+
+DEFINE_TYPE(OclAnnotation);
+DEFINE_TYPE(OclKernelFctAnnotation);
+DEFINE_TYPE(OclWorkGroupSizeAnnotation);
+DEFINE_TYPE(OclAddressSpaceAnnotation);
+
+/** Base class for OpenCL related annotations
+ ** */
+class OclAnnotation : public core::Annotation {
+public:
+    static const core::StringKey<OclAnnotationPtr> KEY;
+
+    OclAnnotation() : core::Annotation() {  }
+    const core::AnnotationKey* getKey() const { return &KEY; }
+};
 
 
 /** Annotation class intended to mark functions as OpenCL kernel functions.
  ** Should be used to annotate OpenCL kernel functions
  ** Default value is isKernelFct() = true
  ** */
-class OclKernelFctAnnotation : public core::Annotation {
+class OclKernelFctAnnotation : public OclAnnotation {
 
 private:
     bool kf;
 public:
-    static const core::StringKey<OclKernelFctAnnotation> KEY;
 
-    OclKernelFctAnnotation() : core::Annotation(), kf(true){ }
+    OclKernelFctAnnotation() : OclAnnotation(), kf(true){ }
 
-    const core::AnnotationKey* getKey() const { return &KEY; }
-
-	const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
+    const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
 
     void setKernelFct(bool isKernelFct);
 
-    bool isKernelFct();
+    bool isKernelFct() const;
 };
 
 /** Annotation class intended to mark store the required work group size if given.
  ** Should be used to annotate OpenCL kernel functions with attribute
  ** reqd_work_group_size set
  ** */
-class OclWorkGroupSizeAnnotation : public core::Annotation {
+class OclWorkGroupSizeAnnotation : public OclAnnotation {
 
 private:
     const unsigned int xDim, yDim, zDim;
 public:
-    static const core::StringKey<OclWorkGroupSizeAnnotation> KEY;
-
     OclWorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
-        core::Annotation(), xDim(x), yDim(y), zDim(z) { }
-
-    const core::AnnotationKey* getKey() const { return &KEY; }
+        OclAnnotation(), xDim(x), yDim(y), zDim(z) { }
 
 	const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
 
-    unsigned int getXdim();
-    unsigned int getYdim();
-    unsigned int getZdim();
+    unsigned int getXdim() const;
+    unsigned int getYdim() const;
+    unsigned int getZdim() const;
 //    unsigned int* getDims();
 };
 
@@ -93,7 +105,7 @@ public:
  ** Should be used to annotate OpenCL variable declarations inside kernel functions
  ** Default value is getAddressSpace() = addressSpace::PRIVATE
  ** */
-class OclAddressSpaceAnnotation : public core::Annotation {
+class OclAddressSpaceAnnotation : public OclAnnotation {
 public:
     enum addressSpace{
         PRIVATE,
@@ -108,17 +120,15 @@ private:
 public:
     static const core::StringKey<OclAddressSpaceAnnotation> KEY;
 
-	const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
+    const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
 
-    OclAddressSpaceAnnotation() : core::Annotation(), as(addressSpace::PRIVATE) { }
+    OclAddressSpaceAnnotation() : OclAnnotation(), as(addressSpace::PRIVATE) { }
 
-    OclAddressSpaceAnnotation(addressSpace space) : core::Annotation(), as(space) { }
-
-    const core::AnnotationKey* getKey() const { return &KEY; }
+    OclAddressSpaceAnnotation(addressSpace space) : OclAnnotation(), as(space) { }
 
     bool setAddressSpace(addressSpace newAs);
 
-    addressSpace getAddressSpace();
+    addressSpace getAddressSpace() const;
 };
 
 

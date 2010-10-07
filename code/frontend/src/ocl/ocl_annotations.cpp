@@ -34,30 +34,28 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_annotations.h"
+#include "ocl/ocl_annotations.h"
 
 namespace insieme {
-namespace c_info {
+namespace frontend {
 
-const core::StringKey<OclKernelFctAnnotation> OclKernelFctAnnotation::KEY("OclKernelFctAnnotationKey");
+const core::StringKey<OclAnnotationPtr> OclAnnotation::KEY("OpenCL");
 
 void OclKernelFctAnnotation::setKernelFct(bool isKernelFct) {
     kf = isKernelFct;
 }
 
-bool OclKernelFctAnnotation::isKernelFct() {
+bool OclKernelFctAnnotation::isKernelFct() const {
     return kf;
 }
 
-const core::StringKey<OclWorkGroupSizeAnnotation> OclWorkGroupSizeAnnotation::KEY("OclAddressSpaceAnnotationKey");
-
-unsigned int OclWorkGroupSizeAnnotation::getXdim() {
+unsigned int OclWorkGroupSizeAnnotation::getXdim() const {
     return xDim;
 }
-unsigned int OclWorkGroupSizeAnnotation::getYdim() {
+unsigned int OclWorkGroupSizeAnnotation::getYdim() const {
     return yDim;
 }
-unsigned int OclWorkGroupSizeAnnotation::getZdim() {
+unsigned int OclWorkGroupSizeAnnotation::getZdim() const {
     return zDim;
 }
 /*
@@ -65,8 +63,6 @@ unsigned int* OclWorkGroupSizeAnnotation::getDims() {
     unsigned int dims[3] = {xDim, yDim, zDim};
     return dims;
 }*/
-
-const core::StringKey<OclAddressSpaceAnnotation> OclAddressSpaceAnnotation::KEY("OclAddressSpaceAnnotationKey");
 
 bool OclAddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     if(as > addressSpace::size)
@@ -76,7 +72,7 @@ bool OclAddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     return true;
 }
 
-OclAddressSpaceAnnotation::addressSpace OclAddressSpaceAnnotation::getAddressSpace() {
+OclAddressSpaceAnnotation::addressSpace OclAddressSpaceAnnotation::getAddressSpace() const {
     return as;
 }
 

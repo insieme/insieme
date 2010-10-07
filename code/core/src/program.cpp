@@ -56,10 +56,8 @@ std::size_t hash(const Program::EntryPointSet& entryPoints) {
 	return insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
 }
 
-Program* Program::createCloneUsing(NodeManager&) const {
-//	return new Program(SharedNodeManager(NULL), manager.getAll(definitions), manager.getAll(entryPoints));
-	assert ( false && "Programs cannot be migrated between manager!");
-	return NULL;
+Program* Program::createCloneUsing(NodeManager& manager) const {
+	return new Program(migrateAllPtr(entryPoints, manager));
 }
 
 /**
@@ -71,38 +69,30 @@ Node::OptionChildList Program::getChildNodes() const {
 	return res;
 }
 
-Program::Program(SharedNodeManager manager, const EntryPointSet& entryPoints) :
-	Node(PROGRAM, ::hash(entryPoints)), nodeManager(manager), entryPoints(entryPoints) { };
+Program::Program(const EntryPointSet& entryPoints) :
+	Node(PROGRAM, ::hash(entryPoints)), entryPoints(entryPoints) { };
 
 Program::Program() :
-	Node(PROGRAM, ::hash(EntryPointSet())), nodeManager(SharedNodeManager(new NodeManager())) {};
+	Node(PROGRAM, ::hash(EntryPointSet())) {};
 
-ProgramPtr Program::create(const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(SharedNodeManager(new NodeManager()), entryPoints), true);
+ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints) {
+	return manager.get(Program(entryPoints));
 }
 
-ProgramPtr Program::create(const SharedNodeManager& manager, const EntryPointSet& entryPoints) {
-	return ProgramPtr(new Program(manager, entryPoints), true);
+ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+	return addEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint));
 }
 
-ProgramPtr Program::addEntryPoint(const ExpressionPtr& entryPoint) const {
-	return addEntryPoints(toSet<EntryPointSet>(entryPoint));
+ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints) {
+	return manager.get(Program(merge(program->getEntryPoints(), entryPoints)));
 }
 
-ProgramPtr Program::addEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(nodeManager, merge(this->entryPoints, migrateAllPtr(entryPoints, *nodeManager))), true);
+ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+	return remEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint));
 }
 
-ProgramPtr Program::remEntryPoint(const ExpressionPtr& entryPoint) const {
-	return remEntryPoints(toSet<EntryPointSet>(entryPoint));
-}
-
-ProgramPtr Program::remEntryPoints(const EntryPointSet& entryPoints) const {
-	return ProgramPtr(new Program(nodeManager, difference(this->entryPoints, entryPoints)), true);
-}
-
-ASTBuilder Program::getASTBuilder() const {
-	return ASTBuilder(nodeManager);
+ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints) {
+	return manager.get(Program(difference(program->getEntryPoints(), entryPoints)));
 }
 
 bool Program::equals(const Node& other) const {
