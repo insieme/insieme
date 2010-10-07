@@ -992,8 +992,13 @@ public:
 		assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
 		VLOG(2) << "IfStmt 'else' body: " << *elseBody;
 
+		core::StatementPtr irNode = builder.ifStmt(condExpr, thenBody, elseBody);
+
+		// handle eventual OpenMP pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(irNode, ifStmt, convFact);
+
 		// adding the ifstmt to the list of returned stmts
-		retStmt.push_back( builder.ifStmt(condExpr, thenBody, elseBody) );
+		retStmt.push_back( irNode );
 
 		// try to aggregate statements into a CompoundStmt if more than 1 statement has been created
 		// from this IfStmt
@@ -1154,6 +1159,10 @@ public:
 			}
 		);
 		core::StatementPtr retStmt = convFact.builder.compoundStmt(stmtList);
+
+		// handle eventual OpenMP pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(retStmt, compStmt, convFact);
+
 		END_LOG_STMT_CONVERSION(retStmt);
 		return StmtWrapper( retStmt );
 	}
@@ -1161,12 +1170,8 @@ public:
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
 		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
 
-		const PragmaPtr pragma = convFact.pragmaMap[nullStmt];
-		if(pragma) {
-			// there is a pragma attached
-			VLOG(1) << "Statement has a pragma attached: " << pragma->toStr(convFact.clangComp.getSourceManager());
-		}
-		// retStmt.addAnnotation();
+		// handle eventual OpenMP pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(retStmt, nullStmt, convFact);
 
 		return StmtWrapper( retStmt );
 	}

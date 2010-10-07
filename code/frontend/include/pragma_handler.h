@@ -142,15 +142,21 @@ typedef std::vector<PragmaPtr> 	PragmaList;
  * Maps statements and declarations to a Pragma.
  */
 class PragmaStmtMap {
-	std::map<const clang::Stmt*, const PragmaPtr> stmtMap;
-	std::map<const clang::Decl*, const PragmaPtr> declMap;
-
 public:
+	typedef std::multimap<const clang::Stmt*, const PragmaPtr> StmtMap;
+	typedef std::multimap<const clang::Decl*, const PragmaPtr> DeclMap;
+
 	PragmaStmtMap() { }
 	PragmaStmtMap(const PragmaList& pList);
 
-	const PragmaPtr operator[](const clang::Stmt* stmt) const;
-	const PragmaPtr operator[](const clang::Decl* decl) const;
+	const StmtMap& getStatementMap() const { return stmtMap; }
+	const DeclMap& getDeclarationMap() const { return declMap; }
+
+//	const PragmaPtr operator[](const clang::Stmt* stmt) const;
+//	const PragmaPtr operator[](const clang::Decl* decl) const;
+private:
+	StmtMap stmtMap;
+	DeclMap declMap;
 };
 
 // ------------------------------------ BasicPragmaHandler<T> ---------------------------

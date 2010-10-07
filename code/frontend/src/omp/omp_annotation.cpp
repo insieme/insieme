@@ -41,7 +41,7 @@ namespace frontend {
 namespace omp {
 namespace annotation {
 
-const core::StringKey<OmpAnnotationPtr> OmpAnnotation::KEY("OpenMP");
+const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
 
 } // End annotation namespace
 } // End omp namespace

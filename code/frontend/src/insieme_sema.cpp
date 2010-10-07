@@ -127,7 +127,7 @@ const char* strbchr(const char* stream, char c) {
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R, MultiStmtArg Elts, bool isStmtExpr) {
-//	DLOG(INFO) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+	DVLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
 
 	/*
 	 * when pragmas are just after the beginning of a compound stmt, example:
@@ -197,7 +197,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocatio
 							new (Context) CompoundStmt(Context, stmts, CS->size() + 1, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
 
 					std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-					std::for_each(CS->body_begin(), CS->body_end(), [](Stmt*& curr) { curr->Retain(); });
+					std::for_each(CS->body_begin(), CS->body_end(), [] (Stmt*& curr) { curr->Retain(); });
 					CompoundStmt::body_iterator it = newCS->body_begin();
 					for (size_t i = 0; i < CS->size(); ++i, ++it)
 						;
@@ -212,8 +212,9 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocatio
 					CS = newCS;
 
 					// destroy the old compound stmt
-					// oldStmt->Destroy(Context);
-					//delete[] stmts;
+					// operator delete( oldStmt );
+					// free(oldStmt); // FIXME: possible memory leak
+					//delete[] stmts; // FIXME: possible memory leak
 				}
 				break;
 			}
@@ -242,7 +243,7 @@ void InsiemeSema::matchStmt(Stmt* S, const SourceRange& bounds, const SourceMana
 clang::StmtResult
 InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal, SourceLocation ElseLoc,
 	clang::Stmt* ElseVal) {
-	// DEBUG("{InsiemeSema}: ActOnIfStmt()");
+	DVLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret = Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
 
 	IfStmt* ifStmt = static_cast<IfStmt*>( ret.get() );
@@ -266,7 +267,7 @@ InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal,
 clang::StmtResult
 InsiemeSema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, clang::Stmt* First, FullExprArg Second, clang::Decl* SecondVar,
 	FullExprArg Third, SourceLocation RParenLoc, clang::Stmt* Body) {
-//	DLOG(INFO) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
+	DVLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
 
 	ForStmt* forStmt = (ForStmt*) ret.get();
@@ -291,7 +292,7 @@ clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl* D) {
 }
 
 clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body) {
-	// DEBUG("{InsiemeSema}: ActOnFinishFunctionBody()");
+	DVLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
 	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, clang::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
 
@@ -344,7 +345,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //}
 
 clang::Decl* InsiemeSema::ActOnDeclarator(Scope *S, Declarator &D) {
-	// DLOG(INFO) << "{InsiemeSema}: ActOnDeclarator()";
+	DVLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
 	clang::Decl* ret = Sema::ActOnDeclarator(S, D);
 
 	if (isInsideFunctionDef)
@@ -367,7 +368,7 @@ clang::Decl* InsiemeSema::ActOnDeclarator(Scope *S, Declarator &D) {
 }
 
 void InsiemeSema::ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc) {
-	DLOG(INFO) << "{InsiemeSema}: ActOnTagFinishDefinition()";
+	DVLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
 
 	Sema::ActOnTagFinishDefinition(S, TagDecl, RBraceLoc);
 	PragmaList matched;
@@ -390,7 +391,7 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 }
 
 void InsiemeSema::dump() {
-	DLOG(INFO) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
+	DVLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
 		(*I)->dump(DLOG(INFO), SourceMgr);
 }

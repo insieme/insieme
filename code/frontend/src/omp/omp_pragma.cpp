@@ -219,16 +219,25 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
 }
 
+/**
+ * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches the resulting annotation
+ * to the IR node
+ */
 void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
-	const PragmaPtr pragma = fact.getPragmaMap()[clangNode];
-	if(pragma) {
-		// there is a pragma attached
-		const omp::pragma::OmpPragma* ompPragma = dynamic_cast<const omp::pragma::OmpPragma*>(&*pragma);
-		if(ompPragma) {
-			VLOG(1) << "Statement has an OpenMP pragma attached";
-			irNode.addAnnotation( ompPragma->toAnnotation(fact) );
-		}
-	}
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
+	std::pair< PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator > iter = pragmaStmtMap.equal_range(clangNode);
+
+	omp::annotation::OmpBaseAnnotation::OmpAnnotationList anns;
+	std::for_each(iter.first, iter.second,
+		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
+			const omp::pragma::OmpPragma* ompPragma = dynamic_cast<const omp::pragma::OmpPragma*>(&*(curr.second));
+			if(ompPragma) {
+				VLOG(1) << "Statement has an OpenMP pragma attached";
+				anns.push_back( ompPragma->toAnnotation(fact) );
+			}
+	});
+
+	irNode.addAnnotation( std::shared_ptr<core::Annotation>((new omp::annotation::OmpBaseAnnotation(anns))) );
 }
 
 namespace pragma {

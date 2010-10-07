@@ -109,6 +109,8 @@ int main(int argc, char** argv) {
 		resv = sqrt(norm)/(N-1);
 
 		#pragma omp barrier
+		#pragma omp flush
+		#pragma omp barrier
 	}
 
 	end_t = clock();
