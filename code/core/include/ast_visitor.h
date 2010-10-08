@@ -527,6 +527,8 @@ inline LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
  *
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
+ * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
+ * 				   post order will be enforced.
  */
 template<typename NodePtr, typename Visitor>
 inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {

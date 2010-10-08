@@ -99,7 +99,7 @@ TEST(InstancePtr, Print) {
 
 typedef float real;
 
-class A {
+struct A {
 	// required to be polymorphic (dynamic cast)
 	virtual real hell() { return 66.6; };
 };
