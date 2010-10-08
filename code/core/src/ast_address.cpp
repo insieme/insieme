@@ -36,29 +36,46 @@
 
 #include "ast_address.h"
 #include "container_utils.h"
+#include "string_utils.h"
 
 namespace insieme {
 namespace core {
 
+/**
+ * Computes a hash code for the given path.
+ */
+std::size_t hashPath(const NodeAddress::Path& path) {
+	std::size_t seed = 0;
+	for_each(path, [&seed](const NodeAddress::PathEntry& cur) {
+		boost::hash_combine(seed, cur.first);
+	});
+	return seed;
+}
+
+NodeAddress::Path toPath(const NodePtr& root) {
+	return toVector(NodeAddress::PathEntry(0,root));
+}
+
 
 NodeAddress::NodeAddress(const NodePtr& root)
-	: HashableImmutableData(boost::hash_value(toVector(root))), path(toVector(root)) {}
+	: HashableImmutableData(hashPath(toPath(root))), path(std::make_shared<Path>(toPath(root))) {}
 
-NodeAddress::NodeAddress(const std::vector<NodePtr>& path) : HashableImmutableData(boost::hash_value(path)), path(path) {}
+NodeAddress::NodeAddress(const Path& path) : HashableImmutableData(hashPath(path)), path(std::make_shared<Path>(path)) {}
 
 NodePtr NodeAddress::getRootNode() const {
-	assert(!path.empty() && "Invalid node address!");
-	return path[0]; // first element of path = root node
+	assert(!path->empty() && "Invalid node address!");
+	return (*path)[0].second; // the pointer assigned to the first path element
 }
 
 NodePtr NodeAddress::getParentNode(unsigned level) const {
-	assert(path.size() > level && "Invalid parent node level!");
-	return path[path.size() - level - 1];
+	std::size_t size = path->size();
+	assert(size > level && "Invalid parent node level!");
+	return (*path)[size - level - 1].second;
 }
 
 NodePtr NodeAddress::getAddressedNode() const {
-	assert(!path.empty() && "Invalid node address!");
-	return path[path.size() - 1];
+	assert(!path->empty() && "Invalid node address!");
+	return (*path)[path->size() - 1].second;
 }
 
 NodeAddress NodeAddress::getRootNodeAddress() const {
@@ -66,7 +83,7 @@ NodeAddress NodeAddress::getRootNodeAddress() const {
 }
 
 NodeAddress NodeAddress::getParentNodeAddress(unsigned level) const {
-	assert(path.size() > level && "Invalid parent node level!");
+	assert(path->size() > level && "Invalid parent node level!");
 
 	// check whether an actual parent is requested
 	if (level == 0) {
@@ -74,35 +91,42 @@ NodeAddress NodeAddress::getParentNodeAddress(unsigned level) const {
 	}
 
 	// check whether root node is requested
-	if (path.size() == level + 1) {
+	if (path->size() == level + 1) {
 		return getRootNodeAddress();
 	}
 
 	// create modified path
-	return NodeAddress(std::vector<NodePtr>(path.begin(), path.end()-level));
+	return NodeAddress(Path(path->begin(), path->end()-level));
 }
 
-NodeAddress NodeAddress::getChildAddress(const NodePtr& child) const {
+NodeAddress NodeAddress::getAddressOfChild(unsigned index) const {
+
 	// verify that it is really a child
-	assert(::contains(getAddressedNode()->getChildList(), child) && "Given node is not a child!");
+	assert((getAddressedNode()->getChildList().size() > index) && "Given node index is not a child!");
+
+	NodePtr child = getAddressedNode()->getChildList()[index];
 
 	// extend path by child element
-	std::vector<NodePtr> newPath(path);
-	newPath.push_back(child);
+	Path newPath(*path);
+	newPath.push_back(std::make_pair(index, child));
 	return NodeAddress(newPath);
 }
 
 bool NodeAddress::isValid() const {
 	// check whether path is not empty
-	if (path.empty()) {
+	if (path->empty()) {
 		return false;
 	}
 
 	// check parent-child relation
-	NodePtr parent = *path.begin();
-	return all(path.begin()+1, path.end(), [&parent](const NodePtr& cur) {
-		// pointer must not be null and has to be within its parents child list
-		bool res = cur && contains(parent->getChildList(), cur);
+	PathEntry parent = *(*path).begin();
+	return all((*path).begin()+1, (*path).end(), [&parent](const PathEntry& cur) {
+
+		bool res =
+				cur.second && // pointer must be not NULL
+				parent.second->getChildList().size() > cur.first && // index must be valid
+				parent.second->getChildList()[cur.first] == cur.second; // pointer must be correct
+
 		parent = cur;
 		return res;
 	});
@@ -110,9 +134,20 @@ bool NodeAddress::isValid() const {
 
 bool NodeAddress::equals(const NodeAddress& other) const {
 	// just compare paths (identity, hash values and others stuff has already been checked by super class)
-	return ::equals(path, other.path);
+std::cout << "Comparing " << *this << other << std::endl;
+	return ::equals(*path, *other.path, [](const PathEntry& a, const PathEntry& b) {
+std::cout << "Checking " << a.first << "==" << b.first << std::endl;
+		return a.first == b.first;
+	});
 }
-
 
 } // end namespace core
 } // end namespace insieme
+
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::NodeAddress& node) {
+	return out << join("-", node.getPath(), [](std::ostream& out, const insieme::core::NodeAddress::PathEntry& cur) {
+		out << cur.first;
+	});
+}
+

@@ -54,12 +54,40 @@ namespace core {
  */
 class NodeAddress : public utils::HashableImmutableData<NodeAddress> {
 
+public:
+
+	/**
+	 * The type used to describe one step among the path addressing a node within the AST.
+	 * The pair represents the index of the child to followed within the upper level and a pointer
+	 * to the node reached by the this step.
+	 *
+	 * NOTE: The pointer only represents a 'cached' value and might as well be obtained by traversing
+	 * the prefix of the path each time a node on the path has to be resolved.
+	 * Due to this pointer, nodes on the path can be obtained with O(1).
+	 */
+	typedef std::pair<std::size_t, NodePtr> PathEntry;
+
+	/**
+	 * The type used to represent the path of a node to be addressed.
+	 */
+	typedef std::vector<PathEntry> Path;
+
+private:
+
+	/**
+	 * The path is maintained via a shared pointer. This way, the rather large vector (which is
+	 * also expensive to be copied) can be shared among all node addresses created by copying or
+	 * assigning one instance to another. Since this class is immutable, sharing the path does
+	 * not result in unexpected side effects.
+	 */
+	typedef std::shared_ptr<Path> SharedPath;
+
 	/**
 	 * The path used to identify the node referenced by this address.
 	 * The pointer stored within this vector are describing the sequence of edges to be followed
 	 * for reaching the corresponding node.
 	 */
-	std::vector<NodePtr> path;
+	SharedPath path;
 
 public:
 
@@ -73,7 +101,7 @@ public:
 	 *
 	 * @param path the path to the node to be addressed.
 	 */
-	NodeAddress(const std::vector<NodePtr>& path = std::vector<NodePtr>());
+	NodeAddress(const Path& path = Path());
 
 	/**
 	 * Obtains a pointer to the root node this address is starting from.
@@ -125,12 +153,12 @@ public:
 
 	/**
 	 * Obtains the address of a child node. It is extending the path maintained by this address by a single
-	 * step, namely the given node.
+	 * step, namely the node given by the index.
 	 *
-	 * @param child the node to be addressed
+	 * @param index the index of the child-node to be addressed within the current nodes child list.
 	 * @return the address of the child node
 	 */
-	NodeAddress getChildAddress(const NodePtr& child) const;
+	NodeAddress getAddressOfChild(unsigned index) const;
 
 	/**
 	 * Checks whether this address is constituting a valid path within some AST. The method returns
@@ -148,7 +176,7 @@ public:
 	 * @return the depth of the addressed nodes within the AST
 	 */
 	unsigned getDepth() const {
-		return path.size();
+		return path->size();
 	}
 
 	/**
@@ -156,8 +184,8 @@ public:
 	 *
 	 * @return a constant reference to the internally maintained path.
 	 */
-	const std::vector<NodePtr>& getPath() const {
-		return path;
+	const Path& getPath() const {
+		return *path;
 	}
 
 
@@ -196,6 +224,12 @@ protected:
 
 } // end namespace core
 } // end namespace insieme
+
+/**
+ * Allows node addresses to be printed to a stream (especially useful during debugging and
+ * within test cases where equals expects values to be printable).
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::NodeAddress& node);
 
 
 
