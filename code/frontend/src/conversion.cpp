@@ -731,8 +731,6 @@ public:
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
 		core::ExpressionPtr base = Visit( arraySubExpr->getBase() ).ref;
 		core::ExpressionPtr idx = Visit( arraySubExpr->getIdx() ).ref;
-		std::cerr << "VisitArraySubscriptExpr: ";
-		arraySubExpr->getIdx()->dump();
 
 //		DLOG(INFO) << *base->getType();
 
