@@ -85,7 +85,8 @@ public:
 
 
 // Some type definitions for combined types required for handling annotations
-typedef std::unordered_map<const AnnotationKey*, std::shared_ptr<Annotation>, hash_target<const AnnotationKey*>> AnnotationMap;
+typedef std::shared_ptr<Annotation> AnnotationPtr;
+typedef std::unordered_map<const AnnotationKey*, AnnotationPtr, hash_target<const AnnotationKey*>> AnnotationMap;
 typedef std::shared_ptr<AnnotationMap> SharedAnnotationMap;
 
 /**
@@ -122,27 +123,7 @@ public:
 	 *
 	 * @param annotation the annotation to be added. The key will be obtained from the given annotation.
 	 */
-	void addAnnotation(const std::shared_ptr<Annotation>& annotation) const {
-
-		// check pre-condition
-		assert ( annotation && "Cannot add NULL annotation!" );
-
-		// insert new element
-		auto key = annotation->getKey();
-		auto value = std::make_pair(key, annotation);
-		auto res = map->insert(value);
-
-		if (!res.second) {
-			// equivalent element already present => remove old and add new element
-			map->erase(res.first);
-			res = map->insert(value);
-		}
-
-		// check post-condition
-		assert ( res.second && "Insert not successful!");
-		assert ( contains(key) && "Insert not successful!");
-		assert ( &*((*map->find(key)).second)==&*annotation && "Insert not successful!");
-	};
+	void addAnnotation(const AnnotationPtr& annotation) const;
 
 	/**
 	 * Obtains a pointer to an Annotation associated to this annotatable class.
@@ -152,12 +133,12 @@ public:
 	 * @return a pointer to the maintained element or NULL if there is no such element.
 	 */
 	template<typename Key>
-	typename Key::annotation_type* getAnnotation(const Key* key) const {
+	typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key* key) const {
 
 		// search for entry
 		auto pos = map->find(key);
 		if (pos == map->end() ) {
-			return NULL;
+			return std::shared_ptr<typename Key::annotation_type>();
 		}
 
 		// check type
@@ -165,7 +146,7 @@ public:
 				&& "Annotation Type of Key does not match actual annotation!" );
 
 		// return pointer to result
-		return static_cast<typename Key::annotation_type*>(&*(*pos).second);
+		return std::static_pointer_cast<typename Key::annotation_type>((*pos).second);
 	}
 
 	/**
@@ -176,7 +157,7 @@ public:
 	 * @return a pointer to the maintained element or NULL if there is no such element.
 	 */
 	template<typename Key>
-	typename Key::annotation_type* getAnnotation(const Key& key) const {
+	typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key& key) const {
 		return getAnnotation(&key);
 	}
 
@@ -204,7 +185,7 @@ public:
 	 * @param key a pointer to the key to be looking for
 	 * @return true if found, false otherwise
 	 */
-	bool contains(const AnnotationKey* key) const {
+	bool hasAnnotation(const AnnotationKey* key) const {
 		return map->find(key) != map->end();
 	}
 
@@ -214,8 +195,8 @@ public:
 	 * @param key a reference to the key to be looking for
 	 * @return true if found, false otherwise
 	 */
-	bool contains(const AnnotationKey& key) const {
-		return contains(&key);
+	bool hasAnnotation(const AnnotationKey& key) const {
+		return hasAnnotation(&key);
 	}
 
 	/**

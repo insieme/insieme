@@ -103,7 +103,7 @@ TEST(ocl_properties, DeclarationAnnotations) {
 
     declaration.addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(functionAnnotations));
 
-    OclBaseAnnotation* declarationAnnotation = declaration.getAnnotation(ocl::OclBaseAnnotation::KEY);
+    auto declarationAnnotation = declaration.getAnnotation(ocl::OclBaseAnnotation::KEY);
 
     EXPECT_EQ(static_cast<unsigned int>(1), declarationAnnotation->getNumAnnotations());
 
