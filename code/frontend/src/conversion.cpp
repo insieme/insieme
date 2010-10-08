@@ -731,6 +731,9 @@ public:
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
 		core::ExpressionPtr base = Visit( arraySubExpr->getBase() ).ref;
 		core::ExpressionPtr idx = Visit( arraySubExpr->getIdx() ).ref;
+		std::cerr << "VisitArraySubscriptExpr: ";
+		arraySubExpr->getIdx()->dump();
+
 //		DLOG(INFO) << *base->getType();
 
 //		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
@@ -738,6 +741,53 @@ public:
 
 		return ExprWrapper( convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx })) );
 	}
+
+    ExprWrapper VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr){
+        START_LOG_EXPR_CONVERSION(vecElemExpr);
+        core::ExpressionPtr base = Visit( vecElemExpr->getBase() ).ref;
+        std::string pos;
+        llvm::StringRef accessor = vecElemExpr->getAccessor().getName();
+   //     convFact.builder.literal("0", type);
+        //translate OpenCL accessor string to index
+        if(accessor.compare(llvm::StringRef("s0")) == 0 || accessor.compare(llvm::StringRef("x")) == 0)
+            pos = "0";
+        else if(accessor.compare(llvm::StringRef("s1")) == 0 || accessor.compare(llvm::StringRef("y")) == 0)
+            pos = "1";
+        else if(accessor.compare(llvm::StringRef("s2")) == 0 || accessor.compare(llvm::StringRef("z")) == 0)
+            pos = "2";
+        else if(accessor.compare(llvm::StringRef("s3")) == 0 || accessor.compare(llvm::StringRef("w")) == 0)
+            pos = "3";
+        else if(accessor.compare(llvm::StringRef("s4")) == 0)
+            pos = "4";
+        else if(accessor.compare(llvm::StringRef("s5")) == 0)
+            pos = "5";
+        else if(accessor.compare(llvm::StringRef("s6")) == 0)
+            pos = "6";
+        else if(accessor.compare(llvm::StringRef("s7")) == 0)
+            pos = "7";
+        else if(accessor.compare(llvm::StringRef("s8")) == 0)
+            pos = "8";
+        else if(accessor.compare(llvm::StringRef("s9")) == 0)
+            pos = "9";
+        else if(accessor.compare(llvm::StringRef("s10")) == 0)
+            pos = "10";
+        else if(accessor.compare(llvm::StringRef("s11")) == 0)
+            pos = "11";
+        else if(accessor.compare(llvm::StringRef("s12")) == 0)
+            pos = "12";
+        else if(accessor.compare(llvm::StringRef("s13")) == 0)
+            pos = "13";
+        else if(accessor.compare(llvm::StringRef("s14")) == 0)
+            pos = "14";
+        else if(accessor.compare(llvm::StringRef("s15")) == 0)
+            pos = "15";
+
+        core::ExpressionPtr idx = convFact.builder.literal(pos,
+                convFact.ConvertType(*vecElemExpr->getType().getTypePtr()));
+
+
+        return ExprWrapper( convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx })) );
+    }
 
 	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		START_LOG_EXPR_CONVERSION(declRef);
@@ -816,7 +866,7 @@ public:
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else{
 			Type& ty = *varDecl->getType().getTypePtr();
-			std::cout << "Type: " << ty.getTypeClassName() << std::endl;
+
 			if (ty.isExtVectorType() || ty.isConstantArrayType()) {
 			    //TODO init routine for vectors
 			}
