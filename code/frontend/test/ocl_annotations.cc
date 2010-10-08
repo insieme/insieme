@@ -42,7 +42,7 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
-TEST(ocl_properties, DefaultInitialization) {
+TEST(ocl_properties, FunctionAnnotations) {
 
     core::Annotatable function;
 
@@ -62,7 +62,9 @@ TEST(ocl_properties, DefaultInitialization) {
     //does not work in Hudson
 //    EXPECT_TRUE(std::dynamic_pointer_cast<OclBaseAnnotation>(oa));
 
+
     if(ocl::OclBaseAnnotationPtr oclKernelAnnotation = std::dynamic_pointer_cast<ocl::OclBaseAnnotation>(oa)) {
+        EXPECT_EQ(static_cast<unsigned int>(2), oclKernelAnnotation->getNumAnnotations());
         for(size_t i = 0; i < oclKernelAnnotation->getNumAnnotations(); ++i) {
             ocl::OclAnnotationPtr ocl = oclKernelAnnotation->getAnnotationByIndex(i);
             if(ocl::OclKernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::OclKernelFctAnnotation>(ocl))
@@ -90,6 +92,28 @@ TEST(ocl_properties, DefaultInitialization) {
 
     EXPECT_EQ(OclAddressSpaceAnnotation::addressSpace::PRIVATE, space.getAddressSpace());
     */
+}
+
+TEST(ocl_properties, DeclarationAnnotations) {
+    core::Annotatable declaration;
+
+    ocl::OclBaseAnnotation::OclAnnotationList functionAnnotations;
+
+    functionAnnotations.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>());
+
+    declaration.addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(functionAnnotations));
+
+    OclBaseAnnotation* declarationAnnotation = declaration.getAnnotation(ocl::OclBaseAnnotation::KEY);
+
+    EXPECT_EQ(static_cast<unsigned int>(1), declarationAnnotation->getNumAnnotations());
+
+    for(ocl::OclBaseAnnotation::OclAnnotationList::const_iterator I = declarationAnnotation->getListBegin();
+            I < declarationAnnotation->getListEnd(); ++I) {
+        if(ocl::OclAddressSpaceAnnotationPtr as = std::dynamic_pointer_cast<ocl::OclAddressSpaceAnnotation>(*I)){
+            EXPECT_EQ(ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE, as->getAddressSpace());
+        }
+    }
+
 }
 
 } //namespace ocl

@@ -60,8 +60,14 @@ public:
     OclBaseAnnotation(OclAnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
     const core::AnnotationKey* getKey() const { return &KEY; }
     const std::string getAnnotationName() const { return "OmpAnnotation"; }
+
+    //Proposal to get vector elements via index
     const size_t getNumAnnotations() const { return annotationList.size(); }
     const OclAnnotationPtr getAnnotationByIndex(size_t idx) const { return annotationList.at(idx); }
+
+    //Proposal to get vector elements via iterator
+    OclAnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
+    const OclAnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
 private:
     OclAnnotationList annotationList;
 
