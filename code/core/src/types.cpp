@@ -448,11 +448,12 @@ NamedCompositeType::NamedCompositeType(const string& prefix, const Entries& entr
 }
 
 /**
- * Migrates
+ * Migrates the given list of entries from the source to the target node manager.
  *
- * @param manager the manager to which the resulting references should point to
- * @param entries the list of entries to be looked up
- * @return a list of entries referencing identical types within the given manager
+ * @param src the source node manager the entries should be migrated from (null if unknown)
+ * @param target the target node manager the entries should be migrated to
+ * @param entries the list of entries to be migrated
+ * @return a list of entries referencing identical types within the target manager
  */
 NamedCompositeType::Entries migrateToManager(const NodeManager* src, NodeManager* target, NamedCompositeType::Entries entries) {
 

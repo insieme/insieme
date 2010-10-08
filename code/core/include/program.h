@@ -123,27 +123,71 @@ protected:
 public:
 
 	/**
-	 * Creates a new program based on the given definitions and entry points.
+	 * Creates a new program node within the given manager combining the given set of entry points.
 	 *
-	 * @param definitions the definitions to be included within the resulting program.
+	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param entryPoints the list of entry points to be included within the resulting program.
-	 * @return a ProgramPtr referencing the resulting program. The pointer can be treated like a shared
-	 * 		   pointer, hence the allocated memory will be automatically cleared as soon as the last
-	 * 		   copy is gone.
+	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+	 * 						will be bound to the given manager.
 	 */
 	static ProgramPtr create(NodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet());
 
+	/**
+	 * Creates a new program node within the given manager which is equivalent to the given program plus the
+	 * given, additional entry point.
+	 *
+	 * @param manager the manager used to create the new node and to maintain all referenced nodes
+	 * @param program the program to be extended by an additional entry point
+	 * @param point the additional entry point to be added
+	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+	 * 						will be bound to the given manager.
+	 */
 	static ProgramPtr addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
 
+	/**
+	 * Creates a new program node within the given manager which is equivalent to the given program plus the
+	 * given, additional entry points.
+	 *
+	 * @param manager the manager used to create the new node and to maintain all referenced nodes
+	 * @param program the program to be extended by additional entry points
+	 * @param points the additional entry points to be added
+	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+	 * 						will be bound to the given manager.
+	 */
 	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
 
+	/**
+	 * Creates a new program node within the given manager which is equivalent to the given program except the
+	 * given entry point will be removed.
+	 *
+	 * @param manager the manager used to create the new node and to maintain all referenced nodes
+	 * @param program the program to be reduced by an entry point
+	 * @param points the entry point to be removed
+	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+	 * 						will be bound to the given manager.
+	 */
+	static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
+
+	/**
+	 * Creates a new program node within the given manager which is equivalent to the given program except the
+	 * given entry points will be removed.
+	 *
+	 * @param manager the manager used to create the new node and to maintain all referenced nodes
+	 * @param program the program to be reduced by some entry points
+	 * @param points the entry points to be removed
+	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+	 * 						will be bound to the given manager.
+	 */
+	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
+
+	/**
+	 * Obtains the set of entry points associated to this program node.
+	 *
+	 * @return the set of entry points.
+	 */
 	const EntryPointSet& getEntryPoints() const {
 		return entryPoints;
 	}
-
-	static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
-
-	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
 
 	/**
 	 * Implements equals for the program type. Two programs are considered

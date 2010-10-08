@@ -249,7 +249,7 @@ public:
 	 * The returned reference will point to the new master copy.
 	 *
 	 * @tparam S the type of instance to be obtained
-	 * @param instance the instance to be looking for within this instance manager.
+	 * @param pointer a pointer to the instance to be looking for within this instance manager.
 	 * @return a reference to the new master copy of the handed in instance
 	 *
 	 * @see get(T*)
@@ -341,7 +341,7 @@ public:
 	 * Unlike the get methods, lookups will never change the content of the instance manager.
 	 *
 	 * @tparam S the type of the instance to be looked up (has to be a sub-type of the managed type)
-	 * @param instance the instance to be looked up
+	 * @param pointer a pointer to the instance to be looked up
 	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
 	 */
 	template<class S>

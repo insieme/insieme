@@ -872,6 +872,7 @@ private:
 	 *
 	 * @param prefix the prefix of the type name (union or struct)
 	 * @param entries the list of entries forming the content of this type
+	 * @return the name to be used by this named composite type
 	 */
 	static string buildNameString(const string& prefix, const Entries& entries);
 
@@ -933,7 +934,7 @@ class UnionType: public NamedCompositeType {
 	/**
 	 * Creates a new instance of this type based on the given entries.
 	 *
-	 * @param entries the entries the new type should consist of
+	 * @param elements the elements the new type should consist of
 	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
 	 */
 	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
@@ -1167,6 +1168,7 @@ public:
 	 * @param manager 		the manager which should be responsible for maintaining the new
 	 * 				  		type instance and all its referenced elements.
 	 * @param elementType 	the type of element the requested reference is addressing
+	 * @param size			the size of the channel to be created
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */

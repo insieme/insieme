@@ -541,6 +541,8 @@ inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
  *
  * @param root the root not to start the visiting from
  * @param lambda the lambda to be applied to all the nodes
+ * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
+ * 				   post order will be enforced.
  */
 template<typename NodePtr, typename Lambda>
 inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
