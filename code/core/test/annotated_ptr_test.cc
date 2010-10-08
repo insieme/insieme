@@ -45,10 +45,10 @@ using namespace insieme::core;
 
 // ------------- utility classes required for the test case --------------
 
-class A {
+struct A {
 	void f() {};
 };
-class B : public A { };
+struct B : public A { };
 
 
 // testing basic properties
