@@ -34,16 +34,32 @@
  * regarding third party software licenses.
  */
 
-#include "omp/omp_annotation.h"
+#pragma once
+
+#include "ast_visitor.h"
 
 namespace insieme {
 namespace frontend {
-namespace omp {
-namespace annotation {
+namespace analysis {
 
-const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
+typedef std::set<core::VarExprPtr> VarSet;
+/**
+ * Returns the list of variables referenced within an expression
+ */
+struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 
-} // End annotation namespace
-} // End omp namespace
+	VarRefFinder(const core::ExpressionPtr& expr) { visit(expr); }
+
+	void visitVarExpr(const core::VarExprPtr& varExpr) { insert(varExpr); }
+
+	void visitNode(const core::NodePtr& node) {
+		std::for_each(node->getChildList().begin(), node->getChildList().end(),
+			[ this ] (core::NodePtr curr){
+				this->visit(curr);
+			});
+	}
+};
+
+} // End analysis namespace
 } // End frontend namespace
 } // End insieme namespace

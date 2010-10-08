@@ -121,14 +121,3 @@ TEST(XmlTest, UnionTypeTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
-
-/*TEST(XmlTest, AnnotationTest) {
-	class TestAnnotation1 : public Annotation {
-	public:
-		int value;
-		const std::string getAnnotationName() const {
-			 return "TestAnnotation1"; 
-		}
-	};
-	insieme::core::XML_CONVERTER(TestAnnotation1, toXML_, fromXML_)
-}*/
