@@ -45,6 +45,7 @@
 #include "utils/dep_graph.h"
 
 #include "analysis/loop_analyzer.h"
+#include "analysis/expr_analysis.h"
 
 #include "program.h"
 #include "ast_node.h"
@@ -161,6 +162,7 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 
 std::string getOperationType(const core::TypePtr& type) {
 	using namespace core::lang;
+	DVLOG(2) << type;
 	if(isUIntType(*type))	return "uint";
 	if(isIntType(*type)) 	return "int";
 	if(isBoolType(*type))	return "bool";
@@ -495,11 +497,37 @@ public:
  		core::ExpressionPtr rhs = Visit(binOp->getRHS()).ref;
 		const core::ExpressionPtr& lhs = Visit(binOp->getLHS()).ref;
 
-		// if the binary operator is a comma separated expression, we convert it into
-		// a tuple expression and return it
+		// if the binary operator is a comma separated expression, we convert it into a function call
+		// which returns the value of the last expression
 		if( binOp->getOpcode() == BO_Comma) {
+			analysis::VarRefFinder rvars(rhs);
+			analysis::VarRefFinder lvars(lhs);
+
+			// ---------TODO: Factorize inside a function----------------
+			vector<core::ExpressionPtr> args;
+			std::set_intersection( rvars.begin(), rvars.end(), lvars.begin(), lvars.end(), std::back_inserter(args) );
+
+			core::TupleType::ElementTypeList elemTy;
+			core::LambdaExpr::ParamList params;
+			std::for_each(args.begin(), args.end(), [&params, &elemTy, &builder] (const core::ExpressionPtr& curr) {
+				const core::VarExprPtr& var = core::dynamic_pointer_cast<const core::VarExpr>(curr);
+				params.push_back( builder.paramExpr(var->getType(), var->getIdentifier()) );
+				elemTy.push_back( var->getType() );
+			});
+
+			// build the type of the function
+			core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), rhs->getType());
+
+			// build the expression body
+			core::LambdaExprPtr retExpr = builder.lambdaExpr(
+					funcTy, params, builder.compoundStmt( std::vector<core::StatementPtr>({ lhs, builder.returnStmt(rhs)}))
+			);
+
+			DLOG(INFO) << *retExpr;
+
+			return ExprWrapper( builder.callExpr(retExpr, args) );
+			// ---------------------------------------------------------------
 			assert(false && "Comma separated expressions not handled!");
-			// return ExprWrapper( builder.tupleExpr({ lhs, rhs }) );
 		}
 
 		core::TypePtr exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
@@ -1221,6 +1249,7 @@ public:
 	FORWARD_VISITOR_CALL(DeclRefExpr)
 	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
 	FORWARD_VISITOR_CALL(CallExpr)
+	FORWARD_VISITOR_CALL(ParenExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });
@@ -1865,6 +1894,12 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 	if(!mDoConversion)
 		return;
 
+	DLOG(INFO) << "Number of parsed pragmas: " << pragmaList.size();
+
+	if(D.isSingleDecl() && !pragmaList.empty()) {
+		DLOG(INFO) << "@ location: " << utils::location(D.getSingleDecl()->getLocStart(), this->mClangComp.getSourceManager());
+		pragmaList.front()->dump(std::cout, this->mClangComp.getSourceManager());
+	}
 	// update the map
 	mFact.updatePragmaMap(pragmaList);
 

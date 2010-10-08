@@ -91,6 +91,7 @@ public:
 	
 	clang::Decl* ActOnDeclarator(clang::Scope *S, clang::Declarator &D);
 
+//	clang::StmtResult ActOnDeclStmt(clang::Sema::DeclGroupPtrTy Decl, SourceLocation StartLoc, SourceLocation EndLoc);
 
 	void ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc);
 

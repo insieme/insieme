@@ -78,8 +78,8 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	// lastprivate(list)
 	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> identifier_list["lastprivate"] >> r_paren;
 
-
-	auto op 			  	= tok::plus | tok::minus; // TODO: add more
+	// + or - or * or & or | or ^ or && or ||
+	auto op 			  	= tok::plus | tok::minus | tok::star | tok::amp | tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
 
 	// reduction(operator: list)
 	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >> identifier_list["reduction"] >> r_paren;
