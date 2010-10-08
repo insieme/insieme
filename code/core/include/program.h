@@ -162,7 +162,7 @@ public:
 	 *
 	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param program the program to be reduced by an entry point
-	 * @param points the entry point to be removed
+	 * @param point the entry point to be removed
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */

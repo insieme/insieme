@@ -668,6 +668,7 @@ public:
 	 * a generic type pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
 	 *
+	 * @param manager		the manager to be used for creating the node (memory management)
 	 * @param name 			the name of the new type (only the prefix)
 	 * @param typeParams	the type parameters of this type, concrete or variable
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
