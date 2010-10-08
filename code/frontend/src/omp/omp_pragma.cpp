@@ -198,7 +198,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// #pragma omp critical [(name)] new-line
 	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpCritical>(pp.getIdentifierInfo("critical"),
-					!(l_paren >> identifier /*TODO */ >> r_paren) >> tok::eom, "omp"));
+					!(l_paren >> identifier >> r_paren) >> tok::eom, "omp"));
 
 	//#pragma omp barrier new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpBarrier>(pp.getIdentifierInfo("barrier"), tok::eom, "omp"));
@@ -404,6 +404,7 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 	// check for reduction clause
 	OmpReductionPtr reductionClause = handleReductionClause(map, fact);
 
+	// check for 'for'
 	if(hasKeyword(map, "for")) {
 		// this is a parallel for
 		VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
@@ -418,6 +419,19 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 			new omp::annotation::OmpParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
 					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
 					scheduleClause, collapseClause, noWait)
+		);
+	}
+
+	// check for 'sections'
+	if(hasKeyword(map, "sections")) {
+		// this is a parallel for
+		VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
+		// check for nowait keyword
+		bool noWait = hasKeyword(map, "nowait");
+
+		return OmpAnnotationPtr(
+			new omp::annotation::OmpParallelSections(ifClause, numThreadsClause, defaultClause, privateClause,
+					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause, noWait)
 		);
 	}
 
@@ -451,28 +465,82 @@ omp::annotation::OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFac
 	);
 }
 
+// Translate a pragma omp section into a OmpSection annotation
+// private(list)
+// firstprivate(list)
+// lastprivate(list)
+// reduction(operator: list)
+// nowait
 omp::annotation::OmpAnnotationPtr OmpSections::toAnnotation(conversion::ConversionFactory& fact) const {
+	using namespace omp::annotation;
+	const MatchMap& map = getMap();
+	// check for private clause
+	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
+	// check for firstprivate clause
+	VarListPtr firstPrivateClause = handleIdentifierList(map, "firstprivate", fact);
+	// check for lastprivate clause
+	VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
+	// check for reduction clause
+	OmpReductionPtr reductionClause = handleReductionClause(map, fact);
+	// check for nowait keyword
+	bool noWait = hasKeyword(map, "nowait");
 
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr(
+		new annotation::OmpSections(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait)
+	);
 }
 
 omp::annotation::OmpAnnotationPtr OmpSection::toAnnotation(conversion::ConversionFactory& fact) const {
-
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr( new annotation::OmpSection );
 }
 
+// OmpSingle
+// private(list)
+// firstprivate(list)
+// copyprivate(list)
+// nowait
 omp::annotation::OmpAnnotationPtr OmpSingle::toAnnotation(conversion::ConversionFactory& fact) const {
+	using namespace omp::annotation;
+	const MatchMap& map = getMap();
+	// check for private clause
+	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
+	// check for firstprivate clause
+	VarListPtr firstPrivateClause = handleIdentifierList(map, "firstprivate", fact);
+	// check for copyprivate clause
+	VarListPtr copyPrivateClause = handleIdentifierList(map, "copyprivate", fact);
+	// check for nowait keyword
+	bool noWait = hasKeyword(map, "nowait");
 
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr(
+		new annotation::OmpSingle(privateClause, firstPrivateClause, copyPrivateClause, noWait)
+	);
 }
 
+// if(scalar-expression)
+// untied
+// default(shared | none)
+// private(list)
+// firstprivate(list)
+// shared(list)
 omp::annotation::OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFactory& fact) const {
-
+	using namespace omp::annotation;
+	const MatchMap& map = getMap();
+	// check for if clause
+	core::ExpressionPtr	ifClause = handleSingleExpression(map, "if", fact);
+	// check for nowait keyword
+	bool untied = hasKeyword(map, "untied");
+	// check for default clause
+	OmpDefaultPtr defaultClause = handleDefaultClause(map, fact);
+	// check for private clause
+	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
+	// check for firstprivate clause
+	VarListPtr firstPrivateClause = handleIdentifierList(map, "firstprivate", fact);
+	// check for shared clause
+	VarListPtr sharedClause = handleIdentifierList(map, "shared", fact);
 	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr(
+		new annotation::OmpTask(ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause)
+	);
 }
 
 omp::annotation::OmpAnnotationPtr OmpMaster::toAnnotation(conversion::ConversionFactory& fact) const {
@@ -480,9 +548,24 @@ omp::annotation::OmpAnnotationPtr OmpMaster::toAnnotation(conversion::Conversion
 }
 
 omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::ConversionFactory& fact) const {
+	using namespace omp::annotation;
+	const MatchMap& map = getMap();
 
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	// checking region name (if existing)
+	core::VarExprPtr criticalName = NULL;
+	auto fit = map.find("critical");
+	if(fit != map.end()) {
+		const ValueList& vars = fit->second;
+		assert(vars.size() == 1 && "Critical region has multiple names");
+		clang::Stmt* name = vars.front()->get<clang::Stmt*>();
+		clang::DeclRefExpr* refName = dyn_cast<clang::DeclRefExpr>(name);
+		assert(refName && "Clause not containing an identifier");
+
+		criticalName = core::dynamic_pointer_cast<const core::VarExpr>(fact.ConvertExpr( *refName ));
+		assert(criticalName && "Conversion to Insieme node failed!");
+	}
+
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpCritical(criticalName) );
 }
 
 omp::annotation::OmpAnnotationPtr OmpBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
@@ -490,33 +573,29 @@ omp::annotation::OmpAnnotationPtr OmpBarrier::toAnnotation(conversion::Conversio
 }
 
 omp::annotation::OmpAnnotationPtr OmpTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
-
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpTaskWait );
 }
 
 omp::annotation::OmpAnnotationPtr OmpAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
-
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpAtomic );
 }
 
 omp::annotation::OmpAnnotationPtr OmpFlush::toAnnotation(conversion::ConversionFactory& fact) const {
-
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	using namespace omp::annotation;
+	// check for flush identifier list
+	VarListPtr flushList = handleIdentifierList(getMap(), "flush", fact);
+	return omp::annotation::OmpAnnotationPtr( new annotation::OmpFlush(flushList) );
 }
 
 omp::annotation::OmpAnnotationPtr OmpOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
-
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpOrdered );
 }
 
 omp::annotation::OmpAnnotationPtr OmpThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
+	using namespace omp::annotation;
+	VarListPtr threadPrivateClause = handleIdentifierList(getMap(), "threadprivate", fact);
 
-	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr();
+	return omp::annotation::OmpAnnotationPtr( new annotation::OmpThreadPrivate(threadPrivateClause)	);
 }
 
 } // End pragma namespace

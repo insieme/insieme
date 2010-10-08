@@ -91,6 +91,7 @@ int main(int argc, char** argv) {
 			 for (int j=1; j < N-1; j++)
 				 tmp[i][j] = (double)1/4 * (u[i-1][j] + u[i][j+1] + u[i][j-1] + u[i+1][j] - factor * f[i][j]);
 		}
+		#pragma omp critical (pippo)
 		memcpy(u, tmp, N*N);
 
 		// calc the residuo

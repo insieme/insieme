@@ -433,9 +433,12 @@ public:
 			const FunctionDecl* definition = NULL;
 			if( !funcDecl->hasBody(definition) ) {
 				// in the case the function is extern, a literal is build
-				return ExprWrapper( convFact.builder.callExpr(
-						builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs)
-				);
+
+				core::ExpressionPtr irNode = convFact.builder.callExpr(	builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
+				// handle eventual pragmas attached to the Clang node
+				frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
+
+				return ExprWrapper( irNode );
 			}
 
 			if(!recVarExprMap.empty()) {
@@ -449,8 +452,13 @@ public:
 
 			if(!isRecSubType) {
 				LambdaExprMap::const_iterator fit = lambdaExprCache.find(definition);
-				if(fit != lambdaExprCache.end())
-					return fit->second;
+				if(fit != lambdaExprCache.end()) {
+					core::ExpressionPtr irNode = builder.callExpr(fit->second, packedArgs);
+					// handle eventual pragmas attached to the Clang node
+					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
+
+					return ExprWrapper( irNode );
+				}
 			}
 
 			assert(definition && "No definition found for function");
@@ -461,7 +469,11 @@ public:
 
 			// Adding the lambda function to the list of converted functions
 			lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
-			return ExprWrapper( builder.callExpr(lambdaExpr, packedArgs)  );
+
+			core::ExpressionPtr irNode = builder.callExpr(lambdaExpr, packedArgs);
+			// handle eventual pragmas attached to the Clang node
+			frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
+			return ExprWrapper( irNode );
 		}
 		assert(false && "Call expression not referring a function");
 	}
@@ -485,8 +497,10 @@ public:
 
 		// if the binary operator is a comma separated expression, we convert it into
 		// a tuple expression and return it
-		if( binOp->getOpcode() == BO_Comma)
-			return ExprWrapper( builder.tupleExpr({ lhs, rhs }) );
+		if( binOp->getOpcode() == BO_Comma) {
+			assert(false && "Comma separated expressions not handled!");
+			// return ExprWrapper( builder.tupleExpr({ lhs, rhs }) );
+		}
 
 		core::TypePtr exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
 
@@ -593,6 +607,9 @@ public:
 		// build a callExpr with the 2 arguments
 		core::ExpressionPtr retExpr = convFact.builder.callExpr(opFunc, { lhs, rhs });
 
+		// handle eventual pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(retExpr, binOp, convFact);
+
 		END_LOG_EXPR_CONVERSION( retExpr );
 		return ExprWrapper( retExpr );
 	}
@@ -621,7 +638,7 @@ public:
 		// --a
 		case UO_PreDec:
 			assert( core::dynamic_pointer_cast<const core::RefType>(subExpr->getType()) && "LHS operand must of type ref<a'>." );
-			return ExprWrapper(
+			subExpr =
 				// build a tuple expression
 				builder.tupleExpr(
 				std::vector<core::ExpressionPtr>({ 	// ref.assign(a int.add(a, 1))
@@ -645,20 +662,20 @@ public:
 						: // else
 						builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} )
 					)
-				}))
-			) ;
+				}));
 		// &a
 		case UO_AddrOf:
 			// assert(false && "Conversion of AddressOf operator '&' not supported");
-			return ExprWrapper( subExpr );
+			break;
 		// *a
 		case UO_Deref:
 			// return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
-			return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
+			subExpr = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} );
+			break;
 		// +a
 		case UO_Plus:
 			// just return the subexpression
-			return ExprWrapper( subExpr );
+			break;
 		// -a
 		case UO_Minus:
 			assert(false && "Conversion of unary operator '-' not supported");
@@ -675,6 +692,10 @@ public:
 		default:
 			assert(false && "Unary operator not supported");
 		}
+
+		// handle eventual pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(subExpr, unOp, convFact);
+
 		return ExprWrapper( subExpr );
 	}
 
@@ -822,6 +843,9 @@ public:
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
 
 		core::StatementPtr ret = convFact.builder.returnStmt( convFact.ConvertExpr( *retStmt->getRetValue() ) );
+		// handle eventual OpenMP pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(ret, retStmt, convFact);
+
 		END_LOG_STMT_CONVERSION( ret );
 		return StmtWrapper( ret );
 	}
@@ -1047,8 +1071,13 @@ public:
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 		VLOG(2) << "WhileStmt 'condition' expression: " << condExpr;
 
+		core::StatementPtr irNode = builder.whileStmt(condExpr, body);
+
+		// handle eventual OpenMP pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(irNode, whileStmt, convFact);
+
 		// adding the WhileStmt to the list of returned stmts
-		retStmt.push_back( builder.whileStmt(condExpr, body) );
+		retStmt.push_back( irNode );
 		retStmt = tryAggregateStmts(builder, retStmt);
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
@@ -1131,8 +1160,12 @@ public:
 			switchCaseStmt = switchCaseStmt->getNextSwitchCase();
 		}
 
+		core::StatementPtr irNode = builder.switchStmt(condExpr, cases, defStmt);
+		// handle eventual OpenMP pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(irNode, switchStmt, convFact);
+
 		// Appends the switchstmt to the current list of stmt
-		retStmt.push_back( builder.switchStmt(condExpr, cases, defStmt) );
+		retStmt.push_back( irNode );
 		retStmt = tryAggregateStmts(builder, retStmt);
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );

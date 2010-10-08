@@ -244,7 +244,6 @@ bool kwd::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t 
 	errStack.addExpected(recID, ParserStack::Error("\'" + kw + "\'", token.getLocation()));
 	return false;
 }
-
 std::string TokenToStr(clang::tok::TokenKind token) {
 	const char *name = clang::tok::getTokenSimpleSpelling(token);
 	if(name)
@@ -260,6 +259,18 @@ std::string TokenToStr(const clang::Token& token) {
 		return TokenToStr(token.getKind());
 	}
 }
+
+//bool identifier_str::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+//	clang::Token& token = ParserProxy::get().ConsumeToken();
+//	if( token.is(clang::tok::identifier) ) {
+//		if(isAddToMap())
+//			mmap[getMapName()].push_back( ValueUnionPtr(new ValueUnion( TokenToStr(token) )) );
+//		return true;
+//	}
+//	errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(token) + "\'", token.getLocation()));
+//	return false;
+//}
+
 
 void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
 	if (!map_str.size())
