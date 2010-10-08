@@ -97,8 +97,7 @@ private:
 	/**
 	 * Creates a new AST based on the given data.
 	 *
-	 * @param nodeManager a shared node manager to be used to maintain definitions, AST nodes and types.
-	 * @param entryPoints the list of entry points the program is supporting.
+	 * @param entryPoints the list of entry points the program is consisting of.
 	 */
 	Program(const EntryPointSet& entryPoints);
 

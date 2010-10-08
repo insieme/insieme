@@ -477,12 +477,6 @@ NamedCompositeType::Entries migrateToManager(const NodeManager* src, NodeManager
 	return res;
 }
 
-/**
- * A static utility function composing the name of this type.
- *
- * @param prefix the prefix of the type name (union or struct)
- * @param entries the list of entries forming the content of this type
- */
 string NamedCompositeType::buildNameString(const string& prefix, const Entries& elements) {
 	// create output buffer
 	std::stringstream res;
