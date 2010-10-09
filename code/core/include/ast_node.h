@@ -47,6 +47,19 @@ namespace insieme {
 namespace core {
 
 /**
+ * Defines an enumeration containing an entry for every node type. This
+ * enumeration can than be used to identify the actual type of AST nodes
+ * in case the exact type cannot be determined statically.
+ */
+#define CONCRETE(name) NT_ ## name,
+enum NodeType {
+	// the necessary information is obtained from the node-definition file
+	#include "ast_nodes.def"
+};
+#undef CONCRETE
+
+
+/**
  * Defines a macro to forward declare AST node types. Each node type
  * is defined by a class. Further, for each node type a pointer type
  * is defined, which might be used to reference instances of the
@@ -61,22 +74,6 @@ namespace core {
  * Define root-node type.
  */
 DECLARE_NODE_TYPE(Node);
-
-/**
- * An enumeration of the fundamental types of nodes
- * to be present within an AST.
- */
-enum NodeType {
-	SUPPORT,		/* < to represent shared values */
-	TYPE, 			/* < to represent a (data) type  */
-	EXPRESSION,		/* < to represent expressions */
-	STATEMENT, 		/* < to represent statements */
-	PROGRAM			/* < to represent entire programs */
-};
-
-inline bool isNodeType(const NodeType& value) {
-	return SUPPORT <= value && value <= PROGRAM;
-}
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.
@@ -247,6 +244,14 @@ private:
 protected:
 
 	/**
+	 * Construct a new node instance based on the essential features.
+	 *
+	 * @param nodeType the type of node to be created
+	 * @param hashCode the hash code of the new node
+	 */
+	Node(const NodeType nodeType, const std::size_t& hashCode) : HashableImmutableData(hashCode), nodeType(nodeType), manager(NULL) { }
+
+	/**
 	 * Defines the new operator to be protected. This prevents instances of AST nodes to be
 	 * created on the heap, thereby enforcing the usage of the static factory methods and
 	 * NodeManager.
@@ -273,16 +278,6 @@ protected:
 	 * NodeManager.
 	 */
 	void operator delete[](void*, size_t);
-
-	/**
-	 * Construct a new node instance based on the essential features.
-	 *
-	 * @param nodeType the type of node to be created
-	 * @param hashCode the hash code of the new node
-	 */
-	Node(const NodeType& nodeType, const std::size_t& hashCode) : HashableImmutableData(hashCode), nodeType(nodeType), manager(NULL) {
-		assert(isNodeType(nodeType) && "Given Node type is not valid!");
-	}
 
 	/**
 	 * Requests a list of child nodes from the actual node implementation.

@@ -67,7 +67,7 @@ std::size_t hash_value(const Statement& stmt) {
 
 // ------------------------------------- BreakStmt ---------------------------------
 
-BreakStmt::BreakStmt(): Statement(HASHVAL_BREAK) {}
+BreakStmt::BreakStmt(): Statement(NT_BreakStmt, HASHVAL_BREAK) {}
 
 std::ostream& BreakStmt::printTo(std::ostream& out) const {
 	return out << "break";
@@ -93,7 +93,7 @@ BreakStmtPtr BreakStmt::get(NodeManager& manager) {
 
 // ------------------------------------- ContinueStmt ---------------------------------
 
-ContinueStmt::ContinueStmt() : Statement(HASHVAL_CONTINUE) {};
+ContinueStmt::ContinueStmt() : Statement(NT_ContinueStmt, HASHVAL_CONTINUE) {};
 
 std::ostream& ContinueStmt::printTo(std::ostream& out) const {
 	return out << "continue";
@@ -126,7 +126,7 @@ std::size_t hashReturnStmt(const ExpressionPtr& returnExpression) {
 }
 
 ReturnStmt::ReturnStmt(const ExpressionPtr& returnExpression)
-	: Statement(hashReturnStmt(returnExpression)), returnExpression(returnExpression) {
+	: Statement(NT_ReturnStmt, hashReturnStmt(returnExpression)), returnExpression(returnExpression) {
 }
 
 std::ostream& ReturnStmt::printTo(std::ostream& out) const {
@@ -163,7 +163,7 @@ std::size_t hashDeclarationStmt(const VarExprPtr& varExpression, const Expressio
 }
 
 DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression)
-	: Statement(hashDeclarationStmt(varExpression, initExpression)), varExpression(varExpression), initExpression(initExpression) {
+	: Statement(NT_DeclarationStmt, hashDeclarationStmt(varExpression, initExpression)), varExpression(varExpression), initExpression(initExpression) {
 }
 
 std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
@@ -202,7 +202,7 @@ std::size_t hashCompoundStmt(const vector<StatementPtr>& stmts) {
 }
 
 CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
-	: Statement(hashCompoundStmt(stmts)), statements(stmts) { }
+	: Statement(NT_CompoundStmt, hashCompoundStmt(stmts)), statements(stmts) { }
 
 std::ostream& CompoundStmt::printTo(std::ostream& out) const {
 	if (statements.empty()) {
@@ -253,7 +253,7 @@ std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& bo
 }
 
 WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
-	: Statement(hashWhileStmt(condition, body)), condition(condition), body(body) {
+	: Statement(NT_WhileStmt, hashWhileStmt(condition, body)), condition(condition), body(body) {
 }
 
 std::ostream& WhileStmt::printTo(std::ostream& out) const {
@@ -294,7 +294,7 @@ std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPt
 }
 
 ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
-	: Statement(hashForStmt(declaration, body, end, step)), declaration(declaration), body(body), end(end), step(step) {}
+	: Statement(NT_ForStmt, hashForStmt(declaration, body, end, step)), declaration(declaration), body(body), end(end), step(step) {}
 	
 std::ostream& ForStmt::printTo(std::ostream& out) const {
 	return out << "for(" << *declaration << " .. " << *end << " : " << *step << ") " << *body;
@@ -342,7 +342,7 @@ std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenB
 }
 
 IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) :
-	Statement(hashIfStmt(condition, thenBody, elseBody)), condition(condition), thenBody(thenBody), elseBody(elseBody) {
+	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(condition), thenBody(thenBody), elseBody(elseBody) {
 }
 
 IfStmt* IfStmt::createCloneUsing(NodeManager& manager) const {
@@ -396,7 +396,7 @@ std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchS
 }
 
 SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) :
-	Statement(hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(switchExpr), cases(cases), defaultCase(defaultCase) {
+	Statement(NT_SwitchStmt, hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(switchExpr), cases(cases), defaultCase(defaultCase) {
 }
 
 SwitchStmt* SwitchStmt::createCloneUsing(NodeManager& manager) const {

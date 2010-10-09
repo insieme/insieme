@@ -74,6 +74,7 @@ DECLARE_NODE_TYPE(GenericType);
 DECLARE_NODE_TYPE(RecGenericType);
 DECLARE_NODE_TYPE(NamedCompositeType);
 
+DECLARE_NODE_TYPE(SingleElementType);
 DECLARE_NODE_TYPE(ArrayType);
 DECLARE_NODE_TYPE(VectorType);
 DECLARE_NODE_TYPE(RefType);
@@ -144,8 +145,8 @@ protected:
 	 * 					due to type variables. Default: true
 	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
 	 */
-	Type(const std::string& name, const bool concrete = true, const bool functionType = false)
-		: Node(TYPE,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
+	Type(NodeType type, const std::string& name, const bool concrete = true, const bool functionType = false)
+		: Node(type,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
 
 public:
 
@@ -231,7 +232,7 @@ public:
 	 *
 	 * @param name the name of the type variable to be created
 	 */
-	TypeVariable(const string& name) : Type(format("'%s", name.c_str()), false, false) { }
+	TypeVariable(const string& name) : Type(NT_TypeVariable, format("'%s", name.c_str()), false, false) { }
 
 private:
 
@@ -314,7 +315,7 @@ public:
 	 * Creates a new tuple type based on the given element types.
 	 */
 	TupleType(const ElementTypeList& elementTypes) :
-		Type(buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
+		Type(NT_TupleType, buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
 
 private:
 
@@ -373,7 +374,7 @@ public:
 	 * @param returnType a reference to the type used as return type
 	 */
 	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
-		Type(format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
+		Type(NT_FunctionType, format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
 		argumentType(argumentType), returnType(returnType) {
 	}
 
@@ -651,6 +652,23 @@ public:
 protected:
 
 	/**
+	 * A special constructor which HAS to be used by all sub-classes to ensure
+	 * that the node type token is matching the actual class type.
+	 *
+	 * @param nodeType		the token to be used to identify the type of this node
+	 * @param name 			the name of the new type (only the prefix)
+	 * @param typeParams	the type parameters of this type, concrete or variable
+	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+	 * @param baseType		the base type of this generic type
+	 */
+	GenericType(NodeType nodeType,
+			const Identifier& name,
+			const vector<TypePtr>& typeParams = vector<TypePtr> (),
+			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const TypePtr& baseType = NULL);
+
+
+	/**
 	 * Creates a clone of this node.
 	 */
 	virtual GenericType* createCloneUsing(NodeManager& manager) const;
@@ -843,12 +861,13 @@ protected:
 	/**
 	 * Creates a new named composite type having the given name and set of entries.
 	 *
+	 * @param nodeType the token to identify the actual type of the resulting node
 	 * @param prefix the prefix to be used for the new type (union or struct)
 	 * @param entries the entries of the new type
 	 *
 	 * @throws std::invalid_argument if the same identifier is used more than once within the type
 	 */
-	NamedCompositeType(const string& prefix, const Entries& entries);
+	NamedCompositeType(NodeType nodeType, const string& prefix, const Entries& entries);
 
 	/**
 	 * Obtains a list of all child sub-types used within this struct.
@@ -901,7 +920,7 @@ class StructType: public NamedCompositeType {
 	 * @param entries the entries the new type should consist of
 	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
 	 */
-	StructType(const Entries& entries) : NamedCompositeType("struct", entries) {}
+	StructType(const Entries& entries) : NamedCompositeType(NT_StructType, "struct", entries) {}
 
 	/**
 	 * Creates a clone of this type within the given manager.
@@ -938,7 +957,7 @@ class UnionType: public NamedCompositeType {
 	 * @param elements the elements the new type should consist of
 	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
 	 */
-	UnionType(const Entries& elements) : NamedCompositeType("union", elements) {}
+	UnionType(const Entries& elements) : NamedCompositeType(NT_UnionType, "union", elements) {}
 
 	/**
 	 * Creates a clone of this type within the given manager.
@@ -975,15 +994,16 @@ protected:
 	 * Creates a new instance of this class using the given name, element type and
 	 * integer parameters.
 	 *
+	 * @param nodeType the node type of the concrete implementation of this abstract class
 	 * @param name the (prefix) of the name of the new type
 	 * @param elementType its single type parameter
 	 * @param intTypeParams additional integer type parameters. By default this parameters
 	 * 						will be set to an empty set.
 	 */
-	SingleElementType(const string& name,
+	SingleElementType(NodeType nodeType, const string& name,
 			const TypePtr& elementType,
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ()) :
-		GenericType(name, toVector(elementType), intTypeParams) {};
+		GenericType(nodeType, name, toVector(elementType), intTypeParams) {};
 
 public:
 
@@ -1108,8 +1128,7 @@ public:
 	 *
 	 * @param elementType the type the new type should reference to.
 	 */
-	RefType(const TypePtr& elementType) :
-		SingleElementType("ref", elementType) {}
+	RefType(const TypePtr& elementType);
 
 private:
 

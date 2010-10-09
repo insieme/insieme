@@ -92,7 +92,7 @@ class Statement : public Node {
 
 protected:
 
-	Statement(std::size_t hashCode, bool isExpr = false) : Node((isExpr)?EXPRESSION:STATEMENT, hashCode) {}
+	Statement(NodeType type, std::size_t hashCode, bool isExpr = false) : Node(type, hashCode) {}
 
 	virtual bool equals(const Node& node) const;
 	virtual bool equalsStmt(const Statement& stmt) const = 0;

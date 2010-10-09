@@ -64,7 +64,7 @@ void NavigatingASTVisitor::visit(const NodePtr& node) {
 	path->push_back(NodeAddress::PathEntry(pos,node));
 
 	// trigger node visit ..
-	dispatchNode(node);
+	ASTVisitor::visit(node);
 
 	// remove last element
 	path->pop_back();

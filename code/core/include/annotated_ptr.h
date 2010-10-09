@@ -68,6 +68,12 @@ dynamic_pointer_cast(AnnotatedPtr<T> src) {
 	return NULL;
 }
 
+template<typename B, typename T>
+typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type
+static_pointer_cast(AnnotatedPtr<T> src) {
+	return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
+}
+
 } // end namespace core
 } // end namespace insieme
 
