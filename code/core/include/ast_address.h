@@ -209,6 +209,10 @@ public:
 		return *getAddressedNode();
 	}
 
+	const Node* operator->() const {
+		return &*getAddressedNode();
+	}
+
 protected:
 
 	/**

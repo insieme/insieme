@@ -47,17 +47,23 @@
 #include "statements.h"
 #include "types.h"
 
+#include "ast_address.h"
+
 namespace insieme {
 namespace core {
 
-template<typename ReturnType = void>
+template<
+	typename ReturnType = void,
+	template<class Target> class Ptr = AnnotatedPtr,
+	template<class T> class StaticCast = StaticAnnotatedPtrCast
+>
 class ASTVisitor {
 
 public:
 
 	typedef ReturnType return_type;
 
-	virtual ReturnType visit(const NodePtr& node) {
+	virtual ReturnType visit(const Ptr<const Node>& node) {
 		assert ( node && "Cannot visit NULL node!");
 
 		// dispatch to correct visit method
@@ -67,7 +73,7 @@ public:
 			#define CONCRETE(name) \
 				case NT_ ## name : \
 					assert(dynamic_cast<const name*>(&*node) && "Type token NT_" #name " does not match type!"); \
-					return visit ## name (static_pointer_cast<const name>(node));
+					return visit ## name (StaticCast<const name>()(node));
 
 					// take all nodes ...
 					#include "ast_nodes.def"
@@ -83,18 +89,74 @@ public:
 
 	// ------------------ protected visitor methods -----------------------
 
+protected:
+
 #define IS_A(CLASS, PARENT) \
-	inline virtual ReturnType visit ## CLASS(const CLASS ## Ptr& ptr) { \
+	inline virtual ReturnType visit ## CLASS(const Ptr<const CLASS>& ptr) { \
 		assert ( !!ptr && "Cannot visit NULL pointer!"); \
 		return visit ## PARENT(ptr); \
 	}
-#include "ast_nodes.def"
+	#include "ast_nodes.def"
 #undef IS_A
 
 	/**
 	 * Implements a the base not visit.
 	 */
-	virtual ReturnType visitNode(const NodePtr&) {
+	virtual ReturnType visitNode(const Ptr<const Node>&) {
+		// by default, do nothing
+		return ReturnType();
+	}
+
+};
+
+
+template<typename ReturnType = void>
+class AddressVisitor {
+
+public:
+
+	typedef ReturnType return_type;
+
+	virtual ReturnType visit(const NodeAddress& address) {
+		assert ( address && "Cannot visit NULL node!");
+
+		// dispatch to correct visit method
+		switch(address->getNodeType()) {
+
+			// Generate all cased from node definition file
+			#define CONCRETE(name) \
+				case NT_ ## name : \
+					assert(dynamic_cast<const name*>(&*address) && "Type token NT_" #name " does not match type!"); \
+					return visit ## name (address);
+
+					// take all nodes ...
+					#include "ast_nodes.def"
+
+			#undef CONCRETE
+
+		}
+
+		// fail => invalid node type!
+		assert ( false && "Cannot dispatch unknown node type!" );
+		return ReturnType();
+	}
+
+	// ------------------ protected visitor methods -----------------------
+
+protected:
+
+#define IS_A(CLASS, PARENT) \
+	inline virtual ReturnType visit ## CLASS(const NodeAddress& address) { \
+		assert ( address && "Cannot visit invalid address!"); \
+		return visit ## PARENT(address); \
+	}
+	#include "ast_nodes.def"
+#undef IS_A
+
+	/**
+	 * Implements a the base not visit.
+	 */
+	virtual ReturnType visitNode(const NodeAddress&) {
 		// by default, do nothing
 		return ReturnType();
 	}
