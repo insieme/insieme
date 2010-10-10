@@ -34,52 +34,61 @@
  * regarding third party software licenses.
  */
 
-#include "ast_navigating_visitor.h"
+#include <gtest/gtest.h>
+
+#include "ast_builder.h"
+#include "ast_check.h"
+#include "container_utils.h"
 
 namespace insieme {
 namespace core {
 
-void NavigatingASTVisitor::visit(const NodePtr& node) {
-	// check if this is the first time the visit is entered
-	bool first = !path;
 
-	// initialize the path in case it is the first invocation
-	if (first) {
-		path = new std::list<NodeAddress::PathEntry>();
+class AllFine : public ASTCheck {};
+
+class IDontLikeAnythingCheck : public ASTCheck {
+	MessageList visitNode(const NodeAddress& node) {
+		return toVector(Message(node, "I hat it!"));
 	}
+};
 
-	// add node to path
-
-	// FIXME: this is ugly and may lead to false results if the same node is referenced twice within the child list
-	int pos = 0;
-	if (!first) {
-
-		Node::ChildList list = path->back().second->getChildList();
-		auto iter = std::find(list.begin(), list.end(), node);
-		assert(iter != list.end() && "Child not present!");
-
-		pos = iter - list.begin();
+class IAmScaredCheck : public ASTCheck {
+	MessageList visitNode(const NodeAddress& node) {
+		return toVector(Message(node, "Don't know - I'm scared!", Message::WARNING));
 	}
+};
 
-	path->push_back(NodeAddress::PathEntry(pos,node));
+TEST(ASTCheck, Basic) {
+	ASTBuilder builder;
 
-	// trigger node visit ..
-	ASTVisitor::visit(node);
+	// OK ... create a simple node
+	TypePtr type = builder.genericType("A");
+	NodeAddress addr(type);
 
-	// remove last element
-	path->pop_back();
+	Message msgA(addr, "I hat it!");
+	Message msgB(addr, "Don't know - I'm scared!", Message::WARNING);
 
-	// clean up visit after termination of recursive visiting
-	if (first) {
-		delete path;
-		path = NULL;
-	}
+	EXPECT_EQ("0", toString(addr));
+	NodeAddress& adr2 = addr;
+	EXPECT_EQ("0", toString(adr2));
+	EXPECT_EQ("ERROR:   @ (0) - MSG: I hat it!", toString(msgA));
+	EXPECT_EQ("WARNING: @ (0) - MSG: Don't know - I'm scared!", toString(msgB));
+
+	MessageList res = check(type, AllFine());
+	EXPECT_TRUE(equals(toVector<Message>(), res));
+
+	res = check(type, IDontLikeAnythingCheck());
+	EXPECT_TRUE(equals(toVector(msgA), res));
+
+	res = check(type, IAmScaredCheck());
+	EXPECT_TRUE(equals(toVector(msgB), res));
+
+	res = check(type, CombinedASTCheck(toVector<SharedCheck>(std::make_shared<IAmScaredCheck>(), std::make_shared<IDontLikeAnythingCheck>())));
+	EXPECT_EQ(toVector(msgB, msgA), res);
+
 }
 
-
-NodeAddress NavigatingASTVisitor::getCurrentAddress() {
-	return NodeAddress(NodeAddress::Path(path->begin(), path->end()));
-}
 
 } // end namespace core
 } // end namespace insieme
+

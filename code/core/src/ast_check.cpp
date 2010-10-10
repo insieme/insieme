@@ -50,7 +50,7 @@ void CombinedASTCheck::remCheck(std::shared_ptr<ASTCheck>& check) {
 	remove(checks.begin(), checks.end(), check);
 }
 
-MessageList CombinedASTCheck::visitNode(const NodePtr& node) {
+MessageList CombinedASTCheck::visitNode(const NodeAddress& node) {
 	// aggregate list of all error / warning messages
 	MessageList list;
 	for_each(checks.begin(), checks.end(), [&list, &node](const std::shared_ptr<ASTCheck>& cur) {
@@ -61,35 +61,34 @@ MessageList CombinedASTCheck::visitNode(const NodePtr& node) {
 
 
 MessageList check(NodePtr& node, ASTCheck& check) {
-	return check.visit(node); // TODO: add address!!
+	return check.visit(node);
 }
 
-MessageList checkRecursive(NodePtr& node, ASTCheck& check) {
-	return MessageList(); // TODO: apply actual test
-}
-
-MessageList check(NodePtr& node, vector<ASTCheck*> checks) {
-	return MessageList(); // TODO: apply actual test
-}
-
-MessageList checkRecursive(NodePtr& node, vector<ASTCheck*> checks) {
-	return MessageList(); // TODO: apply actual test
+MessageList check(NodeAddress& node, ASTCheck& check) {
+	return check.visit(node);
 }
 
 
-std::ostream& operator<<(std::ostream& out, const Message& message) {
+bool Message::operator==(const Message& other) const {
+	return type == other.type && address == other.address && message == other.message;
+}
+
+} // end namespace core
+} // end namespace insieme
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::Message& message) {
 
 	// start with type ...
 	switch(message.getType()) {
-	case Message::Type::WARNING:
-		out << "WARNING: ";
-	case Message::Type::ERROR:
-		out << "ERROR:   ";
+	case insieme::core::Message::Type::WARNING:
+		out << "WARNING: "; break;
+	case insieme::core::Message::Type::ERROR:
+		out << "ERROR:   "; break;
 	}
 
 	// .. continue with location ..
-	out << "@ ";
-	const NodeAddress& address = message.getAddress();
+	out << "@ (";
+	const insieme::core::NodeAddress& address = message.getAddress();
 	if (address.isValid()) {
 		out << address;
 	} else {
@@ -97,10 +96,6 @@ std::ostream& operator<<(std::ostream& out, const Message& message) {
 	}
 
 	// .. and conclude with the message.
-	out << " - " << message.getMessage();
+	out << ") - MSG: " << message.getMessage();
 	return out;
 }
-
-
-} // end namespace core
-} // end namespace insieme

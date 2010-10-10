@@ -63,7 +63,8 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_EQ(root, addrRoot.getRootNode());
 	EXPECT_EQ(addrRoot, addrRoot.getParentNodeAddress(0));
 
-	EXPECT_EQ(toString(toVector(NodeAddress::PathEntry(0, root))), toString(addrRoot.getPath()));
+	EXPECT_EQ(toString(toVector(PathEntry(0, root))), toString(addrRoot.getPath()));
+	EXPECT_EQ("0", toString(addrRoot));
 
 	// go to node R-A
 	NodeAddress addrA = addrRoot.getAddressOfChild(0);
@@ -78,7 +79,8 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_EQ(typeA, addrA.getParentNode(0));
 	EXPECT_EQ(root,  addrA.getParentNode(1));
 
-	EXPECT_EQ(toString(toVector(NodeAddress::PathEntry(0,root), NodeAddress::PathEntry(0,typeA))), toString(addrA.getPath()));
+	EXPECT_EQ(toString(toVector(PathEntry(0,root), PathEntry(0,typeA))), toString(addrA.getPath()));
+	EXPECT_EQ("0-0", toString(addrA));
 
 	// go to child R-A-2
 	TypePtr type2 = builder.genericType("2");
@@ -96,7 +98,8 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_EQ(typeA, addrA2.getParentNode(1));
 	EXPECT_EQ(root,  addrA2.getParentNode(2));
 
-	EXPECT_EQ(toString(toVector(NodeAddress::PathEntry(0,root), NodeAddress::PathEntry(0,typeA), NodeAddress::PathEntry(1,type2))), toString(addrA2.getPath()));
+	EXPECT_EQ(toString(toVector(PathEntry(0,root), PathEntry(0,typeA), PathEntry(1,type2))), toString(addrA2.getPath()));
+	EXPECT_EQ("0-0-1", toString(addrA2));
 }
 
 
@@ -112,9 +115,9 @@ TEST(NodeAddressTest, EqualityTest) {
 	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
 	// start with root node R
-	NodeAddress ABD1(toVector<NodeAddress::PathEntry>(std::make_pair(-1,typeA), std::make_pair(0,typeB), std::make_pair(0,typeD)));
-	NodeAddress ABD2(toVector<NodeAddress::PathEntry>(std::make_pair(-1,typeA), std::make_pair(0,typeB), std::make_pair(0,typeD)));
-	NodeAddress ACD(toVector<NodeAddress::PathEntry>(std::make_pair(-1,typeA), std::make_pair(1,typeC), std::make_pair(0,typeD)));
+	NodeAddress ABD1(toVector(PathEntry(-1,typeA), PathEntry(0,typeB), PathEntry(0,typeD)));
+	NodeAddress ABD2(toVector(PathEntry(-1,typeA), PathEntry(0,typeB), PathEntry(0,typeD)));
+	NodeAddress ACD(toVector(PathEntry(-1,typeA), PathEntry(1,typeC), PathEntry(0,typeD)));
 
 	EXPECT_EQ(ABD1, ABD2);
 	EXPECT_NE(ABD1, ACD);

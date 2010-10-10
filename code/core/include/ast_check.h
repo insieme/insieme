@@ -38,9 +38,9 @@
 
 #include <memory>
 
-#include "enum.h"
-#include "ast_visitor.h"
 #include "ast_address.h"
+#include "ast_visitor.h"
+#include "enum.h"
 
 namespace insieme {
 namespace core {
@@ -49,28 +49,33 @@ namespace core {
 class Message;
 typedef std::vector<Message> MessageList;
 
-class ASTCheck : public ASTVisitor<MessageList> {};
+class ASTCheck : public AddressVisitor<MessageList> {};
+
+typedef std::shared_ptr<ASTCheck> SharedCheck;
+typedef std::vector<SharedCheck> CheckList;
 
 class CombinedASTCheck : public ASTCheck {
 
-	std::vector<std::shared_ptr<ASTCheck>> checks;
+	CheckList checks;
 
 public:
 
-	CombinedASTCheck(const std::vector<std::shared_ptr<ASTCheck>>& checks = std::vector<std::shared_ptr<ASTCheck>>()) : checks(checks) {};
+	CombinedASTCheck(const CheckList& checks = CheckList()) : checks(checks) {};
 
-	void addCheck(std::shared_ptr<ASTCheck>& check);
-	void remCheck(std::shared_ptr<ASTCheck>& check);
+	void addCheck(SharedCheck& check);
+	void remCheck(SharedCheck& check);
 
 protected:
 
-	MessageList visitNode(const NodePtr& node);
+	MessageList visitNode(const NodeAddress& node);
 };
 
-MessageList check(NodePtr& node, ASTCheck& check);
-MessageList checkRecursive(NodePtr& node, ASTCheck& check);
-MessageList check(NodePtr& node, vector<ASTCheck*> checks);
-MessageList checkRecursive(NodePtr& node, vector<ASTCheck*> checks);
+template<typename N, typename C>
+MessageList check(N node, C check) {
+	return check.visit(node);
+}
+
+// TODO: add recursive check
 
 /**
  * TODO: improve this class - e.g. by supporting messages referencing multiple addresses
@@ -115,7 +120,8 @@ public:
 	 * @param message a message describing the issue
 	 * @param type the type of the new message (ERROR by default)
 	 */
-	Message(const NodeAddress& address, const string& message, Type type = ERROR);
+	Message(const NodeAddress& address, const string& message, Type type = ERROR)
+		: type(type), address(address), message(message) {};
 
 	/**
 	 * Obtains the address of the node this message is associated to.
@@ -141,13 +147,18 @@ public:
 	Type getType() const {
 		return type;
 	}
+
+	bool operator==(const Message& other) const;
+
+	bool operator!=(const Message& other) const {
+		return !(*this == other);
+	}
 };
+
+} // end namespace core
+} // end namespace insieme
 
 /**
  * Allows messages to be printed to an output stream.
  */
-std::ostream& operator<<(std::ostream& out, const Message& message);
-
-
-} // end namespace core
-} // end namespace insieme
+std::ostream& operator<<(std::ostream& out, const insieme::core::Message& message);

@@ -63,17 +63,23 @@ public:
 
 	typedef ReturnType return_type;
 
-	virtual ReturnType visit(const Ptr<const Node>& node) {
-		assert ( node && "Cannot visit NULL node!");
+	/**
+	 * Instructs this visitor to visit / process the given element.
+	 *
+	 * @param element the element to be visited / processed
+	 * @return the result of the visiting process
+	 */
+	virtual ReturnType visit(const Ptr<const Node>& element) {
+		assert ( element && "Cannot visit NULL element!");
 
 		// dispatch to correct visit method
-		switch(node->getNodeType()) {
+		switch(element->getNodeType()) {
 
-			// Generate all cased from node definition file
+			// Generate all cases using node definition file
 			#define CONCRETE(name) \
 				case NT_ ## name : \
-					assert(dynamic_cast<const name*>(&*node) && "Type token NT_" #name " does not match type!"); \
-					return visit ## name (StaticCast<const name>()(node));
+					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
+					return visit ## name (*(StaticCast<const name>()(&element)));
 
 					// take all nodes ...
 					#include "ast_nodes.def"
@@ -91,16 +97,26 @@ public:
 
 protected:
 
-#define IS_A(CLASS, PARENT) \
-	inline virtual ReturnType visit ## CLASS(const Ptr<const CLASS>& ptr) { \
-		assert ( !!ptr && "Cannot visit NULL pointer!"); \
-		return visit ## PARENT(ptr); \
-	}
-	#include "ast_nodes.def"
-#undef IS_A
+	/**
+	 * By default, every visitXXX method is just forwarding the call to the visitYYY method
+	 * where YYY is the direct parent class of XXX. Subclasses of this generic visitor may
+	 * override selected visitZZZ methods to tap into the visit processing.
+	 *
+	 * The visitXXX() methods are protected to avoid externally from inadvertently invoking
+	 * a specific visit method instead of the dispatching visit(...) method.
+	 */
+	#define IS_A(CLASS, PARENT) \
+		inline virtual ReturnType visit ## CLASS(const Ptr<const CLASS>& ptr) { \
+			assert ( !!ptr && "Cannot visit NULL pointer!"); \
+			return visit ## PARENT(ptr); \
+		}
+		#include "ast_nodes.def"
+	#undef IS_A
 
 	/**
-	 * Implements a the base not visit.
+	 * Implements a the base not visit. In case none of the visitXXX methods along the forwarding
+	 * chain have been overridden, this method will be reached. By default, it returns an instance
+	 * of a default constructed element of the return type.
 	 */
 	virtual ReturnType visitNode(const Ptr<const Node>&) {
 		// by default, do nothing
@@ -110,58 +126,12 @@ protected:
 };
 
 
+/**
+ * A visitor implementation operating on node addresses instead of node
+ * pointer.
+ */
 template<typename ReturnType = void>
-class AddressVisitor {
-
-public:
-
-	typedef ReturnType return_type;
-
-	virtual ReturnType visit(const NodeAddress& address) {
-		assert ( address && "Cannot visit NULL node!");
-
-		// dispatch to correct visit method
-		switch(address->getNodeType()) {
-
-			// Generate all cased from node definition file
-			#define CONCRETE(name) \
-				case NT_ ## name : \
-					assert(dynamic_cast<const name*>(&*address) && "Type token NT_" #name " does not match type!"); \
-					return visit ## name (address);
-
-					// take all nodes ...
-					#include "ast_nodes.def"
-
-			#undef CONCRETE
-
-		}
-
-		// fail => invalid node type!
-		assert ( false && "Cannot dispatch unknown node type!" );
-		return ReturnType();
-	}
-
-	// ------------------ protected visitor methods -----------------------
-
-protected:
-
-#define IS_A(CLASS, PARENT) \
-	inline virtual ReturnType visit ## CLASS(const NodeAddress& address) { \
-		assert ( address && "Cannot visit invalid address!"); \
-		return visit ## PARENT(address); \
-	}
-	#include "ast_nodes.def"
-#undef IS_A
-
-	/**
-	 * Implements a the base not visit.
-	 */
-	virtual ReturnType visitNode(const NodeAddress&) {
-		// by default, do nothing
-		return ReturnType();
-	}
-
-};
+class AddressVisitor : public ASTVisitor<ReturnType, Address, StaticAddressCast> { };
 
 /**
  * TODO: comment
