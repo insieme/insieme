@@ -79,19 +79,12 @@ ivec(int,4)
 ivec(int,8)
 ivec(int,16)
 
-#if _WIN64 || __amd64__
-ivec(long,2)
-ivec(long,3)
-ivec(long,4)
-ivec(long,8)
-ivec(long,16)
-#else
+//assuming that long long is 64 bit wide on all architectures
 typedef __attribute__((ext_vector_type(2))) long long long2; typedef __attribute__((ext_vector_type(2))) unsigned long long ulong2;
 typedef __attribute__((ext_vector_type(3))) long long long3; typedef __attribute__((ext_vector_type(3))) unsigned long long ulong3;
 typedef __attribute__((ext_vector_type(4))) long long long4; typedef __attribute__((ext_vector_type(4))) unsigned long long ulong4;
 typedef __attribute__((ext_vector_type(8))) long long long8; typedef __attribute__((ext_vector_type(8))) unsigned long long ulong8;
 typedef __attribute__((ext_vector_type(16))) long long long16; typedef __attribute__((ext_vector_type(16))) unsigned long long ulong16;
-#endif
 
 fvec(float,2)
 fvec(float,3)

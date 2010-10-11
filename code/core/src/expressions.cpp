@@ -69,7 +69,7 @@ static std::size_t hashLiteral(const TypePtr& type, const string& value) {
 }
 
 Literal::Literal(const TypePtr& type, const string& value) :
-		Expression(type,::hashLiteral(type, value)), value(value) { }
+		Expression(NT_Literal, type,::hashLiteral(type, value)), value(value) { }
 
 
 Literal* Literal::createCloneUsing(NodeManager& manager) const {
@@ -89,8 +89,11 @@ std::size_t hashVarExpr(const TypePtr& type, const Identifier& id) {
 	return seed;
 }
 
-VarExpr::VarExpr(const TypePtr& type, const Identifier& id) : Expression(type, ::hashVarExpr(type, id)), id(id) { };
-VarExpr::VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode) : Expression(type, hashCode), id(id) { };
+VarExpr::VarExpr(const TypePtr& type, const Identifier& id)
+	: Expression(NT_VarExpr, type, ::hashVarExpr(type, id)), id(id) { };
+
+VarExpr::VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode)
+	: Expression(NT_VarExpr, type, hashCode), id(id) { };
 
 VarExpr* VarExpr::createCloneUsing(NodeManager& manager) const {
 	return new VarExpr(migratePtr(type, manager), id);
@@ -145,7 +148,7 @@ std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& par
 }
 
 LambdaExpr::LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body)
-		: Expression(type, ::hashLambdaExpr(type, params, body)), body(body), params(params) { };
+		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), body(body), params(params) { };
 
 LambdaExpr* LambdaExpr::createCloneUsing(NodeManager& manager) const {
 	return new LambdaExpr(
@@ -187,7 +190,7 @@ std::size_t hashTupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expr
 }
 
 TupleExpr::TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions)
-		: Expression(type, hashTupleExpr(type, expressions)), expressions(expressions) { };
+		: Expression(NT_TupleExpr, type, hashTupleExpr(type, expressions)), expressions(expressions) { };
 
 TupleExpr* TupleExpr::createCloneUsing(NodeManager& manager) const {
 	return new TupleExpr(
@@ -222,8 +225,8 @@ TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& e
 
 // ------------------------------------- NamedCompositeExpr ---------------------------------
 
-NamedCompositeExpr::NamedCompositeExpr(const TypePtr& type, size_t hashval, const Members& members)
-	: Expression(type, hashval), members(members) { }
+NamedCompositeExpr::NamedCompositeExpr(NodeType nodeType, const TypePtr& type, size_t hashval, const Members& members)
+	: Expression(nodeType, type, hashval), members(members) { }
 
 bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
@@ -267,7 +270,7 @@ Node::OptionChildList NamedCompositeExpr::getChildNodes() const {
 // ------------------------------------- StructExpr ---------------------------------
 
 StructExpr::StructExpr(const TypePtr& type, const Members& members)
-	: NamedCompositeExpr(type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
+	: NamedCompositeExpr(NT_StructExpr, type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
 
 StructExpr* StructExpr::createCloneUsing(NodeManager& manager) const {
 	return new StructExpr(migratePtr(type, manager), getManagedMembers(manager));
@@ -286,7 +289,7 @@ StructExprPtr StructExpr::get(NodeManager& manager, const Members& members) {
 // ------------------------------------- UnionExpr ---------------------------------
 
 UnionExpr::UnionExpr(const TypePtr& type, const Members& members)
-	: NamedCompositeExpr(type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
+	: NamedCompositeExpr(NT_UnionExpr, type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
 
 UnionExpr* UnionExpr::createCloneUsing(NodeManager& manager) const {
 	return new UnionExpr(migratePtr(type, manager), getManagedMembers(manager));
@@ -316,7 +319,7 @@ size_t hashJobExpr(const StatementPtr& defaultStmt, const JobExpr::GuardedStmts&
 }
 
 JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
-	: Expression(type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
+	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
 	  localDecls(localDecls), guardedStmts(guardedStmts), defaultStmt(defaultStmt) { }
 
 JobExpr* JobExpr::createCloneUsing(NodeManager& manager) const {
@@ -383,10 +386,10 @@ std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr,
 }
 
 CallExpr::CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
-		: Expression(type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(functionExpr), arguments(arguments) { }
+		: Expression(NT_CallExpr, type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(functionExpr), arguments(arguments) { }
 
 CallExpr::CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
-		: Expression(::getReturnType(functionExpr), ::hashCallExpr(::getReturnType(functionExpr), functionExpr, arguments)),
+		: Expression(NT_CallExpr, ::getReturnType(functionExpr), ::hashCallExpr(::getReturnType(functionExpr), functionExpr, arguments)),
 		  functionExpr(functionExpr), arguments(arguments) { }
 
 CallExpr* CallExpr::createCloneUsing(NodeManager& manager) const {
@@ -433,7 +436,7 @@ std::size_t hashCastExpr(const TypePtr& type, const ExpressionPtr& subExpression
 }
 
 CastExpr::CastExpr(const TypePtr& type, const ExpressionPtr& subExpression)
-		: Expression(type, hashCastExpr(type, subExpression)), subExpression(subExpression) { }
+		: Expression(NT_CastExpr, type, hashCastExpr(type, subExpression)), subExpression(subExpression) { }
 
 CastExpr* CastExpr::createCloneUsing(NodeManager& manager) const {
 	return new CastExpr(
@@ -474,7 +477,7 @@ std::size_t hashRecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& defin
 }
 
 RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions)
-	: Node(SUPPORT, hashRecLambdaDefinition(definitions)), definitions(definitions) { };
+	: Node(NT_RecLambdaDefinition, hashRecLambdaDefinition(definitions)), definitions(definitions) { };
 
 RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::RecFunDefs& definitions) {
 	return manager.get(RecLambdaDefinition(definitions));
@@ -536,7 +539,7 @@ std::size_t hashRecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinit
 }
 
 RecLambdaExpr::RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition)
-	: Expression(variable->getType(), ::hashRecLambdaExpr(variable, definition)), variable(variable), definition(definition) { }
+	: Expression(NT_RecLambdaExpr, variable->getType(), ::hashRecLambdaExpr(variable, definition)), variable(variable), definition(definition) { }
 
 RecLambdaExpr* RecLambdaExpr::createCloneUsing(NodeManager& manager) const {
 	return new RecLambdaExpr(

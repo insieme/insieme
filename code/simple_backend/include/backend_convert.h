@@ -77,11 +77,45 @@ public:
 		// generate a new name string
 		std::stringstream name;
 		switch(ptr->getNodeType()) {
-		case SUPPORT:		name << "supp"; break;
-		case TYPE:			name << "type"; break;
-		case EXPRESSION:	name << "expr"; break;
-		case STATEMENT:		name << "stat"; break;
-		case PROGRAM:		name << "prog"; break;
+			case NT_RecTypeDefinition:
+			case NT_RecLambdaDefinition:
+				name << "supp"; break;
+			case NT_ArrayType:
+			case NT_ChannelType:
+			case NT_GenericType:
+			case NT_FunctionType:
+			case NT_RecType:
+			case NT_RefType:
+			case NT_StructType:
+			case NT_TupleType:
+			case NT_UnionType:
+			case NT_VectorType:
+			case NT_TypeVariable:
+				name << "type"; break;
+			case NT_CallExpr:
+			case NT_CastExpr:
+			case NT_JobExpr:
+			case NT_LambdaExpr:
+			case NT_ParamExpr:
+			case NT_RecLambdaExpr:
+			case NT_Literal:
+			case NT_StructExpr:
+			case NT_TupleExpr:
+			case NT_UnionExpr:
+			case NT_VarExpr:
+				name << "expr"; break;
+			case NT_BreakStmt:
+			case NT_CompoundStmt:
+			case NT_ContinueStmt:
+			case NT_DeclarationStmt:
+			case NT_ForStmt:
+			case NT_IfStmt:
+			case NT_ReturnStmt:
+			case NT_SwitchStmt:
+			case NT_WhileStmt:
+				name << "stat"; break;
+			case NT_Program:
+				name << "prog"; break;
 		}
 		name << "_" << num++;
 		nameMap.insert(make_pair(ptr, name.str()));

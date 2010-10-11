@@ -90,7 +90,7 @@ protected:
 	/** The type of the expression. */
 	const TypePtr type;
 	
-	Expression(const TypePtr& type, const std::size_t& hashCode) : Statement(hashCode, true), type(type) { };
+	Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode) : Statement(nodeType, hashCode, true), type(type) { };
 
 	virtual bool equals(const Node& stmt) const;
 	virtual bool equalsExpr(const Expression& expr) const = 0;
@@ -384,7 +384,7 @@ public:
 	typedef std::vector<Member> Members;
 
 protected:
-	NamedCompositeExpr(const TypePtr& type, size_t hashval, const Members& members);
+	NamedCompositeExpr(NodeType nodeType, const TypePtr& type, size_t hashval, const Members& members);
 
 	const Members members;
 	bool equalsExpr(const Expression& expr) const;

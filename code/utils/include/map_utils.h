@@ -63,6 +63,7 @@ namespace map {
  * @tparam MapB the type of the second map
  * @param mapA the first map
  * @param mapB the second map
+ * @param comparator the comparator used to compare values within the maps
  * @return true if equivalent, false otherwise
  */
 template<typename MapA, typename MapB, typename Comparator>
@@ -137,9 +138,9 @@ std::size_t computeHash(const Map& map, Hasher hasher) {
  * @return a hash value for the given map
  */
 template<typename Map>
-std::size_t computeHash(const Map& set) {
+std::size_t computeHash(const Map& map) {
 	typedef typename Map::mapped_type Element;
-	return computeHash(set, boost::hash<Element>());
+	return computeHash(map, boost::hash<Element>());
 }
 
 } // end namespace: map

@@ -327,6 +327,17 @@ struct expr_p: public MappableNode<expr_p> {
 };
 
 /**
+ * This node matches an expression, due to the complexity of defining a regular expression which can map C/C++ expressions, the clang Parser
+ * is used directly. NOTICE: a comma separated value list will be consumed by this node as it is a regular C expression.
+ */
+//struct identifier_str: public MappableNode<identifier_str> {
+//	identifier_str() { }
+//	identifier_str(std::string const& map_str, bool addToMap=true) : MappableNode<identifier_str>(map_str, addToMap) { }
+//
+//	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+//};
+
+/**
  * Utility function for adding a token with a specific key to the matcher map.
  */
 void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);

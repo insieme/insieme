@@ -35,84 +35,22 @@
  */
 
 #include "ast_address.h"
-#include "container_utils.h"
+
 
 namespace insieme {
 namespace core {
 
-
-NodeAddress::NodeAddress(const NodePtr& root)
-	: HashableImmutableData(boost::hash_value(toVector(root))), path(toVector(root)) {}
-
-NodeAddress::NodeAddress(const std::vector<NodePtr>& path) : HashableImmutableData(boost::hash_value(path)), path(path) {}
-
-NodePtr NodeAddress::getRootNode() const {
-	assert(!path.empty() && "Invalid node address!");
-	return path[0]; // first element of path = root node
-}
-
-NodePtr NodeAddress::getParentNode(unsigned level) const {
-	assert(path.size() > level && "Invalid parent node level!");
-	return path[path.size() - level - 1];
-}
-
-NodePtr NodeAddress::getAddressedNode() const {
-	assert(!path.empty() && "Invalid node address!");
-	return path[path.size() - 1];
-}
-
-NodeAddress NodeAddress::getRootNodeAddress() const {
-	return NodeAddress(getRootNode());
-}
-
-NodeAddress NodeAddress::getParentNodeAddress(unsigned level) const {
-	assert(path.size() > level && "Invalid parent node level!");
-
-	// check whether an actual parent is requested
-	if (level == 0) {
-		return *this;
-	}
-
-	// check whether root node is requested
-	if (path.size() == level + 1) {
-		return getRootNodeAddress();
-	}
-
-	// create modified path
-	return NodeAddress(std::vector<NodePtr>(path.begin(), path.end()-level));
-}
-
-NodeAddress NodeAddress::getChildAddress(const NodePtr& child) const {
-	// verify that it is really a child
-	assert(::contains(getAddressedNode()->getChildList(), child) && "Given node is not a child!");
-
-	// extend path by child element
-	std::vector<NodePtr> newPath(path);
-	newPath.push_back(child);
-	return NodeAddress(newPath);
-}
-
-bool NodeAddress::isValid() const {
-	// check whether path is not empty
-	if (path.empty()) {
-		return false;
-	}
-
-	// check parent-child relation
-	NodePtr parent = *path.begin();
-	return all(path.begin()+1, path.end(), [&parent](const NodePtr& cur) {
-		// pointer must not be null and has to be within its parents child list
-		bool res = cur && contains(parent->getChildList(), cur);
-		parent = cur;
-		return res;
+std::size_t hashPath(const Path& path) {
+	std::size_t seed = 0;
+	for_each(path, [&seed](const PathEntry& cur) {
+		boost::hash_combine(seed, cur.first);
 	});
+	return seed;
 }
 
-bool NodeAddress::equals(const NodeAddress& other) const {
-	// just compare paths (identity, hash values and others stuff has already been checked by super class)
-	return ::equals(path, other.path);
+Path toPath(const NodePtr& node) {
+	return toVector(PathEntry(0,node));
 }
-
 
 } // end namespace core
 } // end namespace insieme

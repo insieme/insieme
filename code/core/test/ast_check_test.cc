@@ -34,16 +34,61 @@
  * regarding third party software licenses.
  */
 
-#include "omp/omp_annotation.h"
+#include <gtest/gtest.h>
+
+#include "ast_builder.h"
+#include "ast_check.h"
+#include "container_utils.h"
 
 namespace insieme {
-namespace frontend {
-namespace omp {
-namespace annotation {
+namespace core {
 
-const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
 
-} // End annotation namespace
-} // End omp namespace
-} // End frontend namespace
-} // End insieme namespace
+class AllFine : public ASTCheck {};
+
+class IDontLikeAnythingCheck : public ASTCheck {
+	MessageList visitNode(const NodeAddress& node) {
+		return toVector(Message(node, "I hat it!"));
+	}
+};
+
+class IAmScaredCheck : public ASTCheck {
+	MessageList visitNode(const NodeAddress& node) {
+		return toVector(Message(node, "Don't know - I'm scared!", Message::WARNING));
+	}
+};
+
+TEST(ASTCheck, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a simple node
+	TypePtr type = builder.genericType("A");
+	NodeAddress addr(type);
+
+	Message msgA(addr, "I hat it!");
+	Message msgB(addr, "Don't know - I'm scared!", Message::WARNING);
+
+	EXPECT_EQ("0", toString(addr));
+	NodeAddress& adr2 = addr;
+	EXPECT_EQ("0", toString(adr2));
+	EXPECT_EQ("ERROR:   @ (0) - MSG: I hat it!", toString(msgA));
+	EXPECT_EQ("WARNING: @ (0) - MSG: Don't know - I'm scared!", toString(msgB));
+
+	MessageList res = check(type, AllFine());
+	EXPECT_TRUE(equals(toVector<Message>(), res));
+
+	res = check(type, IDontLikeAnythingCheck());
+	EXPECT_TRUE(equals(toVector(msgA), res));
+
+	res = check(type, IAmScaredCheck());
+	EXPECT_TRUE(equals(toVector(msgB), res));
+
+	res = check(type, CombinedASTCheck(toVector<SharedCheck>(std::make_shared<IAmScaredCheck>(), std::make_shared<IDontLikeAnythingCheck>())));
+	EXPECT_EQ(toVector(msgB, msgA), res);
+
+}
+
+
+} // end namespace core
+} // end namespace insieme
+

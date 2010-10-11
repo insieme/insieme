@@ -83,6 +83,7 @@ public:
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
 
+	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 	void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
 
 	void convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type);

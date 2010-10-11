@@ -47,50 +47,45 @@
 #include "statements.h"
 #include "types.h"
 
+#include "ast_address.h"
+
 namespace insieme {
 namespace core {
 
-template<typename ReturnType = void>
+template<
+	typename ReturnType = void,
+	template<class Target> class Ptr = AnnotatedPtr,
+	template<class T> class StaticCast = StaticAnnotatedPtrCast
+>
 class ASTVisitor {
-
-#define DISPATCH(CLASS, PTR) \
-		dispatch ## CLASS(PTR)
-
-#define VISIT(CLASS, PTR) \
-		visit ## CLASS(PTR)
 
 public:
 
 	typedef ReturnType return_type;
 
-	virtual ReturnType visit(const NodePtr& node) {
-		assert ( node && "Cannot visit NULL node!");
-		return DISPATCH(Node, node);
-	}
+	/**
+	 * Instructs this visitor to visit / process the given element.
+	 *
+	 * @param element the element to be visited / processed
+	 * @return the result of the visiting process
+	 */
+	virtual ReturnType visit(const Ptr<const Node>& element) {
+		assert ( element && "Cannot visit NULL element!");
 
-protected:
+		// dispatch to correct visit method
+		switch(element->getNodeType()) {
 
-#define TRY_DISPATCH(PTR, CLASS) \
-		if (dynamic_cast<const CLASS*>(&*PTR)) \
-			return DISPATCH(CLASS, dynamic_pointer_cast<const CLASS>(PTR))
+			// Generate all cases using node definition file
+			#define CONCRETE(name) \
+				case NT_ ## name : \
+					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
+					return visit ## name (*(StaticCast<const name>()(&element)));
 
-	// ---------------- Dispatcher ---------------------------------
+					// take all nodes ...
+					#include "ast_nodes.def"
 
-	virtual ReturnType dispatchNode(const NodePtr& node) {
-		assert (node && "Cannot dispatch NULL node!");
+			#undef CONCRETE
 
-		// dispatch node based on its type
-		switch (node->getNodeType()) {
-		case NodeType::SUPPORT:
-			return dispatchSupport(node);
-		case NodeType::TYPE:
-			return dispatchType(dynamic_pointer_cast<const Type>(node));
-		case NodeType::EXPRESSION:
-			return dispatchExpression(dynamic_pointer_cast<const Expression>(node));
-		case NodeType::STATEMENT:
-			return dispatchStatement(dynamic_pointer_cast<const Statement>(node));
-		case NodeType::PROGRAM:
-			return dispatchProgram(dynamic_pointer_cast<const Program>(node));
 		}
 
 		// fail => invalid node type!
@@ -98,215 +93,45 @@ protected:
 		return ReturnType();
 	}
 
-	virtual ReturnType dispatchSupport(const NodePtr& node) {
-		assert ( node && "Cannot dispatch NULL node!");
-
-		TRY_DISPATCH(node, RecTypeDefinition);
-		TRY_DISPATCH(node, RecLambdaDefinition);
-
-		assert( false && "Cannot dispatch unknown supportive AST node!");
-		return ReturnType();
-	}
-
-	virtual ReturnType dispatchStatement(const StatementPtr& statement) {
-		assert ( statement && "Cannot dispatch NULL statement!");
-
-		TRY_DISPATCH(statement, BreakStmt);
-		TRY_DISPATCH(statement, ContinueStmt);
-		TRY_DISPATCH(statement, ReturnStmt);
-
-		TRY_DISPATCH(statement, DeclarationStmt);
-		TRY_DISPATCH(statement, CompoundStmt);
-
-		TRY_DISPATCH(statement, WhileStmt);
-		TRY_DISPATCH(statement, ForStmt);
-		TRY_DISPATCH(statement, IfStmt);
-		TRY_DISPATCH(statement, SwitchStmt);
-
-		assert ( false && "Cannot dispatch unknown statement pointer type." );
-		return ReturnType();
-	}
-
-	virtual ReturnType dispatchExpression(const ExpressionPtr& expression) {
-		assert ( expression && "Cannot dispatch NULL expression!");
-
-		TRY_DISPATCH(expression, Literal);
-		TRY_DISPATCH(expression, VarExpr);
-		TRY_DISPATCH(expression, ParamExpr);
-		TRY_DISPATCH(expression, LambdaExpr);
-		TRY_DISPATCH(expression, CallExpr);
-		TRY_DISPATCH(expression, CastExpr);
-		TRY_DISPATCH(expression, UnionExpr);
-		TRY_DISPATCH(expression, StructExpr);
-		TRY_DISPATCH(expression, JobExpr);
-
-		assert ( false && "Cannot dispatch unknown expression pointer type." );
-		return ReturnType();
-	}
-
-
-
-	virtual ReturnType dispatchType(const TypePtr& type) {
-		assert ( type && "Cannot dispatch NULL type!");
-
-		TRY_DISPATCH(type, TypeVariable);
-		TRY_DISPATCH(type, FunctionType);
-		TRY_DISPATCH(type, TupleType);
-		TRY_DISPATCH(type, GenericType);
-		TRY_DISPATCH(type, RecType);
-		
-		TRY_DISPATCH(type, StructType);
-		TRY_DISPATCH(type, UnionType);
-
-		assert ( false && "Cannot dispatch unknown type pointer." );
-		return ReturnType();
-	}
-
-	virtual ReturnType dispatchGenericType(const GenericTypePtr& type) {
-		assert ( type && "Cannot dispatch NULL pointer to type!");
-
-		TRY_DISPATCH(type, ArrayType);
-		TRY_DISPATCH(type, VectorType);
-		TRY_DISPATCH(type, RefType);
-		TRY_DISPATCH(type, ChannelType);
-
-		// just forward visit generic type
-		return VISIT(GenericType, type);
-	}
-
-	virtual ReturnType dispatchVarExpr(const VarExprPtr& expression) {
-			assert ( expression && "Cannot dispatch NULL pointer!");
-
-			// try only sub-type
-			TRY_DISPATCH(expression, ParamExpr);
-
-			// just forward visit generic type
-			return VISIT(VarExpr, expression);
-		}
-
-
-#undef TRY_DISPATCH
-
-	/**
-	 * The following set of terminal dispatcher form the bridge between the dispatching
-	 * and the visiting methods. Each of those terminals is just forwarding the dispatch
-	 * request to the corresponding visitor method. Subclasses may overwrite their
-	 * behavior to introduce further sub-types (e.g. a filtered set of generic types).
-	 */
-
-#define DISPATCH_TERMINAL(CLASS) \
-	inline virtual ReturnType dispatch ## CLASS(const CLASS ## Ptr& ptr) { \
-		assert ( !!ptr && "Cannot dispatch NULL pointer!"); \
-		return VISIT(CLASS, ptr); \
-	}
-
-	DISPATCH_TERMINAL(Program);
-
-	DISPATCH_TERMINAL(TypeVariable);
-	DISPATCH_TERMINAL(FunctionType);
-	DISPATCH_TERMINAL(TupleType);
-	DISPATCH_TERMINAL(RecType);
-
-	DISPATCH_TERMINAL(ArrayType);
-	DISPATCH_TERMINAL(VectorType);
-	DISPATCH_TERMINAL(RefType);
-	DISPATCH_TERMINAL(ChannelType);
-
-	DISPATCH_TERMINAL(StructType);
-	DISPATCH_TERMINAL(UnionType);
-
-
-	DISPATCH_TERMINAL(BreakStmt);
-	DISPATCH_TERMINAL(ContinueStmt);
-	DISPATCH_TERMINAL(ReturnStmt);
-	DISPATCH_TERMINAL(DeclarationStmt);
-	DISPATCH_TERMINAL(CompoundStmt);
-	DISPATCH_TERMINAL(WhileStmt);
-	DISPATCH_TERMINAL(ForStmt);
-	DISPATCH_TERMINAL(IfStmt);
-	DISPATCH_TERMINAL(SwitchStmt);
-
-	DISPATCH_TERMINAL(Literal);
-	DISPATCH_TERMINAL(ParamExpr);
-	DISPATCH_TERMINAL(LambdaExpr);
-	DISPATCH_TERMINAL(CallExpr);
-	DISPATCH_TERMINAL(CastExpr);
-	DISPATCH_TERMINAL(UnionExpr);
-	DISPATCH_TERMINAL(StructExpr);
-	DISPATCH_TERMINAL(JobExpr);
-
-	DISPATCH_TERMINAL(RecTypeDefinition);
-	DISPATCH_TERMINAL(RecLambdaDefinition);
-
-#undef DISPATCH_TERMINAL
-#undef VISIT
-#undef DISPATCH
-
 	// ------------------ protected visitor methods -----------------------
 
-#define VISIT_NODE(CLASS, PARENT) \
-	inline virtual ReturnType visit ## CLASS(const CLASS ## Ptr& ptr) { \
-		assert ( !!ptr && "Cannot visit NULL pointer!"); \
-		return visit ## PARENT(ptr); \
-	}
-
-	VISIT_NODE(Type, Node);
-
-	VISIT_NODE(TypeVariable, Type);
-	VISIT_NODE(FunctionType, Type);
-	VISIT_NODE(TupleType, Type);
-	VISIT_NODE(RecType, Type);
-
-	VISIT_NODE(GenericType, Type);
-	VISIT_NODE(ArrayType, GenericType);
-	VISIT_NODE(VectorType, GenericType);
-	VISIT_NODE(RefType, GenericType);
-	VISIT_NODE(ChannelType, GenericType);
-
-	VISIT_NODE(NamedCompositeType, Type);
-	VISIT_NODE(StructType, NamedCompositeType);
-	VISIT_NODE(UnionType, NamedCompositeType);
-
-	VISIT_NODE(RecTypeDefinition, Node);
-	VISIT_NODE(RecLambdaDefinition, Node);
-
-	VISIT_NODE(Statement, Node);
-
-	VISIT_NODE(BreakStmt, Statement);
-	VISIT_NODE(ContinueStmt, Statement);
-	VISIT_NODE(ReturnStmt, Statement);
-	VISIT_NODE(DeclarationStmt, Statement);
-	VISIT_NODE(CompoundStmt, Statement);
-	VISIT_NODE(WhileStmt, Statement);
-	VISIT_NODE(ForStmt, Statement);
-	VISIT_NODE(IfStmt, Statement);
-	VISIT_NODE(SwitchStmt, Statement);
-
-
-	VISIT_NODE(Expression, Statement);
-
-	VISIT_NODE(Literal, Expression);
-	VISIT_NODE(VarExpr, Expression);
-	VISIT_NODE(ParamExpr, VarExpr);
-	VISIT_NODE(LambdaExpr, Expression);
-	VISIT_NODE(CallExpr, Expression);
-	VISIT_NODE(CastExpr, Expression);
-	VISIT_NODE(UnionExpr, Expression);
-	VISIT_NODE(StructExpr, Expression);
-	VISIT_NODE(JobExpr, Expression);
-
-	VISIT_NODE(Program, Node);
+protected:
 
 	/**
-	 * Implements a the base not visit.
+	 * By default, every visitXXX method is just forwarding the call to the visitYYY method
+	 * where YYY is the direct parent class of XXX. Subclasses of this generic visitor may
+	 * override selected visitZZZ methods to tap into the visit processing.
+	 *
+	 * The visitXXX() methods are protected to avoid externally from inadvertently invoking
+	 * a specific visit method instead of the dispatching visit(...) method.
 	 */
-	virtual ReturnType visitNode(const NodePtr&) {
+	#define IS_A(CLASS, PARENT) \
+		inline virtual ReturnType visit ## CLASS(const Ptr<const CLASS>& ptr) { \
+			assert ( !!ptr && "Cannot visit NULL pointer!"); \
+			return visit ## PARENT(ptr); \
+		}
+		#include "ast_nodes.def"
+	#undef IS_A
+
+	/**
+	 * Implements a the base not visit. In case none of the visitXXX methods along the forwarding
+	 * chain have been overridden, this method will be reached. By default, it returns an instance
+	 * of a default constructed element of the return type.
+	 */
+	virtual ReturnType visitNode(const Ptr<const Node>&) {
 		// by default, do nothing
 		return ReturnType();
 	}
 
-#undef VISIT_NODE
 };
+
+
+/**
+ * A visitor implementation operating on node addresses instead of node
+ * pointer.
+ */
+template<typename ReturnType = void>
+class AddressVisitor : public ASTVisitor<ReturnType, Address, StaticAddressCast> { };
 
 /**
  * TODO: comment
@@ -527,6 +352,8 @@ inline LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
  *
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
+ * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
+ * 				   post order will be enforced.
  */
 template<typename NodePtr, typename Visitor>
 inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
@@ -541,6 +368,8 @@ inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
  *
  * @param root the root not to start the visiting from
  * @param lambda the lambda to be applied to all the nodes
+ * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
+ * 				   post order will be enforced.
  */
 template<typename NodePtr, typename Lambda>
 inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {

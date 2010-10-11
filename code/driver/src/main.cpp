@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 			insieme::core::ProgramPtr program = res->getProgram();
 			LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
-			LOG(INFO) << "Has name annotation: " << ((program->contains(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
+			LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
 			LOG(INFO) << "Converting to C++ ... ";
 			{ // TODO make one wrapper function for all of this
 				insieme::simple_backend::ConversionContext cc;

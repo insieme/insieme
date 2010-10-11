@@ -133,11 +133,25 @@ public:
  * @return the down-casted pointer pointing to the same location
  */
 template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T>& src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T>& src) {
 	if (dynamic_cast<B*>(&(*src))) {
 		return *(reinterpret_cast<InstancePtr<B>* >(&src));
 	}
 	return NULL;
+}
+
+/**
+ * Allows to statically down-cast between instance pointer of related types. Unlike for the dynamic cast, no runtime
+ * checks will be conducted.
+ *
+ * @tparam B the type the resulting pointer should point to
+ * @tparam T the type the given pointer is pointing to
+ * @param src the pointer to be down-casted
+ * @return the down-casted pointer pointing to the same location
+ */
+template<typename B, typename T>
+inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type static_pointer_cast(InstancePtr<T>& src) {
+	return *(reinterpret_cast<InstancePtr<B>* >(&src));
 }
 
 template<typename T>

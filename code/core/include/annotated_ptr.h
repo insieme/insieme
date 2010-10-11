@@ -59,14 +59,38 @@ public:
 };
 
 template<typename B, typename T>
-typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type 
+inline typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type
 dynamic_pointer_cast(AnnotatedPtr<T> src) {
 	if(dynamic_cast<B*>(&(*src))) {
 		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
 	}
-//	return NullInstance;
 	return NULL;
 }
+
+template<typename B, typename T>
+inline typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>*>::type
+static_pointer_cast(AnnotatedPtr<T>* src) {
+	return reinterpret_cast<AnnotatedPtr<B>*>(src);
+}
+
+template<typename B, typename T>
+inline typename boost::enable_if<boost::is_base_of<T,B>, const AnnotatedPtr<B>*>::type
+static_pointer_cast(const AnnotatedPtr<T>* src) {
+	return reinterpret_cast<const AnnotatedPtr<B>*>(src);
+}
+
+/**
+ * A template version for a functor performing static pointer casts on annotated pointer.
+ * The purpose of this struct is to allow the static_pointer_cast function to be defined as
+ * a pointer conversion function required as a template parameter of the AST Visitor class.
+ */
+template<class Target>
+struct StaticAnnotatedPtrCast {
+	template<class Source>
+	const AnnotatedPtr<Target>* operator()(const AnnotatedPtr<Source>* value) const {
+		return static_pointer_cast<Target>(value);
+	}
+};
 
 } // end namespace core
 } // end namespace insieme

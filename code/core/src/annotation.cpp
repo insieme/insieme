@@ -34,16 +34,36 @@
  * regarding third party software licenses.
  */
 
-#include "omp/omp_annotation.h"
+#include "annotation.h"
 
 namespace insieme {
-namespace frontend {
-namespace omp {
-namespace annotation {
+namespace core {
 
-const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
 
-} // End annotation namespace
-} // End omp namespace
-} // End frontend namespace
-} // End insieme namespace
+void Annotatable::addAnnotation(const AnnotationPtr& annotation) const {
+
+	// check pre-condition
+	assert ( annotation && "Cannot add NULL annotation!" );
+
+	// insert new element
+	auto key = annotation->getKey();
+	auto value = std::make_pair(key, annotation);
+	auto res = map->insert(value);
+
+	if (!res.second) {
+		// equivalent element already present => remove old and add new element
+		map->erase(res.first);
+		res = map->insert(value);
+	}
+
+	// check post-condition
+	assert ( res.second && "Insert not successful!");
+	assert ( hasAnnotation(key) && "Insert not successful!");
+	assert ( &*((*map->find(key)).second)==&*annotation && "Insert not successful!");
+};
+
+
+
+
+} // end namespace core
+} // end namespace insieme

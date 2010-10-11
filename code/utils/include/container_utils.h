@@ -40,6 +40,7 @@
 #include <functional>
 #include <unordered_set>
 #include <vector>
+#include <list>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/iterator/transform_iterator.hpp>
@@ -131,6 +132,9 @@ inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const 
  */
 template<typename T, typename B>
 typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, const vector<B>& source) {
+	if (source.empty())  {
+		return;
+	}
 	// add all elements of the source to the end of the target
 	copy(source.cbegin(), source.cend(), back_inserter(target));
 }
@@ -392,6 +396,24 @@ vector<typename PairContainer::value_type::second_type> projectToSecond(const Pa
  */
 template<typename Element>
 std::ostream& operator<<(std::ostream& out, const vector<Element>& container) {
+
+	// convert elements into strings
+	vector<string> list;
+	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
+
+	// print and done
+	return out << "[" << boost::join(list, ",") << "]";
+}
+
+/**
+ * Allows to print lists including printable elements.
+ *
+ * @param out the stream to which the given vector should be printed to
+ * @param container the list to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename Element>
+std::ostream& operator<<(std::ostream& out, const std::list<Element>& container) {
 
 	// convert elements into strings
 	vector<string> list;
