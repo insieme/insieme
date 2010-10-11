@@ -94,28 +94,16 @@ public:
  ** */
 class SimpleTypeConverter : public ASTVisitor<string> {
 	NameGenerator& nameGen;
+	bool firstRef;
 
 public:
-	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen) { }
+	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen), firstRef(true) { }
 
 	string visitRefType(const RefTypePtr& ptr);
 
 	string visitGenericType(const GenericTypePtr& ptr);
 
-	string visitStructType(const StructTypePtr& ptr) {
-		string structName;
-		if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
-			structName = annotation->getName();
-		} else {
-			structName = nameGen.getName(ptr, "unnamed_struct");
-		}
-		std::ostringstream ret; // TODO use code stream
-		ret << "struct " << structName << " {\n";
-		for_each(ptr->getEntries(), [&ret, this](const NamedCompositeType::Entry& entry) {
-			ret << this->visit(entry.second) << " " << entry.first.getName() << ";";
-		});
-		return ret.str();
-	}
+	string visitStructType(const StructTypePtr& ptr);
 };
 
 // TODO more sane dependency handling / move forward declaration
@@ -226,7 +214,7 @@ public:
 	////////////////////////////////////////////////////////////////////////// Statements
 
 	void visitBreakStmt(const BreakStmtPtr&) {
-		cStr << "break;\n";
+		cStr << "break";
 	}
 
 	void visitCompoundStmt(const CompoundStmtPtr& ptr) {
@@ -239,13 +227,12 @@ public:
 	}
 
 	void visitContinueStmt(const ContinueStmtPtr& ptr) {
-		cStr << "continue;\n";
+		cStr << "continue";
 	}
 
 	void visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		cStr << printTypeName(ptr->getVarExpression()->getType()) << " " << ptr->getVarExpression()->getIdentifier().getName() << " = ";
 		visit(ptr->getInitialization());
-		cStr << ";\n";
 	}
 
 	void visitForStmt(const ForStmtPtr& ptr) {
@@ -282,7 +269,7 @@ public:
 			this->visit(curCase.second);
 			this->cStr << "break;" << CodeStream::indL << "\n";
 		});
-		cStr << "}\n";
+		cStr << "}";
 	}
 
 	void visitWhileStmt(const WhileStmtPtr& ptr) {

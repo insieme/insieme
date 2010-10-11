@@ -50,6 +50,8 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	}
 
 	auto funType = dynamic_pointer_cast<const FunctionType>(lambda->getType());
+	auto body = lambda->getBody();
+	bool isCompoundBody = typeid(body) == typeid(CompoundStmtPtr);
 
 	// generate a new function from the lambda expression
 	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident.getName());
@@ -60,11 +62,13 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const ParamExprPtr& param) -> std::ostream& {
 		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << param->getIdentifier().getName());
 	});
-	cs << ") {" << CodeStream::indR << "\n";
+	cs << ")";
+	if(!isCompoundBody) cs << " {" << CodeStream::indR << "\n";
 	// generate the function body
 	ConvertVisitor visitor(cc, cptr);
 	visitor.visit(lambda->getBody());
-	cs << CodeStream::indL << "\n}\n\n";
+	if(!isCompoundBody) cs << CodeStream::indL << "\n}\n";
+	cs << "\n";
 	// insert into function map and return
 	functionMap.insert(std::make_pair(ident, cptr));
 	return cptr;
@@ -171,25 +175,29 @@ CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
 
 
 string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
+	firstRef = true;
 	if(lang::isUnitType(*ptr)) {
 		return "void";
 	} else
 	if(lang::isIntType(*ptr)) {
-		// TODO better handling for int sizes
 		string qualifier = lang::isUIntType(*ptr) ? "unsigned " : "";
 		switch(lang::getNumBytes(*ptr)) {
-		case 1: return qualifier + "char";
-		case 2: return qualifier + "short";
-		case 4: return qualifier + "int";
-		case 8: return qualifier + "long";
-		default: return ptr->getName();
+			case 1: return qualifier + "char";
+			case 2: return qualifier + "short";
+			case 4: return qualifier + "int";
+			case 8: return qualifier + "long";
+			default: return ptr->getName();
 		}
 	} else
 	if(lang::isBoolType(*ptr)) {
 		return "bool";
 	} else
 	if(lang::isRealType(*ptr)) {
-		return ptr->getName();
+		switch(lang::getNumBytes(*ptr)) {
+			case 4: return "float";
+			case 8: return "double";
+			default: return ptr->getName();
+		}
 	} else
 	if(*ptr == lang::TYPE_STRING_VAL) {
 		return "string";
@@ -205,7 +213,27 @@ string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 }
 
 string SimpleTypeConverter::visitRefType(const RefTypePtr& ptr) {
+	if(firstRef) {
+		firstRef = false;
+		return visit(ptr->getElementType());
+	}
 	return visit(ptr->getElementType()) + "*";
+}
+
+string SimpleTypeConverter::visitStructType(const StructTypePtr& ptr) {
+	firstRef = true;
+	string structName;
+	if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
+		structName = annotation->getName();
+	} else {
+		structName = nameGen.getName(ptr, "unnamed_struct");
+	}
+	std::ostringstream ret; // TODO use code stream
+	ret << "struct " << structName << " {\n";
+	for_each(ptr->getEntries(), [&ret, this](const NamedCompositeType::Entry& entry) {
+		ret << this->visit(entry.second) << " " << entry.first.getName() << ";";
+	});
+	return ret.str();
 }
 
 

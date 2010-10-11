@@ -78,10 +78,10 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 TEST(SimpleBackend, Basic) {
 
-	ConversionContext cc;
-	
 	ASTBuilder build;
 	ProgramPtr prog = setupSampleProgram(build);
+
+	ConversionContext cc;
 
 	std::cout << "Start visit\n";
 	auto converted = cc.convert(prog);
