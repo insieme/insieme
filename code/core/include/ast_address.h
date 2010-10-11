@@ -272,7 +272,7 @@ public:
 
 		// check parent-child relation
 		PathEntry parent = *(*path).begin();
-		return all((*path).begin()+1, (*path).end(), [&parent](const PathEntry& cur) {
+		return all((*path).begin()+1, (*path).end(), [&parent](const PathEntry& cur) -> bool {
 
 			bool res =
 					cur.second && // pointer must be not NULL
