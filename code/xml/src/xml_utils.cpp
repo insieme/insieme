@@ -64,6 +64,18 @@ public:
 	XmlVisitor(DOMDocument* udoc): doc(udoc), rootElem(doc->getDocumentElement()) { }
 	
 	~XmlVisitor() { }
+	
+	void visitAnnotations(const AnnotationMap& map, XmlElement& node){
+		if (!map.empty()){
+			XmlElement annotations("annotations", doc);
+			node << annotations;
+
+			XmlConverter& xmlConverter = XmlConverter::get();
+			for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
+				annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
+			}
+		}
+	}
 
 	void visitGenericType(const GenericTypePtr& cur) {
 		XmlElement genType("genType", doc);
@@ -78,20 +90,8 @@ public:
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*base)));		
 			baseType << typePtr;
-
-			AnnotationMap map = base.getAnnotations();
-			if (!map.empty()){
-				XmlElement annotations("annotations", doc);
-				typePtr << annotations;
-
-				XmlConverter& xmlConverter = XmlConverter::get();
-				for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
-					annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
-				}
-			}
-			else {
-				std::cout << "NULL!!\n";
-			}
+			
+			visitAnnotations(base.getAnnotations(), typePtr);
 		}
 
 		const vector<TypePtr>& param = cur->getTypeParameter();
@@ -102,17 +102,8 @@ public:
 				XmlElement typePtr("typePtr", doc);
 				typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
 				typeParams << typePtr;
-
-				/*AnnotationMap map = (*(*iter)).getAnnotations();
-				if (!map.empty()){
-					XmlElement annotations("annotations", doc);
-					typePtr << annotations;
-
-					XmlConverter& xmlConverter = XmlConverter::get();
-					for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
-						annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
-					}
-				}*/
+				
+				visitAnnotations((*iter).getAnnotations(), typePtr);
 			}
 		}
 
@@ -145,16 +136,7 @@ public:
 			}	
 		}
 		
-		AnnotationMap map = cur->getAnnotations();
-		if (!map.empty()){
-			XmlElement annotations("annotations", doc);
-			genType << annotations;
-			
-			XmlConverter& xmlConverter = XmlConverter::get();
-			for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
-				annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
-			}
-		}
+		visitAnnotations(cur->getAnnotations(), genType);
 	}
 	
 	void visitFunctionType(const FunctionTypePtr& cur){
@@ -170,7 +152,7 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
 			argumentType << typePtr;
 
-			// all the edge annotations
+			visitAnnotations(argument->getAnnotations(), typePtr);
 		}
 		
 		if (const TypePtr returnT = cur->getReturnType()) {
@@ -181,8 +163,10 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
 			returnType << typePtr;
 
-			// all the edge annotations
+			visitAnnotations(returnT->getAnnotations(), typePtr);
 		}
+		
+		visitAnnotations(cur->getAnnotations(), functionType);
 	}
 	
 	void visitStructType(const StructTypePtr& cur) {
@@ -205,8 +189,10 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
 			entry << typePtr;
 			
-			// all the annotations
+			visitAnnotations((*iter->second).getAnnotations(), typePtr);
 		}
+		
+		visitAnnotations(cur->getAnnotations(), structType);
 	}
 	
 	void visitUnionType(const UnionTypePtr& cur) {
@@ -223,15 +209,17 @@ public:
 			entries << entry;
 			
 			XmlElement id("id", doc);
-			id.setText((iter->first).getName());			
+			id.setText((iter->first).getName());		
 			entry << id;
 
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
 			entry << typePtr;
 			
-			// all the annotations
+			visitAnnotations((*iter->second).getAnnotations(), typePtr);
 		}
+		
+		visitAnnotations(cur->getAnnotations(), unionType);
 	}
 
 	void visitExpression(const ExpressionPtr& cur) {
@@ -490,14 +478,14 @@ void XmlUtil::convertIrToDom(const NodePtr& node){
 string XmlUtil::convertDomToString(){
 	if (doc){
 		DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
-		DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
-	
-		if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
-			serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-
-		string stringDump = XMLString::transcode (theSerializer->writeToString(doc));
-	
+		string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
 		theSerializer->release();
+		
+		string stringDump = "";
+		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); it++){
+	    	if (!isspace (*it))
+	      		stringDump += *it;
+		}
 		return stringDump;
 	}
 	else {
