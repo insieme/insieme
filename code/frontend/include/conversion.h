@@ -96,23 +96,18 @@ public:
 /**
  *
  */
-class IRConsumer: public clang::ASTConsumer {
+class IRConverter {
 	const ClangCompiler& mClangComp;
 	core::ProgramPtr     mProgram;
 	ConversionFactory    mFact;
 	const PragmaList&	 pragmaList;
-	bool 			     mDoConversion;
 
 public:
-	IRConsumer(const ClangCompiler& clangComp, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, const PragmaList& pragmaList, bool doConversion=true) :
-		mClangComp(clangComp), mProgram(prog), mFact(manager, clangComp), pragmaList(pragmaList), mDoConversion(doConversion){ }
+	IRConverter(const ClangCompiler& clangComp, const core::ProgramPtr prog, const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
+		mClangComp(clangComp), mProgram(prog), mFact(mgr, clangComp), pragmaList(pragmaList) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
-
-	virtual void Initialize(clang::ASTContext &Context) { }
-
-	virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
-	virtual void HandleTranslationUnit(clang::ASTContext &Ctx);
+	void handleTopLevelDecl(clang::DeclContext* declCtx);
 };
 
 

@@ -1947,20 +1947,12 @@ ConversionFactory::~ConversionFactory() {
 
 // ------------------------------------ ClangTypeConverter ---------------------------
 
-void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
-	if(!mDoConversion)
-		return;
+void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
 
-	DLOG(INFO) << "Number of parsed pragmas: " << pragmaList.size();
-
-	if(D.isSingleDecl() && !pragmaList.empty()) {
-		DLOG(INFO) << "@ location: " << utils::location(D.getSingleDecl()->getLocStart(), this->mClangComp.getSourceManager());
-		pragmaList.front()->dump(std::cout, this->mClangComp.getSourceManager());
-	}
 	// update the map
-	mFact.updatePragmaMap(pragmaList);
+	// mFact.updatePragmaMap(pragmaList);
 
-	for(DeclGroupRef::const_iterator it = D.begin(), end = D.end(); it!=end; ++it) {
+	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			DVLOG(1) << "##########################################################################";
@@ -2041,10 +2033,6 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 //			fact.ConvertType( *varDecl->getType().getTypePtr() );
 //		}
 	}
-}
-
-void IRConsumer::HandleTranslationUnit (ASTContext &Ctx) {
-
 }
 
 } // End conversion namespace
