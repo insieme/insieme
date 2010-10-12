@@ -87,7 +87,7 @@ using namespace insieme::core;
 
 ParserProxy* ParserProxy::currParser = NULL;
 
-Expr* ParserProxy::ParseExpression(Preprocessor& PP) {
+clang::Expr* ParserProxy::ParseExpression(clang::Preprocessor& PP) {
 	PP.Lex(mParser->Tok);
 
 	Parser::ExprResult ownedResult = mParser->ParseExpression();
@@ -95,7 +95,7 @@ Expr* ParserProxy::ParseExpression(Preprocessor& PP) {
 	return result;
 }
 
-void ParserProxy::EnterTokenStream(Preprocessor& PP) {
+void ParserProxy::EnterTokenStream(clang::Preprocessor& PP) {
 	// DEBUG(ClangContext::get().getParser()->Tok.getName());
 	PP.EnterTokenStream(&(CurrentToken()), 1, true, false);
 }
