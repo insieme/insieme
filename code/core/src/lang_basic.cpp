@@ -87,8 +87,8 @@ IntegerType getIntegerType(unsigned short size, bool _signed) {
 	return (_signed)?getIntType(size):getUIntType(size);
 }
 
-int getNumBytes(const IntegerType& type) {
-	assert( isIntegerType(type) && "Given argument is not an integer type!");
+int getNumBytes(const GenericType& type) {
+	assert( (isIntegerType(type) || isRealType(type)) && "Given argument is not a numeric type!");
 	IntTypeParam param = type.getIntTypeParameter()[0];
 	if (param.getType()==IntTypeParam::CONCRETE) {
 		return param.getValue();

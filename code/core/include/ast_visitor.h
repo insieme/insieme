@@ -248,9 +248,9 @@ public:
 
 			// add children of current node to the queue
 			auto children = node->getChildList();
-			std::for_each(children.begin(), children.end(), [&queue](const NodePtr& cur) {
-				queue.push(cur);
-			});
+			for(auto it = children.begin(); it != children.end(); ++it) {
+				queue.push(*it);
+			}
 
 			// proceed with next node in the queue
 			if (!queue.empty()) {
