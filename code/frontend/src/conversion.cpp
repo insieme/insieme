@@ -1955,16 +1955,15 @@ void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
 	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
-			DVLOG(1) << "##########################################################################";
-			DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
-					 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
-
 			// finds a definition of this function if any
 			const FunctionDecl* definition = NULL;
 			// if this function is just a declaration, and it has no definition, we just skip it
 			if(!funcDecl->hasBody(definition))
 				continue;
 
+			DVLOG(1) << "**************************************************************************";
+			DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
+					 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
 			DVLOG(1) << "\t* Converting body";
 
 			core::TypePtr funcType = mFact.ConvertType( *definition->getType().getTypePtr() );

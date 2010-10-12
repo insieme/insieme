@@ -158,7 +158,7 @@ shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
 XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
 
 
-/*TEST(XmlTest, AnnotationTest) {
+TEST(XmlTest, AnnotationTest) {
 	typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 	DummyAnnotationPtr dummyA(new DummyAnnotation(1));
 	
@@ -170,6 +170,6 @@ XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
 	std::cout << s1;
-}*/
+}
 
 

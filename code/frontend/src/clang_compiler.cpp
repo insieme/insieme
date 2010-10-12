@@ -44,6 +44,8 @@
 #include "omp/omp_pragma.h"
 #include "clang_config.h"
 
+#include "timer.h"
+
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/DiagnosticOptions.h"
@@ -268,6 +270,8 @@ public:
 			frontend::TranslationUnit(file_name) {
 		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
 
+		// insieme::utils::Timer t1;
+		// t1.start();
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
@@ -286,6 +290,9 @@ public:
 		// the translation unit has been correctly parsed
 		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
 		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
+		// t1.stop();
+
+		// DVLOG(1) << "'" << file_name << "' input file processes in: " << t1.getTime() << " msecs";
 	}
 
 	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
