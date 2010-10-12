@@ -112,9 +112,9 @@ struct InsiemeSema::InsiemeSemaImpl {
 	InsiemeSemaImpl(PragmaList& pragma_list) :	pragma_list(pragma_list) {	}
 };
 
-InsiemeSema::InsiemeSema(PragmaList& pragma_list, Preprocessor& pp, ASTContext& ctxt, ASTConsumer& consumer, bool CompleteTranslationUnit,
-						 CodeCompleteConsumer* CompletionConsumer) :
-	Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
+InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer, bool CompleteTranslationUnit,
+						 clang::CodeCompleteConsumer* CompletionConsumer) :
+	clang::Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
 
 
 /*
@@ -128,7 +128,7 @@ const char* strbchr(const char* stream, char c) {
 	return stream;
 }
 
-clang::StmtResult InsiemeSema::ActOnCompoundStmt(SourceLocation L, SourceLocation R, MultiStmtArg Elts, bool isStmtExpr) {
+clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr) {
 	DVLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
 
 	/*
@@ -243,8 +243,8 @@ void InsiemeSema::matchStmt(Stmt* S, const SourceRange& bounds, const SourceMana
 }
 
 clang::StmtResult
-InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal, SourceLocation ElseLoc,
-	clang::Stmt* ElseVal) {
+InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal,
+		clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
 	DVLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret = Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
 
@@ -267,8 +267,8 @@ InsiemeSema::ActOnIfStmt(SourceLocation IfLoc, clang::Sema::FullExprArg CondVal,
 }
 
 clang::StmtResult
-InsiemeSema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, clang::Stmt* First, FullExprArg Second, clang::Decl* SecondVar,
-	FullExprArg Third, SourceLocation RParenLoc, clang::Stmt* Body) {
+InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First, clang::Sema::FullExprArg Second,
+		clang::Decl* SecondVar, clang::Sema::FullExprArg Third, clang::SourceLocation RParenLoc, clang::Stmt* Body) {
 	DVLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
 
@@ -283,12 +283,12 @@ InsiemeSema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, clang
 	return clang::move(ret);
 }
 
-clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D) {
+clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D) {
 	isInsideFunctionDef = true;
 	return Sema::ActOnStartOfFunctionDef(FnBodyScope, D);
 }
 
-clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl* D) {
+clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Decl* D) {
 	isInsideFunctionDef = true;
 	return Sema::ActOnStartOfFunctionDef(FnBodyScope, D);
 }
@@ -346,7 +346,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //	return clang::move(ret);
 //}
 
-clang::Decl* InsiemeSema::ActOnDeclarator(Scope *S, Declarator &D) {
+clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D) {
 	DVLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
 
 	clang::Decl* ret = Sema::ActOnDeclarator(S, D);

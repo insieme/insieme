@@ -1785,7 +1785,7 @@ core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) cons
  * currently used for:
  * 	* OpenCL address spaces
  */
-void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr type) {
+void ConversionFactory::convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type) {
     if(varDecl->hasAttrs()) {
         const AttrVec attrVec = varDecl->getAttrs();
         std::ostringstream ss;
