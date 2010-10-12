@@ -118,13 +118,7 @@ Token& ParserProxy::CurrentToken() {
 	return mParser->Tok;
 }
 
-namespace insieme {
-namespace frontend {
-
-struct ClangCompiler::ClangCompilerImpl {
-	CompilerInstance clang;
-	DiagnosticOptions diagOpts;
-};
+namespace {
 
 void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, bool CompleteTranslationUnit, PragmaList& PL) {
 	InsiemeSema S(PL, PP, Ctx, *Consumer, CompleteTranslationUnit);
@@ -158,6 +152,64 @@ void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOption
 	Diagnostic* diags = new Diagnostic(diagClient);
 	clang.setDiagnostics(diags);
 }
+
+
+/**
+ * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
+ * and the insieme IR which has been generated from the source file.
+ */
+class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public clang::idx::TranslationUnit {
+	std::shared_ptr<clang::idx::DeclReferenceMap>   	mDeclRefMap;
+	std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
+
+public:
+	TranslationUnitImpl(const std::string& file_name, const ProgramPtr& prog, const SharedNodeManager& mgr):
+		insieme::frontend::TranslationUnit(file_name) {
+		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
+
+		insieme::utils::Timer t1("Frontend.load '" + file_name + "'");
+		t1.start();
+		// register 'omp' pragmas
+		omp::registerPragmaHandlers( mClang.getPreprocessor() );
+
+		// register 'test' pragma
+		mClang.getPreprocessor().AddPragmaHandler(
+				PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(mClang.getPreprocessor().getIdentifierInfo("test"),
+						insieme::frontend::tok::string_literal["expected"] >> insieme::frontend::tok::eom));
+
+		clang::ASTConsumer emptyCons;
+		InsiemeParseAST(mClang.getPreprocessor(), &emptyCons, mClang.getASTContext(), true, mPragmaList);
+
+		if( mClang.getDiagnostics().hasErrorOccurred() ) {
+			// errors are always fatal!
+			throw ClangParsingError(file_name);
+		}
+
+		// the translation unit has been correctly parsed
+		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
+		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
+		t1.stop();
+
+		t1.print();
+	}
+
+	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
+	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
+	clang::Diagnostic& getDiagnostic() { return getCompiler().getDiagnostics(); }
+
+	clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
+	clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
+};
+
+} // end anonymous namespace
+
+namespace insieme {
+namespace frontend {
+
+struct ClangCompiler::ClangCompilerImpl {
+	CompilerInstance clang;
+	DiagnosticOptions diagOpts;
+};
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
@@ -258,52 +310,6 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-/**
- * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
- * and the insieme IR which has been generated from the source file.
- */
-class TranslationUnitImpl: public frontend::TranslationUnit, public clang::idx::TranslationUnit {
-	std::shared_ptr<clang::idx::DeclReferenceMap>   	mDeclRefMap;
-	std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
-
-public:
-	TranslationUnitImpl(const std::string& file_name, const insieme::core::ProgramPtr& prog, const core::SharedNodeManager& mgr):
-			frontend::TranslationUnit(file_name) {
-		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
-
-		insieme::utils::Timer t1("Frontend.load '" + file_name + "'");
-		t1.start();
-		// register 'omp' pragmas
-		omp::registerPragmaHandlers( mClang.getPreprocessor() );
-
-		// register 'test' pragma
-		mClang.getPreprocessor().AddPragmaHandler(
-				PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(mClang.getPreprocessor().getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom));
-
-		clang::ASTConsumer emptyCons;
-		InsiemeParseAST(mClang.getPreprocessor(), &emptyCons, mClang.getASTContext(), true, mPragmaList);
-
-		if( mClang.getDiagnostics().hasErrorOccurred() ) {
-			// errors are always fatal!
-			throw ClangParsingError(file_name);
-		}
-
-		// the translation unit has been correctly parsed
-		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
-		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
-		t1.stop();
-
-		t1.print();
-	}
-
-	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
-	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
-	clang::Diagnostic& getDiagnostic() { return getCompiler().getDiagnostics(); }
-
-	clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
-	clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
-};
-
 struct Program::ProgramImpl {
 	TranslationUnitSet tranUnits;
 
@@ -319,7 +325,7 @@ struct Program::ProgramImpl {
 Program::Program(const core::SharedNodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(*mgr) ) { }
 
 void Program::addTranslationUnit(const std::string& file_name) {
-	frontend::TranslationUnitImpl* tuImpl = new frontend::TranslationUnitImpl(file_name, mProgram, mMgr);
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, mProgram, mMgr);
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
