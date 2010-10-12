@@ -77,6 +77,21 @@ namespace fe = insieme::frontend;
 
 namespace {
 
+//TODO put it into a class
+void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& clangComp, const clang::Decl* decl) {
+    Diagnostic& diag = clangComp.getDiagnostics();
+    TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
+    SourceManager& manager = clangComp.getSourceManager();
+    clang::SourceLocation errLoc = decl->getLocStart();
+
+    /*Crashes
+    DiagnosticInfo di(&diag);
+    tdc->HandleDiagnostic(Diagnostic::Level::Warning, di);*/
+
+    llvm::errs() << errMsg.str();
+    tdc->EmitCaretDiagnostic(errLoc, NULL, 0, manager, 0, 0, 80, 0, 0, 0);
+}
+
 template <class T>
 struct IRWrapper {
 	T ref;
@@ -1796,7 +1811,6 @@ core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) cons
 void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr type) {
     if(varDecl->hasAttrs()) {
         const AttrVec attrVec = varDecl->getAttrs();
-
         std::ostringstream ss;
         ocl::OclBaseAnnotation::OclAnnotationList declAnnotation;
 
@@ -1844,15 +1858,13 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
         }}
         catch(std::ostringstream *errMsg) {
             //show errors if unexpected patterns were found
-            Diagnostic& diag = clangComp.getDiagnostics();
-            TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
             SourceManager& manager = clangComp.getSourceManager();
             SourceLocation errLoc = varDecl->getLocStart();
 
             *errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
                     frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
-            llvm::errs() << (*errMsg).str();
-            tdc->EmitCaretDiagnostic(errLoc, NULL, 0, manager, 0, 0, 80, 0, 0, 0);
+
+            printErrorMsg(*errMsg, clangComp, varDecl);
         }
         type->addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(declAnnotation));
     }
@@ -1916,15 +1928,12 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
         }}
         catch(std::ostringstream *errMsg) {
             //show errors if unexpected patterns were found
-            Diagnostic& diag = clangComp.getDiagnostics();
-            TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
             SourceManager& manager = clangComp.getSourceManager();
             SourceLocation errLoc = varDecl->getLocStart();
 
             *errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
                     frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
-            llvm::errs() << (*errMsg).str();
-            tdc->EmitCaretDiagnostic(errLoc, NULL, 0, manager, 0, 0, 80, 0, 0, 0);
+            printErrorMsg(*errMsg, clangComp, varDecl);
         }
         type->addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(paramAnnotation));
     }
@@ -1979,7 +1988,6 @@ void IRConsumer::HandleTopLevelDecl (DeclGroupRef D) {
 				}
 			);
 			// this is a function decl
-
 
             //check Attributes of the function definition
             if(definition->hasAttrs()) {
