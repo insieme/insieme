@@ -51,7 +51,7 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 
 	auto funType = dynamic_pointer_cast<const FunctionType>(lambda->getType());
 	auto body = lambda->getBody();
-	bool isCompoundBody = typeid(body) == typeid(CompoundStmtPtr);
+	bool isCompoundBody = !!dynamic_pointer_cast<const CompoundStmt>(body);
 
 	// generate a new function from the lambda expression
 	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident.getName());
