@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace insieme {
 namespace utils {
 
@@ -44,10 +46,11 @@ namespace utils {
  */
 class Timer {
 	long mTime;
+	std::string mName;
 	bool isStopped;
 
 public:
-	Timer(): mTime(0), isStopped(false) { }
+	Timer(const std::string& name): mTime(0), mName(name), isStopped(false) { }
 	/**
 	 * Starts the timer
 	 */
@@ -63,6 +66,8 @@ public:
 	long getTime() const;
 
 	double getTimeInSecs() const { return static_cast<double>(getTime())/1000; }
+
+	void print() const;
 };
 
 } // end utils namespace

@@ -41,6 +41,8 @@
 #include <sys/time.h>
 #include <cassert>
 
+#include "logging.h"
+
 namespace insieme {
 namespace utils {
 
@@ -57,12 +59,19 @@ long Timer::stop() {
 	struct timeval tv;
 	gettimeofday(&tv, 0);
 	long time = tv.tv_sec * 1000 + tv.tv_usec/1000;
-	return mTime -= time;
+	mTime = time - mTime;
+	return mTime;
 }
 
 long Timer::getTime() const {
 	assert(isStopped && "Cannot read the timer value if not stopped.");
 	return mTime;
+}
+
+void Timer::print() const {
+	DLOG(INFO) << "********************************************************************************";
+	DLOG(INFO) << "* " << mName << ":\t" << getTimeInSecs() << " secs";
+	DLOG(INFO) << "********************************************************************************";
 }
 
 } // end utils namespace

@@ -45,6 +45,7 @@
 #include "clang_config.h"
 
 #include "timer.h"
+#include "logging.h"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -270,8 +271,8 @@ public:
 			frontend::TranslationUnit(file_name) {
 		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
 
-		// insieme::utils::Timer t1;
-		// t1.start();
+		insieme::utils::Timer t1("Frontend.load '" + file_name + "'");
+		t1.start();
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
@@ -290,9 +291,9 @@ public:
 		// the translation unit has been correctly parsed
 		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
 		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
-		// t1.stop();
+		t1.stop();
 
-		// DVLOG(1) << "'" << file_name << "' input file processes in: " << t1.getTime() << " msecs";
+		t1.print();
 	}
 
 	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
@@ -336,11 +337,15 @@ const core::ProgramPtr& Program::convert() {
 		const ClangCompiler& comp = (*it)->getCompiler();
 		const PragmaList& pList = (*it)->getPragmaList();
 
+		insieme::utils::Timer t1("Frontend.convert '" + (*it)->getFileName() + "'");
+		t1.start();
 		conversion::IRConverter conv(comp, mProgram, mMgr, pList);
 		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
 
 		conv.handleTopLevelDecl(declRef);
+		t1.stop();
 
+		t1.print();
 		mProgram = conv.getProgram();
 	}
 

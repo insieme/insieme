@@ -161,13 +161,15 @@ typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
  */
 class TranslationUnit: public boost::noncopyable {
 protected:
-	ClangCompiler mClang;
-	PragmaList mPragmaList;
+	std::string 	mFileName;
+	ClangCompiler	mClang;
+	PragmaList 		mPragmaList;
 public:
-	TranslationUnit(const std::string& file_name): mClang(file_name) { }
+	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
 
 	const PragmaList& getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
+	const std::string& getFileName() const { return mFileName; }
 };
 
 /**
