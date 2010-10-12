@@ -87,6 +87,8 @@ public:
 	XmlElement(xercesc::DOMElement* elem);
 	XmlElement(string name, xercesc::DOMDocument* doc);
 	
+	xercesc::DOMElement* getBase();
+	
 	XmlElement& operator<<(XmlElement& childNode);
 	
 	XmlElement& setAttr(const string& id, const string& value);
@@ -118,8 +120,8 @@ public:
 class XmlConverter: public boost::noncopyable {
 	XmlConverter() { }
 public:
-	typedef map<const string, std::function<XmlElement& (const Annotation&, xercesc::DOMDocument*)>> IrToDomConvertMapTy;
-	typedef map<const string, shared_ptr<Annotation>(*)(const XmlElement&)> DomToIrConvertMapTy;
+	typedef map<const string, function<XmlElement& (const Annotation&, xercesc::DOMDocument*)>> IrToDomConvertMapType;
+	typedef map<const string, function<shared_ptr<Annotation> (const XmlElement&)>> DomToIrConvertMapType;
 
 	static XmlConverter& get();
 	
@@ -128,17 +130,16 @@ public:
 	XmlElement& irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const;
 	
 	void* registerAnnotation(string name, 
-							XmlElement&(*toXml)(const Annotation&, xercesc::DOMDocument*), 
-							shared_ptr<Annotation>(*fromXml)(const XmlElement&));
+							function<XmlElement& (const Annotation&, xercesc::DOMDocument*)> toXml, 
+							function<shared_ptr<Annotation> (const XmlElement&)> fromXml);
 private:
-	IrToDomConvertMapTy IrToDomConvertMap;
-	DomToIrConvertMapTy DomToIrConvertMap;
+	IrToDomConvertMapType IrToDomConvertMap;
+	DomToIrConvertMapType DomToIrConvertMap;
 };
 
 
 #define XML_CONVERTER(className_, toXML_, fromXML_) \
 	insieme::xml::XmlElement& convert ## className_ ## ToXML(const Annotation& ann, xercesc::DOMDocument* doc) { \
-	std::cout << "XML_toXML INNNNN"; \
 	const className_& annotation = dynamic_cast<const className_&>(ann); \
 	insieme::xml::XmlElement* node = new insieme::xml::XmlElement("annotation", doc); \
 	node->setAttr("type", #className_); \
