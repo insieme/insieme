@@ -48,8 +48,8 @@
 #include <fstream>
 #include <sstream>
 
-using namespace insieme::frontend;
-using namespace insieme::core;
+namespace fe = insieme::frontend;
+namespace core = insieme::core;
 using namespace insieme::c_info;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
@@ -63,14 +63,15 @@ TEST(DriverTest, HelloWorldTest) {
 	// Set severity level
 	SetStderrLogging(INFO);
 
-	SharedNodeManager sharedManager = std::make_shared<NodeManager>();
-	ProgramPtr program = Program::create(*sharedManager);
+	core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
+	core::ProgramPtr program = core::Program::create(*sharedManager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/hello_world.c", sharedManager, program, true);
+	fe::Program prog(sharedManager);
+	prog.addTranslationUnit(std::string(SRC_DIR) + "/hello_world.c");
+	program = prog.convert();
 	LOG(INFO) << "Done.";
 
-	program = TU->getProgram();
 	LOG(INFO) << "Printing the IR: " << program;
 
 	LOG(INFO) << "Converting IR to C...";

@@ -58,7 +58,7 @@ class Parser;
 class Token;
 class Scope;
 class Expr;
-}
+} // end clang namespace
 
 // ------------------------------------ ParserProxy ---------------------------
 
@@ -126,9 +126,6 @@ struct ClangParsingError: public std::logic_error {
 	ClangParsingError(const std::string& file_name): std::logic_error(file_name) { }
 };
 
-class InsiemeTransUnit;
-typedef std::shared_ptr<InsiemeTransUnit> InsiemeTransUnitPtr;
-
 // ------------------------------------ ClangCompiler ---------------------------
 
 /**
@@ -156,30 +153,52 @@ typedef std::shared_ptr<Pragma> PragmaPtr;
 typedef std::vector<PragmaPtr> 	PragmaList;
 
 
+class TranslationUnit;
+typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
 /**
  * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
  * and the insieme IR which has been generated from the source file.
  */
-class InsiemeTransUnit: public boost::noncopyable {
+class TranslationUnit: public boost::noncopyable {
+protected:
 	ClangCompiler mClang;
 	PragmaList mPragmaList;
-
-	core::ProgramPtr mProgram;
-
-	InsiemeTransUnit(const std::string& file_name, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, bool doConversion);
 public:
+	TranslationUnit(const std::string& file_name): mClang(file_name) { }
 
 	const PragmaList& getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
+};
 
-	const core::ProgramPtr& getProgram() const { return mProgram; }
-	/**
-	 * Main entry method, it creates a translation unit starting from an input file
-	 */
-	static InsiemeTransUnitPtr ParseFile(const std::string& file_name, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, bool doConversion=true) {
-		return InsiemeTransUnitPtr(new InsiemeTransUnit(file_name, manager, prog, doConversion));
+/**
+ * A program is a set of compilation units, we need to keep this object so we can create a complete call graph and thus
+ * determine which part of the input program should be handled by insieme and which should be kept as the original
+ */
+class Program: public boost::noncopyable {
+	class ProgramImpl;
+	typedef std::shared_ptr<ProgramImpl> ProgramImplPtr;
+	ProgramImplPtr pimpl;
+
+	const core::SharedNodeManager& mMgr;
+	core::ProgramPtr mProgram;
+public:
+	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
+
+	Program(const core::SharedNodeManager& mgr);
+
+	void addTranslationUnit(const std::string& fileName);
+
+	void addTranslationUnits(const std::vector<std::string>& fileNames) {
+		std::for_each(fileNames.begin(), fileNames.end(), [ this ](const std::string& fileName){ this->addTranslationUnit(fileName); });
 	}
 
+	// convert the program into the IR representation
+	const core::ProgramPtr& convert();
+
+	const core::ProgramPtr& getProgram() const { return mProgram; }
+	const TranslationUnitSet& getTranslationUnits() const;
+
+	void dumpCallGraph() const;
 };
 
 } // End frontend namespace
