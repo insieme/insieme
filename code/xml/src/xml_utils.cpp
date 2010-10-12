@@ -300,7 +300,28 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) {
 
 XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, DOMDocument* doc) {
 	const string type = ann.getAnnotationName();
-	return IrToDomConvertMap[type](ann, doc);
+	XmlElement&(*funPtr)(const Annotation&, xercesc::DOMDocument*) = IrToDomConvertMap[type];
+
+	// test iterator
+	for(map<const string, XmlElement&(*)(const Annotation&, xercesc::DOMDocument*)>::const_iterator iter = IrToDomConvertMap.begin(); iter != IrToDomConvertMap.end(); ++iter) {
+			std::cout << iter->first << std::endl;
+			XmlElement&(*test)(const Annotation&, xercesc::DOMDocument*) = iter->second;
+			if (test) {
+				std::cout << "test is not NULL";
+				return test(ann, doc);
+			}
+			else
+				std::cout << "test is NULL!!!";
+	}
+	
+	
+	if (funPtr) {
+		std::cout << "funPtr is not NULL!";
+		return funPtr(ann, doc);
+	}
+	else
+		std::cout << "funPtr is NULL!";
+	//return IrToDomConvertMap[type](ann, doc);
 }
 
 void* XmlConverter::registerAnnotation(string name, 

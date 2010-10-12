@@ -124,7 +124,7 @@ TEST(XmlTest, UnionTypeTest) {
 
 
 // ------------------- DummyAnnotation ---------------------------------
-class DummyAnnotation : public Annotation {
+/*class DummyAnnotation : public Annotation {
 public:
 	static StringKey<DummyAnnotation> DummyKey;
 	int value;
@@ -158,7 +158,7 @@ shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
 XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
 
 
-/*TEST(XmlTest, AnnotationTest) {
+TEST(XmlTest, AnnotationTest) {
 	typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 	DummyAnnotationPtr dummyA(new DummyAnnotation(1));
 	
