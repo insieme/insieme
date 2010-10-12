@@ -68,7 +68,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	EXPECT_EQ(pl.size(), (size_t) 2);
 
 	// first pragma is at location [(4:2) - (4:22)]
-	PragmaPtr p = pl[1];
+	PragmaPtr p = pl[0];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 4, 2);
@@ -92,7 +92,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	}
 
 	// CHECK SECOND PRAGMA
-	p = pl[0];
+	p = pl[1];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 12, 2);
@@ -155,7 +155,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	EXPECT_EQ(pl.size(), (size_t) 4);
 
 	// first pragma is at location [(6:2) - (6:37)]
-	PragmaPtr p = pl[3];
+	PragmaPtr p = pl[0];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 6, 2);
@@ -195,7 +195,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	}
 
 	// pragma is at location [(11:2) - (11:22)]
-	p = pl[2];
+	p = pl[1];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 11, 2);
@@ -219,7 +219,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	}
 
 	// pragma is at location [(13:3) - (14:14)]
-	p = pl[0];
+	p = pl[2];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 13, 3);
@@ -258,7 +258,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	}
 
 	// pragma is at location [(16:5) - (16:24)]
-	p = pl[1];
+	p = pl[3];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 16, 5);

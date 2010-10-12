@@ -50,7 +50,7 @@ struct CommandLineOptions {
 	static var_type var_name;
 #define INT_OPTION(opt_name, opt_id, var_name, def_value, var_help) \
 	static int var_name;
-#include "options.inc"
+#include "options.def"
 #undef FLAG
 #undef OPTION
 #undef INT_OPTION
