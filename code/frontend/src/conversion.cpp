@@ -519,11 +519,13 @@ public:
 
 			core::TupleType::ElementTypeList elemTy;
 			core::LambdaExpr::ParamList params;
-			std::for_each(args.begin(), args.end(), [&params, &elemTy, &builder] (const core::ExpressionPtr& curr) {
-				const core::VarExprPtr& var = core::dynamic_pointer_cast<const core::VarExpr>(curr);
-				params.push_back( builder.paramExpr(var->getType(), var->getIdentifier()) );
-				elemTy.push_back( var->getType() );
-			});
+			std::for_each(args.begin(), args.end(),
+				[&params, &elemTy, &builder] (const core::ExpressionPtr& curr) {
+					const core::VarExprPtr& var = core::dynamic_pointer_cast<const core::VarExpr>(curr);
+					params.push_back( builder.paramExpr(var->getType(), var->getIdentifier()) );
+					elemTy.push_back( var->getType() );
+				}
+			);
 
 			// build the type of the function
 			core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), rhs->getType());
@@ -753,9 +755,10 @@ public:
     ExprWrapper VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr){
         START_LOG_EXPR_CONVERSION(vecElemExpr);
         core::ExpressionPtr base = Visit( vecElemExpr->getBase() ).ref;
+
         std::string pos;
-        llvm::StringRef accessor = vecElemExpr->getAccessor().getName();
-   //     convFact.builder.literal("0", type);
+        llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
+
         //translate OpenCL accessor string to index
         if(accessor == "x") 		pos = "0";
         else if(accessor == "y")    pos = "1";
@@ -843,8 +846,8 @@ public:
         // it is not declared as const
 		// successive dataflow analysis could be used to restrict the access to this variable
         core::TypePtr type = clangType.isConstQualified() ?
-            convFact.ConvertType( *varDecl->getType().getTypePtr() ) :
-            convFact.builder.refType( convFact.ConvertType( *varDecl->getType().getTypePtr() ) );
+            convFact.ConvertType( *GET_TYPE_PTR(varDecl) ) :
+            convFact.builder.refType( convFact.ConvertType( *GET_TYPE_PTR(varDecl) ) );
 
 		// initialization value
 		core::ExpressionPtr initExpr(NULL);
@@ -1537,8 +1540,8 @@ public:
 	TypeWrapper VisitExtVectorType(ExtVectorType* vecTy) {
        // get vector datatype
         const QualType qt = vecTy->getElementType();
-        BuiltinType* buildInTy = (BuiltinType*)qt->getUnqualifiedDesugaredType();
-        core::TypePtr subType = Visit(buildInTy).ref;
+        const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+        core::TypePtr subType = Visit(const_cast<BuiltinType*>(buildInTy)).ref;
 
         // get the number of elements
         size_t num = vecTy->getNumElements();
@@ -1549,8 +1552,9 @@ public:
 	}
 
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
-        core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
+		START_LOG_TYPE_CONVERSION( typedefType );
 
+        core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() ).ref;
         // Adding the name of the typedef as annotation
         subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
         END_LOG_TYPE_CONVERSION( subType );
@@ -1566,7 +1570,7 @@ public:
 
 	TypeWrapper VisitTypeOfExprType(TypeOfExprType* typeOfType) {
 		START_LOG_TYPE_CONVERSION( typeOfType );
-		core::TypePtr retTy = Visit( typeOfType->getUnderlyingExpr()->getType().getTypePtr() ).ref;
+		core::TypePtr retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) ).ref;
 		END_LOG_TYPE_CONVERSION( retTy );
 		return TypeWrapper( retTy );
 	}
@@ -1742,7 +1746,7 @@ public:
 	}
 
 	TypeWrapper VisitReferenceType(ReferenceType* refTy) {
-		return TypeWrapper( convFact.builder.refType( Visit(refTy->getPointeeType().getTypePtr()).ref ) );
+		return TypeWrapper( convFact.builder.refType( Visit( refTy->getPointeeType().getTypePtr()).ref ) );
 	}
 
 private:
@@ -1786,12 +1790,10 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
         const AttrVec attrVec = varDecl->getAttrs();
         std::ostringstream ss;
         ocl::OclBaseAnnotation::OclAnnotationList declAnnotation;
-
         try {
-        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
-            Attr* attr = *I;
-            if(attr->getKind() == attr::Kind::Annotate) {
-                std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
+        for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+            if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+                std::string sr = attr->getAnnotation().str();
 
                 //check if the declaration has attribute __private
                 if(sr == "__private") {
@@ -1839,7 +1841,7 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
 
             printErrorMsg(*errMsg, clangComp, varDecl);
         }
-        type->addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(declAnnotation));
+        type->addAnnotation( std::make_shared<ocl::OclBaseAnnotation>(declAnnotation) );
     }
 }
 
@@ -1850,15 +1852,13 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
 void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypePtr type) {
     if(varDecl->hasAttrs()) {
         const AttrVec attrVec = varDecl->getAttrs();
-
         std::ostringstream ss;
         ocl::OclBaseAnnotation::OclAnnotationList paramAnnotation;
 
         try {
-        for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
-            Attr* attr = *I;
-            if(attr->getKind() == attr::Kind::Annotate) {
-                std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
+        for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+            if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+                std::string sr = attr->getAnnotation().str();
 
                 //check if the declaration has attribute __private
                 if(sr == "__private") {
@@ -1942,7 +1942,7 @@ void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
 			std::for_each(definition->param_begin(), definition->param_end(),
 				[&funcParamList, &mFact] (ParmVarDecl* currParam) {
 					funcParamList.push_back(
-						mFact.getASTBuilder().paramExpr( mFact.ConvertType( *currParam->getType().getTypePtr() ), currParam->getNameAsString()) );
+						mFact.getASTBuilder().paramExpr( mFact.ConvertType( *GET_TYPE_PTR(currParam) ), currParam->getNameAsString()) );
 
                     //port clang attributes to IR annotations
 					mFact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
@@ -1955,34 +1955,30 @@ void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
                 const clang::AttrVec attrVec = funcDecl->getAttrs();
                 ocl::OclBaseAnnotation::OclAnnotationList kernelAnnotation;
 
-                for(Attr *const*I = attrVec.begin(), *const*E = attrVec.end(); I != E; ++I) {
-                    Attr* attr = *I;
+                for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
 //                    printf("Attribute \n");
-                    if(attr->getKind() == attr::Kind::Annotate) {
+                    if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
                         //get annotate string
-                        AnnotateAttr* aa = (AnnotateAttr*)attr;
-                        llvm::StringRef sr = aa->getAnnotation();
+                        llvm::StringRef sr = attr->getAnnotation();
 
                         //check if it is an OpenCL kernel function
                         if(sr == "__kernel") {
 //                            printf("        Kernel\n");
                             DVLOG(1) << "is OpenCL kernel function";
 
-                            kernelAnnotation.push_back(std::make_shared<ocl::OclKernelFctAnnotation>());
+                            kernelAnnotation.push_back( std::make_shared<ocl::OclKernelFctAnnotation>() );
                         }
                     }
-                    if(attr->getKind() == attr::Kind::ReqdWorkGroupSize) {
+                    if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
                         kernelAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(
-                                ((ReqdWorkGroupSizeAttr*)attr)->getXDim(),
-                                ((ReqdWorkGroupSizeAttr*)attr)->getYDim(),
-                                ((ReqdWorkGroupSizeAttr*)attr)->getZDim()));
-
+                                attr->getXDim(), attr->getYDim(), attr->getZDim())
+                        );
                     }
                 }
                 // if OpenCL related annotations have been found, create OclBaseAnnotation and
                 // add it to the funciton's attribute
                 if(kernelAnnotation.size() > 0)
-                    funcType.addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(kernelAnnotation));
+                    funcType.addAnnotation( std::make_shared<ocl::OclBaseAnnotation>(kernelAnnotation) );
             }
 
 			core::StatementPtr funcBody(NULL);
