@@ -37,6 +37,7 @@
 #pragma once
 
 #include <string>
+#include <boost/timer.hpp>
 
 namespace insieme {
 namespace utils {
@@ -44,28 +45,26 @@ namespace utils {
 /**
  * Simple timer used to measured time.
  */
-class Timer {
-	long mTime;
+class Timer: public boost::timer {
+	double mElapsed;
 	std::string mName;
 	bool isStopped;
 
 public:
-	Timer(const std::string& name): mTime(0), mName(name), isStopped(false) { }
+	Timer(const std::string& name): boost::timer(), mName(name), isStopped(false) { }
 	/**
 	 * Starts the timer
 	 */
 	void start();
 	/**
-	 * Stops the timer returning the elapsed amount of milliseconds
+	 * Stops the timer returning the elapsed amount of seconds
 	 */
-	long stop();
+	double stop();
 
 	/**
-	 * Return the elapsed amount of milliseconds
+	 * Return the elapsed amount of seconds
 	 */
-	long getTime() const;
-
-	double getTimeInSecs() const { return static_cast<double>(getTime())/1000; }
+	double getTime() const;
 
 	void print() const;
 };

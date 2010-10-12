@@ -320,11 +320,9 @@ Program::Program(const core::SharedNodeManager& mgr): pimpl( new ProgramImpl() )
 
 void Program::addTranslationUnit(const std::string& file_name) {
 	frontend::TranslationUnitImpl* tuImpl = new frontend::TranslationUnitImpl(file_name, mProgram, mMgr);
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) );
+	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
-	// update the program
-	// mProgram = tuImpl->getProgram();
 }
 
 const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
@@ -333,6 +331,7 @@ void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
 
 const core::ProgramPtr& Program::convert() {
 
+	// For each translation unit we call the IRConverter
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
 		const ClangCompiler& comp = (*it)->getCompiler();
 		const PragmaList& pList = (*it)->getPragmaList();

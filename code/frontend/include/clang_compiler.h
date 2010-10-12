@@ -138,7 +138,14 @@ class ClangCompiler: boost::noncopyable {
 	ClangCompilerImpl* pimpl;
 	friend class InsiemeTransUnit;
 public:
+	/**
+	 * Creates an empty compiler instance, usefull for test cases
+	 */
 	ClangCompiler();
+
+	/**
+	 * Creates a compiler instance from an input file
+	 */
 	ClangCompiler(const std::string& file_name);
 	clang::ASTContext& getASTContext() const;
 	clang::SourceManager& getSourceManager() const;
@@ -152,12 +159,11 @@ class Pragma;
 typedef std::shared_ptr<Pragma> PragmaPtr;
 typedef std::vector<PragmaPtr> 	PragmaList;
 
+// ------------------------------------ TranslationUnit ---------------------------
 
-class TranslationUnit;
-typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
 /**
  * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
- * and the insieme IR which has been generated from the source file.
+ * and the pragmas encountred during the processing of the translation unit.
  */
 class TranslationUnit: public boost::noncopyable {
 protected:
@@ -166,30 +172,46 @@ protected:
 	PragmaList 		mPragmaList;
 public:
 	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
-
+	/**
+	 * Returns a list of pragmas defined in the translation unit
+	 */
 	const PragmaList& getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
 	const std::string& getFileName() const { return mFileName; }
 };
 
+typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
+
+// ------------------------------------ Program ---------------------------
 /**
- * A program is a set of compilation units, we need to keep this object so we can create a complete call graph and thus
- * determine which part of the input program should be handled by insieme and which should be kept as the original
+ * A program is made of a set of compilation units, we need to keep this object so we can create a complete call graph and thus
+ * determine which part of the input program should be handled by insieme and which should be kept as the original.
  */
 class Program: public boost::noncopyable {
+
+	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang headers
 	class ProgramImpl;
 	typedef std::shared_ptr<ProgramImpl> ProgramImplPtr;
 	ProgramImplPtr pimpl;
 
+	// Reference to the NodeManager used to convert the translation units into IR code
 	const core::SharedNodeManager& mMgr;
+
+	// The IR program node containing the converted IR
 	core::ProgramPtr mProgram;
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 
 	Program(const core::SharedNodeManager& mgr);
 
+	/**
+	 * Add a single file to the program
+	 */
 	void addTranslationUnit(const std::string& fileName);
 
+	/**
+	 * Add multiple files to the program
+	 */
 	void addTranslationUnits(const std::vector<std::string>& fileNames) {
 		std::for_each(fileNames.begin(), fileNames.end(), [ this ](const std::string& fileName){ this->addTranslationUnit(fileName); });
 	}
@@ -198,6 +220,10 @@ public:
 	const core::ProgramPtr& convert();
 
 	const core::ProgramPtr& getProgram() const { return mProgram; }
+
+	/**
+	 * Returns a list of parsed translation units
+	 */
 	const TranslationUnitSet& getTranslationUnits() const;
 
 	void dumpCallGraph() const;

@@ -36,41 +36,30 @@
 
 #include "timer.h"
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <cassert>
-
 #include "logging.h"
+#include <cassert>
 
 namespace insieme {
 namespace utils {
 
 void Timer::start() {
-	assert(!isStopped && "Cannot restart an used timer!");
-	struct timeval tv;
-	gettimeofday(&tv, 0);
-	long time = tv.tv_sec * 1000 + tv.tv_usec/1000;
-	mTime = time;
+	restart();
 }
 
-long Timer::stop() {
+double Timer::stop() {
+	mElapsed = elapsed();
 	isStopped = true;
-	struct timeval tv;
-	gettimeofday(&tv, 0);
-	long time = tv.tv_sec * 1000 + tv.tv_usec/1000;
-	mTime = time - mTime;
-	return mTime;
+	return mElapsed;
 }
 
-long Timer::getTime() const {
-	assert(isStopped && "Cannot read the timer value if not stopped.");
-	return mTime;
+double Timer::getTime() const {
+	assert(isStopped && "Cannnot read time of a running timer.");
+	return mElapsed;
 }
 
 void Timer::print() const {
 	DLOG(INFO) << "********************************************************************************";
-	DLOG(INFO) << "* " << mName << ":\t" << getTimeInSecs() << " secs";
+	DLOG(INFO) << "* " << mName << ":\t" << getTime() << " secs";
 	DLOG(INFO) << "********************************************************************************";
 }
 
