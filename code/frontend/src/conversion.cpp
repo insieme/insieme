@@ -1794,7 +1794,7 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
                 std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
 
                 //check if the declaration has attribute __private
-                if(sr.compare(llvm::StringRef("__private")) == 0) {
+                if(sr == "__private") {
                     DVLOG(2) << "           OpenCL address space __private";
                     declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
                             ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
@@ -1802,7 +1802,7 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
                 }
 
                 //check if the declaration has attribute __local
-                if(sr.compare(llvm::StringRef("__local")) == 0) {
+                if(sr == "__local") {
                     DVLOG(2) << "           OpenCL address space __local";
                     declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
                             ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
@@ -1810,13 +1810,13 @@ void ConversionFactory::convertClangAttributes(VarDecl* varDecl, core::TypePtr t
                 }
 
                 //check if the declaration has attribute __global
-                if(sr.compare(llvm::StringRef("__global")) == 0) {
+                if(sr == "__global") {
                     ss << "Address space __global not allowed for local variable";
                     throw &ss;
                 }
 
                 //check if the declaration has attribute __constant
-                if(sr.compare(llvm::StringRef("__constant")) == 0) {
+                if(sr == "__constant") {
                     ss << "Address space __constant not allowed for local variable";
                     throw &ss;
                 }
@@ -1861,7 +1861,7 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
                 std::string sr = ((AnnotateAttr*)attr)->getAnnotation().str();
 
                 //check if the declaration has attribute __private
-                if(sr.compare(llvm::StringRef("__private")) == 0) {
+                if(sr == "__private") {
                     DVLOG(2) << "           OpenCL address space __private";
                     paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
                             ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
@@ -1869,7 +1869,7 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
                 }
 
                 //check if the declaration has attribute __local
-                if(sr.compare(llvm::StringRef("__local")) == 0) {
+                if(sr == "__local") {
                     DVLOG(2) << "           OpenCL address space __local";
                     paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
                             ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
@@ -1877,7 +1877,7 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
                 }
 
                 //check if the declaration has attribute __global
-                if(sr.compare(llvm::StringRef("__global")) == 0) {
+                if(sr == "__global") {
                     DVLOG(2) << "           OpenCL address space __global";
                     paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
                             ocl::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
@@ -1885,7 +1885,7 @@ void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypeP
                 }
 
                 //check if the declaration has attribute __constant
-                if(sr.compare(llvm::StringRef("__constant")) == 0) {
+                if(sr == "__constant") {
                     DVLOG(2) << "           OpenCL address space __constant";
                     paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
                             ocl::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
@@ -1964,7 +1964,7 @@ void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
                         llvm::StringRef sr = aa->getAnnotation();
 
                         //check if it is an OpenCL kernel function
-                        if(sr.compare(llvm::StringRef("__kernel")) == 0) {
+                        if(sr == "__kernel") {
 //                            printf("        Kernel\n");
                             DVLOG(1) << "is OpenCL kernel function";
 
