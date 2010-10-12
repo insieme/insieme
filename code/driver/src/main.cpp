@@ -69,26 +69,29 @@ int main(int argc, char** argv) {
 	core::ProgramPtr program = core::Program::create(*manager);
 	try {
 		auto inputFiles = CommandLineOptions::InputFiles;
-//		auto inputFiles = toVector<std::string>("../code/driver/test/hello_world.c");
-		std::for_each(inputFiles.begin(), inputFiles.end(), [&](const std::string& file) {
+		LOG(INFO) << "Parsing input files: ";
+		std::copy(inputFiles.begin(), inputFiles.end(), std::ostream_iterator<std::string>( std::cout, ", " ) );
+		fe::Program p(manager);
+		p.addTranslationUnits(inputFiles);
 
-			LOG(INFO) << "Parsing File: " << file;
-			auto res = fe::InsiemeTransUnit::ParseFile(file, manager, program);
-			insieme::core::ProgramPtr program = res->getProgram();
-			LOG(INFO) << "Parsed Program: " << std::endl << *program;
+		std::cerr << "*** CALL GRAPH ***\n";
+		p.dumpCallGraph();
 
-			LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
-			LOG(INFO) << "Converting to C++ ... ";
-			{ // TODO make one wrapper function for all of this
-				insieme::simple_backend::ConversionContext cc;
+		// do the actual clang to IR conversion
+		insieme::core::ProgramPtr program = p.convert();
 
-				auto converted = cc.convert(program);
-				for_each(program->getEntryPoints(), [&converted](const insieme::core::ExpressionPtr& ep) {
-					LOG(INFO) << "---\n" << converted[ep];
-				});
-			}
-		});
+		LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
+		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
+		LOG(INFO) << "Converting to C++ ... ";
+		{ // TODO make one wrapper function for all of this
+			insieme::simple_backend::ConversionContext cc;
+
+			auto converted = cc.convert(program);
+			for_each(program->getEntryPoints(), [&converted](const insieme::core::ExpressionPtr& ep) {
+				LOG(INFO) << "---\n" << converted[ep];
+			});
+		}
 
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;

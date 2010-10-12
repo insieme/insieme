@@ -45,6 +45,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
+using namespace insieme;
 using namespace insieme::core;
 
 using namespace insieme::frontend;
@@ -61,7 +62,7 @@ TEST(TypeConversion, HandleBuildinType) {
 
 	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clangComp;
 	ConversionFactory convFactory( shared, clangComp );
 
@@ -114,7 +115,7 @@ TEST(TypeConversion, HandlePointerType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
 
 	ConversionFactory convFactory( shared, clang );
@@ -133,7 +134,7 @@ TEST(TypeConversion, HandleReferenceType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
@@ -152,7 +153,7 @@ TEST(TypeConversion, HandleStructType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
 
@@ -194,7 +195,7 @@ TEST(TypeConversion, HandleStructType) {
 TEST(TypeConversion, HandleRecursiveStructType) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
 
@@ -228,7 +229,7 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
 	SourceLocation emptyLoc;
@@ -295,7 +296,7 @@ TEST(TypeConversion, HandleFunctionType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
 
@@ -336,7 +337,7 @@ TEST(TypeConversion, HandleArrayType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr prog = Program::create(*shared);
+	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang);
 
@@ -369,11 +370,14 @@ TEST(TypeConversion, HandleArrayType) {
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr program = Program::create(*shared);
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/types.c", shared, program, false);
-	ConversionFactory convFactory( shared, TU->getCompiler() );
 
-	const PragmaList& pl = TU->getPragmaList();
+	insieme::frontend::Program prog(shared);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
+
+	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
+
+	ConversionFactory convFactory( shared, comp );
 
 	std::for_each(pl.begin(), pl.end(),
 		[ &convFactory ](const PragmaPtr curr) {

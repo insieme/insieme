@@ -133,6 +133,7 @@ public:
 
 #define XML_CONVERTER(className_, toXML_, fromXML_) \
 	insieme::xml::XmlElement& convert ## className_ ## ToXML(const Annotation& ann, xercesc::DOMDocument* doc) { \
+	std::cout << "XML_toXML INNNNN"; \
 	const className_& annotation = dynamic_cast<const className_&>(ann); \
 	insieme::xml::XmlElement* node = new insieme::xml::XmlElement("annotation", doc); \
 	node->setAttr("type", "className_"); \

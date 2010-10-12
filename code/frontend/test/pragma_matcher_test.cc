@@ -58,9 +58,11 @@ using namespace insieme::core;
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr program = Program::create(*shared);
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/omp_parallel.c", shared, program, false);
-	const PragmaList& pl = TU->getPragmaList();
+	insieme::frontend::Program prog(shared);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_parallel.c" );
+
+	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 2);
@@ -69,9 +71,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	PragmaPtr p = pl[1];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 4, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 4, 2);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 4, 22);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 4, 22);
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
@@ -80,9 +82,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		const clang::Stmt* stmt = p->getStatement();
 
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), TU->getCompiler().getSourceManager(), 5, 2);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 5, 2);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 9, 2);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 9, 2);
 
 		// check the omp parallel is empty
 		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
@@ -93,9 +95,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	p = pl[0];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 12, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 12, 2);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 12, 60);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 12, 60);
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
@@ -104,9 +106,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		const clang::Stmt* stmt = p->getStatement();
 
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), TU->getCompiler().getSourceManager(), 13, 2);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 13, 2);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 13, 4);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 13, 4);
 
 		// check the omp parallel is empty
 		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
@@ -143,9 +145,11 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	ProgramPtr program = Program::create(*shared);
-	InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/inputs/omp_for.c", shared, program, false);
-	const PragmaList& pl = TU->getPragmaList();
+	insieme::frontend::Program prog(shared);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_for.c" );
+
+	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -154,9 +158,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	PragmaPtr p = pl[3];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 6, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 6, 2);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 6, 37);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 6, 37);
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
@@ -165,9 +169,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		const clang::Stmt* stmt = p->getStatement();
 
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), TU->getCompiler().getSourceManager(), 7, 2);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 7, 2);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 9, 2);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 9, 2);
 
 		// check the omp parallel is empty
 		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
@@ -194,9 +198,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	p = pl[2];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 11, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 11, 2);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 11, 22);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 11, 22);
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
@@ -205,9 +209,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		const clang::Stmt* stmt = p->getStatement();
 
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), TU->getCompiler().getSourceManager(), 12, 2);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 12, 2);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 18, 2);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 18, 2);
 
 		// check empty map
 		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
@@ -218,9 +222,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	p = pl[0];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 13, 3);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 13, 3);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 14, 14);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 14, 14);
 
 		EXPECT_EQ(p->getType(), "omp::for");
 
@@ -229,9 +233,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		const clang::Stmt* stmt = p->getStatement();
 
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), TU->getCompiler().getSourceManager(), 15, 3);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 15, 3);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), TU->getCompiler().getSourceManager(), 17, 3);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 17, 3);
 
 		// check the omp parallel is empty
 		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
@@ -257,9 +261,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	p = pl[1];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), TU->getCompiler().getSourceManager(), 16, 5);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 16, 5);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), TU->getCompiler().getSourceManager(), 16, 24);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 16, 24);
 
 		EXPECT_EQ(p->getType(), "omp::barrier");
 

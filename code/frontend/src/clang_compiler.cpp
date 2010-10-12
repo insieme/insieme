@@ -42,7 +42,6 @@
 // #include "programs.h"
 
 #include "omp/omp_pragma.h"
-
 #include "clang_config.h"
 
 #include "clang/Frontend/CompilerInstance.h"
@@ -70,6 +69,14 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/ExternalSemaSource.h"
+
+#include <clang/Index/TranslationUnit.h>
+#include "clang/Index/DeclReferenceMap.h"
+#include "clang/Index/SelectorMap.h"
+
+#include "clang/Index/Indexer.h"
+#include "clang/Index/Analyzer.h"
+#include "clang/Index/CallGraph.h"
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -248,25 +255,89 @@ ClangCompiler::~ClangCompiler() {
 	delete pimpl;
 }
 
-InsiemeTransUnit::InsiemeTransUnit(const std::string& file_name, insieme::core::SharedNodeManager manager, insieme::core::ProgramPtr prog, bool doConversion): mClang(file_name), mProgram(prog) {
-	conversion::IRConsumer cons(mClang, manager, prog, mPragmaList, doConversion);
+/**
+ * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
+ * and the insieme IR which has been generated from the source file.
+ */
+class TranslationUnitImpl: public frontend::TranslationUnit, public clang::idx::TranslationUnit {
+	std::shared_ptr<clang::idx::DeclReferenceMap>   	mDeclRefMap;
+	std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
-	// register omp pragmas
-	omp::registerPragmaHandlers( mClang.getPreprocessor() );
+public:
+	TranslationUnitImpl(const std::string& file_name, const insieme::core::ProgramPtr& prog, const core::SharedNodeManager& mgr):
+			frontend::TranslationUnit(file_name) {
+		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
 
-	mClang.getPreprocessor().AddPragmaHandler(
-			PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(mClang.getPreprocessor().getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom));
+		// register 'omp' pragmas
+		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
-	InsiemeParseAST(mClang.getPreprocessor(), &cons, mClang.getASTContext(), true, mPragmaList);
+		// register 'test' pragma
+		mClang.getPreprocessor().AddPragmaHandler(
+				PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(mClang.getPreprocessor().getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom));
 
+		clang::ASTConsumer emptyCons;
+		InsiemeParseAST(mClang.getPreprocessor(), &emptyCons, mClang.getASTContext(), true, mPragmaList);
 
-	if( mClang.getDiagnostics().hasErrorOccurred() ) {
-		// errors are always fatal!
-		throw ClangParsingError(file_name);
+		if( mClang.getDiagnostics().hasErrorOccurred() ) {
+			// errors are always fatal!
+			throw ClangParsingError(file_name);
+		}
+
+		// the translation unit has been correctly parsed
+		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
+		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
 	}
 
-	mProgram = cons.getProgram();
+	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
+	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
+	clang::Diagnostic& getDiagnostic() { return getCompiler().getDiagnostics(); }
+
+	clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
+	clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
+};
+
+struct Program::ProgramImpl {
+	TranslationUnitSet tranUnits;
+
+	clang::idx::Program  mProg;
+	clang::idx::Indexer  mIdx;
+	clang::idx::Analyzer mAnalyzer;
+
+	clang::CallGraph mCallGraph;
+
+	ProgramImpl() : mIdx(mProg), mAnalyzer(mProg, mIdx), mCallGraph(mProg) { }
+};
+
+Program::Program(const core::SharedNodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(*mgr) ) { }
+
+void Program::addTranslationUnit(const std::string& file_name) {
+	frontend::TranslationUnitImpl* tuImpl = new frontend::TranslationUnitImpl(file_name, mProgram, mMgr);
+	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) );
+	pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
+	pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
+	// update the program
+	// mProgram = tuImpl->getProgram();
 }
 
+const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
+
+void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
+
+const core::ProgramPtr& Program::convert() {
+
+	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
+		const ClangCompiler& comp = (*it)->getCompiler();
+		const PragmaList& pList = (*it)->getPragmaList();
+
+		conversion::IRConverter conv(comp, mProgram, mMgr, pList);
+		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
+
+		conv.handleTopLevelDecl(declRef);
+
+		mProgram = conv.getProgram();
+	}
+
+	return mProgram;
+}
 } // End fronend namespace
 } // End insieme namespace

@@ -121,3 +121,55 @@ TEST(XmlTest, UnionTypeTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+
+// ------------------- DummyAnnotation ---------------------------------
+class DummyAnnotation : public Annotation {
+public:
+	static StringKey<DummyAnnotation> DummyKey;
+	int value;
+	DummyAnnotation(int value) : value(value) { };
+
+	virtual AnnotationKey* getKey() const {
+		return &DummyKey;
+	}
+	
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation"; 
+	}
+};
+
+// initalization of the dummy key
+StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+
+XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el, xercesc::DOMDocument* doc){
+	std::cout << "intoToXML\n";
+	XmlElement intNode("int", doc);
+	el << intNode;
+	std::cout << ann.value;
+	return el;
+}
+
+shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
+	std::cout << "intoFromXML\n";
+	return shared_ptr<Annotation> (new DummyAnnotation(10));
+}
+
+XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
+
+
+/*TEST(XmlTest, AnnotationTest) {
+	typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
+	DummyAnnotationPtr dummyA(new DummyAnnotation(1));
+	
+	NodeManager manager;	
+	GenericTypePtr type1 = GenericType::get(manager, "int");
+	type1->addAnnotation(dummyA);
+	NodePtr root = type1;
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	std::cout << s1;
+}*/
+
+

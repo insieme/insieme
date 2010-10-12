@@ -119,6 +119,14 @@ public:
 				break;
 			}
 		}
+		
+		AnnotationMap map = cur->getAnnotations();
+		XmlConverter xmlConverter;
+		for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
+			std::cout << "OK\n";
+			xmlConverter.irToDomAnnotation (*(iter->second), doc);
+			std::cout << "OK\n";
+		}
 	}
 	
 	void visitFunctionType(const FunctionTypePtr& cur){

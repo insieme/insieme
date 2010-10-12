@@ -51,6 +51,7 @@
 #include <clang/Sema/AttributeList.h>
 #include <clang/AST/Expr.h>
 
+using namespace insieme;
 using namespace insieme::frontend;
 using namespace insieme::core;
 
@@ -351,15 +352,15 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
     }
 }
 
-	SharedNodeManager manager = std::make_shared<NodeManager>();
-    ProgramPtr program = Program::create(*manager);
-    InsiemeTransUnitPtr TU = InsiemeTransUnit::ParseFile(std::string(SRC_DIR) + "/kernel_matcher.cl", manager, program, false);
-
-    clang::ASTContext& ctx = TU->getCompiler().getASTContext();
-    std::vector<clang::Type*> types = ctx.getTypes();
-
 //Check the size of the variable
 TEST(KernelMatcherTest, CheckBuildinVector) {
+	SharedNodeManager manager = std::make_shared<NodeManager>();
+	frontend::Program p(manager);
+
+	p.addTranslationUnit( std::string(SRC_DIR) + "/kernel_matcher.cl" );
+    clang::ASTContext& ctx = (*p.getTranslationUnits().begin())->getCompiler().getASTContext();
+    std::vector<clang::Type*> types = ctx.getTypes();
+
     for(size_t i = 0; i < types.size(); ++i)
     {
         clang::Type* t = types.at(i);
@@ -426,6 +427,13 @@ clang::QualType qt = t->getCanonicalTypeInternal();
 
 // Check the given attributes
 TEST(KernelMatcherTest, ReadAttributes) {
+	SharedNodeManager manager = std::make_shared<NodeManager>();
+	frontend::Program p(manager);
+
+	p.addTranslationUnit( std::string(SRC_DIR) + "/kernel_matcher.cl" );
+    clang::ASTContext& ctx = (*p.getTranslationUnits().begin())->getCompiler().getASTContext();
+    std::vector<clang::Type*> types = ctx.getTypes();
+
     clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext(ctx.getTranslationUnitDecl());
 
     for(clang::DeclContext::decl_iterator I = declRef->decls_begin(), E = declRef->decls_end(); I != E; ++I) {
