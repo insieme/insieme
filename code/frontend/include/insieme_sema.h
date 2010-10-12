@@ -75,13 +75,13 @@ public:
 	
 	void addPragma(PragmaPtr P);
 
-	clang::StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr);
+	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr);
 								   
-	clang::StmtResult ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal, SourceLocation ElseLoc,
-								  clang::Stmt* ElseVal);
+	clang::StmtResult ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal,
+			clang::SourceLocation ElseLoc, clang::Stmt* ElseVal);
 
-	clang::StmtResult ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc, clang::Stmt* First, FullExprArg Second, clang::Decl* SecondVar, FullExprArg Third,
-						  		  SourceLocation RParenLoc, clang::Stmt* Body);
+	clang::StmtResult ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
+			clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third, clang::SourceLocation RParenLoc, clang::Stmt* Body);
 								  
 	clang::Decl* ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D);
 	
@@ -99,7 +99,7 @@ public:
 	 * Register the parsed pragma.
 	 */
 	template <class T>
-	void ActOnPragma(const std::string& name, const MatchMap& mmap, SourceLocation startLoc, SourceLocation endLoc) {
+	void ActOnPragma(const std::string& name, const MatchMap& mmap, clang::SourceLocation startLoc, clang::SourceLocation endLoc) {
 		addPragma( PragmaPtr(new T(startLoc, endLoc, name, mmap)) );
 	}
 	

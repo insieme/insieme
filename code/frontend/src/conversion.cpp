@@ -1849,7 +1849,7 @@ void ConversionFactory::convertClangAttributes(clang::VarDecl* varDecl, core::Ty
  * currently used for:
  * OpenCL address spaces
  */
-void ConversionFactory::convertClangAttributes(ParmVarDecl* varDecl, core::TypePtr type) {
+void ConversionFactory::convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type) {
     if(varDecl->hasAttrs()) {
         const AttrVec attrVec = varDecl->getAttrs();
         std::ostringstream ss;
