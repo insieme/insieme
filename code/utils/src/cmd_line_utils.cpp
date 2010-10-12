@@ -56,7 +56,7 @@ namespace po = boost::program_options;
 	var_type CommandLineOptions::var_name;
 #define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
 	int CommandLineOptions::var_name;
-#include "options.inc"
+#include "options.def"
 #undef FLAG
 #undef OPTION
 #undef INT_OPTION
@@ -95,7 +95,7 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 		(opt_name, var_help)
 	// Declare a group of options that will be allowed on the command line
 	cmdLineOpts.add_options()
-		#include "options.inc"
+		#include "options.def"
 	;
 	#undef OPTION
 	#undef FLAG
