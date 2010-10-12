@@ -117,7 +117,7 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 				varsMap.count(opt_id) && cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< var_type >() << endl;
 			#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
 				cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< int >() << endl;
-			#include "options.inc"
+			#include "options.def"
 			#undef OPTION
 			#undef FLAG
 			#undef INT_OPTION
@@ -129,7 +129,7 @@ void CommandLineOptions::Parse(int argc, char** argv, bool debug) {
 		#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 			if(varsMap.count(opt_id)) CommandLineOptions::var_name = varsMap[opt_id].as< var_type >();
 		#define INT_OPTION(opt_name, opt_id, var_name, var_type, var_help)
-		#include "options.inc"
+		#include "options.def"
 		#undef OPTION
 		#undef INT_OPTION
 		#undef FLAG
