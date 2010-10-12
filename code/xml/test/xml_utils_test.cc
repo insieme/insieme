@@ -124,7 +124,7 @@ TEST(XmlTest, UnionTypeTest) {
 
 
 // ------------------- DummyAnnotation ---------------------------------
-/*class DummyAnnotation : public Annotation {
+class DummyAnnotation : public Annotation {
 public:
 	static StringKey<DummyAnnotation> DummyKey;
 	int value;
@@ -170,6 +170,6 @@ TEST(XmlTest, AnnotationTest) {
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
 	std::cout << s1;
-}*/
+}
 
 

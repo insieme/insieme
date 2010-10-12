@@ -121,7 +121,7 @@ public:
 		}
 		
 		AnnotationMap map = cur->getAnnotations();
-		XmlConverter xmlConverter;
+		XmlConverter& xmlConverter = XmlConverter::get();
 		for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
 			std::cout << "OK\n";
 			xmlConverter.irToDomAnnotation (*(iter->second), doc);
@@ -293,42 +293,55 @@ XmlConverter& XmlConverter::get(){
 	return instance;
 }
 
-shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) {
+shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) const {
 	string type = el.getAttr("type");
-	return DomToIrConvertMap[type](el);
+	// return DomToIrConvertMap[type](el);
 }
 
-XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, DOMDocument* doc) {
-	const string type = ann.getAnnotationName();
-	XmlElement&(*funPtr)(const Annotation&, xercesc::DOMDocument*) = IrToDomConvertMap[type];
+XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, DOMDocument* doc) const {
+	const string& type = ann.getAnnotationName();
+	std::cout << type << " " << IrToDomConvertMap.size() << std::endl;
+	IrToDomConvertMapTy::const_iterator fit = IrToDomConvertMap.find(type);
+	if(fit != IrToDomConvertMap.end()) {
+		std::function<XmlElement& (const Annotation&, xercesc::DOMDocument*)> funcPtr = fit->second;
+	
+		// test iterator
+//		for(map<const string, XmlElement&(*)(const Annotation&, xercesc::DOMDocument*)>::const_iterator iter = IrToDomConvertMap.begin(); iter != IrToDomConvertMap.end(); ++iter) {
+//				std::cout << iter->first << std::endl;
+//				XmlElement&(*test)(const Annotation&, xercesc::DOMDocument*) = iter->second;
+//				if (test) {
+//					std::cout << "test is not NULL";
+//					return test(ann, doc);
+//				}
+//				else
+//					std::cout << "test is NULL!!!";
+//		}
 
-	// test iterator
-	for(map<const string, XmlElement&(*)(const Annotation&, xercesc::DOMDocument*)>::const_iterator iter = IrToDomConvertMap.begin(); iter != IrToDomConvertMap.end(); ++iter) {
-			std::cout << iter->first << std::endl;
-			XmlElement&(*test)(const Annotation&, xercesc::DOMDocument*) = iter->second;
-			if (test) {
-				std::cout << "test is not NULL";
-				return test(ann, doc);
-			}
-			else
-				std::cout << "test is NULL!!!";
+
+//		if (funPtr) {
+//			std::cout << "funPtr is not NULL!";
+//			return funPtr(ann, doc);
+//		}
+//		else
+//			std::cout << "funPtr is NULL!";
+
+		return funcPtr(ann, doc);
+
+	} else {
+		assert(false && "Type not found");
 	}
-	
-	
-	if (funPtr) {
-		std::cout << "funPtr is not NULL!";
-		return funPtr(ann, doc);
-	}
-	else
-		std::cout << "funPtr is NULL!";
-	//return IrToDomConvertMap[type](ann, doc);
+
 }
 
 void* XmlConverter::registerAnnotation(string name, 
 						XmlElement&(*toXml)(const Annotation&, DOMDocument*), 
 						shared_ptr<Annotation>(*fromXml)(const XmlElement&)) {
-	IrToDomConvertMap[name] = toXml;
+	IrToDomConvertMap.insert( std::make_pair(name, toXml) );
 	DomToIrConvertMap[name] = fromXml;
+
+	for(IrToDomConvertMapTy::const_iterator it = IrToDomConvertMap.begin(), end = IrToDomConvertMap.end(); it != end; ++it) {
+		cout << "KEY: " << it->first << ", val: " << std::endl;
+	}
 	return NULL;
 }
 
