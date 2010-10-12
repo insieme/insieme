@@ -75,6 +75,8 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
+#define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
+
 namespace {
 
 //TODO put it into a class
@@ -121,20 +123,14 @@ struct StmtWrapper: public std::vector<core::StatementPtr>{
 	bool isSingleStmt() const { return size() == 1; }
 };
 
-insieme::core::ExpressionPtr EmptyExpr(const insieme::core::ASTBuilder& builder) {
-	return builder.literal("0", core::lang::TYPE_INT_GEN_PTR);
-}
-
 // Returns a string of the text within the source range of the input stream
-// unfortunately clang only keeps the location of the beginning of the literal
-// so the end has to be found manually
 std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
 	// we use the getDecomposedSpellingLoc() method because in case we read macros values
 	// we have to read the expanded value
 	std::pair<FileID, unsigned> startLocInfo = srcMgr.getDecomposedSpellingLoc(start);
 	llvm::StringRef startBuffer = srcMgr.getBufferData(startLocInfo.first);
 	const char *strDataStart = startBuffer.begin() + startLocInfo.second;
-//	DLOG(INFO) << "VALUE: " << string(strDataStart, clang::Lexer::MeasureTokenLength(start, srcMgr, clang::LangOptions()));
+
 	return string(strDataStart, clang::Lexer::MeasureTokenLength(srcMgr.getSpellingLoc(start), srcMgr, clang::LangOptions()));
 }
 
@@ -229,7 +225,7 @@ public:
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
 				GetStringFromStream( convFact.clangComp.getSourceManager(), intLit->getExprLoc()),
-				convFact.ConvertType( *intLit->getType().getTypePtr() )
+				convFact.ConvertType( *GET_TYPE_PTR(intLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return ExprWrapper( retExpr );
@@ -241,7 +237,7 @@ public:
 			// retrieve the string representation from the source code
 			convFact.builder.literal(
 				GetStringFromStream( convFact.clangComp.getSourceManager(), floatLit->getExprLoc()),
-				convFact.ConvertType( *floatLit->getType().getTypePtr())
+				convFact.ConvertType( *GET_TYPE_PTR(floatLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return ExprWrapper( retExpr );
@@ -288,7 +284,7 @@ public:
 
 	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
-		const core::TypePtr& type = convFact.ConvertType( *castExpr->getType().getTypePtr() );
+		const core::TypePtr& type = convFact.ConvertType( *GET_TYPE_PTR(castExpr) );
 		const core::ExpressionPtr& subExpr = Visit(castExpr->getSubExpr()).ref;
 		return ExprWrapper( convFact.builder.castExpr( type, subExpr ) );
 	}
@@ -325,7 +321,7 @@ public:
 			if(!isRecSubType) {
 				// we create a TypeVar for each type in the mutual dependence
 				recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
-						convFact.ConvertType( *funcDecl->getType().getTypePtr() ),
+						convFact.ConvertType( *GET_TYPE_PTR(funcDecl) ),
 						core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )))
 				);
 			} else {
@@ -351,7 +347,7 @@ public:
 							recVarName << num_of_overloads;
 
 						this->recVarExprMap.insert( std::make_pair(fd,
-								this->convFact.builder.varExpr(convFact.ConvertType(*fd->getType().getTypePtr()),recVarName.str())) );
+								this->convFact.builder.varExpr(convFact.ConvertType(*GET_TYPE_PTR(fd)),recVarName.str())) );
 					}
 				);
 			}
@@ -377,7 +373,7 @@ public:
 		);
 
 		const core::ASTBuilder& builder = convFact.builder;
-		retLambdaExpr = builder.lambdaExpr( convFact.ConvertType( *funcDecl->getType().getTypePtr() ), params, body);
+		retLambdaExpr = builder.lambdaExpr( convFact.ConvertType( *GET_TYPE_PTR(funcDecl) ), params, body);
 
 		if( !components.empty() ) {
 			// this is a recurive function call
@@ -442,8 +438,7 @@ public:
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg).ref ); }
 			);
 
-			core::FunctionTypePtr funcTy =
-					core::dynamic_pointer_cast<const core::FunctionType>( convFact.ConvertType( *funcDecl->getType().getTypePtr() ) );
+			core::FunctionTypePtr funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.ConvertType( *GET_TYPE_PTR(funcDecl) ) );
 
 			vector< core::ExpressionPtr >&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
@@ -545,7 +540,7 @@ public:
 			assert(false && "Comma separated expressions not handled!");
 		}
 
-		core::TypePtr exprTy = convFact.ConvertType( *binOp->getType().getTypePtr() );
+		core::TypePtr exprTy = convFact.ConvertType( *GET_TYPE_PTR(binOp) );
 
 		// create Pair type
 		core::TupleTypePtr tupleTy = builder.tupleType( { exprTy, exprTy } );
@@ -762,44 +757,22 @@ public:
         llvm::StringRef accessor = vecElemExpr->getAccessor().getName();
    //     convFact.builder.literal("0", type);
         //translate OpenCL accessor string to index
-        if(accessor.compare(llvm::StringRef("s0")) == 0 || accessor.compare(llvm::StringRef("x")) == 0)
-            pos = "0";
-        else if(accessor.compare(llvm::StringRef("s1")) == 0 || accessor.compare(llvm::StringRef("y")) == 0)
-            pos = "1";
-        else if(accessor.compare(llvm::StringRef("s2")) == 0 || accessor.compare(llvm::StringRef("z")) == 0)
-            pos = "2";
-        else if(accessor.compare(llvm::StringRef("s3")) == 0 || accessor.compare(llvm::StringRef("w")) == 0)
-            pos = "3";
-        else if(accessor.compare(llvm::StringRef("s4")) == 0)
-            pos = "4";
-        else if(accessor.compare(llvm::StringRef("s5")) == 0)
-            pos = "5";
-        else if(accessor.compare(llvm::StringRef("s6")) == 0)
-            pos = "6";
-        else if(accessor.compare(llvm::StringRef("s7")) == 0)
-            pos = "7";
-        else if(accessor.compare(llvm::StringRef("s8")) == 0)
-            pos = "8";
-        else if(accessor.compare(llvm::StringRef("s9")) == 0)
-            pos = "9";
-        else if(accessor.compare(llvm::StringRef("s10")) == 0)
-            pos = "10";
-        else if(accessor.compare(llvm::StringRef("s11")) == 0)
-            pos = "11";
-        else if(accessor.compare(llvm::StringRef("s12")) == 0)
-            pos = "12";
-        else if(accessor.compare(llvm::StringRef("s13")) == 0)
-            pos = "13";
-        else if(accessor.compare(llvm::StringRef("s14")) == 0)
-            pos = "14";
-        else if(accessor.compare(llvm::StringRef("s15")) == 0)
-            pos = "15";
-
-        core::ExpressionPtr idx = convFact.builder.literal(pos,
-                convFact.ConvertType(*vecElemExpr->getType().getTypePtr()));
-
-
-        return ExprWrapper( convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx })) );
+        if(accessor == "x") 		pos = "0";
+        else if(accessor == "y")    pos = "1";
+        else if(accessor == "z")	pos = "2";
+        else if(accessor == "w")	pos = "3";
+        else {
+        	// the input string is in a form sXXX
+        	assert(accessor.front() == 's');
+        	// we skip the s and return the value to get the number
+        	llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
+        	assert(insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 && "String is not a number");
+        	pos = numStr;
+        }
+        core::ExpressionPtr idx = convFact.builder.literal(pos, convFact.ConvertType( *GET_TYPE_PTR(vecElemExpr) ));
+        core::ExpressionPtr retExpr = convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx }));
+        END_LOG_EXPR_CONVERSION(retExpr);
+        return ExprWrapper( retExpr );
     }
 
 	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
@@ -1948,9 +1921,6 @@ ConversionFactory::~ConversionFactory() {
 // ------------------------------------ ClangTypeConverter ---------------------------
 
 void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
-
-	// update the map
-	// mFact.updatePragmaMap(pragmaList);
 
 	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
