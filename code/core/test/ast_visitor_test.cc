@@ -233,7 +233,7 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaASTVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
 	});
 
@@ -279,7 +279,7 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaASTVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
 	});
 
@@ -317,7 +317,7 @@ TEST(ASTVisitor, UtilitiesTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaASTVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
 	});
 

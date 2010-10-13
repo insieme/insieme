@@ -91,6 +91,7 @@ typedef std::shared_ptr<NodeManager> SharedNodeManager;
  * @param src the source node manager
  * @param target the target node manger
  */
+// TODO: second parameter is not required!! - take location of targeted node
 template<typename T>
 const T migratePtr(T& pointer, const NodeManager* src, NodeManager* target) {
 	// check if there is actually anything to do

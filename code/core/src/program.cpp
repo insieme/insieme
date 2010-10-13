@@ -76,7 +76,7 @@ Program::Program() :
 	Node(NT_Program, ::hash(EntryPointSet())) {};
 
 ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints) {
-	return manager.get(Program(entryPoints));
+	return manager.get(Program(insieme::core::migrateAllPtr(entryPoints, NULL, &manager)));
 }
 
 ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
@@ -84,7 +84,7 @@ ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& progra
 }
 
 ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints) {
-	return manager.get(Program(merge(program->getEntryPoints(), entryPoints)));
+	return manager.get(Program(insieme::core::migrateAllPtr(merge(program->getEntryPoints(), entryPoints), program->getNodeManager(), &manager)));
 }
 
 ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {

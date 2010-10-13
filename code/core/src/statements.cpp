@@ -150,7 +150,7 @@ ReturnStmt* ReturnStmt::createCloneUsing(NodeManager& manager) const {
 }
 
 ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnExpression) {
-	return manager.get(ReturnStmt(returnExpression));
+	return manager.get(ReturnStmt(insieme::core::migratePtr(returnExpression, NULL, &manager)));
 }
 
 // ------------------------------------- DeclarationStmt ---------------------------------
@@ -237,10 +237,10 @@ CompoundStmtPtr CompoundStmt::get(NodeManager& manager) {
 	return manager.get(CompoundStmt(vector<StatementPtr>()));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const StatementPtr& stmt) {
-	return manager.get(CompoundStmt(toVector(stmt)));
+	return manager.get(CompoundStmt(toVector(insieme::core::migratePtr(stmt, NULL, &manager))));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const vector<StatementPtr>& stmts) {
-	return manager.get(CompoundStmt(stmts));
+	return manager.get(CompoundStmt(insieme::core::migrateAllPtr(stmts, NULL, &manager)));
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
@@ -279,7 +279,10 @@ Node::OptionChildList WhileStmt::getChildNodes() const {
 }
 
 WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
-	return manager.get(WhileStmt(condition, body));
+	return manager.get(WhileStmt(
+			insieme::core::migratePtr(condition, NULL, &manager),
+			insieme::core::migratePtr(body, NULL, &manager)
+		));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
@@ -328,7 +331,12 @@ Node::OptionChildList ForStmt::getChildNodes() const {
 
 ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
 		const ExpressionPtr& step) {
-	return manager.get(ForStmt(declaration, body, end, step));
+	return manager.get(ForStmt(
+			insieme::core::migratePtr(declaration, NULL, &manager),
+			insieme::core::migratePtr(body, NULL, &manager),
+			insieme::core::migratePtr(end, NULL, &manager),
+			insieme::core::migratePtr(step, NULL, &manager)
+		));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
@@ -379,7 +387,11 @@ IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, cons
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
 	// default to empty else block
-	return manager.get(IfStmt(condition, body, elseBody));
+	return manager.get(IfStmt(
+			insieme::core::migratePtr(condition, NULL, &manager),
+			insieme::core::migratePtr(body, NULL, &manager),
+			insieme::core::migratePtr(elseBody, NULL, &manager)
+		));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
@@ -399,14 +411,23 @@ SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& case
 	Statement(NT_SwitchStmt, hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(switchExpr), cases(cases), defaultCase(defaultCase) {
 }
 
-SwitchStmt* SwitchStmt::createCloneUsing(NodeManager& manager) const {
-	vector<Case> localCases;
-	std::for_each(cases.cbegin(), cases.cend(), [&](const Case& cur) {
+vector<SwitchStmt::Case> migrateSwitchCases(const vector<SwitchStmt::Case>& cases, const NodeManager* src, NodeManager* target) {
+	if (src == target) {
+		return cases;
+	}
+
+	vector<SwitchStmt::Case> localCases;
+	std::for_each(cases.cbegin(), cases.cend(), [src, target, &localCases](const SwitchStmt::Case& cur) {
 		localCases.push_back(SwitchStmt::Case(
-				this->migratePtr(cur.first, manager),
-				this->migratePtr(cur.second, manager)));
+				insieme::core::migratePtr(cur.first, src, target),
+				insieme::core::migratePtr(cur.second, src, target)
+			));
 	});
-	return new SwitchStmt( manager.get(*switchExpr), localCases, manager.get(*defaultCase) );
+	return localCases;
+}
+
+SwitchStmt* SwitchStmt::createCloneUsing(NodeManager& manager) const {
+	return new SwitchStmt( manager.get(*switchExpr), migrateSwitchCases(cases, getNodeManager(), &manager), manager.get(*defaultCase) );
 }
 
 std::ostream& SwitchStmt::printTo(std::ostream& out) const {
@@ -444,7 +465,11 @@ SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchE
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {
-	return manager.get(SwitchStmt(switchExpr, cases, defaultCase));
+	return manager.get(SwitchStmt(
+			insieme::core::migratePtr(switchExpr, NULL, &manager),
+			migrateSwitchCases(cases, NULL, &manager),
+			insieme::core::migratePtr(defaultCase, NULL, &manager)
+	));
 }
 
 } // end namespace core

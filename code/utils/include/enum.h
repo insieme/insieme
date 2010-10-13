@@ -52,9 +52,17 @@
 //
 
 
-//private function
+/**
+ * Splits a comma-seperated std::string into its trimmed parts.
+ * Asserts that the count equals enumMax for debugging reasons.
+ *
+ * Note: Not the very best implementation
+ *
+ * @param str Comma-seperated std::string of your element names
+ * @param enumMax The count of elements the enum should have
+ * @return Vector of the elements' names
+*/
 std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax);
-
 
 
 /**
@@ -128,41 +136,8 @@ const std::string ENUM_BAD_CHARS(", \r\n\t");
  * @param s The std::string to trim
  * @return Trimmed std::string
 */
-std::string enumTrimName(std::string s) {
-    std::size_t j = 0, i = 0;
-    while( (ENUM_BAD_CHARS.find(s.at(j))) != std::string::npos) {
-        j++;
-    }
-    i = s.length() - 1;
-    while( (ENUM_BAD_CHARS.find(s.at(i))) != std::string::npos) {
-        i--;
-    }
-    return s.substr(j, i+1-j);
-}
+std::string enumTrimName(std::string s);
 
-/**
- * Splits a comma-seperated std::string into its trimmed parts.
- * Asserts that the count equals enumMax for debugging reasons.
- *
- * Note: Not the very best implementation
- *
- * @param str Comma-seperated std::string of your element names
- * @param enumMax The count of elements the enum should have
- * @return Vector of the elements' names
-*/
-std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax) {
-    std::vector<std::string> res;
-    if (str.empty()) return res;
-    std::size_t oldFound = 0;
-    std::size_t found;
-    while ((found = str.find(',', oldFound+1)) != std::string::npos) {
-        res.push_back(enumTrimName(str.substr(oldFound, found-oldFound)));
-        oldFound = found;
-    }
-    res.push_back(enumTrimName(str.substr(oldFound)));
-    assert(res.size() == (size_t) enumMax);
-    return res;
-}
 
 template <typename T>
 inline const T fromName(const std::string &nam) {

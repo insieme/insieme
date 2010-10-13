@@ -158,4 +158,66 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
 };
 
 
+// -------------------- Function Traits for Lambdas ----------------------------
+//
+// see: http://stackoverflow.com/questions/2611357/lambda-traits-inconsistency-across-c0x-compilers
+// see: boost function_traits.hpp (which unfortunatelly only work for function pointer, not member function pointer.
+
+namespace detail {
+
+	template<typename Function> struct lambda_traits_helper;
+
+	// - for member function pointer -
+	//
+	// TODO: enable in case variadic templates will ever be supported
+	//
+	//template <typename R, typename C, typename ... A >
+	//struct function_traits<R (C::*)( A ... ) const>  { // inherits from this one on VS2010 RC
+	//  typedef R result_type;
+	//};
+
+	template<typename C, typename R>
+	struct lambda_traits_helper<R (C::*)(void) const>
+	{
+	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
+	  typedef R result_type;
+	};
+
+	template<typename C, typename R, typename T1>
+	struct lambda_traits_helper<R (C::*)(T1) const>
+	{
+	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
+	  typedef R result_type;
+	  typedef T1 arg1_type;
+	  typedef T1 argument_type;
+	};
+
+	template<typename C, typename R, typename T1, typename T2>
+	struct lambda_traits_helper<R (C::*)(T1, T2) const>
+	{
+	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
+	  typedef R result_type;
+	  typedef T1 arg1_type;
+	  typedef T2 arg2_type;
+	  typedef T1 first_argument_type;
+	  typedef T2 second_argument_type;
+	};
+
+	template<typename C, typename R, typename T1, typename T2, typename T3>
+	struct lambda_traits_helper<R (C::*)(T1, T2, T3) const>
+	{
+	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
+	  typedef R result_type;
+	  typedef T1 arg1_type;
+	  typedef T2 arg2_type;
+	  typedef T3 arg3_type;
+	};
+
+} // end namespace detail
+
+
+template <typename Lambda>
+struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
+
+
 

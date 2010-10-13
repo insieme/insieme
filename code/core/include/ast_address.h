@@ -60,6 +60,8 @@ template<typename T> class Address;
 	#include "ast_nodes.def"
 #undef NODE
 
+// forward declaration
+struct StaticAddressCast;
 
 // TODO: encapsulate path in an actual object
 
@@ -115,6 +117,11 @@ template<typename T>
 class Address : public utils::HashableImmutableData<Address<T>> {
 
 public:
+
+	/**
+	 * Defines a functor representing a static cast operator for this type.
+	 */
+	typedef StaticAddressCast StaticCast;
 
 	/**
 	 * Defines the type of the node this address is pointing to.
@@ -199,7 +206,7 @@ public:
 	AnnotatedPtr<const T> getAddressedNode() const {
 		assert(!path->empty() && "Invalid node address!");
 		assert(dynamic_pointer_cast<const T>((*path)[path->size() - 1].second) && "Illegal Node-Pointer cast!");
-		return *(static_pointer_cast<const T>(&(*path)[path->size() - 1].second));
+		return static_pointer_cast<const T>((*path)[path->size() - 1].second);
 	}
 
 	/**
@@ -326,11 +333,11 @@ public:
 	 *
 	 * @return a reference to the addressed node.
 	 */
-	const Node& operator*() const {
+	const T& operator*() const {
 		return *getAddressedNode();
 	}
 
-	const Node* operator->() const {
+	const T* operator->() const {
 		return &*getAddressedNode();
 	}
 
@@ -379,13 +386,13 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynam
  * @return the down-casted address pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>*>::type static_address_cast(Address<T>* src) {
-	return reinterpret_cast<Address<B>*>(src);
+inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>&>::type static_address_cast(Address<T>& src) {
+	return reinterpret_cast<Address<B>&>(src);
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>*>::type static_address_cast(const Address<T>* src) {
-	return reinterpret_cast<const Address<B>*>(src);
+inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>&>::type static_address_cast(const Address<T>& src) {
+	return reinterpret_cast<const Address<B>&>(src);
 }
 
 /**
@@ -393,11 +400,10 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>*>::typ
  * The purpose of this struct is to allow the static_address_cast function to be defined as
  * a pointer conversion function required as a template parameter of the AST Visitor class.
  */
-template<class Target>
 struct StaticAddressCast {
-	template<class Source>
-	const Address<Target>* operator()(const Address<Source>* value) const {
-		return static_address_cast<Target>(value);
+	template<typename Target, typename Source>
+	const Address<const Target>& operator()(const Address<const Source>& value) const {
+		return static_address_cast<const Target>(value);
 	}
 };
 

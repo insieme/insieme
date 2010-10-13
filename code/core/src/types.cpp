@@ -184,7 +184,7 @@ TupleType* TupleType::createCloneUsing(NodeManager& manager) const {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& elementTypes) {
-	return manager.get(TupleType(elementTypes));
+	return manager.get(TupleType(insieme::core::migrateAllPtr(elementTypes, NULL, &manager)));
 }
 
 Node::OptionChildList TupleType::getChildNodes() const {
@@ -208,7 +208,12 @@ Node::OptionChildList TupleType::getChildNodes() const {
  */
 FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 	// obtain reference to new element
-	return manager.get(FunctionType(argumentType, returnType));
+	return manager.get(
+			FunctionType(
+					insieme::core::migratePtr(argumentType, NULL, &manager),
+					insieme::core::migratePtr(returnType, NULL, &manager)
+			)
+		);
 }
 
 FunctionType* FunctionType::createCloneUsing(NodeManager& manager) const {
@@ -306,10 +311,10 @@ GenericTypePtr GenericType::get(NodeManager& manager,
 			const TypePtr& baseType) {
 
 	// get all type-parameter references from the manager
-	vector<TypePtr> localTypeParams = manager.getAll(typeParams);
+	vector<TypePtr> localTypeParams = insieme::core::migrateAllPtr(typeParams, NULL, &manager);
 
 	// get base type reference (if necessary) ...
-	TypePtr localBaseType = manager.get(baseType);
+	TypePtr localBaseType = insieme::core::migratePtr(baseType, NULL, &manager);
 
 	// create resulting data element
 	return manager.get(GenericType(name, localTypeParams, intTypeParams, localBaseType));
@@ -340,19 +345,25 @@ std::size_t hashRecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definiti
 RecTypeDefinition::RecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions)
 	: Node(NT_RecTypeDefinition, hashRecTypeDefinition(definitions)), definitions(definitions) { };
 
+
+RecTypeDefinition::RecTypeDefs migrateRecDefinitons(const RecTypeDefinition::RecTypeDefs& definitions, const NodeManager* src, NodeManager* target) {
+	RecTypeDefinition::RecTypeDefs localDefinitions;
+	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
+		[src, target](const RecTypeDefinition::RecTypeDefs::value_type& cur) {
+			return RecTypeDefinition::RecTypeDefs::value_type(
+					insieme::core::migratePtr(cur.first, src, target),
+					insieme::core::migratePtr(cur.second, src, target));
+	});
+	return localDefinitions;
+}
+
+
 RecTypeDefinitionPtr RecTypeDefinition::get(NodeManager& manager, const RecTypeDefinition::RecTypeDefs& definitions) {
-	return manager.get(RecTypeDefinition(definitions));
+	return manager.get(RecTypeDefinition(::migrateRecDefinitons(definitions, NULL, &manager)));
 }
 
 RecTypeDefinition* RecTypeDefinition::createCloneUsing(NodeManager& manager) const {
-	RecTypeDefs localDefinitions;
-	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-		[&manager,this](const RecTypeDefs::value_type& cur) {
-			return RecTypeDefinition::RecTypeDefs::value_type(
-					this->migratePtr(cur.first, manager),
-					this->migratePtr(cur.second, manager));
-	});
-	return new RecTypeDefinition(localDefinitions);
+	return new RecTypeDefinition(::migrateRecDefinitons(definitions, getNodeManager(), &manager));
 }
 
 bool RecTypeDefinition::equals(const Node& other) const {
@@ -433,7 +444,10 @@ Node::OptionChildList RecType::getChildNodes() const {
 }
 
 RecTypePtr RecType::get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
-	return manager.get(RecType(typeVariable, definition));
+	return manager.get(RecType(
+			insieme::core::migratePtr(typeVariable, NULL, &manager),
+			insieme::core::migratePtr(definition, NULL, &manager))
+		);
 }
 
 
@@ -556,7 +570,7 @@ ArrayType* ArrayType::createCloneUsing(NodeManager& manager) const {
 }
 
 ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim) {
-	return manager.get(ArrayType(elementType, dim));
+	return manager.get(ArrayType(insieme::core::migratePtr(elementType, NULL, &manager), dim));
 }
 
 const IntTypeParam ArrayType::getDimension() const {
@@ -574,7 +588,7 @@ VectorType* VectorType::createCloneUsing(NodeManager& manager) const {
 }
 
 VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
-	return manager.get(VectorType(elementType, size));
+	return manager.get(VectorType(insieme::core::migratePtr(elementType, NULL, &manager), size));
 }
 
 const IntTypeParam VectorType::getSize() const {
@@ -587,7 +601,7 @@ RefType::RefType(const TypePtr& elementType) :
 	SingleElementType(NT_RefType, "ref", elementType) {}
 
 RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
-	return manager.get(RefType(elementType));
+	return manager.get(RefType(insieme::core::migratePtr(elementType, NULL, &manager)));
 }
 
 RefType* RefType::createCloneUsing(NodeManager& manager) const {
@@ -605,7 +619,7 @@ ChannelType* ChannelType::createCloneUsing(NodeManager& manager) const {
 }
 
 ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
-	return manager.get(ChannelType(elementType, size));
+	return manager.get(ChannelType(insieme::core::migratePtr(elementType, NULL, &manager), size));
 }
 
 const IntTypeParam ChannelType::getSize() const {

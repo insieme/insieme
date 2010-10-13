@@ -47,6 +47,8 @@
 #include "statements.h"
 #include "types.h"
 
+#include "functional_utils.h"
+
 #include "ast_address.h"
 
 namespace insieme {
@@ -54,8 +56,7 @@ namespace core {
 
 template<
 	typename ReturnType = void,
-	template<class Target> class Ptr = AnnotatedPtr,
-	template<class T> class StaticCast = StaticAnnotatedPtrCast
+	template<class Target> class Ptr = AnnotatedPtr
 >
 class ASTVisitor {
 
@@ -72,6 +73,11 @@ public:
 	virtual ReturnType visit(const Ptr<const Node>& element) {
 		assert ( element && "Cannot visit NULL element!");
 
+		// create cast functor instance
+		typename Ptr<const Node>::StaticCast cast;
+
+		Ptr<const Type> type = cast.template operator()<const Type, const Node>(element);
+
 		// dispatch to correct visit method
 		switch(element->getNodeType()) {
 
@@ -79,13 +85,12 @@ public:
 			#define CONCRETE(name) \
 				case NT_ ## name : \
 					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
-					return visit ## name (*(StaticCast<const name>()(&element)));
+					return visit ## name (cast.template operator()<const name>(element));
 
 					// take all nodes ...
 					#include "ast_nodes.def"
 
 			#undef CONCRETE
-
 		}
 
 		// fail => invalid node type!
@@ -131,13 +136,17 @@ protected:
  * pointer.
  */
 template<typename ReturnType = void>
-class AddressVisitor : public ASTVisitor<ReturnType, Address, StaticAddressCast> { };
+class AddressVisitor : public ASTVisitor<ReturnType, Address> { };
 
 /**
  * TODO: comment
  */
-template<typename Lambda, typename ResultType = void>
-class LambdaASTVisitor : public ASTVisitor<ResultType> {
+template<
+	typename Lambda,
+	typename ResultType = void,
+	template<class Target> class Ptr = AnnotatedPtr
+>
+class LambdaVisitor : public ASTVisitor<ResultType, Ptr> {
 
 	/**
 	 * The lambda to be applied to all nodes ...
@@ -149,12 +158,12 @@ public:
 	/**
 	 * Create a new visitor based on the given lambda.
 	 */
-	LambdaASTVisitor(Lambda& lambda) : lambda(lambda) {};
+	LambdaVisitor(Lambda& lambda) : lambda(lambda) {};
 
 	/**
 	 * Visits the given node and applies it to the maintained lambda.
 	 */
-	ResultType visitNode(const NodePtr& node) {
+	ResultType visitNode(const Ptr<const Node>& node) {
 		// simply apply lambda ...
 		return lambda(node);
 	}
@@ -167,8 +176,11 @@ public:
  * within every node, the sub-visitor's visit method will be invoked. Further, the results
  * of the visited nodes may be combined using a generic result combinator.
  */
-template<typename SubVisitor>
-class RecursiveASTVisitor : public ASTVisitor<void> {
+template<
+	typename SubVisitor = void,
+	template<class Target> class Ptr = AnnotatedPtr
+>
+class RecursiveASTVisitor : public ASTVisitor<void, Ptr> {
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
@@ -191,7 +203,7 @@ public:
 	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
-	void visitNode(const NodePtr& node) {
+	void visitNode(const Ptr<const Node>& node) {
 
 		// visit current (in case of a pre-order)
 		if (preorder) {
@@ -200,7 +212,7 @@ public:
 
 		// recursively visit all sub-nodes
 		const Node::ChildList& children = node->getChildList();
-		std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
+		std::for_each(children.begin(), children.end(), [&](const Ptr<const Node>& cur) {
 			this->visit(cur);
 		});
 
@@ -217,8 +229,11 @@ public:
  * within every node, the sub-visitor's visit method will be invoked. Further, the results
  * of the visited nodes may be combined using a generic result combinator.
  */
-template<typename SubVisitor>
-class BreadthFirstASTVisitor : public ASTVisitor<void> {
+template<
+	typename SubVisitor = void,
+	template<class Target> class Ptr = AnnotatedPtr
+>
+class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr> {
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
@@ -236,19 +251,19 @@ public:
 	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
-	void visitNode(const NodePtr& node) {
+	void visitNode(const Ptr<const Node>& node) {
 
-		std::queue<NodePtr> queue;
+		std::queue<Ptr<const Node>> queue;
 
 		ASTVisitor<void>* visitor;
-		auto lambdaVisitor = makeLambdaASTVisitor([&queue, &visitor, this](const NodePtr& node) {
+		auto lambdaVisitor = makeLambdaVisitor([&queue, &visitor, this](const Ptr<const Node>& node) {
 
 			// visit the current node
 			this->subVisitor.visit(node);
 
 			// add children of current node to the queue
 			auto children = node->getChildList();
-			std::for_each(children.begin(), children.end(), [&queue](const NodePtr& cur) {
+			std::for_each(children.begin(), children.end(), [&queue](const Ptr<const Node>& cur) {
 				queue.push(cur);
 			});
 
@@ -273,7 +288,10 @@ public:
  * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
  * the
  */
-template<typename SubVisitor = void>
+template<
+	typename SubVisitor = void,
+	template<class Target> class Ptr = AnnotatedPtr
+>
 class VisitOnceASTVisitor : public ASTVisitor<void> {
 
 	/**
@@ -295,13 +313,13 @@ public:
 
 
 	/**
-	 * Visits
+	 * The entry point for the visiting process.
 	 */
-	virtual void visit(const NodePtr& node) {
+	virtual void visit(const Ptr<const Node>& node) {
 
-		std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> all;
-		ASTVisitor<void>* visitor;
-		auto lambdaVisitor = makeLambdaASTVisitor([&all, &visitor, this](const NodePtr& node) {
+		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		ASTVisitor<void, Ptr>* visitor;
+		auto lambdaVisitor = makeLambdaVisitor([&all, &visitor, this](const Ptr<const Node>& node) {
 			// add current node to set ..
 			bool isNew = all.insert(node).second;
 			if (!isNew) {
@@ -333,6 +351,7 @@ public:
 	}
 };
 
+
 /**
  * Creates a visitor where each node is passed as an argument to the given
  * lambda function.
@@ -340,9 +359,24 @@ public:
  * @param lambda the lambda function to which all visited nodes shell be passed.
  * @return the resulting visitor.
  */
+template<
+	template<class Target> class Ptr = AnnotatedPtr,
+	typename Lambda
+>
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr> makeLambdaVisitor(Lambda lambda) {
+	return LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr>(lambda);
+};
+
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * lambda function via a address.
+ *
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @return the resulting visitor.
+ */
 template<typename Lambda>
-inline LambdaASTVisitor<Lambda> makeLambdaASTVisitor(Lambda lambda) {
-	return LambdaASTVisitor<Lambda>(lambda);
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Address> makeLambdaAddressVisitor(Lambda lambda) {
+	return makeLambdaVisitor<Address, Lambda>(lambda);
 };
 
 /**
@@ -373,7 +407,7 @@ inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
  */
 template<typename NodePtr, typename Lambda>
 inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
-	auto visitor = makeLambdaASTVisitor(lambda);
+	auto visitor = makeLambdaVisitor(lambda);
 	visitAll(root, visitor, preorder);
 }
 
@@ -403,7 +437,7 @@ inline void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) 
  */
 template<typename NodePtr, typename Lambda>
 inline void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true) {
-	auto visitor = makeLambdaASTVisitor(lambda);
+	auto visitor = makeLambdaVisitor(lambda);
 	visitAllOnce(root, visitor, preorder);
 }
 
@@ -431,7 +465,7 @@ inline void visitAllBreadthFirst(NodePtr& root, Visitor& visitor) {
  */
 template<typename NodePtr, typename Lambda>
 inline void visitAllNodesBreadthFirst(NodePtr& root, Lambda lambda) {
-	auto visitor = makeLambdaASTVisitor(lambda);
+	auto visitor = makeLambdaVisitor(lambda);
 	visitAllBreadthFirst(root, visitor);
 }
 

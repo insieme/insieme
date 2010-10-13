@@ -75,6 +75,11 @@ MessageList check(N node, C check) {
 	return check.visit(node);
 }
 
+template<typename N, typename C>
+MessageList checkRecursive(N node, C check) {
+	return check.visit(node);
+}
+
 // TODO: add recursive check
 
 /**

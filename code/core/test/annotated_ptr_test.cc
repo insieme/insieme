@@ -37,7 +37,9 @@
 #include <string>
 
 #include <gtest/gtest.h>
+
 #include "annotated_ptr.h"
+#include "ast_builder.h"
 
 using std::string;
 
@@ -50,6 +52,39 @@ struct A {
 };
 struct B : public A { };
 
+
+class DummyAnnotation : public Annotation {
+public:
+	static StringKey<DummyAnnotation> DummyKey;
+	int value;
+	DummyAnnotation(int value) : value(value) { };
+
+	virtual AnnotationKey* getKey() const {
+		return &DummyKey;
+	}
+
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation";
+	}
+};
+
+class DummyAnnotation2 : public Annotation {
+public:
+	static StringKey<DummyAnnotation2> DummyKey;
+	int value;
+	DummyAnnotation2(int value) : value(value) { };
+
+	virtual AnnotationKey* getKey() const {
+		return &DummyKey;
+	}
+
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation2";
+	}
+};
+
+StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
 // testing basic properties
 TEST(AnnotatedPtr, Basic) {
@@ -105,4 +140,83 @@ TEST(AnnotatedPtr, SimplePointerTest) {
 	EXPECT_EQ( 5, *ptr);
 }
 
+TEST(AnnotatedPtr, CopyAndAssignment) {
+	ASTBuilder builder;
 
+	NodePtr A = builder.genericType("A");
+	A.addAnnotation(std::make_shared<DummyAnnotation>(1));
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation::DummyKey));
+
+	// test copy constructor
+	NodePtr B(A);
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(B.hasAnnotation(DummyAnnotation2::DummyKey));
+
+	B.addAnnotation(std::make_shared<DummyAnnotation2>(123));
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation2::DummyKey));
+
+	EXPECT_EQ(&A.getAnnotations(), &B.getAnnotations());
+
+	// test assignment
+	A = builder.genericType("C");
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation2::DummyKey));
+
+	EXPECT_NE(&A.getAnnotations(), &B.getAnnotations());
+
+	B.remAnnotation(DummyAnnotation2::DummyKey);
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(B.hasAnnotation(DummyAnnotation2::DummyKey));
+
+	A.addAnnotation(std::make_shared<DummyAnnotation2>(1));
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(B.hasAnnotation(DummyAnnotation2::DummyKey));
+
+
+	NodePtr C = A;
+	EXPECT_FALSE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(B.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(B.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(C.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(C.hasAnnotation(DummyAnnotation2::DummyKey));
+
+	EXPECT_NE(&A.getAnnotations(), &B.getAnnotations());
+	EXPECT_EQ(&A.getAnnotations(), &C.getAnnotations());
+	EXPECT_NE(&C.getAnnotations(), &B.getAnnotations());
+
+	// finally, assign A := B
+	A = B;
+
+	EXPECT_EQ(&A.getAnnotations(), &B.getAnnotations());
+	EXPECT_NE(&A.getAnnotations(), &C.getAnnotations());
+	EXPECT_NE(&C.getAnnotations(), &B.getAnnotations());
+
+}
+
+TEST(AnnotatedPtr, AnnotationPreservation) {
+	ASTBuilder builder;
+
+	GenericTypePtr A = builder.genericType("A");
+	A.addAnnotation(std::make_shared<DummyAnnotation2>(1));
+	GenericTypePtr B = builder.genericType("B",toVector<TypePtr>(), toVector<IntTypeParam>(), A);
+
+	A.addAnnotation(std::make_shared<DummyAnnotation>(12));
+
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(B->getBaseType().hasAnnotation(DummyAnnotation::DummyKey));
+
+	EXPECT_TRUE(A.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(B->getBaseType().hasAnnotation(DummyAnnotation2::DummyKey));
+}

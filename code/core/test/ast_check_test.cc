@@ -48,7 +48,7 @@ class AllFine : public ASTCheck {};
 
 class IDontLikeAnythingCheck : public ASTCheck {
 	MessageList visitNode(const NodeAddress& node) {
-		return toVector(Message(node, "I hat it!"));
+		return toVector(Message(node, "I hate it!"));
 	}
 };
 
@@ -65,13 +65,13 @@ TEST(ASTCheck, Basic) {
 	TypePtr type = builder.genericType("A");
 	NodeAddress addr(type);
 
-	Message msgA(addr, "I hat it!");
+	Message msgA(addr, "I hate it!");
 	Message msgB(addr, "Don't know - I'm scared!", Message::WARNING);
 
 	EXPECT_EQ("0", toString(addr));
 	NodeAddress& adr2 = addr;
 	EXPECT_EQ("0", toString(adr2));
-	EXPECT_EQ("ERROR:   @ (0) - MSG: I hat it!", toString(msgA));
+	EXPECT_EQ("ERROR:   @ (0) - MSG: I hate it!", toString(msgA));
 	EXPECT_EQ("WARNING: @ (0) - MSG: Don't know - I'm scared!", toString(msgB));
 
 	MessageList res = check(type, AllFine());
@@ -85,6 +85,22 @@ TEST(ASTCheck, Basic) {
 
 	res = check(type, CombinedASTCheck(toVector<SharedCheck>(std::make_shared<IAmScaredCheck>(), std::make_shared<IDontLikeAnythingCheck>())));
 	EXPECT_EQ(toVector(msgB, msgA), res);
+
+}
+
+TEST(ASTCheck, Recursive) {
+	ASTBuilder builder;
+
+	// build diamond - again ...
+	TypePtr typeD = builder.genericType("D");
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
+	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
+
+
+
+
+
 
 }
 
