@@ -51,6 +51,139 @@
 
 using namespace std;
 
+namespace {
+
+using namespace insieme::frontend;
+using namespace insieme::frontend::omp;
+
+class OmpParallel: public OmpPragma {
+public:
+	OmpParallel(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+				const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpFor: public OmpPragma {
+public:
+	OmpFor(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+		   const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpSections: public OmpPragma {
+public:
+	OmpSections(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			    const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpSection: public OmpPragma {
+public:
+	OmpSection(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			   const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpSingle: public OmpPragma {
+public:
+	OmpSingle(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			  const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpTask: public OmpPragma {
+public:
+	OmpTask(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpMaster: public OmpPragma {
+public:
+	OmpMaster(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			  const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpCritical: public OmpPragma {
+public:
+	OmpCritical(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			    const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpBarrier: public OmpPragma {
+public:
+	OmpBarrier(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			   const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpTaskWait: public OmpPragma {
+public:
+	OmpTaskWait(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			    const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpAtomic: public OmpPragma {
+public:
+	OmpAtomic(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			  const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpFlush: public OmpPragma {
+public:
+	OmpFlush(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			 const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpOrdered: public OmpPragma {
+public:
+	OmpOrdered(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			   const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+class OmpThreadPrivate: public OmpPragma {
+public:
+	OmpThreadPrivate(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+			      	 const std::string& name, const insieme::frontend::MatchMap& mmap):
+		OmpPragma(startLoc, endLoc, name, mmap) { }
+
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
+};
+
+} // End anonymous namespace
+
 namespace insieme {
 namespace frontend {
 namespace omp {
@@ -58,7 +191,6 @@ namespace omp {
 void registerPragmaHandlers(clang::Preprocessor& pp) {
 	using namespace insieme::frontend;
 	using namespace insieme::frontend::tok;
-	using namespace insieme::frontend::omp::pragma;
 
 	// if(scalar-expression)
 	auto if_expr 		   	= kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;
@@ -230,7 +362,7 @@ void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNo
 	omp::annotation::OmpBaseAnnotation::OmpAnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
-			const omp::pragma::OmpPragma* ompPragma = dynamic_cast<const omp::pragma::OmpPragma*>(&*(curr.second));
+			const ::OmpPragma* ompPragma = dynamic_cast<const ::OmpPragma*>(&*(curr.second));
 			if(ompPragma) {
 				VLOG(1) << "Statement has an OpenMP pragma attached";
 				anns.push_back( ompPragma->toAnnotation(fact) );
@@ -239,8 +371,6 @@ void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNo
 
 	irNode.addAnnotation( std::shared_ptr<core::Annotation>((new omp::annotation::OmpBaseAnnotation(anns))) );
 }
-
-namespace pragma {
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
 	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
@@ -253,6 +383,16 @@ OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceL
 //		DLOG(INFO) << std::endl;
 //	}
 }
+
+} // End omp namespace
+} // End frontend namespace
+} // End insieme namespace
+
+namespace {
+
+using namespace insieme;
+using namespace insieme::frontend;
+
 /**
  * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
  */
@@ -280,6 +420,7 @@ omp::annotation::VarListPtr handleIdentifierList(const MatchMap& mmap, const std
 }
 
 // reduction(operator: list)
+// operator = + or - or * or & or | or ^ or && or ||
 omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
 	using namespace omp::annotation;
 
@@ -291,13 +432,24 @@ omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, con
 	// check the operator
 	auto opIt = mmap.find("reduction_op");
 	assert(opIt != mmap.end() && "Reduction clause doesn't contains an operator");
-	const ValueList& op = opIt->second;
-	assert(op.size() == 1);
+	const ValueList& opVar = opIt->second;
+	assert(opVar.size() == 1);
 
-	std::string* opStr = op.front()->get<std::string*>();
+	std::string* opStr = opVar.front()->get<std::string*>();
 	assert(opStr && "Reduction clause with no operator");
 
-	return OmpReductionPtr( new OmpReduction(*opStr, handleIdentifierList(mmap, "reduction", fact)) );
+	OmpReduction::Operator op;
+	if(*opStr == "+")		op = OmpReduction::PLUS;
+	else if(*opStr == "-")	op = OmpReduction::MINUS;
+	else if(*opStr == "*")	op = OmpReduction::STAR;
+	else if(*opStr == "&")	op = OmpReduction::AND;
+	else if(*opStr == "|")	op = OmpReduction::OR;
+	else if(*opStr == "^")	op = OmpReduction::XOR;
+	else if(*opStr == "&&")	op = OmpReduction::LAND;
+	else if(*opStr == "||")	op = OmpReduction::LOR;
+	else assert(false && "Reduction operator not supported.");
+
+	return OmpReductionPtr( new OmpReduction(op, handleIdentifierList(mmap, "reduction", fact)) );
 }
 
 core::ExpressionPtr handleSingleExpression(const MatchMap& mmap,  const std::string& key, conversion::ConversionFactory& fact) {
@@ -435,7 +587,7 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 		);
 	}
 
-	return OmpAnnotationPtr(
+	return omp::annotation::OmpAnnotationPtr(
 			new omp::annotation::OmpParallel(ifClause, numThreadsClause, defaultClause, privateClause,
 					firstPrivateClause, sharedClause, copyinClause, reductionClause)
 	);
@@ -460,8 +612,8 @@ omp::annotation::OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFac
 	// check for nowait keyword
 	bool noWait = hasKeyword(map, "nowait");
 
-	return OmpAnnotationPtr(
-		new annotation::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, collapseClause, noWait)
+	return omp::annotation::OmpAnnotationPtr(
+		new omp::annotation::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, collapseClause, noWait)
 	);
 }
 
@@ -486,12 +638,12 @@ omp::annotation::OmpAnnotationPtr OmpSections::toAnnotation(conversion::Conversi
 	bool noWait = hasKeyword(map, "nowait");
 
 	return omp::annotation::OmpAnnotationPtr(
-		new annotation::OmpSections(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait)
+		new omp::annotation::OmpSections(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait)
 	);
 }
 
 omp::annotation::OmpAnnotationPtr OmpSection::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new annotation::OmpSection );
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpSection );
 }
 
 // OmpSingle
@@ -512,7 +664,7 @@ omp::annotation::OmpAnnotationPtr OmpSingle::toAnnotation(conversion::Conversion
 	bool noWait = hasKeyword(map, "nowait");
 
 	return omp::annotation::OmpAnnotationPtr(
-		new annotation::OmpSingle(privateClause, firstPrivateClause, copyPrivateClause, noWait)
+		new omp::annotation::OmpSingle(privateClause, firstPrivateClause, copyPrivateClause, noWait)
 	);
 }
 
@@ -539,7 +691,7 @@ omp::annotation::OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFa
 	VarListPtr sharedClause = handleIdentifierList(map, "shared", fact);
 	// We need to check if the
 	return omp::annotation::OmpAnnotationPtr(
-		new annotation::OmpTask(ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause)
+		new omp::annotation::OmpTask(ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause)
 	);
 }
 
@@ -584,7 +736,7 @@ omp::annotation::OmpAnnotationPtr OmpFlush::toAnnotation(conversion::ConversionF
 	using namespace omp::annotation;
 	// check for flush identifier list
 	VarListPtr flushList = handleIdentifierList(getMap(), "flush", fact);
-	return omp::annotation::OmpAnnotationPtr( new annotation::OmpFlush(flushList) );
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpFlush(flushList) );
 }
 
 omp::annotation::OmpAnnotationPtr OmpOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
@@ -595,10 +747,6 @@ omp::annotation::OmpAnnotationPtr OmpThreadPrivate::toAnnotation(conversion::Con
 	using namespace omp::annotation;
 	VarListPtr threadPrivateClause = handleIdentifierList(getMap(), "threadprivate", fact);
 
-	return omp::annotation::OmpAnnotationPtr( new annotation::OmpThreadPrivate(threadPrivateClause)	);
+	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpThreadPrivate(threadPrivateClause)	);
 }
-
-} // End pragma namespace
-} // End omp namespace
-} // End frontend namespace
-} // End insieme namespace
+} // end anonymous namespace

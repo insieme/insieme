@@ -34,53 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "timer.h"
 
-#include "ast_visitor.h"
+#include "logging.h"
+#include <cassert>
 
 namespace insieme {
-namespace frontend {
-namespace analysis {
+namespace utils {
 
-struct lt_ident {
-  bool operator()(const core::VarExprPtr& s1, const core::VarExprPtr& s2) const {
-    return strcmp(s1->getIdentifier().getName().c_str(), s2->getIdentifier().getName().c_str()) < 0;
-  }
-};
+void Timer::start() {
+	restart();
+}
 
-typedef std::set<core::VarExprPtr, lt_ident> VarSet;
-/**
- * Returns the list of variables referenced within an expression
- */
-struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
+double Timer::stop() {
+	mElapsed = elapsed();
+	isStopped = true;
+	return mElapsed;
+}
 
-	VarRefFinder(const core::NodePtr& node) {
-		visit(node);
-		// we have to remove eventual variables which are declared inside this block of code
-		VarSet nonDecls;
-		lt_ident comp;
-		std::set_difference( begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
-		VarSet::operator=(nonDecls);
-	}
+double Timer::getTime() const {
+	assert(isStopped && "Cannnot read time of a running timer.");
+	return mElapsed;
+}
 
-	void visitVarExpr(const core::VarExprPtr& varExpr) { insert(varExpr); }
+void Timer::print() const {
+	DLOG(INFO) << "********************************************************************************";
+	DLOG(INFO) << "* " << mName << ":\t" << getTime() << " secs";
+	DLOG(INFO) << "********************************************************************************";
+}
 
-	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		declaredVars.insert( declStmt->getVarExpression() );
-	}
-
-	void visitNode(const core::NodePtr& node) {
-		std::for_each(node->getChildList().begin(), node->getChildList().end(),
-			[ this ] (core::NodePtr curr){
-				this->visit(curr);
-			});
-	}
-
-private:
-	VarSet declaredVars;
-	bool isInsideDecl;
-};
-
-} // End analysis namespace
-} // End frontend namespace
-} // End insieme namespace
+} // end utils namespace
+} // end insieme namespace

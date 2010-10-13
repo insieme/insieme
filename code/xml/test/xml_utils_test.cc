@@ -121,3 +121,74 @@ TEST(XmlTest, UnionTypeTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+
+// ------------------- DummyAnnotation ---------------------------------
+class DummyAnnotation : public Annotation {
+public:
+	static StringKey<DummyAnnotation> DummyKey;
+	string value;
+	DummyAnnotation(string value) : value(value) { };
+
+	virtual AnnotationKey* getKey() const {
+		return &DummyKey;
+	}
+	
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation"; 
+	}
+};
+
+// initalization of the dummy key
+StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+
+XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el, xercesc::DOMDocument* doc){
+	XmlElement intNode("int", doc);
+	intNode.setText(ann.value);
+	el << intNode;
+	return el;
+}
+
+shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
+	return shared_ptr<Annotation> (new DummyAnnotation("1"));
+}
+
+XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
+
+
+TEST(XmlTest, GenericTypeAnnotationTest) {
+	typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
+	DummyAnnotationPtr dummy1e(new DummyAnnotation("1e"));
+	DummyAnnotationPtr dummy2e(new DummyAnnotation("2e"));
+	DummyAnnotationPtr dummy3e(new DummyAnnotation("3e"));
+	DummyAnnotationPtr dummy1n(new DummyAnnotation("1n"));
+	DummyAnnotationPtr dummy2n(new DummyAnnotation("2n"));
+	DummyAnnotationPtr dummy3n(new DummyAnnotation("3n"));
+	
+	NodeManager manager;
+	GenericTypePtr type1 = GenericType::get(manager, "type1");
+	GenericTypePtr type2 = GenericType::get(manager, "type2");
+	GenericTypePtr type3 = GenericType::get(manager, "type3");
+	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector(IntTypeParam::getVariableIntParam('p')), type3);
+	type4->getBaseType().addAnnotation(dummy3e);
+	type4->getBaseType()->addAnnotation(dummy3n);
+	type4->getTypeParameter()[0].addAnnotation(dummy1e);
+	type4->getTypeParameter()[0]->addAnnotation(dummy1n);
+	type4->getTypeParameter()[1].addAnnotation(dummy2e);
+	type4->getTypeParameter()[1]->addAnnotation(dummy2n);
+	
+	NodePtr root = type4;
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, FunctionTypeAnnotationTest) {
+	
+}
+
+

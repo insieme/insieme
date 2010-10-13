@@ -79,7 +79,7 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-LoopAnalyzer::LoopAnalyzer(const ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL, NULL}) {
+LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL, NULL}) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression
@@ -88,7 +88,7 @@ LoopAnalyzer::LoopAnalyzer(const ForStmt* forStmt, const ConversionFactory& conv
 	handleCondExpr(forStmt);
 }
 
-void LoopAnalyzer::findInductionVariable(const ForStmt* forStmt) {
+void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// an induction variable of a loop should appear in both the condition and increment expressions
 	VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
 	VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
@@ -110,7 +110,7 @@ void LoopAnalyzer::findInductionVariable(const ForStmt* forStmt) {
 	}
 }
 
-void LoopAnalyzer::handleIncrExpr(const ForStmt* forStmt) {
+void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 	assert(loopHelper.inductionVar && "Loop induction variable not found, impossible to handle increment expression.");
 
 	if( const UnaryOperator* unOp = dyn_cast<const UnaryOperator>(forStmt->getInc()) ) {
@@ -128,21 +128,22 @@ void LoopAnalyzer::handleIncrExpr(const ForStmt* forStmt) {
 		}
 	}
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(forStmt->getInc()) ) {
-		assert(isa<const DeclRefExpr>(binOp->getRHS()));
-		const DeclRefExpr* rhs = dyn_cast<const DeclRefExpr>(binOp->getRHS());
-		assert(rhs->getDecl() == loopHelper.inductionVar);
+		assert(isa<const DeclRefExpr>(binOp->getLHS()));
+		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
+		assert(lhs->getDecl() == loopHelper.inductionVar);
 
 		switch(binOp->getOpcode()) {
 		case BO_AddAssign:
 		case BO_SubAssign:
-			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getLHS() );
+			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getRHS() );
+			break;
 		default:
 			assert(false && "BinaryOperator not supported in increment expression");
 		}
 	}
 }
 
-void LoopAnalyzer::handleCondExpr(const ForStmt* forStmt) {
+void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
 	const Expr* cond = forStmt->getCond();
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {

@@ -1,8 +1,18 @@
 <?xml version="1.0"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
+<!-- Annotation -->
+<xs:complexType name="T_annotations">
+	<xs:sequence>
+		<xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip"/>
+	</xs:sequence>
+</xs:complexType>
+
 <!-- NodePtr -->
 <xs:complexType name="T_nodePtr">
+	<xs:all>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
 	<xs:attribute name="ref" type="xs:positiveInteger" use="required"/>
 </xs:complexType>
 
@@ -67,7 +77,8 @@
 	<xs:all>
 		<xs:element name="baseType" type="T_uniqueNodePtr" minOccurs="0"/>
 		<xs:element name="typeParams" type="T_listNodePtr" minOccurs="0"/>
-		<xs:element name="intTypeParams" type="T_intTypeParams" minOccurs="0"/>		
+		<xs:element name="intTypeParams" type="T_intTypeParams" minOccurs="0"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="familyName" type="xs:string" use="required"/>
 		<xs:attribute name="id" type="xs:integer" use="required"/>

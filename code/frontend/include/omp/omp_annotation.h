@@ -96,12 +96,15 @@ typedef std::vector<core::VarExprPtr> VarList;
 typedef std::shared_ptr<VarList> VarListPtr;
 
 class OmpReduction {
-	std::string op;
-	VarListPtr vars;
 public:
-	OmpReduction(const std::string& op, const VarListPtr& vars): op(op), vars(vars) { }
-	const std::string& getOperator() const { return op; }
+	// operator = + or - or * or & or | or ^ or && or ||
+	enum Operator { PLUS, MINUS, STAR, AND, OR, XOR, LAND, LOR };
+	OmpReduction(const Operator& op, const VarListPtr& vars): op(op), vars(vars) { }
+	const Operator& getOperator() const { return op; }
 	const VarListPtr& getVars() const { return vars; }
+private:
+	const Operator op;
+	VarListPtr vars;
 };
 
 /**
@@ -120,7 +123,6 @@ private:
 	core::ExpressionPtr chunkExpr;
 };
 
-
 class OmpDefault {
 public:
 	enum Kind { SHARED, NONE };
@@ -131,7 +133,6 @@ public:
 private:
 	Kind mode;
 };
-
 
 class OmpMaster: public OmpAnnotation { };
 

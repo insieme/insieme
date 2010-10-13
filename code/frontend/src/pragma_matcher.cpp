@@ -98,7 +98,7 @@ MatchMap::MatchMap(const MatchMap& other) {
 	});
 }
 
-// ------------------------------------ ErrorStack ---------------------------
+// ------------------------------------ ParserStack ---------------------------
 
 size_t ParserStack::openRecord() {
 	mRecords.push_back( LocErrorList() );
@@ -161,7 +161,7 @@ star node::operator*() const { return star(*this); }
 choice node::operator|(node const& n) const { return choice(*this, n); }
 option node::operator!() const { return option(*this); }
 
-bool concat::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+bool concat::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
 	if (first->match(PP, mmap, errStack, id)) {
@@ -177,13 +177,13 @@ bool concat::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size
 	return false;
 }
 
-bool star::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+bool star::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	while (getNode()->match(PP, mmap, errStack, recID))
 		;
 	return true;
 }
 
-bool choice::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+bool choice::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
 	if (first->match(PP, mmap, errStack, id)) {
@@ -202,7 +202,7 @@ bool choice::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size
 	return false;
 }
 
-bool option::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+bool option::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	PP.EnableBacktrackAtThisPos();
 	if (getNode()->match(PP, mmap, errStack, recID)) {
 		PP.CommitBacktrackedTokens();
@@ -212,7 +212,7 @@ bool option::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size
 	return true;
 }
 
-bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	// ClangContext::get().getParser()->Tok.setKind(*firstTok);
 	PP.EnableBacktrackAtThisPos();
 	Expr* result = ParserProxy::get().ParseExpression(PP);
@@ -232,7 +232,7 @@ bool expr_p::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size
 	return false;
 }
 
-bool kwd::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+bool kwd::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	clang::Token& token = ParserProxy::get().ConsumeToken();
 	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
 		if(isAddToMap() && getMapName().empty())

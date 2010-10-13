@@ -87,8 +87,8 @@ IntegerType getIntegerType(unsigned short size, bool _signed) {
 	return (_signed)?getIntType(size):getUIntType(size);
 }
 
-int getNumBytes(const IntegerType& type) {
-	assert( isIntegerType(type) && "Given argument is not an integer type!");
+int getNumBytes(const GenericType& type) {
+	assert( (isIntegerType(type) || isRealType(type)) && "Given argument is not a numeric type!");
 	IntTypeParam param = type.getIntTypeParameter()[0];
 	if (param.getType()==IntTypeParam::CONCRETE) {
 		return param.getValue();
@@ -197,6 +197,13 @@ ADD_TYPE(RealType, REAL_2, getRealType(2));
 ADD_TYPE(RealType, REAL_4, getRealType(4));
 ADD_TYPE(RealType, REAL_8, getRealType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
+
+// -------------------------------- Vector Types ------------------------------
+
+bool isVectorType(const Type& type) {
+    std::cout << "is vector type " << dynamic_cast<const core::VectorType*>(&type) << "\n";
+    return dynamic_cast<const core::VectorType*>(&type);
+}
 
 
 // ------------------------ Character and String Types -----------------------

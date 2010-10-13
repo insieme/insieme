@@ -36,51 +36,38 @@
 
 #pragma once
 
-#include "ast_visitor.h"
+#include <string>
+#include <boost/timer.hpp>
 
 namespace insieme {
-namespace frontend {
-namespace analysis {
+namespace utils {
 
-struct lt_ident {
-  bool operator()(const core::VarExprPtr& s1, const core::VarExprPtr& s2) const {
-    return strcmp(s1->getIdentifier().getName().c_str(), s2->getIdentifier().getName().c_str()) < 0;
-  }
-};
-
-typedef std::set<core::VarExprPtr, lt_ident> VarSet;
 /**
- * Returns the list of variables referenced within an expression
+ * Simple timer used to measured time.
  */
-struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
+class Timer: public boost::timer {
+	double mElapsed;
+	std::string mName;
+	bool isStopped;
 
-	VarRefFinder(const core::NodePtr& node) {
-		visit(node);
-		// we have to remove eventual variables which are declared inside this block of code
-		VarSet nonDecls;
-		lt_ident comp;
-		std::set_difference( begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
-		VarSet::operator=(nonDecls);
-	}
+public:
+	Timer(const std::string& name): boost::timer(), mName(name), isStopped(false) { }
+	/**
+	 * Starts the timer
+	 */
+	void start();
+	/**
+	 * Stops the timer returning the elapsed amount of seconds
+	 */
+	double stop();
 
-	void visitVarExpr(const core::VarExprPtr& varExpr) { insert(varExpr); }
+	/**
+	 * Return the elapsed amount of seconds
+	 */
+	double getTime() const;
 
-	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		declaredVars.insert( declStmt->getVarExpression() );
-	}
-
-	void visitNode(const core::NodePtr& node) {
-		std::for_each(node->getChildList().begin(), node->getChildList().end(),
-			[ this ] (core::NodePtr curr){
-				this->visit(curr);
-			});
-	}
-
-private:
-	VarSet declaredVars;
-	bool isInsideDecl;
+	void print() const;
 };
 
-} // End analysis namespace
-} // End frontend namespace
-} // End insieme namespace
+} // end utils namespace
+} // end insieme namespace
