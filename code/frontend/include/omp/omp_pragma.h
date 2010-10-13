@@ -35,6 +35,7 @@
  */
 
 #pragma once
+
 #include "pragma_handler.h"
 #include <memory>
 
@@ -58,8 +59,6 @@ typedef std::shared_ptr<OmpAnnotation> OmpAnnotationPtr;
  * Base class for OpenMP pragmas
  */
 class OmpPragma: public insieme::frontend::Pragma {
-
-protected:
 	insieme::frontend::MatchMap mMap;
 public:
 	OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name, const insieme::frontend::MatchMap& mmap);
