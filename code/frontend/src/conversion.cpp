@@ -515,7 +515,8 @@ public:
 
 			// ---------TODO: Factorize inside a function----------------
 			vector<core::ExpressionPtr> args;
-			std::set_intersection( rvars.begin(), rvars.end(), lvars.begin(), lvars.end(), std::back_inserter(args) );
+			analysis::lt_ident comp;
+			std::set_union( rvars.begin(), rvars.end(), lvars.begin(), lvars.end(), std::back_inserter(args), comp);
 
 			core::TupleType::ElementTypeList elemTy;
 			core::LambdaExpr::ParamList params;
@@ -976,8 +977,8 @@ public:
 			// adding the body
 			std::copy(body.begin(), body.end(), std::back_inserter(whileBody));
 			// adding the incExpr at after the loop body
-			whileBody.push_back(incExpr.ref);
-			return StmtWrapper( builder.whileStmt( condExpr.ref, builder.compoundStmt(whileBody) ) );
+			whileBody.push_back( convFact.ConvertExpr( *forStmt->getInc() ) );
+			return StmtWrapper( builder.whileStmt( convFact.ConvertExpr( *forStmt->getCond() ), builder.compoundStmt(whileBody) ) );
 		}
 
 		StmtWrapper&& initExpr = Visit( initStmt );

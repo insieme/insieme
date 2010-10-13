@@ -39,19 +39,38 @@
 #include "program.h"
 #include "clang_compiler.h"
 #include "conversion.h"
+#include "clang_config.h"
 
-#include "clang/AST/Stmt.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/Expr.h"
 
 using namespace insieme::core;
 using namespace insieme::frontend;
 using namespace insieme::frontend::conversion;
 
-TEST(StmtConversion, HandleStmts) {
+TEST(StmtConversion, FileTest) {
 	using namespace clang;
 
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+
+	insieme::frontend::Program prog(shared);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
+
+	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
+
+	ConversionFactory convFactory( shared, comp );
+
+	std::for_each(pl.begin(), pl.end(),
+		[ &convFactory ](const PragmaPtr curr) {
+			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
+			if(tp->isStatement())
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertStmt( *tp->getStatement() )->toString() + '\"' );
+			else {
+				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
+				assert(td && "Decl is not of type typedecl");
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertType( *td->getTypeForDecl() )->toString() + '\"' );
+			}
+	});
 
 }
 

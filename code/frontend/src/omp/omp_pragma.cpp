@@ -420,6 +420,7 @@ omp::annotation::VarListPtr handleIdentifierList(const MatchMap& mmap, const std
 }
 
 // reduction(operator: list)
+// operator = + or - or * or & or | or ^ or && or ||
 omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
 	using namespace omp::annotation;
 
@@ -431,13 +432,24 @@ omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, con
 	// check the operator
 	auto opIt = mmap.find("reduction_op");
 	assert(opIt != mmap.end() && "Reduction clause doesn't contains an operator");
-	const ValueList& op = opIt->second;
-	assert(op.size() == 1);
+	const ValueList& opVar = opIt->second;
+	assert(opVar.size() == 1);
 
-	std::string* opStr = op.front()->get<std::string*>();
+	std::string* opStr = opVar.front()->get<std::string*>();
 	assert(opStr && "Reduction clause with no operator");
 
-	return OmpReductionPtr( new OmpReduction(*opStr, handleIdentifierList(mmap, "reduction", fact)) );
+	OmpReduction::Operator op;
+	if(*opStr == "+")		op = OmpReduction::PLUS;
+	else if(*opStr == "-")	op = OmpReduction::MINUS;
+	else if(*opStr == "*")	op = OmpReduction::STAR;
+	else if(*opStr == "&")	op = OmpReduction::AND;
+	else if(*opStr == "|")	op = OmpReduction::OR;
+	else if(*opStr == "^")	op = OmpReduction::XOR;
+	else if(*opStr == "&&")	op = OmpReduction::LAND;
+	else if(*opStr == "||")	op = OmpReduction::LOR;
+	else assert(false && "Reduction operator not supported.");
+
+	return OmpReductionPtr( new OmpReduction(op, handleIdentifierList(mmap, "reduction", fact)) );
 }
 
 core::ExpressionPtr handleSingleExpression(const MatchMap& mmap,  const std::string& key, conversion::ConversionFactory& fact) {

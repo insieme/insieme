@@ -128,14 +128,15 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		}
 	}
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(forStmt->getInc()) ) {
-		assert(isa<const DeclRefExpr>(binOp->getRHS()));
-		const DeclRefExpr* rhs = dyn_cast<const DeclRefExpr>(binOp->getRHS());
-		assert(rhs->getDecl() == loopHelper.inductionVar);
+		assert(isa<const DeclRefExpr>(binOp->getLHS()));
+		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
+		assert(lhs->getDecl() == loopHelper.inductionVar);
 
 		switch(binOp->getOpcode()) {
 		case BO_AddAssign:
 		case BO_SubAssign:
-			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getLHS() );
+			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getRHS() );
+			break;
 		default:
 			assert(false && "BinaryOperator not supported in increment expression");
 		}
