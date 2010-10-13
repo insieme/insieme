@@ -152,7 +152,7 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
 			argumentType << typePtr;
 
-			visitAnnotations(argument->getAnnotations(), typePtr);
+			visitAnnotations(argument.getAnnotations(), typePtr);
 		}
 		
 		if (const TypePtr returnT = cur->getReturnType()) {
@@ -163,7 +163,7 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
 			returnType << typePtr;
 
-			visitAnnotations(returnT->getAnnotations(), typePtr);
+			visitAnnotations(returnT.getAnnotations(), typePtr);
 		}
 		
 		visitAnnotations(cur->getAnnotations(), functionType);
@@ -445,7 +445,9 @@ void XmlUtil::convertDomToXml(const string outputFile){
 	delete myFormTarget;
 }
 
-void XmlUtil::convertDomToIr(){}
+void XmlUtil::convertDomToIr(const SharedNodeManager& manager){
+	
+}
 
 void XmlUtil::convertIrToDom(const NodePtr& node){
 	if (doc) {
@@ -503,10 +505,10 @@ void insieme::xml::xmlWrite(const NodePtr& node, const string fileName) {
 	xml.convertDomToXml(fileName);
 };
 
-void insieme::xml::xmlRead(const string fileName, const bool validate) {
+void insieme::xml::xmlRead(const SharedNodeManager& manager, const string fileName, const bool validate) {
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, validate);
-	//xml.convertDomToIr();
+	xml.convertDomToIr(manager);
 };
 
 void insieme::xml::xmlValidate(const string fileName) {

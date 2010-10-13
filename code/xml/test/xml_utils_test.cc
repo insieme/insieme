@@ -155,9 +155,9 @@ shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
 
 XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
 
+typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 
-TEST(XmlTest, GenericTypeAnnotationTest) {
-	typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
+/*TEST(XmlTest, GenericTypeAnnotationTest) {
 	DummyAnnotationPtr dummy1e(new DummyAnnotation("1e"));
 	DummyAnnotationPtr dummy2e(new DummyAnnotation("2e"));
 	DummyAnnotationPtr dummy3e(new DummyAnnotation("3e"));
@@ -185,10 +185,109 @@ TEST(XmlTest, GenericTypeAnnotationTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+}*/
+
+TEST(XmlTest, GenericTypeAnnotationTest) {
+	DummyAnnotationPtr dummy_gte(new DummyAnnotation("genTy e"));
+	DummyAnnotationPtr dummy_gtn(new DummyAnnotation("genTy n"));
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("base e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("base n"));
+	DummyAnnotationPtr dummy_tp1e(new DummyAnnotation("typePar1 e"));
+	DummyAnnotationPtr dummy_tp1n(new DummyAnnotation("typePar1 n"));
+	DummyAnnotationPtr dummy_tp2e(new DummyAnnotation("typePar2 e"));
+	DummyAnnotationPtr dummy_tp2n(new DummyAnnotation("typePar2 n"));
+	
+	NodeManager manager;
+	GenericTypePtr type1 = GenericType::get(manager, "type1");
+	GenericTypePtr type2 = GenericType::get(manager, "type2");
+	GenericTypePtr type3 = GenericType::get(manager, "type3");
+	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector(IntTypeParam::getVariableIntParam('p')), type3);
+	
+	type1.addAnnotation(dummy_tp1e);
+	type1->addAnnotation(dummy_tp1n);
+	type2.addAnnotation(dummy_tp2e);
+	type2->addAnnotation(dummy_tp2n);
+	type3.addAnnotation(dummy_be);
+	type3->addAnnotation(dummy_bn);
+	type4.addAnnotation(dummy_gte);
+	type4->addAnnotation(dummy_gtn);
+	
+	NodePtr root = type4;
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
 }
 
-TEST(XmlTest, FunctionTypeAnnotationTest) {
+/* OK TEST(XmlTest, FunctionTypeAnnotationTest) {
+	NodeManager manager;
 	
-}
+	GenericTypePtr type1 = GenericType::get(manager, "val");
+	GenericTypePtr type2 = GenericType::get(manager, "int");
+
+	DummyAnnotationPtr dummy_fe(new DummyAnnotation("fun e"));
+	DummyAnnotationPtr dummy_fn(new DummyAnnotation("fun n"));
+	DummyAnnotationPtr dummy_re(new DummyAnnotation("ret e"));
+	DummyAnnotationPtr dummy_ae(new DummyAnnotation("arg e"));
+	DummyAnnotationPtr dummy_rn(new DummyAnnotation("ret n"));
+	DummyAnnotationPtr dummy_an(new DummyAnnotation("arg n"));
+	
+	type1.addAnnotation(dummy_ae);
+	type1->addAnnotation(dummy_an);
+	
+	type2.addAnnotation(dummy_re);
+	type2->addAnnotation(dummy_rn);
+	
+	FunctionTypePtr funType1 = FunctionType::get(manager, type1, type2);
+	
+	funType1.addAnnotation(dummy_fe);
+	funType1->addAnnotation(dummy_fn);
+	
+	NodePtr root = funType1;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}*/
+
+/*TEST(XmlTest, StructTypeAnnotationTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+
+	StructType::Entries entriesA;
+	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
+	entriesA.push_back(StructType::Entry(identB, GenericType::get(manager, "B")));
+
+	StructTypePtr structA = StructType::get(manager, entriesA);
+	
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("struct e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("struct n"));
+	
+	DummyAnnotationPtr dummy_re(new DummyAnnotation("ret e"));
+	DummyAnnotationPtr dummy_ae(new DummyAnnotation("arg e"));
+	DummyAnnotationPtr dummy_rn(new DummyAnnotation("ret n"));
+	DummyAnnotationPtr dummy_an(new DummyAnnotation("arg n"));
+	structA.addAnnotation(dummy_se);
+	structA->addAnnotation(dummy_sn);
+	
+	NodePtr root = structA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
+}*/
 
 

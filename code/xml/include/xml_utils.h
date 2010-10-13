@@ -68,7 +68,7 @@ public:
 	
 	void convertDomToXml(const string fileName);
 	
-	void convertDomToIr();
+	void convertDomToIr(const SharedNodeManager& manager);
 	
 	void convertIrToDom(const NodePtr& node);
 	
@@ -155,7 +155,7 @@ private:
 
 void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
 
-void xmlRead(const std::string fileName, const bool validate);
+void xmlRead(const SharedNodeManager& manager, const std::string fileName, const bool validate);
 
 void xmlValidate(const std::string fileName);
 
