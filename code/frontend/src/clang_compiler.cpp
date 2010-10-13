@@ -153,7 +153,6 @@ void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOption
 	clang.setDiagnostics(diags);
 }
 
-
 /**
  * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
  * and the insieme IR which has been generated from the source file.

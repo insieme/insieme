@@ -87,7 +87,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 9, 2);
 
 		// check the omp parallel is empty
-		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
 		EXPECT_TRUE(omp->getMap().empty());
 	}
 
@@ -111,7 +111,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 13, 4);
 
 		// check the omp parallel is empty
-		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
 		EXPECT_FALSE(omp->getMap().empty());
 
 		auto fit = omp->getMap().find("private");
@@ -174,7 +174,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 9, 2);
 
 		// check the omp parallel is empty
-		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
 		EXPECT_FALSE(omp->getMap().empty());
 
 		// look for 'for' keyword in the map
@@ -214,7 +214,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 18, 2);
 
 		// check empty map
-		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
 		EXPECT_TRUE(omp->getMap().empty());
 	}
 
@@ -238,7 +238,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 17, 3);
 
 		// check the omp parallel is empty
-		omp::pragma::OmpPragma* omp = static_cast<omp::pragma::OmpPragma*>(p.get());
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
 
 		auto fit = omp->getMap().find("firstprivate");
 		EXPECT_TRUE(fit != omp->getMap().end());

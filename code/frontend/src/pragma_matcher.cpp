@@ -98,7 +98,7 @@ MatchMap::MatchMap(const MatchMap& other) {
 	});
 }
 
-// ------------------------------------ ErrorStack ---------------------------
+// ------------------------------------ ParserStack ---------------------------
 
 size_t ParserStack::openRecord() {
 	mRecords.push_back( LocErrorList() );
