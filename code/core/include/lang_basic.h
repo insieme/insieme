@@ -126,6 +126,10 @@ ADD_TYPE(RealType, REAL_4);
 ADD_TYPE(RealType, REAL_8);
 ADD_TYPE(RealType, REAL_INF);
 
+// -------------------------------- Vector Types ------------------------------
+
+bool isVectorType(const Type& type);
+
 // ------------------------ Character and String Types -----------------------
 
 ADD_TYPE(GenericType, CHAR);

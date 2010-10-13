@@ -198,6 +198,13 @@ ADD_TYPE(RealType, REAL_4, getRealType(4));
 ADD_TYPE(RealType, REAL_8, getRealType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
+// -------------------------------- Vector Types ------------------------------
+
+bool isVectorType(const Type& type) {
+    std::cout << "is vector type " << dynamic_cast<const core::VectorType*>(&type) << "\n";
+    return dynamic_cast<const core::VectorType*>(&type);
+}
+
 
 // ------------------------ Character and String Types -----------------------
 

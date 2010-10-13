@@ -178,6 +178,21 @@ std::string getOperationType(const core::TypePtr& type) {
 	if(isIntType(*type)) 	return "int";
 	if(isBoolType(*type))	return "bool";
 	if(isRealType(*type))	return "real";
+    if(isVectorType(*type)) {
+        const core::VectorType* vt = dynamic_cast<const core::VectorType*>(&*type);
+
+        const core::TypePtr ref = vt->getElementType();
+        std::ostringstream ss;
+
+        if(const core::RefType* subtype = dynamic_cast<const core::RefType*>(&*ref))
+            ss << "vector<" << getOperationType(subtype->getElementType()) << ">";
+        else
+            ss << "vector<" << getOperationType(ref) << ">";
+
+        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
+        std::cout << ss << std::endl;
+        return ss.str();
+    }
 	assert(false && "Type not supported");
 }
 
