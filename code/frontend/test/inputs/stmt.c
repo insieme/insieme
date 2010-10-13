@@ -35,7 +35,7 @@
  */
 
 // Simple struct
-void binary_op() {
+void binary_op_test() {
 
 	int a = 0;
 
@@ -57,11 +57,21 @@ void binary_op() {
 	#pragma test "fun(ref<int<4>> a, ref<int<4>> b){ {int.add(a, 1); return int.sub(b, 1);} }(a, b)"
 	(a+1, b-1);
 
-	// ... boring
+	#pragma test "fun(ref<int<4>> a){ {ref.assign(a, int.add(a, 1)); return a;} }(a)"
+	a++;
+
+	#pragma test "fun(ref<int<4>> a){ {ref.assign(a, int.sub(a, 1)); return a;} }(a)"
+	a--;
+
+	#pragma test "fun(ref<int<4>> a){ {ref<int<4>> __tmp = a; ref.assign(a, int.add(a, 1)); return __tmp;} }(a)"
+	++a;
+
+	#pragma test "fun(ref<int<4>> a){ {ref<int<4>> __tmp = a; ref.assign(a, int.sub(a, 1)); return __tmp;} }(a)"
+	--a;
 
 }
 
-void unary_op() {
+void unary_op_test() {
 
 	#pragma test "ref<int<4>> a = 0"
 	int a = 0;
@@ -82,7 +92,7 @@ void unary_op() {
 	*b;
 }
 
-void if_stmt() {
+void if_stmt_test() {
 
 	int cond = 0;
 
@@ -99,7 +109,7 @@ void if_stmt() {
 	}
 }
 
-void for_stmt() {
+void for_stmt_test() {
 
 	int it = 0;
 
@@ -111,6 +121,16 @@ void for_stmt() {
 
 	#pragma test "while(int.lt(it, 100)) {{{};}; ref.assign(it, int.add(it, 1));}"
 	for(; it<100; it+=1) { ; }
+
+}
+
+void while_stmt_test() {
+
+	int it = 0;
+
+	#pragma test "while(int.ne(it, 0)) {ref.assign(it, int.sub(it, 1));}"
+	while(it != 0) { it-=1; }
+
 
 }
 

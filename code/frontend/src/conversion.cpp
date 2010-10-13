@@ -196,6 +196,32 @@ std::string getOperationType(const core::TypePtr& type) {
 	assert(false && "Type not supported");
 }
 
+// creates a function call from a list of expressions,
+// usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
+core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vector<core::StatementPtr>& body, core::TypePtr retTy) {
+
+	core::CompoundStmtPtr bodyStmt = builder.compoundStmt( body );
+	// keeps the list variables used in the body
+	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
+
+	core::TupleType::ElementTypeList elemTy;
+	core::LambdaExpr::ParamList params;
+	std::for_each(args.begin(), args.end(),
+		[&params, &elemTy, &builder] (const core::ExpressionPtr& curr) {
+			const core::VarExprPtr& var = core::dynamic_pointer_cast<const core::VarExpr>(curr);
+			params.push_back( builder.paramExpr(var->getType(), var->getIdentifier()) );
+			elemTy.push_back( var->getType() );
+		}
+	);
+
+	// build the type of the function
+	core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
+
+	// build the expression body
+	core::LambdaExprPtr retExpr = builder.lambdaExpr( funcTy, params, bodyStmt );
+	return builder.callExpr( retExpr, std::vector<core::ExpressionPtr>(args.begin(), args.end()) );
+}
+
 } // End empty namespace
 
 
@@ -525,37 +551,7 @@ public:
 		// if the binary operator is a comma separated expression, we convert it into a function call
 		// which returns the value of the last expression
 		if( binOp->getOpcode() == BO_Comma) {
-			analysis::VarRefFinder rvars(rhs);
-			analysis::VarRefFinder lvars(lhs);
-
-			// ---------TODO: Factorize inside a function----------------
-			vector<core::ExpressionPtr> args;
-			analysis::lt_ident comp;
-			std::set_union( rvars.begin(), rvars.end(), lvars.begin(), lvars.end(), std::back_inserter(args), comp);
-
-			core::TupleType::ElementTypeList elemTy;
-			core::LambdaExpr::ParamList params;
-			std::for_each(args.begin(), args.end(),
-				[&params, &elemTy, &builder] (const core::ExpressionPtr& curr) {
-					const core::VarExprPtr& var = core::dynamic_pointer_cast<const core::VarExpr>(curr);
-					params.push_back( builder.paramExpr(var->getType(), var->getIdentifier()) );
-					elemTy.push_back( var->getType() );
-				}
-			);
-
-			// build the type of the function
-			core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), rhs->getType());
-
-			// build the expression body
-			core::LambdaExprPtr retExpr = builder.lambdaExpr(
-					funcTy, params, builder.compoundStmt( std::vector<core::StatementPtr>({ lhs, builder.returnStmt(rhs)}))
-			);
-
-			DLOG(INFO) << *retExpr;
-
-			return ExprWrapper( builder.callExpr(retExpr, args) );
-			// ---------------------------------------------------------------
-			assert(false && "Comma separated expressions not handled!");
+			return ExprWrapper( createCallExpr(builder, std::vector<core::StatementPtr>( {lhs, builder.returnStmt(rhs)} ), rhs->getType()) );
 		}
 
 		core::TypePtr exprTy = convFact.ConvertType( *GET_TYPE_PTR(binOp) );
@@ -676,49 +672,54 @@ public:
 		core::ExpressionPtr subExpr = Visit(unOp->getSubExpr()).ref;
 
 		bool additive = false;
-		bool post = false;
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
-		// a++ ==> (a=a+1, a-1) // FIXME? Does it need to be ATOMIC?
+		// a++ ==> (__tmp = a, a=a+1, __tmp) // FIXME? Does it need to be ATOMIC?
 		// a-- ==> (a=a-1, a+1)
 		// a++
 		case UO_PostInc:
 			additive = true;
 		// a--
 		case UO_PostDec:
-			post = true;
-
-		// ++a
-		case UO_PreInc:
-			additive = true;
-		// --a
-		case UO_PreDec:
 			assert( core::dynamic_pointer_cast<const core::RefType>(subExpr->getType()) && "LHS operand must of type ref<a'>." );
-			subExpr =
-				// build a tuple expression
-				builder.tupleExpr(
-				std::vector<core::ExpressionPtr>({ 	// ref.assign(a int.add(a, 1))
+			subExpr = createCallExpr(builder, std::vector<core::StatementPtr>({
+					// subexpr op= 1
 					builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
 						std::vector<core::ExpressionPtr>({
 							subExpr, // ref<a'> a
 							builder.callExpr(
 								( additive ? core::lang::OP_INT_ADD_PTR:core::lang::OP_INT_SUB_PTR ),
 									std::vector<core::ExpressionPtr>({ subExpr, core::lang::CONST_UINT_ONE_PTR })
-							) // a - 1
+								) // a - 1
 						})
 					),
-					(post ? // if is post increment/decrement
+					// return __tmp
+					builder.returnStmt( subExpr )
+				}),	subExpr->getType() );
+			break;
+		// ++a
+		case UO_PreInc:
+			additive = true;
+		// --a
+		case UO_PreDec:
+			assert( core::dynamic_pointer_cast<const core::RefType>(subExpr->getType()) && "LHS operand must of type ref<a'>." );
+			subExpr = createCallExpr(builder, std::vector<core::StatementPtr>({
+				// ref<a'> __tmp = subexpr
+				builder.declarationStmt(subExpr->getType(), core::Identifier("__tmp"), subExpr),
+				// subexpr op= 1
+				builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
+					std::vector<core::ExpressionPtr>({
+						subExpr, // ref<a'> a
 						builder.callExpr(
-							( additive ? core::lang::OP_INT_SUB_PTR:core::lang::OP_INT_ADD_PTR ),
-							std::vector<core::ExpressionPtr>({
-								builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ), // ref.deref(a)
-								core::lang::CONST_UINT_ONE_PTR // 1
-							})
-						)
-						: // else
-						builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} )
-					)
-				}));
+							( additive ? core::lang::OP_INT_ADD_PTR:core::lang::OP_INT_SUB_PTR ),
+								std::vector<core::ExpressionPtr>({ subExpr, core::lang::CONST_UINT_ONE_PTR })
+							) // a - 1
+					})
+				),
+				// return __tmp
+				builder.returnStmt( builder.varExpr(subExpr->getType(), core::Identifier("__tmp")) )
+			}), subExpr->getType());
+			break;
 		// &a
 		case UO_AddrOf:
 			// assert(false && "Conversion of AddressOf operator '&' not supported");

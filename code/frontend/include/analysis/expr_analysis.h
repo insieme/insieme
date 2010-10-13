@@ -54,9 +54,20 @@ typedef std::set<core::VarExprPtr, lt_ident> VarSet;
  */
 struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 
-	VarRefFinder(const core::ExpressionPtr& expr) { visit(expr); }
+	VarRefFinder(const core::NodePtr& node) {
+		visit(node);
+		// we have to remove eventual variables which are declared inside this block of code
+		VarSet nonDecls;
+		lt_ident comp;
+		std::set_difference( begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
+		VarSet::operator=(nonDecls);
+	}
 
 	void visitVarExpr(const core::VarExprPtr& varExpr) { insert(varExpr); }
+
+	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
+		declaredVars.insert( declStmt->getVarExpression() );
+	}
 
 	void visitNode(const core::NodePtr& node) {
 		std::for_each(node->getChildList().begin(), node->getChildList().end(),
@@ -64,6 +75,10 @@ struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 				this->visit(curr);
 			});
 	}
+
+private:
+	VarSet declaredVars;
+	bool isInsideDecl;
 };
 
 } // End analysis namespace
