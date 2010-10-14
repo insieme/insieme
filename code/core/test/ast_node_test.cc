@@ -86,6 +86,10 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	T copy = T(*node);
 	T* clone = dynamic_cast<T*>(static_cast<const Node*>(&*node)->cloneTo(manager));
 
+	// cloning had to be successful
+	EXPECT_TRUE(clone);
+
+	// and all children have to be in the new manager
 	const Node::ChildList& list = clone->getChildList();
 	std::for_each(list.begin(), list.end(), [&manager](const NodePtr& cur) {
 		EXPECT_TRUE(manager.addressesLocal(cur));

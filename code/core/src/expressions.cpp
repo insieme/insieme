@@ -48,7 +48,7 @@ enum {
 	HASHVAL_LITERAL = 100 /* offset from statements */,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
 	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_REC_LAMBDA_DEFINITION,
-	HASHVAL_REC_LAMBDA
+	HASHVAL_REC_LAMBDA, HASHVAL_VECTOREXPR
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -226,6 +226,55 @@ TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& e
 	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](const ExpressionPtr& e) { return e->getType(); });
 	return manager.get(TupleExpr(TupleType::get(manager, elemTypes), insieme::core::migrateAllPtr(expressions, NULL, &manager)));
 }
+
+// ------------------------------------- VectorExpr ---------------------------------
+
+std::size_t hashVectorExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions) {
+	size_t seed = HASHVAL_VECTOREXPR;
+	boost::hash_combine(seed, type->hash());
+	hashPtrRange(seed, expressions);
+	return seed;
+}
+
+VectorExpr::VectorExpr(const VectorTypePtr& type, const vector<ExpressionPtr>& expressions)
+		: Expression(NT_VectorExpr, type, hashVectorExpr(type, expressions)), expressions(expressions) { };
+
+VectorExpr* VectorExpr::createCloneUsing(NodeManager& manager) const {
+	return new VectorExpr(
+			migratePtr(static_pointer_cast<const VectorType>(type), manager),
+			migrateAllPtr(expressions, manager)
+	);
+}
+
+bool VectorExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base equals
+	const VectorExpr& rhs = static_cast<const VectorExpr&>(expr);
+	return ::equals(expressions, rhs.expressions, equal_target<ExpressionPtr>());
+}
+
+Node::OptionChildList VectorExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(type);
+	std::copy(expressions.cbegin(), expressions.cend(), back_inserter(*res));
+	return res;
+}
+
+std::ostream& VectorExpr::printTo(std::ostream& out) const {
+	return out << "{" << join(",", expressions, print<deref<ExpressionPtr>>()) << "}";
+}
+
+
+VectorExprPtr VectorExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
+
+	TypePtr elementType = TypeVariable::get(manager, "a");
+	if (!expressions.empty()) {
+		elementType = expressions[0]->getType();
+	}
+
+	VectorTypePtr resultType = VectorType::get(manager, elementType, IntTypeParam::getConcreteIntParam(expressions.size()));
+	return manager.get(VectorExpr(resultType, insieme::core::migrateAllPtr(expressions, NULL, &manager)));
+}
+
 
 // ------------------------------------- NamedCompositeExpr ---------------------------------
 

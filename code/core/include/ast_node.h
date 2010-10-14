@@ -285,6 +285,14 @@ protected:
 	 */
 	virtual OptionChildList getChildNodes() const = 0;
 
+public:
+
+	/**
+	 * The default virtual destructor enforcing the proper destruction of derived
+	 * instances.
+	 */
+	virtual ~Node() {};
+
 	/**
 	 * Obtains a pointer to the manager maintaining this instance of an AST node.
 	 *
@@ -293,14 +301,6 @@ protected:
 	inline const NodeManager* getNodeManager() const {
 		return manager;
 	}
-
-public:
-
-	/**
-	 * The default virtual destructor enforcing the proper destruction of derived
-	 * instances.
-	 */
-	virtual ~Node() {};
 
 	/**
 	 * Retrieves a reference to the internally maintained list of child nodes. The
@@ -395,6 +395,38 @@ protected:
 
 };
 
+
+template<typename T>
+inline const AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
+	// null pointers or proper points do not have to be modified
+	if (!ptr || ptr->getNodeManager() == &manager) {
+		return ptr;
+	}
+
+	// obtain pointer to same instance within new manager
+	AnnotatedPtr<T> res = manager.get(ptr);
+
+	// add annotations
+	res.setAnnotations(ptr.getAnnotations());
+
+	// done
+	return res;
+}
+
+template<typename Container>
+inline Container cloneAllPtrTo(NodeManager& manager, const Container& list) {
+	Container res;
+	cloneAllPtrTo(manager, list.begin(), list.end(), inserter(res, res.end()));
+	return res;
+}
+
+template<typename InputIterator, typename OutputIterator>
+inline void cloneAllPtrTo(NodeManager& manager, InputIterator first, InputIterator last, OutputIterator out) {
+	typedef typename std::iterator_traits<InputIterator>::value_type Element;
+	std::transform(first, last, out, [&manager](const Element& cur) {
+		return clonePtrTo(manager, cur);
+	});
+}
 
 } // end namespace core
 } // end namespace insieme
