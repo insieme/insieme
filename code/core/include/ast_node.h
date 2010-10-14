@@ -58,22 +58,17 @@ enum NodeType {
 };
 #undef CONCRETE
 
-
 /**
- * Defines a macro to forward declare AST node types. Each node type
- * is defined by a class. Further, for each node type a pointer type
- * is defined, which might be used to reference instances of the
- * those types.
+ * Adds forward declarations for all AST node types. Further, for each
+ * type a type definition for a corresponding annotated pointer is added.
  */
-#define DECLARE_NODE_TYPE(NAME) \
+#define NODE(NAME) \
 	class NAME; \
 	typedef AnnotatedPtr<const NAME> NAME ## Ptr;
 
-
-/**
- * Define root-node type.
- */
-DECLARE_NODE_TYPE(Node);
+	// take all nodes from within the definition file
+	#include "ast_nodes.def"
+#undef NODE
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.

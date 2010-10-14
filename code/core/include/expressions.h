@@ -50,29 +50,6 @@
 namespace insieme {
 namespace core {
 
-// Forward Declarations { -----------------------------------------------------
-
-DECLARE_NODE_TYPE(Expression);
-
-DECLARE_NODE_TYPE(Literal);
-
-DECLARE_NODE_TYPE(VarExpr);
-DECLARE_NODE_TYPE(ParamExpr);
-DECLARE_NODE_TYPE(CallExpr);
-DECLARE_NODE_TYPE(CastExpr);
-
-DECLARE_NODE_TYPE(TupleExpr);
-DECLARE_NODE_TYPE(NamedCompositeExpr);
-DECLARE_NODE_TYPE(StructExpr);
-DECLARE_NODE_TYPE(UnionExpr);
-DECLARE_NODE_TYPE(JobExpr);
-DECLARE_NODE_TYPE(LambdaExpr);
-DECLARE_NODE_TYPE(VectorExpr);
-
-DECLARE_NODE_TYPE(RecLambdaDefinition);
-DECLARE_NODE_TYPE(RecLambdaExpr);
-
-// Forward Declarations } -----------------------------------------------------
 
 class Expression : public Statement {
 
