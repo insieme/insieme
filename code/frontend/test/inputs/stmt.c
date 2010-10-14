@@ -57,18 +57,17 @@ void binary_op_test() {
 	#pragma test "fun(ref<int<4>> a, ref<int<4>> b){ {int.add(a, 1); return int.sub(b, 1);} }(a, b)"
 	(a+1, b-1);
 
-	#pragma test "fun(ref<int<4>> a){ {ref.assign(a, int.add(a, 1)); return a;} }(a)"
+	#pragma test "fun(ref<int<4>> a){ {int<4> __tmp = ref.deref(a); ref.assign(a, int.add(a, 1)); return __tmp;} }(a)"
 	a++;
 
-	#pragma test "fun(ref<int<4>> a){ {ref.assign(a, int.sub(a, 1)); return a;} }(a)"
+	#pragma test "fun(ref<int<4>> a){ {int<4> __tmp = ref.deref(a); ref.assign(a, int.sub(a, 1)); return __tmp;} }(a)"
 	a--;
 
-	#pragma test "fun(ref<int<4>> a){ {ref<int<4>> __tmp = a; ref.assign(a, int.add(a, 1)); return __tmp;} }(a)"
+	#pragma test "fun(ref<int<4>> a){ {ref.assign(a, int.add(a, 1)); ref.deref(a);} }(a)"
 	++a;
 
-	#pragma test "fun(ref<int<4>> a){ {ref<int<4>> __tmp = a; ref.assign(a, int.sub(a, 1)); return __tmp;} }(a)"
+	#pragma test "fun(ref<int<4>> a){ {ref.assign(a, int.sub(a, 1)); ref.deref(a);} }(a)"
 	--a;
-
 }
 
 void unary_op_test() {
@@ -113,15 +112,28 @@ void for_stmt_test() {
 
 	int it = 0;
 
+	// standard for loop
 	#pragma test "for(ref<int<4>> i = 0 .. 100 : 1) {{};}"
 	for(int i=0; i<100; i++) { ; }
 
-	#pragma test "for(ref<int<4>> __it = 0 .. 100 : 1) {{};}"
+	// for loop using a variable declared outside
+	#pragma test "{for(ref<int<4>> __it = 0 .. 100 : 1) {{};}; ref.assign(it, __it);}"
 	for(it=0; it<100; ++it) { ; }
 
 	#pragma test "while(int.lt(it, 100)) {{{};}; ref.assign(it, int.add(it, 1));}"
 	for(; it<100; it+=1) { ; }
 
+	#pragma test "{ref<int<4>> j = 1; ref<int<4>> z = 2; for(ref<int<4>> i = 0 .. 100 : 1) {{};};}"
+	for(int i=0,j=1,z=2; i<100; i+=1) { ; }
+
+	int mq, nq;
+	#pragma test "{ref.assign(mq, 0); "\
+				  "while(int.gt(nq, 1)) {{}; "\
+				  	  "fun(ref<int<4>> mq, ref<int<4>> nq){ "\
+					  	  "{fun(ref<int<4>> mq){ {int<4> __tmp = ref.deref(mq); ref.assign(mq, int.add(mq, 1)); return __tmp;} }(mq); "\
+					  	  "return ref.assign(nq, int.div(nq, 2));} }(ref<int<4>> mq, nq)"\
+				  ";};}"
+    for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
 
 void while_stmt_test() {
@@ -131,6 +143,7 @@ void while_stmt_test() {
 	#pragma test "while(int.ne(it, 0)) {ref.assign(it, int.sub(it, 1));}"
 	while(it != 0) { it-=1; }
 
-
 }
+
+
 

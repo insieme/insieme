@@ -103,11 +103,13 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 		// only 1 variable is common among the increment expression and the condition expression,
 		// we can be 100% sure this is the induction variable of the loop
 		loopHelper.inductionVar = *commonVars.begin();
-	} else {
-		// loop not in normal form, exit
-		// TODO: handle border cases here
-		assert(false && "Error while determining loop induction variable, loop not in normal form");
+		return;
 	}
+	// loop not in normal form!
+	// TODO: handle border cases here
+
+	// if we cannot still determine the induction variable, throw an exception
+	throw InductionVariableNotFoundException();
 }
 
 void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
@@ -124,21 +126,24 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 			loopHelper.incrExpr = convFact.getASTBuilder().literal("-1", core::lang::TYPE_INT_GEN);
 			return;
 		default:
-			assert(false && "UnaryOperator not supported in loop increment expression");
+			assert(false && "UnaryOperator differet from post/pre inc/dec (++/--) not supported in loop increment expression");
 		}
 	}
-	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(forStmt->getInc()) ) {
-		assert(isa<const DeclRefExpr>(binOp->getLHS()));
-		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
-		assert(lhs->getDecl() == loopHelper.inductionVar);
 
+	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(forStmt->getInc()) ) {
 		switch(binOp->getOpcode()) {
 		case BO_AddAssign:
-		case BO_SubAssign:
+		case BO_SubAssign: {
+			assert(isa<const DeclRefExpr>(binOp->getLHS()));
+			const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
+			assert(lhs->getDecl() == loopHelper.inductionVar);
 			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getRHS() );
 			break;
+		}
 		default:
-			assert(false && "BinaryOperator not supported in increment expression");
+			// the increment operation cannot be translated into a normal form loop
+			throw LoopNormalizationError();
+			// assert(false && "BinaryOperator not supported in increment expression");
 		}
 	}
 }
