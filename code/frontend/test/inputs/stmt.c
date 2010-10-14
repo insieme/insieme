@@ -111,20 +111,21 @@ void if_stmt_test() {
 void for_stmt_test() {
 
 	int it = 0;
+	int a;
 
 	// standard for loop
 	#pragma test "for(ref<int<4>> i = 0 .. 100 : 1) {{};}"
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
-	#pragma test "{for(ref<int<4>> __it = 0 .. 100 : 1) {{};}; ref.assign(it, __it);}"
-	for(it=0; it<100; ++it) { ; }
+	#pragma test "{for(ref<int<4>> __it = 0 .. 100 : 1) {ref.assign(a, it);}; ref.assign(it, __it);}"
+	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test "while(int.lt(it, 100)) {{{};}; ref.assign(it, int.add(it, 1));}"
 	for(; it<100; it+=1) { ; }
 
-	#pragma test "{ref<int<4>> j = 1; ref<int<4>> z = 2; for(ref<int<4>> i = 0 .. 100 : 1) {{};};}"
-	for(int i=0,j=1,z=2; i<100; i+=1) { ; }
+	#pragma test "{ref<int<4>> j = 1; ref<int<4>> z = 2; for(ref<int<4>> i = 0 .. 100 : 1) {ref.assign(a, i);};}"
+	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
 	#pragma test "{ref.assign(mq, 0); "\
