@@ -141,6 +141,23 @@ TEST(XmlTest, TupleTypeTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+TEST(XmlTest, TypeVariableTest) {
+	NodeManager manager;
+	TypeVariablePtr varTypeA = TypeVariable::get(manager, "alpha");
+	TypeVariablePtr varTypeB = TypeVariable::get(manager, "beta");
+	TypeVariablePtr varTypeG = TypeVariable::get(manager, "gamma");
+	GenericTypePtr type1 = GenericType::get(manager, "int", toVector<TypePtr>(varTypeA, varTypeB), toVector(IntTypeParam::getVariableIntParam('p')), varTypeG);
+	
+	NodePtr root = type1;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
 
 
 

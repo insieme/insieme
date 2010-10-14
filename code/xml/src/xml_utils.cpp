@@ -245,6 +245,15 @@ public:
 		// annotations
 	}
 
+	void visitTypeVariable(const TypeVariablePtr& cur) {
+		XmlElement typeVariable("typeVariable", doc);
+		typeVariable.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		typeVariable.setAttr("name", cur->getVarName());
+		rootElem << typeVariable;
+		
+		// annotations
+	}
+
 	void visitArrayType(const ArrayTypePtr& cur) {
 	
 	}

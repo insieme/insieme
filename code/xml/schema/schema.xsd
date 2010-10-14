@@ -72,6 +72,11 @@
 </xs:complexType>
 
 <!-- All IR Node -->
+<xs:complexType name="T_typeVariable">
+	<xs:attribute name="id" type="xs:integer" use="required"/>
+	<xs:attribute name="name" type="xs:string" use="required"/>
+</xs:complexType>
+	
 <xs:complexType name="T_tupleType">
 	<xs:all>
 		<xs:element name="elementTypeList" type="T_elementTypeList" minOccurs="1"/>
@@ -119,6 +124,7 @@
 		<xs:element name="structType" type="T_structType"/>
 		<xs:element name="unionType" type="T_structType"/>
 		<xs:element name="tupleType" type="T_tupleType"/>
+		<xs:element name="typeVariable" type="T_typeVariable"/>
 	</xs:choice>
 </xs:group>
 
