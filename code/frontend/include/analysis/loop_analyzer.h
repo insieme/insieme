@@ -37,6 +37,8 @@
 #pragma once
 
 #include "expressions.h"
+#include <exception>
+#include <stdexcept>
 
 namespace clang {
 class VarDecl;
@@ -50,6 +52,18 @@ class ConversionFactory;
 namespace insieme {
 namespace frontend {
 namespace analysis {
+
+class LoopNormalizationError: public std::exception {
+public:
+	LoopNormalizationError(): std::exception() { }
+	const char* what() throw() { return NULL; }
+	~LoopNormalizationError() throw() { }
+};
+
+class InductionVariableNotFoundException: public LoopNormalizationError {
+public:
+	InductionVariableNotFoundException(): LoopNormalizationError() { }
+};
 
 using insieme::frontend::conversion::ConversionFactory;
 
