@@ -53,7 +53,7 @@ void basic_type_test() {
 	#pragma test "ref<real<4>> f = 0.00f"
 	float f = 0.00f;
 
-	#pragma test "ref<real<8>> g = 0"
+	#pragma test "ref<real<8>> g = 0.0"
 	double g;
 }
 
