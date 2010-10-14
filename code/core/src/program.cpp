@@ -114,8 +114,6 @@ bool compareTypes(const TypePtr& typeA, const TypePtr& typeB) {
 	return toString(typeA) < toString(typeB);
 }
 
-std::vector<GenericTypePtr> getAllGenericTypes(const Program& program);
-
 std::ostream& Program::printTo(std::ostream& out) const {
 
 	typedef std::vector<ExpressionPtr> EntryPointList;
@@ -135,15 +133,4 @@ std::ostream& Program::printTo(std::ostream& out) const {
 	out << "}" << endl;
 
 	return out;
-}
-
-
-
-std::vector<GenericTypePtr> getAllGenericTypes(const Program&) {
-
-	std::vector<GenericTypePtr> res;
-
-
-
-	return res;
 }

@@ -53,9 +53,6 @@
 namespace insieme {
 namespace core {
 
-// forward declaration of the program class and pointer
-DECLARE_NODE_TYPE(Program);
-
 
 class ASTBuilder;
 

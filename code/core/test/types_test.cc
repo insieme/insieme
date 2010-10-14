@@ -325,7 +325,11 @@ TEST(TypeTest, TypeVariable) {
 
 	// check name
 	EXPECT_EQ ( "'alpha", varTypeA->getName() );
+	EXPECT_EQ ( "alpha", varTypeA->getVarName() );
+
 	EXPECT_EQ ( "'beta", varTypeB->getName() );
+	EXPECT_EQ ( "beta", varTypeB->getVarName() );
+
 	EXPECT_EQ ( "'alpha", varTypeA->toString() );
 	EXPECT_EQ ( "'beta", varTypeB->toString() );
 
