@@ -102,10 +102,11 @@ int main(int argc, char** argv) {
 				res[i][j] = f[i][j] - 4 * u[i][j] + u[i-1][j] + u[i+1][j] + u[i][j-1] + u[i][j+1];
 		}
 
+		int i;
 		// normalize
 		double norm = 0;
 		#pragma omp for private(a) reduction(+: norm)
-		for (int i=1; i<N-1; i++)
+		for (i=1; i<N-1; i++)
 			for (int j=1; j<N-1; j++)
 				norm += pow( res[i][j], 2 );
 
