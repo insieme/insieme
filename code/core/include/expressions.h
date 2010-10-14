@@ -67,6 +67,7 @@ DECLARE_NODE_TYPE(StructExpr);
 DECLARE_NODE_TYPE(UnionExpr);
 DECLARE_NODE_TYPE(JobExpr);
 DECLARE_NODE_TYPE(LambdaExpr);
+DECLARE_NODE_TYPE(VectorExpr);
 
 DECLARE_NODE_TYPE(RecLambdaDefinition);
 DECLARE_NODE_TYPE(RecLambdaExpr);
@@ -361,6 +362,7 @@ public:
 class TupleExpr : public Expression {
 	const vector<ExpressionPtr> expressions;
 
+	// TODO: does not require type ...
 	TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions);
 	virtual TupleExpr* createCloneUsing(NodeManager& manager) const;
 
@@ -375,6 +377,26 @@ public:
 	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
 
 	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
+};
+
+
+class VectorExpr : public Expression {
+	const vector<ExpressionPtr> expressions;
+
+	VectorExpr(const VectorTypePtr& type, const vector<ExpressionPtr>& expressions);
+	virtual VectorExpr* createCloneUsing(NodeManager& manager) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
+
+public:
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
+
+	static VectorExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
 };
 
 

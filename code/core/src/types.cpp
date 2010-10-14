@@ -287,11 +287,7 @@ GenericType::GenericType(NodeType nodeType, const Identifier& name,
 		baseType(baseType) { }
 
 GenericType* GenericType::createCloneUsing(NodeManager& manager) const {
-	return new GenericType(familyName,
-			migrateAllPtr(typeParams, manager),
-			intParams,
-			migratePtr(baseType, manager)
-	);
+	return new GenericType(familyName, cloneAllPtrTo(manager, typeParams), intParams, clonePtrTo(manager, baseType));
 }
 
 /**
@@ -310,14 +306,8 @@ GenericTypePtr GenericType::get(NodeManager& manager,
 			const vector<IntTypeParam>& intTypeParams,
 			const TypePtr& baseType) {
 
-	// get all type-parameter references from the manager
-	vector<TypePtr> localTypeParams = insieme::core::migrateAllPtr(typeParams, NULL, &manager);
-
-	// get base type reference (if necessary) ...
-	TypePtr localBaseType = insieme::core::migratePtr(baseType, NULL, &manager);
-
 	// create resulting data element
-	return manager.get(GenericType(name, localTypeParams, intTypeParams, localBaseType));
+	return manager.get(GenericType(name, typeParams, intTypeParams, baseType));
 }
 
 /**
