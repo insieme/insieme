@@ -222,8 +222,27 @@ public:
 		visitAnnotations(cur->getAnnotations(), unionType);
 	}
 
-	void visitExpression(const ExpressionPtr& cur) {
-	
+	void visitTupleType(const TupleTypePtr& cur) {
+		XmlElement tupleType("tupleType", doc);
+		tupleType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << tupleType;
+
+		XmlElement elementTypeList("elementTypeList",doc);
+		tupleType << elementTypeList;
+
+		const vector<TypePtr> elementList = cur->getElementTypes();
+		for(vector<TypePtr>::const_iterator iter = elementList.begin(); iter != elementList.end(); ++iter) {
+			XmlElement elementType("elementType", doc);
+			elementTypeList << elementType;
+			
+			XmlElement typePtr("typePtr", doc);
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+			elementType << typePtr;
+			
+			// annotations
+		}
+		
+		// annotations
 	}
 
 	void visitArrayType(const ArrayTypePtr& cur) {
