@@ -47,7 +47,7 @@ void basic_type_test() {
 
 	char d = 'a';
 
-	#pragma test "ref<ref<unit>> e = 0"
+	#pragma test "ref<ref<unit>> e = null"
 	void* e;
 
 	#pragma test "ref<real<4>> f = 0.00f"
