@@ -42,7 +42,7 @@ void basic_type_test() {
 	#pragma test "ref<int<8>> b = 0"
 	long b;
 
-	#pragma test "ref<int<2>> c = cast<int<2>>(0xFFFF)"
+	#pragma test "ref<int<2>> c = 0xFFFF"
 	short c = 0xFFFF;
 
 	char d = 'a';

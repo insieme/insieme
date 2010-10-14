@@ -62,30 +62,6 @@ using std::map;
 namespace insieme {
 namespace core {
 
-// ------------------------------ Forward Declarations ------------------------------------
-
-DECLARE_NODE_TYPE(Type);
-
-DECLARE_NODE_TYPE(TypeVariable);
-
-DECLARE_NODE_TYPE(FunctionType);
-DECLARE_NODE_TYPE(TupleType);
-DECLARE_NODE_TYPE(GenericType);
-DECLARE_NODE_TYPE(RecGenericType);
-DECLARE_NODE_TYPE(NamedCompositeType);
-
-DECLARE_NODE_TYPE(SingleElementType);
-DECLARE_NODE_TYPE(ArrayType);
-DECLARE_NODE_TYPE(VectorType);
-DECLARE_NODE_TYPE(RefType);
-DECLARE_NODE_TYPE(ChannelType);
-
-DECLARE_NODE_TYPE(StructType);
-DECLARE_NODE_TYPE(UnionType);
-
-DECLARE_NODE_TYPE(RecTypeDefinition);
-DECLARE_NODE_TYPE(RecType);
-
 /**
  * This class is used to represent integer parameters of generic types.
  */
@@ -225,6 +201,11 @@ public:
  */
 class TypeVariable: public Type {
 
+	/**
+	 * The name of the represented variable.
+	 */
+	std::string varName;
+
 public:
 
 	/**
@@ -232,7 +213,7 @@ public:
 	 *
 	 * @param name the name of the type variable to be created
 	 */
-	TypeVariable(const string& name) : Type(NT_TypeVariable, format("'%s", name.c_str()), false, false) { }
+	TypeVariable(const string& name) : Type(NT_TypeVariable, format("'%s", name.c_str()), false, false), varName(name) { }
 
 private:
 
@@ -253,13 +234,19 @@ protected:
 
 public:
 
-	static TypeVariable DotTy;
 	/**
 	 * This method provides a static factory method for this type of node. It will return
 	 * a type variable pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
 	 */
 	static TypeVariablePtr get(NodeManager& manager, const string& name);
+
+	/**
+	 * Obtains the name of the variable represented by this instance.
+	 */
+	const std::string getVarName() const {
+		return varName;
+	}
 
 };
 

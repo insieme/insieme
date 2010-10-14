@@ -103,6 +103,7 @@ public:
 			case NT_TupleExpr:
 			case NT_UnionExpr:
 			case NT_VarExpr:
+			case NT_VectorExpr:
 				name << "expr"; break;
 			case NT_BreakStmt:
 			case NT_CompoundStmt:

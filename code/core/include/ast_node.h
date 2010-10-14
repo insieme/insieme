@@ -58,22 +58,17 @@ enum NodeType {
 };
 #undef CONCRETE
 
-
 /**
- * Defines a macro to forward declare AST node types. Each node type
- * is defined by a class. Further, for each node type a pointer type
- * is defined, which might be used to reference instances of the
- * those types.
+ * Adds forward declarations for all AST node types. Further, for each
+ * type a type definition for a corresponding annotated pointer is added.
  */
-#define DECLARE_NODE_TYPE(NAME) \
+#define NODE(NAME) \
 	class NAME; \
 	typedef AnnotatedPtr<const NAME> NAME ## Ptr;
 
-
-/**
- * Define root-node type.
- */
-DECLARE_NODE_TYPE(Node);
+	// take all nodes from within the definition file
+	#include "ast_nodes.def"
+#undef NODE
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.
@@ -285,6 +280,14 @@ protected:
 	 */
 	virtual OptionChildList getChildNodes() const = 0;
 
+public:
+
+	/**
+	 * The default virtual destructor enforcing the proper destruction of derived
+	 * instances.
+	 */
+	virtual ~Node() {};
+
 	/**
 	 * Obtains a pointer to the manager maintaining this instance of an AST node.
 	 *
@@ -293,14 +296,6 @@ protected:
 	inline const NodeManager* getNodeManager() const {
 		return manager;
 	}
-
-public:
-
-	/**
-	 * The default virtual destructor enforcing the proper destruction of derived
-	 * instances.
-	 */
-	virtual ~Node() {};
 
 	/**
 	 * Retrieves a reference to the internally maintained list of child nodes. The
@@ -395,6 +390,38 @@ protected:
 
 };
 
+
+template<typename T>
+inline const AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
+	// null pointers or proper points do not have to be modified
+	if (!ptr || ptr->getNodeManager() == &manager) {
+		return ptr;
+	}
+
+	// obtain pointer to same instance within new manager
+	AnnotatedPtr<T> res = manager.get(ptr);
+
+	// add annotations
+	res.setAnnotations(ptr.getAnnotations());
+
+	// done
+	return res;
+}
+
+template<typename Container>
+inline Container cloneAllPtrTo(NodeManager& manager, const Container& list) {
+	Container res;
+	cloneAllPtrTo(manager, list.begin(), list.end(), inserter(res, res.end()));
+	return res;
+}
+
+template<typename InputIterator, typename OutputIterator>
+inline void cloneAllPtrTo(NodeManager& manager, InputIterator first, InputIterator last, OutputIterator out) {
+	typedef typename std::iterator_traits<InputIterator>::value_type Element;
+	std::transform(first, last, out, [&manager](const Element& cur) {
+		return clonePtrTo(manager, cur);
+	});
+}
 
 } // end namespace core
 } // end namespace insieme

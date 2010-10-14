@@ -277,6 +277,11 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+//#############################################################################
+//
+//							CLANG EXPRESSION CONVERTER
+//
+//############################################################################
 class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 	ConversionFactory& convFact;
 
@@ -294,6 +299,9 @@ class ClangExprConverter: public StmtVisitor<ClangExprConverter, ExprWrapper> {
 public:
 	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false), currVar(NULL) { }
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								INTEGER LITERAL
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		START_LOG_EXPR_CONVERSION(intLit);
 		core::ExpressionPtr retExpr =
@@ -306,6 +314,9 @@ public:
 		return ExprWrapper( retExpr );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								FLOATING LITERAL
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
 		START_LOG_EXPR_CONVERSION(floatLit);
 		core::ExpressionPtr retExpr =
@@ -318,29 +329,9 @@ public:
 		return ExprWrapper( retExpr );
 	}
 
-	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
-		START_LOG_EXPR_CONVERSION(stringLit);
-		core::ExpressionPtr retExpr =
-			convFact.builder.literal(
-				GetStringFromStream( convFact.clangComp.getSourceManager(), stringLit->getExprLoc()),
-				convFact.builder.genericType(core::Identifier("string"))
-			);
-		END_LOG_EXPR_CONVERSION(retExpr);
-		return ExprWrapper( retExpr );
-	}
-
-	// CXX Extension for boolean types
-	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
-		START_LOG_EXPR_CONVERSION(boolLit);
-		core::ExpressionPtr retExpr =
-			// retrieve the string representation from the source code
-			convFact.builder.literal(
-				GetStringFromStream(convFact.clangComp.getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR
-			);
-		END_LOG_EXPR_CONVERSION(retExpr);
-		return ExprWrapper( retExpr );
-	}
-
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								CHARACTER LITERAL
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitCharacterLiteral(CharacterLiteral* charLit) {
 		START_LOG_EXPR_CONVERSION(charLit);
 		core::ExpressionPtr retExpr =
@@ -353,10 +344,53 @@ public:
 		return ExprWrapper( retExpr	);
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								STRING LITERAL
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	ExprWrapper VisitStringLiteral(clang::StringLiteral* stringLit) {
+		START_LOG_EXPR_CONVERSION(stringLit);
+		core::ExpressionPtr retExpr =
+			convFact.builder.literal(
+				GetStringFromStream( convFact.clangComp.getSourceManager(), stringLit->getExprLoc()),
+				convFact.builder.genericType(core::Identifier("string"))
+			);
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return ExprWrapper( retExpr );
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								CXX BOOLEAN LITERAL
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	ExprWrapper VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
+		START_LOG_EXPR_CONVERSION(boolLit);
+		core::ExpressionPtr retExpr =
+			// retrieve the string representation from the source code
+			convFact.builder.literal(
+				GetStringFromStream(convFact.clangComp.getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR
+			);
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return ExprWrapper( retExpr );
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							PARENTESIS EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitParenExpr(clang::ParenExpr* parExpr) {
 		return Visit( parExpr->getSubExpr() );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							IMPLICIT CAST EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	ExprWrapper VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
+		// we do not convert implicit casts
+		START_LOG_EXPR_CONVERSION(implCastExpr);
+		return Visit(implCastExpr->getSubExpr());
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								CAST EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitCastExpr(clang::CastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.ConvertType( *GET_TYPE_PTR(castExpr) );
@@ -364,6 +398,9 @@ public:
 		return ExprWrapper( convFact.builder.castExpr( type, subExpr ) );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							FUNCTION DECLARATION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 		// the function is not extern, a lambdaExpr has to be created
 		assert(funcDecl->hasBody() && "Function has no body!");
@@ -502,6 +539,9 @@ public:
 		return retLambdaExpr;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							FUNCTION CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitCallExpr(clang::CallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
@@ -565,16 +605,25 @@ public:
 		assert(false && "Call expression not referring a function");
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX MEMBER CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		//todo: CXX extensions
 		assert(false && "CXXMemberCallExpr not yet handled");
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX OPERATOR CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitCXXOperatorCallExprr(clang::CXXOperatorCallExpr* callExpr) {
 		//todo: CXX extensions
 		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							BINARY OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitBinaryOperator(clang::BinaryOperator* binOp)  {
 		START_LOG_EXPR_CONVERSION(binOp);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -700,6 +749,9 @@ public:
 		return ExprWrapper( retExpr );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							UNARY OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitUnaryOperator(clang::UnaryOperator *unOp) {
 		START_LOG_EXPR_CONVERSION(unOp);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -764,6 +816,24 @@ public:
 		return ExprWrapper( subExpr );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							CONDITIONAL OPERATOR FIXME
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	ExprWrapper VisitConditionalOperator(clang::ConditionalOperator* condOp) {
+		core::TypePtr retTy = convFact.ConvertType( *GET_TYPE_PTR(condOp) );
+
+		core::ExpressionPtr trueExpr = Visit(condOp->getTrueExpr()).ref;
+		core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr()).ref;
+		core::ExpressionPtr condExpr = Visit( condOp->getCond() ).ref;
+		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
+
+		return ExprWrapper( createCallExpr( convFact.builder,
+			std::vector<core::StatementPtr>( { ifStmt } ),  retTy) );
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						ARRAY SUBSCRIPT EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
 		core::ExpressionPtr base = Visit( arraySubExpr->getBase() ).ref;
@@ -777,18 +847,9 @@ public:
 		return ExprWrapper( convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx })) );
 	}
 
-	ExprWrapper VisitConditionalOperator(clang::ConditionalOperator* condOp) {
-		core::TypePtr retTy = convFact.ConvertType( *GET_TYPE_PTR(condOp) );
-
-		core::ExpressionPtr trueExpr = Visit(condOp->getTrueExpr()).ref;
-		core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr()).ref;
-		core::ExpressionPtr condExpr = Visit( condOp->getCond() ).ref;
-		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
-
-		return ExprWrapper( createCallExpr( convFact.builder,
-			std::vector<core::StatementPtr>( { ifStmt } ),  retTy) );
-	}
-
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						EXT VECTOR ELEMENT EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ExprWrapper VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr){
         START_LOG_EXPR_CONVERSION(vecElemExpr);
         core::ExpressionPtr base = Visit( vecElemExpr->getBase() ).ref;
@@ -815,6 +876,9 @@ public:
         return ExprWrapper( retExpr );
     }
 
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							VAR DECLARATION REFERENCE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ExprWrapper VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		START_LOG_EXPR_CONVERSION(declRef);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -838,6 +902,9 @@ public:
 	}
 };
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 							Printing macros for statements
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
 
@@ -855,12 +922,21 @@ public:
 	DVLOG(1) << "Converted 'statement' into IR stmt: "; \
 	DVLOG(1) << "\t" << *stmt;
 
+
+//#############################################################################
+//
+//							CLANG STMT CONVERTER
+//
+//############################################################################
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
 public:
 
 	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						VARIABLE DECLARATION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
 
 		// logging
@@ -928,6 +1004,9 @@ public:
     	return StmtWrapper( retStmt );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							DECLARATION STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// In clang a declstmt is represented as a list of VarDecl
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
@@ -942,6 +1021,9 @@ public:
 		return retList;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							RETURN STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
@@ -954,6 +1036,9 @@ public:
 		return StmtWrapper( ret );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								FOR STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitForStmt(ForStmt* forStmt) {
 		START_LOG_STMT_CONVERSION(forStmt);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1033,7 +1118,7 @@ public:
 			}
 
 			// We are in the case where we are sure there is exactly 1 element in the initialization expression
-			VLOG(2) << "ForStmt initExpr: " << initExpr;
+			DVLOG(2) << "ForStmt initExpr: " << initExpr;
 
 			core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 			bool iteratorChanged = false;
@@ -1047,7 +1132,7 @@ public:
 
 				// we have to define a new induction variable for the loop and replace every instance in the loop with the new variable
 				std::string varName = std::string("__") + loopAnalysis.getInductionVar()->getNameAsString();
-				VLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
+				DVLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
 						<< " with variable: " << varName;
 
 				core::TypePtr varTy = convFact.ConvertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
@@ -1055,11 +1140,12 @@ public:
 
 				declStmt = builder.declarationStmt( builder.refType(varTy), core::Identifier(varName), core::lang::CONST_UINT_ZERO_PTR );
 
-				VLOG(2) << "Printing body: " << body;
+				DVLOG(2) << "Printing body: " << body;
 				core::NodePtr ret = core::transform::replaceNode(convFact.builder, body.getSingleStmt(),
-						builder.varExpr(varTy, core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())),
+						builder.varExpr(builder.refType(varTy), core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())),
 						newIndVar);
 
+				DLOG(INFO) << "Printing body: " << ret;
 				// replace the body with the newly modified one
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 
@@ -1105,6 +1191,9 @@ public:
 		return retStmt;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								IF STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitIfStmt(IfStmt* ifStmt) {
 		START_LOG_STMT_CONVERSION(ifStmt);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1165,6 +1254,9 @@ public:
 		return retStmt;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							WHILE STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitWhileStmt(WhileStmt* whileStmt) {
 		START_LOG_STMT_CONVERSION(whileStmt);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1217,6 +1309,9 @@ public:
 		return retStmt;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							SWITCH STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitSwitchStmt(SwitchStmt* switchStmt) {
 		START_LOG_STMT_CONVERSION(switchStmt);
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1311,6 +1406,9 @@ public:
 	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) { return StmtWrapper( convFact.builder.breakStmt() ); }
 	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) { return StmtWrapper( convFact.builder.continueStmt() ); }
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							COMPOUND STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
 		START_LOG_STMT_CONVERSION(compStmt);
 		vector<core::StatementPtr> stmtList;
@@ -1332,6 +1430,9 @@ public:
 		return StmtWrapper( retStmt );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							NULL STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
 		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
 
@@ -1351,6 +1452,7 @@ public:
 	FORWARD_VISITOR_CALL(ConditionalOperator)
 
 	FORWARD_VISITOR_CALL(CastExpr)
+	FORWARD_VISITOR_CALL(ImplicitCastExpr)
 	FORWARD_VISITOR_CALL(DeclRefExpr)
 	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
 	FORWARD_VISITOR_CALL(CallExpr)
@@ -1362,6 +1464,9 @@ public:
 	}
 };
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 							Printing macros for statements
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
@@ -1378,9 +1483,12 @@ public:
 	DVLOG(1) << "Converted 'type' into IR type: "; \
 	DVLOG(1) << "\t" << *type;
 
-/**
- * Converts a clang type to an IR type
- */
+
+//#############################################################################
+//
+//							CLANG TYPE CONVERTER
+//
+//############################################################################
 class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 	const ConversionFactory& convFact;
 
@@ -1396,10 +1504,9 @@ class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, TypeWrapper> {
 public:
 	ClangTypeConverter(const ConversionFactory& fact): convFact( fact ), isRecSubType(false) { }
 
-	// -------------------- BUILTIN ------------------------------------------------------------------------------
-	/**
-	 * This method handles buildin types (void,int,long,float,...).
-	 */
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								BUILTIN TYPES
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitBuiltinType(BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1465,18 +1572,23 @@ public:
 		assert(false && "Built-in type conversion not supported!");
 	}
 
-	// --------------------  COMPLEX   ------------------------------------------------------------------------------
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//								COMPLEX TYPE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitComplexType(ComplexType* bulinTy) {
 		assert(false && "ComplexType not yet handled!");
 	}
 
-	// ------------------------   ARRAYS  ----------------------------------------------------------------
-	/**
-	 * This method handles the canonical version of C arrays with a specified constant size.
-	 * For example, the canonical type for 'int A[4 + 4*100]' is a ConstantArrayType where the element type is 'int' and the size is 404
-	 *
-	 * The IR representation for such array will be: vector<ref<int<4>>,404>
-	 */
+	// ------------------------   ARRAYS  -------------------------------------
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 					CONSTANT ARRAY TYPE
+	//
+	// This method handles the canonical version of C arrays with a specified
+	// constant size. For example, the canonical type for 'int A[4 + 4*100]' is
+	// a ConstantArrayType where the element type is 'int' and the size is 404
+	//
+	// The IR representation for such array will be: vector<ref<int<4>>,404>
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitConstantArrayType(ConstantArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
@@ -1492,12 +1604,14 @@ public:
 		return TypeWrapper( retTy );
 	}
 
-	/**
-	 * This method handles C arrays with an unspecified size. For example 'int A[]' has an IncompleteArrayType where the element
-	 * type is 'int' and the size is unspecified.
-	 *
-	 * The representation for such array will be: ref<array<ref<int<4>>>>
-	 */
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						INCOMPLETE ARRAT TYPE
+	// This method handles C arrays with an unspecified size. For example
+	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
+	// and the size is unspecified.
+	//
+	// The representation for such array will be: ref<array<ref<int<4>>>>
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitIncompleteArrayType(IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
@@ -1513,15 +1627,19 @@ public:
 		return TypeWrapper( retTy );
 	}
 
-	/**
-	 * This class represents C arrays with a specified size which is not an integer-constant-expression. For example, 'int s[x+foo()]'.
-	 * Since the size expression is an arbitrary expression, we store it as such. Note: VariableArrayType's aren't uniqued
-	 * (since the expressions aren't) and should not be: two lexically equivalent variable array types could mean different things,
-	 * for example, these variables do not have the same type dynamically:
-	 * 	 void foo(int x) { int Y[x]; ++x; int Z[x]; }
-	 *
-	 * he representation for such array will be: array<ref<int<4>>>( expr() )
-	 */
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							VARIABLE ARRAT TYPE
+	// This class represents C arrays with a specified size which is not an
+	// integer-constant-expression. For example, 'int s[x+foo()]'. Since the
+	// size expression is an arbitrary expression, we store it as such.
+	// Note: VariableArrayType's aren't uniqued (since the expressions aren't)
+	// and should not be: two lexically equivalent variable array types could
+	// mean different things, for example, these variables do not have the same
+	// type dynamically:
+	//				void foo(int x) { int Y[x]; ++x; int Z[x]; }
+	//
+	// he representation for such array will be: array<ref<int<4>>>( expr() )
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitVariableArrayType(VariableArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
@@ -1537,26 +1655,32 @@ public:
 		return TypeWrapper( retTy );
 	}
 
-	/**
-	 * This type represents an array type in C++ whose size is a value-dependent expression. For example:
-	 *
-	 *  template<typename T, int Size>
-	 *  class array {
-	 *     T data[Size];
-	 *  };
-	 *
-	 *  For these types, we won't actually know what the array bound is until template instantiation occurs,
-	 *  at which point this will become either a ConstantArrayType or a VariableArrayType.
-	 */
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 						DEPENDENT SIZED ARRAY TYPE
+	// This type represents an array type in C++ whose size is a value-dependent
+	// expression. For example:
+	//
+	//  template<typename T, int Size>
+	//  class array {
+	//     T data[Size];
+	//  };
+	//
+	// For these types, we won't actually know what the array bound is until
+	// template instantiation occurs, at which point this will become either
+	// a ConstantArrayType or a VariableArrayType.
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitDependentSizedArrayType(DependentSizedArrayType* arrTy) {
 		assert(false && "DependentSizedArrayType not yet handled!");
 	}
 
-	// --------------------  FUNCTIONS  ----------------------------------------------------------------------------
-	/**
-	 * Represents a prototype with argument type info, e.g. 'int foo(int)' or 'int foo(void)'. 'void' is represented as having no arguments,
-	 * not as having a single void argument. Such a type can have an exception specification, but this specification is not part of the canonical type.
-	 */
+	// --------------------  FUNCTIONS  ---------------------------------------
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//				FUNCTION PROTO TYPE
+	// Represents a prototype with argument type info, e.g. 'int foo(int)' or
+	// 'int foo(void)'. 'void' is represented as having no arguments, not as
+	// having a single void argument. Such a type can have an exception
+	// specification, but this specification is not part of the canonical type.
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitFunctionProtoType(FunctionProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION(funcTy);
 
@@ -1584,9 +1708,11 @@ public:
 		return TypeWrapper( retTy );
 	}
 
-	/**
-	 *  Represents a K&R-style 'int foo()' function, which has no information available about its arguments.
-	 */
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					FUNCTION NO PROTO TYPE
+	// Represents a K&R-style 'int foo()' function, which has no information
+	// available about its arguments.
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitFunctionNoProtoType(FunctionNoProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION( funcTy );
 		core::TypePtr retTy = Visit( funcTy->getResultType().getTypePtr() ).ref;
@@ -1597,12 +1723,12 @@ public:
 		return TypeWrapper( retTy );
 	}
 
-/*
- * Not used at the moment
- */
-//	TypeWrapper VisitVectorType(VectorType* vecTy) {
-//	}
+	// TBD
+//	TypeWrapper VisitVectorType(VectorType* vecTy) {	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 							EXTENDEND VECTOR TYPE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitExtVectorType(ExtVectorType* vecTy) {
        // get vector datatype
         const QualType qt = vecTy->getElementType();
@@ -1617,6 +1743,9 @@ public:
         return TypeWrapper( convFact.builder.vectorType( convFact.builder.refType(subType), numElem));
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 								TYPEDEF TYPE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitTypedefType(TypedefType* typedefType) {
 		START_LOG_TYPE_CONVERSION( typedefType );
 
@@ -1627,6 +1756,9 @@ public:
         return TypeWrapper( subType );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 								TYPE OF TYPE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitTypeOfType(TypeOfType* typeOfType) {
 		START_LOG_TYPE_CONVERSION(typeOfType);
 		core::TypePtr retTy = convFact.builder.getUnitType();
@@ -1634,6 +1766,9 @@ public:
 		return TypeWrapper( retTy );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 							TYPE OF EXPRESSION TYPE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitTypeOfExprType(TypeOfExprType* typeOfType) {
 		START_LOG_TYPE_CONVERSION( typeOfType );
 		core::TypePtr retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) ).ref;
@@ -1641,6 +1776,9 @@ public:
 		return TypeWrapper( retTy );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitTagType(TagType* tagType) {
 		if(!recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
@@ -1800,10 +1938,16 @@ public:
 		return TypeWrapper( retTy );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							ELABORATED TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitElaboratedType(ElaboratedType* elabType) {
 		assert(false && "ElaboratedType not yet handled!");
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							POINTER TYPE (FIXME)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitPointerType(PointerType* pointerTy) {
 		START_LOG_TYPE_CONVERSION(pointerTy);
 		core::TypePtr retTy = convFact.builder.refType( Visit(pointerTy->getPointeeType().getTypePtr()).ref );
@@ -1811,6 +1955,9 @@ public:
 		return TypeWrapper( retTy );
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						REFERENCE TYPE (FIXME)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	TypeWrapper VisitReferenceType(ReferenceType* refTy) {
 		return TypeWrapper( convFact.builder.refType( Visit( refTy->getPointeeType().getTypePtr()).ref ) );
 	}

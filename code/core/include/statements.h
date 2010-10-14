@@ -57,28 +57,6 @@ using std::vector;
 namespace insieme {
 namespace core {
 
-// some expression types ...
-DECLARE_NODE_TYPE(Expression);
-DECLARE_NODE_TYPE(VarExpr);
-
-// Forward Declarations { -----------------------------------------------------
-
-DECLARE_NODE_TYPE(Statement)
-
-DECLARE_NODE_TYPE(BreakStmt)
-DECLARE_NODE_TYPE(ContinueStmt)
-DECLARE_NODE_TYPE(ReturnStmt)
-
-DECLARE_NODE_TYPE(DeclarationStmt)
-DECLARE_NODE_TYPE(CompoundStmt)
-DECLARE_NODE_TYPE(ForStmt)
-DECLARE_NODE_TYPE(WhileStmt)
-DECLARE_NODE_TYPE(IfStmt)
-DECLARE_NODE_TYPE(SwitchStmt)
-
-
-// Forward Declarations } -----------------------------------------------------
-
 // ------------------------------------- Statements ---------------------------------
 
 /**
