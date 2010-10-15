@@ -41,6 +41,7 @@
 #include "clang_compiler.h"
 #include "conversion.h"
 #include "logging.h"
+#include "insieme_pragma.h"
 
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"

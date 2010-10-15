@@ -75,7 +75,7 @@ public:
 	typedef std::unordered_map<VarExprPtr, LambdaExprPtr, hash_target<VarExprPtr>, equal_target<VarExprPtr>> RecFunDefs;
 
 
-	SharedNodeManager getNodeManager() {
+	SharedNodeManager getNodeManager() const {
 		return sharedManager;
 	}
 

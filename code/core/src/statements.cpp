@@ -83,7 +83,7 @@ Node::OptionChildList BreakStmt::getChildNodes() const {
 	return OptionChildList(new ChildList());
 }
 
-BreakStmt* BreakStmt::createCloneUsing(NodeManager&) const {
+BreakStmt* BreakStmt::createCopyUsing(NodeMapper&) const {
 	return new BreakStmt();
 }
 
@@ -109,7 +109,7 @@ Node::OptionChildList ContinueStmt::getChildNodes() const {
 	return OptionChildList(new ChildList());
 }
 
-ContinueStmt* ContinueStmt::createCloneUsing(NodeManager&) const {
+ContinueStmt* ContinueStmt::createCopyUsing(NodeMapper&) const {
 	return new ContinueStmt();
 }
 
@@ -145,8 +145,8 @@ Node::OptionChildList ReturnStmt::getChildNodes() const {
 	return res;
 }
 
-ReturnStmt* ReturnStmt::createCloneUsing(NodeManager& manager) const {
-	return new ReturnStmt(clonePtrTo(manager, returnExpression));
+ReturnStmt* ReturnStmt::createCopyUsing(NodeMapper& mapper) const {
+	return new ReturnStmt(mapper.map(returnExpression));
 }
 
 ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnExpression) {
@@ -176,8 +176,8 @@ bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
 	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
 }
 
-DeclarationStmt* DeclarationStmt::createCloneUsing(NodeManager& manager) const {
-	return new DeclarationStmt(clonePtrTo(manager, varExpression), clonePtrTo(manager, initExpression));
+DeclarationStmt* DeclarationStmt::createCopyUsing(NodeMapper& mapper) const {
+	return new DeclarationStmt(mapper.map(varExpression), mapper.map(initExpression));
 }
 
 Node::OptionChildList DeclarationStmt::getChildNodes() const {
@@ -218,8 +218,8 @@ bool CompoundStmt::equalsStmt(const Statement& stmt) const {
 }
 
 
-CompoundStmt* CompoundStmt::createCloneUsing(NodeManager& manager) const {
-	return new CompoundStmt(clonePtrTo(manager, statements));
+CompoundStmt* CompoundStmt::createCopyUsing(NodeMapper& mapper) const {
+	return new CompoundStmt(mapper.map(statements));
 }
 
 Node::OptionChildList CompoundStmt::getChildNodes() const {
@@ -266,8 +266,8 @@ bool WhileStmt::equalsStmt(const Statement& stmt) const {
 	return (*condition == *rhs.condition) && (*body == *rhs.body);
 }
 
-WhileStmt* WhileStmt::createCloneUsing(NodeManager& manager) const {
-	return new WhileStmt(clonePtrTo(manager, condition), clonePtrTo(manager, body));
+WhileStmt* WhileStmt::createCopyUsing(NodeMapper& mapper) const {
+	return new WhileStmt(mapper.map(condition), mapper.map(body));
 }
 
 Node::OptionChildList WhileStmt::getChildNodes() const {
@@ -307,12 +307,12 @@ bool ForStmt::equalsStmt(const Statement& stmt) const {
 		&& (*end == *rhs.end) && (*step == *rhs.step);
 }
 
-ForStmt* ForStmt::createCloneUsing(NodeManager& manager) const {
+ForStmt* ForStmt::createCopyUsing(NodeMapper& mapper) const {
 	return new ForStmt(
-			clonePtrTo(manager, declaration),
-			clonePtrTo(manager, body),
-			clonePtrTo(manager, end),
-			clonePtrTo(manager, step)
+			mapper.map(declaration),
+			mapper.map(body),
+			mapper.map(end),
+			mapper.map(step)
 	);
 }
 
@@ -345,11 +345,11 @@ IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, con
 	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(isolate(condition)), thenBody(isolate(thenBody)), elseBody(isolate(elseBody)) {
 }
 
-IfStmt* IfStmt::createCloneUsing(NodeManager& manager) const {
+IfStmt* IfStmt::createCopyUsing(NodeMapper& mapper) const {
 	return new IfStmt(
-			clonePtrTo(manager, condition),
-			clonePtrTo(manager, thenBody),
-			clonePtrTo(manager, elseBody)
+			mapper.map(condition),
+			mapper.map(thenBody),
+			mapper.map(elseBody)
 	);
 }
 
@@ -384,40 +384,42 @@ IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, cons
 
 // ------------------------------------- SwitchStmt ---------------------------------
 
-std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase) {
-	std::size_t seed = HASHVAL_SWITCH;
-	boost::hash_combine(seed, switchExpr->hash());
-	std::for_each(cases.begin(), cases.end(), [&seed](const SwitchStmt::Case& cur) {
-		boost::hash_combine(seed, cur.first->hash());
-		boost::hash_combine(seed, cur.second->hash());
-	});
-	boost::hash_combine(seed, defaultCase->hash());
-	return seed;
-}
+namespace { // some anonymous utilities for the switch statement
 
-const vector<SwitchStmt::Case>& isolateSwitchCases(const vector<SwitchStmt::Case>& cases) {
-	for_each(cases, [](const SwitchStmt::Case& cur) {
-		isolate(cur.first);
-		isolate(cur.second);
-	});
-	return cases;
-}
+	std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase) {
+		std::size_t seed = HASHVAL_SWITCH;
+		boost::hash_combine(seed, switchExpr->hash());
+		std::for_each(cases.begin(), cases.end(), [&seed](const SwitchStmt::Case& cur) {
+			boost::hash_combine(seed, cur.first->hash());
+			boost::hash_combine(seed, cur.second->hash());
+		});
+		boost::hash_combine(seed, defaultCase->hash());
+		return seed;
+	}
 
+	const vector<SwitchStmt::Case>& isolateSwitchCases(const vector<SwitchStmt::Case>& cases) {
+		for_each(cases, [](const SwitchStmt::Case& cur) {
+			isolate(cur.first);
+			isolate(cur.second);
+		});
+		return cases;
+	}
+
+	vector<SwitchStmt::Case> copySwitchCasesUsing(NodeMapper& mapper, const vector<SwitchStmt::Case>& cases) {
+		vector<SwitchStmt::Case> res;
+		std::transform(cases.begin(), cases.end(), back_inserter(res), [&mapper](const SwitchStmt::Case& cur) {
+			return SwitchStmt::Case(mapper.map(cur.first), mapper.map(cur.second));
+		});
+		return res;
+	}
+}
 
 SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) :
 	Statement(NT_SwitchStmt, hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(isolate(switchExpr)), cases(isolateSwitchCases(cases)), defaultCase(isolate(defaultCase)) {
 }
 
-vector<SwitchStmt::Case> cloneSwitchCasesTo(NodeManager& manager, const vector<SwitchStmt::Case>& cases) {
-	vector<SwitchStmt::Case> res;
-	std::transform(cases.begin(), cases.end(), back_inserter(res), [&manager](const SwitchStmt::Case& cur) {
-		return SwitchStmt::Case(clonePtrTo(manager, cur.first), clonePtrTo(manager, cur.second));
-	});
-	return res;
-}
-
-SwitchStmt* SwitchStmt::createCloneUsing(NodeManager& manager) const {
-	return new SwitchStmt( clonePtrTo(manager, switchExpr), cloneSwitchCasesTo(manager, cases), clonePtrTo(manager, defaultCase) );
+SwitchStmt* SwitchStmt::createCopyUsing(NodeMapper& mapper) const {
+	return new SwitchStmt( mapper.map(switchExpr), copySwitchCasesUsing(mapper, cases), mapper.map(defaultCase) );
 }
 
 std::ostream& SwitchStmt::printTo(std::ostream& out) const {

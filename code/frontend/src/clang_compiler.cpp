@@ -41,6 +41,7 @@
 #include "pragma_handler.h"
 // #include "programs.h"
 
+#include "insieme_pragma.h"
 #include "omp/omp_pragma.h"
 #include "clang_config.h"
 
@@ -168,13 +169,15 @@ public:
 
 		insieme::utils::Timer t1("Frontend.load '" + file_name + "'");
 		t1.start();
+
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
 		// register 'test' pragma
-		mClang.getPreprocessor().AddPragmaHandler(
-				PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(mClang.getPreprocessor().getIdentifierInfo("test"),
-						insieme::frontend::tok::string_literal["expected"] >> insieme::frontend::tok::eom));
+		TestPragma::registerPragmaHandler(mClang.getPreprocessor());
+
+		// register 'insieme' pragma
+		InsiemePragma::registerPragmaHandler(mClang.getPreprocessor());
 
 		clang::ASTConsumer emptyCons;
 		InsiemeParseAST(mClang.getPreprocessor(), &emptyCons, mClang.getASTContext(), true, mPragmaList);
@@ -335,6 +338,42 @@ const Program::TranslationUnitSet& Program::getTranslationUnits() const { return
 void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
 
 const core::ProgramPtr& Program::convert() {
+
+	bool insiemePragmaFound = false;
+	// We check for insieme pragmas in each translation unit
+	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
+
+		const ClangCompiler& comp = (*it)->getCompiler();
+		conversion::IRConverter conv(comp, mProgram, mMgr, (*it)->getPragmaList());
+
+		for(PragmaList::const_iterator pit = (*it)->getPragmaList().begin(), pend = (*it)->getPragmaList().end(); pit != pend; ++pit) {
+
+			if((*pit)->getType() == "insieme") {
+				insiemePragmaFound = true;
+				const Pragma& insiemePragma = **pit;
+
+				if(insiemePragma.isDecl()) {
+					// this is a declaration, if it's a function add it to the entry points of the program
+					const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
+					assert(funcDecl && "Pragma insieme only valid for function declarations.");
+
+					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleFunctionDecl(funcDecl));
+				} else {
+					// insieme pragma associated to a statement, in this case we convert the body
+					// and create an anonymous lambda expression to enclose it
+
+					const clang::Stmt* body = insiemePragma.getStatement();
+					assert(body && "Pragma matching failed!");
+					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleBody(body));
+				}
+
+			}
+
+		}
+	}
+
+	if(insiemePragmaFound)
+		return mProgram;
 
 	// For each translation unit we call the IRConverter
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {

@@ -34,54 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
+#pragma once
 
+#include <boost/unordered_map.hpp>
 
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-using namespace insieme::core;
+#include "types.h"
 
 
 namespace insieme {
 namespace core {
 
-const Node::ChildList& Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
-	}
-	return *children;
+
+class Substitution {
+
+public:
+
+	typedef boost::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Mapping;
+
+private:
+
+	/**
+	 * The mapping this substitution is representing.
+	 */
+	Mapping mapping;
+
+public:
+
+	Substitution() {};
+
+	Substitution(const TypeVariablePtr& var, const TypePtr& type);
+
+	TypePtr applyTo(NodeManager& manager, const TypePtr& type);
+
+};
+
+
 }
-
-NodePtr Node::substitute(NodeManager& manager, NodeMapper& mapper) const {
-	// create a version having everything substituted
-	Node* node = createCopyUsing(mapper);
-
-	// obtain element within the manager
-	NodePtr res = manager.get(node);
-
-	// free temporary instance
-	delete node;
-
-	// return instance maintained within manager
-	return res;
-}
-
-void* Node::operator new(size_t size) {
-	return ::operator new(size);
-}
-
-void Node::operator delete(void* ptr) {
-	return ::operator delete(ptr);
-}
-
-
-} // end namespace core
-} // end namespace insieme
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
 }

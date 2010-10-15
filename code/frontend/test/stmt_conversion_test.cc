@@ -40,6 +40,7 @@
 #include "clang_compiler.h"
 #include "conversion.h"
 #include "clang_config.h"
+#include "insieme_pragma.h"
 
 #include "clang/AST/Decl.h"
 

@@ -34,54 +34,44 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
+#pragma once
 
+#include "pragma_handler.h"
 
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-using namespace insieme::core;
-
+namespace clang {
+class Preprocessor;
+}
 
 namespace insieme {
-namespace core {
-
-const Node::ChildList& Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
-	}
-	return *children;
-}
-
-NodePtr Node::substitute(NodeManager& manager, NodeMapper& mapper) const {
-	// create a version having everything substituted
-	Node* node = createCopyUsing(mapper);
-
-	// obtain element within the manager
-	NodePtr res = manager.get(node);
-
-	// free temporary instance
-	delete node;
-
-	// return instance maintained within manager
-	return res;
-}
-
-void* Node::operator new(size_t size) {
-	return ::operator new(size);
-}
-
-void Node::operator delete(void* ptr) {
-	return ::operator delete(ptr);
-}
-
-
-} // end namespace core
-} // end namespace insieme
+namespace frontend {
 
 /**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
+ * Custom pragma used for testing purposes;
+ *
+ * #pragma test "insieme-IR"
+ * C stmt
+ *
+ * checks if the conversion of the C statement matches the one specified by the user
  */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
-}
+class TestPragma: public Pragma {
+	std::string expected;
+public:
+	TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+
+	std::string getExpected() const { return expected; }
+
+	static void registerPragmaHandler(clang::Preprocessor& pp);
+};
+
+
+class InsiemePragma: public Pragma {
+
+public:
+	InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+
+	static void registerPragmaHandler(clang::Preprocessor& pp);
+};
+
+
+} // End frontend namespace
+} // End insieme namespace

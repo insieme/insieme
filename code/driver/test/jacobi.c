@@ -48,6 +48,7 @@
 #include <math.h>
 #include <time.h>
 
+#pragma insieme
 double init_func(int x, int y) {
 	return 40 * sin((double)(16 * (2 * x - 1) * y));
 }
@@ -84,6 +85,7 @@ int main(int argc, char** argv) {
 #endif
 	start_t = clock();
 
+	#pragma insieme
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for private(resv) reduction(+: resv)
@@ -94,8 +96,6 @@ int main(int argc, char** argv) {
 		#pragma omp critical (pippo)
 		memcpy(u, tmp, N*N);
 
-		int a;
-		(a, a+1);
 		// calc the residuo
 		for (int i=1; i<N-1; i++) {
 			for (int j=1; j<N-1; j++)
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 		int i;
 		// normalize
 		double norm = 0;
-		#pragma omp for private(a) reduction(+: norm)
+		#pragma omp for reduction(+: norm)
 		for (i=1; i<N-1; i++)
 			for (int j=1; j<N-1; j++)
 				norm += pow( res[i][j], 2 );

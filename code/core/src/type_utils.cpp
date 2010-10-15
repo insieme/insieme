@@ -34,54 +34,26 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
-
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-using namespace insieme::core;
-
+#include "type_utils.h"
 
 namespace insieme {
 namespace core {
 
-const Node::ChildList& Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
-	}
-	return *children;
+
+Substitution::Substitution(const TypeVariablePtr& var, const TypePtr& type) {
+	mapping.insert(std::make_pair(var, type));
+};
+
+
+TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) {
+
+	// TODO: implement substitution
+
+	return NULL;
 }
 
-NodePtr Node::substitute(NodeManager& manager, NodeMapper& mapper) const {
-	// create a version having everything substituted
-	Node* node = createCopyUsing(mapper);
-
-	// obtain element within the manager
-	NodePtr res = manager.get(node);
-
-	// free temporary instance
-	delete node;
-
-	// return instance maintained within manager
-	return res;
-}
-
-void* Node::operator new(size_t size) {
-	return ::operator new(size);
-}
-
-void Node::operator delete(void* ptr) {
-	return ::operator delete(ptr);
-}
 
 
 } // end namespace core
 } // end namespace insieme
 
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
-}

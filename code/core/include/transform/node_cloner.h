@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "ast_builder.h"
 #include "ast_visitor.h"
 
 namespace insieme {
@@ -49,49 +50,41 @@ namespace transform {
  * Clones the nodes of the IR.
  * Alone this Visitor is pointless, but combined with other visitors can be used to replace/remove/insert nodes to an existing tree.
  */
-class NodeCloner: public core::ASTVisitor<NodePtr> {
-	const core::ASTBuilder& builder;
+class NodeCloner: public core::ASTVisitor<NodePtr>, public NodeMapper {
+	NodeManager& nodeManager;
 
 public:
-	NodeCloner(const core::ASTBuilder& builder);
+	NodeCloner(NodeManager& manager) : nodeManager(nodeManager) { };
+
+	/**
+	 * This method bridges the gap between a visitor and a NodeMapper by
+	 * forwarding requests from the mapper to the visitor method.
+	 *
+	 * @param ptr the pointer to be mapped to another pointer
+	 * @return the resulting pointer
+	 */
+	virtual NodePtr mapElement(const NodePtr& ptr) {
+		return visit(ptr);
+	}
 
 protected:
-	NodePtr visitBreakStmt(const core::BreakStmtPtr& breakStmt) { return breakStmt; }
 
-	NodePtr visitContinueStmt(const core::ContinueStmtPtr& contStmt) { return contStmt; }
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual NodePtr visitNode(const NodePtr& ptr) {
+		return ptr->substitute(nodeManager, *this);
+	}
 
-	NodePtr visitReturnStmt(const core::ReturnStmtPtr& retStmt);
+	/**
+	 * Obtains a reference to the associated node manager.
+	 *
+	 * @return a reference to the associated node manager.
+	 */
+	NodeManager& getNodeManager() {
+		return nodeManager;
+	}
 
-	NodePtr visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt);
-
-	NodePtr visitCompoundStmt(const core::CompoundStmtPtr& compStmt);
-
-	NodePtr visitWhileStmt(const core::WhileStmtPtr& whileStmt);
-
-	NodePtr visitForStmt(const core::ForStmtPtr& forStmt);
-
-	NodePtr visitIfStmt(const core::IfStmtPtr& declStmt);
-
-	NodePtr visitSwitchStmt(const core::SwitchStmtPtr& declStmt);
-
-	NodePtr visitLiteral(const core::LiteralPtr& lit) { return lit; }
-
-	NodePtr visitVarExpr(const core::VarExprPtr& varExpr) { return varExpr; }
-
-	NodePtr visitParamExpr(const core::ParamExprPtr& paramExpr) { return paramExpr; }
-
-	NodePtr visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr);
-
-	NodePtr visitCallExpr(const core::CallExprPtr& callExpr);
-
-	NodePtr visitCastExpr(const core::CastExprPtr& castExpr);
-
-// TODO:
-//	NodePtr visitUnionExpr(const core::UnionExprPtr& unionExpr);
-//
-//	NodePtr visitStructExpr(const core::StructExprPtr& structExpr);
-//
-//	NodePtr visitJobExpr(const core::JobExprPtr& jobExpr);
 };
 
 } // End transform namespace

@@ -65,7 +65,6 @@ inline void for_each(const Container& c, const Functor& f) {
 	std::for_each(c.cbegin(), c.cend(), f);
 }
 
-
 /**
  * Create an empty vector containing no elements.
  */

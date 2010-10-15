@@ -37,7 +37,6 @@
 #pragma once
 
 #include "ast_visitor.h"
-#include "transform/node_cloner.h"
 
 namespace insieme {
 namespace core {

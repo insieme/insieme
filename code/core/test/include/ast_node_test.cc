@@ -81,7 +81,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*node);
-	T* clone = dynamic_cast<T*>(static_cast<const Node*>(&*node)->cloneTo(manager));
+	T* clone = &*manager.get(node);
 
 	// cloning had to be successful
 	EXPECT_TRUE(clone);
@@ -115,9 +115,6 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 		// check children
 		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<insieme::core::NodePtr>()) );
 	}
-
-	delete clone;
-
 
 	// --------------- Annotations -------------
 

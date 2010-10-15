@@ -34,54 +34,35 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
-
-
-// ---------------------------------------------- Utility Functions ------------------------------------
-
-using namespace insieme::core;
-
+#include "insieme_pragma.h"
 
 namespace insieme {
-namespace core {
+namespace frontend {
 
-const Node::ChildList& Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
+	Pragma(startLoc, endLoc, type) {
+
+	MatchMap::const_iterator fit = mmap.find("expected");
+	if(fit != mmap.end()) {
+		expected = *fit->second.front()->get<std::string*>();
 	}
-	return *children;
 }
 
-NodePtr Node::substitute(NodeManager& manager, NodeMapper& mapper) const {
-	// create a version having everything substituted
-	Node* node = createCopyUsing(mapper);
-
-	// obtain element within the manager
-	NodePtr res = manager.get(node);
-
-	// free temporary instance
-	delete node;
-
-	// return instance maintained within manager
-	return res;
+void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
+	pp.AddPragmaHandler(
+		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom)
+	);
 }
 
-void* Node::operator new(size_t size) {
-	return ::operator new(size);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+InsiemePragma::InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
+	Pragma(startLoc, endLoc, type){ }
+
+void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
+	pp.AddPragmaHandler( PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(pp.getIdentifierInfo("insieme"), tok::eom) );
 }
 
-void Node::operator delete(void* ptr) {
-	return ::operator delete(ptr);
-}
-
-
-} // end namespace core
-} // end namespace insieme
-
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
-}
+} // end frontend namespace
+} // end insieme namespace
