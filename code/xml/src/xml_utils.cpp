@@ -278,12 +278,12 @@ public:
 		recTypeDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recTypeDefinition;
 		
-		const insieme::core::RecTypeDefinition::RecTypeDefs defs = cur->getDefinitions();
+		const RecTypeDefinition::RecTypeDefs defs = cur->getDefinitions();
 		if (!defs.empty()){
 			XmlElement definitions("definitions", doc);
 			recTypeDefinition << definitions;
 			
-			//for(const insieme::core::RecTypeDefinition::RecTypeDefs iter = defs.begin(); iter != defs.end(); ++iter) {
+			for(RecTypeDefinition::RecTypeDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
 				/*XmlElement definition("definition", doc);
 				definitions << definition;
 				
@@ -296,7 +296,7 @@ public:
 				definition << typePtr;*/
 				
 				// annotations
-			//}
+			}
 		}
 		
 		// annotations
