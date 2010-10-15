@@ -34,44 +34,44 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "program.h"
-#include "clang_compiler.h"
-#include "conversion.h"
-#include "clang_config.h"
-#include "insieme_pragma.h"
+#include "pragma_handler.h"
 
-#include "clang/AST/Decl.h"
-
-using namespace insieme::core;
-using namespace insieme::frontend;
-using namespace insieme::frontend::conversion;
-
-TEST(StmtConversion, FileTest) {
-	using namespace clang;
-
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-
-	insieme::frontend::Program prog(shared);
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
-
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-
-	ConversionFactory convFactory( shared, comp );
-
-	std::for_each(pl.begin(), pl.end(),
-		[ &convFactory ](const PragmaPtr curr) {
-			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
-			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertStmt( *tp->getStatement() )->toString() + '\"' );
-			else {
-				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
-				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertType( *td->getTypeForDecl() )->toString() + '\"' );
-			}
-	});
-
+namespace clang {
+class Preprocessor;
 }
 
+namespace insieme {
+namespace frontend {
+
+/**
+ * Custom pragma used for testing purposes;
+ *
+ * #pragma test "insieme-IR"
+ * C stmt
+ *
+ * checks if the conversion of the C statement matches the one specified by the user
+ */
+class TestPragma: public Pragma {
+	std::string expected;
+public:
+	TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+
+	std::string getExpected() const { return expected; }
+
+	static void registerPragmaHandler(clang::Preprocessor& pp);
+};
+
+
+class InsiemePragma: public Pragma {
+
+public:
+	InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+
+	static void registerPragmaHandler(clang::Preprocessor& pp);
+};
+
+
+} // End frontend namespace
+} // End insieme namespace

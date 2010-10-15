@@ -46,6 +46,7 @@
 namespace clang {
 class ASTContext;
 class DeclGroupRef;
+class FunctionDecl;
 }
 
 namespace insieme {
@@ -92,7 +93,7 @@ public:
 	~ConversionFactory();
 };
 
-// ------------------------------------ IRConsumer ---------------------------
+// ------------------------------------ IRConverter ---------------------------
 /**
  *
  */
@@ -107,7 +108,11 @@ public:
 		mClangComp(clangComp), mProgram(prog), mFact(mgr, clangComp), pragmaList(pragmaList) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
+
 	void handleTopLevelDecl(clang::DeclContext* declCtx);
+	core::LambdaExprPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl);
+
+	core::LambdaExprPtr handleBody(const clang::Stmt* body);
 };
 
 

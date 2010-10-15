@@ -173,7 +173,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	}
 
 	StmtResult ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
-	clang::CompoundStmt* CS = static_cast<CompoundStmt*>(ret.get());
+	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
 	Stmt* Prev = NULL;
 
 	PragmaList matched;
@@ -216,7 +216,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 					// destroy the old compound stmt
 					// operator delete( oldStmt );
 					// free(oldStmt); // FIXME: possible memory leak
-					delete[] stmts; // FIXME: possible memory leak
+					delete[] stmts;
 				}
 				break;
 			}

@@ -330,8 +330,8 @@ public:
 
 // ------------------------------------ XmlElement ----------------------------
 
-XmlElement::XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
-XmlElement::XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
+XmlElement::XmlElement(xercesc::DOMElement* elem) : doc(NULL), base(elem) { }
+XmlElement::XmlElement(string name, xercesc::DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
 
 DOMElement* XmlElement::getBase() {
 	return base;
@@ -391,7 +391,7 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	}
 }
 
-XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, DOMDocument* doc) const {
+XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
 	const string& type = ann.getAnnotationName();
 	IrToDomConvertMapType::const_iterator fit = IrToDomConvertMap.find(type);
 	if(fit != IrToDomConvertMap.end()) {

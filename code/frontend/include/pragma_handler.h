@@ -188,9 +188,10 @@ public:
 			// #pragma omp barrier
 			// will be "omp::barrier", the string is passed to the pragma constructur which store the value
 			std::ostringstream pragma_name;
-			pragma_name << base_name;
+			if(!base_name.empty())
+				pragma_name << base_name << "::";
 			if(!getName().empty())
-				pragma_name << "::" << getName().str();
+				pragma_name << getName().str();
 
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
 			// the pragma has been successfully parsed, now we have to instantiate the correct type which is associated to this pragma (T) and
@@ -215,16 +216,6 @@ struct PragmaHandlerFactory {
 	static clang::PragmaHandler* CreatePragmaHandler(clang::IdentifierInfo* name, node const& re, const std::string& base_name = std::string()) {
 		return new BasicPragmaHandler<T> (name, re, base_name);
 	}
-};
-
-/**
- * Pragma used for testing purposes
- */
-class TestPragma: public Pragma {
-	std::string expected;
-public:
-	TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
-	std::string getExpected() const { return expected; }
 };
 
 } // End frontend namespace

@@ -83,15 +83,15 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
 		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
-//		LOG(INFO) << "Converting to C++ ... ";
-//		{ // TODO make one wrapper function for all of this
-//			insieme::simple_backend::ConversionContext cc;
-//
-//			auto converted = cc.convert(program);
-//			for_each(program->getEntryPoints(), [&converted](const insieme::core::ExpressionPtr& ep) {
-//				LOG(INFO) << "---\n" << converted[ep];
-//			});
-//		}
+		LOG(INFO) << "Converting to C++ ... ";
+		{ // TODO make one wrapper function for all of this
+			insieme::simple_backend::ConversionContext cc;
+
+			auto converted = cc.convert(program);
+			for_each(program->getEntryPoints(), [&converted](const insieme::core::ExpressionPtr& ep) {
+				LOG(INFO) << "---\n" << converted[ep];
+			});
+		}
 
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error wile parsing input file: " << e.what() << endl;
