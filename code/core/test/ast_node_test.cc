@@ -47,8 +47,39 @@ namespace core {
 
 
 class DummyAnnotation : public Annotation {
-	// TODO: add annotations to basic tests ...
+public:
+	static StringKey<DummyAnnotation> DummyKey;
+	int value;
+	DummyAnnotation(int value) : value(value) { };
+
+	virtual AnnotationKey* getKey() const {
+		return &DummyKey;
+	}
+
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation";
+	}
 };
+
+class DummyAnnotation2 : public Annotation {
+public:
+	static StringKey<DummyAnnotation2> DummyKey;
+	int value;
+	DummyAnnotation2(int value) : value(value) { };
+
+	virtual AnnotationKey* getKey() const {
+		return &DummyKey;
+	}
+
+	const std::string getAnnotationName() const {
+		 return "DummyAnnotation2";
+	}
+};
+
+// initalization of the dummy key
+StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
+
 
 template<typename T>
 Node::ChildList toList(const vector<T>& list) {
@@ -120,6 +151,88 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	}
 
 	delete clone;
+
+
+	// --------------- Annotations -------------
+
+	// check whether annotations become isolated when migrating nodes between managers
+
+	EXPECT_TRUE(node->getAnnotations().empty());
+
+	node->addAnnotation(std::make_shared<DummyAnnotation>(12));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+
+	// add one annotation to each child - exposing its index
+	int i = 0;
+	for_each(node->getChildList(), [&i](const NodePtr& cur) {
+		cur.addAnnotation(std::make_shared<DummyAnnotation2>(i++));
+	});
+
+	NodeManager managerA;
+	NodeManager managerB;
+
+	NP nodeInA = managerA.get(node);
+	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
+
+	// check child annotations
+	i = 0;
+	for_each(node->getChildList(), [&i](const NodePtr& cur) {
+
+		EXPECT_FALSE(cur.hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_TRUE(cur.hasAnnotation(DummyAnnotation2::DummyKey));
+
+		if (cur.hasAnnotation(DummyAnnotation2::DummyKey)) {
+			EXPECT_EQ(i, cur.getAnnotation(DummyAnnotation2::DummyKey)->value);
+		}
+
+		i++;
+	});
+
+	EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
+	EXPECT_EQ(*node, *nodeInA);
+
+	nodeInA->addAnnotation(std::make_shared<DummyAnnotation2>(14));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
+
+	NP nodeInB = managerB.get(node);
+	EXPECT_EQ(*node, *nodeInA);
+	EXPECT_EQ(*node, *nodeInB);
+	EXPECT_EQ(*nodeInA, *nodeInB);
+
+	EXPECT_TRUE(nodeInB->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(nodeInB->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
+	EXPECT_NE(&nodeInA->getAnnotations(), &nodeInB->getAnnotations());
+	EXPECT_NE(&node->getAnnotations(), &nodeInB->getAnnotations());
+
+	// check children isolation
+	NP allPtr[] = { node, nodeInA, nodeInB };
+	for (int i=0; i<3; i++) {
+		for (int j=0; j<3; j++) {
+			if (i==j) {
+				continue;
+			}
+
+			auto a = allPtr[i]->getChildList();
+			auto b = allPtr[j]->getChildList();
+
+			std::for_each(
+					make_paired_iterator(a.begin(), b.begin()),
+					make_paired_iterator(a.end(), b.end()),
+					[](const std::pair<NodePtr, NodePtr>& cur) {
+
+				EXPECT_NE(cur.first, cur.second);
+				EXPECT_EQ(*cur.first, *cur.second);
+				EXPECT_NE(&cur.first.getAnnotations(), &cur.second.getAnnotations());
+
+			});
+		}
+	}
 }
 
 } // end namespace core

@@ -41,15 +41,15 @@
 #include <unordered_set>
 #include <queue>
 
-#include "annotated_ptr.h"
+#include "functional_utils.h"
+
+#include "ast_address.h"
+#include "ast_node.h"
 #include "expressions.h"
 #include "program.h"
 #include "statements.h"
 #include "types.h"
 
-#include "functional_utils.h"
-
-#include "ast_address.h"
 
 namespace insieme {
 namespace core {

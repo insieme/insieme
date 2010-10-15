@@ -36,276 +36,35 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cassert>
+#include "ast_visitor.h"
 
-#include "annotated_ptr.h"
-// #include "definition.h"
-#include "expressions.h"
-#include "program.h"
-#include "statements.h"
-#include "types.h"
+namespace insieme {
+namespace core {
 
-template<typename Derived>
-class ProgramTransformation {
+namespace transform {
 
-#define DISPATCH(CLASS, PTR) \
-		static_cast<Derived*>(this)->dispatch ## CLASS(PTR)
-
-#define TRANSFORM(CLASS, PTR) \
-		static_cast<Derived*>(this)->transform ## CLASS(PTR)
-
+class Transformation {
 public:
-
-	ProgramPtr transform(const ProgramPtr& program) {
-		assert( program && "Cannot visit NULL program!");
-		return DISPATCH(Program, program);
-	}
-
-	DefinitionPtr transform(const DefinitionPtr& definition) {
-		assert( definition && "Cannot visit NULL definition!");
-		return DISPATCH(Definition, definition);
-	}
-
-	StmtPtr transform(const StmtPtr& statement) {
-		assert( statement && "Cannot visit NULL statement!");
-		if (const ExprPtr& ptr = dynamic_pointer_cast<const Expression>(statement)) {
-			return DISPATCH(Expr, ptr);
-		}
-		return DISPATCH(Stmt, statement);
-	}
-
-	TypePtr transform(const TypePtr& type) {
-		assert( type && "Cannot visit NULL type!");
-		return DISPATCH(Type, type);
-	}
-
-protected:
-
-#define TRY_DISPATCH(PTR, CLASS) \
-		if (const CLASS ## Ptr& ptr = dynamic_pointer_cast<const CLASS>(PTR)) \
-			return DISPATCH(CLASS, ptr)
-
-
-	// ---------------- Dispatcher ---------------------------------
-
-	StmtPtr dispatchStmt(const StmtPtr& statement) {
-		assert ( statement && "Cannot dispatch NULL statement!");
-
-	}
-
-	ReturnType dispatchExpr(const ExprPtr& expression) {
-		assert ( expression && "Cannot dispatch NULL expression!");
-
-		TRY_DISPATCH(expression, IntLiteral);
-		TRY_DISPATCH(expression, FloatLiteral);
-		TRY_DISPATCH(expression, BoolLiteral);
-		TRY_DISPATCH(expression, VarExpr);
-		TRY_DISPATCH(expression, ParamExpr);
-		TRY_DISPATCH(expression, LambdaExpr);
-		TRY_DISPATCH(expression, CallExpr);
-		TRY_DISPATCH(expression, CastExpr);
-
-		assert ( false && "Cannot dispatch unknown expression pointer type." );
-		return ReturnType();
-	}
-
-
-
-	ReturnType dispatchType(const TypePtr& type) {
-		assert ( type && "Cannot dispatch NULL type!");
-
-		TRY_DISPATCH(type, TypeVariable);
-		TRY_DISPATCH(type, FunctionType);
-		TRY_DISPATCH(type, TupleType);
-		TRY_DISPATCH(type, GenericType);
-
-		assert ( false && "Cannot dispatch unknown type pointer." );
-		return ReturnType();
-	}
-
-	ReturnType dispatchGenericType(const GenericTypePtr& type) {
-		assert ( type && "Cannot dispatch NULL pointer to type!");
-
-		TRY_DISPATCH(type, ArrayType);
-		TRY_DISPATCH(type, VectorType);
-		TRY_DISPATCH(type, RefType);
-		TRY_DISPATCH(type, ChannelType);
-
-		TRY_DISPATCH(type, IntType);
-		TRY_DISPATCH(type, FloatType);
-		TRY_DISPATCH(type, BoolType);
-		TRY_DISPATCH(type, UnitType);
-
-		// just forward visit generic type
-		return VISIT(GenericType, type);
-	}
-
-	ReturnType dispatchVarExpr(const VarExprPtr& expression) {
-			assert ( expression && "Cannot dispatch NULL pointer!");
-
-			// try only sub-type
-			TRY_DISPATCH(expression, ParamExpr);
-
-			// just forward visit generic type
-			return VISIT(VarExpr, expression);
-		}
-
-
-#undef TRY_DISPATCH
-
-	/**
-	 * The following set of terminal dispatcher form the bridge between the dispatching
-	 * and the visiting methods. Each of those terminals is just forwarding the dispatch
-	 * request to the corresponding visitor method. Subclasses may overwrite their
-	 * behavior to introduce further sub-types (e.g. a filtered set of generic types).
-	 */
-
-#define DISPATCH_TERMINAL(CLASS) \
-	inline ReturnType dispatch ## CLASS(const CLASS ## Ptr& ptr) { \
-		assert ( !!ptr && "Cannot dispatch NULL pointer!"); \
-		return VISIT(CLASS, ptr); \
-	}
-
-	DISPATCH_TERMINAL(Program);
-	DISPATCH_TERMINAL(Definition);
-
-	DISPATCH_TERMINAL(TypeVariable);
-	DISPATCH_TERMINAL(FunctionType);
-	DISPATCH_TERMINAL(TupleType);
-
-	DISPATCH_TERMINAL(ArrayType);
-	DISPATCH_TERMINAL(VectorType);
-	DISPATCH_TERMINAL(RefType);
-	DISPATCH_TERMINAL(ChannelType);
-
-	DISPATCH_TERMINAL(IntType);
-	DISPATCH_TERMINAL(FloatType);
-	DISPATCH_TERMINAL(BoolType);
-	DISPATCH_TERMINAL(UnitType);
-
-	DISPATCH_TERMINAL(StructType);
-	DISPATCH_TERMINAL(UnionType);
-
-
-	DISPATCH_TERMINAL(NoOpStmt);
-	DISPATCH_TERMINAL(BreakStmt);
-	DISPATCH_TERMINAL(ContinueStmt);
-	DISPATCH_TERMINAL(ReturnStmt);
-	DISPATCH_TERMINAL(DeclarationStmt);
-	DISPATCH_TERMINAL(CompoundStmt);
-	DISPATCH_TERMINAL(WhileStmt);
-	DISPATCH_TERMINAL(ForStmt);
-	DISPATCH_TERMINAL(IfStmt);
-	DISPATCH_TERMINAL(SwitchStmt);
-
-	DISPATCH_TERMINAL(IntLiteral);
-	DISPATCH_TERMINAL(FloatLiteral);
-	DISPATCH_TERMINAL(BoolLiteral);
-	DISPATCH_TERMINAL(ParamExpr);
-	DISPATCH_TERMINAL(LambdaExpr);
-	DISPATCH_TERMINAL(CallExpr);
-	DISPATCH_TERMINAL(CastExpr);
-
-#undef DISPATCH_TERMINAL
-#undef VISIT
-#undef DISPATCH
-
-	// ------------------ protected visitor methods -----------------------
-
-#define VISIT_NODE(CLASS, PARENT) \
-	inline ReturnType visit ## CLASS(const CLASS ## Ptr& ptr) { \
-		assert ( !!ptr && "Cannot visit NULL pointer!"); \
-		return static_cast<Derived*>(this)->visit ## PARENT(ptr); \
-	}
-
-	/**
-	 * The base case - all type visits will be default be forwarded
-	 * to this method.
-	 *
-	 * @param ptr the pointer to be visited
-	 */
-	ReturnType visitType(const TypePtr& ptr) {
-		// base case
-		return ReturnType();
-	}
-
-	VISIT_NODE(TypeVariable, Type);
-	VISIT_NODE(FunctionType, Type);
-	VISIT_NODE(TupleType, Type);
-
-	VISIT_NODE(GenericType, Type);
-	VISIT_NODE(ArrayType, GenericType);
-	VISIT_NODE(VectorType, GenericType);
-	VISIT_NODE(RefType, GenericType);
-	VISIT_NODE(ChannelType, GenericType);
-
-	VISIT_NODE(IntType, GenericType);
-	VISIT_NODE(FloatType, GenericType);
-	VISIT_NODE(BoolType, GenericType);
-	VISIT_NODE(UnitType, GenericType);
-
-	VISIT_NODE(NamedCompositeType, Type);
-	VISIT_NODE(StructType, NamedCompositeType);
-	VISIT_NODE(UnionType, NamedCompositeType);
-
-
-	ReturnType visitStmt(const StmtPtr& ptr) {
-		return ReturnType();
-	}
-
-	VISIT_NODE(NoOpStmt, Stmt);
-	VISIT_NODE(BreakStmt, Stmt);
-	VISIT_NODE(ContinueStmt, Stmt);
-	VISIT_NODE(ReturnStmt, Stmt);
-	VISIT_NODE(DeclarationStmt, Stmt);
-	VISIT_NODE(CompoundStmt, Stmt);
-	VISIT_NODE(WhileStmt, Stmt);
-	VISIT_NODE(ForStmt, Stmt);
-	VISIT_NODE(IfStmt, Stmt);
-	VISIT_NODE(SwitchStmt, Stmt);
-
-	VISIT_NODE(Expr, Stmt);
-	VISIT_NODE(IntLiteral, Expr);
-	VISIT_NODE(FloatLiteral, Expr);
-	VISIT_NODE(BoolLiteral, Expr);
-	VISIT_NODE(VarExpr, Expr);
-	VISIT_NODE(ParamExpr, VarExpr);
-	VISIT_NODE(LambdaExpr, Expr);
-	VISIT_NODE(CallExpr, Expr);
-	VISIT_NODE(CastExpr, Expr);
-
-
-	ReturnType visitProgram(const ProgramPtr& program) {
-		// by default, do nothing
-		return ReturnType();
-	}
-
-	ReturnType visitDefinition(const DefinitionPtr& definition) {
-		// by default, do nothing
-		return ReturnType();
-	}
-
-#undef VISIT_NODE
+	virtual NodePtr transform(const NodePtr& element) = 0;
 };
 
 
-
-/**
- * A visitor which by default is descending into all types.
- */
-template<typename ReturnType>
-class RecursiveProgramVisitor : public ProgramVisitor<RecursiveProgramVisitor<ReturnType>, ReturnType> {
-
+template<template<class Target> class Ptr = AnnotatedPtr>
+class Transformation : public ASTVisitor<Ptr<const Node>, Ptr> {
 
 public:
 
-	ReturnType visitProgram(const ProgramPtr& program) {
-
+	Ptr<const Node> transform(const Ptr<const Node>& element) {
+		return visit(element);
 	}
 
+}
 
-};
+
+
+} // end namespace transform
+} // end namespace core
+} // end namespace insieme
 
 
 
