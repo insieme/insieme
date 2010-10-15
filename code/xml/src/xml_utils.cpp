@@ -83,7 +83,7 @@ public:
 		genType.setAttr("familyName", cur->getFamilyName().getName());
 		rootElem << genType;
 
-		if (const TypePtr base = cur->getBaseType()) {
+		if (const TypePtr& base = cur->getBaseType()) {
 			XmlElement baseType("baseType", doc);
 			genType << baseType;
 
@@ -144,7 +144,7 @@ public:
 		functionType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << functionType;
 		
-		if (const TypePtr argument = cur->getArgumentType()) {
+		if (const TypePtr& argument = cur->getArgumentType()) {
 			XmlElement argumentType("argumentType", doc);
 			functionType << argumentType;
 
@@ -155,7 +155,7 @@ public:
 			visitAnnotations(argument.getAnnotations(), typePtr);
 		}
 		
-		if (const TypePtr returnT = cur->getReturnType()) {
+		if (const TypePtr& returnT = cur->getReturnType()) {
 			XmlElement returnType("returnType", doc);
 			functionType << returnType;
 
@@ -176,7 +176,7 @@ public:
 		XmlElement entries("entries", doc);
 		structType << entries;
 		
-		const vector<NamedCompositeType::Entry> entriesVec = cur->getEntries ();
+		const vector<NamedCompositeType::Entry>& entriesVec = cur->getEntries ();
 		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
 			XmlElement entry("entry", doc);
 			entries << entry;
@@ -203,7 +203,7 @@ public:
 		XmlElement entries("entries",doc);
 		unionType << entries;
 		
-		const vector<NamedCompositeType::Entry> entriesVec = cur->getEntries ();
+		const vector<NamedCompositeType::Entry>& entriesVec = cur->getEntries ();
 		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
 			XmlElement entry("entry", doc);
 			entries << entry;
@@ -230,7 +230,7 @@ public:
 		XmlElement elementTypeList("elementTypeList",doc);
 		tupleType << elementTypeList;
 
-		const vector<TypePtr> elementList = cur->getElementTypes();
+		const vector<TypePtr>& elementList = cur->getElementTypes();
 		for(vector<TypePtr>::const_iterator iter = elementList.begin(); iter != elementList.end(); ++iter) {
 			XmlElement elementType("elementType", doc);
 			elementTypeList << elementType;
@@ -259,7 +259,7 @@ public:
 		recType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recType;
 		
-		if (const RecTypeDefinitionPtr definitionT = cur->getDefinition()) {
+		if (const RecTypeDefinitionPtr& definitionT = cur->getDefinition()) {
 			XmlElement definition("definition", doc);
 			recType << definition;
 
@@ -278,22 +278,22 @@ public:
 		recTypeDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recTypeDefinition;
 		
-		const RecTypeDefinition::RecTypeDefs defs = cur->getDefinitions();
+		const RecTypeDefinition::RecTypeDefs& defs = cur->getDefinitions();
 		if (!defs.empty()){
 			XmlElement definitions("definitions", doc);
 			recTypeDefinition << definitions;
 			
 			for(RecTypeDefinition::RecTypeDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
-				/*XmlElement definition("definition", doc);
+				XmlElement definition("definition", doc);
 				definitions << definition;
 				
 				XmlElement typeVariablePtr("typeVariablePtr", doc);
-				//typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
 				definition << typeVariablePtr;
 				
 				XmlElement typePtr("typePtr", doc);
-				//typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
-				definition << typePtr;*/
+				typePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+				definition << typePtr;
 				
 				// annotations
 			}
@@ -560,7 +560,7 @@ string XmlUtil::convertDomToString(){
 		theSerializer->release();
 		
 		string stringDump = "";
-		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); it++){
+		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it){
 	    	if (!isspace (*it))
 	      		stringDump += *it;
 		}

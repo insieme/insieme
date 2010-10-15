@@ -28,6 +28,12 @@
 	</xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="T_uniqueRecTypeDefinitionPtr">
+	<xs:all>
+		<xs:element name="recTypeDefinitionPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
 
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
@@ -71,7 +77,39 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_definitions -->
+<xs:complexType name="T_definitions">
+	<xs:sequence>
+		<xs:element name="definition" type="T_definition" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="T_definition">
+	<xs:sequence>
+		<xs:element name="typeVariablePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="typePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
+
+
+
+
 <!-- All IR Node -->
+<xs:complexType name="T_recTypeDefinition">
+	<xs:all>
+		<xs:element name="definitions" type="T_definitions" minOccurs="1"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+
+<xs:complexType name="T_recType">
+	<xs:all>
+		<xs:element name="definition" type="T_uniqueRecTypeDefinitionPtr" minOccurs="1"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_typeVariable">
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="name" type="xs:string" use="required"/>
@@ -125,6 +163,8 @@
 		<xs:element name="unionType" type="T_structType"/>
 		<xs:element name="tupleType" type="T_tupleType"/>
 		<xs:element name="typeVariable" type="T_typeVariable"/>
+		<xs:element name="recType" type="T_recType"/>
+		<xs:element name="recTypeDefinition" type="T_recTypeDefinition"/>
 	</xs:choice>
 </xs:group>
 
