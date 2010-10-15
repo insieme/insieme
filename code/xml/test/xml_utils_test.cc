@@ -141,6 +141,7 @@ TEST(XmlTest, TupleTypeTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
 TEST(XmlTest, TypeVariableTest) {
 	NodeManager manager;
 	TypeVariablePtr varTypeA = TypeVariable::get(manager, "alpha");
