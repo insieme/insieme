@@ -410,7 +410,14 @@ public:
  */
 template<typename T>
 const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
-	ptr.isolateAnnotations();
+	// TODO:
+	//	isolation is disabled for the constructors - since not required according to tests!
+	//  Since every instance within a node manager is placed there through a cloning process,
+	//  isolating annotations during the cloning is sufficient. Disabling it for constructors
+	//  is only critical in case nodes are created on the stack using the public constructor
+	//  directly.
+	//
+	//ptr.isolateAnnotations();
 	return ptr;
 }
 
