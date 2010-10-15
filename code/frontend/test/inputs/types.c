@@ -58,6 +58,9 @@ void basic_type_test() {
 	
 	#pragma test "ref<vector<ref<real<4>>,3>> v = {0.0,0.0,0.0}"
 	float v[3];
+
+    #pragma test "ref<vector<ref<vector<ref<int<4>>,2>>,3>> vv = {{0,0},{0,0},{0,0}}"
+	int vv[3][2];
 }
 
 // Simple struct
