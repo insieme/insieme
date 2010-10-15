@@ -750,7 +750,7 @@ public:
 
 	static RecTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
 
-	const RecTypeDefs& getDefinitions() {
+	const RecTypeDefs& getDefinitions() const{
 		return definitions;
 	}
 
