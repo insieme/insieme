@@ -45,60 +45,53 @@ class ASTBuilder;
 
 namespace transform {
 
-struct NodeWrapper {
-	core::NodePtr ref;
-
-	NodeWrapper(): ref(NULL) { }
-	NodeWrapper(const core::NodePtr& n): ref(n) { }
-};
-
 /**
  * Clones the nodes of the IR.
  * Alone this Visitor is pointless, but combined with other visitors can be used to replace/remove/insert nodes to an existing tree.
  */
-class NodeCloner: public core::ASTVisitor<NodeWrapper> {
+class NodeCloner: public core::ASTVisitor<NodePtr> {
 	const core::ASTBuilder& builder;
 
 public:
 	NodeCloner(const core::ASTBuilder& builder);
 
 protected:
-	NodeWrapper visitBreakStmt(const core::BreakStmtPtr& breakStmt);
+	NodePtr visitBreakStmt(const core::BreakStmtPtr& breakStmt) { return breakStmt; }
 
-	NodeWrapper visitContinueStmt(const core::ContinueStmtPtr& contStmt);
+	NodePtr visitContinueStmt(const core::ContinueStmtPtr& contStmt) { return contStmt; }
 
-	NodeWrapper visitReturnStmt(const core::ReturnStmtPtr& retStmt);
+	NodePtr visitReturnStmt(const core::ReturnStmtPtr& retStmt);
 
-	NodeWrapper visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt);
+	NodePtr visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt);
 
-	NodeWrapper visitCompoundStmt(const core::CompoundStmtPtr& compStmt);
+	NodePtr visitCompoundStmt(const core::CompoundStmtPtr& compStmt);
 
-	NodeWrapper visitWhileStmt(const core::WhileStmtPtr& whileStmt);
+	NodePtr visitWhileStmt(const core::WhileStmtPtr& whileStmt);
 
-	NodeWrapper visitForStmt(const core::ForStmtPtr& forStmt);
+	NodePtr visitForStmt(const core::ForStmtPtr& forStmt);
 
-	NodeWrapper visitIfStmt(const core::IfStmtPtr& declStmt);
+	NodePtr visitIfStmt(const core::IfStmtPtr& declStmt);
 
-	NodeWrapper visitSwitchStmt(const core::SwitchStmtPtr& declStmt);
+	NodePtr visitSwitchStmt(const core::SwitchStmtPtr& declStmt);
 
-	NodeWrapper visitLiteral(const core::LiteralPtr& lit);
+	NodePtr visitLiteral(const core::LiteralPtr& lit) { return lit; }
 
-	NodeWrapper visitVarExpr(const core::VarExprPtr& varExpr);
+	NodePtr visitVarExpr(const core::VarExprPtr& varExpr) { return varExpr; }
 
-	NodeWrapper visitParamExpr(const core::ParamExprPtr& paramExpr);
+	NodePtr visitParamExpr(const core::ParamExprPtr& paramExpr) { return paramExpr; }
 
-	NodeWrapper visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr);
+	NodePtr visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr);
 
-	NodeWrapper visitCallExpr(const core::CallExprPtr& callExpr);
+	NodePtr visitCallExpr(const core::CallExprPtr& callExpr);
 
-	NodeWrapper visitCastExpr(const core::CastExprPtr& castExpr);
+	NodePtr visitCastExpr(const core::CastExprPtr& castExpr);
 
 // TODO:
-//	NodeWrapper visitUnionExpr(const core::UnionExprPtr& unionExpr);
+//	NodePtr visitUnionExpr(const core::UnionExprPtr& unionExpr);
 //
-//	NodeWrapper visitStructExpr(const core::StructExprPtr& structExpr);
+//	NodePtr visitStructExpr(const core::StructExprPtr& structExpr);
 //
-//	NodeWrapper visitJobExpr(const core::JobExprPtr& jobExpr);
+//	NodePtr visitJobExpr(const core::JobExprPtr& jobExpr);
 };
 
 } // End transform namespace
