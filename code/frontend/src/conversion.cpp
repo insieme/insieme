@@ -1004,21 +1004,39 @@ public:
 				// boolean values are initialized to false
 				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
 			} else if ( ty.isExtVectorType() ) {
-			    //TODO fixme
-  //              if(ExtVectorType* vecTy = dynamic_cast<ExtVectorType*>(&ty)) {
-  //                  const QualType qt = vecTy->getElementType();
-  //                  const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+			    ExtVectorType* vecTy;
+			    TypedefType* typedefType;
+			    if((typedefType = dynamic_cast<TypedefType*>(&ty)) &&
+                    (vecTy = dynamic_cast<ExtVectorType*>(typedefType->getDecl()->getUnderlyingType().getTypePtr()))) {
+                    const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( vecTy->getElementType()->getUnqualifiedDesugaredType() );
 
-   //                 std::string initVal = buildInTy->isIntegerType() || buildInTy->isUnsignedIntegerType()  ? "0" : "0.0";
+                    std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
 
-  //                  std::vector<core::ExpressionPtr> zeros;
-   //                 for(size_t i = 0; i < vecTy->getNumElements(); ++i)
-    //                    zeros.push_back(convFact.builder.literal(initVal, type));
+                    std::vector<core::ExpressionPtr> zeros;
+                    for(size_t i = 0; i < vecTy->getNumElements(); ++i)
+                        zeros.push_back(convFact.builder.literal(initVal, type));
 
-  //                  initExpr = convFact.builder.vectorExpr(zeros);
-    //            }
+                    initExpr = convFact.builder.vectorExpr(zeros);
+                } else {
+                    assert(false && "ExtVectorType has unexpected class");
+                }
             } else if ( ty.isConstantArrayType() ) {
-                //TODO init routine for vectors
+                if(ConstantArrayType* arrTy = dynamic_cast<ConstantArrayType*>(&ty)) {
+                    if(const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( arrTy->getElementType()->getUnqualifiedDesugaredType() )) {
+                        std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
+
+                        std::vector<core::ExpressionPtr> zeros;
+                        for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
+                            zeros.push_back(convFact.builder.literal(initVal, type));
+
+                        initExpr = convFact.builder.vectorExpr(zeros);
+                    } else {
+                        //TODO add initializer for constant arrays of not build in types (recursion?)
+                        initExpr = core::lang::CONST_NULL_PTR_PTR;
+                    }
+                } else {
+                    assert(false && "ConstantArrayType has unexpected class");
+                }
             }
 		}
 
