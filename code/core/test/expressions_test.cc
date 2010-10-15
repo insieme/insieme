@@ -244,7 +244,7 @@ void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& c
 	// copy and clone the type
 	NodeManager manager;
 	T copy = T(*expression);
-	T* clone = dynamic_cast<T*>(static_cast<const Expression*>(&*expression)->createCloneUsing(manager));
+	T* clone = &*manager.get(expression);
 
 	// check whether all are equal
 	T* all[] = { &*expression, &copy, clone };
@@ -270,8 +270,6 @@ void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& c
 		// check children
 		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<NodePtr>()) );
 	}
-
-	delete clone;
 }
 
 } // end namespace: core

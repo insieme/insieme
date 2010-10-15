@@ -76,6 +76,100 @@ enum NodeType {
 class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
 typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
+template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
+
+
+class NodeMapper {
+public:
+	virtual ~NodeMapper() {};
+
+	template<typename T>
+	inline AnnotatedPtr<T> map(const AnnotatedPtr<T>& ptr) {
+		// short-cut for null
+		if (!ptr) {
+			return static_pointer_cast<T>(ptr);
+		}
+
+		// map and cast
+		NodePtr res = mapElement(ptr);
+
+		// during development, make cast secure
+		assert(dynamic_pointer_cast<T>(res) && "Invalid conversion");
+		return static_pointer_cast<T>(res);
+	}
+
+	/**
+	 * Obtains a container of pointers referencing clones of nodes referenced by a given
+	 * container of pointers. Thereby, annotations are properly preserved and isolated.
+	 *
+	 * @param manager the manager which should maintain the nodes referenced by the resulting pointer
+	 * @param container the container including the pointers to be cloned
+	 * @return a new container including pointers referencing clones of the nodes referenced
+	 * 		   by the original container.
+	 */
+	template<typename Container>
+	Container map(const Container& container) {
+		Container res;
+
+		// --- Begin: STRANGE CASE ---
+		auto first = container.begin();
+		auto last = container.end();
+		auto out = inserter(res, res.end());
+		for (auto it = first; it != last; ++it) {
+			*out = map(*it);
+			out++;
+		}
+		// The equivalent construct
+		//   map(container.cbegin(), container.cend(), inserter(res, res.end()));
+		// produces a segmentation fault
+		// --- End: STRANGE CASE ---
+
+		return res;
+	}
+
+	/**
+	 * Obtains pointers to clones of nodes referenced by a range of pointers.
+	 *
+	 * @param manager the manager which should maintain the nodes referenced by the resulting pointer
+	 * @param first the first element of the range
+	 * @param last the last element of the range
+	 * @param out the output iterator to which resulting elements are forwarded
+	 */
+	template<typename InputIterator, typename OutputIterator>
+	void map(InputIterator first, InputIterator last, OutputIterator out) {
+		typedef typename std::iterator_traits<InputIterator>::value_type Element;
+		std::transform(first, last, out, [&](const Element& cur) {
+			return this->map(cur);
+		});
+	}
+
+protected:
+
+	/**
+	 * Implements the actual mapping operation by mapping one ptr to another.
+	 *
+	 * @param ptr the pointer to be resolved
+	 * @return the pointer the given pointer is mapped to by this mapper
+	 */
+	virtual NodePtr mapElement(const NodePtr& ptr) =0;
+};
+
+template<typename Lambda>
+class LambdaNodeMapper : public NodeMapper {
+	Lambda lambda;
+public:
+	LambdaNodeMapper(Lambda lambda) : lambda(lambda) {};
+
+	NodePtr mapElement(const NodePtr& ptr) {
+		return lambda(ptr);
+	}
+};
+
+template<typename Lambda>
+LambdaNodeMapper<Lambda> makeLambdaMapper(Lambda lambda) {
+	return LambdaNodeMapper<Lambda>(lambda);
+}
+
 
 /**
  * This class models an abstract base class for all AST nodes to be used within a program
@@ -107,12 +201,6 @@ public:
 	 */
 	typedef std::shared_ptr<ChildList> OptionChildList;
 
-	/**
-	 * Allow the test case to access private methods.
-	 */
-	template<typename PT>
-	friend void basicNodeTests(PT, const ChildList& children = ChildList());
-
 private:
 
 	/**
@@ -139,7 +227,7 @@ private:
 	 * @return a clone of this instance referencing elements maintained exclusively by the given manager
 	 */
 	const Node* cloneTo(NodeManager& manager) const {
-		// NOTE: this method is performing the all-AST-node work, the rest is done by createClone(...)
+		// NOTE: this method is performing the all-AST-node work, the rest is done by createCloneUsing(...)
 
 		// check whether cloning is necessary
 		if (this->manager == &manager) {
@@ -147,7 +235,10 @@ private:
 		}
 
 		// trigger the creation of a clone
-		Node* res = createCloneUsing(manager);
+		auto cloner = makeLambdaMapper([&manager](const NodePtr& ptr) {
+			return clonePtr(manager, ptr);
+		});
+		Node* res = createCopyUsing(cloner);
 
 		// update manager
 		res->manager = &manager;
@@ -160,13 +251,15 @@ private:
 	}
 
 	/**
-	 * A virtual method to be implemented by sub-classes to realize the actual creation of cloned
-	 * instances.
+	 * A virtual method to be implemented by sub-classes to realize the actual creation of
+	 * modified instances of AST nodes.
 	 *
-	 * @param manager the manager to which this node should be cloned to
-	 * @return a pointer to a new instance, representing an independent, yet equivalent instance.
+	 * @param mapper a mapping allowing to alter pointer instances during the copy process. For instance
+	 * 			the mapper may re-direct all pointers to point to instances maintained by a different
+	 * 			node manager (node migration) or to a totally different instance during transformations.
+	 * @return a pointer to a new instance, representing an independent, transformed instance.
 	 */
-	virtual Node* createCloneUsing(NodeManager& manager) const = 0;
+	virtual Node* createCopyUsing(NodeMapper& mapper) const =0;
 
 protected:
 
@@ -218,6 +311,16 @@ public:
 	 * instances.
 	 */
 	virtual ~Node() {};
+
+	/**
+	 * Creates a new version of this node where every referenced to a child node
+	 * is replaced by a pointer to the node returned by the given mapper.
+	 *
+	 * @param manager the manager to be used to create the new node
+	 * @param mapper the mapper used to translate child node references
+	 * @return a pointer to the modified node.
+	 */
+	NodePtr substitute(NodeManager& manager, NodeMapper& mapper) const;
 
 	/**
 	 * Obtains a pointer to the manager maintaining this instance of an AST node.
@@ -306,7 +409,7 @@ public:
  * @return a reference to the handed in pointer.
  */
 template<typename T>
-static const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
+const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
 	ptr.isolateAnnotations();
 	return ptr;
 }
@@ -319,7 +422,7 @@ static const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
  * @return a reference to the handed in container
  */
 template<typename Container>
-static const Container& isolate(const Container& container, typename Container::value_type* = 0) {
+const Container& isolate(const Container& container, typename Container::value_type* = 0) {
 	for_each(container, [](const typename Container::value_type& cur){
 		cur.isolateAnnotations();
 	});
@@ -336,7 +439,7 @@ static const Container& isolate(const Container& container, typename Container::
  * @return the pointer to the cloned node within the given manager
  */
 template<typename T>
-static inline AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
+inline AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
 	// null pointers or proper points do not have to be modified
 	if (!ptr || ptr->getNodeManager() == &manager) {
 		return ptr;
@@ -351,39 +454,6 @@ static inline AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPt
 	// done
 	return res;
 }
-
-/**
- * Obtains a container of pointers referencing clones of nodes referenced by a given
- * container of pointers. Thereby, annotations are properly preserved and isolated.
- *
- * @param manager the manager which should maintain the nodes referenced by the resulting pointer
- * @param container the container including the pointers to be cloned
- * @return a new container including pointers referencing clones of the nodes referenced
- * 		   by the original container.
- */
-template<typename Container>
-static inline Container clonePtrTo(NodeManager& manager, const Container& container) {
-	Container res;
-	clonePtrTo(manager, container.begin(), container.end(), inserter(res, res.end()));
-	return res;
-}
-
-/**
- * Obtains pointers to clones of nodes referenced by a range of pointers.
- *
- * @param manager the manager which should maintain the nodes referenced by the resulting pointer
- * @param first the first element of the range
- * @param last the last element of the range
- * @param out the output iterator to which resulting elements are forwarded
- */
-template<typename InputIterator, typename OutputIterator>
-static inline void clonePtrTo(NodeManager& manager, InputIterator first, InputIterator last, OutputIterator out) {
-	typedef typename std::iterator_traits<InputIterator>::value_type Element;
-	std::transform(first, last, out, [&manager](const Element& cur) {
-		return clonePtrTo(manager, cur);
-	});
-}
-
 
 } // end namespace core
 } // end namespace insieme

@@ -99,15 +99,12 @@ private:
 	Program(const EntryPointSet& entryPoints);
 
 	/**
-	 * Implements the clone method defined by the Base Node class. However,
-	 * invoking this method will lead to an assertion error, since programs
-	 * should and cannot be migrated between managers (Programs are not maintained
-	 * by managers at all).
+	 * Implements the copy method defined by the Base Node class.
 	 *
-	 * @param manager the manager this program should be cloned to
-	 * @return a pointer to the new program, cloned for the new manager
+	 * @param mapper the mapper to be used to resolve alternatives for current elements.
+	 * @return a pointer to the new program, copies using the given mapper
 	 */
-	virtual Program* createCloneUsing(NodeManager& manager) const;
+	virtual Program* createCopyUsing(NodeMapper& mapper) const;
 
 protected:
 

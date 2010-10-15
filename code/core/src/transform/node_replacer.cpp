@@ -42,43 +42,30 @@ namespace {
 using namespace insieme::core;
 using namespace insieme::core::transform;
 
-#define VISIT_NODE(NodeTy) \
-	NodePtr visit##NodeTy (const NodeTy##Ptr& currNode) { \
-		if(*(currNode) == *(toReplace)) return replacement; \
-		return NodeCloner::visit##NodeTy (currNode); \
-	}
-
 /**
  * Visitor which replace a specific node of the IR starting from a root node.
  */
-class NodeReplacer : public NodeCloner {
+class NodeReplacer : public NodeMapper {
+	NodeManager& manager;
 	const NodePtr& toReplace;
 	const NodePtr& replacement;
 
 public:
 
-	NodeReplacer(const ASTBuilder& builder, const NodePtr& toReplace, const NodePtr& replacement):
-		NodeCloner(builder), toReplace(toReplace), replacement(replacement) { }
+	NodeReplacer(NodeManager& manager, const NodePtr& toReplace, const NodePtr& replacement):
+		manager(manager), toReplace(toReplace), replacement(replacement) { }
 
 private:
 
-	VISIT_NODE(BreakStmt)
-	VISIT_NODE(ContinueStmt)
-	VISIT_NODE(Literal)
-
-	VISIT_NODE(ReturnStmt)
-	VISIT_NODE(DeclarationStmt)
-	VISIT_NODE(CompoundStmt)
-	VISIT_NODE(WhileStmt)
-	VISIT_NODE(ForStmt)
-	VISIT_NODE(IfStmt)
-	VISIT_NODE(SwitchStmt)
-	VISIT_NODE(VarExpr)
-
-	VISIT_NODE(ParamExpr)
-	VISIT_NODE(LambdaExpr)
-	VISIT_NODE(CallExpr)
-	VISIT_NODE(CastExpr)
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual NodePtr mapElement(const NodePtr& ptr) {
+		if(*(ptr) == *(toReplace)) {
+			return replacement;
+		}
+		return ptr->substitute(manager, *this);
+	}
 };
 
 }
@@ -88,17 +75,16 @@ namespace core {
 namespace transform {
 
 NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement) {
-	if(!root) return NodePtr(NULL);
+	if(!root) {
+		return NodePtr(NULL);
+	}
 
-	::NodeReplacer replacer(ASTBuilder(mgr), toReplace, replacement);
-	return replacer.visit(root);
+	auto mapper = ::NodeReplacer(*mgr, toReplace, replacement);
+	return root->substitute(*mgr, mapper);
 }
 
 NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement) {
-	if(!root) return NodePtr(NULL);
-
-	::NodeReplacer replacer(builder, toReplace, replacement);
-	return replacer.visit(root);
+	return replaceNode(builder.getNodeManager(), root, toReplace, replacement);
 }
 
 } // End transform namespace
