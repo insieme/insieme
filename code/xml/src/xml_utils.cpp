@@ -284,16 +284,16 @@ public:
 			recTypeDefinition << definitions;
 			
 			for(RecTypeDefinition::RecTypeDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
-				/*XmlElement definition("definition", doc);
+				XmlElement definition("definition", doc);
 				definitions << definition;
 				
 				XmlElement typeVariablePtr("typeVariablePtr", doc);
-				//typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
 				definition << typeVariablePtr;
 				
 				XmlElement typePtr("typePtr", doc);
-				//typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
-				definition << typePtr;*/
+				typePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+				definition << typePtr;
 				
 				// annotations
 			}

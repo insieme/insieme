@@ -162,11 +162,12 @@ TEST(XmlTest, TypeVariableTest) {
 TEST(XmlTest, RecTypeTest) {
 	NodeManager manager;
 	TypeVariablePtr varX = TypeVariable::get(manager, "X");
+	GenericTypePtr gen = GenericType::get(manager, "int");
 	RecTypeDefinition::RecTypeDefs definitions;
-	definitions.insert(std::make_pair(varX, varX));
+	definitions.insert(std::make_pair(varX, gen));
 	
 	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
-
+ 
 	RecTypePtr type = RecType::get(manager, varX, definition);
 	
 	NodePtr root = type;
@@ -175,7 +176,7 @@ TEST(XmlTest, RecTypeTest) {
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
 	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", false); // FIX
+	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
