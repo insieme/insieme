@@ -900,6 +900,25 @@ public:
 		// todo: C++ check whether this is a reference to a class field, or method (function).
 		assert(false && "DeclRefExpr not supported!");
 	}
+
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                       VECTOR INITALIZATION EXPRESSION
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ExprWrapper VisitInitListExpr(clang::InitListExpr* initList) {
+        START_LOG_EXPR_CONVERSION(initList);
+        std::vector<core::ExpressionPtr> elements;
+
+        // get all values of the init expression
+        for(size_t i = 0; i < initList->getNumInits(); ++i) {
+             elements.push_back(convFact.ConvertExpr(*(initList->getInit(i))));
+        }
+
+        // create vector initializator
+        core::ExpressionPtr retExpr = convFact.builder.vectorExpr(elements);
+
+        END_LOG_EXPR_CONVERSION(retExpr);
+        return ExprWrapper( retExpr );
+    }
 };
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -967,12 +986,9 @@ public:
 		if( varDecl->getInit() )
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else{
-			Type& ty = *varDecl->getType().getTypePtr();
+			Type& ty = * GET_TYPE_PTR(varDecl);
 
-			if (ty.isExtVectorType() || ty.isConstantArrayType()) {
-			    //TODO init routine for vectors
-			}
-			else if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+            if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
 				// initialize integer value
 				initExpr = convFact.builder.literal("0", type);
 			} else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
@@ -986,9 +1002,25 @@ public:
 			} else if ( ty.isBooleanType() ) {
 				// boolean values are initialized to false
 				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
-			}
-			// TODO: each type should be initialized accordingly, what about arrays/vectors
-			initExpr = core::lang::CONST_UINT_ZERO_PTR;
+			} else if ( ty.isExtVectorType() ) {
+			    //TODO fixme
+  //              if(ExtVectorType* vecTy = dynamic_cast<ExtVectorType*>(&ty)) {
+  //                  const QualType qt = vecTy->getElementType();
+  //                  const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+
+   //                 std::string initVal = buildInTy->isIntegerType() || buildInTy->isUnsignedIntegerType()  ? "0" : "0.0";
+
+  //                  std::vector<core::ExpressionPtr> zeros;
+   //                 for(size_t i = 0; i < vecTy->getNumElements(); ++i)
+    //                    zeros.push_back(convFact.builder.literal(initVal, type));
+
+  //                  initExpr = convFact.builder.vectorExpr(zeros);
+    //            }
+				initExpr = core::lang::CONST_NULL_PTR_PTR;
+            } else if ( ty.isConstantArrayType() ) {
+                //TODO init routine for vectors
+            	initExpr = core::lang::CONST_NULL_PTR_PTR;
+            }
 		}
 
         /*-------------------------><-----------------------*/
@@ -1145,7 +1177,6 @@ public:
 						builder.varExpr(builder.refType(varTy), core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())),
 						newIndVar);
 
-				DLOG(INFO) << "Printing body: " << ret;
 				// replace the body with the newly modified one
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 
