@@ -89,6 +89,8 @@ public:
 	
 	xercesc::DOMElement* getBase();
 	
+	xercesc::DOMDocument* getDoc();
+	
 	XmlElement& operator<<(XmlElement& childNode);
 	
 	XmlElement& setAttr(const string& id, const string& value);
@@ -143,7 +145,7 @@ private:
 	const className_& annotation = dynamic_cast<const className_&>(ann); \
 	insieme::xml::XmlElement* node = new insieme::xml::XmlElement("annotation", doc); \
 	node->setAttr("type", #className_); \
-	toXML_(annotation, *node, doc); \
+	toXML_(annotation, *node); \
 	return *node; } \
 	shared_ptr<Annotation> convert ## className_ ## FromXML(const XmlElement& node) { \
 	return fromXML_(node); } \

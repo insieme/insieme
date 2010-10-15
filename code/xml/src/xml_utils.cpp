@@ -173,24 +173,8 @@ public:
 		XmlElement structType("structType",doc);
 		structType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << structType;
-		XmlElement entries("entries", doc);
-		structType << entries;
 		
-		const vector<NamedCompositeType::Entry>& entriesVec = cur->getEntries ();
-		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
-			XmlElement entry("entry", doc);
-			entries << entry;
-			
-			XmlElement id("id", doc);			
-			id.setText((iter->first).getName());
-			entry << id;
-			
-			XmlElement typePtr("typePtr", doc);
-			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
-			entry << typePtr;
-			
-			visitAnnotations((*iter->second).getAnnotations(), typePtr);
-		}
+		visitNamedCompositeType_(structType, cur);
 		
 		visitAnnotations(cur->getAnnotations(), structType);
 	}
@@ -200,8 +184,14 @@ public:
 		unionType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << unionType;
 		
+		visitNamedCompositeType_(unionType, cur);
+		
+		visitAnnotations(cur->getAnnotations(), unionType);
+	}
+	
+	void visitNamedCompositeType_(XmlElement& el, const NamedCompositeTypePtr& cur){
 		XmlElement entries("entries",doc);
-		unionType << entries;
+		el << entries;
 		
 		const vector<NamedCompositeType::Entry>& entriesVec = cur->getEntries ();
 		for(vector<NamedCompositeType::Entry>::const_iterator iter = entriesVec.begin(); iter != entriesVec.end(); ++iter) {
@@ -218,8 +208,6 @@ public:
 			
 			visitAnnotations((*iter->second).getAnnotations(), typePtr);
 		}
-		
-		visitAnnotations(cur->getAnnotations(), unionType);
 	}
 
 	void visitTupleType(const TupleTypePtr& cur) {
@@ -347,6 +335,10 @@ XmlElement::XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->creat
 
 DOMElement* XmlElement::getBase() {
 	return base;
+}
+
+DOMDocument* XmlElement::getDoc(){
+	return doc;
 }
 
 XmlElement& XmlElement::operator<<(XmlElement& childNode) {

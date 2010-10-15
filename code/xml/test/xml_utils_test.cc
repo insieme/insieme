@@ -141,6 +141,7 @@ TEST(XmlTest, TupleTypeTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
 TEST(XmlTest, TypeVariableTest) {
 	NodeManager manager;
 	TypeVariablePtr varTypeA = TypeVariable::get(manager, "alpha");
@@ -203,8 +204,8 @@ public:
 // initalization of the dummy key
 StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
 
-XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el, xercesc::DOMDocument* doc){
-	XmlElement intNode("int", doc);
+XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el){
+	XmlElement intNode("int", el.getDoc());
 	intNode.setText(ann.value);
 	el << intNode;
 	return el;
