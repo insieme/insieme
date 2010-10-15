@@ -41,44 +41,10 @@
 #include "container_utils.h"
 
 
+#include "dummy_annotations.cc"
+
 namespace insieme {
 namespace core {
-
-
-
-class DummyAnnotation : public Annotation {
-public:
-	static StringKey<DummyAnnotation> DummyKey;
-	int value;
-	DummyAnnotation(int value) : value(value) { };
-
-	virtual AnnotationKey* getKey() const {
-		return &DummyKey;
-	}
-
-	const std::string getAnnotationName() const {
-		 return "DummyAnnotation";
-	}
-};
-
-class DummyAnnotation2 : public Annotation {
-public:
-	static StringKey<DummyAnnotation2> DummyKey;
-	int value;
-	DummyAnnotation2(int value) : value(value) { };
-
-	virtual AnnotationKey* getKey() const {
-		return &DummyKey;
-	}
-
-	const std::string getAnnotationName() const {
-		 return "DummyAnnotation2";
-	}
-};
-
-// initalization of the dummy key
-StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
-StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
 
 template<typename T>
