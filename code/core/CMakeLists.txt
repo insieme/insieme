@@ -28,6 +28,7 @@ add_dependencies( insieme_core insieme_utils)
 # enable tests for this project
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
+include_directories( test/include/ )
 
 file(GLOB test_cases test/*.cc)
 foreach ( case_file ${test_cases})

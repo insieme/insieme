@@ -163,16 +163,20 @@ TupleType::TupleType() : Type(NT_TupleType, buildNameString(toVector<TypePtr>())
  * Creates a new tuple type based on the given element type(s).
  */
 TupleType::TupleType(const TypePtr& a)
-	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a)), allConcrete(toVector<TypePtr>(a))), elementTypes(toVector<TypePtr>(a)) {}
+	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a)), allConcrete(toVector<TypePtr>(a))), elementTypes(toVector<TypePtr>(isolate(a))) {}
 
 /**
  * Creates a new tuple type based on the given element type(s).
  */
 TupleType::TupleType(const TypePtr& a, const TypePtr& b)
-	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a,b)), allConcrete(toVector<TypePtr>(a,b))), elementTypes(toVector<TypePtr>(a,b)) {}
+	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a,b)), allConcrete(toVector<TypePtr>(a,b))), elementTypes(toVector<TypePtr>(isolate(a),isolate(b))) {}
+
+TupleType::TupleType(const ElementTypeList& elementTypes) :
+	Type(NT_TupleType, buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(isolate(elementTypes)) {}
+
 
 TupleType* TupleType::createCloneUsing(NodeManager& manager) const {
-	return new TupleType(migrateAllPtr(elementTypes, manager));
+	return new TupleType(clonePtrTo(manager, elementTypes));
 }
 
 /**
@@ -184,7 +188,7 @@ TupleType* TupleType::createCloneUsing(NodeManager& manager) const {
  * @param elementTypes the list of element types to be used to form the tuple
  */
 TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& elementTypes) {
-	return manager.get(TupleType(insieme::core::migrateAllPtr(elementTypes, NULL, &manager)));
+	return manager.get(TupleType(elementTypes));
 }
 
 Node::OptionChildList TupleType::getChildNodes() const {
@@ -196,31 +200,18 @@ Node::OptionChildList TupleType::getChildNodes() const {
 // ---------------------------------------- Function Type ------------------------------
 
 
-/**
- * This method provides a static factory method for this type of node. It will return
- * a function type pointer pointing toward a variable with the given name maintained by the
- * given manager.
- *
- * @param manager the manager to be used for handling the obtained type pointer
- * @param argumentType the argument type of the type to be obtained
- * @param returnType the type of value to be returned by the obtained function type
- * @return a pointer to a instance of the required type maintained by the given manager
- */
+FunctionType::FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
+	Type(NT_FunctionType, format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
+	argumentType(isolate(argumentType)), returnType(isolate(returnType)) {
+}
+
 FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
 	// obtain reference to new element
-	return manager.get(
-			FunctionType(
-					insieme::core::migratePtr(argumentType, NULL, &manager),
-					insieme::core::migratePtr(returnType, NULL, &manager)
-			)
-		);
+	return manager.get(FunctionType(argumentType, returnType));
 }
 
 FunctionType* FunctionType::createCloneUsing(NodeManager& manager) const {
-	return new FunctionType(
-			migratePtr(argumentType, manager),
-			migratePtr(returnType, manager)
-	);
+	return new FunctionType(clonePtrTo(manager, argumentType),clonePtrTo(manager, returnType));
 }
 
 Node::OptionChildList FunctionType::getChildNodes() const {
@@ -270,9 +261,9 @@ GenericType::GenericType(const Identifier& name,
 	:
 		Type(NT_GenericType, ::buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
 		familyName(name),
-		typeParams(typeParams),
+		typeParams(isolate(typeParams)),
 		intParams(intTypeParams),
-		baseType(baseType) { }
+		baseType(isolate(baseType)) { }
 
 
 GenericType::GenericType(NodeType nodeType, const Identifier& name,
@@ -282,12 +273,12 @@ GenericType::GenericType(NodeType nodeType, const Identifier& name,
 	:
 		Type(nodeType, ::buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
 		familyName(name),
-		typeParams(typeParams),
+		typeParams(isolate(typeParams)),
 		intParams(intTypeParams),
-		baseType(baseType) { }
+		baseType(isolate(baseType)) { }
 
 GenericType* GenericType::createCloneUsing(NodeManager& manager) const {
-	return new GenericType(familyName, cloneAllPtrTo(manager, typeParams), intParams, clonePtrTo(manager, baseType));
+	return new GenericType(familyName, clonePtrTo(manager, typeParams), intParams, clonePtrTo(manager, baseType));
 }
 
 /**
@@ -332,28 +323,37 @@ std::size_t hashRecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definiti
 	return hash;
 }
 
+
+const RecTypeDefinition::RecTypeDefs& isolateRecDefinitons(const RecTypeDefinition::RecTypeDefs& definitions) {
+	for_each(definitions, [](const RecTypeDefinition::RecTypeDefs::value_type& cur) {
+		isolate(cur.first);
+		isolate(cur.second);
+	});
+	return definitions;
+}
+
 RecTypeDefinition::RecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions)
-	: Node(NT_RecTypeDefinition, hashRecTypeDefinition(definitions)), definitions(definitions) { };
+	: Node(NT_RecTypeDefinition, hashRecTypeDefinition(definitions)), definitions(isolateRecDefinitons(definitions)) { };
 
 
-RecTypeDefinition::RecTypeDefs migrateRecDefinitons(const RecTypeDefinition::RecTypeDefs& definitions, const NodeManager* src, NodeManager* target) {
+RecTypeDefinition::RecTypeDefs cloneRecDefinitons(NodeManager& manager, const RecTypeDefinition::RecTypeDefs& definitions) {
 	RecTypeDefinition::RecTypeDefs localDefinitions;
 	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-		[src, target](const RecTypeDefinition::RecTypeDefs::value_type& cur) {
+		[&manager](const RecTypeDefinition::RecTypeDefs::value_type& cur) {
 			return RecTypeDefinition::RecTypeDefs::value_type(
-					insieme::core::migratePtr(cur.first, src, target),
-					insieme::core::migratePtr(cur.second, src, target));
+					clonePtrTo(manager, cur.first),
+					clonePtrTo(manager, cur.second));
 	});
 	return localDefinitions;
 }
 
 
 RecTypeDefinitionPtr RecTypeDefinition::get(NodeManager& manager, const RecTypeDefinition::RecTypeDefs& definitions) {
-	return manager.get(RecTypeDefinition(::migrateRecDefinitons(definitions, NULL, &manager)));
+	return manager.get(RecTypeDefinition(definitions));
 }
 
 RecTypeDefinition* RecTypeDefinition::createCloneUsing(NodeManager& manager) const {
-	return new RecTypeDefinition(::migrateRecDefinitons(definitions, getNodeManager(), &manager));
+	return new RecTypeDefinition(cloneRecDefinitons(manager, definitions));
 }
 
 bool RecTypeDefinition::equals(const Node& other) const {
@@ -417,13 +417,11 @@ RecType::RecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& de
 	: Type(NT_RecType, buildRecTypeName(variable, definition),
 			isConcreteRecType(variable, definition),
 			isRecFunctionType(variable, definition)),
-			typeVariable(variable), definition(definition) { }
+			typeVariable(isolate(variable)), definition(isolate(definition)) { }
 
 
 RecType* RecType::createCloneUsing(NodeManager& manager) const {
-	return new RecType(
-			migratePtr(typeVariable, manager),
-			migratePtr(definition, manager));
+	return new RecType(clonePtrTo(manager, typeVariable), clonePtrTo(manager, definition));
 }
 
 Node::OptionChildList RecType::getChildNodes() const {
@@ -434,17 +432,21 @@ Node::OptionChildList RecType::getChildNodes() const {
 }
 
 RecTypePtr RecType::get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
-	return manager.get(RecType(
-			insieme::core::migratePtr(typeVariable, NULL, &manager),
-			insieme::core::migratePtr(definition, NULL, &manager))
-		);
+	return manager.get(RecType(typeVariable, definition));
 }
 
 
 // ------------------------------------ Named Composite Type ---------------------------
 
-NamedCompositeType::NamedCompositeType(NodeType nodeType, const string& prefix, const Entries& entries) :
-	Type(nodeType, buildNameString(prefix, entries), allConcrete(entries)), entries(entries) {
+const NamedCompositeType::Entries& isolateEntries(const NamedCompositeType::Entries& entries) {
+	for_each(entries, [](const NamedCompositeType::Entry& cur) {
+		isolate(cur.second);
+	});
+	return entries;
+}
+
+NamedCompositeType::NamedCompositeType(NodeType nodeType, const string& prefix, const Entries& entries)
+	: Type(nodeType, buildNameString(prefix, entries), allConcrete(entries)), entries(isolateEntries(entries)) {
 
 	// get projection to first element
 	auto start = boost::make_transform_iterator(entries.cbegin(), extractFirst<Entry>());
@@ -455,22 +457,7 @@ NamedCompositeType::NamedCompositeType(NodeType nodeType, const string& prefix, 
 	}
 }
 
-/**
- * Migrates the given list of entries from the source to the target node manager.
- *
- * @param src the source node manager the entries should be migrated from (null if unknown)
- * @param target the target node manager the entries should be migrated to
- * @param entries the list of entries to be migrated
- * @return a list of entries referencing identical types within the target manager
- */
-NamedCompositeType::Entries migrateToManager(const NodeManager* src, NodeManager* target, NamedCompositeType::Entries entries) {
-
-	// if there is no migration necessary or possible ..
-	if (src == target || !target) {
-		// .. return input
-		return entries;
-	}
-
+NamedCompositeType::Entries cloneEntriesTo(NodeManager& manager, const NamedCompositeType::Entries& entries) {
 	// quick check ..
 	if (entries.empty()) {
 		return entries;
@@ -479,8 +466,8 @@ NamedCompositeType::Entries migrateToManager(const NodeManager* src, NodeManager
 	// obtain elements by looking up one after another ...
 	NamedCompositeType::Entries res;
 	std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
-		[&src, &target](const NamedCompositeType::Entry& cur) {
-			return NamedCompositeType::Entry(cur.first, migratePtr(cur.second, src, target));
+		[&manager](const NamedCompositeType::Entry& cur) {
+			return NamedCompositeType::Entry(cur.first, clonePtrTo(manager, cur.second));
 	});
 	return res;
 }
@@ -532,23 +519,31 @@ Node::OptionChildList NamedCompositeType::getChildNodes() const {
 
 StructTypePtr StructType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
-	return manager.get(StructType(::migrateToManager(NULL, &manager, entries)));
+	return manager.get(StructType(entries));
 }
 
 StructType* StructType::createCloneUsing(NodeManager& manager) const {
-	return new StructType(::migrateToManager(getNodeManager(), &manager, getEntries()));
+	return new StructType(cloneEntriesTo(manager, getEntries()));
 }
 
 // ------------------------------------ Union Type ---------------------------
 
 UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
-	return manager.get(UnionType(::migrateToManager(NULL, &manager, entries)));
+	return manager.get(UnionType(entries));
 }
 
 UnionType* UnionType::createCloneUsing(NodeManager& manager) const {
-	return new UnionType(::migrateToManager(getNodeManager(), &manager, getEntries()));
+	return new UnionType(cloneEntriesTo(manager, getEntries()));
 }
+
+
+// ------------------------------------ Single Element Type ---------------------------
+
+SingleElementType::SingleElementType(NodeType nodeType, const string& name,
+		const TypePtr& elementType, const vector<IntTypeParam>& intTypeParams) :
+	GenericType(nodeType, name, toVector(isolate(elementType)), intTypeParams) {};
+
 
 // ------------------------------------ Array Type ---------------------------
 
@@ -556,11 +551,11 @@ ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParam& dim) :
 	SingleElementType(NT_ArrayType, "array", elementType, toVector(dim)) {}
 
 ArrayType* ArrayType::createCloneUsing(NodeManager& manager) const {
-	return new ArrayType(migratePtr(getElementType(), manager), getDimension());
+	return new ArrayType(clonePtrTo(manager, getElementType()), getDimension());
 }
 
 ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim) {
-	return manager.get(ArrayType(insieme::core::migratePtr(elementType, NULL, &manager), dim));
+	return manager.get(ArrayType(elementType, dim));
 }
 
 const IntTypeParam ArrayType::getDimension() const {
@@ -574,11 +569,11 @@ VectorType::VectorType(const TypePtr& elementType, const IntTypeParam& size) :
 	SingleElementType(NT_VectorType, "vector", elementType, toVector(size)) {}
 
 VectorType* VectorType::createCloneUsing(NodeManager& manager) const {
-	return new VectorType(migratePtr(getElementType(), manager), getIntTypeParameter()[0]);
+	return new VectorType(clonePtrTo(manager, getElementType()), getIntTypeParameter()[0]);
 }
 
 VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
-	return manager.get(VectorType(insieme::core::migratePtr(elementType, NULL, &manager), size));
+	return manager.get(VectorType(elementType, size));
 }
 
 const IntTypeParam VectorType::getSize() const {
@@ -591,11 +586,11 @@ RefType::RefType(const TypePtr& elementType) :
 	SingleElementType(NT_RefType, "ref", elementType) {}
 
 RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
-	return manager.get(RefType(insieme::core::migratePtr(elementType, NULL, &manager)));
+	return manager.get(RefType(elementType));
 }
 
 RefType* RefType::createCloneUsing(NodeManager& manager) const {
-	return new RefType(migratePtr(getElementType(), manager));
+	return new RefType(clonePtrTo(manager, getElementType()));
 }
 
 
@@ -605,11 +600,11 @@ ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParam& size) :
 	SingleElementType(NT_ChannelType, "channel", elementType, toVector(size)) {}
 
 ChannelType* ChannelType::createCloneUsing(NodeManager& manager) const {
-	return new ChannelType(migratePtr(getElementType(), manager), getSize());
+	return new ChannelType(clonePtrTo(manager, getElementType()), getSize());
 }
 
 ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
-	return manager.get(ChannelType(insieme::core::migratePtr(elementType, NULL, &manager), size));
+	return manager.get(ChannelType(elementType, size));
 }
 
 const IntTypeParam ChannelType::getSize() const {

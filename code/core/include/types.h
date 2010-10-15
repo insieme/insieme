@@ -301,8 +301,7 @@ public:
 	/**
 	 * Creates a new tuple type based on the given element types.
 	 */
-	TupleType(const ElementTypeList& elementTypes) :
-		Type(NT_TupleType, buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(elementTypes) {}
+	TupleType(const ElementTypeList& elementTypes);
 
 private:
 
@@ -360,10 +359,7 @@ public:
 	 * @param argumentType a reference to the type used as argument
 	 * @param returnType a reference to the type used as return type
 	 */
-	FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
-		Type(NT_FunctionType, format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
-		argumentType(argumentType), returnType(returnType) {
-	}
+	FunctionType(const TypePtr& argumentType, const TypePtr& returnType);
 
 protected:
 
@@ -750,7 +746,7 @@ public:
 
 	static RecTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
 
-	const RecTypeDefs& getDefinitions() {
+	const RecTypeDefs& getDefinitions() const{
 		return definitions;
 	}
 
@@ -989,8 +985,7 @@ protected:
 	 */
 	SingleElementType(NodeType nodeType, const string& name,
 			const TypePtr& elementType,
-			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ()) :
-		GenericType(nodeType, name, toVector(elementType), intTypeParams) {};
+			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ());
 
 public:
 

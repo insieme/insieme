@@ -253,6 +253,54 @@ public:
 		
 		// annotations
 	}
+	
+	void visitRecType(const RecTypePtr& cur) {
+		XmlElement recType("recType", doc);
+		recType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << recType;
+		
+		if (const RecTypeDefinitionPtr definitionT = cur->getDefinition()) {
+			XmlElement definition("definition", doc);
+			recType << definition;
+
+			XmlElement recTypeDefinitionPtr("recTypeDefinitionPtr", doc);
+			recTypeDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*definitionT)));			
+			definition << recTypeDefinitionPtr;
+
+			// annotation
+		}
+		
+		// annotations
+	}
+	
+	void visitRecTypeDefinition(const RecTypeDefinitionPtr& cur) {
+		XmlElement recTypeDefinition("recTypeDefinition", doc);
+		recTypeDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << recTypeDefinition;
+		
+		const RecTypeDefinition::RecTypeDefs defs = cur->getDefinitions();
+		if (!defs.empty()){
+			XmlElement definitions("definitions", doc);
+			recTypeDefinition << definitions;
+			
+			for(RecTypeDefinition::RecTypeDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
+				/*XmlElement definition("definition", doc);
+				definitions << definition;
+				
+				XmlElement typeVariablePtr("typeVariablePtr", doc);
+				//typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				definition << typeVariablePtr;
+				
+				XmlElement typePtr("typePtr", doc);
+				//typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				definition << typePtr;*/
+				
+				// annotations
+			}
+		}
+		
+		// annotations
+	}
 
 	void visitArrayType(const ArrayTypePtr& cur) {
 	

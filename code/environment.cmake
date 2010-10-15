@@ -136,6 +136,22 @@ if (NOT MEMORY_CHECK_SETUP)
 		else(USE_VALGRIND)
 			# add normal test
 			add_test(ut_${case_name} ut_${case_name})
+
+			# + valgrind as a custom target (only of not explicitly prohibited)
+			if ((NOT (${ARGC} GREATER 1)) OR (${ARG2}))
+				add_custom_target(valgrind_${case_name} 
+					COMMAND valgrind
+						--leak-check=full
+						--show-reachable=yes
+						--track-fds=yes
+						--error-exitcode=1
+						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+					WORKING_DIRECTORY
+						${CMAKE_CURRENT_BINARY_DIR}
+				)
+				add_dependencies(valgrind valgrind_${case_name})
+			endif ((NOT (${ARGC} GREATER 1)) OR (${ARG2}))
 		endif(USE_VALGRIND)
 	endmacro(add_unit_test)
 

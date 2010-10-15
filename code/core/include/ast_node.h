@@ -78,75 +78,6 @@ typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 
 /**
- * Migrates the given pointer from the source to the target manager.
- * The annotations within the pointer will be cloned as well, such that
- * future modifications are not reflected.
- *
- * @param pointer the pointer to be cloned
- * @param src the source node manager
- * @param target the target node manger
- */
-// TODO: second parameter is not required!! - take location of targeted node
-template<typename T>
-const T migratePtr(T& pointer, const NodeManager* src, NodeManager* target) {
-	// check if there is actually anything to do
-	if (src == target) {
-		return pointer;
-	}
-
-	// obtain resulting pointer ...
-	T res = target->get(pointer);
-
-	// .. and add copy of annotations
-	res.setAnnotations(pointer.getAnnotations());
-	return res;
-}
-
-/**
- * Clones all the pointer within the given range from the given source manager
- * to the target manager. In case both are equivalent, nothing will actually be cloned.
- *
- * @param start the start of the range to be cloned
- * @param end the end of the range to be cloned
- * @param out an output iterator to which the resulting elements can be written
- * @param src the source node manager
- * @param target the target node manager
- *
- * @see template<typename T> static const T clonePtr(T&, NodeManager*, NodeManager*)
- */
-template<typename InIter, typename OutIter>
-void migrateAllPtr(InIter start, InIter end, OutIter out, const NodeManager* src, NodeManager* target) {
-	std::transform(start, end, out,
-		[&](const typename std::iterator_traits<InIter>::value_type& cur) {
-			return migratePtr(cur, src, target);
-	});
-}
-
-/**
- * Clones all the pointer within the given container from the given source manager
- * to the target manager. In case both are equivalent, nothing will actually be cloned.
- *
- * @param container the container containing all the pointers to be cloned
- * @param src the source node manager
- * @param target the target node manager
- *
- * @see template<typename T> static const T clonePtr(T&, NodeManager*, NodeManager*)
- */
-template<typename Container>
-Container migrateAllPtr(const Container& container, const NodeManager* src, NodeManager* target) {
-	// check whether there is something to do ...
-	if (src == target) {
-		// => nothing to do
-		return container;
-	}
-
-	// clone the content of the container
-	Container res;
-	migrateAllPtr(container.cbegin(), container.cend(), inserter(res, res.end()), src, target);
-	return res;
-}
-
-/**
  * This class models an abstract base class for all AST nodes to be used within a program
  * representation. It defines a minimum number of functionality to be supported by all nodes
  * (including to be hash- and comparable, such that instances can be used within unordered
@@ -361,38 +292,51 @@ public:
 		return equals(other);
 	}
 
-protected:
-
-	/**
-	 * Migrates the given (local) pointer to the given target manager.
-	 * The annotations within the pointer will be cloned as well, such that
-	 * future modifications are not reflected.
-	 *
-	 * @param pointer the pointer to be cloned
-	 * @param target the target node manger
-	 */
-	template<typename T>
-	const T migratePtr(T& pointer, NodeManager& target) const {
-		return insieme::core::migratePtr(pointer, getNodeManager(), &target);
-	}
-
-	/**
-	 * Clones all the (local) pointer within the given container to the target
-	 * manager. In case both are equivalent, nothing will actually be cloned.
-	 *
-	 * @param container the container containing all the pointers to be cloned
-	 * @param target the target node manager
-	 */
-	template<typename Container>
-	Container migrateAllPtr(const Container& container, NodeManager& target) const {
-		return insieme::core::migrateAllPtr(container, getNodeManager(), &target);
-	}
-
 };
 
 
+/**
+ * Isolates the given pointer such that it is no longer sharing the same annotation
+ * map with other pointers referencing the same element.
+ *
+ * NOTE: the handed in reference can be constant since annotations are even mutable within
+ * constant instances.
+ *
+ * @param ptr the pointer to be isolated.
+ * @return a reference to the handed in pointer.
+ */
 template<typename T>
-inline const AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
+static const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
+	ptr.isolateAnnotations();
+	return ptr;
+}
+
+/**
+ * Isolates the pointers within the given list from copies eventual copies, thereby separating
+ * the internal link allowing copies to shared annotations.
+ *
+ * @param container the container listing the pointers to be isolated
+ * @return a reference to the handed in container
+ */
+template<typename Container>
+static const Container& isolate(const Container& container, typename Container::value_type* = 0) {
+	for_each(container, [](const typename Container::value_type& cur){
+		cur.isolateAnnotations();
+	});
+	return container;
+}
+
+/**
+ * Obtains a pointer referencing a clone of the element referenced by the given pointer within the
+ * given manager. If there is no such instance, a new one will be created. Further, the annotations
+ * associated to the pointer will be preserved.
+ *
+ * @param manager the manager from which a cloned node should be obtained from
+ * @param ptr the pointer from which a clone should be obtained from
+ * @return the pointer to the cloned node within the given manager
+ */
+template<typename T>
+static inline AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
 	// null pointers or proper points do not have to be modified
 	if (!ptr || ptr->getNodeManager() == &manager) {
 		return ptr;
@@ -408,20 +352,38 @@ inline const AnnotatedPtr<T> clonePtrTo(NodeManager& manager, const AnnotatedPtr
 	return res;
 }
 
+/**
+ * Obtains a container of pointers referencing clones of nodes referenced by a given
+ * container of pointers. Thereby, annotations are properly preserved and isolated.
+ *
+ * @param manager the manager which should maintain the nodes referenced by the resulting pointer
+ * @param container the container including the pointers to be cloned
+ * @return a new container including pointers referencing clones of the nodes referenced
+ * 		   by the original container.
+ */
 template<typename Container>
-inline Container cloneAllPtrTo(NodeManager& manager, const Container& list) {
+static inline Container clonePtrTo(NodeManager& manager, const Container& container) {
 	Container res;
-	cloneAllPtrTo(manager, list.begin(), list.end(), inserter(res, res.end()));
+	clonePtrTo(manager, container.begin(), container.end(), inserter(res, res.end()));
 	return res;
 }
 
+/**
+ * Obtains pointers to clones of nodes referenced by a range of pointers.
+ *
+ * @param manager the manager which should maintain the nodes referenced by the resulting pointer
+ * @param first the first element of the range
+ * @param last the last element of the range
+ * @param out the output iterator to which resulting elements are forwarded
+ */
 template<typename InputIterator, typename OutputIterator>
-inline void cloneAllPtrTo(NodeManager& manager, InputIterator first, InputIterator last, OutputIterator out) {
+static inline void clonePtrTo(NodeManager& manager, InputIterator first, InputIterator last, OutputIterator out) {
 	typedef typename std::iterator_traits<InputIterator>::value_type Element;
 	std::transform(first, last, out, [&manager](const Element& cur) {
 		return clonePtrTo(manager, cur);
 	});
 }
+
 
 } // end namespace core
 } // end namespace insieme
