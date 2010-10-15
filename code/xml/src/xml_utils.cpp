@@ -349,6 +349,10 @@ DOMElement* XmlElement::getBase() {
 	return base;
 }
 
+DOMDocument* XmlElement::getDoc(){
+	return doc;
+}
+
 XmlElement& XmlElement::operator<<(XmlElement& childNode) {
 	base->appendChild(childNode.base);
 	return childNode;

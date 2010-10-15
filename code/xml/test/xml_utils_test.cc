@@ -203,8 +203,8 @@ public:
 // initalization of the dummy key
 StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
 
-XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el, xercesc::DOMDocument* doc){
-	XmlElement intNode("int", doc);
+XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el){
+	XmlElement intNode("int", el.getDoc());
 	intNode.setText(ann.value);
 	el << intNode;
 	return el;
