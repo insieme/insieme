@@ -57,6 +57,8 @@ public:
 
 	typedef StaticAnnotatedPtrCast StaticCast;
 
+	AnnotatedPtr() : InstancePtr<T>(NULL) {}
+
 	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
 
 	template<typename B>
