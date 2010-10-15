@@ -109,28 +109,5 @@ PragmaStmtMap::PragmaStmtMap(const PragmaList& pList) {
 	}
 }
 
-//const PragmaPtr PragmaStmtMap::operator[](const clang::Stmt* stmt) const {
-//	auto fit = stmtMap.find(stmt);
-//	if(fit != stmtMap.end())
-//		return fit->second;
-//	return PragmaPtr();
-//}
-//const PragmaPtr PragmaStmtMap::operator[](const clang::Decl* decl) const {
-//	auto fit = declMap.find(decl);
-//	if(fit != declMap.end())
-//		return fit->second;
-//	return PragmaPtr();
-//}
-
-TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
-	Pragma(startLoc, endLoc, type) {
-
-	MatchMap::const_iterator fit = mmap.find("expected");
-	if(fit != mmap.end()) {
-		expected = *fit->second.front()->get<std::string*>();
-	}
-}
-
-
 } // End frontend namespace
 } // End insieme namespace

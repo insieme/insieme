@@ -1839,7 +1839,7 @@ public:
 
 		// will store the converted type
 		core::TypePtr retTy(NULL);
-		DLOG(INFO) << "Converting TagType: " << tagType->getDecl()->getName().str();
+		DVLOG(2) << "Converting TagType: " << tagType->getDecl()->getName().str();
 
 		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
 		// iterate through all the re-declarations to see if one of them provides a definition
@@ -1876,9 +1876,8 @@ public:
 								VLOG(2) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
 							}
 						);
+						typeGraph.print(std::cout);
 					}
-
-//					typeGraph.print(std::cout);
 
 					// we create a TypeVar for each type in the mutual dependence
 					recVarMap.insert( std::make_pair(tagType, convFact.builder.typeVariable(recDecl->getName())) );
@@ -2176,80 +2175,88 @@ void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
 	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+
 			// finds a definition of this function if any
 			const FunctionDecl* definition = NULL;
 			// if this function is just a declaration, and it has no definition, we just skip it
 			if(!funcDecl->hasBody(definition))
 				continue;
 
-			DVLOG(1) << "**************************************************************************";
-			DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
-					 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
-			DVLOG(1) << "\t* Converting body";
-
-			core::TypePtr funcType = mFact.ConvertType( *definition->getType().getTypePtr() );
-			// paramlist
-			core::LambdaExpr::ParamList funcParamList;
-			std::for_each(definition->param_begin(), definition->param_end(),
-				[&funcParamList, &mFact] (ParmVarDecl* currParam) {
-					funcParamList.push_back(
-						mFact.getASTBuilder().paramExpr( mFact.ConvertType( *GET_TYPE_PTR(currParam) ), currParam->getNameAsString()) );
-
-                    //port clang attributes to IR annotations
-					mFact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
-				}
-			);
-			// this is a function decl
-
-            //check Attributes of the function definition
-            if(definition->hasAttrs()) {
-                const clang::AttrVec attrVec = funcDecl->getAttrs();
-                ocl::OclBaseAnnotation::OclAnnotationList kernelAnnotation;
-
-                for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-//                    printf("Attribute \n");
-                    if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-                        //get annotate string
-                        llvm::StringRef sr = attr->getAnnotation();
-
-                        //check if it is an OpenCL kernel function
-                        if(sr == "__kernel") {
-//                            printf("        Kernel\n");
-                            DVLOG(1) << "is OpenCL kernel function";
-
-                            kernelAnnotation.push_back( std::make_shared<ocl::OclKernelFctAnnotation>() );
-                        }
-                    }
-                    if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
-                        kernelAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(
-                                attr->getXDim(), attr->getYDim(), attr->getZDim())
-                        );
-                    }
-                }
-                // if OpenCL related annotations have been found, create OclBaseAnnotation and
-                // add it to the funciton's attribute
-                if(kernelAnnotation.size() > 0)
-                    funcType.addAnnotation( std::make_shared<ocl::OclBaseAnnotation>(kernelAnnotation) );
-            }
-
-			core::StatementPtr funcBody(NULL);
-			assert(definition->getBody() && "Function Definition has no body");
-
-			funcBody = mFact.ConvertStmt( *definition->getBody() );
-			core::ExpressionPtr lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
-			// annotate name of function
-			lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
-			if(definition->isMain()) {
+			core::LambdaExprPtr lambdaExpr = handleFunctionDecl(definition);
+			if(definition->isMain())
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
-				//assert((*program->getEntryPoints().begin()).contains(insieme::c_info::CNameAnnotation::KEY) && "Key lost!");
-			}
 		}
-
 //		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 //			fact.ConvertType( *varDecl->getType().getTypePtr() );
 //		}
 	}
+
 }
+
+core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl) {
+	DVLOG(1) << "**************************************************************************";
+	DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
+			 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
+	DVLOG(1) << "\t* Converting body";
+
+	core::TypePtr funcType = mFact.ConvertType( *GET_TYPE_PTR(funcDecl) );
+	// paramlist
+	core::LambdaExpr::ParamList funcParamList;
+	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
+		[&funcParamList, &mFact] (ParmVarDecl* currParam) {
+			funcParamList.push_back(
+				mFact.getASTBuilder().paramExpr( mFact.ConvertType( *GET_TYPE_PTR(currParam) ), currParam->getNameAsString()) );
+
+			//port clang attributes to IR annotations
+			mFact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
+		}
+	);
+
+	//check Attributes of the function definition
+	if(funcDecl->hasAttrs()) {
+		const clang::AttrVec attrVec = funcDecl->getAttrs();
+		ocl::OclBaseAnnotation::OclAnnotationList kernelAnnotation;
+
+		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+				//get annotate string
+				llvm::StringRef sr = attr->getAnnotation();
+
+				//check if it is an OpenCL kernel function
+				if(sr == "__kernel") {
+					DVLOG(1) << "is OpenCL kernel function";
+					kernelAnnotation.push_back( std::make_shared<ocl::OclKernelFctAnnotation>() );
+				}
+			}
+			if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+				kernelAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(
+						attr->getXDim(), attr->getYDim(), attr->getZDim())
+				);
+			}
+		}
+		// if OpenCL related annotations have been found, create OclBaseAnnotation and
+		// add it to the funciton's attribute
+		if(kernelAnnotation.size() > 0)
+			funcType.addAnnotation( std::make_shared<ocl::OclBaseAnnotation>(kernelAnnotation) );
+	}
+
+	core::StatementPtr funcBody(NULL);
+	assert(funcDecl->getBody() && "Function Definition has no body");
+
+	funcBody = mFact.ConvertStmt( *funcDecl->getBody() );
+	core::LambdaExprPtr&& lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+	// annotate name of function
+	lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
+	return lambdaExpr;
+}
+
+core::LambdaExprPtr IRConverter::handleBody(const clang::Stmt* body) {
+	core::StatementPtr&& bodyStmt = mFact.ConvertStmt( *body );
+	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), std::vector<core::StatementPtr>( {bodyStmt} ), core::lang::TYPE_UNIT);
+
+	return core::dynamic_pointer_cast<const core::LambdaExpr>(callExpr->getFunctionExpr());
+}
+
 
 } // End conversion namespace
 } // End frontend namespace

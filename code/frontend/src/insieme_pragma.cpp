@@ -34,44 +34,35 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "program.h"
-#include "clang_compiler.h"
-#include "conversion.h"
-#include "clang_config.h"
 #include "insieme_pragma.h"
 
-#include "clang/AST/Decl.h"
+namespace insieme {
+namespace frontend {
 
-using namespace insieme::core;
-using namespace insieme::frontend;
-using namespace insieme::frontend::conversion;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
+	Pragma(startLoc, endLoc, type) {
 
-TEST(StmtConversion, FileTest) {
-	using namespace clang;
-
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-
-	insieme::frontend::Program prog(shared);
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
-
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-
-	ConversionFactory convFactory( shared, comp );
-
-	std::for_each(pl.begin(), pl.end(),
-		[ &convFactory ](const PragmaPtr curr) {
-			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
-			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertStmt( *tp->getStatement() )->toString() + '\"' );
-			else {
-				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
-				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertType( *td->getTypeForDecl() )->toString() + '\"' );
-			}
-	});
-
+	MatchMap::const_iterator fit = mmap.find("expected");
+	if(fit != mmap.end()) {
+		expected = *fit->second.front()->get<std::string*>();
+	}
 }
 
+void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
+	pp.AddPragmaHandler(
+		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom)
+	);
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+InsiemePragma::InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
+	Pragma(startLoc, endLoc, type){ }
+
+void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
+	pp.AddPragmaHandler( PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(pp.getIdentifierInfo("insieme"), tok::eom) );
+}
+
+} // end frontend namespace
+} // end insieme namespace
