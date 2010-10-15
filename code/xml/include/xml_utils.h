@@ -86,6 +86,7 @@ class XmlElement {
 public:
 	XmlElement(xercesc::DOMElement* elem);
 	XmlElement(string name, xercesc::DOMDocument* doc);
+	XmlElement(xercesc::DOMElement* base, xercesc::DOMDocument* doc);
 	
 	xercesc::DOMElement* getBase();
 	
@@ -93,11 +94,19 @@ public:
 	
 	XmlElement& operator<<(XmlElement& childNode);
 	
+	const vector<XmlElement> operator[](const string&) const;
+	
 	XmlElement& setAttr(const string& id, const string& value);
+
+	XmlElement& setText(const string& text);
 	
 	string getAttr(const string& id) const;
 	
-	XmlElement& setText(const string& text);
+	string getText() const;
+	
+	string getName() const;
+	
+	const vector<XmlElement> getChildren() const;
 };
 
 
@@ -149,7 +158,7 @@ private:
 	return *node; } \
 	shared_ptr<Annotation> convert ## className_ ## FromXML(const XmlElement& node) { \
 	return fromXML_(node); } \
-	void* hack = insieme::xml::XmlConverter::get().registerAnnotation(#className_, \
+	void* hack ## className_ ## hack = insieme::xml::XmlConverter::get().registerAnnotation(#className_, \
 					& convert ## className_ ## ToXML, & convert ## className_ ## FromXML);
 
 

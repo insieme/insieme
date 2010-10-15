@@ -40,7 +40,7 @@
 using namespace insieme::core;
 using namespace insieme::xml;
 
-TEST(XmlTest, GenericTypeTest) {
+/*TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager;
 
 	GenericTypePtr type1 = GenericType::get(manager, "int");
@@ -55,7 +55,7 @@ TEST(XmlTest, GenericTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
-}
+}*/
 
 TEST(XmlTest, FunctionTypeTest) {
 	NodeManager manager;
@@ -183,8 +183,6 @@ TEST(XmlTest, RecTypeTest) {
 }
 
 
-
-
 // ------------------- DummyAnnotation ---------------------------------
 class DummyAnnotation : public Annotation {
 public:
@@ -219,38 +217,63 @@ XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
 
 typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 
-/* OK TEST(XmlTest, GenericTypeAnnotationTest) {
-	DummyAnnotationPtr dummy1e(new DummyAnnotation("1e"));
-	DummyAnnotationPtr dummy2e(new DummyAnnotation("2e"));
-	DummyAnnotationPtr dummy3e(new DummyAnnotation("3e"));
-	DummyAnnotationPtr dummy1n(new DummyAnnotation("1n"));
-	DummyAnnotationPtr dummy2n(new DummyAnnotation("2n"));
-	DummyAnnotationPtr dummy3n(new DummyAnnotation("3n"));
-	
-	NodeManager manager;
-	GenericTypePtr type1 = GenericType::get(manager, "type1");
-	GenericTypePtr type2 = GenericType::get(manager, "type2");
-	GenericTypePtr type3 = GenericType::get(manager, "type3");
-	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector(IntTypeParam::getVariableIntParam('p')), type3);
-	type4->getBaseType().addAnnotation(dummy3e);
-	type4->getBaseType()->addAnnotation(dummy3n);
-	type4->getTypeParameter()[0].addAnnotation(dummy1e);
-	type4->getTypeParameter()[0]->addAnnotation(dummy1n);
-	type4->getTypeParameter()[1].addAnnotation(dummy2e);
-	type4->getTypeParameter()[1]->addAnnotation(dummy2n);
-	
-	NodePtr root = type4;
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}*/
+// ------------------- VectorAnnotation ---------------------------------
+class VectorAnnotation : public Annotation {
+public:
+	static StringKey<VectorAnnotation> VectorKey;
+	vector<string> values;
+	VectorAnnotation(vector<string> values) : values(values) { };
 
-/*TEST(XmlTest, GenericTypeAnnotationTest) {
-	DummyAnnotationPtr dummy_gte(new DummyAnnotation("genTy e"));
+	virtual AnnotationKey* getKey() const {
+		return &VectorKey;
+	}
+	
+	const std::string getAnnotationName() const {
+		 return "VectorAnnotation"; 
+	}
+};
+
+// initalization of the vector key
+StringKey<VectorAnnotation> VectorAnnotation::VectorKey("VectorKey");
+
+XmlElement VectorAnnotationToXML(VectorAnnotation ann, XmlElement el){
+	XmlElement entries("entries", el.getDoc());
+	el << entries;
+	for (vector<string>::const_iterator iter = ann.values.begin(); iter != ann.values.end(); ++iter){
+		XmlElement entry("entry", el.getDoc());
+		entry.setText(*iter);
+		entries << entry;
+	}
+	/*
+	vector<XmlElement> prova = entries.getChildren();
+	for (vector<XmlElement>::const_iterator iter = prova.begin(); iter != prova.end(); ++iter){
+		std::cout << iter->getName() << std::endl;
+		std::cout << iter->getText() << std::endl;
+	}
+	*/
+	return el;
+}
+
+shared_ptr<Annotation> VectorAnnotationFromXML(XmlElement el){
+	vector <string> vec;
+	vec.push_back("test1");
+	vec.push_back("test2");
+	return shared_ptr<Annotation> (new VectorAnnotation(vec));
+}
+
+XML_CONVERTER(VectorAnnotation, VectorAnnotationToXML, VectorAnnotationFromXML)
+
+typedef shared_ptr<VectorAnnotation> VectorAnnotationPtr;
+
+
+
+
+TEST(XmlTest, GenericTypeAnnotationTest) {
+	vector <string> vec;
+	vec.push_back("genTy e1");
+	vec.push_back("genTy e2");
+	
+	VectorAnnotationPtr vector_gte(new VectorAnnotation(vec));
 	DummyAnnotationPtr dummy_gtn(new DummyAnnotation("genTy n"));
 	DummyAnnotationPtr dummy_be(new DummyAnnotation("base e"));
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("base n"));
@@ -261,17 +284,16 @@ typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 	
 	NodeManager manager;
 	GenericTypePtr type1 = GenericType::get(manager, "type1");
-	GenericTypePtr type2 = GenericType::get(manager, "type2");
-	GenericTypePtr type3 = GenericType::get(manager, "type3");
-	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector(IntTypeParam::getVariableIntParam('p')), type3);
-	
 	type1.addAnnotation(dummy_tp1e);
 	type1->addAnnotation(dummy_tp1n);
+	GenericTypePtr type2 = GenericType::get(manager, "type2");
 	type2.addAnnotation(dummy_tp2e);
 	type2->addAnnotation(dummy_tp2n);
+	GenericTypePtr type3 = GenericType::get(manager, "type3");
 	type3.addAnnotation(dummy_be);
 	type3->addAnnotation(dummy_bn);
-	type4.addAnnotation(dummy_gte);
+	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector(IntTypeParam::getVariableIntParam('p')), type3);
+	type4.addAnnotation(vector_gte);
 	type4->addAnnotation(dummy_gtn);
 	
 	NodePtr root = type4;
@@ -282,7 +304,7 @@ typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
-}*/
+}
 
 /* OK TEST(XmlTest, FunctionTypeAnnotationTest) {
 	NodeManager manager;

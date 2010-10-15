@@ -44,6 +44,7 @@
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/util/XMLUni.hpp>
 
+#include "ast_builder.h"
 #include "xml_utils.h"
 #include "xsd_config.h"
 
@@ -332,6 +333,7 @@ public:
 
 XmlElement::XmlElement(xercesc::DOMElement* elem) : doc(NULL), base(elem) { }
 XmlElement::XmlElement(string name, xercesc::DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
+XmlElement::XmlElement(xercesc::DOMElement* elem, xercesc::DOMDocument* doc) : doc(doc), base(elem) { }
 
 DOMElement* XmlElement::getBase() {
 	return base;
@@ -351,18 +353,49 @@ XmlElement& XmlElement::setAttr(const string& id, const string& value) {
 	return *this;
 }
 
-string XmlElement::getAttr(const string& id) const {
+XmlElement& XmlElement::setText(const string& text) { // FIXME: ATTENTO A NON CREARE NODI DIVERSI
+	assert(doc != NULL && "Attempt to create text on a root node");
+	DOMText* textNode = doc->createTextNode(toUnicode(text));
+	base->appendChild(textNode);
+	return *this;
+}
+
+string XmlElement::getAttr(const string& id) const { // FIXME: CONTROLLARE SE ATTRIBUTO NON ESISTE
 	char* ctype (XMLString::transcode (base->getAttribute(toUnicode(id))));
 	string type(ctype);
 	XMLString::release(&ctype);	
 	return type;
 }
 
-XmlElement& XmlElement::setText(const string& text) {
-	assert(doc != NULL && "Attempt to create text on a root node");
-	DOMText* textNode = doc->createTextNode(toUnicode(text));
-	base->appendChild(textNode);
-	return *this;
+string XmlElement::getText() const { // FIXME: CONSIDERARE IL CASO NON C'E' TESTO
+	DOMNode* first = base->getFirstChild();
+	while(first){
+		if (first->getNodeType() == 3) {
+			char* ctext (XMLString::transcode(first->getNodeValue()));
+			string text(ctext);
+			XMLString::release(&ctext);	
+			return text;
+		}
+		first = first->getPreviousSibling();
+	}
+	return "NULL";
+}
+
+string XmlElement::getName() const {
+	char* cname (XMLString::transcode (base->getTagName()));
+	string name(cname);
+	XMLString::release(&cname);	
+	return name;
+}
+
+const vector<XmlElement> XmlElement::getChildren() const {
+	vector<XmlElement> vec;
+	DOMElement* first = base->getFirstElementChild();
+	while(first) {
+		vec.push_back(XmlElement(first, doc));
+		first = first->getNextElementSibling();
+	}
+	return vec;
 }
 
 // ------------------------------------ XStr ----------------------------
@@ -514,7 +547,16 @@ void XmlUtil::convertDomToXml(const string outputFile){
 }
 
 void XmlUtil::convertDomToIr(const SharedNodeManager& manager){
-	
+	ASTBuilder builder(manager);
+
+	//GenericTypePtr type = builder.genericType("int");
+
+	/*LiteralPtr toReplace = builder.literal("14", type);
+	LiteralPtr replacement = builder.literal("0", type);
+
+	IfStmtPtr ifStmt = builder.ifStmt( builder.literal("12", type), toReplace, builder.compoundStmt() );
+
+	NodePtr newTree = transform::replaceNode(manager, ifStmt, toReplace, replacement);*/
 }
 
 void XmlUtil::convertIrToDom(const NodePtr& node){
