@@ -560,7 +560,7 @@ string XmlUtil::convertDomToString(){
 		theSerializer->release();
 		
 		string stringDump = "";
-		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); it++){
+		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it){
 	    	if (!isspace (*it))
 	      		stringDump += *it;
 		}
