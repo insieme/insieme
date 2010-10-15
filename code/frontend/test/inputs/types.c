@@ -55,6 +55,9 @@ void basic_type_test() {
 
 	#pragma test "ref<real<8>> g = 0.0"
 	double g;
+	
+	#pragma test "ref<vector<ref<real<4>>,3>> v = {0.0,0.0,0.0}"
+	float v[3];
 }
 
 // Simple struct
