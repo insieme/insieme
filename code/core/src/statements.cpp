@@ -126,7 +126,7 @@ std::size_t hashReturnStmt(const ExpressionPtr& returnExpression) {
 }
 
 ReturnStmt::ReturnStmt(const ExpressionPtr& returnExpression)
-	: Statement(NT_ReturnStmt, hashReturnStmt(returnExpression)), returnExpression(returnExpression) {
+	: Statement(NT_ReturnStmt, hashReturnStmt(returnExpression)), returnExpression(isolate(returnExpression)) {
 }
 
 std::ostream& ReturnStmt::printTo(std::ostream& out) const {
@@ -146,11 +146,11 @@ Node::OptionChildList ReturnStmt::getChildNodes() const {
 }
 
 ReturnStmt* ReturnStmt::createCloneUsing(NodeManager& manager) const {
-	return new ReturnStmt(migratePtr(returnExpression, manager));
+	return new ReturnStmt(clonePtrTo(manager, returnExpression));
 }
 
 ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnExpression) {
-	return manager.get(ReturnStmt(insieme::core::migratePtr(returnExpression, NULL, &manager)));
+	return manager.get(ReturnStmt(returnExpression));
 }
 
 // ------------------------------------- DeclarationStmt ---------------------------------
@@ -163,7 +163,7 @@ std::size_t hashDeclarationStmt(const VarExprPtr& varExpression, const Expressio
 }
 
 DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression)
-	: Statement(NT_DeclarationStmt, hashDeclarationStmt(varExpression, initExpression)), varExpression(varExpression), initExpression(initExpression) {
+	: Statement(NT_DeclarationStmt, hashDeclarationStmt(varExpression, initExpression)), varExpression(isolate(varExpression)), initExpression(isolate(initExpression)) {
 }
 
 std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
@@ -177,7 +177,7 @@ bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
 }
 
 DeclarationStmt* DeclarationStmt::createCloneUsing(NodeManager& manager) const {
-	return new DeclarationStmt(migratePtr(varExpression, manager), migratePtr(initExpression, manager));
+	return new DeclarationStmt(clonePtrTo(manager, varExpression), clonePtrTo(manager, initExpression));
 }
 
 Node::OptionChildList DeclarationStmt::getChildNodes() const {
@@ -202,7 +202,7 @@ std::size_t hashCompoundStmt(const vector<StatementPtr>& stmts) {
 }
 
 CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
-	: Statement(NT_CompoundStmt, hashCompoundStmt(stmts)), statements(stmts) { }
+	: Statement(NT_CompoundStmt, hashCompoundStmt(stmts)), statements(isolate(stmts)) { }
 
 std::ostream& CompoundStmt::printTo(std::ostream& out) const {
 	if (statements.empty()) {
@@ -219,7 +219,7 @@ bool CompoundStmt::equalsStmt(const Statement& stmt) const {
 
 
 CompoundStmt* CompoundStmt::createCloneUsing(NodeManager& manager) const {
-	return new CompoundStmt(migrateAllPtr(statements, manager));
+	return new CompoundStmt(clonePtrTo(manager, statements));
 }
 
 Node::OptionChildList CompoundStmt::getChildNodes() const {
@@ -237,10 +237,10 @@ CompoundStmtPtr CompoundStmt::get(NodeManager& manager) {
 	return manager.get(CompoundStmt(vector<StatementPtr>()));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const StatementPtr& stmt) {
-	return manager.get(CompoundStmt(toVector(insieme::core::migratePtr(stmt, NULL, &manager))));
+	return manager.get(CompoundStmt(toVector(stmt)));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const vector<StatementPtr>& stmts) {
-	return manager.get(CompoundStmt(insieme::core::migrateAllPtr(stmts, NULL, &manager)));
+	return manager.get(CompoundStmt(stmts));
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
@@ -253,7 +253,7 @@ std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& bo
 }
 
 WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
-	: Statement(NT_WhileStmt, hashWhileStmt(condition, body)), condition(condition), body(body) {
+	: Statement(NT_WhileStmt, hashWhileStmt(condition, body)), condition(isolate(condition)), body(isolate(body)) {
 }
 
 std::ostream& WhileStmt::printTo(std::ostream& out) const {
@@ -267,7 +267,7 @@ bool WhileStmt::equalsStmt(const Statement& stmt) const {
 }
 
 WhileStmt* WhileStmt::createCloneUsing(NodeManager& manager) const {
-	return new WhileStmt(migratePtr(condition, manager), migratePtr(body, manager));
+	return new WhileStmt(clonePtrTo(manager, condition), clonePtrTo(manager, body));
 }
 
 Node::OptionChildList WhileStmt::getChildNodes() const {
@@ -279,10 +279,7 @@ Node::OptionChildList WhileStmt::getChildNodes() const {
 }
 
 WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
-	return manager.get(WhileStmt(
-			insieme::core::migratePtr(condition, NULL, &manager),
-			insieme::core::migratePtr(body, NULL, &manager)
-		));
+	return manager.get(WhileStmt(condition, body));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
@@ -297,7 +294,7 @@ std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPt
 }
 
 ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
-	: Statement(NT_ForStmt, hashForStmt(declaration, body, end, step)), declaration(declaration), body(body), end(end), step(step) {}
+	: Statement(NT_ForStmt, hashForStmt(declaration, body, end, step)), declaration(isolate(declaration)), body(isolate(body)), end(isolate(end)), step(isolate(step)) {}
 	
 std::ostream& ForStmt::printTo(std::ostream& out) const {
 	return out << "for(" << *declaration << " .. " << *end << " : " << *step << ") " << *body;
@@ -312,10 +309,10 @@ bool ForStmt::equalsStmt(const Statement& stmt) const {
 
 ForStmt* ForStmt::createCloneUsing(NodeManager& manager) const {
 	return new ForStmt(
-			migratePtr(declaration, manager),
-			migratePtr(body, manager),
-			migratePtr(end, manager),
-			migratePtr(step, manager)
+			clonePtrTo(manager, declaration),
+			clonePtrTo(manager, body),
+			clonePtrTo(manager, end),
+			clonePtrTo(manager, step)
 	);
 }
 
@@ -331,12 +328,7 @@ Node::OptionChildList ForStmt::getChildNodes() const {
 
 ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
 		const ExpressionPtr& step) {
-	return manager.get(ForStmt(
-			insieme::core::migratePtr(declaration, NULL, &manager),
-			insieme::core::migratePtr(body, NULL, &manager),
-			insieme::core::migratePtr(end, NULL, &manager),
-			insieme::core::migratePtr(step, NULL, &manager)
-		));
+	return manager.get(ForStmt(declaration, body, end, step));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
@@ -350,14 +342,14 @@ std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenB
 }
 
 IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) :
-	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(condition), thenBody(thenBody), elseBody(elseBody) {
+	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(isolate(condition)), thenBody(isolate(thenBody)), elseBody(isolate(elseBody)) {
 }
 
 IfStmt* IfStmt::createCloneUsing(NodeManager& manager) const {
 	return new IfStmt(
-			migratePtr(condition, manager),
-			migratePtr(thenBody, manager),
-			migratePtr(elseBody, manager)
+			clonePtrTo(manager, condition),
+			clonePtrTo(manager, thenBody),
+			clonePtrTo(manager, elseBody)
 	);
 }
 
@@ -387,11 +379,7 @@ IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, cons
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
 	// default to empty else block
-	return manager.get(IfStmt(
-			insieme::core::migratePtr(condition, NULL, &manager),
-			insieme::core::migratePtr(body, NULL, &manager),
-			insieme::core::migratePtr(elseBody, NULL, &manager)
-		));
+	return manager.get(IfStmt(condition, body, elseBody));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
@@ -407,27 +395,29 @@ std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchS
 	return seed;
 }
 
-SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) :
-	Statement(NT_SwitchStmt, hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(switchExpr), cases(cases), defaultCase(defaultCase) {
+const vector<SwitchStmt::Case>& isolateSwitchCases(const vector<SwitchStmt::Case>& cases) {
+	for_each(cases, [](const SwitchStmt::Case& cur) {
+		isolate(cur.first);
+		isolate(cur.second);
+	});
+	return cases;
 }
 
-vector<SwitchStmt::Case> migrateSwitchCases(const vector<SwitchStmt::Case>& cases, const NodeManager* src, NodeManager* target) {
-	if (src == target) {
-		return cases;
-	}
 
-	vector<SwitchStmt::Case> localCases;
-	std::for_each(cases.cbegin(), cases.cend(), [src, target, &localCases](const SwitchStmt::Case& cur) {
-		localCases.push_back(SwitchStmt::Case(
-				insieme::core::migratePtr(cur.first, src, target),
-				insieme::core::migratePtr(cur.second, src, target)
-			));
+SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) :
+	Statement(NT_SwitchStmt, hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(isolate(switchExpr)), cases(isolateSwitchCases(cases)), defaultCase(isolate(defaultCase)) {
+}
+
+vector<SwitchStmt::Case> cloneSwitchCasesTo(NodeManager& manager, const vector<SwitchStmt::Case>& cases) {
+	vector<SwitchStmt::Case> res;
+	std::transform(cases.begin(), cases.end(), back_inserter(res), [&manager](const SwitchStmt::Case& cur) {
+		return SwitchStmt::Case(clonePtrTo(manager, cur.first), clonePtrTo(manager, cur.second));
 	});
-	return localCases;
+	return res;
 }
 
 SwitchStmt* SwitchStmt::createCloneUsing(NodeManager& manager) const {
-	return new SwitchStmt( manager.get(*switchExpr), migrateSwitchCases(cases, getNodeManager(), &manager), manager.get(*defaultCase) );
+	return new SwitchStmt( clonePtrTo(manager, switchExpr), cloneSwitchCasesTo(manager, cases), clonePtrTo(manager, defaultCase) );
 }
 
 std::ostream& SwitchStmt::printTo(std::ostream& out) const {
@@ -465,11 +455,7 @@ SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchE
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {
-	return manager.get(SwitchStmt(
-			insieme::core::migratePtr(switchExpr, NULL, &manager),
-			migrateSwitchCases(cases, NULL, &manager),
-			insieme::core::migratePtr(defaultCase, NULL, &manager)
-	));
+	return manager.get(SwitchStmt(switchExpr, cases, defaultCase));
 }
 
 } // end namespace core

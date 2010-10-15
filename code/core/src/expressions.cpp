@@ -53,6 +53,9 @@ enum {
 
 // ------------------------------------- Expression ---------------------------------
 
+Expression::Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode)
+	: Statement(nodeType, hashCode, true), type(isolate(type)) { };
+
 bool Expression::equals(const Node& stmt) const {
 	// conversion is guaranteed by base Node::operator==
 	const Expression& rhs = static_cast<const Expression&>(stmt);
@@ -73,11 +76,11 @@ Literal::Literal(const TypePtr& type, const string& value) :
 
 
 Literal* Literal::createCloneUsing(NodeManager& manager) const {
-	return new Literal(migratePtr(type, manager), value);
+	return new Literal(clonePtrTo(manager, type), value);
 }
 
 LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr& type) {
-	return manager.get( Literal(insieme::core::migratePtr(type, NULL, &manager), value) );
+	return manager.get(Literal(type, value) );
 }
 
 // ------------------------------------- VarExpr ---------------------------------
@@ -96,7 +99,7 @@ VarExpr::VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& h
 	: Expression(NT_VarExpr, type, hashCode), id(id) { };
 
 VarExpr* VarExpr::createCloneUsing(NodeManager& manager) const {
-	return new VarExpr(migratePtr(type, manager), id);
+	return new VarExpr(clonePtrTo(manager, type), id);
 }
 
 bool VarExpr::equalsExpr(const Expression& expr) const {
@@ -110,7 +113,7 @@ std::ostream& VarExpr::printTo(std::ostream& out) const {
 }
 
 VarExprPtr VarExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.get(VarExpr(insieme::core::migratePtr(type, NULL, &manager), id));
+	return manager.get(VarExpr(type, id));
 }
 
 // ------------------------------------- ParamExpr ---------------------------------
@@ -126,7 +129,7 @@ std::size_t hashParamExpr(const TypePtr& type, const Identifier& id) {
 ParamExpr::ParamExpr(const TypePtr& type, const Identifier& id) : VarExpr(type, id, ::hashParamExpr(type,id)) { };
 
 ParamExpr* ParamExpr::createCloneUsing(NodeManager& manager) const {
-	return new ParamExpr(migratePtr(type, manager), id);
+	return new ParamExpr(clonePtrTo(manager, type), id);
 }
 
 std::ostream& ParamExpr::printTo(std::ostream& out) const {
@@ -134,7 +137,7 @@ std::ostream& ParamExpr::printTo(std::ostream& out) const {
 }
 
 ParamExprPtr ParamExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.get(ParamExpr(insieme::core::migratePtr(type, NULL, &manager), id));
+	return manager.get(ParamExpr(type, id));
 }
 
 // ------------------------------------- LambdaExpr ---------------------------------
@@ -148,13 +151,13 @@ std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& par
 }
 
 LambdaExpr::LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body)
-		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), body(body), params(params) { };
+		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), body(isolate(body)), params(isolate(params)) { };
 
 LambdaExpr* LambdaExpr::createCloneUsing(NodeManager& manager) const {
 	return new LambdaExpr(
-			migratePtr(type, manager),
-			migrateAllPtr(params, manager),
-			migratePtr(body, manager)
+			clonePtrTo(manager, type),
+			clonePtrTo(manager, params),
+			clonePtrTo(manager, body)
 	);
 }
 
@@ -177,11 +180,7 @@ std::ostream& LambdaExpr::printTo(std::ostream& out) const {
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
-	return manager.get(LambdaExpr(
-			insieme::core::migratePtr(type, NULL, &manager),
-			insieme::core::migrateAllPtr(params, NULL, &manager),
-			insieme::core::migratePtr(body, NULL, &manager)
-	));
+	return manager.get(LambdaExpr(type, params, body));
 }
 
 // ------------------------------------- TupleExpr ---------------------------------
@@ -193,14 +192,14 @@ std::size_t hashTupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expr
 	return seed;
 }
 
-TupleExpr::TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions)
-		: Expression(NT_TupleExpr, type, hashTupleExpr(type, expressions)), expressions(expressions) { };
+TupleExpr::TupleExpr(const TupleTypePtr& type, const vector<ExpressionPtr>& expressions)
+		: Expression(NT_TupleExpr, type, hashTupleExpr(type, expressions)), expressions(isolate(expressions)) { };
 
 TupleExpr* TupleExpr::createCloneUsing(NodeManager& manager) const {
 	return new TupleExpr(
-			migratePtr(type, manager),
-			migrateAllPtr(expressions, manager)
-	);
+			clonePtrTo(manager, static_pointer_cast<const TupleType>(type)),
+			clonePtrTo(manager, expressions)
+		);
 }
 
 bool TupleExpr::equalsExpr(const Expression& expr) const {
@@ -224,7 +223,7 @@ std::ostream& TupleExpr::printTo(std::ostream& out) const {
 TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
 	TupleType::ElementTypeList elemTypes;
 	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](const ExpressionPtr& e) { return e->getType(); });
-	return manager.get(TupleExpr(TupleType::get(manager, elemTypes), insieme::core::migrateAllPtr(expressions, NULL, &manager)));
+	return manager.get(TupleExpr(TupleType::get(manager, elemTypes), expressions));
 }
 
 // ------------------------------------- VectorExpr ---------------------------------
@@ -237,12 +236,12 @@ std::size_t hashVectorExpr(const TypePtr& type, const vector<ExpressionPtr>& exp
 }
 
 VectorExpr::VectorExpr(const VectorTypePtr& type, const vector<ExpressionPtr>& expressions)
-		: Expression(NT_VectorExpr, type, hashVectorExpr(type, expressions)), expressions(expressions) { };
+		: Expression(NT_VectorExpr, type, hashVectorExpr(type, expressions)), expressions(isolate(expressions)) { };
 
 VectorExpr* VectorExpr::createCloneUsing(NodeManager& manager) const {
 	return new VectorExpr(
-			migratePtr(static_pointer_cast<const VectorType>(type), manager),
-			migrateAllPtr(expressions, manager)
+			clonePtrTo(manager, static_pointer_cast<const VectorType>(type)),
+			clonePtrTo(manager, expressions)
 	);
 }
 
@@ -272,14 +271,21 @@ VectorExprPtr VectorExpr::get(NodeManager& manager, const vector<ExpressionPtr>&
 	}
 
 	VectorTypePtr resultType = VectorType::get(manager, elementType, IntTypeParam::getConcreteIntParam(expressions.size()));
-	return manager.get(VectorExpr(resultType, insieme::core::migrateAllPtr(expressions, NULL, &manager)));
+	return manager.get(VectorExpr(resultType, expressions));
 }
 
 
 // ------------------------------------- NamedCompositeExpr ---------------------------------
 
+const NamedCompositeExpr::Members& isolateMembers(const NamedCompositeExpr::Members& members) {
+	for_each(members, [](const NamedCompositeExpr::Member& cur) {
+		isolate(cur.second);
+	});
+	return members;
+}
+
 NamedCompositeExpr::NamedCompositeExpr(NodeType nodeType, const TypePtr& type, size_t hashval, const Members& members)
-	: Expression(nodeType, type, hashval), members(members) { }
+	: Expression(nodeType, type, hashval), members(isolateMembers(members)) { }
 
 bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
@@ -288,20 +294,13 @@ bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
 		return l.first == r.first && *l.second == *r.second; });
 }
 
-NamedCompositeExpr::Members migrateMembers(const NamedCompositeExpr::Members& members, const NodeManager* src, NodeManager* target) {
-	if (src == target) {
-		return members;
-	}
-	NamedCompositeExpr::Members managedMembers;
-	std::transform(members.cbegin(), members.cend(), std::back_inserter(managedMembers),
-			[&src, &target](const NamedCompositeExpr::Member& m) {
-				return NamedCompositeExpr::Member(m.first, insieme::core::migratePtr(m.second, src, target));
+NamedCompositeExpr::Members cloneMembersTo(NodeManager& manager, const NamedCompositeExpr::Members& members) {
+	NamedCompositeExpr::Members res;
+	std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
+			[&manager](const NamedCompositeExpr::Member& m) {
+				return NamedCompositeExpr::Member(m.first, clonePtrTo(manager, m.second));
 	});
-	return managedMembers;
-}
-
-NamedCompositeExpr::Members NamedCompositeExpr::getManagedMembers(NodeManager& manager) const {
-	return migrateMembers(members, getNodeManager(), &manager);
+	return res;
 }
 
 NamedCompositeType::Entries NamedCompositeExpr::getTypeEntries(const Members& mem) {
@@ -335,7 +334,7 @@ StructExpr::StructExpr(const TypePtr& type, const Members& members)
 	: NamedCompositeExpr(NT_StructExpr, type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
 
 StructExpr* StructExpr::createCloneUsing(NodeManager& manager) const {
-	return new StructExpr(migratePtr(type, manager), getManagedMembers(manager));
+	return new StructExpr(clonePtrTo(manager, type), cloneMembersTo(manager, members));
 }
 
 std::ostream& StructExpr::printTo(std::ostream& out) const {
@@ -345,7 +344,7 @@ std::ostream& StructExpr::printTo(std::ostream& out) const {
 }
 
 StructExprPtr StructExpr::get(NodeManager& manager, const Members& members) {
-	return manager.get(StructExpr(StructType::get(manager, getTypeEntries(members)), migrateMembers(members, NULL, &manager)));
+	return manager.get(StructExpr(StructType::get(manager, getTypeEntries(members)), members));
 }
 
 // ------------------------------------- UnionExpr ---------------------------------
@@ -354,7 +353,7 @@ UnionExpr::UnionExpr(const TypePtr& type, const Members& members)
 	: NamedCompositeExpr(NT_UnionExpr, type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
 
 UnionExpr* UnionExpr::createCloneUsing(NodeManager& manager) const {
-	return new UnionExpr(migratePtr(type, manager), getManagedMembers(manager));
+	return new UnionExpr(clonePtrTo(manager, type), cloneMembersTo(manager, members));
 }
 
 std::ostream& UnionExpr::printTo(std::ostream& out) const {
@@ -364,7 +363,7 @@ std::ostream& UnionExpr::printTo(std::ostream& out) const {
 }
 
 UnionExprPtr UnionExpr::get(NodeManager& manager, const Members& members) {
-	return manager.get(UnionExpr(UnionType::get(manager, getTypeEntries(members)), migrateMembers(members, NULL, &manager)));
+	return manager.get(UnionExpr(UnionType::get(manager, getTypeEntries(members)), members));
 }
 
 // ------------------------------------- JobExpr ---------------------------------
@@ -380,29 +379,36 @@ size_t hashJobExpr(const StatementPtr& defaultStmt, const JobExpr::GuardedStmts&
 	return seed;
 }
 
-JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
-	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
-	  localDecls(localDecls), guardedStmts(guardedStmts), defaultStmt(defaultStmt) { }
+const JobExpr::GuardedStmts& isolateGuardedStmts(const JobExpr::GuardedStmts& stmts) {
+	JobExpr::GuardedStmts localGuardedStmts;
+	for_each(stmts, [](const JobExpr::GuardedStmt& stmt) {
+			isolate(stmt.first);
+			isolate(stmt.second);
+	});
+	return stmts;
+}
 
-const JobExpr::GuardedStmts migrateGuardedStmts(const JobExpr::GuardedStmts& stmts, const NodeManager* src, NodeManager* target) {
-	if (src == target || target == NULL){
-		return stmts;
-	}
+const JobExpr::GuardedStmts cloneGuardedStmtsTo(NodeManager& manager, const JobExpr::GuardedStmts& stmts) {
 	JobExpr::GuardedStmts localGuardedStmts;
 	std::transform(stmts.cbegin(), stmts.cend(), back_inserter(localGuardedStmts),
-		[&localGuardedStmts, src, target](const JobExpr::GuardedStmt& stmt) {
-			return JobExpr::GuardedStmt(
-					insieme::core::migratePtr(stmt.first, src, target),
-					insieme::core::migratePtr(stmt.first, src, target));
-	} );
+		[&localGuardedStmts, &manager](const JobExpr::GuardedStmt& stmt) {
+			return JobExpr::GuardedStmt(clonePtrTo(manager, stmt.first), clonePtrTo(manager, stmt.second));
+	});
 	return localGuardedStmts;
 }
 
+JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
+	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
+	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) { }
+
+
+
 JobExpr* JobExpr::createCloneUsing(NodeManager& manager) const {
-	return new JobExpr(migratePtr(type, manager),
-			manager.get(defaultStmt),
-			migrateGuardedStmts(guardedStmts, NULL, &manager),
-			manager.getAll(localDecls));
+	return new JobExpr(
+			clonePtrTo(manager, type),
+			clonePtrTo(manager, defaultStmt),
+			cloneGuardedStmtsTo(manager, guardedStmts),
+			clonePtrTo(manager, localDecls));
 }
 
 Node::OptionChildList JobExpr::getChildNodes() const {
@@ -436,11 +442,7 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 
 JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
 	auto type = GenericType::get(manager, "Job"); // TODO
-	return manager.get(JobExpr(type,
-			insieme::core::migratePtr(defaultStmt, NULL, &manager),
-			migrateGuardedStmts(guardedStmts, NULL, &manager),
-			insieme::core::migrateAllPtr(localDecls, NULL, &manager)
-	));
+	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
 }
 
 // ------------------------------------- CallExpr ---------------------------------
@@ -462,17 +464,18 @@ std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr,
 }
 
 CallExpr::CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
-		: Expression(NT_CallExpr, type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(functionExpr), arguments(arguments) { }
+		: Expression(NT_CallExpr, type, ::hashCallExpr(type, functionExpr, arguments)), functionExpr(isolate(functionExpr)), arguments(isolate(arguments)) { }
 
 CallExpr::CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments)
 		: Expression(NT_CallExpr, ::getReturnType(functionExpr), ::hashCallExpr(::getReturnType(functionExpr), functionExpr, arguments)),
-		  functionExpr(functionExpr), arguments(arguments) { }
+		  functionExpr(isolate(functionExpr)), arguments(isolate(arguments)) { }
 
 CallExpr* CallExpr::createCloneUsing(NodeManager& manager) const {
 	return new CallExpr(
-			migratePtr(type, manager),
-			migratePtr(functionExpr, manager),
-			migrateAllPtr(arguments, manager));
+			clonePtrTo(manager, type),
+			clonePtrTo(manager, functionExpr),
+			clonePtrTo(manager, arguments)
+		);
 }
 
 bool CallExpr::equalsExpr(const Expression& expr) const {
@@ -495,18 +498,11 @@ std::ostream& CallExpr::printTo(std::ostream& out) const {
 }
 
 CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-	return manager.get(CallExpr(
-			insieme::core::migratePtr(functionExpr, NULL, &manager),
-			insieme::core::migrateAllPtr(arguments, NULL, &manager)
-		));
+	return manager.get(CallExpr(functionExpr, arguments));
 }
 
 CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-	return manager.get(CallExpr(
-			insieme::core::migratePtr(type, NULL, &manager),
-			insieme::core::migratePtr(functionExpr, NULL, &manager),
-			insieme::core::migrateAllPtr(arguments, NULL, &manager)
-	));
+	return manager.get(CallExpr(type, functionExpr, arguments));
 }
 
 // ------------------------------------- CastExpr ---------------------------------
@@ -519,13 +515,10 @@ std::size_t hashCastExpr(const TypePtr& type, const ExpressionPtr& subExpression
 }
 
 CastExpr::CastExpr(const TypePtr& type, const ExpressionPtr& subExpression)
-		: Expression(NT_CastExpr, type, hashCastExpr(type, subExpression)), subExpression(subExpression) { }
+		: Expression(NT_CastExpr, type, hashCastExpr(type, subExpression)), subExpression(isolate(subExpression)) { }
 
 CastExpr* CastExpr::createCloneUsing(NodeManager& manager) const {
-	return new CastExpr(
-			migratePtr(type, manager),
-			migratePtr(subExpression, manager)
-	);
+	return new CastExpr(clonePtrTo(manager, type), clonePtrTo(manager, subExpression));
 }
 
 bool CastExpr::equalsExpr(const Expression& expr) const {
@@ -546,10 +539,7 @@ std::ostream& CastExpr::printTo(std::ostream& out) const {
 }
 
 CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpr) {
-	return manager.get(CastExpr(
-			insieme::core::migratePtr(type, NULL, &manager),
-			insieme::core::migratePtr(subExpr, NULL, &manager)
-		));
+	return manager.get(CastExpr(type, subExpr));
 }
 
 
@@ -562,31 +552,35 @@ std::size_t hashRecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& defin
 	return hash;
 }
 
-RecLambdaDefinition::RecFunDefs migrate(const RecLambdaDefinition::RecFunDefs& definitions, const NodeManager* src, NodeManager* target) {
-	if (src == target) {
-		return definitions;
-	}
+const RecLambdaDefinition::RecFunDefs& isolateRecFunDef(const RecLambdaDefinition::RecFunDefs& definitions) {
+	for_each(definitions, [](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
+			isolate(cur.first);
+			isolate(cur.second);
+	});
+	return definitions;
+}
 
-	RecLambdaDefinition::RecFunDefs localDefinitions;
-	std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-		[src, target, &localDefinitions](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
+RecLambdaDefinition::RecFunDefs cloneRecFunDefTo(NodeManager& manager, const RecLambdaDefinition::RecFunDefs& definitions) {
+	RecLambdaDefinition::RecFunDefs res;
+	std::transform(definitions.begin(), definitions.end(), inserter(res, res.end()),
+		[&manager](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
 			return RecLambdaDefinition::RecFunDefs::value_type(
-					insieme::core::migratePtr(cur.first, src, target),
-					insieme::core::migratePtr(cur.second, src, target)
+					clonePtrTo(manager, cur.first),
+					clonePtrTo(manager, cur.second)
 			);
 	});
-	return localDefinitions;
+	return res;
 }
 
 RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions)
-	: Node(NT_RecLambdaDefinition, hashRecLambdaDefinition(definitions)), definitions(definitions) { };
+	: Node(NT_RecLambdaDefinition, hashRecLambdaDefinition(definitions)), definitions(isolateRecFunDef(definitions)) { };
 
 RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::RecFunDefs& definitions) {
-	return manager.get(RecLambdaDefinition(migrate(definitions, NULL, &manager)));
+	return manager.get(RecLambdaDefinition(definitions));
 }
 
 RecLambdaDefinition* RecLambdaDefinition::createCloneUsing(NodeManager& manager) const {
-	return new RecLambdaDefinition(migrate(definitions, getNodeManager(), &manager));
+	return new RecLambdaDefinition(cloneRecFunDefTo(manager, definitions));
 }
 
 bool RecLambdaDefinition::equals(const Node& other) const {
@@ -633,13 +627,11 @@ std::size_t hashRecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinit
 }
 
 RecLambdaExpr::RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition)
-	: Expression(NT_RecLambdaExpr, variable->getType(), ::hashRecLambdaExpr(variable, definition)), variable(variable), definition(definition) { }
+	: Expression(NT_RecLambdaExpr, variable->getType(), ::hashRecLambdaExpr(variable, definition)),
+	  variable(isolate(variable)), definition(isolate(definition)) { }
 
 RecLambdaExpr* RecLambdaExpr::createCloneUsing(NodeManager& manager) const {
-	return new RecLambdaExpr(
-			migratePtr(variable, manager),
-			migratePtr(definition, manager)
-	);
+	return new RecLambdaExpr(clonePtrTo(manager, variable), clonePtrTo(manager, definition));
 }
 
 Node::OptionChildList RecLambdaExpr::getChildNodes() const {
@@ -656,10 +648,7 @@ bool RecLambdaExpr::equalsExpr(const Expression& expr) const {
 }
 
 RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition) {
-	return manager.get(RecLambdaExpr(
-			insieme::core::migratePtr(variable, NULL, &manager),
-			insieme::core::migratePtr(definition, NULL, &manager)
-		));
+	return manager.get(RecLambdaExpr(variable, definition));
 }
 
 std::ostream& RecLambdaExpr::printTo(std::ostream& out) const {

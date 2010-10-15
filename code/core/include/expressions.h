@@ -68,7 +68,7 @@ protected:
 	/** The type of the expression. */
 	const TypePtr type;
 	
-	Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode) : Statement(nodeType, hashCode, true), type(type) { };
+	Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode);
 
 	virtual bool equals(const Node& stmt) const;
 	virtual bool equalsExpr(const Expression& expr) const = 0;
@@ -339,8 +339,7 @@ public:
 class TupleExpr : public Expression {
 	const vector<ExpressionPtr> expressions;
 
-	// TODO: does not require type ...
-	TupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions);
+	TupleExpr(const TupleTypePtr& type, const vector<ExpressionPtr>& expressions);
 	virtual TupleExpr* createCloneUsing(NodeManager& manager) const;
 
 protected:
@@ -389,7 +388,6 @@ protected:
 	bool equalsExpr(const Expression& expr) const;
 
 	virtual OptionChildList getChildNodes() const;
-	Members getManagedMembers(NodeManager& manager) const;
 	static NamedCompositeType::Entries getTypeEntries(const Members& mem);
 
 public:

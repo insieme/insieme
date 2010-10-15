@@ -57,7 +57,7 @@ std::size_t hash(const Program::EntryPointSet& entryPoints) {
 }
 
 Program* Program::createCloneUsing(NodeManager& manager) const {
-	return new Program(migrateAllPtr(entryPoints, manager));
+	return new Program(clonePtrTo(manager, entryPoints));
 }
 
 /**
@@ -76,7 +76,7 @@ Program::Program() :
 	Node(NT_Program, ::hash(EntryPointSet())) {};
 
 ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints) {
-	return manager.get(Program(insieme::core::migrateAllPtr(entryPoints, NULL, &manager)));
+	return manager.get(Program(entryPoints));
 }
 
 ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
@@ -84,7 +84,7 @@ ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& progra
 }
 
 ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints) {
-	return manager.get(Program(insieme::core::migrateAllPtr(merge(program->getEntryPoints(), entryPoints), program->getNodeManager(), &manager)));
+	return manager.get(Program(merge(program->getEntryPoints(), isolate(entryPoints))));
 }
 
 ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {

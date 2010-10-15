@@ -41,6 +41,8 @@
 #include "annotated_ptr.h"
 #include "ast_builder.h"
 
+#include "dummy_annotations.cc"
+
 using std::string;
 
 using namespace insieme::core;
@@ -52,39 +54,6 @@ struct A {
 };
 struct B : public A { };
 
-
-class DummyAnnotation : public Annotation {
-public:
-	static StringKey<DummyAnnotation> DummyKey;
-	int value;
-	DummyAnnotation(int value) : value(value) { };
-
-	virtual AnnotationKey* getKey() const {
-		return &DummyKey;
-	}
-
-	const std::string getAnnotationName() const {
-		 return "DummyAnnotation";
-	}
-};
-
-class DummyAnnotation2 : public Annotation {
-public:
-	static StringKey<DummyAnnotation2> DummyKey;
-	int value;
-	DummyAnnotation2(int value) : value(value) { };
-
-	virtual AnnotationKey* getKey() const {
-		return &DummyKey;
-	}
-
-	const std::string getAnnotationName() const {
-		 return "DummyAnnotation2";
-	}
-};
-
-StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
-StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
 // testing basic properties
 TEST(AnnotatedPtr, Basic) {

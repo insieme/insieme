@@ -55,6 +55,8 @@ public:
 
 	T* ptr;
 
+	InstancePtr() : ptr(NULL) {}
+
 	InstancePtr(T* ptr) : ptr(ptr) { }
 
 	template<typename B>

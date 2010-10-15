@@ -34,37 +34,42 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "ast_visitor.h"
-
 namespace insieme {
 namespace core {
 
-namespace transform {
+	class DummyAnnotation : public Annotation {
+	public:
+		static StringKey<DummyAnnotation> DummyKey;
+		int value;
+		DummyAnnotation(int value) : value(value) { };
 
-class Transformation {
-public:
-	virtual NodePtr transform(const NodePtr& element) = 0;
-};
+		virtual AnnotationKey* getKey() const {
+			return &DummyKey;
+		}
 
+		const std::string getAnnotationName() const {
+			 return "DummyAnnotation";
+		}
+	};
 
-template<template<class Target> class Ptr = AnnotatedPtr>
-class Transformation : public ASTVisitor<Ptr<const Node>, Ptr> {
+	class DummyAnnotation2 : public Annotation {
+	public:
+		static StringKey<DummyAnnotation2> DummyKey;
+		int value;
+		DummyAnnotation2(int value) : value(value) { };
 
-public:
+		virtual AnnotationKey* getKey() const {
+			return &DummyKey;
+		}
 
-	Ptr<const Node> transform(const Ptr<const Node>& element) {
-		return visit(element);
-	}
+		const std::string getAnnotationName() const {
+			 return "DummyAnnotation2";
+		}
+	};
 
-}
+	// initalization of the dummy key
+	StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+	StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
-
-
-} // end namespace transform
 } // end namespace core
 } // end namespace insieme
-
-
-
