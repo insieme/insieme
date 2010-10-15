@@ -43,8 +43,8 @@ using namespace insieme::core;
 using namespace insieme::core::transform;
 
 #define VISIT_NODE(NodeTy) \
-	NodeWrapper visit##NodeTy (const NodeTy##Ptr& currNode) { \
-		if(*(currNode) == *(toReplace)) return NodeWrapper(replacement); \
+	NodePtr visit##NodeTy (const NodeTy##Ptr& currNode) { \
+		if(*(currNode) == *(toReplace)) return replacement; \
 		return NodeCloner::visit##NodeTy (currNode); \
 	}
 
@@ -91,14 +91,14 @@ NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const Nod
 	if(!root) return NodePtr(NULL);
 
 	::NodeReplacer replacer(ASTBuilder(mgr), toReplace, replacement);
-	return replacer.visit(root).ref;
+	return replacer.visit(root);
 }
 
 NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement) {
 	if(!root) return NodePtr(NULL);
 
 	::NodeReplacer replacer(builder, toReplace, replacement);
-	return replacer.visit(root).ref;
+	return replacer.visit(root);
 }
 
 } // End transform namespace
