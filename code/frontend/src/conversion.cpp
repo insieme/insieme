@@ -938,6 +938,69 @@ public:
 //############################################################################
 class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
+private:
+	core::ExpressionPtr defaultInitVal(const Type& ty, const core::TypePtr type ) {
+	    core::ExpressionPtr initExpr;
+        if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+            // initialize integer value
+            initExpr = convFact.builder.literal("0", type);
+            return initExpr;
+        } else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+            // in case of floating types we initialize with a zero value
+            return convFact.builder.literal("0.0", type);
+        } else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+            // initialize pointer/reference types with the null value
+            return core::lang::CONST_NULL_PTR_PTR;
+        } else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+            //todo
+            return core::lang::CONST_NULL_PTR_PTR;
+        } else if ( ty.isBooleanType() ) {
+            // boolean values are initialized to false
+            return convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
+        } else if ( ty.isExtVectorType() ) {
+            const ExtVectorType* vecTy;
+            const TypedefType* typedefType;
+            if((typedefType = dynamic_cast<const TypedefType*>(&ty)) &&
+                (vecTy = dynamic_cast<const ExtVectorType*>(typedefType->getDecl()->getUnderlyingType().getTypePtr()))) {
+                const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( vecTy->getElementType()->getUnqualifiedDesugaredType() );
+
+                std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
+
+                std::vector<core::ExpressionPtr> zeros;
+                for(size_t i = 0; i < vecTy->getNumElements(); ++i)
+                    zeros.push_back(convFact.builder.literal(initVal, type));
+
+
+                return convFact.builder.vectorExpr(zeros);
+            } else {
+                assert(false && "ExtVectorType has unexpected class");
+            }
+        } else if ( ty.isConstantArrayType() ) {
+            if(const ConstantArrayType* arrTy = dynamic_cast<const ConstantArrayType*>(&ty)) {
+                std::vector<core::ExpressionPtr> vals;
+                if(const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( arrTy->getElementType()->getUnqualifiedDesugaredType() )) {
+                    std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
+
+                    for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
+                        vals.push_back(convFact.builder.literal(initVal, type));
+
+                    return convFact.builder.vectorExpr(vals);
+                } else {
+                    //TODO test with array of structs/classes
+                    core::ExpressionPtr elements = defaultInitVal(*arrTy->getElementType()->getUnqualifiedDesugaredType(), type);
+                    for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
+                        vals.push_back(elements);
+
+                    return convFact.builder.vectorExpr(vals);
+                }
+            } else {
+                    assert(false && "ConstantArrayType has unexpected class");
+            }
+        }
+        assert(false && "default initialization type not defined");
+        return core::lang::CONST_NULL_PTR_PTR;
+	}
+
 public:
 
 	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
@@ -971,11 +1034,12 @@ public:
             convFact.builder.refType( convFact.ConvertType( *GET_TYPE_PTR(varDecl) ) );
 
 		// initialization value
-		core::ExpressionPtr initExpr(NULL);
+		core::ExpressionPtr initExpr;//initExpr(NULL);
 		if( varDecl->getInit() )
 			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
 		else{
-			Type& ty = * GET_TYPE_PTR(varDecl);
+		    initExpr = defaultInitVal(* GET_TYPE_PTR(varDecl), type);
+/*			Type& ty = * GET_TYPE_PTR(varDecl);
 
             if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
 				// initialize integer value
@@ -1026,7 +1090,7 @@ public:
                 } else {
                     assert(false && "ConstantArrayType has unexpected class");
                 }
-            }
+            }*/
 		}
 
         /*-------------------------><-----------------------*/
