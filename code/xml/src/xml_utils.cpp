@@ -348,6 +348,15 @@ XmlElement& XmlElement::operator<<(XmlElement& childNode) {
 	return childNode;
 }
 
+XmlElement& XmlElement::operator<<(shared_ptr<XmlElement> childNode) {
+	if (childNode) {
+		base->appendChild(childNode->base);
+		return *childNode;
+	}
+	return *this; // if XmlElement is NULL (annotation without registration) return the left element
+}
+
+
 XmlElement& XmlElement::setAttr(const string& id, const string& value) {
 	base->setAttribute(toUnicode(id), toUnicode(value));
 	return *this;
@@ -420,22 +429,24 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	if(fit != DomToIrConvertMap.end()) {
 		return (fit->second)(el);
 	} else {
-		assert(false && "Type not found");
+		cerr << "Warning: Annotation \"" << type << "\" is not registred for Xml_write!";
+		return shared_ptr<Annotation>();
 	}
 }
 
-XmlElement& XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
+shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
 	const string& type = ann.getAnnotationName();
 	IrToDomConvertMapType::const_iterator fit = IrToDomConvertMap.find(type);
 	if(fit != IrToDomConvertMap.end()) {
 		return (fit->second)(ann, doc);
 	} else {
-		assert(false && "Type not found");
+		cerr << "Warning: Annotation \"" << type << "\" is not registred for Xml_write!";
+		return shared_ptr<XmlElement>();
 	}
 }
 
 void* XmlConverter::registerAnnotation(string name, 
-		function<XmlElement& (const Annotation&, xercesc::DOMDocument*)> toXml, 
+		function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)> toXml, 
 		function<shared_ptr<Annotation> (const XmlElement&)> fromXml) {
 	IrToDomConvertMap[name] = toXml;
 	DomToIrConvertMap[name] = fromXml;

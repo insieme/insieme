@@ -94,6 +94,8 @@ public:
 	
 	XmlElement& operator<<(XmlElement& childNode);
 	
+	XmlElement& operator<<(shared_ptr<XmlElement> childNode);
+	
 	const vector<XmlElement> operator[](const string&) const;
 	
 	XmlElement& setAttr(const string& id, const string& value);
@@ -131,17 +133,17 @@ public:
 class XmlConverter: public boost::noncopyable {
 	XmlConverter() { }
 public:
-	typedef map<const string, function<XmlElement& (const Annotation&, xercesc::DOMDocument*)>> IrToDomConvertMapType;
+	typedef map<const string, function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)>> IrToDomConvertMapType;
 	typedef map<const string, function<shared_ptr<Annotation> (const XmlElement&)>> DomToIrConvertMapType;
 
 	static XmlConverter& get();
 	
 	shared_ptr<Annotation> domToIrAnnotation (const XmlElement& el) const;
 	
-	XmlElement& irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const;
+	shared_ptr<XmlElement> irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const;
 	
 	void* registerAnnotation(string name, 
-							function<XmlElement& (const Annotation&, xercesc::DOMDocument*)> toXml, 
+							function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)> toXml, 
 							function<shared_ptr<Annotation> (const XmlElement&)> fromXml);
 private:
 	IrToDomConvertMapType IrToDomConvertMap;
@@ -150,12 +152,12 @@ private:
 
 
 #define XML_CONVERTER(className_, toXML_, fromXML_) \
-	insieme::xml::XmlElement& convert ## className_ ## ToXML(const Annotation& ann, xercesc::DOMDocument* doc) { \
+	shared_ptr<XmlElement> convert ## className_ ## ToXML(const Annotation& ann, xercesc::DOMDocument* doc) { \
 	const className_& annotation = dynamic_cast<const className_&>(ann); \
-	insieme::xml::XmlElement* node = new insieme::xml::XmlElement("annotation", doc); \
+	shared_ptr<XmlElement> node (new insieme::xml::XmlElement("annotation", doc)); \
 	node->setAttr("type", #className_); \
 	toXML_(annotation, *node); \
-	return *node; } \
+	return node; } \
 	shared_ptr<Annotation> convert ## className_ ## FromXML(const XmlElement& node) { \
 	return fromXML_(node); } \
 	void* hack ## className_ ## hack = insieme::xml::XmlConverter::get().registerAnnotation(#className_, \

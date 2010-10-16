@@ -244,13 +244,13 @@ XmlElement VectorAnnotationToXML(VectorAnnotation ann, XmlElement el){
 		entry.setText(*iter);
 		entries << entry;
 	}
-	/*
+	
 	vector<XmlElement> prova = entries.getChildren();
 	for (vector<XmlElement>::const_iterator iter = prova.begin(); iter != prova.end(); ++iter){
 		std::cout << iter->getName() << std::endl;
 		std::cout << iter->getText() << std::endl;
 	}
-	*/
+	
 	return el;
 }
 
