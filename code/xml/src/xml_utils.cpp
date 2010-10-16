@@ -415,7 +415,7 @@ string XmlElement::getText() const { // return the empty string if there is no t
 		if (first->getNodeType() == 3) {
 			char* ctext (XMLString::transcode(first->getNodeValue()));
 			string text(ctext);
-			XMLString::release(&ctext);	
+			XMLString::release(&ctext);
 			return text;
 		}
 		first = first->getPreviousSibling();
@@ -557,8 +557,10 @@ void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
 }
 
 void XmlUtil::convertDomToXml(const string outputFile){
-	DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
-	DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
+	DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
+	assert(implLS);
+	DOMLSSerializer   *theSerializer = implLS->createLSSerializer();
+	DOMLSOutput       *theOutputDesc = implLS->createLSOutput();
 	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
 	
 	if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
@@ -622,7 +624,8 @@ void XmlUtil::convertIrToDom(const NodePtr& node){
 
 string XmlUtil::convertDomToString(){
 	if (doc){
-		DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
+		DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
+		DOMLSSerializer*	theSerializer = implLS->createLSSerializer();
 		string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
 		theSerializer->release();
 		

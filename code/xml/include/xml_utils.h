@@ -35,7 +35,6 @@
  */
 
 #include "ast_visitor.h"
-// #include <xercesc/util/XercesDefs.hpp>
 
 namespace xercesc_3_1 {
 class DOMElement;
