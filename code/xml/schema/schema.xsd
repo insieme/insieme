@@ -111,6 +111,9 @@
 </xs:complexType>
 
 <xs:complexType name="T_typeVariable">
+	<xs:all>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="name" type="xs:string" use="required"/>
 </xs:complexType>
@@ -118,6 +121,7 @@
 <xs:complexType name="T_tupleType">
 	<xs:all>
 		<xs:element name="elementTypeList" type="T_elementTypeList" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
@@ -125,6 +129,7 @@
 <xs:complexType name="T_structType">
 	<xs:all>
 		<xs:element name="entries" type="T_entries" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
