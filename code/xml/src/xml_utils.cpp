@@ -147,7 +147,7 @@ public:
 					break;
 				case IntTypeParam::CONCRETE:
 					intTypeParam.setAttr("type", "concrete");
-					intTypeParam.setAttr("value", numeric_cast<string>(iter->getSymbol()));
+					intTypeParam.setAttr("value", numeric_cast<string>(iter->getValue()));
 					break;
 				case IntTypeParam::INFINITE:
 					intTypeParam.setAttr("type", "infinite");
@@ -229,7 +229,7 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*iter->second)));			
 			entry << typePtr;
 			
-			visitAnnotations((*iter->second).getAnnotations(), typePtr);
+			visitAnnotations((iter->second).getAnnotations(), typePtr);
 		}
 	}
 
@@ -250,10 +250,10 @@ public:
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
 			elementType << typePtr;
 			
-			// annotations
+			visitAnnotations(iter->getAnnotations(), typePtr);
 		}
 		
-		// annotations
+		visitAnnotations(cur->getAnnotations(), tupleType);
 	}
 
 	void visitTypeVariable(const TypeVariablePtr& cur) {
@@ -262,7 +262,7 @@ public:
 		typeVariable.setAttr("name", cur->getVarName());
 		rootElem << typeVariable;
 		
-		// annotations
+		visitAnnotations(cur->getAnnotations(), typeVariable);
 	}
 	
 	void visitRecType(const RecTypePtr& cur) {
@@ -384,21 +384,32 @@ XmlElement& XmlElement::setAttr(const string& id, const string& value) {
 	return *this;
 }
 
-XmlElement& XmlElement::setText(const string& text) { // FIXME: ATTENTO A NON CREARE NODI DIVERSI
+XmlElement& XmlElement::setText(const string& text) {
 	assert(doc != NULL && "Attempt to create text on a root node");
-	DOMText* textNode = doc->createTextNode(toUnicode(text));
-	base->appendChild(textNode);
+	DOMNode* first = base->getFirstChild();
+	bool found = false;
+	while(first && !found){
+		if (first->getNodeType() == 3) {
+			first->setTextContent(toUnicode(text));
+			found = true;
+		}
+		first = first->getPreviousSibling();
+	}
+	if (!found){
+		DOMText* textNode = doc->createTextNode(toUnicode(text));
+		base->appendChild(textNode);
+	}
 	return *this;
 }
 
-string XmlElement::getAttr(const string& id) const { // FIXME: CONTROLLARE SE ATTRIBUTO NON ESISTE
+string XmlElement::getAttr(const string& id) const { // return the empty string if there is not attribute
 	char* ctype (XMLString::transcode (base->getAttribute(toUnicode(id))));
 	string type(ctype);
 	XMLString::release(&ctype);	
 	return type;
 }
 
-string XmlElement::getText() const { // FIXME: CONSIDERARE IL CASO NON C'E' TESTO
+string XmlElement::getText() const { // return the empty string if there is no text
 	DOMNode* first = base->getFirstChild();
 	while(first){
 		if (first->getNodeType() == 3) {
@@ -409,7 +420,7 @@ string XmlElement::getText() const { // FIXME: CONSIDERARE IL CASO NON C'E' TEST
 		}
 		first = first->getPreviousSibling();
 	}
-	return "NULL";
+	return "";
 }
 
 string XmlElement::getName() const {
