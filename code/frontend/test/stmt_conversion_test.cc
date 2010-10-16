@@ -52,14 +52,12 @@ TEST(StmtConversion, FileTest) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-
-	ConversionFactory convFactory( shared, comp );
+	ConversionFactory convFactory( shared, comp, pl );
 
 	std::for_each(pl.begin(), pl.end(),
 		[ &convFactory ](const PragmaPtr curr) {

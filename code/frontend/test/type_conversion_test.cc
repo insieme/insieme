@@ -118,7 +118,6 @@ TEST(TypeConversion, HandlePointerType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-
 	ConversionFactory convFactory( shared, clang );
 
 	BuiltinType intTy(BuiltinType::Int);
@@ -138,7 +137,7 @@ TEST(TypeConversion, HandleReferenceType) {
 	core::ProgramPtr prog = core::Program::create(*shared);
 
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang);
+	ConversionFactory convFactory( shared, clang );
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
@@ -156,7 +155,7 @@ TEST(TypeConversion, HandleStructType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang);
+	ConversionFactory convFactory( shared, clang );
 
 	SourceLocation emptyLoc;
 
@@ -198,7 +197,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang);
+	ConversionFactory convFactory( shared, clang );
 
 	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
 	clang::BuiltinType* longTy = new clang::BuiltinType(clang::BuiltinType::Long);
@@ -232,7 +231,7 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang);
+	ConversionFactory convFactory( shared, clang );
 	SourceLocation emptyLoc;
 
 	RecordDecl* declA = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL, emptyLoc, clang.getPreprocessor().getIdentifierInfo("A"));
@@ -299,7 +298,7 @@ TEST(TypeConversion, HandleFunctionType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang);
+	ConversionFactory convFactory( shared, clang );
 
 	ASTContext& ctx = clang.getASTContext();
 	// Defines a function with the following prototype:
@@ -340,7 +339,7 @@ TEST(TypeConversion, HandleArrayType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang);
+	ConversionFactory convFactory( shared, clang );
 
 	ASTContext& ctx = clang.getASTContext();
 
@@ -377,8 +376,7 @@ TEST(TypeConversion, FileTest) {
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-
-	ConversionFactory convFactory( shared, comp );
+	ConversionFactory convFactory( shared, comp, pl );
 
 	std::for_each(pl.begin(), pl.end(),
 		[ &convFactory ](const PragmaPtr curr) {

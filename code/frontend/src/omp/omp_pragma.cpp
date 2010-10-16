@@ -56,131 +56,29 @@ namespace {
 using namespace insieme::frontend;
 using namespace insieme::frontend::omp;
 
-class OmpParallel: public OmpPragma {
-public:
-	OmpParallel(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-				const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
+#define OMP_PRAGMA(TYPE) 	\
+struct Omp ## TYPE: public OmpPragma { \
+	Omp##TYPE(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,	\
+		   const std::string& name, const insieme::frontend::MatchMap& mmap):	\
+		OmpPragma(startLoc, endLoc, name, mmap) { }	\
+	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const; 	\
+}
 
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpFor: public OmpPragma {
-public:
-	OmpFor(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-		   const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpSections: public OmpPragma {
-public:
-	OmpSections(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			    const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpSection: public OmpPragma {
-public:
-	OmpSection(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			   const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpSingle: public OmpPragma {
-public:
-	OmpSingle(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			  const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpTask: public OmpPragma {
-public:
-	OmpTask(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpMaster: public OmpPragma {
-public:
-	OmpMaster(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			  const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpCritical: public OmpPragma {
-public:
-	OmpCritical(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			    const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpBarrier: public OmpPragma {
-public:
-	OmpBarrier(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			   const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpTaskWait: public OmpPragma {
-public:
-	OmpTaskWait(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			    const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpAtomic: public OmpPragma {
-public:
-	OmpAtomic(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			  const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpFlush: public OmpPragma {
-public:
-	OmpFlush(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			 const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpOrdered: public OmpPragma {
-public:
-	OmpOrdered(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			   const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
-
-class OmpThreadPrivate: public OmpPragma {
-public:
-	OmpThreadPrivate(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-			      	 const std::string& name, const insieme::frontend::MatchMap& mmap):
-		OmpPragma(startLoc, endLoc, name, mmap) { }
-
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const;
-};
+// Defines basic OpenMP pragma types which will be created by the pragma_matcher class
+OMP_PRAGMA(Parallel);
+OMP_PRAGMA(For);
+OMP_PRAGMA(Sections);
+OMP_PRAGMA(Section);
+OMP_PRAGMA(Single);
+OMP_PRAGMA(Task);
+OMP_PRAGMA(Master);
+OMP_PRAGMA(Critical);
+OMP_PRAGMA(Barrier);
+OMP_PRAGMA(TaskWait);
+OMP_PRAGMA(Atomic);
+OMP_PRAGMA(Flush);
+OMP_PRAGMA(Ordered);
+OMP_PRAGMA(ThreadPrivate);
 
 } // End anonymous namespace
 

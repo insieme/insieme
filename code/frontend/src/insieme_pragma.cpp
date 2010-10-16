@@ -61,7 +61,13 @@ InsiemePragma::InsiemePragma(const clang::SourceLocation& startLoc, const clang:
 	Pragma(startLoc, endLoc, type){ }
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
-	pp.AddPragmaHandler( PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(pp.getIdentifierInfo("insieme"), tok::eom) );
+	// define a PragmaNamespace for insieme
+	clang::PragmaNamespace* insieme = new clang::PragmaNamespace("insieme");
+	pp.AddPragmaHandler(insieme);
+
+	// Add an handler for pragma omp parallel:
+	// #pragma omp parallel [clause[ [, ]clause] ...] new-line
+	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(pp.getIdentifierInfo("mark"), tok::eom, "insieme"));
 }
 
 } // end frontend namespace

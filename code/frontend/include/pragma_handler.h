@@ -146,7 +146,6 @@ public:
 	typedef std::multimap<const clang::Stmt*, const PragmaPtr> StmtMap;
 	typedef std::multimap<const clang::Decl*, const PragmaPtr> DeclMap;
 
-	PragmaStmtMap() { }
 	PragmaStmtMap(const PragmaList& pList);
 
 	const StmtMap& getStatementMap() const { return stmtMap; }

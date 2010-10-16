@@ -123,6 +123,11 @@ void ParserStack::discardPrevRecords(size_t recordId) {
 
 const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const { return mRecords[recordId]; }
 
+
+/**
+ * This function is used to report an error occurred during the pragma matching. Clang utilities are used
+ * to report the carret location of the error.
+ */
 void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 
 	using namespace insieme::frontend::utils;
@@ -155,7 +160,6 @@ void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Pars
 }
 
 // ------------------------------------ node ---------------------------
-
 concat node::operator>>(node const& n) const { return concat(*this, n); }
 star node::operator*() const { return star(*this); }
 choice node::operator|(node const& n) const { return choice(*this, n); }
@@ -259,18 +263,6 @@ std::string TokenToStr(const clang::Token& token) {
 		return TokenToStr(token.getKind());
 	}
 }
-
-//bool identifier_str::match(Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
-//	clang::Token& token = ParserProxy::get().ConsumeToken();
-//	if( token.is(clang::tok::identifier) ) {
-//		if(isAddToMap())
-//			mmap[getMapName()].push_back( ValueUnionPtr(new ValueUnion( TokenToStr(token) )) );
-//		return true;
-//	}
-//	errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(token) + "\'", token.getLocation()));
-//	return false;
-//}
-
 
 void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
 	if (!map_str.size())

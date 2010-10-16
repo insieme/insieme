@@ -939,64 +939,53 @@ public:
 class ConversionFactory::ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
 private:
-	core::ExpressionPtr defaultInitVal(const Type& ty, const core::TypePtr type ) {
-	    core::ExpressionPtr initExpr;
+
+	core::ExpressionPtr defaultInitVal(const clang::Type& ty, const core::TypePtr type ) {
         if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
             // initialize integer value
-            initExpr = convFact.builder.literal("0", type);
-            return initExpr;
-        } else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+            return convFact.builder.literal("0", type);
+        }
+        if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
             // in case of floating types we initialize with a zero value
             return convFact.builder.literal("0.0", type);
-        } else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+        }
+        if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
             // initialize pointer/reference types with the null value
             return core::lang::CONST_NULL_PTR_PTR;
-        } else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-            //todo
+        }
+        if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+            // TODO
             return core::lang::CONST_NULL_PTR_PTR;
-        } else if ( ty.isBooleanType() ) {
+        }
+        if ( ty.isBooleanType() ) {
             // boolean values are initialized to false
             return convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
-        } else if ( ty.isExtVectorType() ) {
-            const ExtVectorType* vecTy;
-            const TypedefType* typedefType;
-            if((typedefType = dynamic_cast<const TypedefType*>(&ty)) &&
-                (vecTy = dynamic_cast<const ExtVectorType*>(typedefType->getDecl()->getUnderlyingType().getTypePtr()))) {
-                const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( vecTy->getElementType()->getUnqualifiedDesugaredType() );
-
-                std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                std::vector<core::ExpressionPtr> zeros;
-                for(size_t i = 0; i < vecTy->getNumElements(); ++i)
-                    zeros.push_back(convFact.builder.literal(initVal, type));
-
-
-                return convFact.builder.vectorExpr(zeros);
-            } else {
-                assert(false && "ExtVectorType has unexpected class");
-            }
-        } else if ( ty.isConstantArrayType() ) {
-            if(const ConstantArrayType* arrTy = dynamic_cast<const ConstantArrayType*>(&ty)) {
-                std::vector<core::ExpressionPtr> vals;
-                if(const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( arrTy->getElementType()->getUnqualifiedDesugaredType() )) {
-                    std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                    for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
-                        vals.push_back(convFact.builder.literal(initVal, type));
-
-                    return convFact.builder.vectorExpr(vals);
-                } else {
-                    //TODO test with array of structs/classes
-                    core::ExpressionPtr elements = defaultInitVal(*arrTy->getElementType()->getUnqualifiedDesugaredType(), type);
-                    for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
-                        vals.push_back(elements);
-
-                    return convFact.builder.vectorExpr(vals);
-                }
-            } else {
-                    assert(false && "ConstantArrayType has unexpected class");
-            }
         }
+
+        //----------------  INTIALIZE VECTORS ---------------------------------
+        const Type* elemTy = NULL;
+        size_t arraySize = 0;
+        if ( ty.isExtVectorType() ) {
+        	const TypedefType* typedefType = dyn_cast<const TypedefType>(&ty);
+            assert(typedefType && "ExtVectorType has unexpected class");
+            const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+            assert(vecTy && "ExtVectorType has unexpected class");
+
+			elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
+			arraySize = vecTy->getNumElements();
+        }
+        if ( ty.isConstantArrayType() ) {
+        	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(&ty);
+			assert(arrTy && "ConstantArrayType has unexpected class");
+
+			elemTy = arrTy->getElementType()->getUnqualifiedDesugaredType();
+			arraySize = *arrTy->getSize().getRawData();
+        }
+        if( ty.isExtVectorType() || ty.isConstantArrayType() ) {
+        	core::ExpressionPtr&& initVal = defaultInitVal(*elemTy, convFact.convertType( *elemTy ) );
+        	return convFact.builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
+        }
+
         assert(false && "default initialization type not defined");
         return core::lang::CONST_NULL_PTR_PTR;
 	}
@@ -1008,7 +997,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						VARIABLE DECLARATION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
+	core::DeclarationStmtPtr VisitVarDecl(clang::VarDecl* varDecl) {
 
 		// logging
 		DVLOG(1) << "\n****************************************************************************************\n"
@@ -1021,90 +1010,37 @@ public:
 		}
 
 		clang::QualType clangType = varDecl->getType();
-
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 
-
 		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
-        // it is not declared as const
-		// successive dataflow analysis could be used to restrict the access to this variable
+        // it is not declared as const, successive dataflow analysis could be used to restrict the access
+		// to this variable
         core::TypePtr type = clangType.isConstQualified() ?
             convFact.convertType( *GET_TYPE_PTR(varDecl) ) :
             convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(varDecl) ) );
 
 		// initialization value
 		core::ExpressionPtr initExpr;//initExpr(NULL);
-		if( varDecl->getInit() )
+		if( varDecl->getInit() ) {
 			initExpr = convFact.convertExpr( *varDecl->getInit() );
-		else{
+		} else {
 		    initExpr = defaultInitVal(* GET_TYPE_PTR(varDecl), type);
-/*			Type& ty = * GET_TYPE_PTR(varDecl);
-
-            if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
-				// initialize integer value
-				initExpr = convFact.builder.literal("0", type);
-			} else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
-				// in case of floating types we initialize with a zero value
-				initExpr = convFact.builder.literal("0.0", type);
-			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
-				// initialize pointer/reference types with the null value
-				initExpr = core::lang::CONST_NULL_PTR_PTR;
-			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-				//todo
-			} else if ( ty.isBooleanType() ) {
-				// boolean values are initialized to false
-				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
-			} else if ( ty.isExtVectorType() ) {
-			    ExtVectorType* vecTy;
-			    TypedefType* typedefType;
-			    if((typedefType = dynamic_cast<TypedefType*>(&ty)) &&
-                    (vecTy = dynamic_cast<ExtVectorType*>(typedefType->getDecl()->getUnderlyingType().getTypePtr()))) {
-                    const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( vecTy->getElementType()->getUnqualifiedDesugaredType() );
-
-                    std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                    std::vector<core::ExpressionPtr> zeros;
-                    for(size_t i = 0; i < vecTy->getNumElements(); ++i)
-                        zeros.push_back(convFact.builder.literal(initVal, type));
-
-
-                    initExpr = convFact.builder.vectorExpr(zeros);
-                } else {
-                    assert(false && "ExtVectorType has unexpected class");
-                }
-            } else if ( ty.isConstantArrayType() ) {
-                if(ConstantArrayType* arrTy = dynamic_cast<ConstantArrayType*>(&ty)) {
-                    if(const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( arrTy->getElementType()->getUnqualifiedDesugaredType() )) {
-                        std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                        std::vector<core::ExpressionPtr> zeros;
-                        for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
-                            zeros.push_back(convFact.builder.literal(initVal, type));
-
-                        initExpr = convFact.builder.vectorExpr(zeros);
-                    } else {
-                        //TODO add initializer for constant arrays of not build in types (recursion?)
-                        initExpr = core::lang::CONST_NULL_PTR_PTR;
-                    }
-                } else {
-                    assert(false && "ConstantArrayType has unexpected class");
-                }
-            }*/
 		}
 
         /*-------------------------><-----------------------*/
-        core::AnnotationPtr attr = convFact.convertClangAttributes(varDecl);
-        if(attr)	type->addAnnotation(attr);
+        core::AnnotationPtr&& attr = convFact.convertClangAttributes(varDecl);
+        if(attr)
+        	type->addAnnotation(attr);
 
 		// todo: initialization for declarations with no initialization value
-        core::StatementPtr retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
+        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
 
         // logging
         DVLOG(1) << "Converted into IR stmt: "; \
     	DVLOG(1) << "\t" << *retStmt;
 
-    	return StmtWrapper( retStmt );
+    	return retStmt;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1114,13 +1050,13 @@ public:
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
-			return VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
+			return StmtWrapper( VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) ) );
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-				retList.push_back( VisitVarDecl(varDecl).getSingleStmt() );
+				retList.push_back( VisitVarDecl(varDecl) );
 		return retList;
 	}
 
@@ -1170,7 +1106,7 @@ public:
 				// inside a new context
 				Expr* expr = condVarDecl->getInit();
 				condVarDecl->setInit(NULL); // set the expression to null temporarily
-				core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+				core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 				condVarDecl->setInit(expr);
 
 				retStmt.push_back( declStmt );
@@ -1315,7 +1251,7 @@ public:
 			//
 			// this will be converted into the following IR representation:
 			// { int a = ...; if(a){ } }
-			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -1380,8 +1316,7 @@ public:
 			// { int a = 0; while(a = expr){ } }
 			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null temporarily
-			core::DeclarationStmtPtr&& declStmt =
-					core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 			condVarDecl->setInit(expr);
 
 			retStmt.push_back( declStmt );
@@ -1424,7 +1359,7 @@ public:
 		if( VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
 			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
 
-			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -2078,8 +2013,8 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang):
-	mgr(mgr),  builder(mgr), clangComp(clang),
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList):
+	mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
 	typeConv( new ClangTypeConverter(*this) ),
 	exprConv( new ClangExprConverter(*this) ),
 	stmtConv( new ClangStmtConverter(*this) ) { }

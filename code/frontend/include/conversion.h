@@ -36,9 +36,10 @@
 
 #pragma once
 
-#include "pragma_handler.h"
 #include "program.h"
 #include "ast_builder.h"
+
+#include "pragma_handler.h"
 
 // Forward declarations
 namespace clang {
@@ -56,6 +57,7 @@ namespace conversion {
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
 class ConversionFactory {
+
 	class ClangStmtConverter;
 	class ClangTypeConverter;
 	class ClangExprConverter;
@@ -63,20 +65,20 @@ class ConversionFactory {
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;
-    PragmaStmtMap 	 	 	 pragmaMap;
+    PragmaStmtMap 	 		 pragmaMap;
 
 	ClangTypeConverter* typeConv;
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
 public:
-	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);
+	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList = PragmaList());
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
 
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
-	void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
+	// void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
 
 	core::TypePtr 		convertType(const clang::Type& type) const;
 	core::StatementPtr 	convertStmt(const clang::Stmt& stmt) const;
@@ -86,7 +88,6 @@ public:
 	core::AnnotationPtr convertClangAttributes(const clang::ParmVarDecl* varDecl);
 
 	~ConversionFactory();
-
 };
 
 // ------------------------------------ IRConverter ---------------------------
@@ -95,13 +96,14 @@ public:
  */
 class IRConverter {
 	const ClangCompiler& mClangComp;
-	core::ProgramPtr     mProgram;
 	ConversionFactory    mFact;
+	core::ProgramPtr     mProgram;
 	const PragmaList&	 pragmaList;
+
 
 public:
 	IRConverter(const ClangCompiler& clangComp, const core::ProgramPtr prog, const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
-		mClangComp(clangComp), mProgram(prog), mFact(mgr, clangComp), pragmaList(pragmaList) { }
+		mClangComp(clangComp), mFact(mgr, clangComp, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
