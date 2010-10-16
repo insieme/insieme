@@ -412,7 +412,7 @@ omp::annotation::VarListPtr handleIdentifierList(const MatchMap& mmap, const std
 		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
 		assert(refVarIdent && "Clause not containing a DeclRefExpr");
 
-		core::VarExprPtr varExpr = core::dynamic_pointer_cast<const core::VarExpr>(fact.ConvertExpr( *refVarIdent ));
+		core::VarExprPtr varExpr = core::dynamic_pointer_cast<const core::VarExpr>(fact.convertExpr( *refVarIdent ));
 		assert(varExpr && "Conversion to Insieme node failed!");
 		varList->push_back( varExpr );
 	}
@@ -464,7 +464,7 @@ core::ExpressionPtr handleSingleExpression(const MatchMap& mmap,  const std::str
 	assert(expr.size() == 1);
 	clang::Expr* collapseExpr = dyn_cast<clang::Expr>(expr.front()->get<clang::Stmt*>());
 	assert(collapseExpr && "OpenMP collapse clause's expression is not of type clang::Expr");
-	return fact.ConvertExpr( *collapseExpr );
+	return fact.convertExpr( *collapseExpr );
 }
 
 // schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
@@ -713,7 +713,7 @@ omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::Conversi
 		clang::DeclRefExpr* refName = dyn_cast<clang::DeclRefExpr>(name);
 		assert(refName && "Clause not containing an identifier");
 
-		criticalName = core::dynamic_pointer_cast<const core::VarExpr>(fact.ConvertExpr( *refName ));
+		criticalName = core::dynamic_pointer_cast<const core::VarExpr>(fact.convertExpr( *refName ));
 		assert(criticalName && "Conversion to Insieme node failed!");
 	}
 

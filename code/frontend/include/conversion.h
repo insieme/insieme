@@ -40,8 +40,6 @@
 #include "program.h"
 #include "ast_builder.h"
 
-#include "clang/AST/ASTConsumer.h"
-
 // Forward declarations
 namespace clang {
 class ASTContext;
@@ -53,15 +51,15 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-class ClangStmtConverter;
-class ClangTypeConverter;
-class ClangExprConverter;
-
 // ------------------------------------ ConversionFactory ---------------------------
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
 class ConversionFactory {
+	class ClangStmtConverter;
+	class ClangTypeConverter;
+	class ClangExprConverter;
+
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;
@@ -71,15 +69,8 @@ class ConversionFactory {
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
-	friend class ClangTypeConverter;
-	friend class ClangExprConverter;
-	friend class ClangStmtConverter;
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);
-
-	core::TypePtr 		ConvertType(const clang::Type& type) const;
-	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt) const;
-	core::ExpressionPtr ConvertExpr(const clang::Expr& expr) const;
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
@@ -87,10 +78,15 @@ public:
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 	void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
 
-	void convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type);
-    void convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type);
+	core::TypePtr 		convertType(const clang::Type& type) const;
+	core::StatementPtr 	convertStmt(const clang::Stmt& stmt) const;
+	core::ExpressionPtr convertExpr(const clang::Expr& expr) const;
+
+	core::AnnotationPtr convertClangAttributes(const clang::VarDecl* varDecl);
+	core::AnnotationPtr convertClangAttributes(const clang::ParmVarDecl* varDecl);
 
 	~ConversionFactory();
+
 };
 
 // ------------------------------------ IRConverter ---------------------------

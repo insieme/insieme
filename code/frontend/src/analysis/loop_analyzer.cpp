@@ -137,7 +137,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 			assert(isa<const DeclRefExpr>(binOp->getLHS()));
 			const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 			assert(lhs->getDecl() == loopHelper.inductionVar);
-			loopHelper.incrExpr = convFact.ConvertExpr( *binOp->getRHS() );
+			loopHelper.incrExpr = convFact.convertExpr( *binOp->getRHS() );
 			break;
 		}
 		default:
@@ -155,7 +155,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		assert(isa<const DeclRefExpr>(binOp->getLHS()));
 		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 		assert(lhs->getDecl() == loopHelper.inductionVar);
-		loopHelper.condExpr = convFact.ConvertExpr( *binOp->getRHS() );
+		loopHelper.condExpr = convFact.convertExpr( *binOp->getRHS() );
 		return;
 	}
 	assert(false && "Loop condition not in normal form");

@@ -65,11 +65,11 @@ TEST(StmtConversion, FileTest) {
 		[ &convFactory ](const PragmaPtr curr) {
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
 			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertStmt( *tp->getStatement() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( *tp->getStatement() )->toString() + '\"' );
 			else {
 				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
 				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertType( *td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( *td->getTypeForDecl() )->toString() + '\"' );
 			}
 	});
 
