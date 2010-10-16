@@ -36,11 +36,10 @@
 
 #pragma once
 
-#include "pragma_handler.h"
 #include "program.h"
 #include "ast_builder.h"
 
-#include "clang/AST/ASTConsumer.h"
+#include "pragma_handler.h"
 
 // Forward declarations
 namespace clang {
@@ -53,42 +52,40 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-class ClangStmtConverter;
-class ClangTypeConverter;
-class ClangExprConverter;
-
 // ------------------------------------ ConversionFactory ---------------------------
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
 class ConversionFactory {
+
+	class ClangStmtConverter;
+	class ClangTypeConverter;
+	class ClangExprConverter;
+
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;
-    PragmaStmtMap 	 	 	 pragmaMap;
+    PragmaStmtMap 	 		 pragmaMap;
 
 	ClangTypeConverter* typeConv;
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
-	friend class ClangTypeConverter;
-	friend class ClangExprConverter;
-	friend class ClangStmtConverter;
 public:
-	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang);
-
-	core::TypePtr 		ConvertType(const clang::Type& type) const;
-	core::StatementPtr 	ConvertStmt(const clang::Stmt& stmt) const;
-	core::ExpressionPtr ConvertExpr(const clang::Expr& expr) const;
+	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList = PragmaList());
 
 	const core::ASTBuilder&  getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
 
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
-	void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
+	// void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
 
-	void convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type);
-    void convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type);
+	core::TypePtr 		convertType(const clang::Type& type) const;
+	core::StatementPtr 	convertStmt(const clang::Stmt& stmt) const;
+	core::ExpressionPtr convertExpr(const clang::Expr& expr) const;
+
+	core::AnnotationPtr convertClangAttributes(const clang::VarDecl* varDecl);
+	core::AnnotationPtr convertClangAttributes(const clang::ParmVarDecl* varDecl);
 
 	~ConversionFactory();
 };
@@ -99,13 +96,14 @@ public:
  */
 class IRConverter {
 	const ClangCompiler& mClangComp;
-	core::ProgramPtr     mProgram;
 	ConversionFactory    mFact;
+	core::ProgramPtr     mProgram;
 	const PragmaList&	 pragmaList;
+
 
 public:
 	IRConverter(const ClangCompiler& clangComp, const core::ProgramPtr prog, const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
-		mClangComp(clangComp), mProgram(prog), mFact(mgr, clangComp), pragmaList(pragmaList) { }
+		mClangComp(clangComp), mFact(mgr, clangComp, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 

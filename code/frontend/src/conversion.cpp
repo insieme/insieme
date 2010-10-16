@@ -272,7 +272,7 @@ namespace conversion {
 //							CLANG EXPRESSION CONVERTER
 //
 //############################################################################
-class ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
+class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
 	ConversionFactory& convFact;
 
 	// Map for resolved lambda functions
@@ -298,7 +298,7 @@ public:
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
 				GetStringFromStream( convFact.clangComp.getSourceManager(), intLit->getExprLoc()),
-				convFact.ConvertType( *GET_TYPE_PTR(intLit) )
+				convFact.convertType( *GET_TYPE_PTR(intLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -313,7 +313,7 @@ public:
 			// retrieve the string representation from the source code
 			convFact.builder.literal(
 				GetStringFromStream( convFact.clangComp.getSourceManager(), floatLit->getExprLoc()),
-				convFact.ConvertType( *GET_TYPE_PTR(floatLit) )
+				convFact.convertType( *GET_TYPE_PTR(floatLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -383,7 +383,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCastExpr(clang::CastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
-		const core::TypePtr& type = convFact.ConvertType( *GET_TYPE_PTR(castExpr) );
+		const core::TypePtr& type = convFact.convertType( *GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
 		return convFact.builder.castExpr( type, subExpr );
 	}
@@ -423,7 +423,7 @@ public:
 			if(!isRecSubType) {
 				// we create a TypeVar for each type in the mutual dependence
 				recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.varExpr(
-						convFact.ConvertType( *GET_TYPE_PTR(funcDecl) ),
+						convFact.convertType( *GET_TYPE_PTR(funcDecl) ),
 						core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )))
 				);
 			} else {
@@ -449,7 +449,7 @@ public:
 							recVarName << num_of_overloads;
 
 						this->recVarExprMap.insert( std::make_pair(fd,
-								this->convFact.builder.varExpr(convFact.ConvertType(*GET_TYPE_PTR(fd)),recVarName.str())) );
+								this->convFact.builder.varExpr(convFact.convertType(*GET_TYPE_PTR(fd)),recVarName.str())) );
 					}
 				);
 			}
@@ -464,18 +464,18 @@ public:
 
 		core::ExpressionPtr retLambdaExpr( NULL );
 		// this lambda is not yet in the map, we need to create it and add it to the cache
-		core::StatementPtr body = convFact.ConvertStmt( *funcDecl->getBody() );
+		core::StatementPtr body = convFact.convertStmt( *funcDecl->getBody() );
 
 		vector<core::ParamExprPtr> params;
 		std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 			[ &params, this ] (ParmVarDecl* currParam) {
-				core::TypePtr paramTy = this->convFact.ConvertType( *currParam->getOriginalType().getTypePtr() );
+				core::TypePtr paramTy = this->convFact.convertType( *currParam->getOriginalType().getTypePtr() );
 				params.push_back( this->convFact.builder.paramExpr( paramTy, core::Identifier(currParam->getName()) ) );
 			}
 		);
 
 		const core::ASTBuilder& builder = convFact.builder;
-		retLambdaExpr = builder.lambdaExpr( convFact.ConvertType( *GET_TYPE_PTR(funcDecl) ), params, body);
+		retLambdaExpr = builder.lambdaExpr( convFact.convertType( *GET_TYPE_PTR(funcDecl) ), params, body);
 
 		if( !components.empty() ) {
 			// this is a recurive function call
@@ -543,7 +543,7 @@ public:
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg) ); }
 			);
 
-			core::FunctionTypePtr funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.ConvertType( *GET_TYPE_PTR(funcDecl) ) );
+			core::FunctionTypePtr funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( *GET_TYPE_PTR(funcDecl) ) );
 
 			vector< core::ExpressionPtr >&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
@@ -627,7 +627,7 @@ public:
 			return createCallExpr(builder, std::vector<core::StatementPtr>( {lhs, builder.returnStmt(rhs)} ), rhs->getType());
 		}
 
-		core::TypePtr exprTy = convFact.ConvertType( *GET_TYPE_PTR(binOp) );
+		core::TypePtr exprTy = convFact.convertType( *GET_TYPE_PTR(binOp) );
 
 		// create Pair type
 		core::TupleTypePtr tupleTy = builder.tupleType( { exprTy, exprTy } );
@@ -810,7 +810,7 @@ public:
 	//							CONDITIONAL OPERATOR FIXME
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
-		core::TypePtr&& retTy = convFact.ConvertType( *GET_TYPE_PTR(condOp) );
+		core::TypePtr&& retTy = convFact.convertType( *GET_TYPE_PTR(condOp) );
 
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
@@ -859,7 +859,7 @@ public:
         	assert(insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 && "String is not a number");
         	pos = numStr;
         }
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, convFact.ConvertType( *GET_TYPE_PTR(vecElemExpr) ));
+        core::ExpressionPtr&& idx = convFact.builder.literal(pos, convFact.convertType( *GET_TYPE_PTR(vecElemExpr) ));
         core::ExpressionPtr&& retExpr = convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx }));
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
@@ -873,7 +873,7 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		// check whether this is a reference to a variable
 		if(Decl* varDecl = declRef->getDecl()) {
-			core::TypePtr varTy = convFact.ConvertType( *GET_TYPE_PTR(declRef) );
+			core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(declRef) );
 			// FIXME: is this correct?
 			if(!core::dynamic_pointer_cast<const core::RefType>(varTy))
 				varTy = builder.refType(varTy);
@@ -899,7 +899,7 @@ public:
 
         // get all values of the init expression
         for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-             elements.push_back( convFact.ConvertExpr(*(initList->getInit(i))) );
+             elements.push_back( convFact.convertExpr(*(initList->getInit(i))) );
         }
 
         // create vector initializator
@@ -914,7 +914,7 @@ public:
 // 							Printing macros for statements
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define FORWARD_VISITOR_CALL(StmtTy) \
-	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.ConvertExpr(*stmt) ); }
+	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(*stmt) ); }
 
 #define START_LOG_STMT_CONVERSION(stmt) \
 	DVLOG(1) << "\n****************************************************************************************\n" \
@@ -936,67 +936,56 @@ public:
 //							CLANG STMT CONVERTER
 //
 //############################################################################
-class ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
+class ConversionFactory::ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
 private:
-	core::ExpressionPtr defaultInitVal(const Type& ty, const core::TypePtr type ) {
-	    core::ExpressionPtr initExpr;
+
+	core::ExpressionPtr defaultInitVal(const clang::Type& ty, const core::TypePtr type ) {
         if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
             // initialize integer value
-            initExpr = convFact.builder.literal("0", type);
-            return initExpr;
-        } else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+            return convFact.builder.literal("0", type);
+        }
+        if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
             // in case of floating types we initialize with a zero value
             return convFact.builder.literal("0.0", type);
-        } else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+        }
+        if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
             // initialize pointer/reference types with the null value
             return core::lang::CONST_NULL_PTR_PTR;
-        } else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-            //todo
+        }
+        if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+            // TODO
             return core::lang::CONST_NULL_PTR_PTR;
-        } else if ( ty.isBooleanType() ) {
+        }
+        if ( ty.isBooleanType() ) {
             // boolean values are initialized to false
             return convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
-        } else if ( ty.isExtVectorType() ) {
-            const ExtVectorType* vecTy;
-            const TypedefType* typedefType;
-            if((typedefType = dynamic_cast<const TypedefType*>(&ty)) &&
-                (vecTy = dynamic_cast<const ExtVectorType*>(typedefType->getDecl()->getUnderlyingType().getTypePtr()))) {
-                const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( vecTy->getElementType()->getUnqualifiedDesugaredType() );
-
-                std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                std::vector<core::ExpressionPtr> zeros;
-                for(size_t i = 0; i < vecTy->getNumElements(); ++i)
-                    zeros.push_back(convFact.builder.literal(initVal, type));
-
-
-                return convFact.builder.vectorExpr(zeros);
-            } else {
-                assert(false && "ExtVectorType has unexpected class");
-            }
-        } else if ( ty.isConstantArrayType() ) {
-            if(const ConstantArrayType* arrTy = dynamic_cast<const ConstantArrayType*>(&ty)) {
-                std::vector<core::ExpressionPtr> vals;
-                if(const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( arrTy->getElementType()->getUnqualifiedDesugaredType() )) {
-                    std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                    for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
-                        vals.push_back(convFact.builder.literal(initVal, type));
-
-                    return convFact.builder.vectorExpr(vals);
-                } else {
-                    //TODO test with array of structs/classes
-                    core::ExpressionPtr elements = defaultInitVal(*arrTy->getElementType()->getUnqualifiedDesugaredType(), type);
-                    for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
-                        vals.push_back(elements);
-
-                    return convFact.builder.vectorExpr(vals);
-                }
-            } else {
-                    assert(false && "ConstantArrayType has unexpected class");
-            }
         }
+
+        //----------------  INTIALIZE VECTORS ---------------------------------
+        const Type* elemTy = NULL;
+        size_t arraySize = 0;
+        if ( ty.isExtVectorType() ) {
+        	const TypedefType* typedefType = dyn_cast<const TypedefType>(&ty);
+            assert(typedefType && "ExtVectorType has unexpected class");
+            const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+            assert(vecTy && "ExtVectorType has unexpected class");
+
+			elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
+			arraySize = vecTy->getNumElements();
+        }
+        if ( ty.isConstantArrayType() ) {
+        	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(&ty);
+			assert(arrTy && "ConstantArrayType has unexpected class");
+
+			elemTy = arrTy->getElementType()->getUnqualifiedDesugaredType();
+			arraySize = *arrTy->getSize().getRawData();
+        }
+        if( ty.isExtVectorType() || ty.isConstantArrayType() ) {
+        	core::ExpressionPtr&& initVal = defaultInitVal(*elemTy, convFact.convertType( *elemTy ) );
+        	return convFact.builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
+        }
+
         assert(false && "default initialization type not defined");
         return core::lang::CONST_NULL_PTR_PTR;
 	}
@@ -1008,7 +997,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						VARIABLE DECLARATION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	StmtWrapper VisitVarDecl(clang::VarDecl* varDecl) {
+	core::DeclarationStmtPtr VisitVarDecl(clang::VarDecl* varDecl) {
 
 		// logging
 		DVLOG(1) << "\n****************************************************************************************\n"
@@ -1021,89 +1010,37 @@ public:
 		}
 
 		clang::QualType clangType = varDecl->getType();
-
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 
-
 		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
-        // it is not declared as const
-		// successive dataflow analysis could be used to restrict the access to this variable
+        // it is not declared as const, successive dataflow analysis could be used to restrict the access
+		// to this variable
         core::TypePtr type = clangType.isConstQualified() ?
-            convFact.ConvertType( *GET_TYPE_PTR(varDecl) ) :
-            convFact.builder.refType( convFact.ConvertType( *GET_TYPE_PTR(varDecl) ) );
+            convFact.convertType( *GET_TYPE_PTR(varDecl) ) :
+            convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(varDecl) ) );
 
 		// initialization value
 		core::ExpressionPtr initExpr;//initExpr(NULL);
-		if( varDecl->getInit() )
-			initExpr = convFact.ConvertExpr( *varDecl->getInit() );
-		else{
+		if( varDecl->getInit() ) {
+			initExpr = convFact.convertExpr( *varDecl->getInit() );
+		} else {
 		    initExpr = defaultInitVal(* GET_TYPE_PTR(varDecl), type);
-/*			Type& ty = * GET_TYPE_PTR(varDecl);
-
-            if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
-				// initialize integer value
-				initExpr = convFact.builder.literal("0", type);
-			} else if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
-				// in case of floating types we initialize with a zero value
-				initExpr = convFact.builder.literal("0.0", type);
-			} else if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
-				// initialize pointer/reference types with the null value
-				initExpr = core::lang::CONST_NULL_PTR_PTR;
-			} else if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-				//todo
-			} else if ( ty.isBooleanType() ) {
-				// boolean values are initialized to false
-				initExpr = convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
-			} else if ( ty.isExtVectorType() ) {
-			    ExtVectorType* vecTy;
-			    TypedefType* typedefType;
-			    if((typedefType = dynamic_cast<TypedefType*>(&ty)) &&
-                    (vecTy = dynamic_cast<ExtVectorType*>(typedefType->getDecl()->getUnderlyingType().getTypePtr()))) {
-                    const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( vecTy->getElementType()->getUnqualifiedDesugaredType() );
-
-                    std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                    std::vector<core::ExpressionPtr> zeros;
-                    for(size_t i = 0; i < vecTy->getNumElements(); ++i)
-                        zeros.push_back(convFact.builder.literal(initVal, type));
-
-
-                    initExpr = convFact.builder.vectorExpr(zeros);
-                } else {
-                    assert(false && "ExtVectorType has unexpected class");
-                }
-            } else if ( ty.isConstantArrayType() ) {
-                if(ConstantArrayType* arrTy = dynamic_cast<ConstantArrayType*>(&ty)) {
-                    if(const BuiltinType* buildInTy = dynamic_cast<const BuiltinType*>( arrTy->getElementType()->getUnqualifiedDesugaredType() )) {
-                        std::string initVal = buildInTy->isFloatingPoint() ? "0.0" : "0";
-
-                        std::vector<core::ExpressionPtr> zeros;
-                        for(size_t i = 0; i < *arrTy->getSize().getRawData(); ++i)
-                            zeros.push_back(convFact.builder.literal(initVal, type));
-
-                        initExpr = convFact.builder.vectorExpr(zeros);
-                    } else {
-                        //TODO add initializer for constant arrays of not build in types (recursion?)
-                        initExpr = core::lang::CONST_NULL_PTR_PTR;
-                    }
-                } else {
-                    assert(false && "ConstantArrayType has unexpected class");
-                }
-            }*/
 		}
 
         /*-------------------------><-----------------------*/
-        convFact.convertClangAttributes(varDecl, type);
+        core::AnnotationPtr&& attr = convFact.convertClangAttributes(varDecl);
+        if(attr)
+        	type->addAnnotation(attr);
 
 		// todo: initialization for declarations with no initialization value
-        core::StatementPtr retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
+        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
 
         // logging
         DVLOG(1) << "Converted into IR stmt: "; \
     	DVLOG(1) << "\t" << *retStmt;
 
-    	return StmtWrapper( retStmt );
+    	return retStmt;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1113,13 +1050,13 @@ public:
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
-			return VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
+			return StmtWrapper( VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) ) );
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-				retList.push_back( VisitVarDecl(varDecl).getSingleStmt() );
+				retList.push_back( VisitVarDecl(varDecl) );
 		return retList;
 	}
 
@@ -1130,7 +1067,7 @@ public:
 		START_LOG_STMT_CONVERSION(retStmt);
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
 
-		core::StatementPtr ret = convFact.builder.returnStmt( convFact.ConvertExpr( *retStmt->getRetValue() ) );
+		core::StatementPtr ret = convFact.builder.returnStmt( convFact.convertExpr( *retStmt->getRetValue() ) );
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(ret, retStmt, convFact);
 
@@ -1169,7 +1106,7 @@ public:
 				// inside a new context
 				Expr* expr = condVarDecl->getInit();
 				condVarDecl->setInit(NULL); // set the expression to null temporarily
-				core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+				core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 				condVarDecl->setInit(expr);
 
 				retStmt.push_back( declStmt );
@@ -1178,7 +1115,7 @@ public:
 				// int a = 0;
 				// for(...; a=f(); ...) { }
 	//				const core::VarExprPtr& varExpr = declStmt->getVarExpression();
-	//				core::ExpressionPtr&& initExpr = convFact.ConvertExpr( *expr );
+	//				core::ExpressionPtr&& initExpr = convFact.convertExpr( *expr );
 				// todo: build a binary expression
 				// condExpr = (varExpr = initExpr);
 			} else
@@ -1201,8 +1138,8 @@ public:
 				// adding the body
 				std::copy(body.begin(), body.end(), std::back_inserter(whileBody));
 				// adding the incExpr at after the loop body
-				whileBody.push_back( convFact.ConvertExpr( *forStmt->getInc() ) );
-				return StmtWrapper( builder.whileStmt( convFact.ConvertExpr( *forStmt->getCond() ), builder.compoundStmt(whileBody) ) );
+				whileBody.push_back( convFact.convertExpr( *forStmt->getInc() ) );
+				return StmtWrapper( builder.whileStmt( convFact.convertExpr( *forStmt->getCond() ), builder.compoundStmt(whileBody) ) );
 			}
 
 			StmtWrapper&& initExpr = Visit( initStmt );
@@ -1237,7 +1174,7 @@ public:
 				DVLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
 						<< " with variable: " << varName;
 
-				core::TypePtr varTy = convFact.ConvertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
+				core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
 				newIndVar = builder.varExpr(varTy, core::Identifier(varName));
 
 				declStmt = builder.declarationStmt( builder.refType(varTy), core::Identifier(varName), core::lang::CONST_UINT_ZERO_PTR );
@@ -1267,7 +1204,7 @@ public:
 			if(iteratorChanged) {
 				// in the case we replace the loop iterator with a temporary variable, we have to assign the final value of the
 				// iterator to the old variable so we don't change the semantics of the code
-				core::TypePtr varTy = convFact.ConvertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
+				core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
 
 				retStmt.push_back( builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
 					std::vector<core::ExpressionPtr>({
@@ -1281,8 +1218,8 @@ public:
 			// analysis of loop structure failed, we have to build a while statement
 			retStmt.push_back( Visit( forStmt->getInit() ).getSingleStmt() );
 			retStmt.push_back( builder.whileStmt(
-					convFact.ConvertExpr( *forStmt->getCond() ),
-					builder.compoundStmt(std::vector<core::StatementPtr>({ body.getSingleStmt(), convFact.ConvertExpr( *forStmt->getInc() ) })))
+					convFact.convertExpr( *forStmt->getCond() ),
+					builder.compoundStmt(std::vector<core::StatementPtr>({ body.getSingleStmt(), convFact.convertExpr( *forStmt->getInc() ) })))
 			);
 		}
 
@@ -1314,7 +1251,7 @@ public:
 			//
 			// this will be converted into the following IR representation:
 			// { int a = ...; if(a){ } }
-			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -1322,7 +1259,7 @@ public:
 		} else {
 			Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
-			condExpr = convFact.ConvertExpr( *cond );
+			condExpr = convFact.convertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the IfStmt");
 		VLOG(2) << "IfStmt 'condition' expression: " << *condExpr;
@@ -1379,8 +1316,7 @@ public:
 			// { int a = 0; while(a = expr){ } }
 			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null temporarily
-			core::DeclarationStmtPtr&& declStmt =
-					core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 			condVarDecl->setInit(expr);
 
 			retStmt.push_back( declStmt );
@@ -1391,7 +1327,7 @@ public:
 		} else {
 			Expr* cond = whileStmt->getCond();
 			assert(cond && "WhileStmt with no condition.");
-			condExpr = convFact.ConvertExpr( *cond );
+			condExpr = convFact.convertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 		VLOG(2) << "WhileStmt 'condition' expression: " << condExpr;
@@ -1423,7 +1359,7 @@ public:
 		if( VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
 			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
 
-			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( VisitVarDecl(condVarDecl).getSingleStmt() );
+			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -1431,7 +1367,7 @@ public:
 		} else {
 			Expr* cond = switchStmt->getCond();
 			assert(cond && "SwitchStmt with no condition.");
-			condExpr = convFact.ConvertExpr( *cond );
+			condExpr = convFact.convertExpr( *cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
@@ -1473,11 +1409,11 @@ public:
 				core::StatementPtr subStmt(NULL);
 				if( Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
-					subStmt = convFact.ConvertExpr( *rhs );
+					subStmt = convFact.convertExpr( *rhs );
 				} else if( Stmt* sub = caseStmt->getSubStmt() ) {
 					subStmt = tryAggregateStmts( builder, Visit(sub) );
 				}
-				cases.push_back( std::make_pair(convFact.ConvertExpr( *caseStmt->getLHS() ), subStmt) );
+				cases.push_back( std::make_pair(convFact.convertExpr( *caseStmt->getLHS() ), subStmt) );
 			} else {
 				// default case
 				DefaultStmt* defCase = dyn_cast<DefaultStmt>(switchCaseStmt);
@@ -1590,7 +1526,7 @@ public:
 //							CLANG TYPE CONVERTER
 //
 //############################################################################
-class ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
+class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
 	const ConversionFactory& convFact;
 
 	utils::DependencyGraph<const Type*> typeGraph;
@@ -2077,21 +2013,21 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang):
-	mgr(mgr),  builder(mgr), clangComp(clang),
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList):
+	mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
 	typeConv( new ClangTypeConverter(*this) ),
 	exprConv( new ClangExprConverter(*this) ),
 	stmtConv( new ClangStmtConverter(*this) ) { }
 
-core::TypePtr ConversionFactory::ConvertType(const clang::Type& type) const {
+core::TypePtr ConversionFactory::convertType(const clang::Type& type) const {
 	return typeConv->Visit( const_cast<Type*>(&type) );
 }
 
-core::StatementPtr ConversionFactory::ConvertStmt(const clang::Stmt& stmt) const {
+core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt& stmt) const {
 	return stmtConv->Visit( const_cast<Stmt*>(&stmt) ).getSingleStmt();
 }
 
-core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) const {
+core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr& expr) const {
 	return exprConv->Visit( const_cast<Expr*>(&expr) );
 }
 
@@ -2099,131 +2035,133 @@ core::ExpressionPtr ConversionFactory::ConvertExpr(const clang::Expr& expr) cons
  * currently used for:
  * 	* OpenCL address spaces
  */
-void ConversionFactory::convertClangAttributes(clang::VarDecl* varDecl, core::TypePtr type) {
-    if(varDecl->hasAttrs()) {
-        const AttrVec attrVec = varDecl->getAttrs();
-        std::ostringstream ss;
-        ocl::OclBaseAnnotation::OclAnnotationList declAnnotation;
-        try {
-        for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-            if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-                std::string sr = attr->getAnnotation().str();
+core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDecl* varDecl) {
+    if(!varDecl->hasAttrs())
+    	return core::AnnotationPtr();
 
-                //check if the declaration has attribute __private
-                if(sr == "__private") {
-                    DVLOG(2) << "           OpenCL address space __private";
-                    declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-                            ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
-                    continue;
-                }
+	const AttrVec attrVec = varDecl->getAttrs();
+	std::ostringstream ss;
+	ocl::OclBaseAnnotation::OclAnnotationList declAnnotation;
+	try {
+	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+			std::string sr = attr->getAnnotation().str();
 
-                //check if the declaration has attribute __local
-                if(sr == "__local") {
-                    DVLOG(2) << "           OpenCL address space __local";
-                    declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-                            ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
-                    continue;
-                }
+			//check if the declaration has attribute __private
+			if(sr == "__private") {
+				DVLOG(2) << "           OpenCL address space __private";
+				declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
+						ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+				continue;
+			}
 
-                //check if the declaration has attribute __global
-                if(sr == "__global") {
-                    ss << "Address space __global not allowed for local variable";
-                    throw &ss;
-                }
+			//check if the declaration has attribute __local
+			if(sr == "__local") {
+				DVLOG(2) << "           OpenCL address space __local";
+				declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
+						ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+				continue;
+			}
 
-                //check if the declaration has attribute __constant
-                if(sr == "__constant") {
-                    ss << "Address space __constant not allowed for local variable";
-                    throw &ss;
-                }
+			//check if the declaration has attribute __global
+			if(sr == "__global") {
+				ss << "Address space __global not allowed for local variable";
+				throw &ss;
+			}
 
-                ss << "Unexpected annotation " << sr;
+			//check if the declaration has attribute __constant
+			if(sr == "__constant") {
+				ss << "Address space __constant not allowed for local variable";
+				throw &ss;
+			}
 
-                throw &ss;
-            }
-            else
-                ss << "Unexpected attribute";
-                throw &ss;
-        }}
-        catch(std::ostringstream *errMsg) {
-            //show errors if unexpected patterns were found
-            SourceManager& manager = clangComp.getSourceManager();
-            SourceLocation errLoc = varDecl->getLocStart();
+			ss << "Unexpected annotation " << sr;
 
-            *errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
-                    frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
+			throw &ss;
+		}
+		else
+			ss << "Unexpected attribute";
+			throw &ss;
+	}}
+	catch(std::ostringstream *errMsg) {
+		//show errors if unexpected patterns were found
+		SourceManager& manager = clangComp.getSourceManager();
+		SourceLocation errLoc = varDecl->getLocStart();
 
-            printErrorMsg(*errMsg, clangComp, varDecl);
-        }
-        type->addAnnotation( std::make_shared<ocl::OclBaseAnnotation>(declAnnotation) );
-    }
+		*errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
+				frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
+
+		printErrorMsg(*errMsg, clangComp, varDecl);
+	}
+	return std::make_shared<ocl::OclBaseAnnotation>(declAnnotation);
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (arguments version)
  * currently used for:
  * OpenCL address spaces
  */
-void ConversionFactory::convertClangAttributes(clang::ParmVarDecl* varDecl, core::TypePtr type) {
-    if(varDecl->hasAttrs()) {
-        const AttrVec attrVec = varDecl->getAttrs();
-        std::ostringstream ss;
-        ocl::OclBaseAnnotation::OclAnnotationList paramAnnotation;
+core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmVarDecl* varDecl) {
+    if(!varDecl->hasAttrs())
+    	return core::AnnotationPtr();
 
-        try {
-        for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-            if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-                std::string sr = attr->getAnnotation().str();
+	const AttrVec attrVec = varDecl->getAttrs();
+	std::ostringstream ss;
+	ocl::OclBaseAnnotation::OclAnnotationList paramAnnotation;
 
-                //check if the declaration has attribute __private
-                if(sr == "__private") {
-                    DVLOG(2) << "           OpenCL address space __private";
-                    paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-                            ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
-                    continue;
-                }
+	try {
+	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+			std::string sr = attr->getAnnotation().str();
 
-                //check if the declaration has attribute __local
-                if(sr == "__local") {
-                    DVLOG(2) << "           OpenCL address space __local";
-                    paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-                            ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
-                    continue;
-                }
+			//check if the declaration has attribute __private
+			if(sr == "__private") {
+				DVLOG(2) << "           OpenCL address space __private";
+				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
+						ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+				continue;
+			}
 
-                //check if the declaration has attribute __global
-                if(sr == "__global") {
-                    DVLOG(2) << "           OpenCL address space __global";
-                    paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-                            ocl::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
-                    continue;
-                }
+			//check if the declaration has attribute __local
+			if(sr == "__local") {
+				DVLOG(2) << "           OpenCL address space __local";
+				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
+						ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+				continue;
+			}
 
-                //check if the declaration has attribute __constant
-                if(sr == "__constant") {
-                    DVLOG(2) << "           OpenCL address space __constant";
-                    paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-                            ocl::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
-                    continue;
-                }
-                ss << "Unexpected annotation " << sr;
+			//check if the declaration has attribute __global
+			if(sr == "__global") {
+				DVLOG(2) << "           OpenCL address space __global";
+				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
+						ocl::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
+				continue;
+			}
 
-                throw &ss;
-            }
-            else
-                ss << "Unexpected attribute";
-                throw &ss;
-        }}
-        catch(std::ostringstream *errMsg) {
-            //show errors if unexpected patterns were found
-            SourceManager& manager = clangComp.getSourceManager();
-            SourceLocation errLoc = varDecl->getLocStart();
+			//check if the declaration has attribute __constant
+			if(sr == "__constant") {
+				DVLOG(2) << "           OpenCL address space __constant";
+				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
+						ocl::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
+				continue;
+			}
+			ss << "Unexpected annotation " << sr;
 
-            *errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
-                    frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
-            printErrorMsg(*errMsg, clangComp, varDecl);
-        }
-        type->addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(paramAnnotation));
-    }
+			throw &ss;
+		}
+		else
+			ss << "Unexpected attribute";
+			throw &ss;
+	}}
+	catch(std::ostringstream *errMsg) {
+		//show errors if unexpected patterns were found
+		SourceManager& manager = clangComp.getSourceManager();
+		SourceLocation errLoc = varDecl->getLocStart();
+
+		*errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
+				frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
+		printErrorMsg(*errMsg, clangComp, varDecl);
+	}
+	return std::make_shared<ocl::OclBaseAnnotation>(paramAnnotation);
 }
 
 ConversionFactory::~ConversionFactory() {
@@ -2251,7 +2189,7 @@ void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
 		}
 //		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-//			fact.ConvertType( *varDecl->getType().getTypePtr() );
+//			fact.convertType( *varDecl->getType().getTypePtr() );
 //		}
 	}
 
@@ -2263,16 +2201,18 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 			 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
 	DVLOG(1) << "\t* Converting body";
 
-	core::TypePtr funcType = mFact.ConvertType( *GET_TYPE_PTR(funcDecl) );
+	core::TypePtr funcType = mFact.convertType( *GET_TYPE_PTR(funcDecl) );
 	// paramlist
 	core::LambdaExpr::ParamList funcParamList;
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[&funcParamList, &mFact] (ParmVarDecl* currParam) {
 			funcParamList.push_back(
-				mFact.getASTBuilder().paramExpr( mFact.ConvertType( *GET_TYPE_PTR(currParam) ), currParam->getNameAsString()) );
+				mFact.getASTBuilder().paramExpr( mFact.convertType( *GET_TYPE_PTR(currParam) ), currParam->getNameAsString()) );
 
 			//port clang attributes to IR annotations
-			mFact.convertClangAttributes(currParam, funcParamList.back().ptr->getType());
+			core::AnnotationPtr attr = mFact.convertClangAttributes(currParam);
+			if(attr)
+				 funcParamList.back().ptr->getType()->addAnnotation(attr);
 		}
 	);
 
@@ -2307,7 +2247,7 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 	core::StatementPtr funcBody(NULL);
 	assert(funcDecl->getBody() && "Function Definition has no body");
 
-	funcBody = mFact.ConvertStmt( *funcDecl->getBody() );
+	funcBody = mFact.convertStmt( *funcDecl->getBody() );
 	core::LambdaExprPtr&& lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
 	// annotate name of function
 	lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
@@ -2315,7 +2255,7 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 }
 
 core::LambdaExprPtr IRConverter::handleBody(const clang::Stmt* body) {
-	core::StatementPtr&& bodyStmt = mFact.ConvertStmt( *body );
+	core::StatementPtr&& bodyStmt = mFact.convertStmt( *body );
 	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), std::vector<core::StatementPtr>( {bodyStmt} ), core::lang::TYPE_UNIT);
 
 	return core::dynamic_pointer_cast<const core::LambdaExpr>(callExpr->getFunctionExpr());

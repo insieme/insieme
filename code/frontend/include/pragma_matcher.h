@@ -65,15 +65,18 @@ class SourceLocation;
 namespace insieme {
 namespace frontend {
 
+// ------------------------------------ ParserStack ---------------------------
 /**
  * Data structure used for error reporting due to unmatched pragmas.
- * Choice points generated new records which are allocated in a stack-like data structure.
+ * Choice points generated new records which are allocated in a stack-like data
+ * structure.
  */
 class ParserStack {
 public:
 	/**
 	 * Contains a parsing error encountered during the evaluation of pragmas.
-	 * It has a string representing the expecting tokens and the location at which the error was encountered.
+	 * It has a string representing the expecting tokens and the location at
+	 * which the error was encountered.
 	 */
 	struct Error {
 		std::string 		expected;
@@ -100,8 +103,9 @@ private:
 };
 
 /**
- * Function which create an error report error using the clang Diagnostics utilities. It reports to std error the location
- * at which the parser found the error and the list of keywords he was expecting.
+ * Function which create an error report error using the clang Diagnostics utilities.
+ * It reports to std error the location at which the parser found the error and the list
+ * of keywords he was expecting.
  */
 void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
 
@@ -115,8 +119,9 @@ class option;
 
 /**
  * This class is used to keep the tokens extracted during the parsing of pragmas.
- * Two kind of tokens can be stored, strings (which usually results from parsing of keywords) and clang AST nodes (stmt)
- * which are instead extracted when identifiers, expressions are parsed.
+ * Two kind of tokens can be stored, strings (which usually results from parsing
+ * of keywords) and clang AST nodes (stmt) which are instead extracted when
+ * identifiers, expressions are parsed.
  */
 class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*> {
 	bool ptrOwner;
@@ -167,7 +172,8 @@ template<clang::tok::TokenKind T> struct Tok;
 
 // ------------------------------------ pragma matcher ---------------------------
 /**
- * A node is a abstract class representing a generic node of the matching tree composed to parse a determined pragma.
+ * A node is a abstract class representing a generic node of the matching tree
+ * composed to parse a determined pragma.
  */
 struct node {
 
@@ -192,7 +198,8 @@ struct node {
 	 */
 	choice operator|(node const& n) const;
 	/**
-	 * The semantics of operator ! is that the following node is optional. !n1 matches either if n1 is found or no tokens are available from the input stream.
+	 * The semantics of operator ! is that the following node is optional. !n1 matches either if n1 is found or no tokens are available
+	 * from the input stream.
 	 */
 	option operator!() const;
 
@@ -325,17 +332,6 @@ struct expr_p: public MappableNode<expr_p> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
-
-/**
- * This node matches an expression, due to the complexity of defining a regular expression which can map C/C++ expressions, the clang Parser
- * is used directly. NOTICE: a comma separated value list will be consumed by this node as it is a regular C expression.
- */
-//struct identifier_str: public MappableNode<identifier_str> {
-//	identifier_str() { }
-//	identifier_str(std::string const& map_str, bool addToMap=true) : MappableNode<identifier_str>(map_str, addToMap) { }
-//
-//	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
-//};
 
 /**
  * Utility function for adding a token with a specific key to the matcher map.

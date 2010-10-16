@@ -52,24 +52,22 @@ TEST(StmtConversion, FileTest) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-
-	ConversionFactory convFactory( shared, comp );
+	ConversionFactory convFactory( shared, comp, pl );
 
 	std::for_each(pl.begin(), pl.end(),
 		[ &convFactory ](const PragmaPtr curr) {
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
 			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertStmt( *tp->getStatement() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( *tp->getStatement() )->toString() + '\"' );
 			else {
 				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
 				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.ConvertType( *td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( *td->getTypeForDecl() )->toString() + '\"' );
 			}
 	});
 

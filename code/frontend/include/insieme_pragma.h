@@ -63,13 +63,21 @@ public:
 	static void registerPragmaHandler(clang::Preprocessor& pp);
 };
 
-
+/**
+ * The pragma 'insieme mark' is used to mark code reagions (i.e. function definitions and code blocks)
+ * that will be parsed by the compiler.
+ */
 class InsiemePragma: public Pragma {
-
 public:
 	InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
 
 	static void registerPragmaHandler(clang::Preprocessor& pp);
+};
+
+class InsiemeMark: public InsiemePragma {
+public:
+	InsiemeMark(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
+		InsiemePragma(startLoc, endLoc, type, mmap) { }
 };
 
 

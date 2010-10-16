@@ -348,7 +348,7 @@ const core::ProgramPtr& Program::convert() {
 
 		for(PragmaList::const_iterator pit = (*it)->getPragmaList().begin(), pend = (*it)->getPragmaList().end(); pit != pend; ++pit) {
 
-			if((*pit)->getType() == "insieme") {
+			if((*pit)->getType() == "insieme::mark") {
 				insiemePragmaFound = true;
 				const Pragma& insiemePragma = **pit;
 
