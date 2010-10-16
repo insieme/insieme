@@ -48,7 +48,7 @@
 #include <math.h>
 #include <time.h>
 
-// #pragma insieme mark
+#pragma insieme mark
 double init_func(int x, int y) {
 	return 40 * sin((double)(16 * (2 * x - 1) * y));
 }
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 #endif
 	start_t = clock();
 
-//	#pragma insieme
+	#pragma insieme mark
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for private(resv) reduction(+: resv)

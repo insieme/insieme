@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#include <xercesc/util/XercesDefs.hpp>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -54,7 +55,28 @@ using namespace insieme::xml;
 using namespace std;
 
 XERCES_CPP_NAMESPACE_USE
-	
+
+// ------------------------------------ XStr ----------------------------
+
+#define toUnicode(str) XStr(str).unicodeForm()
+
+class XStr {
+	::XMLCh* fUnicodeForm;
+public:
+	XStr(const string& toTranscode);
+
+	~XStr();
+
+	const ::XMLCh* unicodeForm();
+};
+
+XStr::XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
+
+XStr::~XStr() { XMLString::release(&fUnicodeForm); }
+
+const ::XMLCh* XStr::unicodeForm() { return fUnicodeForm; }
+
+
 // ------------------------------------ XmlVisitor ----------------------------	
 
 class XmlVisitor : public ASTVisitor<void> {
@@ -331,9 +353,9 @@ public:
 
 // ------------------------------------ XmlElement ----------------------------
 
-XmlElement::XmlElement(xercesc::DOMElement* elem) : doc(NULL), base(elem) { }
-XmlElement::XmlElement(string name, xercesc::DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
-XmlElement::XmlElement(xercesc::DOMElement* elem, xercesc::DOMDocument* doc) : doc(doc), base(elem) { }
+XmlElement::XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
+XmlElement::XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
+XmlElement::XmlElement(DOMElement* elem, DOMDocument* doc) : doc(doc), base(elem) { }
 
 DOMElement* XmlElement::getBase() {
 	return base;
@@ -407,15 +429,6 @@ const vector<XmlElement> XmlElement::getChildren() const {
 	return vec;
 }
 
-// ------------------------------------ XStr ----------------------------
-
-XStr::XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
-
-XStr::~XStr() { XMLString::release(&fUnicodeForm); }
-
-const XMLCh* XStr::unicodeForm() { return fUnicodeForm; }
-
-
 // ------------------------------------ XmlConverter ----------------------------
 
 XmlConverter& XmlConverter::get(){
@@ -445,9 +458,7 @@ shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, x
 	}
 }
 
-void* XmlConverter::registerAnnotation(string name, 
-		function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)> toXml, 
-		function<shared_ptr<Annotation> (const XmlElement&)> fromXml) {
+void* XmlConverter::registerAnnotation(string name, const XmlConverter::IrToDomConvertType& toXml, const XmlConverter::DomToIrConvertType& fromXml) {
 	IrToDomConvertMap[name] = toXml;
 	DomToIrConvertMap[name] = fromXml;
 	return NULL;

@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <xml_utils.h>
+#include <xercesc/util/XercesDefs.hpp>
 
+using namespace std;
 using namespace insieme::core;
 using namespace insieme::xml;
 

@@ -50,8 +50,9 @@
 #include "cmd_line_utils.h"
 
 #include "clang_compiler.h"
-
 #include "logging.h"
+
+#include "xml_utils.h"
 
 using namespace std;
 using namespace google;
@@ -79,8 +80,10 @@ int main(int argc, char** argv) {
 
 		// do the actual clang to IR conversion
 		insieme::core::ProgramPtr program = p.convert();
-
 		LOG(INFO) << "Parsed Program: " << std::endl << *program;
+
+		// XML dump
+		insieme::xml::xmlWrite(program, "insieme.xml");
 
 		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
 		LOG(INFO) << "Converting to C++ ... ";

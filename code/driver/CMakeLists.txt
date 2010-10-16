@@ -21,6 +21,7 @@ include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
 include_directories( ${insieme_c_info_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
+include_directories( ${insieme_xml_include_dir} )
 
 # Build dummy executable
 add_executable( main src/main.cpp )
@@ -29,7 +30,7 @@ add_executable( main src/main.cpp )
 add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
 
 # register linked libraries
-target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
+target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info insieme_xml )
 
 # add boost_program_options library
 target_link_libraries( main boost_program_options ${glog_LIB})
