@@ -108,7 +108,7 @@ private:
 	 */
 	const bool functionType;
 
-	virtual Type* createCopyUsing(NodeMapper& manager) const = 0;
+	virtual Type* createCopyUsing(NodeMapping& mapper) const = 0;
 
 protected:
 
@@ -220,7 +220,7 @@ private:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TypeVariable* createCopyUsing(NodeMapper&) const;
+	virtual TypeVariable* createCopyUsing(NodeMapping&) const;
 
 protected:
 
@@ -308,7 +308,7 @@ private:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual TupleType* createCopyUsing(NodeMapper& manager) const;
+	virtual TupleType* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
 
@@ -366,7 +366,7 @@ protected:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual FunctionType* createCopyUsing(NodeMapper& manager) const;
+	virtual FunctionType* createCopyUsing(NodeMapping& mapper) const;
 
 	/**
 	 * Creates a empty child list since this node represents a terminal node.
@@ -654,7 +654,7 @@ protected:
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual GenericType* createCopyUsing(NodeMapper& manager) const;
+	virtual GenericType* createCopyUsing(NodeMapping& mapper) const;
 
 	/**
 	 * Obtains a list of all type parameters and the optional base type
@@ -734,7 +734,7 @@ private:
 
 	RecTypeDefinition(const RecTypeDefs& definitions);
 
-	RecTypeDefinition* createCopyUsing(NodeMapper& manager) const;
+	RecTypeDefinition* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
 
@@ -788,7 +788,7 @@ class RecType: public Type {
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual RecType* createCopyUsing(NodeMapper& manager) const;
+	virtual RecType* createCopyUsing(NodeMapping& mapper) const;
 
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
@@ -908,7 +908,7 @@ class StructType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual StructType* createCopyUsing(NodeMapper& manager) const;
+	virtual StructType* createCopyUsing(NodeMapping& mapper) const;
 
 public:
 
@@ -945,7 +945,7 @@ class UnionType: public NamedCompositeType {
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual UnionType* createCopyUsing(NodeMapper& manager) const;
+	virtual UnionType* createCopyUsing(NodeMapping& mapper) const;
 
 public:
 
@@ -1022,7 +1022,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ArrayType* createCopyUsing(NodeMapper& manager) const;
+	virtual ArrayType* createCopyUsing(NodeMapping& mapper) const;
 
 public:
 
@@ -1069,7 +1069,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual VectorType* createCopyUsing(NodeMapper& manager) const;
+	virtual VectorType* createCopyUsing(NodeMapping& mapper) const;
 
 public:
 
@@ -1117,7 +1117,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual RefType* createCopyUsing(NodeMapper& manager) const;
+	virtual RefType* createCopyUsing(NodeMapping& mapper) const;
 
 public:
 
@@ -1159,7 +1159,7 @@ private:
 	/**
 	 * Creates a clone of this type within the given manager.
 	 */
-	virtual ChannelType* createCopyUsing(NodeMapper& manager) const;
+	virtual ChannelType* createCopyUsing(NodeMapping& mapper) const;
 
 public:
 

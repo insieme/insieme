@@ -45,7 +45,7 @@ using namespace insieme::core::transform;
 /**
  * Visitor which replace a specific node of the IR starting from a root node.
  */
-class NodeReplacer : public NodeMapper {
+class NodeReplacer : public NodeMapping {
 	NodeManager& manager;
 	const NodePtr& toReplace;
 	const NodePtr& replacement;
@@ -61,7 +61,7 @@ private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
-	virtual NodePtr mapElement(const NodePtr& ptr) {
+	virtual const NodePtr mapElement(const NodePtr& ptr) {
 		// check whether the element has been found
 		if(*(ptr) == *(toReplace)) {
 			return replacement;

@@ -75,7 +75,7 @@ Literal::Literal(const TypePtr& type, const string& value) :
 		Expression(NT_Literal, type,::hashLiteral(type, value)), value(value) { }
 
 
-Literal* Literal::createCopyUsing(NodeMapper& mapper) const {
+Literal* Literal::createCopyUsing(NodeMapping& mapper) const {
 	return new Literal(mapper.map(type), value);
 }
 
@@ -98,7 +98,7 @@ VarExpr::VarExpr(const TypePtr& type, const Identifier& id)
 VarExpr::VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode)
 	: Expression(NT_VarExpr, type, hashCode), id(id) { };
 
-VarExpr* VarExpr::createCopyUsing(NodeMapper& mapper) const {
+VarExpr* VarExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new VarExpr(mapper.map(type), id);
 }
 
@@ -128,7 +128,7 @@ std::size_t hashParamExpr(const TypePtr& type, const Identifier& id) {
 
 ParamExpr::ParamExpr(const TypePtr& type, const Identifier& id) : VarExpr(type, id, ::hashParamExpr(type,id)) { };
 
-ParamExpr* ParamExpr::createCopyUsing(NodeMapper& mapper) const {
+ParamExpr* ParamExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new ParamExpr(mapper.map(type), id);
 }
 
@@ -153,7 +153,7 @@ std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& par
 LambdaExpr::LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body)
 		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), body(isolate(body)), params(isolate(params)) { };
 
-LambdaExpr* LambdaExpr::createCopyUsing(NodeMapper& mapper) const {
+LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(
 			mapper.map(type),
 			mapper.map(params),
@@ -195,7 +195,7 @@ std::size_t hashTupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expr
 TupleExpr::TupleExpr(const TupleTypePtr& type, const vector<ExpressionPtr>& expressions)
 		: Expression(NT_TupleExpr, type, hashTupleExpr(type, expressions)), expressions(isolate(expressions)) { };
 
-TupleExpr* TupleExpr::createCopyUsing(NodeMapper& mapper) const {
+TupleExpr* TupleExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new TupleExpr(
 			mapper.map(static_pointer_cast<const TupleType>(type)),
 			mapper.map(expressions)
@@ -238,7 +238,7 @@ std::size_t hashVectorExpr(const TypePtr& type, const vector<ExpressionPtr>& exp
 VectorExpr::VectorExpr(const VectorTypePtr& type, const vector<ExpressionPtr>& expressions)
 		: Expression(NT_VectorExpr, type, hashVectorExpr(type, expressions)), expressions(isolate(expressions)) { };
 
-VectorExpr* VectorExpr::createCopyUsing(NodeMapper& mapper) const {
+VectorExpr* VectorExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new VectorExpr(
 			mapper.map(static_pointer_cast<const VectorType>(type)),
 			mapper.map(expressions)
@@ -294,7 +294,7 @@ bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
 		return l.first == r.first && *l.second == *r.second; });
 }
 
-NamedCompositeExpr::Members copyMembersUsing(NodeMapper& mapper, const NamedCompositeExpr::Members& members) {
+NamedCompositeExpr::Members copyMembersUsing(NodeMapping& mapper, const NamedCompositeExpr::Members& members) {
 	NamedCompositeExpr::Members res;
 	std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
 			[&mapper](const NamedCompositeExpr::Member& m) {
@@ -333,7 +333,7 @@ Node::OptionChildList NamedCompositeExpr::getChildNodes() const {
 StructExpr::StructExpr(const TypePtr& type, const Members& members)
 	: NamedCompositeExpr(NT_StructExpr, type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
 
-StructExpr* StructExpr::createCopyUsing(NodeMapper& mapper) const {
+StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new StructExpr(mapper.map(type), copyMembersUsing(mapper, members));
 }
 
@@ -352,7 +352,7 @@ StructExprPtr StructExpr::get(NodeManager& manager, const Members& members) {
 UnionExpr::UnionExpr(const TypePtr& type, const Members& members)
 	: NamedCompositeExpr(NT_UnionExpr, type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
 
-UnionExpr* UnionExpr::createCopyUsing(NodeMapper& mapper) const {
+UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new UnionExpr(mapper.map(type), copyMembersUsing(mapper, members));
 }
 
@@ -388,7 +388,7 @@ const JobExpr::GuardedStmts& isolateGuardedStmts(const JobExpr::GuardedStmts& st
 	return stmts;
 }
 
-const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapper& mapper, const JobExpr::GuardedStmts& stmts) {
+const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, const JobExpr::GuardedStmts& stmts) {
 	JobExpr::GuardedStmts localGuardedStmts;
 	std::transform(stmts.cbegin(), stmts.cend(), back_inserter(localGuardedStmts),
 		[&localGuardedStmts, &mapper](const JobExpr::GuardedStmt& stmt) {
@@ -403,7 +403,7 @@ JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const Gua
 
 
 
-JobExpr* JobExpr::createCopyUsing(NodeMapper& mapper) const {
+JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new JobExpr(
 			mapper.map(type),
 			mapper.map(defaultStmt),
@@ -470,7 +470,7 @@ CallExpr::CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr
 		: Expression(NT_CallExpr, ::getReturnType(functionExpr), ::hashCallExpr(::getReturnType(functionExpr), functionExpr, arguments)),
 		  functionExpr(isolate(functionExpr)), arguments(isolate(arguments)) { }
 
-CallExpr* CallExpr::createCopyUsing(NodeMapper& mapper) const {
+CallExpr* CallExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new CallExpr(
 			mapper.map(type),
 			mapper.map(functionExpr),
@@ -517,7 +517,7 @@ std::size_t hashCastExpr(const TypePtr& type, const ExpressionPtr& subExpression
 CastExpr::CastExpr(const TypePtr& type, const ExpressionPtr& subExpression)
 		: Expression(NT_CastExpr, type, hashCastExpr(type, subExpression)), subExpression(isolate(subExpression)) { }
 
-CastExpr* CastExpr::createCopyUsing(NodeMapper& mapper) const {
+CastExpr* CastExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new CastExpr(mapper.map(type), mapper.map(subExpression));
 }
 
@@ -560,7 +560,7 @@ const RecLambdaDefinition::RecFunDefs& isolateRecFunDef(const RecLambdaDefinitio
 	return definitions;
 }
 
-RecLambdaDefinition::RecFunDefs copyRecFunDefUsing(NodeMapper& mapper, const RecLambdaDefinition::RecFunDefs& definitions) {
+RecLambdaDefinition::RecFunDefs copyRecFunDefUsing(NodeMapping& mapper, const RecLambdaDefinition::RecFunDefs& definitions) {
 	RecLambdaDefinition::RecFunDefs res;
 	std::transform(definitions.begin(), definitions.end(), inserter(res, res.end()),
 		[&mapper](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
@@ -579,7 +579,7 @@ RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecL
 	return manager.get(RecLambdaDefinition(definitions));
 }
 
-RecLambdaDefinition* RecLambdaDefinition::createCopyUsing(NodeMapper& mapper) const {
+RecLambdaDefinition* RecLambdaDefinition::createCopyUsing(NodeMapping& mapper) const {
 	return new RecLambdaDefinition(copyRecFunDefUsing(mapper, definitions));
 }
 
@@ -630,7 +630,7 @@ RecLambdaExpr::RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefiniti
 	: Expression(NT_RecLambdaExpr, variable->getType(), ::hashRecLambdaExpr(variable, definition)),
 	  variable(isolate(variable)), definition(isolate(definition)) { }
 
-RecLambdaExpr* RecLambdaExpr::createCopyUsing(NodeMapper& mapper) const {
+RecLambdaExpr* RecLambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new RecLambdaExpr(mapper.map(variable), mapper.map(definition));
 }
 

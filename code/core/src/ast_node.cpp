@@ -52,7 +52,7 @@ const Node::ChildList& Node::getChildList() const {
 	return *children;
 }
 
-NodePtr Node::substitute(NodeManager& manager, NodeMapper& mapper) const {
+NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper) const {
 	// create a version having everything substituted
 	Node* node = createCopyUsing(mapper);
 

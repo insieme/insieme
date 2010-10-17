@@ -89,10 +89,25 @@ typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
 
+/**
+ * This class constitutes an interface for utility class required for transforming AST nodes.
+ * Instances of this class represent mappings between nodes. During the transformation process,
+ * each referenced pointer is replaced by the element is mapped to.
+ */
+class NodeMapping {
 
-class NodeMapper {
+protected:
+
+	/**
+	 * Implements the actual mapping operation by mapping one ptr to another.
+	 *
+	 * @param ptr the pointer to be resolved
+	 * @return the pointer the given pointer is mapped to by this mapper
+	 */
+	virtual const NodePtr mapElement(const NodePtr& ptr) =0;
+
 public:
-	virtual ~NodeMapper() {};
+	virtual ~NodeMapping() {};
 
 	template<typename T>
 	inline AnnotatedPtr<T> map(const AnnotatedPtr<T>& ptr) {
@@ -153,25 +168,15 @@ public:
 			return this->map(cur);
 		});
 	}
-
-protected:
-
-	/**
-	 * Implements the actual mapping operation by mapping one ptr to another.
-	 *
-	 * @param ptr the pointer to be resolved
-	 * @return the pointer the given pointer is mapped to by this mapper
-	 */
-	virtual NodePtr mapElement(const NodePtr& ptr) =0;
 };
 
 template<typename Lambda>
-class LambdaNodeMapper : public NodeMapper {
+class LambdaNodeMapper : public NodeMapping {
 	Lambda lambda;
 public:
 	LambdaNodeMapper(Lambda lambda) : lambda(lambda) {};
 
-	NodePtr mapElement(const NodePtr& ptr) {
+	const NodePtr mapElement(const NodePtr& ptr) {
 		return lambda(ptr);
 	}
 };
@@ -275,7 +280,7 @@ private:
 	 * 			node manager (node migration) or to a totally different instance during transformations.
 	 * @return a pointer to a new instance, representing an independent, transformed instance.
 	 */
-	virtual Node* createCopyUsing(NodeMapper& mapper) const =0;
+	virtual Node* createCopyUsing(NodeMapping& mapper) const =0;
 
 protected:
 
@@ -338,7 +343,7 @@ public:
 	 * @param mapper the mapper used to translate child node references
 	 * @return a pointer to the modified node.
 	 */
-	NodePtr substitute(NodeManager& manager, NodeMapper& mapper) const;
+	NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
 
 	/**
 	 * Obtains a pointer to the manager maintaining this instance of an AST node.

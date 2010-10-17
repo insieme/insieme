@@ -50,7 +50,7 @@ namespace transform {
  * Clones the nodes of the IR.
  * Alone this Visitor is pointless, but combined with other visitors can be used to replace/remove/insert nodes to an existing tree.
  */
-class NodeCloner: public core::ASTVisitor<NodePtr>, public NodeMapper {
+class NodeCloner: public core::ASTVisitor<NodePtr>, public NodeMapping {
 	NodeManager& nodeManager;
 
 public:

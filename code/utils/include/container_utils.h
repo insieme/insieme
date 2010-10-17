@@ -61,8 +61,8 @@ using boost::enable_if;
  * Convenience function for std::for_each.
  */
 template<typename Container, typename Functor>
-inline void for_each(const Container& c, const Functor& f) {
-	std::for_each(c.cbegin(), c.cend(), f);
+inline void for_each(Container& c, const Functor& f) {
+	std::for_each(c.begin(), c.end(), f);
 }
 
 /**

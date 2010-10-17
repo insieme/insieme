@@ -83,7 +83,7 @@ Node::OptionChildList BreakStmt::getChildNodes() const {
 	return OptionChildList(new ChildList());
 }
 
-BreakStmt* BreakStmt::createCopyUsing(NodeMapper&) const {
+BreakStmt* BreakStmt::createCopyUsing(NodeMapping&) const {
 	return new BreakStmt();
 }
 
@@ -109,7 +109,7 @@ Node::OptionChildList ContinueStmt::getChildNodes() const {
 	return OptionChildList(new ChildList());
 }
 
-ContinueStmt* ContinueStmt::createCopyUsing(NodeMapper&) const {
+ContinueStmt* ContinueStmt::createCopyUsing(NodeMapping&) const {
 	return new ContinueStmt();
 }
 
@@ -145,7 +145,7 @@ Node::OptionChildList ReturnStmt::getChildNodes() const {
 	return res;
 }
 
-ReturnStmt* ReturnStmt::createCopyUsing(NodeMapper& mapper) const {
+ReturnStmt* ReturnStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new ReturnStmt(mapper.map(returnExpression));
 }
 
@@ -176,7 +176,7 @@ bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
 	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
 }
 
-DeclarationStmt* DeclarationStmt::createCopyUsing(NodeMapper& mapper) const {
+DeclarationStmt* DeclarationStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new DeclarationStmt(mapper.map(varExpression), mapper.map(initExpression));
 }
 
@@ -218,7 +218,7 @@ bool CompoundStmt::equalsStmt(const Statement& stmt) const {
 }
 
 
-CompoundStmt* CompoundStmt::createCopyUsing(NodeMapper& mapper) const {
+CompoundStmt* CompoundStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new CompoundStmt(mapper.map(statements));
 }
 
@@ -266,7 +266,7 @@ bool WhileStmt::equalsStmt(const Statement& stmt) const {
 	return (*condition == *rhs.condition) && (*body == *rhs.body);
 }
 
-WhileStmt* WhileStmt::createCopyUsing(NodeMapper& mapper) const {
+WhileStmt* WhileStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new WhileStmt(mapper.map(condition), mapper.map(body));
 }
 
@@ -307,7 +307,7 @@ bool ForStmt::equalsStmt(const Statement& stmt) const {
 		&& (*end == *rhs.end) && (*step == *rhs.step);
 }
 
-ForStmt* ForStmt::createCopyUsing(NodeMapper& mapper) const {
+ForStmt* ForStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new ForStmt(
 			mapper.map(declaration),
 			mapper.map(body),
@@ -345,7 +345,7 @@ IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, con
 	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(isolate(condition)), thenBody(isolate(thenBody)), elseBody(isolate(elseBody)) {
 }
 
-IfStmt* IfStmt::createCopyUsing(NodeMapper& mapper) const {
+IfStmt* IfStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new IfStmt(
 			mapper.map(condition),
 			mapper.map(thenBody),
@@ -405,7 +405,7 @@ namespace { // some anonymous utilities for the switch statement
 		return cases;
 	}
 
-	vector<SwitchStmt::Case> copySwitchCasesUsing(NodeMapper& mapper, const vector<SwitchStmt::Case>& cases) {
+	vector<SwitchStmt::Case> copySwitchCasesUsing(NodeMapping& mapper, const vector<SwitchStmt::Case>& cases) {
 		vector<SwitchStmt::Case> res;
 		std::transform(cases.begin(), cases.end(), back_inserter(res), [&mapper](const SwitchStmt::Case& cur) {
 			return SwitchStmt::Case(mapper.map(cur.first), mapper.map(cur.second));
@@ -418,7 +418,7 @@ SwitchStmt::SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& case
 	Statement(NT_SwitchStmt, hashSwitchStmt(switchExpr, cases, defaultCase)), switchExpr(isolate(switchExpr)), cases(isolateSwitchCases(cases)), defaultCase(isolate(defaultCase)) {
 }
 
-SwitchStmt* SwitchStmt::createCopyUsing(NodeMapper& mapper) const {
+SwitchStmt* SwitchStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new SwitchStmt( mapper.map(switchExpr), copySwitchCasesUsing(mapper, cases), mapper.map(defaultCase) );
 }
 

@@ -34,26 +34,112 @@
  * regarding third party software licenses.
  */
 
+#include <cassert>
+
 #include "type_utils.h"
+#include "map_utils.h"
 
 namespace insieme {
 namespace core {
 
+namespace {
+
+class SubstitutionMapper : public NodeMapping {
+
+	NodeManager& manager;
+	const Substitution::Mapping& mapping;
+
+public:
+
+	SubstitutionMapper(NodeManager& manager, const Substitution::Mapping& mapping)
+		: manager(manager), mapping(mapping) {};
+
+	const NodePtr mapElement(const NodePtr& element) {
+		// quick check - only variables are substituted
+		if (element->getNodeType() != NT_TypeVariable) {
+			return element->substitute(manager, *this);
+		}
+
+		// lookup current variable within the mapping
+		auto pos = mapping.find(static_pointer_cast<TypeVariable>(element));
+		if (pos != mapping.end()) {
+			// found! => replace
+			return (*pos).second;
+		}
+
+		// not found => return current node
+		// (since nothing within a variable node may be substituted)
+		return element;
+	}
+};
+
+
+}
 
 Substitution::Substitution(const TypeVariablePtr& var, const TypePtr& type) {
 	mapping.insert(std::make_pair(var, type));
 };
 
 
-TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) {
+TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
+	// perform substitution
+	SubstitutionMapper mapper(manager, mapping);
+	return mapper.map(type);
+}
 
-	// TODO: implement substitution
+void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
+	auto element = std::make_pair(var,type);
+	auto res = mapping.insert(element);
+	if (!res.second) {
+		mapping.erase(var);
+		res = mapping.insert(element);
+		assert( res.second && "Insert was not successful!" );
+	}
+}
 
-	return NULL;
+void Substitution::remMappingOf(const TypeVariablePtr& var) {
+	mapping.erase(var);
+}
+
+Substitution Substitution::compose(NodeManager& manager, const Substitution& a, const Substitution& b) {
+
+	typedef Substitution::Mapping::value_type Entry;
+
+	// copy substitution b
+	Substitution res(b);
+
+	// apply substitution a to all mappings in b
+	for_each(res.mapping, [&manager, &b](Entry& cur) {
+		cur.second = b.applyTo(manager, cur.second);
+	});
+
+	// add remaining mappings of a
+	Substitution::Mapping& resMapping = res.mapping;
+	for_each(a.mapping, [&resMapping](const Entry& cur) {
+		if (resMapping.find(cur.first) == resMapping.end()) {
+			resMapping.insert(cur);
+		}
+	});
+
+	return res;
 }
 
 
+bool occurs(const NodePtr& x, const NodePtr& term) {
+	// it occurs if it is the current node or one of its child contains the node
+	return *x==*term || any(term->getChildList(), [&x](const NodePtr& cur) {
+		return occurs(x, cur);
+	});
+}
 
 } // end namespace core
 } // end namespace insieme
+
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::Substitution& substitution) {
+	return out << "{" << join(",", substitution.getMapping(), [](std::ostream& out, const insieme::core::Substitution::Mapping::value_type& cur)->std::ostream& {
+		return out << *cur.first << "->" << *cur.second;
+	}) << "}";
+	//return out << substitution.getMapping();
+}
 

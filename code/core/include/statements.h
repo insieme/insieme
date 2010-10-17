@@ -81,7 +81,7 @@ public:
 
 class BreakStmt : public Statement {
 	BreakStmt();
-	virtual BreakStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual BreakStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -96,7 +96,7 @@ public:
 
 class ContinueStmt : public Statement {
 	ContinueStmt();
-	virtual ContinueStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual ContinueStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -113,7 +113,7 @@ class ReturnStmt: public Statement {
 	const ExpressionPtr returnExpression;
 
 	ReturnStmt(const ExpressionPtr& returnExpression);
-	virtual ReturnStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual ReturnStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -133,7 +133,7 @@ class DeclarationStmt : public Statement {
 	const ExpressionPtr initExpression;
 
 	DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression);
-	virtual DeclarationStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual DeclarationStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -155,7 +155,7 @@ class CompoundStmt: public Statement {
 public:
 	CompoundStmt(const vector<StatementPtr>& stmts);
 private:
-	virtual CompoundStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual CompoundStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -177,7 +177,7 @@ class WhileStmt: public Statement {
 	StatementPtr body;
 
 	WhileStmt(const ExpressionPtr& condition, const StatementPtr& body);
-	virtual WhileStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual WhileStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -198,7 +198,7 @@ class ForStmt: public Statement {
 	ExpressionPtr end, step;
 
 	ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step);
-	virtual ForStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual ForStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -222,7 +222,7 @@ class IfStmt: public Statement {
 	StatementPtr elseBody;
 	
 	IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody);
-	virtual IfStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual IfStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
@@ -249,7 +249,7 @@ private:
 	const StatementPtr defaultCase;
 
 	SwitchStmt(const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase);
-	virtual SwitchStmt* createCopyUsing(NodeMapper& mapper) const;
+	virtual SwitchStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;

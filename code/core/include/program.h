@@ -104,7 +104,7 @@ private:
 	 * @param mapper the mapper to be used to resolve alternatives for current elements.
 	 * @return a pointer to the new program, copies using the given mapper
 	 */
-	virtual Program* createCopyUsing(NodeMapper& mapper) const;
+	virtual Program* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
 

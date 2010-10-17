@@ -56,7 +56,7 @@ std::size_t hash(const Program::EntryPointSet& entryPoints) {
 	return insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
 }
 
-Program* Program::createCopyUsing(NodeMapper& mapper) const {
+Program* Program::createCopyUsing(NodeMapping& mapper) const {
 	return new Program(mapper.map(entryPoints));
 }
 
