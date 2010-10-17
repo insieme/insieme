@@ -70,10 +70,10 @@ Node::OptionChildList Program::getChildNodes() const {
 }
 
 Program::Program(const EntryPointSet& entryPoints) :
-	Node(NT_Program, ::hash(entryPoints)), entryPoints(entryPoints) { };
+	Node(NT_Program, NC_Program, ::hash(entryPoints)), entryPoints(entryPoints) { };
 
 Program::Program() :
-	Node(NT_Program, ::hash(EntryPointSet())) {};
+	Node(NT_Program, NC_Program, ::hash(EntryPointSet())) {};
 
 ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints) {
 	return manager.get(Program(entryPoints));

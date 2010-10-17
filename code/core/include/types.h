@@ -122,7 +122,7 @@ protected:
 	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
 	 */
 	Type(NodeType type, const std::string& name, const bool concrete = true, const bool functionType = false)
-		: Node(type,boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
+		: Node(type, NC_Type, boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
 
 public:
 

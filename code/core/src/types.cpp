@@ -348,7 +348,7 @@ namespace { // some anonymous functions for the Rec Definition
 }
 
 RecTypeDefinition::RecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions)
-	: Node(NT_RecTypeDefinition, hashRecTypeDefinition(definitions)), definitions(isolateRecDefinitons(definitions)) { };
+	: Node(NT_RecTypeDefinition, NC_Support, hashRecTypeDefinition(definitions)), definitions(isolateRecDefinitons(definitions)) { };
 
 
 RecTypeDefinitionPtr RecTypeDefinition::get(NodeManager& manager, const RecTypeDefinition::RecTypeDefs& definitions) {

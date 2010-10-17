@@ -59,6 +59,17 @@ enum NodeType {
 #undef CONCRETE
 
 /**
+ * An enumeration covering the five basic node categories.
+ */
+enum NodeCategory {
+	NC_Support,      /* < The node represents a supporting element. */
+	NC_Type, 		/* < The node represents a type. */
+	NC_Expression,  /* < The node represents an expression. */
+	NC_Statement,   /* < The node represents a statement. */
+	NC_Program     /* < The node represents a program. */
+};
+
+/**
  * Adds forward declarations for all AST node types. Further, for each
  * type a type definition for a corresponding annotated pointer is added.
  */
@@ -209,6 +220,11 @@ private:
 	const NodeType nodeType;
 
 	/**
+	 * The category of node to be represented by this instance.
+	 */
+	const NodeCategory nodeCategory;
+
+	/**
 	 * A pointer to the manager this instance is maintained by.
 	 */
 	const NodeManager* manager;
@@ -267,9 +283,11 @@ protected:
 	 * Construct a new node instance based on the essential features.
 	 *
 	 * @param nodeType the type of node to be created
+	 * @param nodeCategory the category of the node to be created
 	 * @param hashCode the hash code of the new node
 	 */
-	Node(const NodeType nodeType, const std::size_t& hashCode) : HashableImmutableData(hashCode), nodeType(nodeType), manager(NULL) { }
+	Node(const NodeType nodeType, const NodeCategory nodeCategory, const std::size_t& hashCode)
+		: HashableImmutableData(hashCode), nodeType(nodeType), nodeCategory(nodeCategory), manager(NULL) { }
 
 	/**
 	 * Defines the new operator to be protected. This prevents instances of AST nodes to be
@@ -361,15 +379,27 @@ public:
 	}
 
 	/**
-	 * Obtains the fundamental type of this node.
+	 * Obtains the type of this node.
 	 *
-	 * @return the type of node represented by this instance
+	 * @return the type of the node represented by this instance
 	 *
 	 * @see NodeType
 	 */
 	NodeType getNodeType() const {
 		return nodeType;
 	}
+
+	/**
+	 * Obtains the category of this node.
+	 *
+	 * @return the category of the node represented by this instance
+	 *
+	 * @see NodeCategory
+	 */
+	NodeCategory getNodeCategory() const {
+		return nodeCategory;
+	}
+
 
 	/**
 	 * A default implementation of the equals operator comparing the actual
