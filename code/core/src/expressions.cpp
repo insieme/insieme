@@ -48,7 +48,7 @@ enum {
 	HASHVAL_LITERAL = 100 /* offset from statements */,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
 	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_REC_LAMBDA_DEFINITION,
-	HASHVAL_REC_LAMBDA, HASHVAL_VECTOREXPR
+	HASHVAL_REC_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -77,6 +77,11 @@ Literal::Literal(const TypePtr& type, const string& value) :
 
 Literal* Literal::createCopyUsing(NodeMapping& mapper) const {
 	return new Literal(mapper.map(type), value);
+}
+
+bool Literal::equalsExpr(const Expression& expr) const {
+	const Literal& rhs = static_cast<const Literal&>(expr);
+	return (value == rhs.value);
 }
 
 LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr& type) {
@@ -114,6 +119,44 @@ std::ostream& VarExpr::printTo(std::ostream& out) const {
 
 VarExprPtr VarExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
 	return manager.get(VarExpr(type, id));
+}
+
+
+// ------------------------------------- Variable ---------------------------------
+
+namespace {
+	std::size_t hashVariable(const TypePtr& type, unsigned int id) {
+		std::size_t seed = HASHVAL_VARIABLE;
+		boost::hash_combine(seed, type->hash());
+		boost::hash_combine(seed, id);
+		return seed;
+	}
+}
+
+unsigned int Variable::counter = 0;
+
+Variable::Variable(const TypePtr& type, unsigned int id)
+	: Expression(NT_Variable, type, hashVariable(type, id)), id(id) {};
+
+Variable* Variable::createCopyUsing(NodeMapping& mapper) const {
+	return new Variable(mapper.map(type), id);
+}
+
+bool Variable::equalsExpr(const Expression& expr) const {
+	const Variable& rhs = static_cast<const Variable&>(expr);
+	return (id == rhs.id);
+}
+
+std::ostream& Variable::printTo(std::ostream& out) const {
+	return out << "v" << id;
+}
+
+VariablePtr Variable::get(NodeManager& manager, const TypePtr& type) {
+	return manager.get(Variable(type, ++counter));
+}
+
+VariablePtr Variable::get(NodeManager& manager, const TypePtr& type, unsigned int id) {
+	return manager.get(Variable(type, id));
 }
 
 // ------------------------------------- ParamExpr ---------------------------------

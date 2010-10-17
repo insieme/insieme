@@ -226,6 +226,7 @@ AST_TERMINAL(Program, Node)
 
 AST_TERMINAL(RecTypeDefinition, Node)
 AST_TERMINAL(RecLambdaDefinition, Node)
+AST_TERMINAL(Variable, Node)
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 

@@ -95,6 +95,24 @@ TEST(ExpressionsTest, VarExpr) {
 	basicExprTests(var, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
 }
 
+TEST(ExpressionsTest, Variable) {
+	NodeManager manager;
+
+	VariablePtr var = Variable::get(manager, TYPE_BOOL_PTR);
+	EXPECT_EQ (format("v%d", var->getId()), toString(*var));
+
+	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR);
+	EXPECT_NE(*var, *var2);
+	EXPECT_LT(var->getId(), var2->getId());
+
+	VariablePtr var3 = Variable::get(manager, TYPE_BOOL_PTR, var->getId());
+	EXPECT_EQ(var, var3);
+
+	// check hash codes, children and cloning
+	basicExprTests(var, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
+	basicExprTests(var2, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
+}
+
 TEST(ExpressionsTest, ParamExpr) {
 	NodeManager manager;
 

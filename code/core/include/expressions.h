@@ -109,10 +109,7 @@ public:
 
 protected:
 
-	bool equalsExpr(const Expression& expr) const {
-		const Literal& rhs = static_cast<const Literal&>(expr);
-		return (value == rhs.value);
-	}
+	bool equalsExpr(const Expression& expr) const;
 
 	virtual Literal* createCopyUsing(NodeMapping& mapper) const;
 
@@ -140,7 +137,7 @@ protected:
     VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode);
 
 	virtual VarExpr* createCopyUsing(NodeMapping& mapper) const;
-	bool equalsExpr(const Expression& expr) const;
+	virtual bool equalsExpr(const Expression& expr) const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -148,6 +145,30 @@ public:
 	const Identifier& getIdentifier() const { return id; }
 
 	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
+};
+
+class Variable : public Expression {
+private:
+
+	static unsigned int counter;
+
+	const unsigned int id;
+
+private:
+    Variable(const TypePtr& type, unsigned int id);
+
+protected:
+	virtual Variable* createCopyUsing(NodeMapping& mapper) const;
+	virtual bool equalsExpr(const Expression& expr) const;
+
+public:
+
+	unsigned int getId() const { return id; }
+
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	static VariablePtr get(NodeManager& manager, const TypePtr& type);
+	static VariablePtr get(NodeManager& manager, const TypePtr& type, unsigned int id);
 };
 
 // TODO: think about eliminating this (since it is no independent expression!)
