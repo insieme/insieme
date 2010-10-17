@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <xml_utils.h>
+#include <xercesc/util/XercesDefs.hpp>
 
+using namespace std;
 using namespace insieme::core;
 using namespace insieme::xml;
 
@@ -67,7 +69,7 @@ XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el){
 }
 
 shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
-	return shared_ptr<Annotation> (new DummyAnnotation("1"));
+	return std::make_shared<DummyAnnotation>("1");
 }
 
 XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
@@ -115,15 +117,12 @@ shared_ptr<Annotation> VectorAnnotationFromXML(XmlElement el){
 	vector <string> vec;
 	vec.push_back("test1");
 	vec.push_back("test2");
-	return shared_ptr<Annotation> (new VectorAnnotation(vec));
+	return std::make_shared<VectorAnnotation>( vec );
 }
 
 XML_CONVERTER(VectorAnnotation, VectorAnnotationToXML, VectorAnnotationFromXML)
 
 typedef shared_ptr<VectorAnnotation> VectorAnnotationPtr;
-
-
-
 
 TEST(XmlTest, GenericTypeTest) {
 	vector <string> vec;

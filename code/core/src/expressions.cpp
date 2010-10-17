@@ -54,7 +54,7 @@ enum {
 // ------------------------------------- Expression ---------------------------------
 
 Expression::Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode)
-	: Statement(nodeType, hashCode, true), type(isolate(type)) { };
+	: Statement(nodeType, hashCode, true, NC_Expression), type(isolate(type)) { };
 
 bool Expression::equals(const Node& stmt) const {
 	// conversion is guaranteed by base Node::operator==
@@ -573,7 +573,7 @@ RecLambdaDefinition::RecFunDefs copyRecFunDefUsing(NodeMapper& mapper, const Rec
 }
 
 RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions)
-	: Node(NT_RecLambdaDefinition, hashRecLambdaDefinition(definitions)), definitions(isolateRecFunDef(definitions)) { };
+	: Node(NT_RecLambdaDefinition, NC_Support, hashRecLambdaDefinition(definitions)), definitions(isolateRecFunDef(definitions)) { };
 
 RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::RecFunDefs& definitions) {
 	return manager.get(RecLambdaDefinition(definitions));

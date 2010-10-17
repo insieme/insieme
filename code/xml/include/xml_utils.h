@@ -35,96 +35,81 @@
  */
 
 #include "ast_visitor.h"
-#include <xercesc/util/XercesDefs.hpp>
 
-XERCES_CPP_NAMESPACE_BEGIN
+namespace xercesc_3_1 {
 class DOMElement;
 class DOMImplementation;
 class DOMDocument;
 class DOMLSParser;
-XERCES_CPP_NAMESPACE_END
+}
 
 using namespace insieme::core;
-using namespace std;
 
 namespace insieme {
 namespace xml{
+
+using namespace xercesc_3_1;
 
 // ------------------------------------ XmlUtil ----------------------------
 
 class XmlUtil {
 public:
-	xercesc::DOMImplementation* impl;
-	xercesc::DOMDocument* doc;
-	xercesc::DOMElement* rootElem;
-	xercesc::DOMLSParser* parser;
+	DOMImplementation* impl;
+	DOMDocument* doc;
+	DOMElement* rootElem;
+	DOMLSParser* parser;
 
 public:
 	XmlUtil();
-	
+
 	~XmlUtil();
-	
+
 	void convertXmlToDom(const string fileName, const bool validate);
-	
+
 	void convertDomToXml(const string fileName);
-	
+
 	void convertDomToIr(const SharedNodeManager& manager);
-	
+
 	void convertIrToDom(const NodePtr& node);
-	
+
 	string convertDomToString();
-	
+
 };
 
 
 // ------------------------------------ XmlElement ----------------------------
 
 class XmlElement {
-	xercesc::DOMDocument* doc;
-	xercesc::DOMElement* base;
+
+	DOMDocument* doc;
+	DOMElement* base;
 	
 public:
-	XmlElement(xercesc::DOMElement* elem);
-	XmlElement(string name, xercesc::DOMDocument* doc);
-	XmlElement(xercesc::DOMElement* base, xercesc::DOMDocument* doc);
+	XmlElement(DOMElement* elem);
+	XmlElement(std::string name, DOMDocument* doc);
+	XmlElement(DOMElement* base, DOMDocument* doc);
 	
-	xercesc::DOMElement* getBase();
+	DOMElement* getBase();
 	
-	xercesc::DOMDocument* getDoc();
+	DOMDocument* getDoc();
 	
 	XmlElement& operator<<(XmlElement& childNode);
 	
-	XmlElement& operator<<(shared_ptr<XmlElement> childNode);
+	XmlElement& operator<<(std::shared_ptr<XmlElement> childNode);
 	
-	const vector<XmlElement> operator[](const string&) const;
+	const vector<XmlElement> operator[](const std::string&) const;
 	
-	XmlElement& setAttr(const string& id, const string& value);
+	XmlElement& setAttr(const std::string& id, const std::string& value);
 
-	XmlElement& setText(const string& text);
+	XmlElement& setText(const std::string& text);
 	
-	string getAttr(const string& id) const;
+	std::string getAttr(const std::string& id) const;
 	
-	string getText() const;
+	std::string getText() const;
 	
-	string getName() const;
+	std::string getName() const;
 	
 	const vector<XmlElement> getChildren() const;
-};
-
-
-
-// ------------------------------------ XStr ----------------------------
-
-#define toUnicode(str) XStr(str).unicodeForm()
-
-class XStr {
-	XMLCh* fUnicodeForm;
-public:
-	XStr(const string& toTranscode);
-
-	~XStr();
-
-	const XMLCh* unicodeForm();
 };
 
 
@@ -133,18 +118,19 @@ public:
 class XmlConverter: public boost::noncopyable {
 	XmlConverter() { }
 public:
-	typedef map<const string, function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)>> IrToDomConvertMapType;
-	typedef map<const string, function<shared_ptr<Annotation> (const XmlElement&)>> DomToIrConvertMapType;
+	typedef std::function<std::shared_ptr<XmlElement> (const Annotation&, DOMDocument*)> IrToDomConvertType;
+	typedef map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
+
+	typedef std::function<std::shared_ptr<Annotation> (const XmlElement&)> DomToIrConvertType;
+	typedef map<const std::string, DomToIrConvertType> DomToIrConvertMapType;
 
 	static XmlConverter& get();
 	
-	shared_ptr<Annotation> domToIrAnnotation (const XmlElement& el) const;
+	std::shared_ptr<Annotation> domToIrAnnotation (const XmlElement& el) const;
 	
-	shared_ptr<XmlElement> irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const;
+	std::shared_ptr<XmlElement> irToDomAnnotation (const Annotation& ann, DOMDocument* doc) const;
 	
-	void* registerAnnotation(string name, 
-							function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)> toXml, 
-							function<shared_ptr<Annotation> (const XmlElement&)> fromXml);
+	void* registerAnnotation(std::string name, const IrToDomConvertType& toXml, const DomToIrConvertType& fromXml);
 private:
 	IrToDomConvertMapType IrToDomConvertMap;
 	DomToIrConvertMapType DomToIrConvertMap;

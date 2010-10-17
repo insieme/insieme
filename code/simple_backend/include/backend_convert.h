@@ -76,46 +76,16 @@ public:
 		if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
 		// generate a new name string
 		std::stringstream name;
-		switch(ptr->getNodeType()) {
-			case NT_RecTypeDefinition:
-			case NT_RecLambdaDefinition:
+		switch(ptr->getNodeCategory()) {
+			case NC_Support:
 				name << "supp"; break;
-			case NT_ArrayType:
-			case NT_ChannelType:
-			case NT_GenericType:
-			case NT_FunctionType:
-			case NT_RecType:
-			case NT_RefType:
-			case NT_StructType:
-			case NT_TupleType:
-			case NT_UnionType:
-			case NT_VectorType:
-			case NT_TypeVariable:
+			case NC_Type:
 				name << "type"; break;
-			case NT_CallExpr:
-			case NT_CastExpr:
-			case NT_JobExpr:
-			case NT_LambdaExpr:
-			case NT_ParamExpr:
-			case NT_RecLambdaExpr:
-			case NT_Literal:
-			case NT_StructExpr:
-			case NT_TupleExpr:
-			case NT_UnionExpr:
-			case NT_VarExpr:
-			case NT_VectorExpr:
+			case NC_Expression:
 				name << "expr"; break;
-			case NT_BreakStmt:
-			case NT_CompoundStmt:
-			case NT_ContinueStmt:
-			case NT_DeclarationStmt:
-			case NT_ForStmt:
-			case NT_IfStmt:
-			case NT_ReturnStmt:
-			case NT_SwitchStmt:
-			case NT_WhileStmt:
+			case NC_Statement:
 				name << "stat"; break;
-			case NT_Program:
+			case NC_Program:
 				name << "prog"; break;
 		}
 		name << "_" << num++;

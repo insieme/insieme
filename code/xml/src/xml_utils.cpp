@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#include <xercesc/util/XercesDefs.hpp>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -54,7 +55,28 @@ using namespace insieme::xml;
 using namespace std;
 
 XERCES_CPP_NAMESPACE_USE
-	
+
+// ------------------------------------ XStr ----------------------------
+
+#define toUnicode(str) XStr(str).unicodeForm()
+
+class XStr {
+	::XMLCh* fUnicodeForm;
+public:
+	XStr(const string& toTranscode);
+
+	~XStr();
+
+	const ::XMLCh* unicodeForm();
+};
+
+XStr::XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
+
+XStr::~XStr() { XMLString::release(&fUnicodeForm); }
+
+const ::XMLCh* XStr::unicodeForm() { return fUnicodeForm; }
+
+
 // ------------------------------------ XmlVisitor ----------------------------	
 
 class XmlVisitor : public ASTVisitor<void> {
@@ -333,9 +355,9 @@ public:
 
 // ------------------------------------ XmlElement ----------------------------
 
-XmlElement::XmlElement(xercesc::DOMElement* elem) : doc(NULL), base(elem) { }
-XmlElement::XmlElement(string name, xercesc::DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
-XmlElement::XmlElement(xercesc::DOMElement* elem, xercesc::DOMDocument* doc) : doc(doc), base(elem) { }
+XmlElement::XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
+XmlElement::XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
+XmlElement::XmlElement(DOMElement* elem, DOMDocument* doc) : doc(doc), base(elem) { }
 
 DOMElement* XmlElement::getBase() {
 	return base;
@@ -395,7 +417,7 @@ string XmlElement::getText() const { // return the empty string if there is no t
 		if (first->getNodeType() == 3) {
 			char* ctext (XMLString::transcode(first->getNodeValue()));
 			string text(ctext);
-			XMLString::release(&ctext);	
+			XMLString::release(&ctext);
 			return text;
 		}
 		first = first->getPreviousSibling();
@@ -419,15 +441,6 @@ const vector<XmlElement> XmlElement::getChildren() const {
 	}
 	return vec;
 }
-
-// ------------------------------------ XStr ----------------------------
-
-XStr::XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
-
-XStr::~XStr() { XMLString::release(&fUnicodeForm); }
-
-const XMLCh* XStr::unicodeForm() { return fUnicodeForm; }
-
 
 // ------------------------------------ XmlConverter ----------------------------
 
@@ -458,9 +471,7 @@ shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, x
 	}
 }
 
-void* XmlConverter::registerAnnotation(string name, 
-		function<shared_ptr<XmlElement> (const Annotation&, xercesc::DOMDocument*)> toXml, 
-		function<shared_ptr<Annotation> (const XmlElement&)> fromXml) {
+void* XmlConverter::registerAnnotation(string name, const XmlConverter::IrToDomConvertType& toXml, const XmlConverter::DomToIrConvertType& fromXml) {
 	IrToDomConvertMap[name] = toXml;
 	DomToIrConvertMap[name] = fromXml;
 	return NULL;
@@ -548,8 +559,10 @@ void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
 }
 
 void XmlUtil::convertDomToXml(const string outputFile){
-	DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
-	DOMLSOutput       *theOutputDesc = ((DOMImplementationLS*)impl)->createLSOutput();
+	DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
+	assert(implLS);
+	DOMLSSerializer   *theSerializer = implLS->createLSSerializer();
+	DOMLSOutput       *theOutputDesc = implLS->createLSOutput();
 	DOMConfiguration* serializerConfig = theSerializer->getDomConfig();
 	
 	if (serializerConfig->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
@@ -613,7 +626,8 @@ void XmlUtil::convertIrToDom(const NodePtr& node){
 
 string XmlUtil::convertDomToString(){
 	if (doc){
-		DOMLSSerializer   *theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
+		DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
+		DOMLSSerializer*	theSerializer = implLS->createLSSerializer();
 		string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
 		theSerializer->release();
 		

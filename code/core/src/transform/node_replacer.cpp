@@ -49,11 +49,12 @@ class NodeReplacer : public NodeMapper {
 	NodeManager& manager;
 	const NodePtr& toReplace;
 	const NodePtr& replacement;
+	const bool targetIsType;
 
 public:
 
 	NodeReplacer(NodeManager& manager, const NodePtr& toReplace, const NodePtr& replacement):
-		manager(manager), toReplace(toReplace), replacement(replacement) { }
+		manager(manager), toReplace(toReplace), replacement(replacement), targetIsType(toReplace->getNodeCategory() == NC_Type) { }
 
 private:
 
@@ -61,9 +62,19 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual NodePtr mapElement(const NodePtr& ptr) {
+		// check whether the element has been found
 		if(*(ptr) == *(toReplace)) {
 			return replacement;
 		}
+
+		// if element to be replaced is a not a type but the current node is,
+		// the recursion can be pruned (since types only have other types as
+		// sub-nodes)
+		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// recursive replacement has to be continued
 		return ptr->substitute(manager, *this);
 	}
 };
