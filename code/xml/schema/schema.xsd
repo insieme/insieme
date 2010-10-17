@@ -98,6 +98,7 @@
 <xs:complexType name="T_recTypeDefinition">
 	<xs:all>
 		<xs:element name="definitions" type="T_definitions" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
@@ -106,6 +107,7 @@
 <xs:complexType name="T_recType">
 	<xs:all>
 		<xs:element name="definition" type="T_uniqueRecTypeDefinitionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>

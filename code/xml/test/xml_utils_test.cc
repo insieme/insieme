@@ -42,150 +42,6 @@ using namespace std;
 using namespace insieme::core;
 using namespace insieme::xml;
 
-/*TEST(XmlTest, GenericTypeTest) {
-	NodeManager manager;
-
-	GenericTypePtr type1 = GenericType::get(manager, "int");
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type1), toVector(IntTypeParam::getVariableIntParam('p')), type1);
-	
-	NodePtr root = type1;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}*/
-
-/*TEST(XmlTest, FunctionTypeTest) {
-	NodeManager manager;
-	
-	GenericTypePtr type1 = GenericType::get(manager, "int");
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type1), toVector(IntTypeParam::getVariableIntParam('p')), type1);
-	
-	FunctionTypePtr funType1 = FunctionType::get(manager, type1, type2);
-	
-	NodePtr root = funType1;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}*/
-
-/*TEST(XmlTest, StructTypeTest) {
-	NodeManager manager;
-
-	Identifier identA("a");
-	Identifier identB("b");
-
-	StructType::Entries entriesA;
-	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
-	entriesA.push_back(StructType::Entry(identB, GenericType::get(manager, "B")));
-
-	StructTypePtr structA = StructType::get(manager, entriesA);
-	
-	NodePtr root = structA;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}
-
-TEST(XmlTest, UnionTypeTest) {
-	NodeManager manager;
-
-	Identifier identA("a");
-	Identifier identB("b");
-
-	UnionType::Entries entriesA;
-	entriesA.push_back(UnionType::Entry(identA, GenericType::get(manager, "A")));
-	entriesA.push_back(UnionType::Entry(identB, GenericType::get(manager, "B")));
-
-	UnionTypePtr unionA = UnionType::get(manager, entriesA);
-	
-	NodePtr root = unionA;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}*/
-
-/*TEST(XmlTest, TupleTypeTest) {
-	NodeManager manager;
-
-	vector<TypePtr> subTypesA;
-	subTypesA.push_back(GenericType::get(manager, "int"));
-	subTypesA.push_back(GenericType::get(manager, "val"));
-
-	TupleTypePtr tupleA = TupleType::get(manager, subTypesA);
-	
-	NodePtr root = tupleA;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}*/
-
-/*TEST(XmlTest, TypeVariableTest) {
-	NodeManager manager;
-	TypeVariablePtr varTypeA = TypeVariable::get(manager, "alpha");
-	TypeVariablePtr varTypeB = TypeVariable::get(manager, "beta");
-	TypeVariablePtr varTypeG = TypeVariable::get(manager, "gamma");
-	GenericTypePtr type1 = GenericType::get(manager, "int", toVector<TypePtr>(varTypeA, varTypeB), 
-								toVector(IntTypeParam::getVariableIntParam('p')), varTypeG);
-	
-	NodePtr root = type1;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}*/
-
-TEST(XmlTest, RecTypeTest) {
-	NodeManager manager;
-	TypeVariablePtr varX = TypeVariable::get(manager, "X");
-	GenericTypePtr gen = GenericType::get(manager, "int");
-	RecTypeDefinition::RecTypeDefs definitions;
-	definitions.insert(std::make_pair(varX, gen));
-	
-	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
- 
-	RecTypePtr type = RecType::get(manager, varX, definition);
-	
-	NodePtr root = type;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-}
-
-
 // ------------------- DummyAnnotation ---------------------------------
 class DummyAnnotation : public Annotation {
 public:
@@ -268,7 +124,7 @@ XML_CONVERTER(VectorAnnotation, VectorAnnotationToXML, VectorAnnotationFromXML)
 
 typedef shared_ptr<VectorAnnotation> VectorAnnotationPtr;
 
-TEST(XmlTest, GenericTypeAnnotationTest) {
+TEST(XmlTest, GenericTypeTest) {
 	vector <string> vec;
 	vec.push_back("genTy e1");
 	vec.push_back("genTy e2");
@@ -306,7 +162,7 @@ TEST(XmlTest, GenericTypeAnnotationTest) {
 	EXPECT_EQ (s1, s2);
 }
 
-TEST(XmlTest, FunctionTypeAnnotationTest) {
+TEST(XmlTest, FunctionTypeTest) {
 	NodeManager manager;
 	
 	GenericTypePtr type1 = GenericType::get(manager, "val");
@@ -341,7 +197,7 @@ TEST(XmlTest, FunctionTypeAnnotationTest) {
 	EXPECT_EQ (s1, s2);
 }
 
-TEST(XmlTest, StructTypeAnnotationTest) {
+TEST(XmlTest, StructTypeTest) {
 	NodeManager manager;
 
 	Identifier identA("a");
@@ -384,7 +240,7 @@ TEST(XmlTest, StructTypeAnnotationTest) {
 	EXPECT_EQ (s1, s2);	
 }
 
-TEST(XmlTest, UnionTypeAnnotationTest) {
+TEST(XmlTest, UnionTypeTest) {
 	NodeManager manager;
 
 	Identifier identA("a");
@@ -427,7 +283,7 @@ TEST(XmlTest, UnionTypeAnnotationTest) {
 	EXPECT_EQ (s1, s2);	
 }
 
-TEST(XmlTest, TupleTypeAnnotationTest) {
+TEST(XmlTest, TupleTypeTest) {
 	NodeManager manager;
 
 	DummyAnnotationPtr dummy_ae(new DummyAnnotation("typeA e"));
@@ -497,4 +353,43 @@ TEST(XmlTest, TypeVariableTest) {
 	EXPECT_EQ (s1, s2);
 }
 
+TEST(XmlTest, RecTypeTest) {
+	NodeManager manager;
+	TypeVariablePtr varTypeA = TypeVariable::get(manager, "alpha");
+	DummyAnnotationPtr dummy_ae(new DummyAnnotation("typeA e"));
+	DummyAnnotationPtr dummy_an(new DummyAnnotation("typeA n"));
+	varTypeA.addAnnotation(dummy_ae);
+	varTypeA->addAnnotation(dummy_an);
+	
+	DummyAnnotationPtr dummy_ge(new DummyAnnotation("typeG e"));
+	DummyAnnotationPtr dummy_gn(new DummyAnnotation("typeG n"));
 
+	GenericTypePtr typeG = GenericType::get(manager, "G");
+	typeG.addAnnotation(dummy_ge);
+	typeG->addAnnotation(dummy_gn);
+	
+	RecTypeDefinition::RecTypeDefs definitions;
+	definitions.insert(std::make_pair(varTypeA, typeG));
+	
+	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
+	DummyAnnotationPtr dummy_rtd_e(new DummyAnnotation("RecTypeDefs e"));
+	DummyAnnotationPtr dummy_rtd_n(new DummyAnnotation("RecTypeDefs n"));
+	definition.addAnnotation(dummy_rtd_e);
+	definition->addAnnotation(dummy_rtd_n);
+ 
+	RecTypePtr type = RecType::get(manager, varTypeA, definition);
+	DummyAnnotationPtr dummy_rt_e(new DummyAnnotation("RecType e"));
+	DummyAnnotationPtr dummy_rt_n(new DummyAnnotation("RecType n"));
+	type.addAnnotation(dummy_rt_e);
+	type->addAnnotation(dummy_rt_n);
+	
+	NodePtr root = type;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

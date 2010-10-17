@@ -278,10 +278,10 @@ public:
 			recTypeDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*definitionT)));			
 			definition << recTypeDefinitionPtr;
 
-			// annotation
+			visitAnnotations(definitionT.getAnnotations(), recTypeDefinitionPtr);
 		}
 		
-		// annotations
+		visitAnnotations(cur->getAnnotations(), recType);
 	}
 	
 	void visitRecTypeDefinition(const RecTypeDefinitionPtr& cur) {
@@ -302,15 +302,17 @@ public:
 				typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
 				definition << typeVariablePtr;
 				
+				visitAnnotations((iter->first).getAnnotations(), typeVariablePtr);
+				
 				XmlElement typePtr("typePtr", doc);
 				typePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
 				definition << typePtr;
 				
-				// annotations
+				visitAnnotations((iter->second).getAnnotations(), typePtr);
 			}
 		}
 		
-		// annotations
+		visitAnnotations(cur->getAnnotations(), recTypeDefinition);
 	}
 
 	void visitArrayType(const ArrayTypePtr& cur) {
