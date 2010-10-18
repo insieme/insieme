@@ -672,7 +672,7 @@ public:
 			// we check if the RHS is a ref, in that case we use the deref operator
 			if( core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
 				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
-			rhs = builder.callExpr(opFunc, { builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs });
+			rhs = builder.callExpr(opFunc, std::vector<core::ExpressionPtr>({ builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs }) );
 		}
 
 		bool isAssignment = false;
