@@ -46,30 +46,30 @@ TEST(ocl_properties, FunctionAnnotations) {
 
     core::Annotatable function;
 
-    ocl::OclBaseAnnotation::OclAnnotationList functionAnnotation;
+    ocl::BaseAnnotation::AnnotationList functionAnnotation;
 
-    functionAnnotation.push_back(std::make_shared<ocl::OclKernelFctAnnotation>());
-    functionAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(1,2,3));
+    functionAnnotation.push_back(std::make_shared<ocl::KernelFctAnnotation>());
+    functionAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(1,2,3));
 
-    function.addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(functionAnnotation));
+    function.addAnnotation(std::make_shared<ocl::BaseAnnotation>(functionAnnotation));
 
     core::AnnotationMap aMap = function.getAnnotations();
 
     EXPECT_EQ(static_cast<unsigned int>(1), aMap.size());
 
-    std::shared_ptr<insieme::core::Annotation> oa = (*aMap.find(&OclBaseAnnotation::KEY)).second;
+    std::shared_ptr<insieme::core::Annotation> oa = (*aMap.find(&BaseAnnotation::KEY)).second;
 
     //does not work in Hudson
-//    EXPECT_TRUE(std::dynamic_pointer_cast<OclBaseAnnotation>(oa));
+//    EXPECT_TRUE(std::dynamic_pointer_cast<BaseAnnotation>(oa));
 
 
-    if(ocl::OclBaseAnnotationPtr oclKernelAnnotation = std::dynamic_pointer_cast<ocl::OclBaseAnnotation>(oa)) {
-        EXPECT_EQ(static_cast<unsigned int>(2), oclKernelAnnotation->getNumAnnotations());
-        for(size_t i = 0; i < oclKernelAnnotation->getNumAnnotations(); ++i) {
-            ocl::OclAnnotationPtr ocl = oclKernelAnnotation->getAnnotationByIndex(i);
-            if(ocl::OclKernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::OclKernelFctAnnotation>(ocl))
+    if(ocl::BaseAnnotationPtr oclKernelAnnotation = std::dynamic_pointer_cast<ocl::BaseAnnotation>(oa)) {
+        for(ocl::BaseAnnotation::AnnotationList::const_iterator I = oclKernelAnnotation->getListBegin();
+                I < oclKernelAnnotation->getListEnd(); ++I) {
+            ocl::AnnotationPtr ocl = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I);
+            if(ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::KernelFctAnnotation>(ocl))
                 EXPECT_TRUE(kf->isKernelFct());
-            if(ocl::OclWorkGroupSizeAnnotationPtr wgs = std::dynamic_pointer_cast<ocl::OclWorkGroupSizeAnnotation>(ocl)) {
+            if(ocl::WorkGroupSizeAnnotationPtr wgs = std::dynamic_pointer_cast<ocl::WorkGroupSizeAnnotation>(ocl)) {
                 EXPECT_EQ(static_cast<unsigned int>(1), wgs->getXdim());
                 EXPECT_EQ(static_cast<unsigned int>(2), wgs->getYdim());
                 EXPECT_EQ(static_cast<unsigned int>(3), wgs->getZdim());
@@ -79,38 +79,23 @@ TEST(ocl_properties, FunctionAnnotations) {
     else
         EXPECT_TRUE(false);
 
-
-
-/*
-
-    const OclAddressSpaceAnnotationPtr space(new OclAddressSpaceAnnotation());
-    if(OclKernelFctAnnotationPtr s = std::dynamic_pointer_cast<OclKernelFctAnnotation>(oa))
-
-    EXPECT_EQ(1, wgs.getXdim());
-    EXPECT_EQ(2, wgs.getYdim());
-    EXPECT_EQ(3, wgs.getZdim());
-
-    EXPECT_EQ(OclAddressSpaceAnnotation::addressSpace::PRIVATE, space.getAddressSpace());
-    */
 }
 
 TEST(ocl_properties, DeclarationAnnotations) {
     core::Annotatable declaration;
 
-    ocl::OclBaseAnnotation::OclAnnotationList functionAnnotations;
+    ocl::BaseAnnotation::AnnotationList functionAnnotations;
 
-    functionAnnotations.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>());
+    functionAnnotations.push_back(std::make_shared<ocl::AddressSpaceAnnotation>());
 
-    declaration.addAnnotation(std::make_shared<ocl::OclBaseAnnotation>(functionAnnotations));
+    declaration.addAnnotation(std::make_shared<ocl::BaseAnnotation>(functionAnnotations));
 
-    auto declarationAnnotation = declaration.getAnnotation(ocl::OclBaseAnnotation::KEY);
+    auto declarationAnnotation = declaration.getAnnotation(ocl::BaseAnnotation::KEY);
 
-    EXPECT_EQ(static_cast<unsigned int>(1), declarationAnnotation->getNumAnnotations());
-
-    for(ocl::OclBaseAnnotation::OclAnnotationList::const_iterator I = declarationAnnotation->getListBegin();
+    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getListBegin();
             I < declarationAnnotation->getListEnd(); ++I) {
-        if(ocl::OclAddressSpaceAnnotationPtr as = std::dynamic_pointer_cast<ocl::OclAddressSpaceAnnotation>(*I)){
-            EXPECT_EQ(ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE, as->getAddressSpace());
+        if(ocl::AddressSpaceAnnotationPtr as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
+            EXPECT_EQ(ocl::AddressSpaceAnnotation::addressSpace::PRIVATE, as->getAddressSpace());
         }
     }
 
