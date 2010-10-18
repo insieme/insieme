@@ -91,5 +91,20 @@ public:
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
+class COpAnnotation : public core::Annotation {
+
+	std::string opStr;
+
+public:
+	static const core::StringKey<COpAnnotation> KEY;
+
+	COpAnnotation(const std::string& opStr) : core::Annotation(), opStr(opStr) { }
+
+	const std::string getOperator() const { return opStr; }
+	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
+
+	const core::AnnotationKey* getKey() const { return &KEY; }
+};
+
 } // namespace c_info
 } // namespace insieme

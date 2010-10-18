@@ -718,7 +718,7 @@ public:
 		case BO_Assign:
 			VLOG(2) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-//			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			op = "assign"; break;
@@ -730,7 +730,10 @@ public:
 		const core::lang::OperatorPtr& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
 		// build a callExpr with the 2 arguments
-		core::ExpressionPtr retExpr = convFact.builder.callExpr(opFunc, { lhs, rhs });
+		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, { lhs, rhs } );
+
+		// add the operator name in order to help the convertion process in the backend
+		retExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(binOp->getOpcode()) ) );
 
 		// handle eventual pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retExpr, binOp, convFact);
@@ -802,6 +805,9 @@ public:
 
 		// handle eventual pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(subExpr, unOp, convFact);
+
+		// add the operator name in order to help the convertion process in the backend
+		subExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( UnaryOperator::getOpcodeStr(unOp->getOpcode()) ) );
 
 		return subExpr;
 	}
