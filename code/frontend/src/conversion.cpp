@@ -1757,7 +1757,8 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-				argTypes.push_back( this->Visit( currArgType.getTypePtr() ) );
+				// we add a ref type for function parameters
+				argTypes.push_back( this->convFact.builder.refType( this->Visit( currArgType.getTypePtr() ) ) );
 			}
 		);
 
