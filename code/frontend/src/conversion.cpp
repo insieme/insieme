@@ -639,27 +639,28 @@ public:
 		// we rewrite the RHS expression in a normal form, i.e.:
 		// a op= b  ---->  a = a op b
 		std::string op;
+		clang::BinaryOperatorKind baseOp;
 		switch( binOp->getOpcode() ) {
 		// a *= b
-		case BO_MulAssign: op = "mul"; break;
+		case BO_MulAssign: op = "mul"; baseOp = BO_Mul; break;
 		// a /= b
-		case BO_DivAssign: op = "div"; break;
+		case BO_DivAssign: op = "div"; baseOp = BO_Div; break;
 		// a %= b
-		case BO_RemAssign: op = "mod"; break;
+		case BO_RemAssign: op = "mod"; baseOp = BO_Rem; break;
 		// a += b
-		case BO_AddAssign: op = "add"; break;
+		case BO_AddAssign: op = "add"; baseOp = BO_Add; break;
 		// a -= b
-		case BO_SubAssign: op = "sub"; break;
+		case BO_SubAssign: op = "sub"; baseOp = BO_Sub; break;
 		// a <<= b
-		case BO_ShlAssign: op = "shl"; break;
+		case BO_ShlAssign: op = "shl"; baseOp = BO_Shl; break;
 		// a >>= b
-		case BO_ShrAssign: op = "shr"; break;
+		case BO_ShrAssign: op = "shr"; baseOp = BO_Shr; break;
 		// a &= b
-		case BO_AndAssign: op = "and"; break;
+		case BO_AndAssign: op = "and"; baseOp = BO_And; break;
 		// a |= b
-		case BO_OrAssign: op = "or"; break;
+		case BO_OrAssign: op = "or"; baseOp = BO_Or; break;
 		// a ^= b
-		case BO_XorAssign: op = "xor"; break;
+		case BO_XorAssign: op = "xor"; baseOp = BO_Xor; break;
 		default:
 			break;
 		}
@@ -673,9 +674,13 @@ public:
 			if( core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
 				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
 			rhs = builder.callExpr(opFunc, std::vector<core::ExpressionPtr>({ builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs }) );
+			// add an annotation to the subexpression
+			rhs->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
 		}
 
 		bool isAssignment = false;
+		baseOp = binOp->getOpcode();
+
 		switch( binOp->getOpcode() ) {
 		case BO_PtrMemD:
 		case BO_PtrMemI:
@@ -724,6 +729,7 @@ public:
 		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
+			baseOp = BO_Assign;
 			VLOG(2) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			// assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
@@ -747,7 +753,7 @@ public:
 		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, { lhs, rhs } );
 
 		// add the operator name in order to help the convertion process in the backend
-		retExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(binOp->getOpcode()) ) );
+		retExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
 
 		// handle eventual pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retExpr, binOp, convFact);
