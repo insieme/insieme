@@ -116,7 +116,17 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 
 void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
-	visit(ptr->getFunctionExpr());
+	auto funExp = ptr->getFunctionExpr();
+	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) { // a built in C operator
+		string op = cOpAnn->getOperator();
+		cStr << "(";
+		visit(args.front());
+		cStr << " " << op << " ";
+		visit(args.back());
+		cStr << ")";
+		return;
+	}
+	visit(funExp);
 	cStr << "(";
 	if(args.size()>0) {
 		visit(args.front());

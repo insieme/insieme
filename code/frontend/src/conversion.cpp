@@ -677,7 +677,7 @@ public:
 				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
 			rhs = builder.callExpr(opFunc, std::vector<core::ExpressionPtr>({ builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs }) );
 			// add an annotation to the subexpression
-			rhs->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
+			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
 		}
 
 		bool isAssignment = false;
@@ -755,7 +755,7 @@ public:
 		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, { lhs, rhs } );
 
 		// add the operator name in order to help the convertion process in the backend
-		retExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
+		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
 
 		// handle eventual pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retExpr, binOp, convFact);
@@ -1756,7 +1756,8 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-				argTypes.push_back( this->Visit( currArgType.getTypePtr() ) );
+				// we add a ref type for function parameters
+				argTypes.push_back( this->convFact.builder.refType( this->Visit( currArgType.getTypePtr() ) ) );
 			}
 		);
 
