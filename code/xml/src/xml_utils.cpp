@@ -315,12 +315,24 @@ public:
 		visitAnnotations(cur->getAnnotations(), recTypeDefinition);
 	}
 
-	void visitArrayType(const ArrayTypePtr& cur) {
-	
-	}
+	void visitLiteral(const LiteralPtr& cur) {
+		XmlElement literal("literal", doc);
+		literal.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		literal.setAttr("value", cur->getValue());
+		rootElem << literal;
+		
+		if (const TypePtr& typeT = cur->getType()) {
+			XmlElement type("type", doc);
+			literal << type;
 
-	void visitRefType(const RefTypePtr& cur) {
-	
+			XmlElement typePtr("typePtr", doc);
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
+			type << typePtr;
+			
+			visitAnnotations(typeT.getAnnotations(), typePtr);
+		}
+		
+		visitAnnotations(cur->getAnnotations(), literal);
 	}
 };
 
@@ -585,7 +597,10 @@ void XmlUtil::convertDomToXml(const string outputFile){
 
 void XmlUtil::convertDomToIr(const SharedNodeManager& manager){
 	ASTBuilder builder(manager);
-
+	
+	XmlElement root(doc->getDocumentElement(), doc);
+	std::cout << root.getName() << "\n"; 
+	
 	//GenericTypePtr type = builder.genericType("int");
 
 	/*LiteralPtr toReplace = builder.literal("14", type);

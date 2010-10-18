@@ -35,11 +35,13 @@
  */
 
 #include <gtest/gtest.h>
-#include <xml_utils.h>
+#include "xml_utils.h"
+#include "lang_basic.h"
 #include <xercesc/util/XercesDefs.hpp>
 
 using namespace std;
 using namespace insieme::core;
+using namespace insieme::core::lang;
 using namespace insieme::xml;
 
 // ------------------- DummyAnnotation ---------------------------------
@@ -160,6 +162,8 @@ TEST(XmlTest, GenericTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	//
+	//xml.convertDomtoIr();
 }
 
 TEST(XmlTest, FunctionTypeTest) {
@@ -384,6 +388,25 @@ TEST(XmlTest, RecTypeTest) {
 	type->addAnnotation(dummy_rt_n);
 	
 	NodePtr root = type;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, LiteralTest) {
+	NodeManager manager;
+	LiteralPtr lit1 = Literal::get(manager, "10", TYPE_INT_8_PTR);
+	DummyAnnotationPtr dummy_le(new DummyAnnotation("lit1 e"));
+	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lit1 n"));
+	lit1.addAnnotation(dummy_le);
+	lit1->addAnnotation(dummy_ln);
+	
+	NodePtr root = lit1;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);
