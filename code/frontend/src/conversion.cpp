@@ -678,7 +678,7 @@ public:
 				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
 			rhs = builder.callExpr(opFunc, std::vector<core::ExpressionPtr>({ builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs }) );
 			// add an annotation to the subexpression
-			rhs->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
+			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
 		}
 
 		bool isAssignment = false;
@@ -756,7 +756,7 @@ public:
 		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, { lhs, rhs } );
 
 		// add the operator name in order to help the convertion process in the backend
-		retExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
+		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
 
 		// handle eventual pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retExpr, binOp, convFact);
