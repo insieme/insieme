@@ -77,6 +77,11 @@ public:
     OmpBaseAnnotation(const OmpAnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
     const core::AnnotationKey* getKey() const { return &KEY; }
 	const std::string getAnnotationName() const { return "OmpAnnotation"; }
+
+    //Iterator to access annotationList elements
+    OmpAnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
+    const OmpAnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
+
 private:
 	OmpAnnotationList annotationList;
 };
