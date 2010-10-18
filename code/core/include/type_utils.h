@@ -37,6 +37,7 @@
 #pragma once
 
 #include <queue>
+#include <map>
 
 #include <boost/optional/optional.hpp>
 #include <boost/unordered_map.hpp>
@@ -53,6 +54,7 @@ class Substitution {
 public:
 
 	typedef boost::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Mapping;
+	typedef std::map<IntTypeParam, IntTypeParam> IntTypeParamMapping;
 
 private:
 
@@ -61,20 +63,37 @@ private:
 	 */
 	Mapping mapping;
 
+	/**
+	 * The mapping between integer type variables and concrete values.
+	 */
+	IntTypeParamMapping paramMapping;
+
 public:
 
 	Substitution() {};
 
 	Substitution(const TypeVariablePtr& var, const TypePtr& type);
 
+	Substitution(const IntTypeParam& var, const IntTypeParam& type);
+
 	TypePtr applyTo(NodeManager& manager, const TypePtr& type) const;
+
+	IntTypeParam applyTo(const IntTypeParam& param) const;
 
 	void addMapping(const TypeVariablePtr& var, const TypePtr& type);
 
+	void addMapping(const IntTypeParam& var, const IntTypeParam& value);
+
 	void remMappingOf(const TypeVariablePtr& var);
+
+	void remMappingOf(const IntTypeParam& var);
 
 	const Mapping& getMapping() const {
 		return mapping;
+	}
+
+	const IntTypeParamMapping& getIntTypeParamMapping() const {
+		return paramMapping;
 	}
 
 	static Substitution compose(NodeManager& manager, const Substitution& a, const Substitution& b);

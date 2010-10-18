@@ -159,21 +159,66 @@ TEST(TypeUtils, Unification) {
 	TypePtr varZ = builder.typeVariable("z");
 	TypePtr varU = builder.typeVariable("u");
 
-	TypePtr termGY = builder.genericType("g", toVector(varY));
-	TypePtr termA = builder.genericType("f", toVector(varX, termGY, varX));
+	{
+		TypePtr termGY = builder.genericType("g", toVector(varY));
+		TypePtr termA = builder.genericType("f", toVector(varX, termGY, varX));
 
-	TypePtr termGU = builder.genericType("g", toVector(varU));
-	TypePtr termHU = builder.genericType("h", toVector(varU));
-	TypePtr termB = builder.genericType("f", toVector(varZ, termGU, termHU));
+		TypePtr termGU = builder.genericType("g", toVector(varU));
+		TypePtr termHU = builder.genericType("h", toVector(varU));
+		TypePtr termB = builder.genericType("f", toVector(varZ, termGU, termHU));
 
-	EXPECT_EQ("f<'x,g<'y>,'x>", toString(*termA));
-	EXPECT_EQ("f<'z,g<'u>,h<'u>>", toString(*termB));
+		EXPECT_EQ("f<'x,g<'y>,'x>", toString(*termA));
+		EXPECT_EQ("f<'z,g<'u>,h<'u>>", toString(*termB));
 
-	EXPECT_TRUE(isUnifyable(termA, termB));
-	auto unifyingMap = *unify(manager, termA, termB);
-	EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA)));
-	EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termB)));
-	EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
+		EXPECT_TRUE(isUnifyable(termA, termB));
+		auto unifyingMap = *unify(manager, termA, termB);
+		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA)));
+		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termB)));
+		EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
+	}
+
+	{
+		TypePtr termArrayY = builder.genericType("array", toVector(varY));
+		TypePtr termA = builder.tupleType(toVector(varX, termArrayY, varX));
+
+		TypePtr termArrayU = builder.genericType("array", toVector(varU));
+		TypePtr termSetU = builder.genericType("vector", toVector(varU));
+		TypePtr termB = builder.tupleType(toVector(varZ, termArrayU, termSetU));
+
+		EXPECT_EQ("('x,array<'y>,'x)", toString(*termA));
+		EXPECT_EQ("('z,array<'u>,vector<'u>)", toString(*termB));
+
+		EXPECT_TRUE(isUnifyable(termA, termB));
+		auto unifyingMap = *unify(manager, termA, termB);
+		EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termA)));
+		EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termB)));
+		EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
+	}
+
+}
+
+bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
+	return isUnifyable(typeA, typeB);
+}
+
+bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
+	return !isUnifyable(typeA, typeB);
+}
+
+TEST(TypeUtils, IntParamUnification) {
+	ASTBuilder builder;
+	NodeManager& manager = *builder.getNodeManager();
+
+	TypePtr typeAx = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getVariableIntParam('x')));
+	TypePtr typeA3 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(3)));
+	TypePtr typeA4 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(4)));
+
+	EXPECT_PRED2(unifyable, typeA3, typeAx);
+	EXPECT_PRED2(notUnifable, typeA3, typeA4);
+
+	Substitution res = *unify(manager, typeA3, typeAx);
+	EXPECT_EQ(*res.applyTo(manager, typeA3), *res.applyTo(manager, typeAx));
+	EXPECT_EQ(*typeA3, *res.applyTo(manager, typeAx));
 }
 
 } // end namespace core

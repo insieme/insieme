@@ -66,6 +66,25 @@ inline void for_each(Container& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::transform.
+ */
+template<typename Container, typename Functor>
+inline Container transform(const Container& c, const Functor& f) {
+	Container res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
+ * Convenience function for std::transform.
+ */
+template<typename Container, typename OutputIterator, typename Functor>
+inline void transform(Container& c, OutputIterator out, const Functor& f) {
+	std::transform(c.begin(), c.end(), out, f);
+}
+
+
+/**
  * Create an empty vector containing no elements.
  */
 template<typename T>

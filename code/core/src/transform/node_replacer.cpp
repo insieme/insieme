@@ -54,7 +54,7 @@ class NodeReplacer : public NodeMapping {
 public:
 
 	NodeReplacer(NodeManager& manager, const NodePtr& toReplace, const NodePtr& replacement):
-		manager(manager), toReplace(toReplace), replacement(replacement), targetIsType(toReplace->getNodeCategory() == NC_Type) { }
+		manager(manager), toReplace(toReplace), replacement(replacement), targetIsType(toReplace->getNodeCategory() == NC_Type || toReplace->getNodeType() == NT_RecTypeDefinition) { }
 
 private:
 
