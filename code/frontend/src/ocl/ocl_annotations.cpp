@@ -40,23 +40,23 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
-const core::StringKey<OclBaseAnnotation> OclBaseAnnotation::KEY("OpenCL");
+const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
 
-void OclKernelFctAnnotation::setKernelFct(bool isKernelFct) {
+void KernelFctAnnotation::setKernelFct(bool isKernelFct) {
     kf = isKernelFct;
 }
 
-bool OclKernelFctAnnotation::isKernelFct() const {
+bool KernelFctAnnotation::isKernelFct() const {
     return kf;
 }
 
-unsigned int OclWorkGroupSizeAnnotation::getXdim() const {
+unsigned int WorkGroupSizeAnnotation::getXdim() const {
     return xDim;
 }
-unsigned int OclWorkGroupSizeAnnotation::getYdim() const {
+unsigned int WorkGroupSizeAnnotation::getYdim() const {
     return yDim;
 }
-unsigned int OclWorkGroupSizeAnnotation::getZdim() const {
+unsigned int WorkGroupSizeAnnotation::getZdim() const {
     return zDim;
 }
 /*
@@ -65,7 +65,7 @@ unsigned int* OclWorkGroupSizeAnnotation::getDims() {
     return dims;
 }*/
 
-bool OclAddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
+bool AddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     if(as > addressSpace::size)
         return false;
     else
@@ -73,7 +73,7 @@ bool OclAddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     return true;
 }
 
-OclAddressSpaceAnnotation::addressSpace OclAddressSpaceAnnotation::getAddressSpace() const {
+AddressSpaceAnnotation::addressSpace AddressSpaceAnnotation::getAddressSpace() const {
     return as;
 }
 

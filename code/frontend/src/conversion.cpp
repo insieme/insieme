@@ -183,7 +183,6 @@ std::string getOperationType(const core::TypePtr& type) {
             ss << "vector<" << getOperationType(ref) << ">";
 
         ss << "vector<" << getOperationType(vt->getElementType()) << ">";
-        std::cout << ss << std::endl;
         return ss.str();
     }
     // FIXME
@@ -2070,7 +2069,7 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDe
 
 	const AttrVec attrVec = varDecl->getAttrs();
 	std::ostringstream ss;
-	ocl::OclBaseAnnotation::OclAnnotationList declAnnotation;
+	ocl::BaseAnnotation::AnnotationList declAnnotation;
 	try {
 	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
 		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
@@ -2079,16 +2078,16 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDe
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
 				DVLOG(2) << "           OpenCL address space __private";
-				declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-						ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
 				DVLOG(2) << "           OpenCL address space __local";
-				declAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-						ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
 				continue;
 			}
 
@@ -2116,7 +2115,7 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDe
         //show errors if unexpected patterns were found
         printErrorMsg(*errMsg, clangComp, varDecl);
 	}
-	return std::make_shared<ocl::OclBaseAnnotation>(declAnnotation);
+	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (arguments version)
@@ -2129,7 +2128,7 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmV
 
 	const AttrVec attrVec = varDecl->getAttrs();
 	std::ostringstream ss;
-	ocl::OclBaseAnnotation::OclAnnotationList paramAnnotation;
+	ocl::BaseAnnotation::AnnotationList paramAnnotation;
 
 	try {
 	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
@@ -2139,32 +2138,32 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmV
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
 				DVLOG(2) << "           OpenCL address space __private";
-				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-						ocl::OclAddressSpaceAnnotation::addressSpace::PRIVATE));
+				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
 				DVLOG(2) << "           OpenCL address space __local";
-				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-						ocl::OclAddressSpaceAnnotation::addressSpace::LOCAL));
+				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
 				continue;
 			}
 
 			//check if the declaration has attribute __global
 			if(sr == "__global") {
 				DVLOG(2) << "           OpenCL address space __global";
-				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-						ocl::OclAddressSpaceAnnotation::addressSpace::GLOBAL));
+				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+						ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
 				continue;
 			}
 
 			//check if the declaration has attribute __constant
 			if(sr == "__constant") {
 				DVLOG(2) << "           OpenCL address space __constant";
-				paramAnnotation.push_back(std::make_shared<ocl::OclAddressSpaceAnnotation>(
-						ocl::OclAddressSpaceAnnotation::addressSpace::CONSTANT));
+				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+						ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
 				continue;
 			}
 			ss << "Unexpected annotation " << sr;
@@ -2179,7 +2178,7 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmV
         //show errors if unexpected patterns were found
         printErrorMsg(*errMsg, clangComp, varDecl);
 	}
-	return std::make_shared<ocl::OclBaseAnnotation>(paramAnnotation);
+	return std::make_shared<ocl::BaseAnnotation>(paramAnnotation);
 }
 
 ConversionFactory::~ConversionFactory() {
@@ -2237,7 +2236,7 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 	//check Attributes of the function definition
 	if(funcDecl->hasAttrs()) {
 		const clang::AttrVec attrVec = funcDecl->getAttrs();
-		ocl::OclBaseAnnotation::OclAnnotationList kernelAnnotation;
+		ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
 		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
 			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
@@ -2247,11 +2246,11 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 				//check if it is an OpenCL kernel function
 				if(sr == "__kernel") {
 					DVLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<ocl::OclKernelFctAnnotation>() );
+					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
 				}
 			}
 			if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
-				kernelAnnotation.push_back(std::make_shared<ocl::OclWorkGroupSizeAnnotation>(
+				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
 						attr->getXDim(), attr->getYDim(), attr->getZDim())
 				);
 			}
@@ -2259,7 +2258,7 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 		// if OpenCL related annotations have been found, create OclBaseAnnotation and
 		// add it to the funciton's attribute
 		if(kernelAnnotation.size() > 0)
-			funcType.addAnnotation( std::make_shared<ocl::OclBaseAnnotation>(kernelAnnotation) );
+			funcType.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 	}
 
 	core::StatementPtr funcBody(NULL);

@@ -46,37 +46,33 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
-DEFINE_TYPE(OclBaseAnnotation);
-DEFINE_TYPE(OclAnnotation);
-DEFINE_TYPE(OclKernelFctAnnotation);
-DEFINE_TYPE(OclWorkGroupSizeAnnotation);
-DEFINE_TYPE(OclAddressSpaceAnnotation);
+DEFINE_TYPE(BaseAnnotation);
+DEFINE_TYPE(Annotation);
+DEFINE_TYPE(KernelFctAnnotation);
+DEFINE_TYPE(WorkGroupSizeAnnotation);
+DEFINE_TYPE(AddressSpaceAnnotation);
 
-class OclBaseAnnotation : public core::Annotation {
+class BaseAnnotation : public core::Annotation {
 public:
-    typedef std::vector<OclAnnotationPtr> OclAnnotationList;
-    static const core::StringKey<OclBaseAnnotation> KEY;
+    typedef std::vector<AnnotationPtr> AnnotationList;
+    static const core::StringKey<BaseAnnotation> KEY;
 
-    OclBaseAnnotation(OclAnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
+    BaseAnnotation(AnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
     const core::AnnotationKey* getKey() const { return &KEY; }
     const std::string getAnnotationName() const { return "OmpAnnotation"; }
 
-    //Proposal to get vector elements via index
-    const size_t getNumAnnotations() const { return annotationList.size(); }
-    const OclAnnotationPtr getAnnotationByIndex(size_t idx) const { return annotationList.at(idx); }
-
-    //Proposal to get vector elements via iterator
-    OclAnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
-    const OclAnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
+    //Iterator to access annotationList elements
+    AnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
+    const AnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
 private:
-    OclAnnotationList annotationList;
+    AnnotationList annotationList;
 
 };
 
 
 /** Base class for OpenCL related annotations
  ** */
-class OclAnnotation {
+class Annotation {
     //needed to make OclAnnotation polymorphic
     virtual const std::string getAnnotationName() const { return "OclAnnotation"; };
 };
@@ -86,13 +82,13 @@ class OclAnnotation {
  ** Should be used to annotate OpenCL kernel functions
  ** Default value is isKernelFct() = true
  ** */
-class OclKernelFctAnnotation : public OclAnnotation {
+class KernelFctAnnotation : public Annotation {
 
 private:
     bool kf;
 public:
 
-    OclKernelFctAnnotation() : OclAnnotation(), kf(true){ }
+    KernelFctAnnotation() : Annotation(), kf(true){ }
 
     const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
 
@@ -105,13 +101,13 @@ public:
  ** Should be used to annotate OpenCL kernel functions with attribute
  ** reqd_work_group_size set
  ** */
-class OclWorkGroupSizeAnnotation : public OclAnnotation {
+class WorkGroupSizeAnnotation : public Annotation {
 
 private:
     const unsigned int xDim, yDim, zDim;
 public:
-    OclWorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
-        OclAnnotation(), xDim(x), yDim(y), zDim(z) { }
+    WorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
+        Annotation(), xDim(x), yDim(y), zDim(z) { }
 
     const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
 
@@ -126,7 +122,7 @@ public:
  ** Should be used to annotate OpenCL variable declarations inside kernel functions
  ** Default value is getAddressSpace() = addressSpace::PRIVATE
  ** */
-class OclAddressSpaceAnnotation : public OclAnnotation {
+class AddressSpaceAnnotation : public Annotation {
 public:
     enum addressSpace{
         PRIVATE,
@@ -139,13 +135,13 @@ public:
 private:
     addressSpace as;
 public:
-    static const core::StringKey<OclAddressSpaceAnnotation> KEY;
+    static const core::StringKey<AddressSpaceAnnotation> KEY;
 
     const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
 
-    OclAddressSpaceAnnotation() : OclAnnotation(), as(addressSpace::PRIVATE) { }
+    AddressSpaceAnnotation() : Annotation(), as(addressSpace::PRIVATE) { }
 
-    OclAddressSpaceAnnotation(addressSpace space) : OclAnnotation(), as(space) { }
+    AddressSpaceAnnotation(addressSpace space) : Annotation(), as(space) { }
 
     bool setAddressSpace(addressSpace newAs);
 
