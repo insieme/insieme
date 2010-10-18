@@ -216,8 +216,8 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 
 // build lambda expression for post/pre increment/decrement unary operators
 core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, core::ExpressionPtr subExpr, bool post, bool additive) {
-	assert( core::dynamic_pointer_cast<const core::RefType>(subExpr->getType()) && "LHS operand must of type ref<a'>." );
 	core::RefTypePtr subTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
+	assert( subTy && "LHS operand must of type ref<a'>." );
 	std::vector<core::StatementPtr> stmts;
 	if(post) {
 		// ref<a'> __tmp = subexpr
@@ -230,8 +230,10 @@ core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, co
 			std::vector<core::ExpressionPtr>({
 				subExpr, // ref<a'> a
 				builder.callExpr(
-					( additive ? core::lang::OP_INT_ADD_PTR:core::lang::OP_INT_SUB_PTR ),
-						std::vector<core::ExpressionPtr>({ subExpr, core::lang::CONST_UINT_ONE_PTR })
+					( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
+						std::vector<core::ExpressionPtr>(
+							{ builder.callExpr( core::lang::OP_REF_DEREF_PTR, { subExpr } ), core::lang::CONST_UINT_ONE_PTR }
+						)
 					) // a - 1
 			})
 		)
@@ -619,7 +621,7 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 
  		core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
-		const core::ExpressionPtr& lhs = Visit(binOp->getLHS());
+		core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 
 		// if the binary operator is a comma separated expression, we convert it into a function call
 		// which returns the value of the last expression
@@ -664,10 +666,16 @@ public:
 
 		if( !op.empty() ) {
 			// The operator is a compound operator, we substitute the RHS expression with the expanded one
-			const core::lang::OperatorPtr& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
-			rhs = builder.callExpr(opFunc, { lhs, rhs });
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			core::lang::OperatorPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
+
+			// we check if the RHS is a ref, in that case we use the deref operator
+			if( core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
+				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
+			rhs = builder.callExpr(opFunc, { builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs });
 		}
 
+		bool isAssignment = false;
 		switch( binOp->getOpcode() ) {
 		case BO_PtrMemD:
 		case BO_PtrMemI:
@@ -721,6 +729,7 @@ public:
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
+			isAssignment = true;
 			op = "assign"; break;
 
 		default:
@@ -730,6 +739,11 @@ public:
 		const core::lang::OperatorPtr& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
 		// build a callExpr with the 2 arguments
+		if( core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
+			rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
+		if( !isAssignment && core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) )
+			lhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} );
+
 		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, { lhs, rhs } );
 
 		// add the operator name in order to help the convertion process in the backend
@@ -1215,7 +1229,7 @@ public:
 				retStmt.push_back( builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
 					std::vector<core::ExpressionPtr>({
 						builder.varExpr(varTy, core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())), // ref<a'> a
-						newIndVar
+						builder.callExpr( core::lang::OP_REF_DEREF_PTR, {newIndVar} )
 					})
 				));
 			}
