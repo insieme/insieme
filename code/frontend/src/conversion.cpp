@@ -85,6 +85,9 @@ void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& cl
     TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
     SourceManager& manager = clangComp.getSourceManager();
     clang::SourceLocation errLoc = decl->getLocStart();
+    errMsg << " at location (" << frontend::utils::Line(errLoc, manager) << ":" <<
+            frontend::utils::Column(errLoc, manager) << ").\n";
+
 
     /*Crashes
     DiagnosticInfo di(&diag);
@@ -2110,14 +2113,8 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDe
 			throw &ss;
 	}}
 	catch(std::ostringstream *errMsg) {
-		//show errors if unexpected patterns were found
-		SourceManager& manager = clangComp.getSourceManager();
-		SourceLocation errLoc = varDecl->getLocStart();
-
-		*errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
-				frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
-
-		printErrorMsg(*errMsg, clangComp, varDecl);
+        //show errors if unexpected patterns were found
+        printErrorMsg(*errMsg, clangComp, varDecl);
 	}
 	return std::make_shared<ocl::OclBaseAnnotation>(declAnnotation);
 }
@@ -2179,13 +2176,8 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmV
 			throw &ss;
 	}}
 	catch(std::ostringstream *errMsg) {
-		//show errors if unexpected patterns were found
-		SourceManager& manager = clangComp.getSourceManager();
-		SourceLocation errLoc = varDecl->getLocStart();
-
-		*errMsg << " at location (" << utils::Line(errLoc, manager) << ":" <<
-				frontend::utils::Column(errLoc, manager) << "). Will be ignored \n";
-		printErrorMsg(*errMsg, clangComp, varDecl);
+        //show errors if unexpected patterns were found
+        printErrorMsg(*errMsg, clangComp, varDecl);
 	}
 	return std::make_shared<ocl::OclBaseAnnotation>(paramAnnotation);
 }
