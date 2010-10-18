@@ -34,6 +34,12 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_uniqueExpressionPtr">
+	<xs:all>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
 
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
@@ -91,10 +97,15 @@
 	</xs:sequence>
 </xs:complexType>
 
-
-
-
 <!-- All IR Node -->
+<xs:complexType name="T_returnStmt">
+	<xs:all>
+		<xs:element name="returnExpression" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_recTypeDefinition">
 	<xs:all>
 		<xs:element name="definitions" type="T_definitions" minOccurs="1"/>
@@ -102,7 +113,6 @@
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
-
 
 <xs:complexType name="T_recType">
 	<xs:all>
@@ -182,6 +192,7 @@
 		<xs:element name="recType" type="T_recType"/>
 		<xs:element name="recTypeDefinition" type="T_recTypeDefinition"/>
 		<xs:element name="literal" type="T_literal"/>
+		<xs:element name="returnStmt" type="T_returnStmt"/>
 	</xs:choice>
 </xs:group>
 

@@ -416,3 +416,24 @@ TEST(XmlTest, LiteralTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, ReturnTest) {
+	NodeManager manager;
+	
+	LiteralPtr literal = Literal::get(manager, "12", lang::TYPE_INT_4_PTR);
+	ReturnStmtPtr rstmt = ReturnStmt::get(manager, literal);
+	DummyAnnotationPtr dummy_re(new DummyAnnotation("return e"));
+	DummyAnnotationPtr dummy_rn(new DummyAnnotation("return n"));
+	rstmt.addAnnotation(dummy_re);
+	rstmt->addAnnotation(dummy_rn);
+
+	NodePtr root = rstmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

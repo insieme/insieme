@@ -334,6 +334,25 @@ public:
 		
 		visitAnnotations(cur->getAnnotations(), literal);
 	}
+	
+	void visitReturnStmt(const ReturnStmtPtr& cur) {
+		XmlElement returnStmt("returnStmt", doc);
+		returnStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << returnStmt;
+		
+		if (const ExpressionPtr& returnE = cur->getReturnExpr()) {
+			XmlElement returnExpression("returnExpression", doc);
+			returnStmt << returnExpression;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnE)));		
+			returnExpression << expressionPtr;
+			
+			visitAnnotations(returnE.getAnnotations(), expressionPtr);
+		}
+		
+		visitAnnotations(cur->getAnnotations(), returnStmt);
+	}
 };
 
 class error_handler: public DOMErrorHandler {
