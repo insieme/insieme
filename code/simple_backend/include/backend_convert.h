@@ -71,27 +71,7 @@ class NameGenerator {
 public:
 	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
 
-	string getName(const NodePtr& ptr, const char* fragment) {
-		auto it = nameMap.find(ptr);
-		if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
-		// generate a new name string
-		std::stringstream name;
-		switch(ptr->getNodeCategory()) {
-			case NC_Support:
-				name << "supp"; break;
-			case NC_Type:
-				name << "type"; break;
-			case NC_Expression:
-				name << "expr"; break;
-			case NC_Statement:
-				name << "stat"; break;
-			case NC_Program:
-				name << "prog"; break;
-		}
-		name << "_" << num++;
-		nameMap.insert(make_pair(ptr, name.str()));
-		return getName(ptr, fragment);
-	} 
+	string getName(const NodePtr& ptr, const char* fragment = "unnamed"); 
 };
 
 /** Converts simple IR types to their corresponding C(++) representations.
@@ -143,6 +123,7 @@ public:
 
 	CodePtr getFunction(const core::LambdaExprPtr& lambda, const Identifier& ident);
 	CodePtr getFunctionLiteral(const core::FunctionTypePtr& type, const string& name);
+	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
 };
 
 
@@ -235,10 +216,7 @@ public:
 		cStr << "continue";
 	}
 
-	void visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
-		cStr << printTypeName(ptr->getVarExpression()->getType()) << " " << ptr->getVarExpression()->getIdentifier().getName() << " = ";
-		visit(ptr->getInitialization());
-	}
+	void visitDeclarationStmt(const DeclarationStmtPtr& ptr);
 
 	void visitForStmt(const ForStmtPtr& ptr) {
 		auto decl = ptr->getDeclaration();

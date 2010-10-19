@@ -44,6 +44,8 @@ namespace c_info {
 const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
 const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
 
+const core::StringKey<COpAnnotation> COpAnnotation::KEY("COpAnnotation");
+
 void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
 	identMap.insert(std::make_pair(recVarName, cName));
 }

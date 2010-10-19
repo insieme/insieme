@@ -43,6 +43,8 @@
 #include "instance_manager.h"
 #include "string_utils.h"
 
+#include "int_type_param.h"
+
 namespace insieme {
 namespace core {
 
@@ -90,6 +92,12 @@ typedef std::shared_ptr<NodeManager> SharedNodeManager;
 template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
 
 /**
+ * This class is used to represent integer parameters of generic types.
+ */
+class IntTypeParam;
+
+
+/**
  * This class constitutes an interface for utility class required for transforming AST nodes.
  * Instances of this class represent mappings between nodes. During the transformation process,
  * each referenced pointer is replaced by the element is mapped to.
@@ -107,8 +115,25 @@ protected:
 	virtual const NodePtr mapElement(const NodePtr& ptr) =0;
 
 public:
+
+	/**
+	 * Requests to map the given integer type parameter to another element.
+	 */
+	virtual IntTypeParam mapParam(const IntTypeParam& param);
+
+	/**
+	 * Requests to map the given vector if integer type parameters to corre
+	 */
+	virtual vector<IntTypeParam> mapParam(const vector<IntTypeParam>& list);
+
+	/**
+	 * A virtual destructor of the mapping for a proper cleanup.
+	 */
 	virtual ~NodeMapping() {};
 
+	/**
+	 * A generic version of the map operation handling pointer types properly.
+	 */
 	template<typename T>
 	inline AnnotatedPtr<T> map(const AnnotatedPtr<T>& ptr) {
 		// short-cut for null

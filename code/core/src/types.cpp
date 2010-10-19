@@ -53,58 +53,6 @@ enum HashSeed {
 };
 
 
-// -------------------------------- Integer Type Parameter ----------------------------
-
-const IntTypeParam IntTypeParam::ZERO = IntTypeParam::getConcreteIntParam(0);
-const IntTypeParam IntTypeParam::ONE  = IntTypeParam::getConcreteIntParam(1);
-const IntTypeParam IntTypeParam::INF  = IntTypeParam(INFINITE);
-
-bool IntTypeParam::operator==(const IntTypeParam& param) const {
-	// quick check on reference
-	if (this == &param) {
-		return true;
-	}
-
-	// different type => different
-	if (type != param.type) {
-		return false;
-	}
-
-	// check type dependent content
-	switch (type) {
-	case VARIABLE:
-		return symbol == param.symbol;
-	case CONCRETE:
-		return value == param.value;
-	case INFINITE:
-		return true;
-	}
-	return false;
-}
-
-/**
- * Tests whether all of the given integer type parameter are concrete.
- *
- * @param intTypeParams the list of parameters to be tested
- * @return true if all are concrete, false otherwise
- */
-bool IntTypeParam::allConcrete(const vector<IntTypeParam>& intTypeParams) {
-	// just use all-functionality of container utils
-	return all(intTypeParams, [](const IntTypeParam& param) { return param.isConcrete(); });
-}
-
-IntTypeParam IntTypeParam::getVariableIntParam(char symbol) {
-	return IntTypeParam(symbol);
-}
-
-IntTypeParam IntTypeParam::getConcreteIntParam(std::size_t value) {
-	return IntTypeParam(value);
-}
-
-IntTypeParam IntTypeParam::getInfiniteIntParam() {
-	return IntTypeParam(INFINITE);
-}
-
 // ---------------------------------------- Type --------------------------------
 
 /**
@@ -278,7 +226,7 @@ GenericType::GenericType(NodeType nodeType, const Identifier& name,
 		baseType(isolate(baseType)) { }
 
 GenericType* GenericType::createCopyUsing(NodeMapping& mapper) const {
-	return new GenericType(familyName, mapper.map(typeParams), intParams, mapper.map(baseType));
+	return new GenericType(familyName, mapper.map(typeParams), mapper.mapParam(intParams), mapper.map(baseType));
 }
 
 /**

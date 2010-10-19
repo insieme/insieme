@@ -48,11 +48,12 @@ class SubstitutionMapper : public NodeMapping {
 
 	NodeManager& manager;
 	const Substitution::Mapping& mapping;
+	const Substitution::IntTypeParamMapping& paramMapping;
 
 public:
 
-	SubstitutionMapper(NodeManager& manager, const Substitution::Mapping& mapping)
-		: manager(manager), mapping(mapping) {};
+	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
+		: manager(manager), mapping(substitution.getMapping()), paramMapping(substitution.getIntTypeParamMapping()) {};
 
 	const NodePtr mapElement(const NodePtr& element) {
 		// quick check - only variables are substituted
@@ -71,6 +72,17 @@ public:
 		// (since nothing within a variable node may be substituted)
 		return element;
 	}
+
+	virtual IntTypeParam mapParam(const IntTypeParam& param) {
+		if (param.getType() != IntTypeParam::VARIABLE) {
+			return param;
+		}
+		auto pos = paramMapping.find(param);
+		if (pos != paramMapping.end()) {
+			return (*pos).second;
+		}
+		return param;
+	}
 };
 
 
@@ -80,12 +92,28 @@ Substitution::Substitution(const TypeVariablePtr& var, const TypePtr& type) {
 	mapping.insert(std::make_pair(var, type));
 };
 
+Substitution::Substitution(const IntTypeParam& var, const IntTypeParam& type) {
+	assert( var.getType()==IntTypeParam::VARIABLE && "Cannot add mapping for non-variable parameter!");
+	paramMapping.insert(std::make_pair(var,type));
+}
 
 TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
 	// perform substitution
-	SubstitutionMapper mapper(manager, mapping);
+	SubstitutionMapper mapper(manager, *this);
 	return mapper.map(type);
 }
+
+IntTypeParam Substitution::applyTo(const IntTypeParam& param) const {
+	if (param.getType() != IntTypeParam::VARIABLE) {
+		return param;
+	}
+	auto pos = paramMapping.find(param);
+	if (pos == paramMapping.end()) {
+		return param;
+	}
+	return (*pos).second;
+}
+
 
 void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	auto element = std::make_pair(var,type);
@@ -97,20 +125,47 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	}
 }
 
+void Substitution::addMapping(const IntTypeParam& var, const IntTypeParam& value) {
+
+	assert( var.getType()==IntTypeParam::VARIABLE && "Cannot add mapping for non-variable parameter!");
+
+	auto element = std::make_pair(var,value);
+	auto res = paramMapping.insert(element);
+	if (!res.second) {
+		paramMapping.erase(var);
+		res = paramMapping.insert(element);
+		assert( res.second && "Insert was not successful!" );
+	}
+}
+
 void Substitution::remMappingOf(const TypeVariablePtr& var) {
+	if (var->getNodeType() != NT_TypeVariable) {
+		return;
+	}
 	mapping.erase(var);
 }
+
+void Substitution::remMappingOf(const IntTypeParam& var) {
+	if (var.getType() != IntTypeParam::VARIABLE) {
+		return;
+	}
+	paramMapping.erase(var);
+}
+
 
 Substitution Substitution::compose(NodeManager& manager, const Substitution& a, const Substitution& b) {
 
 	typedef Substitution::Mapping::value_type Entry;
+	typedef Substitution::IntTypeParamMapping::value_type ParamEntry;
 
 	// copy substitution b
 	Substitution res(b);
 
+	// --- normal types ---
+
 	// apply substitution a to all mappings in b
-	for_each(res.mapping, [&manager, &b](Entry& cur) {
-		cur.second = b.applyTo(manager, cur.second);
+	for_each(res.mapping, [&manager, &a](Entry& cur) {
+		cur.second = a.applyTo(manager, cur.second);
 	});
 
 	// add remaining mappings of a
@@ -118,6 +173,21 @@ Substitution Substitution::compose(NodeManager& manager, const Substitution& a, 
 	for_each(a.mapping, [&resMapping](const Entry& cur) {
 		if (resMapping.find(cur.first) == resMapping.end()) {
 			resMapping.insert(cur);
+		}
+	});
+
+	// --- int type parameter ---
+
+	// apply substitution a to all mappings in b
+	for_each(res.paramMapping, [&manager, &a](ParamEntry& cur) {
+		cur.second = a.applyTo(cur.second);
+	});
+
+	// add remaining mappings of a
+	Substitution::IntTypeParamMapping& resParamMapping = res.paramMapping;
+	for_each(a.paramMapping, [&resParamMapping](const ParamEntry& cur) {
+		if (resParamMapping.find(cur.first) == resParamMapping.end()) {
+			resParamMapping.insert(cur);
 		}
 	});
 
@@ -145,8 +215,8 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 		Pair cur = list.front();
 		list.pop_front();
 
-		const TypePtr a = cur.first;
-		const TypePtr b = cur.second;
+		const TypePtr& a = cur.first;
+		const TypePtr& b = cur.second;
 
 		const NodeType typeOfA = a->getNodeType();
 		const NodeType typeOfB = b->getNodeType();
@@ -200,8 +270,58 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 
 		// => check family of generic type
 		if (typeOfA == NT_GenericType) {
-			if (static_pointer_cast<GenericType>(a)->getFamilyName() != static_pointer_cast<GenericType>(b)->getFamilyName()) {
+			const GenericTypePtr& genericTypeA = static_pointer_cast<GenericType>(a);
+			const GenericTypePtr& genericTypeB = static_pointer_cast<GenericType>(b);
+
+			if (genericTypeA->getFamilyName() != genericTypeB->getFamilyName()) {
 				return boost::optional<Substitution>();
+			}
+
+			// ---- unify int type parameter ---
+
+			// get lists
+			auto paramsA = genericTypeA->getIntTypeParameter();
+			auto paramsB = genericTypeB->getIntTypeParameter();
+
+			// check number of arguments ...
+			if (paramsA.size() != paramsB.size()) {
+				// => not unifyable
+				return boost::optional<Substitution>();
+			}
+
+			for(std::size_t i=0; i<paramsA.size(); i++) {
+				IntTypeParam paramA = paramsA[i];
+				IntTypeParam paramB = paramsB[i];
+
+				// equivalent pairs can be ignored ...
+				if (paramA == paramB) {
+					continue;
+				}
+
+				// check for variables
+				if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() != IntTypeParam::VARIABLE) {
+					// different constants => not unifyable!
+					return boost::optional<Substitution>();
+				}
+
+				// move variable to first place
+				if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() ==IntTypeParam::VARIABLE) {
+					IntTypeParam tmp = paramA;
+					paramA = paramB;
+					paramB = tmp;
+				}
+
+				// add mapping
+				Substitution mapping(paramA,paramB);
+
+				// apply substitution to remaining pairs
+				for_each(list, [&mapping, &manager](Pair& cur) {
+					cur.first = mapping.applyTo(manager, cur.first);
+					cur.second = mapping.applyTo(manager, cur.second);
+				});
+
+				// compose current mapping with overall result
+				res = Substitution::compose(manager, res, mapping);
 			}
 		}
 
@@ -230,9 +350,15 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 
 
 std::ostream& operator<<(std::ostream& out, const insieme::core::Substitution& substitution) {
-	return out << "{" << join(",", substitution.getMapping(), [](std::ostream& out, const insieme::core::Substitution::Mapping::value_type& cur)->std::ostream& {
+	out << "{";
+	out << join(",", substitution.getMapping(), [](std::ostream& out, const insieme::core::Substitution::Mapping::value_type& cur)->std::ostream& {
 		return out << *cur.first << "->" << *cur.second;
-	}) << "}";
-	//return out << substitution.getMapping();
+	});
+	out << "/";
+	out << join(",", substitution.getIntTypeParamMapping(), [](std::ostream& out, const insieme::core::Substitution::IntTypeParamMapping::value_type& cur)->std::ostream& {
+		return out << cur.first.toString() << "->" << cur.second.toString();
+	});
+	out << "}";
+	return out;
 }
 

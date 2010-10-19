@@ -36,7 +36,10 @@
 
 #include "backend_convert.h"
 
+#include <glog/logging.h>
+
 #include "annotated_ptr.h"
+#include "types.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -76,7 +79,12 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 
 CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, const string& name) {
 	// TODO refactor duplication w/ above
-	CodePtr cptr = std::make_shared<CodeFragment>(string("fundecl_codefragment_") + name);
+	auto ident = Identifier(string("fundecl_codefragment_") + name);
+	auto codeIt = functionMap.find(ident);
+	if(codeIt != functionMap.end()) {
+		return codeIt->second;
+	}
+	CodePtr cptr = std::make_shared<CodeFragment>(ident.getName());
 	CodeStream& cs = cptr->getCodeStream();
 	cs << cc.getTypeMan().getTypeName(type->getReturnType()) << " " << name << "(";
 	auto argType = type->getArgumentType();
@@ -86,7 +94,13 @@ CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, c
 		});
 	} // TODO handle other argument types
 	cs << ");\n";
+	// insert into function map and return
+	functionMap.insert(std::make_pair(ident, cptr));
 	return cptr;
+}
+
+void FunctionManager::writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr) {
+	 // TODO
 }
 
 
@@ -101,19 +115,47 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 }
 
 
-void ConvertVisitor::visitLambdaExpr( const LambdaExprPtr& ptr ) {
-	if(auto cname = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
-		defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cname->getIdent()));
-		// TODO print function name
+void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
+	string cFunName = cc.getNameGen().getName(ptr);
+	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
+		cFunName = cnameAnn->getName();
 	}
-	else { // an unnamed lambda
-		assert(0 && "Unnamed lambda not yet implemented");
-	}
+	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cFunName));
+	cStr << cFunName;
 }
 
 void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
-	visit(ptr->getFunctionExpr());
+	auto funExp = ptr->getFunctionExpr();
+	// generic built in C operator handling
+	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) { 
+		string op = cOpAnn->getOperator();
+		cStr << "(";
+		visit(args.front());
+		cStr << " " << op << " ";
+		visit(args.back());
+		cStr << ")";
+		return;
+	}
+	// special built in function handling -- TODO make more generic
+	if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
+		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
+		auto funName = literalFun->getValue();
+		//LOG(INFO) << "+++++++ val: " << funName << "\n";
+		if(funName == "ref.deref") {
+			// TODO decide whether no-op or *
+			visit(ptr->getArguments().front());
+			return;
+		} else if(funName == "subscript") {
+			visit(ptr->getArguments().front());
+			cStr << "[";
+			visit(ptr->getArguments().back());
+			cStr << "]";
+			return;
+		}
+	}
+	// non built-in handling
+	visit(funExp);
 	cStr << "(";
 	if(args.size()>0) {
 		visit(args.front());
@@ -123,6 +165,34 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		});
 	}
 	cStr << ")";
+}
+
+void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
+	// handle fixed size vectors of simple types (C arrays)
+	vector<unsigned> vecLengths;
+	auto innerType = ptr->getVarExpression()->getType();
+	if(auto innerRefType = dynamic_pointer_cast<const RefType>(innerType)) {
+		innerType = innerRefType->getElementType();
+	}
+	while(auto innerVecType = dynamic_pointer_cast<const VectorType>(innerType)) {
+		//LOG(INFO) << "+++++++ innerVec\n";
+		assert(innerVecType->getSize().isConcrete() && "Vectors with non-concrete size not yet supported");
+		vecLengths.push_back(innerVecType->getSize().getValue());
+		innerType = innerVecType->getElementType();
+		if(auto innerRefType = dynamic_pointer_cast<const RefType>(innerType)) {
+			innerType = innerRefType->getElementType();
+		}
+	}
+	if(!vecLengths.empty()) { // TODO check that innerType is "simple" enough to be part of C array
+		//LOG(INFO) << "+++++++ innerType " << innerType << "\n";
+		cStr << printTypeName(innerType) << " " << ptr->getVarExpression()->getIdentifier().getName();
+		for_each(vecLengths, [this](unsigned vl) { this->cStr << "[" << vl << "]"; });
+		// TODO initialization
+		return;
+	}
+	// standard handling
+	cStr << printTypeName(ptr->getVarExpression()->getType()) << " " << ptr->getVarExpression()->getIdentifier().getName() << " = ";
+	visit(ptr->getInitialization());
 }
 
 void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
@@ -179,13 +249,13 @@ string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 	if(lang::isUnitType(*ptr)) {
 		return "void";
 	} else
-	if(lang::isIntType(*ptr)) {
+	if(lang::isIntegerType(*ptr)) {
 		string qualifier = lang::isUIntType(*ptr) ? "unsigned " : "";
 		switch(lang::getNumBytes(*ptr)) {
 			case 1: return qualifier + "char";
 			case 2: return qualifier + "short";
 			case 4: return qualifier + "int";
-			case 8: return qualifier + "long";
+			case 8: return qualifier + "long"; // long long ?
 			default: return ptr->getName();
 		}
 	} else
@@ -239,6 +309,29 @@ string SimpleTypeConverter::visitStructType(const StructTypePtr& ptr) {
 
 const ProgramPtr& ConvertedCode::getProgram() const {
 	return fromProg;
+}
+
+
+string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unnamed"*/ ) {
+	auto it = nameMap.find(ptr);
+	if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
+	// generate a new name string
+	std::stringstream name;
+	switch(ptr->getNodeCategory()) {
+	case NC_Support:
+		name << "supp"; break;
+	case NC_Type:
+		name << "type"; break;
+	case NC_Expression:
+		name << "expr"; break;
+	case NC_Statement:
+		name << "stat"; break;
+	case NC_Program:
+		name << "prog"; break;
+	}
+	name << "_" << num++;
+	nameMap.insert(make_pair(ptr, name.str()));
+	return getName(ptr, fragment);
 }
 
 }
