@@ -141,6 +141,8 @@ ADD_TYPE(GenericType, STRING);
 ADD_TYPE(GenericType, WSTRING);
 ADD_TYPE(GenericType, VAR_LIST);
 
+ADD_TYPE(FunctionType, OP_ASSIGN);
+
 // -------------------------------- Constants ------------------------------
 
 #define ADD_CONST(NAME) \

@@ -739,9 +739,8 @@ public:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
 			baseOp = BO_Assign;
-			VLOG(2) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			// assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			isAssignment = true;
@@ -1228,14 +1227,15 @@ public:
 				// in the case we replace the loop iterator with a temporary variable, we have to assign the final value of the
 				// iterator to the old variable so we don't change the semantics of the code
 				core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
+				const core::lang::OperatorPtr& refAssign = builder.literal( "ref.assign", core::lang::TYPE_OP_ASSIGN_PTR);
 
-				retStmt.push_back( builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
+				retStmt.push_back( builder.callExpr( refAssign,
 					toVector<core::ExpressionPtr>(
 						builder.varExpr(varTy, core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())), // ref<a'> a
 						builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(newIndVar) )
 					)
 				));
-				core::lang::OP_REF_ASSIGN_PTR->addAnnotation( std::make_shared<c_info::COpAnnotation>("=") ); // FIXME
+				refAssign->addAnnotation( std::make_shared<c_info::COpAnnotation>("=") ); // FIXME
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {
