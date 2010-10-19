@@ -353,6 +353,99 @@ public:
 		
 		visitAnnotations(cur->getAnnotations(), returnStmt);
 	}
+	
+	void visitForStmt(const ForStmtPtr& cur) {
+		XmlElement forStmt("forStmt", doc);
+		forStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << forStmt;
+		
+		if (const DeclarationStmtPtr& declarationR = cur->getDeclaration()) {
+			XmlElement declaration("declaration", doc);
+			forStmt << declaration;
+
+			XmlElement declarationStmtPtr("declarationStmtPtr", doc);
+			declarationStmtPtr.setAttr("ref", numeric_cast<string>((size_t)(&*declarationR)));		
+			declaration << declarationStmtPtr;
+			
+			visitAnnotations(declarationR.getAnnotations(), declarationStmtPtr);
+		}
+		
+		if (const StatementPtr& bodyR = cur->getBody()) {
+			XmlElement body("body", doc);
+			forStmt << body;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyR)));		
+			body << statementPtr;
+			
+			visitAnnotations(bodyR.getAnnotations(), statementPtr);
+		}
+		
+		if (const ExpressionPtr& endR = cur->getEnd()) {
+			XmlElement end("end", doc);
+			forStmt << end;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*endR)));		
+			end << expressionPtr;
+			
+			visitAnnotations(endR.getAnnotations(), expressionPtr);
+		}
+		
+		if (const ExpressionPtr& stepR = cur->getStep()) {
+			XmlElement step("step", doc);
+			forStmt << step;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*stepR)));		
+			step << expressionPtr;
+			
+			visitAnnotations(stepR.getAnnotations(), expressionPtr);
+		}
+		
+		visitAnnotations(cur->getAnnotations(), forStmt);
+	}
+	
+	void visitIfStmt(const IfStmtPtr& cur) {
+		XmlElement ifStmt("ifStmt", doc);
+		ifStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << ifStmt;
+
+		if (const ExpressionPtr& cond = cur->getCondition()) {
+			XmlElement condition("condition", doc);
+			ifStmt << condition;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*cond)));		
+			condition << expressionPtr;
+			
+			visitAnnotations(cond.getAnnotations(), expressionPtr);
+		}
+		
+		if (const StatementPtr& thenBodyR = cur->getThenBody()) {
+			XmlElement thenBody("thenBody", doc);
+			ifStmt << thenBody;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*thenBodyR)));		
+			thenBody << statementPtr;
+			
+			visitAnnotations(thenBodyR.getAnnotations(), statementPtr);
+		}
+		
+		if (const StatementPtr& elseBodyR = cur->getElseBody()) {
+			XmlElement elseBody("elseBody", doc);
+			ifStmt << elseBody;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*elseBodyR)));		
+			elseBody << statementPtr;
+			
+			visitAnnotations(elseBodyR.getAnnotations(), statementPtr);
+		}
+
+		visitAnnotations(cur->getAnnotations(), ifStmt);
+	}
 };
 
 class error_handler: public DOMErrorHandler {

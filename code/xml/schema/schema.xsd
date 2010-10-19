@@ -40,6 +40,17 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_uniqueDeclarationStmtPtr">
+	<xs:all>
+		<xs:element name="declarationStmtPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_uniqueStatementPtr">
+	<xs:all>
+		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
 
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
@@ -98,6 +109,27 @@
 </xs:complexType>
 
 <!-- All IR Node -->
+<xs:complexType name="T_ifStmt">
+	<xs:all>
+		<xs:element name="condition" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="thenBody" type="T_uniqueStatementPtr" minOccurs="1"/>
+		<xs:element name="elseBody" type="T_uniqueStatementPtr" minOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_forStmt">
+	<xs:all>
+		<xs:element name="declaration" type="T_uniqueDeclarationStmtPtr" minOccurs="1"/>
+		<xs:element name="body" type="T_uniqueStatementPtr" minOccurs="1"/>		
+		<xs:element name="step" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="end" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_returnStmt">
 	<xs:all>
 		<xs:element name="returnExpression" type="T_uniqueExpressionPtr" minOccurs="1"/>
@@ -193,6 +225,8 @@
 		<xs:element name="recTypeDefinition" type="T_recTypeDefinition"/>
 		<xs:element name="literal" type="T_literal"/>
 		<xs:element name="returnStmt" type="T_returnStmt"/>
+		<xs:element name="forStmt" type="T_forStmt"/>
+		<xs:element name="ifStmt" type="T_ifStmt"/>
 	</xs:choice>
 </xs:group>
 

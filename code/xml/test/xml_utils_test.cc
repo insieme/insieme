@@ -417,7 +417,7 @@ TEST(XmlTest, LiteralTest) {
 	EXPECT_EQ (s1, s2);
 }
 
-TEST(XmlTest, ReturnTest) {
+TEST(XmlTest, ReturnStmtTest) {
 	NodeManager manager;
 	
 	LiteralPtr literal = Literal::get(manager, "12", lang::TYPE_INT_4_PTR);
@@ -428,6 +428,91 @@ TEST(XmlTest, ReturnTest) {
 	rstmt->addAnnotation(dummy_rn);
 
 	NodePtr root = rstmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, ForStmtTest) {
+	NodeManager manager;
+
+	LiteralPtr start = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("lit_start e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("lit_start n"));
+	start.addAnnotation(dummy_se);
+	start->addAnnotation(dummy_sn);
+	
+	LiteralPtr end   = Literal::get(manager, "9", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_ee(new DummyAnnotation("end e"));
+	DummyAnnotationPtr dummy_en(new DummyAnnotation("end n"));
+	end.addAnnotation(dummy_ee);
+	end->addAnnotation(dummy_en);
+	
+	LiteralPtr step  = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_te(new DummyAnnotation("step e"));
+	DummyAnnotationPtr dummy_tn(new DummyAnnotation("step n"));
+	step.addAnnotation(dummy_te);
+	step->addAnnotation(dummy_tn);
+
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "i", start);
+	DummyAnnotationPtr dummy_de(new DummyAnnotation("decl e"));
+	DummyAnnotationPtr dummy_dn(new DummyAnnotation("decl n"));
+	decl.addAnnotation(dummy_de);
+	decl->addAnnotation(dummy_dn);
+	
+	StatementPtr body = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
+	body.addAnnotation(dummy_be);
+	body->addAnnotation(dummy_bn);
+
+	ForStmtPtr fstmt = ForStmt::get(manager, decl, body, end, step);
+	DummyAnnotationPtr dummy_fe(new DummyAnnotation("for e"));
+	DummyAnnotationPtr dummy_fn(new DummyAnnotation("for n"));
+	fstmt.addAnnotation(dummy_fe);
+	fstmt->addAnnotation(dummy_fn);
+
+	NodePtr root = fstmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, IfStmtTest) {
+	NodeManager manager;
+
+	VarExprPtr var = VarExpr::get(manager, lang::TYPE_BOOL_PTR, "valid");
+	// FIXME: Check in the future
+	
+	StatementPtr thenStmt = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_te(new DummyAnnotation("then e"));
+	DummyAnnotationPtr dummy_tn(new DummyAnnotation("then n"));
+	thenStmt.addAnnotation(dummy_te);
+	thenStmt->addAnnotation(dummy_tn);
+	
+	StatementPtr elseStmt = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_ee(new DummyAnnotation("else e"));
+	DummyAnnotationPtr dummy_en(new DummyAnnotation("else n"));
+	elseStmt.addAnnotation(dummy_ee);
+	elseStmt->addAnnotation(dummy_en);
+
+	IfStmtPtr stmt = IfStmt::get(manager, var, thenStmt, elseStmt);
+	DummyAnnotationPtr dummy_ie(new DummyAnnotation("if e"));
+	DummyAnnotationPtr dummy_in(new DummyAnnotation("if n"));
+	stmt.addAnnotation(dummy_ie);
+	stmt->addAnnotation(dummy_in);
+	
+	NodePtr root = stmt;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);
