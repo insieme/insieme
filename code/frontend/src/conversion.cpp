@@ -1071,6 +1071,7 @@ public:
         core::TypePtr type = clangType.isConstQualified() ?
             convFact.convertType( *GET_TYPE_PTR(varDecl) ) :
             convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(varDecl) ) );
+		// todo: initialization for declarations with no initialization value
 
 		// initialization value
 		core::ExpressionPtr initExpr;
@@ -1080,13 +1081,12 @@ public:
 		    initExpr = defaultInitVal(* GET_TYPE_PTR(varDecl), type);
 		}
 
+        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
+
         /*-------------------------><-----------------------*/
         core::AnnotationPtr&& attr = convFact.convertClangAttributes(varDecl);
         if(attr)
-        	type->addAnnotation(attr);
-
-		// todo: initialization for declarations with no initialization value
-        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
+        	retStmt->addAnnotation(attr);
 
         // logging
         DVLOG(1) << "Converted into IR stmt: "; \
@@ -2260,14 +2260,14 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 			//port clang attributes to IR annotations
 			core::AnnotationPtr attr = mFact.convertClangAttributes(currParam);
 			if(attr)
-				 funcParamList.back().ptr->getType()->addAnnotation(attr);
+				 funcParamList.back()->addAnnotation(attr);
 		}
 	);
 
 	//check Attributes of the function definition
+	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 	if(funcDecl->hasAttrs()) {
 		const clang::AttrVec attrVec = funcDecl->getAttrs();
-		ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
 		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
 			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
@@ -2286,10 +2286,6 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 				);
 			}
 		}
-		// if OpenCL related annotations have been found, create OclBaseAnnotation and
-		// add it to the funciton's attribute
-		if(kernelAnnotation.size() > 0)
-			funcType.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 	}
 
 	core::StatementPtr funcBody(NULL);
@@ -2297,6 +2293,10 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 
 	funcBody = mFact.convertStmt( *funcDecl->getBody() );
 	core::LambdaExprPtr&& lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+    // if OpenCL related annotations have been found, create OclBaseAnnotation and
+    // add it to the funciton's attribute
+    if(kernelAnnotation.size() > 0)
+        lambdaExpr.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 	// annotate name of function
 	lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
 	return lambdaExpr;

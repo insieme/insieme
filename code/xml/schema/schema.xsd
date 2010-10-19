@@ -87,6 +87,20 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_members -->
+<xs:complexType name="T_members">
+	<xs:sequence>
+		<xs:element name="member" type="T_member" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="T_member">
+	<xs:sequence>
+		<xs:element name="id" type="xs:string" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
+
 <!-- T_elementTypeList -->
 <xs:complexType name="T_elementTypeList">
 	<xs:sequence>
@@ -133,6 +147,15 @@
 <xs:complexType name="T_empty">
 	<xs:all>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_structExpr">
+	<xs:all>
+		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
+		<xs:element name="members" type="T_members" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
@@ -287,6 +310,8 @@
 		<xs:element name="breakStmt" type="T_empty"/>
 		<xs:element name="continueStmt" type="T_empty"/>
 		<xs:element name="compoundStmt" type="T_compoundStmt"/>
+		<xs:element name="structExpr" type="T_structExpr"/>
+		<xs:element name="unionExpr" type="T_structExpr"/>
 	</xs:choice>
 </xs:group>
 
