@@ -611,7 +611,7 @@ TEST(XmlTest, WhileStmtTest) {
 	EXPECT_EQ (s1, s2);
 }
 
-TEST(XmlTest, BreakStmt) {
+TEST(XmlTest, BreakStmtTest) {
 	NodeManager manager;
 
 	BreakStmtPtr stmt = BreakStmt::get(manager);
@@ -631,7 +631,7 @@ TEST(XmlTest, BreakStmt) {
 	EXPECT_EQ (s1, s2);
 }
 
-TEST(XmlTest, ContinueStmt) {
+TEST(XmlTest, ContinueStmtTest) {
 	NodeManager manager;
 
 	ContinueStmtPtr stmt = ContinueStmt::get(manager);
@@ -649,4 +649,39 @@ TEST(XmlTest, ContinueStmt) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, CompoundStmtTest) {
+	NodeManager manager;
+	
+	BreakStmtPtr bS = BreakStmt::get(manager);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("break e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("break n"));
+	bS.addAnnotation(dummy_be);
+	bS->addAnnotation(dummy_bn);
+		
+	ContinueStmtPtr cS = ContinueStmt::get(manager);
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("continue e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("continue n"));
+	cS.addAnnotation(dummy_ce);
+	cS->addAnnotation(dummy_cn);
+	
+	vector<StatementPtr> stmtVec;
+	stmtVec.push_back(bS);
+	stmtVec.push_back(cS);
+	CompoundStmtPtr compS = CompoundStmt::get(manager, stmtVec);
+	DummyAnnotationPtr dummy_cme(new DummyAnnotation("compound e"));
+	DummyAnnotationPtr dummy_cmn(new DummyAnnotation("compound n"));
+	compS.addAnnotation(dummy_cme);
+	compS->addAnnotation(dummy_cmn);
+	
+	NodePtr root = compS;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
 }

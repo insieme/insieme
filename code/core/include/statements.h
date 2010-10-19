@@ -165,6 +165,7 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const StatementPtr& operator[](unsigned index) const;
+	const vector<StatementPtr>& getStatements() const { return statements; }
 
 	static CompoundStmtPtr get(NodeManager& manager);
 	static CompoundStmtPtr get(NodeManager& manager, const StatementPtr& stmt);

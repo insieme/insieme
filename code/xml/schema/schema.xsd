@@ -122,11 +122,25 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_statements -->
+<xs:complexType name="T_statements">
+	<xs:sequence>
+		<xs:element name="statement" type="T_uniqueStatementPtr" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
 
 <!-- All IR Node -->
 <xs:complexType name="T_empty">
 	<xs:all>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_compoundStmt">
+	<xs:all>
+		<xs:element name="statements" type="T_statements" minOccurs="0"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
@@ -272,6 +286,7 @@
 		<xs:element name="whileStmt" type="T_whileStmt"/>
 		<xs:element name="breakStmt" type="T_empty"/>
 		<xs:element name="continueStmt" type="T_empty"/>
+		<xs:element name="compoundStmt" type="T_compoundStmt"/>
 	</xs:choice>
 </xs:group>
 

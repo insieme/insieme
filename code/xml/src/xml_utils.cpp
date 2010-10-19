@@ -545,6 +545,31 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), continueStmt);
 	}
+
+	void visitCompoundStmt(const CompoundStmtPtr& cur) {
+		XmlElement compoundStmt("compoundStmt", doc);
+		compoundStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << compoundStmt;
+		
+		const vector<StatementPtr>& stats = cur->getStatements();
+		if (!stats.empty()){
+			XmlElement statements("statements", doc);
+			compoundStmt << statements;
+			
+			for(vector<StatementPtr>::const_iterator iter = stats.begin(); iter != stats.end(); ++iter) {
+				XmlElement statement("statement", doc);
+				statements << statement;
+				
+				XmlElement statementPtr("statementPtr", doc);
+				statementPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));
+				statement << statementPtr;
+				
+				visitAnnotations((*iter).getAnnotations(), statementPtr);
+			}
+		}
+
+		visitAnnotations(cur->getAnnotations(), compoundStmt);
+	}
 };
 
 class error_handler: public DOMErrorHandler {
