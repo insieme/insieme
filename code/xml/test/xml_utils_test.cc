@@ -577,3 +577,76 @@ TEST(XmlTest, SwitchStmtTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+
+TEST(XmlTest, WhileStmtTest) {
+	NodeManager manager;
+
+	LiteralPtr condition = Literal::get(manager, "true", manager.get(lang::TYPE_BOOL_PTR));
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("cond e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("cond n"));
+	condition.addAnnotation(dummy_ce);
+	condition->addAnnotation(dummy_cn);
+	
+	StatementPtr body = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
+	body.addAnnotation(dummy_be);
+	body->addAnnotation(dummy_bn);
+
+	WhileStmtPtr stmt = WhileStmt::get(manager, condition, body);
+	DummyAnnotationPtr dummy_we(new DummyAnnotation("while e"));
+	DummyAnnotationPtr dummy_wn(new DummyAnnotation("while n"));
+	stmt.addAnnotation(dummy_we);
+	stmt->addAnnotation(dummy_wn);
+	
+	NodePtr root = stmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, BreakStmt) {
+	NodeManager manager;
+
+	BreakStmtPtr stmt = BreakStmt::get(manager);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("break e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("break n"));
+	stmt.addAnnotation(dummy_be);
+	stmt->addAnnotation(dummy_bn);
+	
+	NodePtr root = stmt;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, ContinueStmt) {
+	NodeManager manager;
+
+	ContinueStmtPtr stmt = ContinueStmt::get(manager);
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("continue e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("continue n"));
+	stmt.addAnnotation(dummy_ce);
+	stmt->addAnnotation(dummy_cn);
+	
+	NodePtr root = stmt;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

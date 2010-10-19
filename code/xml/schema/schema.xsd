@@ -124,6 +124,22 @@
 
 
 <!-- All IR Node -->
+<xs:complexType name="T_empty">
+	<xs:all>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_whileStmt">
+	<xs:all>
+		<xs:element name="condition" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="body" type="T_uniqueStatementPtr" minOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_switchStmt">
 	<xs:all>
 		<xs:element name="expression" type="T_uniqueExpressionPtr" minOccurs="1"/>
@@ -253,6 +269,9 @@
 		<xs:element name="forStmt" type="T_forStmt"/>
 		<xs:element name="ifStmt" type="T_ifStmt"/>
 		<xs:element name="switchStmt" type="T_switchStmt"/>
+		<xs:element name="whileStmt" type="T_whileStmt"/>
+		<xs:element name="breakStmt" type="T_empty"/>
+		<xs:element name="continueStmt" type="T_empty"/>
 	</xs:choice>
 </xs:group>
 

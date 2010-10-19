@@ -499,6 +499,52 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), switchStmt);
 	}
+	
+	void visitWhileStmt(const WhileStmtPtr& cur) {
+		XmlElement whileStmt("whileStmt", doc);
+		whileStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << whileStmt;
+
+		if (const ExpressionPtr& cond = cur->getCondition()) {
+			XmlElement condition("condition", doc);
+			whileStmt << condition;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*cond)));		
+			condition << expressionPtr;
+			
+			visitAnnotations(cond.getAnnotations(), expressionPtr);
+		}
+		
+		if (const StatementPtr& bodyR = cur->getBody()) {
+			XmlElement body("body", doc);
+			whileStmt << body;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyR)));		
+			body << statementPtr;
+			
+			visitAnnotations(bodyR.getAnnotations(), statementPtr);
+		}
+
+		visitAnnotations(cur->getAnnotations(), whileStmt);
+	}
+	
+	void visitBreakStmt(const BreakStmtPtr& cur) {
+		XmlElement breakStmt("breakStmt", doc);
+		breakStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << breakStmt;
+
+		visitAnnotations(cur->getAnnotations(), breakStmt);
+	}
+	
+	void visitContinueStmt(const ContinueStmtPtr& cur) {
+		XmlElement continueStmt("continueStmt", doc);
+		continueStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << continueStmt;
+
+		visitAnnotations(cur->getAnnotations(), continueStmt);
+	}
 };
 
 class error_handler: public DOMErrorHandler {
