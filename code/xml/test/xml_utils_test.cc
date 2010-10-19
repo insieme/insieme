@@ -685,3 +685,87 @@ TEST(XmlTest, CompoundStmtTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);	
 }
+
+TEST(XmlTest, StructExprTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+	
+	vector<NamedCompositeExpr::Member> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
+	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+
+	StructExprPtr structA = StructExpr::get(manager, vecA);
+	
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("struct e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("struct n"));
+	
+	structA.addAnnotation(dummy_se);
+	structA->addAnnotation(dummy_sn);
+	
+	NodePtr root = structA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
+}
+
+TEST(XmlTest, UnionExprTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+	
+	vector<NamedCompositeExpr::Member> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
+	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+
+	UnionExprPtr unionA = UnionExpr::get(manager, vecA);
+	
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("union e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("union n"));
+	
+	unionA.addAnnotation(dummy_se);
+	unionA->addAnnotation(dummy_sn);
+	
+	NodePtr root = unionA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
+}
