@@ -359,7 +359,7 @@ TEST(TypeConversion, HandleArrayType) {
 		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
 		TypePtr insiemeTy = convFactory.convertType( *arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("ref<array<ref<ref<char>>,1>>", insiemeTy->toString());
+		EXPECT_EQ("array<ref<ref<char>>,1>", insiemeTy->toString());
 	}
 	operator delete (charTy);
 

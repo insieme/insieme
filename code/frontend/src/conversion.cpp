@@ -632,7 +632,7 @@ public:
 		// if the binary operator is a comma separated expression, we convert it into a function call
 		// which returns the value of the last expression
 		if( binOp->getOpcode() == BO_Comma) {
-			return createCallExpr(builder, std::vector<core::StatementPtr>( {lhs, builder.returnStmt(rhs)} ), rhs->getType());
+			return createCallExpr(builder, toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)), rhs->getType());
 		}
 
 		core::TypePtr exprTy = convFact.convertType( *GET_TYPE_PTR(binOp) );
@@ -737,8 +737,10 @@ public:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
 			baseOp = BO_Assign;
+			DLOG(INFO) << *lhs;
+			DLOG(INFO) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			//assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			isAssignment = true;
@@ -858,14 +860,31 @@ public:
 	core::ExpressionPtr VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
 		core::ExpressionPtr&& base = Visit( arraySubExpr->getBase() );
+
+//		if( !core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ) {
+//			// CLANG doesn't recognize this as a vector type, but a subscript operator has been called,
+//			// so we assume this was originally a vector type
+//
+//		}
+
 		core::ExpressionPtr&& idx = Visit( arraySubExpr->getIdx() );
 
-//		DLOG(INFO) << *base->getType();
-
+//		TODO: we need better checking for vector type
 //		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 //				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) && "Base expression of array subscript is not a vector/array type.");
 
-		return convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, toVector( base, idx ));
+		core::ExpressionPtr&& retExpr =
+			convFact.builder.callExpr(
+				convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(arraySubExpr) ) ),
+				core::lang::OP_SUBSCRIPT_PTR,
+				toVector<core::ExpressionPtr>(
+					convFact.builder.callExpr(core::lang::OP_REF_DEREF_PTR, toVector(base)),
+					idx
+				)
+			);
+//		DLOG(INFO) << "EXPR_TY: " << *retExpr->getType();
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -906,6 +925,7 @@ public:
 		// check whether this is a reference to a variable
 		if(Decl* varDecl = declRef->getDecl()) {
 			core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(declRef) );
+
 			// FIXME: is this correct?
 			if(!core::dynamic_pointer_cast<const core::RefType>(varTy))
 				varTy = builder.refType(varTy);
@@ -1697,7 +1717,7 @@ public:
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 
-		core::TypePtr&& retTy = builder.refType( builder.arrayType(builder.refType(elemTy)) );
+		core::TypePtr&& retTy = builder.arrayType(builder.refType(elemTy));
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

@@ -118,7 +118,7 @@ void for_stmt_test() {
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
-	#pragma test "{for(ref<int<4>> __it = 0 .. 100 : 1) {ref.assign(a, ref.deref(__it));}; ref.assign(it, ref.deref(__it));}"
+	#pragma test "{for(ref<int<4>> __it = 0 .. 100 : 1) {ref.assign(a, ref.deref(__it));}; ref.assign(it, 100);}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test "while(int.lt(ref.deref(it), 100)) {{{};}; ref.assign(it, int.add(ref.deref(it), 1));}"
