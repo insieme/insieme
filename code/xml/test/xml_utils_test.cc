@@ -522,3 +522,58 @@ TEST(XmlTest, IfStmtTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, SwitchStmtTest) {
+	NodeManager manager;
+
+	VarExprPtr var = VarExpr::get(manager, lang::TYPE_INT_4_PTR, "value");
+	DummyAnnotationPtr dummy_ve(new DummyAnnotation("var e"));
+	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var n"));
+	var.addAnnotation(dummy_ve);
+	var->addAnnotation(dummy_vn);
+
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	StatementPtr caseA = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_cae(new DummyAnnotation("caseA e"));
+	DummyAnnotationPtr dummy_can(new DummyAnnotation("caseA n"));
+	caseA.addAnnotation(dummy_cae);
+	caseA->addAnnotation(dummy_can);
+	
+	StatementPtr caseB = ContinueStmt::get(manager);
+	DummyAnnotationPtr dummy_cbe(new DummyAnnotation("caseB e"));
+	DummyAnnotationPtr dummy_cbn(new DummyAnnotation("caseB n"));
+	caseB.addAnnotation(dummy_cbe);
+	caseB->addAnnotation(dummy_cbn);
+
+	std::vector<SwitchStmt::Case> cases;
+	cases.push_back(SwitchStmt::Case(literalA, caseA));
+	cases.push_back(SwitchStmt::Case(literalB, caseB));
+	StatementPtr other = BreakStmt::get(manager);
+
+	SwitchStmtPtr stmt = SwitchStmt::get(manager, var, cases, other);
+	DummyAnnotationPtr dummy_ie(new DummyAnnotation("switch e"));
+	DummyAnnotationPtr dummy_in(new DummyAnnotation("switch n"));
+	stmt.addAnnotation(dummy_ie);
+	stmt->addAnnotation(dummy_in);
+	
+	NodePtr root = stmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

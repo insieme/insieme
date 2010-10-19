@@ -108,7 +108,32 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_cases -->
+<xs:complexType name="T_cases">
+	<xs:sequence>
+		<xs:element name="case" type="T_case" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="T_case">
+	<xs:sequence>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
+
+
 <!-- All IR Node -->
+<xs:complexType name="T_switchStmt">
+	<xs:all>
+		<xs:element name="expression" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="cases" type="T_cases" minOccurs="1"/>
+		<xs:element name="defaultCase" type="T_uniqueStatementPtr" minOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_ifStmt">
 	<xs:all>
 		<xs:element name="condition" type="T_uniqueExpressionPtr" minOccurs="1"/>
@@ -227,6 +252,7 @@
 		<xs:element name="returnStmt" type="T_returnStmt"/>
 		<xs:element name="forStmt" type="T_forStmt"/>
 		<xs:element name="ifStmt" type="T_ifStmt"/>
+		<xs:element name="switchStmt" type="T_switchStmt"/>
 	</xs:choice>
 </xs:group>
 

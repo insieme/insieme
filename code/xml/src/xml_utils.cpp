@@ -446,6 +446,59 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), ifStmt);
 	}
+	
+	void visitSwitchStmt(const SwitchStmtPtr& cur) {
+		XmlElement switchStmt("switchStmt", doc);
+		switchStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << switchStmt;
+
+		if (const ExpressionPtr& expr = cur->getSwitchExpr()) {
+			XmlElement expression("expression", doc);
+			switchStmt << expression;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*expr)));		
+			expression << expressionPtr;
+			
+			visitAnnotations(expr.getAnnotations(), expressionPtr);
+		}
+		
+		const vector<SwitchStmt::Case>& cas = cur->getCases();
+		if (!cas.empty()){
+			XmlElement cases("cases", doc);
+			switchStmt << cases;
+			
+			for(vector<SwitchStmt::Case>::const_iterator iter = cas.begin(); iter != cas.end(); ++iter) {
+				XmlElement caseEl("case", doc);
+				cases << caseEl;
+				
+				XmlElement expressionPtr("expressionPtr", doc);
+				expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+				caseEl << expressionPtr;
+				
+				visitAnnotations((iter->first).getAnnotations(), expressionPtr);
+				
+				XmlElement statementPtr("statementPtr", doc);
+				statementPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+				caseEl << statementPtr;
+				
+				visitAnnotations((iter->second).getAnnotations(), statementPtr);
+			}
+		}
+		
+		if (const StatementPtr& defaultC = cur->getDefaultCase()) {
+			XmlElement defaultCase("defaultCase", doc);
+			switchStmt << defaultCase;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*defaultC)));		
+			defaultCase << statementPtr;
+			
+			visitAnnotations(defaultC.getAnnotations(), statementPtr);
+		}
+
+		visitAnnotations(cur->getAnnotations(), switchStmt);
+	}
 };
 
 class error_handler: public DOMErrorHandler {
