@@ -738,7 +738,7 @@ public:
 		case BO_Assign:
 			baseOp = BO_Assign;
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			// assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			//assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			isAssignment = true;
@@ -1230,7 +1230,7 @@ public:
 				retStmt.push_back( builder.callExpr( refAssign,
 					toVector<core::ExpressionPtr>(
 						builder.varExpr(varTy, core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())), // ref<a'> a
-						builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(newIndVar) )
+						loopAnalysis.getCondExpr()
 					)
 				));
 				refAssign->addAnnotation( std::make_shared<c_info::COpAnnotation>("=") ); // FIXME
