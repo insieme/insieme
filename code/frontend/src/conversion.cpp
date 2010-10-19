@@ -36,6 +36,7 @@
 
 #include <sstream>
 #include <memory>
+#include <functional>
 
 #include "logging.h"
 #include "conversion.h"
@@ -69,6 +70,8 @@
 
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/bind.hpp>
+
 
 using namespace boost;
 
@@ -1158,24 +1161,35 @@ public:
 				// e.g.
 				// for(int a,b=0; ...)
 				//
-				// to handle this situation we have to create an outer block and declare the variable which is
+				// to handle this situation we have to create an outer block in order to declare the variables which are
 				// not used as induction variable
-				// todo: WE ASSUME (FOR NOW) THE FIRST DECL IS THE INDUCTION VARIABLE
-				std::copy(initExpr.begin()+1, initExpr.end(), std::back_inserter(retStmt));
-				initExpr = StmtWrapper( initExpr.front() );
+				const VarDecl* inductionVar = loopAnalysis.getInductionVar();
+
+				std::function<bool (const core::StatementPtr&, bool)> inductionVarFilter =
+					[inductionVar](const core::StatementPtr& curr, bool negate) {
+						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
+						assert(declStmt && "Not a declaration statement");
+						bool ret = declStmt->getVarExpression()->getIdentifier() == inductionVar->getNameAsString();
+						return negate ? !ret : ret;
+					};
+
+				// we insert all the variable declarations (excluded the induction variable) before the body of the for loop
+				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt), boost::bind( inductionVarFilter, _1, true ) );
+				//
+				std::vector<core::StatementPtr>::const_iterator fit =
+						std::find_if(initExpr.begin(), initExpr.end(), boost::bind( inductionVarFilter, _1, false ));
+				assert(fit != initExpr.end() && "Induction variable not declared in the loop initialization expression");
+				initExpr = *fit;
 			}
 
 			// We are in the case where we are sure there is exactly 1 element in the initialization expression
-			DVLOG(2) << "ForStmt initExpr: " << initExpr;
-
 			core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 			bool iteratorChanged = false;
-			core::VarExprPtr newIndVar(NULL);
+			core::VarExprPtr newIndVar;
 			if( !declStmt ) {
 				// the init expression is not a declaration stmt, it could be a situation where it is an assignment operation:
 				// for( i=0; ...)
 				core::ExpressionPtr&& init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
-
 				assert(init);
 
 				// we have to define a new induction variable for the loop and replace every instance in the loop with the new variable
