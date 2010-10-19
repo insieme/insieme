@@ -36,6 +36,7 @@
 
 #include <sstream>
 #include <memory>
+#include <functional>
 
 #include "logging.h"
 #include "conversion.h"
@@ -57,6 +58,7 @@
 #include "naming.h"
 #include "ocl/ocl_annotations.h"
 #include "ast_visitor.h"
+#include "container_utils.h"
 
 #include "omp/omp_pragma.h"
 #include "transform/node_replacer.h"
@@ -224,20 +226,22 @@ core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, co
 	if(post) {
 		// ref<a'> __tmp = subexpr
 		stmts.push_back(builder.declarationStmt(subTy->getElementType(), core::Identifier("__tmp"),
-				builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) ));
+				builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) ));
 	}
 	// subexpr op= 1
 	stmts.push_back(
-		builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
-			std::vector<core::ExpressionPtr>({
+		builder.callExpr(
+			core::lang::OP_REF_ASSIGN_PTR,
+			toVector<core::ExpressionPtr>(
 				subExpr, // ref<a'> a
 				builder.callExpr(
 					( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
-						std::vector<core::ExpressionPtr>(
-							{ builder.callExpr( core::lang::OP_REF_DEREF_PTR, { subExpr } ), core::lang::CONST_UINT_ONE_PTR }
+						toVector<core::ExpressionPtr>(
+							builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ),
+							core::lang::CONST_UINT_ONE_PTR
 						)
 					) // a - 1
-			})
+			)
 		)
 	);
 	if(post) {
@@ -245,7 +249,7 @@ core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, co
 		stmts.push_back( builder.returnStmt( builder.varExpr(subExpr->getType(), core::Identifier("__tmp"))) );
 	} else {
 		// return the variable
-		stmts.push_back( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
+		stmts.push_back( builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) );
 	}
 	return createCallExpr(builder, std::vector<core::StatementPtr>(stmts), subTy->getElementType());
 }
@@ -628,7 +632,7 @@ public:
 		// if the binary operator is a comma separated expression, we convert it into a function call
 		// which returns the value of the last expression
 		if( binOp->getOpcode() == BO_Comma) {
-			return createCallExpr(builder, std::vector<core::StatementPtr>( {lhs, builder.returnStmt(rhs)} ), rhs->getType());
+			return createCallExpr(builder, toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)), rhs->getType());
 		}
 
 		core::TypePtr exprTy = convFact.convertType( *GET_TYPE_PTR(binOp) );
@@ -674,8 +678,9 @@ public:
 
 			// we check if the RHS is a ref, in that case we use the deref operator
 			if( core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
-				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
-			rhs = builder.callExpr(opFunc, std::vector<core::ExpressionPtr>({ builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} ), rhs }) );
+				rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector(rhs) );
+			rhs = builder.callExpr(opFunc,
+				toVector<core::ExpressionPtr>(builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector(lhs) ), rhs) );
 			// add an annotation to the subexpression
 			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
 		}
@@ -732,9 +737,10 @@ public:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
 			baseOp = BO_Assign;
-			VLOG(2) << *lhs->getType();
+			DLOG(INFO) << *lhs;
+			DLOG(INFO) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			// assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			isAssignment = true;
@@ -748,11 +754,11 @@ public:
 
 		// build a callExpr with the 2 arguments
 		if( core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
-			rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {rhs} );
+			rhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector(rhs) );
 		if( !isAssignment && core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) )
-			lhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {lhs} );
+			lhs = builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector(lhs) );
 
-		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, { lhs, rhs } );
+		core::ExpressionPtr retExpr = convFact.builder.callExpr( opFunc, toVector(lhs, rhs) );
 
 		// add the operator name in order to help the convertion process in the backend
 		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
@@ -798,7 +804,7 @@ public:
 		// *a
 		case UO_Deref:
 			// return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
-			subExpr = builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} );
+			subExpr = builder.callExpr( core::lang::OP_REF_DEREF_PTR, toVector(subExpr) );
 			break;
 		// +a
 		case UO_Plus:
@@ -845,7 +851,7 @@ public:
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
 		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
 
-		return createCallExpr( convFact.builder, std::vector<core::StatementPtr>( { ifStmt } ),  retTy);
+		return createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -854,14 +860,31 @@ public:
 	core::ExpressionPtr VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
 		core::ExpressionPtr&& base = Visit( arraySubExpr->getBase() );
+
+//		if( !core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ) {
+//			// CLANG doesn't recognize this as a vector type, but a subscript operator has been called,
+//			// so we assume this was originally a vector type
+//
+//		}
+
 		core::ExpressionPtr&& idx = Visit( arraySubExpr->getIdx() );
 
-//		DLOG(INFO) << *base->getType();
-
+//		TODO: we need better checking for vector type
 //		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 //				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) && "Base expression of array subscript is not a vector/array type.");
 
-		return convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx }));
+		core::ExpressionPtr&& retExpr =
+			convFact.builder.callExpr(
+				convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(arraySubExpr) ) ),
+				core::lang::OP_SUBSCRIPT_PTR,
+				toVector<core::ExpressionPtr>(
+					convFact.builder.callExpr(core::lang::OP_REF_DEREF_PTR, toVector(base)),
+					idx
+				)
+			);
+//		DLOG(INFO) << "EXPR_TY: " << *retExpr->getType();
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -888,7 +911,7 @@ public:
         	pos = numStr;
         }
         core::ExpressionPtr&& idx = convFact.builder.literal(pos, convFact.convertType( *GET_TYPE_PTR(vecElemExpr) ));
-        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, std::vector<core::ExpressionPtr>({ base, idx }));
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(core::lang::OP_SUBSCRIPT_PTR, toVector( base, idx ));
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
     }
@@ -902,6 +925,7 @@ public:
 		// check whether this is a reference to a variable
 		if(Decl* varDecl = declRef->getDecl()) {
 			core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(declRef) );
+
 			// FIXME: is this correct?
 			if(!core::dynamic_pointer_cast<const core::RefType>(varTy))
 				varTy = builder.refType(varTy);
@@ -1047,22 +1071,22 @@ public:
         core::TypePtr type = clangType.isConstQualified() ?
             convFact.convertType( *GET_TYPE_PTR(varDecl) ) :
             convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(varDecl) ) );
+		// todo: initialization for declarations with no initialization value
 
 		// initialization value
-		core::ExpressionPtr initExpr;//initExpr(NULL);
+		core::ExpressionPtr initExpr;
 		if( varDecl->getInit() ) {
 			initExpr = convFact.convertExpr( *varDecl->getInit() );
 		} else {
 		    initExpr = defaultInitVal(* GET_TYPE_PTR(varDecl), type);
 		}
 
+        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
+
         /*-------------------------><-----------------------*/
         core::AnnotationPtr&& attr = convFact.convertClangAttributes(varDecl);
         if(attr)
-        	type->addAnnotation(attr);
-
-		// todo: initialization for declarations with no initialization value
-        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( type, varDecl->getNameAsString(), initExpr );
+        	retStmt->addAnnotation(attr);
 
         // logging
         DVLOG(1) << "Converted into IR stmt: "; \
@@ -1109,47 +1133,17 @@ public:
 	StmtWrapper VisitForStmt(ForStmt* forStmt) {
 		START_LOG_STMT_CONVERSION(forStmt);
 		const core::ASTBuilder& builder = convFact.builder;
-		VLOG(2) << "{ ForStmt }";
+		VLOG(2) << "{ Visit ForStmt }";
 
 		StmtWrapper retStmt;
 		StmtWrapper&& body = Visit(forStmt->getBody());
-		VLOG(2) << "ForStmt body: " << body;
 
 		try {
 			// Analyze loop for induction variable
 			analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
 
 			core::ExpressionPtr&& incExpr = loopAnalysis.getIncrExpr();
-			// Determine the induction variable
-			// analyze the incExpr looking for the induction variable for this loop
-			VLOG(2) << "ForStmt incExpr: " << *incExpr;
-
-			core::ExpressionPtr condExpr;
-			if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
-				assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
-				// the for loop has a variable declared in the condition part, e.g.
-				// for(...; int a = f(); ...)
-				//
-				// to handle this kind of situation we have to move the declaration outside the loop body
-				// inside a new context
-				Expr* expr = condVarDecl->getInit();
-				condVarDecl->setInit(NULL); // set the expression to null temporarily
-				core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
-				condVarDecl->setInit(expr);
-
-				retStmt.push_back( declStmt );
-
-				// now the condition expression has to be converted into the following form:
-				// int a = 0;
-				// for(...; a=f(); ...) { }
-	//				const core::VarExprPtr& varExpr = declStmt->getVarExpression();
-	//				core::ExpressionPtr&& initExpr = convFact.convertExpr( *expr );
-				// todo: build a binary expression
-				// condExpr = (varExpr = initExpr);
-			} else
-				condExpr = loopAnalysis.getCondExpr();
-
-			VLOG(2) << "ForStmt condExpr: " << *condExpr;
+			core::ExpressionPtr&& condExpr = loopAnalysis.getCondExpr();
 
 			Stmt* initStmt = forStmt->getInit();
 			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
@@ -1167,7 +1161,14 @@ public:
 				std::copy(body.begin(), body.end(), std::back_inserter(whileBody));
 				// adding the incExpr at after the loop body
 				whileBody.push_back( convFact.convertExpr( *forStmt->getInc() ) );
-				return StmtWrapper( builder.whileStmt( convFact.convertExpr( *forStmt->getCond() ), builder.compoundStmt(whileBody) ) );
+
+				core::StatementPtr&& whileStmt =  builder.whileStmt( convFact.convertExpr( *forStmt->getCond() ), builder.compoundStmt(whileBody) );
+
+				// handle eventual pragmas attached to the Clang node
+				frontend::omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
+
+				END_LOG_STMT_CONVERSION( whileStmt );
+				return StmtWrapper( whileStmt );
 			}
 
 			StmtWrapper&& initExpr = Visit( initStmt );
@@ -1177,24 +1178,35 @@ public:
 				// e.g.
 				// for(int a,b=0; ...)
 				//
-				// to handle this situation we have to create an outer block and declare the variable which is
+				// to handle this situation we have to create an outer block in order to declare the variables which are
 				// not used as induction variable
-				// todo: WE ASSUME (FOR NOW) THE FIRST DECL IS THE INDUCTION VARIABLE
-				std::copy(initExpr.begin()+1, initExpr.end(), std::back_inserter(retStmt));
-				initExpr = StmtWrapper( initExpr.front() );
+				const VarDecl* inductionVar = loopAnalysis.getInductionVar();
+
+				std::function<bool (const core::StatementPtr&, bool)> inductionVarFilter =
+					[inductionVar](const core::StatementPtr& curr, bool negate) {
+						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
+						assert(declStmt && "Not a declaration statement");
+						bool ret = declStmt->getVarExpression()->getIdentifier() == inductionVar->getNameAsString();
+						return negate ? !ret : ret;
+					};
+
+				// we insert all the variable declarations (excluded the induction variable) before the body of the for loop
+				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt), std::bind( inductionVarFilter, std::placeholders::_1, true ) );
+				//
+				std::vector<core::StatementPtr>::const_iterator fit =
+						std::find_if(initExpr.begin(), initExpr.end(), std::bind( inductionVarFilter, std::placeholders::_1, false ));
+				assert(fit != initExpr.end() && "Induction variable not declared in the loop initialization expression");
+				initExpr = *fit;
 			}
 
 			// We are in the case where we are sure there is exactly 1 element in the initialization expression
-			DVLOG(2) << "ForStmt initExpr: " << initExpr;
-
 			core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
 			bool iteratorChanged = false;
-			core::VarExprPtr newIndVar(NULL);
+			core::VarExprPtr newIndVar;
 			if( !declStmt ) {
 				// the init expression is not a declaration stmt, it could be a situation where it is an assignment operation:
 				// for( i=0; ...)
-				core::ExpressionPtr init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
-
+				core::ExpressionPtr&& init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
 				assert(init);
 
 				// we have to define a new induction variable for the loop and replace every instance in the loop with the new variable
@@ -1233,21 +1245,39 @@ public:
 				// in the case we replace the loop iterator with a temporary variable, we have to assign the final value of the
 				// iterator to the old variable so we don't change the semantics of the code
 				core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
+				const core::lang::OperatorPtr& refAssign = builder.literal( "ref.assign", core::lang::TYPE_OP_ASSIGN_PTR);
 
-				retStmt.push_back( builder.callExpr( core::lang::OP_REF_ASSIGN_PTR,
-					std::vector<core::ExpressionPtr>({
+				retStmt.push_back( builder.callExpr( refAssign,
+					toVector<core::ExpressionPtr>(
 						builder.varExpr(varTy, core::Identifier(loopAnalysis.getInductionVar()->getNameAsString())), // ref<a'> a
-						builder.callExpr( core::lang::OP_REF_DEREF_PTR, std::vector<core::ExpressionPtr>({newIndVar}) )
-					})
+						loopAnalysis.getCondExpr()
+					)
 				));
+				refAssign->addAnnotation( std::make_shared<c_info::COpAnnotation>("=") ); // FIXME
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {
+
+			if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
+				assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
+				// the for loop has a variable declared in the condition part, e.g.
+				// for(...; int a = f(); ...)
+				//
+				// to handle this kind of situation we have to move the declaration outside the loop body
+				// inside a new context
+				Expr* expr = condVarDecl->getInit();
+				condVarDecl->setInit(NULL); // set the expression to null temporarily
+				core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
+				condVarDecl->setInit(expr);
+
+				retStmt.push_back( declStmt );
+			}
+
 			// analysis of loop structure failed, we have to build a while statement
 			retStmt.push_back( Visit( forStmt->getInit() ).getSingleStmt() );
 			retStmt.push_back( builder.whileStmt(
 					convFact.convertExpr( *forStmt->getCond() ),
-					builder.compoundStmt(std::vector<core::StatementPtr>({ body.getSingleStmt(), convFact.convertExpr( *forStmt->getInc() ) })))
+					builder.compoundStmt(toVector<core::StatementPtr>(body.getSingleStmt(), convFact.convertExpr( *forStmt->getInc() ))))
 			);
 		}
 
@@ -1687,7 +1717,7 @@ public:
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 
-		core::TypePtr&& retTy = builder.refType( builder.arrayType(builder.refType(elemTy)) );
+		core::TypePtr&& retTy = builder.arrayType(builder.refType(elemTy));
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -2230,14 +2260,14 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 			//port clang attributes to IR annotations
 			core::AnnotationPtr attr = mFact.convertClangAttributes(currParam);
 			if(attr)
-				 funcParamList.back().ptr->getType()->addAnnotation(attr);
+				 funcParamList.back()->addAnnotation(attr);
 		}
 	);
 
 	//check Attributes of the function definition
+	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 	if(funcDecl->hasAttrs()) {
 		const clang::AttrVec attrVec = funcDecl->getAttrs();
-		ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
 		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
 			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
@@ -2256,10 +2286,6 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 				);
 			}
 		}
-		// if OpenCL related annotations have been found, create OclBaseAnnotation and
-		// add it to the funciton's attribute
-		if(kernelAnnotation.size() > 0)
-			funcType.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 	}
 
 	core::StatementPtr funcBody(NULL);
@@ -2267,6 +2293,10 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 
 	funcBody = mFact.convertStmt( *funcDecl->getBody() );
 	core::LambdaExprPtr&& lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
+    // if OpenCL related annotations have been found, create OclBaseAnnotation and
+    // add it to the funciton's attribute
+    if(kernelAnnotation.size() > 0)
+        lambdaExpr.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 	// annotate name of function
 	lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
 	return lambdaExpr;

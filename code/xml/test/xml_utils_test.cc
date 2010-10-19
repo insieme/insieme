@@ -35,11 +35,13 @@
  */
 
 #include <gtest/gtest.h>
-#include <xml_utils.h>
+#include "xml_utils.h"
+#include "lang_basic.h"
 #include <xercesc/util/XercesDefs.hpp>
 
 using namespace std;
 using namespace insieme::core;
+using namespace insieme::core::lang;
 using namespace insieme::xml;
 
 // ------------------- DummyAnnotation ---------------------------------
@@ -160,6 +162,8 @@ TEST(XmlTest, GenericTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	//
+	//xml.convertDomtoIr();
 }
 
 TEST(XmlTest, FunctionTypeTest) {
@@ -392,4 +396,376 @@ TEST(XmlTest, RecTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, LiteralTest) {
+	NodeManager manager;
+	LiteralPtr lit1 = Literal::get(manager, "10", TYPE_INT_8_PTR);
+	DummyAnnotationPtr dummy_le(new DummyAnnotation("lit1 e"));
+	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lit1 n"));
+	lit1.addAnnotation(dummy_le);
+	lit1->addAnnotation(dummy_ln);
+	
+	NodePtr root = lit1;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, ReturnStmtTest) {
+	NodeManager manager;
+	
+	LiteralPtr literal = Literal::get(manager, "12", lang::TYPE_INT_4_PTR);
+	ReturnStmtPtr rstmt = ReturnStmt::get(manager, literal);
+	DummyAnnotationPtr dummy_re(new DummyAnnotation("return e"));
+	DummyAnnotationPtr dummy_rn(new DummyAnnotation("return n"));
+	rstmt.addAnnotation(dummy_re);
+	rstmt->addAnnotation(dummy_rn);
+
+	NodePtr root = rstmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, ForStmtTest) {
+	NodeManager manager;
+
+	LiteralPtr start = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("lit_start e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("lit_start n"));
+	start.addAnnotation(dummy_se);
+	start->addAnnotation(dummy_sn);
+	
+	LiteralPtr end   = Literal::get(manager, "9", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_ee(new DummyAnnotation("end e"));
+	DummyAnnotationPtr dummy_en(new DummyAnnotation("end n"));
+	end.addAnnotation(dummy_ee);
+	end->addAnnotation(dummy_en);
+	
+	LiteralPtr step  = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_te(new DummyAnnotation("step e"));
+	DummyAnnotationPtr dummy_tn(new DummyAnnotation("step n"));
+	step.addAnnotation(dummy_te);
+	step->addAnnotation(dummy_tn);
+
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "i", start);
+	DummyAnnotationPtr dummy_de(new DummyAnnotation("decl e"));
+	DummyAnnotationPtr dummy_dn(new DummyAnnotation("decl n"));
+	decl.addAnnotation(dummy_de);
+	decl->addAnnotation(dummy_dn);
+	
+	StatementPtr body = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
+	body.addAnnotation(dummy_be);
+	body->addAnnotation(dummy_bn);
+
+	ForStmtPtr fstmt = ForStmt::get(manager, decl, body, end, step);
+	DummyAnnotationPtr dummy_fe(new DummyAnnotation("for e"));
+	DummyAnnotationPtr dummy_fn(new DummyAnnotation("for n"));
+	fstmt.addAnnotation(dummy_fe);
+	fstmt->addAnnotation(dummy_fn);
+
+	NodePtr root = fstmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, IfStmtTest) {
+	NodeManager manager;
+
+	VarExprPtr var = VarExpr::get(manager, lang::TYPE_BOOL_PTR, "valid");
+	// FIXME: Check in the future
+	
+	StatementPtr thenStmt = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_te(new DummyAnnotation("then e"));
+	DummyAnnotationPtr dummy_tn(new DummyAnnotation("then n"));
+	thenStmt.addAnnotation(dummy_te);
+	thenStmt->addAnnotation(dummy_tn);
+	
+	StatementPtr elseStmt = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_ee(new DummyAnnotation("else e"));
+	DummyAnnotationPtr dummy_en(new DummyAnnotation("else n"));
+	elseStmt.addAnnotation(dummy_ee);
+	elseStmt->addAnnotation(dummy_en);
+
+	IfStmtPtr stmt = IfStmt::get(manager, var, thenStmt, elseStmt);
+	DummyAnnotationPtr dummy_ie(new DummyAnnotation("if e"));
+	DummyAnnotationPtr dummy_in(new DummyAnnotation("if n"));
+	stmt.addAnnotation(dummy_ie);
+	stmt->addAnnotation(dummy_in);
+	
+	NodePtr root = stmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, SwitchStmtTest) {
+	NodeManager manager;
+
+	VarExprPtr var = VarExpr::get(manager, lang::TYPE_INT_4_PTR, "value");
+	DummyAnnotationPtr dummy_ve(new DummyAnnotation("var e"));
+	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var n"));
+	var.addAnnotation(dummy_ve);
+	var->addAnnotation(dummy_vn);
+
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	StatementPtr caseA = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_cae(new DummyAnnotation("caseA e"));
+	DummyAnnotationPtr dummy_can(new DummyAnnotation("caseA n"));
+	caseA.addAnnotation(dummy_cae);
+	caseA->addAnnotation(dummy_can);
+	
+	StatementPtr caseB = ContinueStmt::get(manager);
+	DummyAnnotationPtr dummy_cbe(new DummyAnnotation("caseB e"));
+	DummyAnnotationPtr dummy_cbn(new DummyAnnotation("caseB n"));
+	caseB.addAnnotation(dummy_cbe);
+	caseB->addAnnotation(dummy_cbn);
+
+	std::vector<SwitchStmt::Case> cases;
+	cases.push_back(SwitchStmt::Case(literalA, caseA));
+	cases.push_back(SwitchStmt::Case(literalB, caseB));
+	StatementPtr other = BreakStmt::get(manager);
+
+	SwitchStmtPtr stmt = SwitchStmt::get(manager, var, cases, other);
+	DummyAnnotationPtr dummy_ie(new DummyAnnotation("switch e"));
+	DummyAnnotationPtr dummy_in(new DummyAnnotation("switch n"));
+	stmt.addAnnotation(dummy_ie);
+	stmt->addAnnotation(dummy_in);
+	
+	NodePtr root = stmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+
+TEST(XmlTest, WhileStmtTest) {
+	NodeManager manager;
+
+	LiteralPtr condition = Literal::get(manager, "true", manager.get(lang::TYPE_BOOL_PTR));
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("cond e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("cond n"));
+	condition.addAnnotation(dummy_ce);
+	condition->addAnnotation(dummy_cn);
+	
+	StatementPtr body = manager.get(lang::STMT_NO_OP_PTR);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
+	body.addAnnotation(dummy_be);
+	body->addAnnotation(dummy_bn);
+
+	WhileStmtPtr stmt = WhileStmt::get(manager, condition, body);
+	DummyAnnotationPtr dummy_we(new DummyAnnotation("while e"));
+	DummyAnnotationPtr dummy_wn(new DummyAnnotation("while n"));
+	stmt.addAnnotation(dummy_we);
+	stmt->addAnnotation(dummy_wn);
+	
+	NodePtr root = stmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, BreakStmtTest) {
+	NodeManager manager;
+
+	BreakStmtPtr stmt = BreakStmt::get(manager);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("break e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("break n"));
+	stmt.addAnnotation(dummy_be);
+	stmt->addAnnotation(dummy_bn);
+	
+	NodePtr root = stmt;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, ContinueStmtTest) {
+	NodeManager manager;
+
+	ContinueStmtPtr stmt = ContinueStmt::get(manager);
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("continue e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("continue n"));
+	stmt.addAnnotation(dummy_ce);
+	stmt->addAnnotation(dummy_cn);
+	
+	NodePtr root = stmt;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, CompoundStmtTest) {
+	NodeManager manager;
+	
+	BreakStmtPtr bS = BreakStmt::get(manager);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("break e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("break n"));
+	bS.addAnnotation(dummy_be);
+	bS->addAnnotation(dummy_bn);
+		
+	ContinueStmtPtr cS = ContinueStmt::get(manager);
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("continue e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("continue n"));
+	cS.addAnnotation(dummy_ce);
+	cS->addAnnotation(dummy_cn);
+	
+	vector<StatementPtr> stmtVec;
+	stmtVec.push_back(bS);
+	stmtVec.push_back(cS);
+	CompoundStmtPtr compS = CompoundStmt::get(manager, stmtVec);
+	DummyAnnotationPtr dummy_cme(new DummyAnnotation("compound e"));
+	DummyAnnotationPtr dummy_cmn(new DummyAnnotation("compound n"));
+	compS.addAnnotation(dummy_cme);
+	compS->addAnnotation(dummy_cmn);
+	
+	NodePtr root = compS;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
+}
+
+TEST(XmlTest, StructExprTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+	
+	vector<NamedCompositeExpr::Member> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
+	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+
+	StructExprPtr structA = StructExpr::get(manager, vecA);
+	
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("struct e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("struct n"));
+	
+	structA.addAnnotation(dummy_se);
+	structA->addAnnotation(dummy_sn);
+	
+	NodePtr root = structA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
+}
+
+TEST(XmlTest, UnionExprTest) {
+	NodeManager manager;
+
+	Identifier identA("a");
+	Identifier identB("b");
+	
+	vector<NamedCompositeExpr::Member> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
+	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+
+	UnionExprPtr unionA = UnionExpr::get(manager, vecA);
+	
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("union e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("union n"));
+	
+	unionA.addAnnotation(dummy_se);
+	unionA->addAnnotation(dummy_sn);
+	
+	NodePtr root = unionA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);	
 }

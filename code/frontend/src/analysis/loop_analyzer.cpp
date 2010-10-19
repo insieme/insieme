@@ -151,6 +151,9 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
 	const Expr* cond = forStmt->getCond();
+	if(!cond)
+		throw LoopNormalizationError();
+
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
 		assert(isa<const DeclRefExpr>(binOp->getLHS()));
 		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
@@ -158,8 +161,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		loopHelper.condExpr = convFact.convertExpr( *binOp->getRHS() );
 		return;
 	}
-	assert(false && "Loop condition not in normal form");
-
+	throw LoopNormalizationError();
 }
 
 } // End analysis namespace

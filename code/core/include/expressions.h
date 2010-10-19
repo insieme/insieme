@@ -412,7 +412,7 @@ protected:
 	static NamedCompositeType::Entries getTypeEntries(const Members& mem);
 
 public:
-	const Members& getMembers() { return members; }
+	const Members& getMembers() const{ return members; }
 };
 
 class StructExpr : public NamedCompositeExpr {

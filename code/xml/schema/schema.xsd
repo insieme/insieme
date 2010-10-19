@@ -34,6 +34,23 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_uniqueExpressionPtr">
+	<xs:all>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_uniqueDeclarationStmtPtr">
+	<xs:all>
+		<xs:element name="declarationStmtPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+<xs:complexType name="T_uniqueStatementPtr">
+	<xs:all>
+		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
 
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
@@ -70,6 +87,20 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_members -->
+<xs:complexType name="T_members">
+	<xs:sequence>
+		<xs:element name="member" type="T_member" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="T_member">
+	<xs:sequence>
+		<xs:element name="id" type="xs:string" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
+
 <!-- T_elementTypeList -->
 <xs:complexType name="T_elementTypeList">
 	<xs:sequence>
@@ -91,10 +122,100 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_cases -->
+<xs:complexType name="T_cases">
+	<xs:sequence>
+		<xs:element name="case" type="T_case" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
 
+<xs:complexType name="T_case">
+	<xs:sequence>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
 
+<!-- T_statements -->
+<xs:complexType name="T_statements">
+	<xs:sequence>
+		<xs:element name="statement" type="T_uniqueStatementPtr" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
 
 <!-- All IR Node -->
+<xs:complexType name="T_empty">
+	<xs:all>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_structExpr">
+	<xs:all>
+		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
+		<xs:element name="members" type="T_members" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_compoundStmt">
+	<xs:all>
+		<xs:element name="statements" type="T_statements" minOccurs="0"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_whileStmt">
+	<xs:all>
+		<xs:element name="condition" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="body" type="T_uniqueStatementPtr" minOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_switchStmt">
+	<xs:all>
+		<xs:element name="expression" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="cases" type="T_cases" minOccurs="1"/>
+		<xs:element name="defaultCase" type="T_uniqueStatementPtr" minOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_ifStmt">
+	<xs:all>
+		<xs:element name="condition" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="thenBody" type="T_uniqueStatementPtr" minOccurs="1"/>
+		<xs:element name="elseBody" type="T_uniqueStatementPtr" minOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_forStmt">
+	<xs:all>
+		<xs:element name="declaration" type="T_uniqueDeclarationStmtPtr" minOccurs="1"/>
+		<xs:element name="body" type="T_uniqueStatementPtr" minOccurs="1"/>		
+		<xs:element name="step" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="end" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_returnStmt">
+	<xs:all>
+		<xs:element name="returnExpression" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_recTypeDefinition">
 	<xs:all>
 		<xs:element name="definitions" type="T_definitions" minOccurs="1"/>
@@ -103,13 +224,21 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
-
 <xs:complexType name="T_recType">
 	<xs:all>
 		<xs:element name="definition" type="T_uniqueRecTypeDefinitionPtr" minOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_literal">
+	<xs:all>
+		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+	<xs:attribute name="id" type="xs:integer" use="required"/>
+	<xs:attribute name="value" type="xs:string" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_typeVariable">
@@ -172,6 +301,17 @@
 		<xs:element name="typeVariable" type="T_typeVariable"/>
 		<xs:element name="recType" type="T_recType"/>
 		<xs:element name="recTypeDefinition" type="T_recTypeDefinition"/>
+		<xs:element name="literal" type="T_literal"/>
+		<xs:element name="returnStmt" type="T_returnStmt"/>
+		<xs:element name="forStmt" type="T_forStmt"/>
+		<xs:element name="ifStmt" type="T_ifStmt"/>
+		<xs:element name="switchStmt" type="T_switchStmt"/>
+		<xs:element name="whileStmt" type="T_whileStmt"/>
+		<xs:element name="breakStmt" type="T_empty"/>
+		<xs:element name="continueStmt" type="T_empty"/>
+		<xs:element name="compoundStmt" type="T_compoundStmt"/>
+		<xs:element name="structExpr" type="T_structExpr"/>
+		<xs:element name="unionExpr" type="T_structExpr"/>
 	</xs:choice>
 </xs:group>
 

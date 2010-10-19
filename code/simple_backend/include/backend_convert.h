@@ -216,10 +216,7 @@ public:
 		cStr << "continue";
 	}
 
-	void visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
-		cStr << printTypeName(ptr->getVarExpression()->getType()) << " " << ptr->getVarExpression()->getIdentifier().getName() << " = ";
-		visit(ptr->getInitialization());
-	}
+	void visitDeclarationStmt(const DeclarationStmtPtr& ptr);
 
 	void visitForStmt(const ForStmtPtr& ptr) {
 		auto decl = ptr->getDeclaration();
