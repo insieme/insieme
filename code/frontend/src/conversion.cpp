@@ -70,8 +70,6 @@
 
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include <boost/algorithm/string.hpp>
-#include <boost/bind.hpp>
-
 
 using namespace boost;
 
@@ -740,7 +738,7 @@ public:
 		case BO_Assign:
 			baseOp = BO_Assign;
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			// assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = lhs->getType();
 			opType = "ref";
 			isAssignment = true;
@@ -1173,10 +1171,10 @@ public:
 					};
 
 				// we insert all the variable declarations (excluded the induction variable) before the body of the for loop
-				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt), boost::bind( inductionVarFilter, _1, true ) );
+				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt), std::bind( inductionVarFilter, std::placeholders::_1, true ) );
 				//
 				std::vector<core::StatementPtr>::const_iterator fit =
-						std::find_if(initExpr.begin(), initExpr.end(), boost::bind( inductionVarFilter, _1, false ));
+						std::find_if(initExpr.begin(), initExpr.end(), std::bind( inductionVarFilter, std::placeholders::_1, false ));
 				assert(fit != initExpr.end() && "Induction variable not declared in the loop initialization expression");
 				initExpr = *fit;
 			}
