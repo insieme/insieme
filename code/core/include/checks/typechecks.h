@@ -43,6 +43,18 @@ namespace insieme {
 namespace core {
 namespace checks {
 
+enum {
+	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = 1000,
+	EC_TYPE_INVALID_ARGUMENT_TYPE,
+	EC_TYPE_INVALID_RETURN_TYPE
+};
+
+/**
+ * Obtains a combined check case containing all the checks defined within this header file.
+ */
+CheckPtr getFullCheck();
+
+
 /**
  * A small macro to simplify the definition of AST checks.
  *
@@ -55,10 +67,10 @@ namespace checks {
 			MessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
 
+SIMPLE_CHECK(CallExprType, CallExpr);
 
-SIMPLE_CHECK(NumArgument, CallExpr);
-//SIMPLE_CHECK(ArgumentTypes, CallExpr);
-SIMPLE_CHECK(ReturnType, CallExpr);
+// TODO:
+//	- check that only concrete types are used for variables
 
 #undef SIMPLE_CHECK
 

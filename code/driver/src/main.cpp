@@ -36,16 +36,18 @@
 
 #include <iostream>
 #include <memory>
+#include <algorithm>
 
 #include "expressions.h"
 #include "types.h"
+#include "expressions.h"
 #include "statements.h"
 #include "backend_convert.h"
 #include "naming.h"
 
-#include "container_utils.h"
+#include "checks/typechecks.h"
 
-#include "expressions.h"
+#include "container_utils.h"
 #include "string_utils.h"
 #include "cmd_line_utils.h"
 
@@ -81,6 +83,13 @@ int main(int argc, char** argv) {
 		// do the actual clang to IR conversion
 		insieme::core::ProgramPtr program = p.convert();
 		LOG(INFO) << "Parsed Program: " << std::endl << *program;
+
+		// perform checks
+		MessageList errors = check(program, insieme::core::checks::getFullCheck());
+		std::sort(errors.begin(), errors.end());
+		for_each(errors, [](const Message& cur) {
+			LOG(INFO) << cur << std::endl;
+		});
 
 		// XML dump
 		insieme::xml::xmlWrite(program, "insieme.xml");

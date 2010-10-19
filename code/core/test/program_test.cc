@@ -57,13 +57,13 @@ TEST(Program, HelloWorld) {
 
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
-	TypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
+	TupleTypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
 	TypePtr unitType = lang::TYPE_UNIT_PTR;
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.literal("printf", printfType);
 
-	TypePtr emptyTupleType = build.tupleType();
+	TupleTypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
 	ExpressionPtr intLiteral = build.literal("4", TYPE_INT_GEN_PTR);

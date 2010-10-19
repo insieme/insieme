@@ -55,13 +55,13 @@ using namespace insieme::simple_backend;
 
 ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
-	TypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(TYPE_CHAR_PTR), TYPE_VAR_LIST_PTR));
+	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(TYPE_CHAR_PTR), TYPE_VAR_LIST_PTR));
 	TypePtr unitType = build.getUnitType();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.literal("printf", printfType);
 
-	TypePtr emptyTupleType = build.tupleType();
+	TupleTypePtr emptyTupleType = build.tupleType();
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
 	ExpressionPtr stringLiteral = build.literal("Hello World!", TYPE_STRING_PTR);

@@ -36,62 +36,82 @@
 
 #include "checks/typechecks.h"
 
-
+#include "type_utils.h"
 
 namespace insieme {
 namespace core {
 namespace checks {
 
+
+
+CheckPtr getFullCheck() {
+	// TODO: extend list of checks
+	return makeVisitOnce(
+			combine(toVector<CheckPtr>(
+					make_check<CallExprTypeCheck>()
+			)
+	));
+}
+
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 
 
+MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 
-MessageList NumArgumentCheck::visitCallExpr(const CallExprAddress& address) {
-
+	NodeManager manager;
 	MessageList res;
 
-	// check type of function
+	// obtain function type ...
 	TypePtr funType = address->getFunctionExpr()->getType();
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
-	TypePtr arguments = CAST(FunctionType, funType)->getArgumentType();
 
+	FunctionTypePtr functionType = CAST(FunctionType, funType);
+	TupleTypePtr argumentType = functionType->getArgumentType();
+	TypePtr returnType = functionType->getReturnType();
 
-	// compute the number of required arguments
-	int requiredArguments = 1;
-	if (arguments->getNodeType() == NT_TupleType) {
-		requiredArguments = CAST(TupleType, arguments)->getElementTypes().size();
+	// Obtain argument type
+	vector<TypePtr> types;
+	transform(address->getArguments(), back_inserter(types), [](const ExpressionPtr& cur) {
+		return cur->getType();
+	});
+	TupleTypePtr parameterType = TupleType::get(manager, types);
+
+	// 1) check number of arguments
+	int numArguments = argumentType->getElementTypes().size();
+	int numParameter = parameterType->getElementTypes().size();
+	if (numArguments != numParameter) {
+		res.push_back(Message(address,
+						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
+						format("Wrong number of arguments - expected: %d, actual: %d", numArguments, numParameter),
+						Message::ERROR));
+		return res;
 	}
 
-	// check number of arguments
-	int actualArguments = address->getArguments().size();
-	if (requiredArguments != actualArguments) {
+	// 2) check types of arguments => by computing most general unifier
+	auto mgu = unify(manager, argumentType, parameterType);
+	if (!mgu) {
 		res.push_back(Message(address,
-				format("Incorrect number of arguments - expected: %d, actual: %d", requiredArguments, actualArguments),
-				Message::ERROR));
+						EC_TYPE_INVALID_ARGUMENT_TYPE,
+						format("Invalid argument type(s) - expected: %s, actual: %s",
+								toString(*argumentType).c_str(),
+								toString(*parameterType).c_str()),
+						Message::ERROR));
+		return res;
 	}
-	return res;
-}
 
-MessageList ReturnTypeCheck::visitCallExpr(const CallExprAddress& address) {
+	// 3) check return type - which has to be unifyable with modified function return value.
+	TypePtr retType = mgu->applyTo(manager, returnType);
+	TypePtr resType = address->getType();
 
-	// TODO: extend with unification result!
-
-	MessageList res;
-
-	// check type of function
-	TypePtr funType = address->getFunctionExpr()->getType();
-	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
-	TypePtr returnType = CAST(FunctionType, funType)->getReturnType();
-
-	// check return type
-	TypePtr actualType = address->getType();
-	if (*returnType != *actualType) {
+	if (*retType != *resType) {
 		res.push_back(Message(address,
-				format("Incorrect return type of call expression - expected: %s, actual: %s",
-						toString(*returnType).c_str(),
-						toString(*actualType).c_str()),
-				Message::ERROR));
+						EC_TYPE_INVALID_RETURN_TYPE,
+						format("Invalid return type - expected: %s, actual: %s",
+								toString(*retType).c_str(),
+								toString(*resType).c_str()),
+						Message::ERROR));
+		return res;
 	}
 	return res;
 }

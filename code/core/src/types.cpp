@@ -127,14 +127,10 @@ TupleType* TupleType::createCopyUsing(NodeMapping& mapper) const {
 	return new TupleType(mapper.map(elementTypes));
 }
 
-/**
- * This method provides a static factory method for this type of node. It will return
- * a tuple type pointer pointing toward a variable with the given name maintained by the
- * given manager.
- *
- * @param manager the manager to obtain the new type reference from
- * @param elementTypes the list of element types to be used to form the tuple
- */
+TupleTypePtr TupleType::getEmpty(NodeManager& manager) {
+	return get(manager, toVector<TypePtr>());
+}
+
 TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& elementTypes) {
 	return manager.get(TupleType(elementTypes));
 }
@@ -148,12 +144,12 @@ Node::OptionChildList TupleType::getChildNodes() const {
 // ---------------------------------------- Function Type ------------------------------
 
 
-FunctionType::FunctionType(const TypePtr& argumentType, const TypePtr& returnType) :
+FunctionType::FunctionType(const TupleTypePtr& argumentType, const TypePtr& returnType) :
 	Type(NT_FunctionType, format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
 	argumentType(isolate(argumentType)), returnType(isolate(returnType)) {
 }
 
-FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType) {
+FunctionTypePtr FunctionType::get(NodeManager& manager, const TupleTypePtr& argumentType, const TypePtr& returnType) {
 	// obtain reference to new element
 	return manager.get(FunctionType(argumentType, returnType));
 }

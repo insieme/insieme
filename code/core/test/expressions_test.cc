@@ -183,7 +183,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	ASTBuilder builder;
 
 	// create a recursive even/odd example
-	FunctionTypePtr functionType = builder.functionType(lang::TYPE_UINT_4_PTR, lang::TYPE_BOOL_PTR);
+	TupleTypePtr argumentType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR));
+	FunctionTypePtr functionType = builder.functionType(argumentType, lang::TYPE_BOOL_PTR);
 	VarExprPtr evenVar = builder.varExpr(functionType, "even");
 	VarExprPtr oddVar = builder.varExpr(functionType, "odd");
 

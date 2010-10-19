@@ -37,6 +37,7 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -339,6 +340,34 @@ public:
 
 	const T* operator->() const {
 		return &*getAddressedNode();
+	}
+
+	/**
+	 * Realizes an order on address according to their lexicographical order.
+	 *
+	 * @param other the address to be compared to
+	 * @return true if this address is lexicographical smaller than the given address
+	 */
+	template<typename S>
+	bool operator<(const Address<S>& other) {
+		// get size of paths
+		std::size_t sizeA = path->size();
+		std::size_t sizeB = other.path->size();
+
+		// compare common prefix
+		int length = std::min(sizeA, sizeB);
+		Path& pathA = *path;
+		Path& pathB = (*other.path);
+		for(int i=0; i<length; i++) {
+			std::size_t a = pathA[i].first;
+			std::size_t b = pathB[i].first;
+			if (a != b) {
+				return a < b;
+			}
+		}
+
+		// longer is bigger
+		return sizeA < sizeB;
 	}
 
 protected:

@@ -345,6 +345,15 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 }
 
 
+boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB) {
+	return unifyAll(manager, toVector<TypePtr>(typeA), toVector<TypePtr>(typeB));
+}
+
+bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB) {
+	NodeManager tmp; // requires only temporary manager
+	return typeA==typeB || unify(tmp, typeA, typeB);
+}
+
 } // end namespace core
 } // end namespace insieme
 

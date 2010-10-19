@@ -135,17 +135,12 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, const Container& li
 	return unifyAll(manager, list);
 }
 
-boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB) {
-	return unifyAll(manager, toVector<TypePtr>(typeA), toVector<TypePtr>(typeB));
-}
+boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB);
 
-bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB) {
-	NodeManager tmp; // requires only temporary manager
-	return typeA==typeB || unify(tmp, typeA, typeB);
-}
+bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB);
 
 template<typename Container>
-bool isUnifyable(const Container& listA, const Container& listB) {
+bool areUnifyable(const Container& listA, const Container& listB) {
 	NodeManager tmp; // requires only temporary manager
 	// exploits implicit boolean conversion of boost::optional
 	return unify(tmp, listA, listB);

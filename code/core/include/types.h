@@ -322,6 +322,13 @@ public:
 	const ElementTypeList& getElementTypes() const { return elementTypes; }
 
 	/**
+	 * This method provides a static factory method for an empty tuple type.
+	 *
+	 * @param manager the manager to obtain the new type reference from
+	 */
+	static TupleTypePtr getEmpty(NodeManager& manager);
+
+	/**
 	 * This method provides a static factory method for this type of node. It will return
 	 * a tuple type pointer pointing toward a variable with the given name maintained by the
 	 * given manager.
@@ -344,7 +351,7 @@ class FunctionType: public Type {
 	/**
 	 * The type of element accepted as an argument by this function type.
 	 */
-	const TypePtr argumentType;
+	const TupleTypePtr argumentType;
 
 	/**
 	 * The type of value produced by this function type.
@@ -359,7 +366,7 @@ public:
 	 * @param argumentType a reference to the type used as argument
 	 * @param returnType a reference to the type used as return type
 	 */
-	FunctionType(const TypePtr& argumentType, const TypePtr& returnType);
+	FunctionType(const TupleTypePtr& argumentType, const TypePtr& returnType);
 
 protected:
 
@@ -385,14 +392,14 @@ public:
 	 * @param returnType the type of value to be returned by the obtained function type
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
-	static FunctionTypePtr get(NodeManager& manager, const TypePtr& argumentType, const TypePtr& returnType);
+	static FunctionTypePtr get(NodeManager& manager, const TupleTypePtr& argumentType, const TypePtr& returnType);
 
 	/**
 	 * Obtains a reference to the internally maintained argument type.
 	 *
 	 * @return a reference to the argument type.
 	 */
-	const TypePtr& getArgumentType() const {
+	const TupleTypePtr& getArgumentType() const {
 		return argumentType;
 	}
 

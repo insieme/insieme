@@ -84,7 +84,7 @@ TEST(TypeTest, NodeManagerGetAllBug ) {
 	TupleType::ElementTypeList list;
 	list.push_back(typeA);
 	list.push_back(typeB);
-	TypePtr tuple = TupleType::get(manager, list);
+	TupleTypePtr tuple = TupleType::get(manager, list);
 
 	FunctionTypePtr funType = FunctionType::get(manager, tuple, typeR);
 }
@@ -360,16 +360,19 @@ TEST(TypeTest, FunctionType) {
 
 	NodeManager manager;
 
-	TypePtr argumentA = GenericType::get(manager, "dummyA");
-	TypePtr argumentB = TypeVariable::get(manager, "alpha");
+	TypePtr dummyA = GenericType::get(manager, "dummyA");
+	TypePtr alpha = TypeVariable::get(manager, "alpha");
+
+	TupleTypePtr argumentA = TupleType::get(manager, { dummyA } );
+	TupleTypePtr argumentB = TupleType::get(manager, { alpha } );
 	TypePtr resultA = GenericType::get(manager, "returnA");
 	TypePtr resultB = GenericType::get(manager, "returnB");
 
 	FunctionTypePtr funTypeA = FunctionType::get(manager, argumentA, resultA);
 	FunctionTypePtr funTypeB = FunctionType::get(manager, argumentB, resultB);
 
-	EXPECT_EQ ( "(dummyA->returnA)" , funTypeA->getName() );
-	EXPECT_EQ ( "('alpha->returnB)" , funTypeB->getName() );
+	EXPECT_EQ ( "((dummyA)->returnA)" , funTypeA->getName() );
+	EXPECT_EQ ( "(('alpha)->returnB)" , funTypeB->getName() );
 
 	vector<TypePtr> subTypesA;
 	subTypesA.push_back(argumentA);

@@ -486,6 +486,7 @@ public:
 	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
+	// TODO: re-add with proper type inferencing of return type
 	static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };

@@ -51,39 +51,37 @@ typedef std::vector<Message> MessageList;
 
 class ASTCheck : public AddressVisitor<MessageList> {};
 
-typedef std::shared_ptr<ASTCheck> SharedCheck;
-typedef std::vector<SharedCheck> CheckList;
+typedef std::shared_ptr<ASTCheck> CheckPtr;
+typedef std::vector<CheckPtr> CheckList;
 
-class CombinedASTCheck : public ASTCheck {
+MessageList check(const NodePtr& node, const CheckPtr& check);
 
-	CheckList checks;
+CheckPtr makeRecursive(const CheckPtr& check);
 
-public:
+CheckPtr makeVisitOnce(const CheckPtr& check);
 
-	CombinedASTCheck(const CheckList& checks = CheckList()) : checks(checks) {};
+CheckPtr combine(const CheckPtr& a);
 
-	void addCheck(SharedCheck& check);
-	void remCheck(SharedCheck& check);
+CheckPtr combine(const CheckPtr& a, const CheckPtr& b);
 
-protected:
+CheckPtr combine(const CheckPtr& a, const CheckPtr& b, const CheckPtr& c);
 
-	MessageList visitNode(const NodeAddress& node);
-};
+CheckPtr combine(const CheckList& list);
 
-template<typename N, typename C>
-MessageList check(N node, C check) {
-	return check.visit(node);
+template<typename C>
+inline CheckPtr make_check() {
+	return std::make_shared<C>();
 }
 
-template<typename N, typename C>
-MessageList checkRecursive(N node, C check) {
-
-	// TODO: add recursive check
-
-	return check.visit(node);
+template<typename C, typename T1>
+inline CheckPtr make_check(T1 t1) {
+	return std::make_shared<C>(t1);
 }
 
-// TODO: add recursive check
+template<typename C, typename T1, typename T2>
+inline CheckPtr make_check(T1 t1, T2 t2) {
+	return std::make_shared<C>(t1, t2);
+}
 
 /**
  * TODO: improve this class - e.g. by supporting messages referencing multiple addresses
@@ -115,6 +113,12 @@ private:
 	NodeAddress address;
 
 	/**
+	 * The error code of this message - added since it is easier to automatically process
+	 * numbers than strings.
+	 */
+	unsigned errorCode;
+
+	/**
 	 * A string message describing the problem.
 	 */
 	string message;
@@ -128,8 +132,8 @@ public:
 	 * @param message a message describing the issue
 	 * @param type the type of the new message (ERROR by default)
 	 */
-	Message(const NodeAddress& address, const string& message, Type type = ERROR)
-		: type(type), address(address), message(message) {};
+	Message(const NodeAddress& address, unsigned errorCode, const string& message, Type type = ERROR)
+		: type(type), address(address), errorCode(errorCode), message(message) {};
 
 	/**
 	 * Obtains the address of the node this message is associated to.
@@ -150,17 +154,51 @@ public:
 	}
 
 	/**
+	 * Obtains the error code assigned to this message.
+	 *
+	 * @return the error code
+	 */
+	unsigned getErrorCode() const {
+		return errorCode;
+	}
+
+	/**
 	 * The type of this warning.
 	 */
 	Type getType() const {
 		return type;
 	}
 
+	/**
+	 * Implements the equality operator for this class. Two error messages are equal
+	 * if the have the same error code, warning level and are pointing to the same node address.
+	 *
+	 * @param other the message to be compared to
+	 * @return true if equal, false otherwise
+	 */
 	bool operator==(const Message& other) const;
 
+	/**
+	 * Implements the inequality operator for this class. It is simply the negation of the
+	 * equality operation.
+	 *
+	 * @param other the message to be compared to
+	 * @return true if not equal, false otherwise
+	 *
+	 * @see operator==
+	 */
 	bool operator!=(const Message& other) const {
 		return !(*this == other);
 	}
+
+	/**
+	 * Can be used to sort messages within a list. Messages are ordered according to their
+	 * type (ERROR < WARNING) and their address.
+	 *
+	 * @param other the message to be compared to
+	 * @return true if this one is considered smaller, false otherwise
+	 */
+	bool operator<(const Message& other) const;
 };
 
 } // end namespace core

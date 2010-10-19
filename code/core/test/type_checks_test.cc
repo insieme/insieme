@@ -43,167 +43,117 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-TEST(NumArgumentCheck, Basic) {
+bool containsMSG(const MessageList& list, const Message& msg) {
+	return contains(list, msg);
+}
+
+
+TEST(CallExprTypeCheck, Basic) {
 	ASTBuilder builder;
 
 	// OK ... create a function literal
-	TypePtr type = builder.genericType("int");
+	TypePtr type = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getVariableIntParam('a')));
 
 	// ... define some types
 	TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
 	EXPECT_EQ("()", toString(*empty));
 	FunctionTypePtr nullary = builder.functionType(empty, type);
-	EXPECT_EQ("(()->int)", toString(*nullary));
-	FunctionTypePtr unary = builder.functionType(type, type);
-	EXPECT_EQ("(int->int)", toString(*unary));
+	EXPECT_EQ("(()->int<a>)", toString(*nullary));
 	TupleTypePtr single = builder.tupleType(toVector(type));
-	EXPECT_EQ("(int)", toString(*single));
-	FunctionTypePtr unary2 = builder.functionType(single, type);
-	EXPECT_EQ("((int)->int)", toString(*unary2));
+	EXPECT_EQ("(int<a>)", toString(*single));
+	FunctionTypePtr unary = builder.functionType(single, type);
+	EXPECT_EQ("((int<a>)->int<a>)", toString(*unary));
 	TupleTypePtr pair = builder.tupleType(toVector(type, type));
-	EXPECT_EQ("(int,int)", toString(*pair));
+	EXPECT_EQ("(int<a>,int<a>)", toString(*pair));
 	FunctionTypePtr binary = builder.functionType(pair, type);
-	EXPECT_EQ("((int,int)->int)", toString(*binary));
+	EXPECT_EQ("((int<a>,int<a>)->int<a>)", toString(*binary));
 
 	// define literals
 	LiteralPtr x = builder.literal("1",type);
 	EXPECT_EQ("1", toString(*x));
 
+	TypePtr concreteType = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(4)));
+	LiteralPtr y = builder.literal("2", concreteType);
+	EXPECT_EQ("2", toString(*y));
+
 	LiteralPtr constFun = builder.literal("zero", nullary);
 	LiteralPtr unaryFun = builder.literal("succ", unary);
-	LiteralPtr unary2Fun = builder.literal("succ", unary2);
 	LiteralPtr binaryFun = builder.literal("sum", binary);
 
 
 	ExpressionPtr expr = constFun;
 
+	CheckPtr typeCheck = make_check<CallExprTypeCheck>();
+
 	// correct examples ...
 	expr = builder.callExpr(constFun, toVector<ExpressionPtr>());
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
+	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
-	expr = builder.callExpr(unaryFun, toVector<ExpressionPtr>(x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
+	expr = builder.callExpr(type, unaryFun, toVector<ExpressionPtr>(x));
+	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
-	expr = builder.callExpr(unary2Fun, toVector<ExpressionPtr>(x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
+	expr = builder.callExpr(concreteType, unaryFun, toVector<ExpressionPtr>(y));
+	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
-	expr = builder.callExpr(binaryFun, toVector<ExpressionPtr>(x,x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x,x));
+	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
-	// incorrect example ...
-	expr = builder.callExpr(constFun, toVector<ExpressionPtr>(x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	expr = builder.callExpr(concreteType, binaryFun, toVector<ExpressionPtr>(x,y));
+	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
-	expr = builder.callExpr(constFun, toVector<ExpressionPtr>(x, x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	expr = builder.callExpr(concreteType, binaryFun, toVector<ExpressionPtr>(y,y));
+	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
-	expr = builder.callExpr(unaryFun, toVector<ExpressionPtr>());
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	// invalid return type
+	MessageList issues;
+	expr = builder.callExpr(type, unaryFun, toVector<ExpressionPtr>(y));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
-	expr = builder.callExpr(unaryFun, toVector<ExpressionPtr>(x,x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x,y));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
-	expr = builder.callExpr(unary2Fun, toVector<ExpressionPtr>());
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,y));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
-	expr = builder.callExpr(unary2Fun, toVector<ExpressionPtr>(x,x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	// invalid argument types
+	TypePtr concreteType2 = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(2)));
+	LiteralPtr z = builder.literal("3", concreteType2);
+	EXPECT_EQ("3", toString(*z));
 
-	expr = builder.callExpr(binaryFun, toVector<ExpressionPtr>());
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	TypePtr boolType = builder.genericType("bool");
+	LiteralPtr w = builder.literal("true", boolType);
+	EXPECT_EQ("true", toString(*w));
 
-	expr = builder.callExpr(binaryFun, toVector<ExpressionPtr>(x));
-	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
+	// => not unifyable arguments ...
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,z));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+	// => not unifyable arguments
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,w));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+	// => wrong number of arguments
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
+
+	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x,y,z));
+	issues = check(expr, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 }
 
-TEST(ReturnTypeCheck, Basic) {
-	ASTBuilder builder;
-
-	// OK ... create a function literal
-	TypePtr var = builder.typeVariable("a");
-	TypePtr concrete = builder.genericType("int");
-	TypePtr type = builder.genericType("gen", toVector(var), toVector(IntTypeParam::getVariableIntParam('p')));
-	TypePtr typeVV = type;
-	TypePtr typeCV = builder.genericType("gen", toVector(concrete), toVector(IntTypeParam::getVariableIntParam('p')));
-	TypePtr typeVC = builder.genericType("gen", toVector(var), toVector(IntTypeParam::getConcreteIntParam(12)));
-	TypePtr typeCC = builder.genericType("gen", toVector(concrete), toVector(IntTypeParam::getConcreteIntParam(12)));
-
-	EXPECT_EQ("gen<'a,p>", toString(*type));
-	EXPECT_EQ("gen<'a,p>", toString(*typeVV));
-	EXPECT_EQ("gen<int,p>", toString(*typeCV));
-	EXPECT_EQ("gen<'a,12>", toString(*typeVC));
-	EXPECT_EQ("gen<int,12>", toString(*typeCC));
-
-
-	// TODO: finish test case considering unification
-//	LiteralPtr literal
-//
-//	// ... define some types
-//	TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
-//	EXPECT_EQ("()", toString(*empty));
-//	FunctionTypePtr nullary = builder.functionType(empty, type);
-//	EXPECT_EQ("(()->int)", toString(*nullary));
-//	FunctionTypePtr unary = builder.functionType(type, type);
-//	EXPECT_EQ("(int->int)", toString(*unary));
-//	TupleTypePtr single = builder.tupleType(toVector(type));
-//	EXPECT_EQ("(int)", toString(*single));
-//	FunctionTypePtr unary2 = builder.functionType(single, type);
-//	EXPECT_EQ("((int)->int)", toString(*unary2));
-//	TupleTypePtr pair = builder.tupleType(toVector(type, type));
-//	EXPECT_EQ("(int,int)", toString(*pair));
-//	FunctionTypePtr binary = builder.functionType(pair, type);
-//	EXPECT_EQ("((int,int)->int)", toString(*binary));
-//
-//	// define literals
-//	LiteralPtr x = builder.literal("1",type);
-//	EXPECT_EQ("1", toString(*x));
-//
-//	LiteralPtr constFun = builder.literal("zero", nullary);
-//	LiteralPtr unaryFun = builder.literal("succ", unary);
-//	LiteralPtr unary2Fun = builder.literal("succ", unary2);
-//	LiteralPtr binaryFun = builder.literal("sum", binary);
-//
-//
-//	ExpressionPtr expr = constFun;
-//
-//	// correct examples ...
-//	expr = builder.callExpr(constFun, toVector<ExpressionPtr>());
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
-//
-//	expr = builder.callExpr(unaryFun, toVector<ExpressionPtr>(x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
-//
-//	expr = builder.callExpr(unary2Fun, toVector<ExpressionPtr>(x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
-//
-//	expr = builder.callExpr(binaryFun, toVector<ExpressionPtr>(x,x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).empty());
-//
-//	// incorrect example ...
-//	expr = builder.callExpr(constFun, toVector<ExpressionPtr>(x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(constFun, toVector<ExpressionPtr>(x, x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(unaryFun, toVector<ExpressionPtr>());
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(unaryFun, toVector<ExpressionPtr>(x,x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(unary2Fun, toVector<ExpressionPtr>());
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(unary2Fun, toVector<ExpressionPtr>(x,x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(binaryFun, toVector<ExpressionPtr>());
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-//
-//	expr = builder.callExpr(binaryFun, toVector<ExpressionPtr>(x));
-//	EXPECT_TRUE(check(expr, NumArgumentCheck()).size() == 1);
-}
 
 
 } // end namespace checks

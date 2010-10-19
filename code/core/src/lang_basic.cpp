@@ -52,7 +52,7 @@ namespace lang {
 	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL);
 
 ADD_TYPE(TypeVariable, ALPHA, (TypeVariable("a")));
-
+ADD_TYPE(TupleType, SINGLE_ALPHA_TUPLE, (TupleType(TYPE_ALPHA_PTR)));
 
 // -------------------------------- Unit Type -------------------------------
 
@@ -393,7 +393,7 @@ ADD_TYPE(TupleType, SINGLE_CHANNEL_GEN, (TupleType(TYPE_CHANNEL_GEN)));
 //ADD_OP(EMPTY);
 
 // --- VAR_LIST packing ---
-ADD_TYPE(FunctionType, OP_VAR_LIST_PACK, FunctionType(TYPE_ALPHA_PTR, TYPE_VAR_LIST_PTR));
+ADD_TYPE(FunctionType, OP_VAR_LIST_PACK, FunctionType(TYPE_SINGLE_ALPHA_TUPLE_PTR, TYPE_VAR_LIST_PTR));
 ADD_OP(VAR_LIST_PACK, TYPE_OP_VAR_LIST_PACK_PTR, "pack");
 
 #undef ADD_OP
