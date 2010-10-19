@@ -186,8 +186,8 @@ namespace {
 				addAll(res, this->check->visit(node));
 
 				// visit / check all child nodes
-				int numChildren = node->getChildList().size();
-				for (int i=0; i<numChildren; i++) {
+				std::size_t numChildren = node->getChildList().size();
+				for (std::size_t i=0; i<numChildren; i++) {
 					visitor->visit(node.getAddressOfChild(i));
 				}
 			});

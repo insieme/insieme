@@ -157,7 +157,7 @@ TEST(StatementsTest, DefaultParams) {
 	ASTBuilder builder;
 
 	LiteralPtr one = builder.literal("1", TYPE_INT_GEN_PTR);
-	DeclarationStmtPtr decl = builder.declarationStmt(TYPE_INT_GEN_PTR, Identifier("bla"), one);
+	DeclarationStmtPtr decl = builder.declarationStmt(TYPE_INT_GEN_PTR, one);
 	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
 	
 	EXPECT_EQ(one, forStmt->getStep());
@@ -203,12 +203,12 @@ TEST(StatementsTest, Declaration) {
 	NodeManager manager;
 
 	LiteralPtr literal = Literal::get(manager, "12", lang::TYPE_INT_4_PTR);
-	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "x", literal);
+	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), literal);
 
-	EXPECT_EQ ("int<4> x = 12", toString(*stmt));
+	EXPECT_EQ ("int<4> v1 = 12", toString(*stmt));
 
 	// check hash codes, children and cloning
-	VarExprPtr varExpr = VarExpr::get(manager, lang::TYPE_INT_4_PTR, "x");
+	VariablePtr varExpr = Variable::get(manager, lang::TYPE_INT_4_PTR, 1);
 	basicNodeTests(stmt, toVector<NodePtr>(varExpr, literal));
 }
 
@@ -216,9 +216,9 @@ TEST(StatementsTest, Compound) {
 	NodeManager manager;
 
 	LiteralPtr literal = Literal::get(manager, "12", lang::TYPE_INT_4_PTR);
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "x", literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "y", literal);
-	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "z", literal);
+	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), literal);
+	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 2), literal);
+	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 3), literal);
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager);
 	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1));
@@ -234,9 +234,9 @@ TEST(StatementsTest, Compound) {
 	}
 
 	EXPECT_EQ ("{}", toString(*cs0));
-	EXPECT_EQ ("{int<4> x = 12;}", toString(*cs1));
-	EXPECT_EQ ("{int<4> x = 12; int<4> y = 12;}", toString(*cs2));
-	EXPECT_EQ ("{int<4> x = 12; int<4> y = 12; int<4> z = 12;}", toString(*cs3));
+	EXPECT_EQ ("{int<4> v1 = 12;}", toString(*cs1));
+	EXPECT_EQ ("{int<4> v1 = 12; int<4> v2 = 12;}", toString(*cs2));
+	EXPECT_EQ ("{int<4> v1 = 12; int<4> v2 = 12; int<4> v3 = 12;}", toString(*cs3));
 
 	// check hash codes, children and cloning
 	basicNodeTests(cs0, toVector<NodePtr>());
@@ -252,12 +252,12 @@ TEST(StatementsTest, For) {
 	LiteralPtr end   = Literal::get(manager, "9", lang::TYPE_INT_4_PTR);
 	LiteralPtr step  = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
 
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "i", start);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), start);
 	StatementPtr body = lang::STMT_NO_OP_PTR;
 
 	ForStmtPtr stmt = ForStmt::get(manager, decl, body, end, step);
 
-	EXPECT_EQ ("for(int<4> i = 1 .. 9 : 2) {}", toString(*stmt));
+	EXPECT_EQ ("for(int<4> v1 = 1 .. 9 : 2) {}", toString(*stmt));
 
 	// check hash codes, children and cloning
 	basicNodeTests(stmt, toVector<NodePtr>(decl, end, step, body));
@@ -281,13 +281,13 @@ TEST(StatementsTest, While) {
 TEST(StatementsTest, If) {
 	NodeManager manager;
 
-	VarExprPtr var = VarExpr::get(manager, lang::TYPE_BOOL_PTR, "valid");
+	VariablePtr var = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	StatementPtr then = lang::STMT_NO_OP_PTR;
 	StatementPtr other = lang::STMT_NO_OP_PTR;
 
 	IfStmtPtr stmt = IfStmt::get(manager, var, then, other);
 
-	EXPECT_EQ ("if(valid) {} else {}", toString(*stmt));
+	EXPECT_EQ ("if(v1) {} else {}", toString(*stmt));
 
 	// check hash codes, children and cloning
 	basicNodeTests(stmt, toVector<NodePtr>(var, then, other));
@@ -296,7 +296,7 @@ TEST(StatementsTest, If) {
 TEST(StatementsTest, Switch) {
 	NodeManager manager;
 
-	VarExprPtr var = VarExpr::get(manager, lang::TYPE_INT_4_PTR, "value");
+	VariablePtr var = Variable::get(manager, lang::TYPE_INT_4_PTR, 1);
 
 	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
 	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
@@ -312,7 +312,7 @@ TEST(StatementsTest, Switch) {
 
 	SwitchStmtPtr stmt = SwitchStmt::get(manager, var, cases, other);
 
-	EXPECT_EQ ("switch(value) [ case 1: {} | case 2: continue | default: break ]", toString(*stmt));
+	EXPECT_EQ ("switch(v1) [ case 1: {} | case 2: continue | default: break ]", toString(*stmt));
 
 	// check hash codes, children and cloning
 	auto list = toVector<NodePtr>(var, literalA, caseA, literalB, caseB);

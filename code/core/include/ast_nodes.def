@@ -195,9 +195,7 @@ AST_TERMINAL(SwitchStmt, Statement)
 
 AST_NODE(Expression, Statement)
 
-AST_NODE(VarExpr, Expression)
-CONCRETE(VarExpr)
-AST_TERMINAL(ParamExpr, VarExpr)
+AST_TERMINAL(Variable, Expression)
 
 AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(LambdaExpr, Expression)
@@ -226,7 +224,6 @@ AST_TERMINAL(Program, Node)
 
 AST_TERMINAL(RecTypeDefinition, Node)
 AST_TERMINAL(RecLambdaDefinition, Node)
-AST_TERMINAL(Variable, Node)
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 

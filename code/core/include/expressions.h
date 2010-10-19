@@ -128,25 +128,6 @@ public:
 };
 
 
-class VarExpr : public Expression {
-protected:
-	const Identifier id;
-public:
-    VarExpr(const TypePtr& type, const Identifier& id);
-protected:
-    VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode);
-
-	virtual VarExpr* createCopyUsing(NodeMapping& mapper) const;
-	virtual bool equalsExpr(const Expression& expr) const;
-
-public:
-	virtual std::ostream& printTo(std::ostream& out) const;
-
-	const Identifier& getIdentifier() const { return id; }
-
-	static VarExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
-};
-
 class Variable : public Expression {
 private:
 
@@ -171,21 +152,10 @@ public:
 	static VariablePtr get(NodeManager& manager, const TypePtr& type, unsigned int id);
 };
 
-// TODO: think about eliminating this (since it is no independent expression!)
-class ParamExpr : public VarExpr {
-	ParamExpr(const TypePtr& type, const Identifier& id);
-	virtual ParamExpr* createCopyUsing(NodeMapping& mapper) const;
-
-public:
-	virtual std::ostream& printTo(std::ostream& out) const;
-
-	static ParamExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier &id);
-};
-
 
 class LambdaExpr : public Expression {
 public:
-	typedef vector<ParamExprPtr> ParamList;
+	typedef vector<VariablePtr> ParamList;
 
 private:
 	const StatementPtr body;
@@ -216,7 +186,7 @@ public:
 	 *
 	 * TODO: think about replacing the function body by a value, not a pointer?
 	 */
-	typedef std::unordered_map<VarExprPtr, LambdaExprPtr, hash_target<VarExprPtr>, equal_target<VarExprPtr>> RecFunDefs;
+	typedef std::unordered_map<VariablePtr, LambdaExprPtr, hash_target<VariablePtr>, equal_target<VariablePtr>> RecFunDefs;
 
 private:
 
@@ -279,7 +249,7 @@ public:
 	 * 				   this recursive function definition.
 	 * @return a copy of the internally maintained pointer to the actual function definition.
 	 */
-	const LambdaExprPtr getDefinitionOf(const VarExprPtr& variable) const;
+	const LambdaExprPtr getDefinitionOf(const VariablePtr& variable) const;
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.
@@ -298,7 +268,7 @@ class RecLambdaExpr : public Expression {
 	 * The variable used within the recursive definition to describe the
 	 * recursive function to be described by this expression.
 	 */
-	const VarExprPtr variable;
+	const VariablePtr variable;
 
 	/**
 	 * The definition body of this recursive type. Identical definitions may be
@@ -313,7 +283,7 @@ class RecLambdaExpr : public Expression {
 	 * 				   to be represented by this expression.
 	 * @param definition the recursive definitions to be based on.
 	 */
-	RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition);
+	RecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinitionPtr& definition);
 
 	/**
 	 * Creates a clone of this node.
@@ -345,7 +315,7 @@ public:
 	 * 					   recursive function to be defined by the resulting expression.
 	 * @param definition the definition of the recursive lambda.
 	 */
-	static RecLambdaExprPtr get(NodeManager& manager, const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition);
+	static RecLambdaExprPtr get(NodeManager& manager, const VariablePtr& variable, const RecLambdaDefinitionPtr& definition);
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.
@@ -487,7 +457,7 @@ public:
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
 	// TODO: re-add with proper type inferencing of return type
-	static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
+	// static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 

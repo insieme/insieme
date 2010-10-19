@@ -459,7 +459,7 @@ TEST(XmlTest, ForStmtTest) {
 	step.addAnnotation(dummy_te);
 	step->addAnnotation(dummy_tn);
 
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, lang::TYPE_INT_4_PTR, "i", start);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), start);
 	DummyAnnotationPtr dummy_de(new DummyAnnotation("decl e"));
 	DummyAnnotationPtr dummy_dn(new DummyAnnotation("decl n"));
 	decl.addAnnotation(dummy_de);
@@ -491,7 +491,7 @@ TEST(XmlTest, ForStmtTest) {
 TEST(XmlTest, IfStmtTest) {
 	NodeManager manager;
 
-	VarExprPtr var = VarExpr::get(manager, lang::TYPE_BOOL_PTR, "valid");
+	VariablePtr var = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	// FIXME: Check in the future
 	
 	StatementPtr thenStmt = manager.get(lang::STMT_NO_OP_PTR);
@@ -526,7 +526,7 @@ TEST(XmlTest, IfStmtTest) {
 TEST(XmlTest, SwitchStmtTest) {
 	NodeManager manager;
 
-	VarExprPtr var = VarExpr::get(manager, lang::TYPE_INT_4_PTR, "value");
+	VariablePtr var = Variable::get(manager, lang::TYPE_INT_4_PTR);
 	DummyAnnotationPtr dummy_ve(new DummyAnnotation("var e"));
 	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var n"));
 	var.addAnnotation(dummy_ve);

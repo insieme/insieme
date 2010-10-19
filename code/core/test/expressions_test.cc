@@ -85,16 +85,6 @@ TEST(ExpressionsTest, FloatLiterals) {
 //	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
 }
 
-TEST(ExpressionsTest, VarExpr) {
-	NodeManager manager;
-
-	VarExprPtr var = VarExpr::get(manager, TYPE_BOOL_PTR, "valid");
-	EXPECT_EQ ("valid", toString(*var));
-
-	// check hash codes, children and cloning
-	basicExprTests(var, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
-}
-
 TEST(ExpressionsTest, Variable) {
 	NodeManager manager;
 
@@ -113,27 +103,17 @@ TEST(ExpressionsTest, Variable) {
 	basicExprTests(var2, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
 }
 
-TEST(ExpressionsTest, ParamExpr) {
-	NodeManager manager;
-
-	ParamExprPtr var = ParamExpr::get(manager, TYPE_BOOL_PTR, "valid");
-	EXPECT_EQ ("bool valid", toString(*var));
-
-	// check hash codes, children and cloning
-	basicExprTests(var, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
-}
-
 TEST(ExpressionsTest, LambdaExpr) {
 	NodeManager manager;
 
 	LambdaExpr::ParamList list;
-	list.push_back(ParamExpr::get(manager, TYPE_BOOL_PTR, "a"));
-	list.push_back(ParamExpr::get(manager, TYPE_BOOL_PTR, "b"));
+	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
+	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
 
 	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
 	LambdaExprPtr expr = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
 
-	EXPECT_EQ ("fun(bool a, bool b){ return true }", toString(*expr));
+	EXPECT_EQ ("fun(bool v1, bool v2){ return true }", toString(*expr));
 
 	// check hash codes, children and cloning
 	basicExprTests(expr, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, list[0], list[1], body));
@@ -185,22 +165,22 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	// create a recursive even/odd example
 	TupleTypePtr argumentType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR));
 	FunctionTypePtr functionType = builder.functionType(argumentType, lang::TYPE_BOOL_PTR);
-	VarExprPtr evenVar = builder.varExpr(functionType, "even");
-	VarExprPtr oddVar = builder.varExpr(functionType, "odd");
+	VariablePtr evenVar = builder.variable(functionType, 1);
+	VariablePtr oddVar = builder.variable(functionType, 2);
 
 
 	LambdaExpr::ParamList param;
-	param.push_back(builder.paramExpr(lang::TYPE_UINT_4_PTR, "x"));
+	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
 
-	VarExprPtr x = builder.varExpr(lang::TYPE_UINT_4_PTR, "x");
-	ExpressionPtr condition = builder.callExpr(lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
+	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
+	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
 
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,
 			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
 			builder.returnStmt(
-					builder.callExpr(lang::OP_BOOL_NOT_PTR,
-							toVector<ExpressionPtr>(builder.callExpr(oddVar, toVector<ExpressionPtr>(x))))
+					builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
+							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, oddVar, toVector<ExpressionPtr>(x))))
 			)
 	);
 	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
@@ -209,8 +189,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	StatementPtr oddBody = builder.ifStmt(condition,
 				builder.returnStmt(lang::CONST_BOOL_FALSE_PTR),
 				builder.returnStmt(
-						builder.callExpr(lang::OP_BOOL_NOT_PTR,
-								toVector<ExpressionPtr>(builder.callExpr(evenVar, toVector<ExpressionPtr>(x))))
+						builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
+								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evenVar, toVector<ExpressionPtr>(x))))
 				)
 	);
 	LambdaExprPtr oddLambda = builder.lambdaExpr(functionType, param, oddBody);
@@ -239,8 +219,8 @@ TEST(ExpressionsTest, RecursiveLambda) {
 
 	EXPECT_NE ( even->hash(), odd->hash());
 
-	EXPECT_TRUE (toString(*even) == "rec even.{even=fun(uint<4> x){ if(uint.eq(x, 0)) return true else return bool.not(odd(x)) }, odd=fun(uint<4> x){ if(uint.eq(x, 0)) return false else return bool.not(even(x)) }}" ||
-			     toString(*even) == "rec even.{odd=fun(uint<4> x){ if(uint.eq(x, 0)) return false else return bool.not(even(x)) }, even=fun(uint<4> x){ if(uint.eq(x, 0)) return true else return bool.not(odd(x)) }}");
+	EXPECT_TRUE (toString(*even) == "rec v1.{v1=fun(uint<4> v3){ if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)) }, v2=fun(uint<4> v3){ if(uint.eq(v3, 0)) return false else return bool.not(v1(v3)) }}" ||
+			     toString(*even) == "rec v1.{v2=fun(uint<4> v3){ if(uint.eq(v3, 0)) return false else return bool.not(v1(v3)) }, v1=fun(uint<4> v3){ if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)) }}");
 }
 
 

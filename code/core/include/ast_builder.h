@@ -59,7 +59,7 @@ class ASTBuilder {
 public:
 	ASTBuilder(const SharedNodeManager& manager = SharedNodeManager(new NodeManager())) : sharedManager(manager), manager(*sharedManager) { }
 
-	typedef vector<ParamExprPtr> ParamList;
+	typedef vector<VariablePtr> ParamList;
 	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
 	typedef vector<TypePtr> ElementTypeList;
@@ -72,7 +72,7 @@ public:
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
 	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;
-	typedef std::unordered_map<VarExprPtr, LambdaExprPtr, hash_target<VarExprPtr>, equal_target<VarExprPtr>> RecFunDefs;
+	typedef std::unordered_map<VariablePtr, LambdaExprPtr, hash_target<VariablePtr>, equal_target<VariablePtr>> RecFunDefs;
 
 
 	SharedNodeManager getNodeManager() const {
@@ -89,11 +89,6 @@ public:
 	lang::IntTypePtr  getIntType (unsigned short size) const;
 	lang::UIntTypePtr getUIntType(unsigned short size) const;
 	lang::RealTypePtr getRealType(unsigned short size) const;
-
-	// -------------------------------- Expressions ---------------------------------
-
-	ExpressionPtr createExpr(const lang::OperatorPtr& op, const ExpressionPtr& operant) const;
-	ExpressionPtr createExpr(const ExpressionPtr& rhs, const lang::OperatorPtr& op, const ExpressionPtr& lhs) const;
 
 
 #include "ast_builder.inl"

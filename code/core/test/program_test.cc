@@ -67,13 +67,13 @@ TEST(Program, HelloWorld) {
 	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
 	ExpressionPtr intLiteral = build.literal("4", TYPE_INT_GEN_PTR);
-	auto invocation = build.callExpr(unitType, build.varExpr(printfType, "printf"), toVector(intLiteral));
+	auto invocation = build.callExpr(unitType, build.literal("printf", printfType), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
 
 	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
 	
 	ProgramPtr pro = build.createProgram(
-		toSet<Program::EntryPointSet>(build.varExpr(voidNullaryFunctionType, "main"))
+		toSet<Program::EntryPointSet>(build.literal("main", voidNullaryFunctionType))
 	);
 
 	cout << pro;
@@ -98,9 +98,9 @@ TEST(Program, ProgramData) {
 	TypePtr typeDouble = GenericType::get(manager, "double");
 
 	// ------------- Entry Points ------------
-	ExpressionPtr entryA = VarExpr::get(manager, typeInt, "a");
-	ExpressionPtr entryB = VarExpr::get(manager, typeInt, "b");
-	ExpressionPtr entryC = VarExpr::get(manager, typeDouble, "c");
+	ExpressionPtr entryA = Variable::get(manager, typeInt, 1);
+	ExpressionPtr entryB = Variable::get(manager, typeInt, 2);
+	ExpressionPtr entryC = Variable::get(manager, typeDouble, 3);
 
 	program = Program::addEntryPoint(programManager, program, entryA);
 	EXPECT_NE (entryA , *program->getEntryPoints().begin());

@@ -49,17 +49,19 @@ TEST(ASTBuilder, Basic) {
 
 	// With Builder
 	ASTBuilder build;
+	VariablePtr var1 = build.variable(TYPE_BOOL_PTR, 1);
 	std::vector<StatementPtr> statements;
 	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(TYPE_BOOL_PTR, "test", build.literal("true", TYPE_BOOL_PTR)));
+	statements.push_back(build.declarationStmt(var1, build.literal("true", TYPE_BOOL_PTR)));
 	auto compound = build.compoundStmt(statements);
 
 	// Without Builder
-	SharedNodeManager manager(new NodeManager());
+	NodeManager manager;
+	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR, 1);
 	std::vector<StatementPtr> statements2;
-	statements2.push_back(build.breakStmt());
-	statements2.push_back(build.declarationStmt(TYPE_BOOL_PTR, "test",  build.literal("true", TYPE_BOOL_PTR)));
-	auto compound2 = CompoundStmt::get(*manager, statements2);
+	statements2.push_back(BreakStmt::get(manager));
+	statements2.push_back(DeclarationStmt::get(manager, var2, build.literal("true", TYPE_BOOL_PTR)));
+	auto compound2 = CompoundStmt::get(manager, statements2);
 
 	EXPECT_EQ(*compound2, *compound);
 }

@@ -88,39 +88,6 @@ LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr
 	return manager.get(Literal(type, value) );
 }
 
-// ------------------------------------- VarExpr ---------------------------------
-
-std::size_t hashVarExpr(const TypePtr& type, const Identifier& id) {
-	size_t seed = HASHVAL_VAREXPR;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, id.hash());
-	return seed;
-}
-
-VarExpr::VarExpr(const TypePtr& type, const Identifier& id)
-	: Expression(NT_VarExpr, type, ::hashVarExpr(type, id)), id(id) { };
-
-VarExpr::VarExpr(const TypePtr& type, const Identifier& id, const std::size_t& hashCode)
-	: Expression(NT_VarExpr, type, hashCode), id(id) { };
-
-VarExpr* VarExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new VarExpr(mapper.map(type), id);
-}
-
-bool VarExpr::equalsExpr(const Expression& expr) const {
-	// conversion is guaranteed by base operator==
-	const VarExpr& rhs = static_cast<const VarExpr&>(expr);
-	return rhs.id == id;
-}
-
-std::ostream& VarExpr::printTo(std::ostream& out) const {
-	return out << id;
-}
-
-VarExprPtr VarExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.get(VarExpr(type, id));
-}
-
 
 // ------------------------------------- Variable ---------------------------------
 
@@ -159,30 +126,6 @@ VariablePtr Variable::get(NodeManager& manager, const TypePtr& type, unsigned in
 	return manager.get(Variable(type, id));
 }
 
-// ------------------------------------- ParamExpr ---------------------------------
-
-
-std::size_t hashParamExpr(const TypePtr& type, const Identifier& id) {
-	size_t seed = HASHVAL_PARAMEXPR;
-	boost::hash_combine(seed, type->hash());
-	boost::hash_combine(seed, id.hash());
-	return seed;
-}
-
-ParamExpr::ParamExpr(const TypePtr& type, const Identifier& id) : VarExpr(type, id, ::hashParamExpr(type,id)) { };
-
-ParamExpr* ParamExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new ParamExpr(mapper.map(type), id);
-}
-
-std::ostream& ParamExpr::printTo(std::ostream& out) const {
-	return out << *type << " " << id;
-}
-
-ParamExprPtr ParamExpr::get(NodeManager& manager, const TypePtr& type, const Identifier &id) {
-	return manager.get(ParamExpr(type, id));
-}
-
 // ------------------------------------- LambdaExpr ---------------------------------
 
 std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& params, const StatementPtr& body) {
@@ -219,7 +162,9 @@ Node::OptionChildList LambdaExpr::getChildNodes() const {
 }
 
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-	return out << "fun(" << join(", ", params, print<deref<ExpressionPtr>>()) << "){ " << *body << " }";
+	return out << "fun(" << join(", ", params, [](std::ostream& out, const VariablePtr& cur)->std::ostream& {
+			return out << (*cur->getType()) << " " << *cur;
+	}) << "){ " << *body << " }";
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
@@ -540,12 +485,13 @@ std::ostream& CallExpr::printTo(std::ostream& out) const {
 	return out << *functionExpr << "(" << join(", ", arguments, print<deref<ExpressionPtr>>()) << ")";
 }
 
-CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-	return manager.get(CallExpr(functionExpr, arguments));
-}
+// TODO: re-add with proper result type inference (after everybody has switched to alternative)
+//CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+//	return manager.get(CallExpr(functionExpr, arguments));
+//}
 
-CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-	return manager.get(CallExpr(type, functionExpr, arguments));
+CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	return manager.get(CallExpr(resultType, functionExpr, arguments));
 }
 
 // ------------------------------------- CastExpr ---------------------------------
@@ -651,7 +597,7 @@ std::ostream& RecLambdaDefinition::printTo(std::ostream& out) const {
 	}) << "}";
 }
 
-const LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VarExprPtr& variable) const {
+const LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VariablePtr& variable) const {
 	auto it = definitions.find(variable);
 	if (it == definitions.end()) {
 		return LambdaExprPtr(NULL);
@@ -662,14 +608,14 @@ const LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VarExprPtr& varia
 
 // ------------------------------------ Recursive Lambda Expr ------------------------------
 
-std::size_t hashRecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition) {
+std::size_t hashRecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinitionPtr& definition) {
 	std::size_t hash = HASHVAL_REC_LAMBDA;
 	boost::hash_combine(hash, variable->hash());
 	boost::hash_combine(hash, definition->hash());
 	return hash;
 }
 
-RecLambdaExpr::RecLambdaExpr(const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition)
+RecLambdaExpr::RecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinitionPtr& definition)
 	: Expression(NT_RecLambdaExpr, variable->getType(), ::hashRecLambdaExpr(variable, definition)),
 	  variable(isolate(variable)), definition(isolate(definition)) { }
 
@@ -690,7 +636,7 @@ bool RecLambdaExpr::equalsExpr(const Expression& expr) const {
 	return (*rhs.variable == *variable && *rhs.definition == *definition);
 }
 
-RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VarExprPtr& variable, const RecLambdaDefinitionPtr& definition) {
+RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VariablePtr& variable, const RecLambdaDefinitionPtr& definition) {
 	return manager.get(RecLambdaExpr(variable, definition));
 }
 

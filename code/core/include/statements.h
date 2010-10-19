@@ -129,10 +129,10 @@ public:
 
 
 class DeclarationStmt : public Statement {
-	const VarExprPtr varExpression;
+	const VariablePtr variable;
 	const ExpressionPtr initExpression;
 
-	DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression);
+	DeclarationStmt(const VariablePtr& variable, const ExpressionPtr& initExpression);
 	virtual DeclarationStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
@@ -142,10 +142,11 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
-	const VarExprPtr& getVarExpression() const { return varExpression; }
+	const VariablePtr& getVariable() const { return variable; }
 	const ExpressionPtr& getInitialization() const { return initExpression; }
 
-	static DeclarationStmtPtr get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression);
+	static DeclarationStmtPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& initExpression);
+	static DeclarationStmtPtr get(NodeManager& manager, const VariablePtr& variable, const ExpressionPtr& initExpression);
 };
 
 

@@ -86,7 +86,7 @@ TEST(CallExprTypeCheck, Basic) {
 	CheckPtr typeCheck = make_check<CallExprTypeCheck>();
 
 	// correct examples ...
-	expr = builder.callExpr(constFun, toVector<ExpressionPtr>());
+	expr = builder.callExpr(type, constFun, toVector<ExpressionPtr>());
 	EXPECT_EQ("[]", toString(check(expr, typeCheck)));
 
 	expr = builder.callExpr(type, unaryFun, toVector<ExpressionPtr>(x));

@@ -155,43 +155,46 @@ ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnE
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
-std::size_t hashDeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression) {
+std::size_t hashDeclarationStmt(const VariablePtr& variable, const ExpressionPtr& initExpression) {
 	std::size_t seed = HASHVAL_DECLARATION;
-    boost::hash_combine(seed, varExpression->hash());
+    boost::hash_combine(seed, variable->hash());
     boost::hash_combine(seed, initExpression->hash());
 	return seed;
 }
 
-DeclarationStmt::DeclarationStmt(const VarExprPtr& varExpression, const ExpressionPtr& initExpression)
-	: Statement(NT_DeclarationStmt, hashDeclarationStmt(varExpression, initExpression)), varExpression(isolate(varExpression)), initExpression(isolate(initExpression)) {
+DeclarationStmt::DeclarationStmt(const VariablePtr& variable, const ExpressionPtr& initExpression)
+	: Statement(NT_DeclarationStmt, hashDeclarationStmt(variable, initExpression)), variable(isolate(variable)), initExpression(isolate(initExpression)) {
 }
 
 std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
-	return out << *varExpression->getType() << " " << *varExpression << " = " << *initExpression;
+	return out << *variable->getType() << " " << *variable << " = " << *initExpression;
 }
 
 bool DeclarationStmt::equalsStmt(const Statement& stmt) const {
 	// conversion is guaranteed by base operator==
 	const DeclarationStmt& rhs = static_cast<const DeclarationStmt&>(stmt);
-	return (*varExpression == *rhs.varExpression) && (*initExpression == *rhs.initExpression);
+	return (*variable == *rhs.variable) && (*initExpression == *rhs.initExpression);
 }
 
 DeclarationStmt* DeclarationStmt::createCopyUsing(NodeMapping& mapper) const {
-	return new DeclarationStmt(mapper.map(varExpression), mapper.map(initExpression));
+	return new DeclarationStmt(mapper.map(variable), mapper.map(initExpression));
 }
 
 Node::OptionChildList DeclarationStmt::getChildNodes() const {
 	// does not have any sub-nodes
 	OptionChildList res(new ChildList());
-	res->push_back(varExpression);
+	res->push_back(variable);
 	res->push_back(initExpression);
 	return res;
 }
 
-DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const TypePtr& type, const Identifier& id, const ExpressionPtr& initExpression) {
-	return manager.get(DeclarationStmt(VarExpr::get(manager, type, id), initExpression));
+DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& initExpression) {
+	return get(manager, Variable::get(manager, type), initExpression);
 }
 
+DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
+	return manager.get(DeclarationStmt(variable, initExpression));
+}
 
 // ------------------------------------- CompoundStmt ---------------------------------
 

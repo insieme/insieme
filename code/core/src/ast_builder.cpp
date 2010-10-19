@@ -41,6 +41,7 @@
 #include "statements.h"
 #include "expressions.h"
 #include "types.h"
+#include "type_utils.h"
 
 namespace insieme {
 namespace core {
@@ -70,16 +71,6 @@ lang::UIntTypePtr ASTBuilder::getUIntType(unsigned short size) const {
 lang::RealTypePtr ASTBuilder::getRealType(unsigned short size) const {
 	return manager.get(lang::getRealType(size));
 }
-
-// ------------------------------- Build Expressions -------------------------
-
-ExpressionPtr ASTBuilder::createExpr(const lang::OperatorPtr& op, const ExpressionPtr& operant) const {
-	return CallExpr::get(manager, op, toVector(operant));
-}
-ExpressionPtr ASTBuilder::createExpr(const ExpressionPtr& rhs, const lang::OperatorPtr& op, const ExpressionPtr& lhs) const {
-	return CallExpr::get(manager, op, toVector(rhs, lhs));
-}
-
 
 #include "ast_builder_impl.inl"
 
