@@ -19,7 +19,7 @@ set ( insieme_driver_include_dir ${insieme_code_dir}/driver/include )
 set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
 
 # include boost headers
-find_package( Boost )
+find_package( Boost COMPONENTS program_options )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -138,7 +138,7 @@ if (NOT MEMORY_CHECK_SETUP)
 			add_test(ut_${case_name} ut_${case_name})
 
 			# + valgrind as a custom target (only of not explicitly prohibited)
-			if ((NOT (${ARGC} GREATER 1)) OR (${ARG2}))
+			if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 				add_custom_target(valgrind_${case_name} 
 					COMMAND valgrind
 						--leak-check=full
@@ -151,7 +151,7 @@ if (NOT MEMORY_CHECK_SETUP)
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
 				add_dependencies(valgrind valgrind_${case_name})
-			endif ((NOT (${ARGC} GREATER 1)) OR (${ARG2}))
+			endif ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 		endif(USE_VALGRIND)
 	endmacro(add_unit_test)
 

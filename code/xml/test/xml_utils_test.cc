@@ -75,7 +75,7 @@ shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
 }
 
 XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML)
-
+/*
 typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 
 // ------------------- VectorAnnotation ---------------------------------
@@ -105,14 +105,14 @@ XmlElement VectorAnnotationToXML(VectorAnnotation ann, XmlElement el){
 		entry.setText(*iter);
 		entries << entry;
 	}
-	
+*/	
 	/*vector<XmlElement> prova = entries.getChildren();
 	for (vector<XmlElement>::const_iterator iter = prova.begin(); iter != prova.end(); ++iter){
 		std::cout << iter->getName() << std::endl;
 		std::cout << iter->getText() << std::endl;
 	}*/
 	
-	return el;
+/*	return el;
 }
 
 shared_ptr<Annotation> VectorAnnotationFromXML(XmlElement el){
@@ -1041,4 +1041,4 @@ TEST(XmlTest, LambdaExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
-}
+}*/

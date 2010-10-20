@@ -50,6 +50,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_simple_backend)
 	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} insieme_utils)
+	target_link_libraries(ut_${case_name} insieme_xml)	# FIXME
 	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} boost_program_options)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})

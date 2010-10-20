@@ -63,7 +63,7 @@ struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 		VarSet::operator=(nonDecls);
 	}
 
-	void visitVarExpr(const core::VariablePtr& varExpr) { insert(varExpr); }
+	void visitVariable(const core::VariablePtr& varExpr) { insert(varExpr); }
 
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
 		declaredVars.insert( declStmt->getVariable() );

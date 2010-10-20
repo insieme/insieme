@@ -72,6 +72,8 @@ public:
 	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
 
 	string getName(const NodePtr& ptr, const char* fragment = "unnamed"); 
+
+	string getVarName(const VariablePtr& var);
 };
 
 /** Converts simple IR types to their corresponding C(++) representations.
@@ -193,7 +195,7 @@ public:
 	//	std::cout << *node << std::endl;
 	//}
 
-	void visitProgram(const ProgramPtr& ptr) {
+	void visitProgram(const ProgramPtr&) {
 		assert(0 && "ConvertVisitor should never encounter program node");
 	}
 	
@@ -207,12 +209,13 @@ public:
 		cStr << "{" << CodeStream::indR << "\n";
 		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { 
 			this->visit(ptr); 
-			cStr << ";\n"; // TODO remove this if stmt/expr handling better
+			cStr << ";";
+			if(ptr != ptr->getChildList().back()) cStr << "\n";
 		});
-		cStr << CodeStream::indL << "\n}" << "\n";
+		cStr << CodeStream::indL << "\n}";
 	}
 
-	void visitContinueStmt(const ContinueStmtPtr& ptr) {
+	void visitContinueStmt(const ContinueStmtPtr&) {
 		cStr << "continue";
 	}
 
@@ -220,7 +223,8 @@ public:
 
 	void visitForStmt(const ForStmtPtr& ptr) {
 		auto decl = ptr->getDeclaration();
-		const string& ident = decl->getVarExpression()->getIdentifier().getName();
+		auto var = decl->getVariable();
+		string ident = cc.getNameGen().getVarName(var);
 		cStr << "for(";
 		visit(decl);
 		cStr << "; " << ident << " < ";
@@ -273,29 +277,29 @@ public:
 	}
 
 	void visitJobExpr(const JobExprPtr& ptr) {
-		// check if local decls exist, if so generate struct to hold them and populate it
-		auto localDecls = ptr->getLocalDecls();
-		if(localDecls.size() > 0) {
-			string structName = nameGen.getName(ptr, "jobLocalDecls");
-			string structVarName = structName + "__var";
-			CodePtr structCode = defCodePtr->addDependency(structName);
-			CodeStream& sCStr = structCode->getCodeStream();
-			// definition
-			sCStr << "struct " << structName << CodeStream::indR << " {\n";
-			// variable declaration
-			cStr << "struct " << structName << "* " << structVarName << " = new " << structName << ";";
-			for_each(localDecls, [&](const DeclarationStmtPtr& cur) {
-				auto varExp = cur->getVarExpression();
-				// generate definition
-				sCStr << this->printTypeName(varExp->getType()) << " " << varExp->getIdentifier().getName() << ";";
-				// populate entry
-				cStr << structVarName << "." << varExp->getIdentifier().getName() << " = ";
-				this->visit(cur->getInitialization());
-				cStr << ";";
-			});
-			sCStr << CodeStream::indL << "};";
-			// TODO finish job generation (when runtime lib available)
-		}
+		//// check if local decls exist, if so generate struct to hold them and populate it
+		//auto localDecls = ptr->getLocalDecls();
+		//if(localDecls.size() > 0) {
+		//	string structName = nameGen.getName(ptr, "jobLocalDecls");
+		//	string structVarName = structName + "__var";
+		//	CodePtr structCode = defCodePtr->addDependency(structName);
+		//	CodeStream& sCStr = structCode->getCodeStream();
+		//	// definition
+		//	sCStr << "struct " << structName << CodeStream::indR << " {\n";
+		//	// variable declaration
+		//	cStr << "struct " << structName << "* " << structVarName << " = new " << structName << ";";
+		//	for_each(localDecls, [&](const DeclarationStmtPtr& cur) {
+		//		auto varExp = cur->getVarExpression();
+		//		// generate definition
+		//		sCStr << this->printTypeName(varExp->getType()) << " " << varExp->getIdentifier().getName() << ";";
+		//		// populate entry
+		//		cStr << structVarName << "." << varExp->getIdentifier().getName() << " = ";
+		//		this->visit(cur->getInitialization());
+		//		cStr << ";";
+		//	});
+		//	sCStr << CodeStream::indL << "};";
+		//	// TODO finish job generation (when runtime lib available)
+		//}
 	}
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr);
@@ -339,8 +343,8 @@ public:
 		cStr << ")";
 	}
 
-	void visitVarExpr(const VarExprPtr& ptr) {
-		cStr << ptr->getIdentifier().getName();
+	void visitVariable(const VariablePtr& ptr) {
+		cStr << nameGen.getVarName(ptr);
 	}
 };
 

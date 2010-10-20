@@ -62,8 +62,8 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	// write the function header
 	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident.getName() << "(";
 	// handle arguments
-	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const ParamExprPtr& param) -> std::ostream& {
-		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << param->getIdentifier().getName());
+	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
+		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
 	});
 	cs << ")";
 	if(!isCompoundBody) cs << " {" << CodeStream::indR << "\n";
@@ -168,9 +168,10 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 }
 
 void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
+	auto var = ptr->getVariable();
 	// handle fixed size vectors of simple types (C arrays)
 	vector<unsigned> vecLengths;
-	auto innerType = ptr->getVarExpression()->getType();
+	auto innerType = var->getType();
 	if(auto innerRefType = dynamic_pointer_cast<const RefType>(innerType)) {
 		innerType = innerRefType->getElementType();
 	}
@@ -185,13 +186,13 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	}
 	if(!vecLengths.empty()) { // TODO check that innerType is "simple" enough to be part of C array
 		//LOG(INFO) << "+++++++ innerType " << innerType << "\n";
-		cStr << printTypeName(innerType) << " " << ptr->getVarExpression()->getIdentifier().getName();
+		cStr << printTypeName(innerType) << " " << nameGen.getVarName(var);
 		for_each(vecLengths, [this](unsigned vl) { this->cStr << "[" << vl << "]"; });
 		// TODO initialization
 		return;
 	}
 	// standard handling
-	cStr << printTypeName(ptr->getVarExpression()->getType()) << " " << ptr->getVarExpression()->getIdentifier().getName() << " = ";
+	cStr << printTypeName(var->getType()) << " " << nameGen.getVarName(var) << " = ";
 	visit(ptr->getInitialization());
 }
 
@@ -332,6 +333,14 @@ string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unn
 	name << "_" << num++;
 	nameMap.insert(make_pair(ptr, name.str()));
 	return getName(ptr, fragment);
+}
+
+string NameGenerator::getVarName(const VariablePtr& var) {
+	if(auto annotation = var.getAnnotation(c_info::CNameAnnotation::KEY)) {
+		return annotation->getName();
+	} else {
+		return string("unnamed_var_") + toString(var->getId());
+	}
 }
 
 }

@@ -36,12 +36,26 @@
 
 #include "omp/omp_annotation.h"
 
+#include "xml_utils.h"
+#include <memory>
+
 namespace insieme {
 namespace frontend {
 namespace omp {
 namespace annotation {
 
 const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
+
+
+xml::XmlElement& ompToXml(const OmpBaseAnnotation& ann, xml::XmlElement& el) {
+	return el;
+}
+
+std::shared_ptr<OmpBaseAnnotation> ompFromXml(const xml::XmlElement& el) {
+	return std::make_shared<OmpBaseAnnotation>( std::vector<OmpAnnotationPtr>() );
+}
+
+XML_CONVERTER(OmpBaseAnnotation, ompToXml, ompFromXml);
 
 } // End annotation namespace
 } // End omp namespace

@@ -54,7 +54,7 @@ enum {
 // ------------------------------------- Expression ---------------------------------
 
 Expression::Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode)
-	: Statement(nodeType, hashCode, true, NC_Expression), type(isolate(type)) { };
+	: Statement(nodeType, hashCode, NC_Expression), type(isolate(type)) { };
 
 bool Expression::equals(const Node& stmt) const {
 	// conversion is guaranteed by base Node::operator==
