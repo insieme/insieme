@@ -769,3 +769,40 @@ TEST(XmlTest, UnionExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);	
 }
+
+TEST(XmlTest, VectorExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(literalA);
+	vecA.push_back(literalB);
+	
+	VectorExprPtr vec = VectorExpr::get(manager, vecA);
+	DummyAnnotationPtr dummy_Ve(new DummyAnnotation("vecExpr e"));
+	DummyAnnotationPtr dummy_Vn(new DummyAnnotation("vecExpr n"));
+	vec.addAnnotation(dummy_Ve);
+	vec->addAnnotation(dummy_Vn);
+	
+	NodePtr root = vec;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
