@@ -324,6 +324,10 @@ public:
 	 * @return a reference to the stream
 	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
+	
+	const VariablePtr& getVariable() const { return variable; }
+	
+	const RecLambdaDefinitionPtr& getDefinition() const { return definition; }
 };
 
 
