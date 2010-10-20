@@ -48,8 +48,80 @@ const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
 
 
 xml::XmlElement& ompToXml(const OmpBaseAnnotation& ann, xml::XmlElement& el) {
+	xml::XmlElement entries("pragmas", el.getDoc());
+	el << entries;
+
+	for (OmpBaseAnnotation::OmpAnnotationList::const_iterator it = ann.getListBegin(); it != ann.getListEnd(); ++it) {
+		xml::XmlElement entry("pragma", el.getDoc());
+		(*it)->toXml(entry);
+		entries << entry;
+	}
 
 	return el;
+}
+
+void OmpBarrier::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "barrier");
+}
+
+void OmpMaster::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "master");
+}
+
+void OmpFlush::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "flush");
+}
+
+void OmpFor::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "for");
+}
+
+void OmpParallelFor::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "parallel for");
+}
+
+void OmpSection::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "section");
+}
+
+void OmpSections::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "sections");
+}
+
+void OmpParallelSections::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "parallel sections");
+}
+
+void OmpParallel::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "parallel");
+}
+
+void OmpCritical::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "critical");
+}
+
+void OmpSingle::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "single");
+}
+
+void OmpAtomic::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "atomic");
+}
+
+void OmpTask::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "task");
+}
+
+void OmpTaskWait::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "taskwait");
+}
+
+void OmpOrdered::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "ordered");
+}
+
+void OmpThreadPrivate::toXml(insieme::xml::XmlElement& elem) {
+	elem.setAttr("name", "threadprivate");
 }
 
 std::shared_ptr<OmpBaseAnnotation> ompFromXml(const xml::XmlElement& el) {
