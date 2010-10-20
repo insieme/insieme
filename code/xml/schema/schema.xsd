@@ -52,6 +52,12 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_uniqueVariablePtr">
+	<xs:all>
+		<xs:element name="variablePtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
 	<xs:all>
@@ -202,6 +208,15 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_declarationStmt">
+	<xs:all>
+		<xs:element name="variable" type="T_uniqueVariablePtr" minOccurs="1"/>
+		<xs:element name="expression" type="T_uniqueExpressionPtr" minOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_compoundStmt">
 	<xs:all>
 		<xs:element name="statements" type="T_statements" minOccurs="0"/>
@@ -283,6 +298,15 @@
 	<xs:attribute name="value" type="xs:string" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_variable">
+	<xs:all>
+		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+	<xs:attribute name="id" type="xs:integer" use="required"/>
+	<xs:attribute name="identifier" type="xs:string" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_typeVariable">
 	<xs:all>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
@@ -344,6 +368,7 @@
 		<xs:element name="recType" type="T_recType"/>
 		<xs:element name="recTypeDefinition" type="T_recTypeDefinition"/>
 		<xs:element name="literal" type="T_literal"/>
+		<xs:element name="variable" type="T_variable"/>
 		<xs:element name="returnStmt" type="T_returnStmt"/>
 		<xs:element name="forStmt" type="T_forStmt"/>
 		<xs:element name="ifStmt" type="T_ifStmt"/>
@@ -352,6 +377,7 @@
 		<xs:element name="breakStmt" type="T_empty"/>
 		<xs:element name="continueStmt" type="T_empty"/>
 		<xs:element name="compoundStmt" type="T_compoundStmt"/>
+		<xs:element name="declarationStmt" type="T_declarationStmt"/>		
 		<xs:element name="structExpr" type="T_structExpr"/>
 		<xs:element name="unionExpr" type="T_structExpr"/>
 		<xs:element name="vectorExpr" type="T_vectorExpr"/>

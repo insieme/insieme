@@ -492,7 +492,6 @@ TEST(XmlTest, IfStmtTest) {
 	NodeManager manager;
 
 	VariablePtr var = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
-	// FIXME: Check in the future
 	
 	StatementPtr thenStmt = manager.get(lang::STMT_NO_OP_PTR);
 	DummyAnnotationPtr dummy_te(new DummyAnnotation("then e"));
@@ -684,6 +683,38 @@ TEST(XmlTest, CompoundStmtTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);	
+}
+
+TEST(XmlTest, DeclarationStmtTest) {
+	NodeManager manager;
+
+	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
+	DummyAnnotationPtr dummy_ve(new DummyAnnotation("var1 e"));
+	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var1 n"));
+	var1.addAnnotation(dummy_ve);
+	var1->addAnnotation(dummy_vn);
+
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+
+	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, var1, literalA);
+	DummyAnnotationPtr dummy_de(new DummyAnnotation("decl e"));
+	DummyAnnotationPtr dummy_dn(new DummyAnnotation("decl n"));
+	stmt.addAnnotation(dummy_de);
+	stmt->addAnnotation(dummy_dn);
+	
+	NodePtr root = stmt;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
 }
 
 TEST(XmlTest, StructExprTest) {
@@ -896,13 +927,32 @@ TEST(XmlTest, CallExprTest) {
 	vecA.push_back(literalA);
 	vecA.push_back(literalB);
 	
-	CallExprPtr call = CallExpr::get(manager, lang::TYPE_BOOL_PTR, literalC, vecA); // FIXME: WHY??
+	CallExprPtr call = CallExpr::get(manager, lang::TYPE_BOOL_PTR, literalC, vecA);
 	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("callExpr e"));
 	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("callExpr n"));
 	call.addAnnotation(dummy_Ce);
 	call->addAnnotation(dummy_Cn);
 	
 	NodePtr root = call;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, VariableTest) {
+	NodeManager manager;
+	VariablePtr var1 = Variable::get(manager, TYPE_INT_8_PTR);
+	DummyAnnotationPtr dummy_ve(new DummyAnnotation("var1 e"));
+	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var1 n"));
+	var1.addAnnotation(dummy_ve);
+	var1->addAnnotation(dummy_vn);
+	
+	NodePtr root = var1;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);
