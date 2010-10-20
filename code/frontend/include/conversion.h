@@ -52,6 +52,11 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+struct ConversionContext {
+	typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
+	VarDeclMap varMap;
+};
+
 // ------------------------------------ ConversionFactory ---------------------------
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
@@ -62,6 +67,7 @@ class ConversionFactory {
 	class ClangTypeConverter;
 	class ClangExprConverter;
 
+	ConversionContext		 ctx;
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;

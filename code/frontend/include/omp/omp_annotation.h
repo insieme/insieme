@@ -97,7 +97,7 @@ class OmpBarrier: public OmpAnnotation { };
 /**
  * Holds a list of identifiers
  */
-typedef std::vector<core::VarExprPtr> VarList;
+typedef std::vector<core::VariablePtr> VarList;
 typedef std::shared_ptr<VarList> VarListPtr;
 
 class OmpReduction {
@@ -390,13 +390,13 @@ class OmpAtomic: public OmpAnnotation { };
  * OpenMP 'critical' clause
  */
 class OmpCritical: public OmpAnnotation {
-	core::VarExprPtr name;
+	core::VariablePtr name;
 
 public:
-	OmpCritical(const core::VarExprPtr& name): name(name) { }
+	OmpCritical(const core::VariablePtr& name): name(name) { }
 
 	bool hasName() { return static_cast<bool>(name); }
-	const core::VarExprPtr& getName() { return name; }
+	const core::VariablePtr& getName() { return name; }
 };
 
 /**

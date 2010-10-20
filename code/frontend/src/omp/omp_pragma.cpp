@@ -310,7 +310,7 @@ omp::annotation::VarListPtr handleIdentifierList(const MatchMap& mmap, const std
 		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
 		assert(refVarIdent && "Clause not containing a DeclRefExpr");
 
-		core::VarExprPtr varExpr = core::dynamic_pointer_cast<const core::VarExpr>(fact.convertExpr( *refVarIdent ));
+		core::VariablePtr varExpr = core::dynamic_pointer_cast<const core::Variable>( fact.convertExpr( *refVarIdent ) );
 		assert(varExpr && "Conversion to Insieme node failed!");
 		varList->push_back( varExpr );
 	}
@@ -602,7 +602,7 @@ omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::Conversi
 	const MatchMap& map = getMap();
 
 	// checking region name (if existing)
-	core::VarExprPtr criticalName = NULL;
+	core::VariablePtr criticalName = NULL;
 	auto fit = map.find("critical");
 	if(fit != map.end()) {
 		const ValueList& vars = fit->second;
@@ -611,7 +611,7 @@ omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::Conversi
 		clang::DeclRefExpr* refName = dyn_cast<clang::DeclRefExpr>(name);
 		assert(refName && "Clause not containing an identifier");
 
-		criticalName = core::dynamic_pointer_cast<const core::VarExpr>(fact.convertExpr( *refName ));
+		criticalName = core::dynamic_pointer_cast<const core::Variable>( fact.convertExpr( *refName ) );
 		assert(criticalName && "Conversion to Insieme node failed!");
 	}
 
