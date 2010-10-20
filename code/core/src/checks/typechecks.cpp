@@ -37,6 +37,7 @@
 #include "checks/typechecks.h"
 
 #include "type_utils.h"
+#include "lang_basic.h"
 
 namespace insieme {
 namespace core {
@@ -48,7 +49,11 @@ CheckPtr getFullCheck() {
 	// TODO: extend list of checks
 	return makeVisitOnce(
 			combine(toVector<CheckPtr>(
-					make_check<CallExprTypeCheck>()
+					make_check<CallExprTypeCheck>(),
+					make_check<DeclarationStmtTypeCheck>(),
+					make_check<WhileConditionTypeCheck>(),
+					make_check<IfConditionTypeCheck>(),
+					make_check<SwitchExpressionTypeCheck>()
 			)
 	));
 }
@@ -116,6 +121,77 @@ MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 	return res;
 }
 
+
+
+MessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+
+	NodeManager manager;
+	MessageList res;
+
+	DeclarationStmtPtr declaration = address.getAddressedNode();
+
+	// just test whether same type is on both sides
+	TypePtr variableType = declaration->getVariable()->getType();
+	TypePtr initType = declaration->getInitialization()->getType();
+
+	if (*variableType != *initType) {
+		res.push_back(Message(address,
+						EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						format("Invalid type of initial value - expected: %s, actual: %s",
+								toString(*variableType).c_str(),
+								toString(*initType).c_str()),
+						Message::ERROR));
+	}
+	return res;
+}
+
+MessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
+
+	NodeManager manager;
+	MessageList res;
+
+	TypePtr conditionType = address->getCondition()->getType();
+
+	if (*conditionType != lang::TYPE_BOOL_VAL) {
+		res.push_back(Message(address,
+						EC_TYPE_INVALID_CONDITION_EXPR,
+						format("Invalid type of condition expression - expected: %s, actual: %s",
+								toString(*lang::TYPE_BOOL_PTR).c_str(),
+								toString(*conditionType).c_str()),
+						Message::ERROR));
+	}
+	return res;
+}
+
+MessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
+
+	MessageList res;
+	TypePtr conditionType = address->getCondition()->getType();
+	if (*conditionType != lang::TYPE_BOOL_VAL) {
+		res.push_back(Message(address,
+						EC_TYPE_INVALID_CONDITION_EXPR,
+						format("Invalid type of condition expression - expected: %s, actual: %s",
+								toString(*lang::TYPE_BOOL_PTR).c_str(),
+								toString(*conditionType).c_str()),
+						Message::ERROR));
+	}
+	return res;
+}
+
+
+MessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& address) {
+
+	MessageList res;
+	TypePtr switchType = address->getSwitchExpr()->getType();
+	if (!lang::isIntType(*switchType)) {
+		res.push_back(Message(address,
+						EC_TYPE_INVALID_SWITCH_EXPR,
+						format("Invalid type of switch expression - expected: integral type, actual: %s",
+								toString(*switchType).c_str()),
+						Message::ERROR));
+	}
+	return res;
+}
 
 #undef CAST
 
