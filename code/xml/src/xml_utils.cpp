@@ -887,7 +887,7 @@ public:
 	}
 	
 	
-	/*void visitLambdaExpr(const LambdaExprPtr& cur) {
+	void visitLambdaExpr(const LambdaExprPtr& cur) {
 		XmlElement lambdaExpr("lambdaExpr", doc);
 		lambdaExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << lambdaExpr;
@@ -903,23 +903,37 @@ public:
 			visitAnnotations(typeT.getAnnotations(), typePtr);
 		}
 		
-		XmlElement params("params",doc);
-		tupleExpr << params;
-		
-		const vector<ExpressionPtr>& expressionsVec = cur->getExpressions ();
-		for(vector<ExpressionPtr>::const_iterator iter = expressionsVec.begin(); iter != expressionsVec.end(); ++iter) {
-			XmlElement expression("expression", doc);
-			expressions << expression;
-
-			XmlElement expressionPtr("expressionPtr", doc);
-			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
-			expression << expressionPtr;
+		const vector<VariablePtr>& parList = cur->getParams ();
+		if (!parList.empty()){
+			XmlElement params("params",doc);
+			lambdaExpr << params;
 			
-			visitAnnotations((*iter).getAnnotations(), expressionPtr);
+			for(vector<VariablePtr>::const_iterator iter = parList.begin(); iter != parList.end(); ++iter) {
+				XmlElement param("param", doc);
+				params << param;
+
+				XmlElement variablePtr("variablePtr", doc);
+				variablePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				param << variablePtr;
+			
+				visitAnnotations((*iter).getAnnotations(), variablePtr);
+			}
 		}
 		
-		visitAnnotations(cur->getAnnotations(), tupleExpr);
-	}*/
+		if (const StatementPtr& bodyT = cur->getBody()) {
+			XmlElement body("body", doc);
+			lambdaExpr << body;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyT)));		
+			body << statementPtr;
+			
+			visitAnnotations(bodyT.getAnnotations(), statementPtr);
+		}
+		
+		visitAnnotations(cur->getAnnotations(), lambdaExpr);
+	}
+
 };
 
 class error_handler: public DOMErrorHandler {

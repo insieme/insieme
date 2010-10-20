@@ -1012,3 +1012,33 @@ TEST(XmlTest, JobExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, LambdaExprTest) {
+	NodeManager manager;
+	
+	LambdaExpr::ParamList list;
+	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
+	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
+
+	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
+	body.addAnnotation(dummy_be);
+	body->addAnnotation(dummy_bn);
+	
+	LambdaExprPtr expr = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
+	DummyAnnotationPtr dummy_le(new DummyAnnotation("lambda e"));
+	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lambda n"));
+	expr.addAnnotation(dummy_le);
+	expr->addAnnotation(dummy_ln);
+
+	NodePtr root = expr;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
