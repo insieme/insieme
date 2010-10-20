@@ -151,10 +151,10 @@ AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const 
 	return fromXml(node);
 }
 
-#define XML_CONVERTER(CLASS_NAME, TO_XML, FROM_XML)	\
+#define XML_CONVERTER(CLASS_NAME, KEY, TO_XML, FROM_XML)	\
 	void* hack ## CLASS_NAME ## hack = \
-		insieme::xml::XmlConverter::get().registerAnnotation(#CLASS_NAME, \
-			std::bind(insieme::xml::convertToXML<CLASS_NAME>, #CLASS_NAME, TO_XML, std::placeholders::_1, std::placeholders::_2), \
+		insieme::xml::XmlConverter::get().registerAnnotation(KEY, \
+			std::bind(insieme::xml::convertToXML<CLASS_NAME>, KEY, TO_XML, std::placeholders::_1, std::placeholders::_2), \
 			std::bind(insieme::xml::convertFromXML<CLASS_NAME>, FROM_XML, std::placeholders::_1) );
 
 

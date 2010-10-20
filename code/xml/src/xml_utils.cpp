@@ -48,6 +48,7 @@
 #include "ast_builder.h"
 #include "xml_utils.h"
 #include "xsd_config.h"
+#include "logging.h"
 
 using namespace insieme::core;
 using namespace insieme::utils;
@@ -932,7 +933,7 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	if(fit != DomToIrConvertMap.end()) {
 		return (fit->second)(el);
 	} else {
-		cerr << "Warning: Annotation \"" << type << "\" is not registred for Xml_write!";
+		DLOG(WARNING) << "Annotation \"" << type << "\" is not registred for Xml_write!";
 		return shared_ptr<Annotation>();
 	}
 }
@@ -943,7 +944,7 @@ shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, x
 	if(fit != IrToDomConvertMap.end()) {
 		return (fit->second)(ann, doc);
 	} else {
-		cerr << "Warning: Annotation \"" << type << "\" is not registred for Xml_write!";
+		DLOG(WARNING) << "Annotation \"" << type << "\" is not registred for Xml_write!";
 		return shared_ptr<XmlElement>();
 	}
 }
@@ -957,19 +958,19 @@ void* XmlConverter::registerAnnotation(const string& name, const XmlConverter::I
 // ------------------------------------ XmlUtil ----------------------------
 
 XmlUtil::XmlUtil(){
-	try {
+//	try {
 		XMLPlatformUtils::Initialize();
 		impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
-	}
-	catch(const XMLException& toCatch)
-	{
-		char* pMsg = XMLString::transcode(toCatch.getMessage());
-		XERCES_STD_QUALIFIER cerr << "Error during Xerces-c Initialization.\n" << "  Exception message:" << pMsg;
-		XMLString::release(&pMsg);
-	}
-	doc = NULL;
-	rootElem = NULL;
-	parser = NULL;
+		doc = NULL;
+		rootElem = NULL;
+		parser = NULL;
+//	}
+//	catch(const XMLException& toCatch)
+//	{
+//		char* pMsg = XMLString::transcode(toCatch.getMessage());
+//		DLOG(ERROR) << "Error during Xerces-c initialization.\n" << "  Exception message:" << pMsg;
+//		XMLString::release(&pMsg);
+//	}
 }
 
 XmlUtil::~XmlUtil(){
@@ -1118,9 +1119,7 @@ string XmlUtil::convertDomToString(){
 		}
 		return stringDump;
 	}
-	else {
-		return "DOM is empty";
-	}
+	throw "DOM is empty";
 }
 
 

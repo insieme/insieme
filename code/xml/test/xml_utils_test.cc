@@ -76,7 +76,7 @@ DummyAnnotationPtr DummyAnnotationFromXML(const XmlElement& el){
 	return std::make_shared<DummyAnnotation>("1");
 }
 
-XML_CONVERTER(DummyAnnotation, DummyAnnotationToXML, DummyAnnotationFromXML);
+XML_CONVERTER(DummyAnnotation, "DummyAnnotation", DummyAnnotationToXML, DummyAnnotationFromXML);
 
 // ------------------- VectorAnnotation ---------------------------------
 class VectorAnnotation : public Annotation {
@@ -123,7 +123,7 @@ VectorAnnotationPtr VectorAnnotationFromXML(const XmlElement& el){
 	return std::make_shared<VectorAnnotation>( vec );
 }
 
-XML_CONVERTER(VectorAnnotation, VectorAnnotationToXML, VectorAnnotationFromXML)
+XML_CONVERTER(VectorAnnotation, "VectorAnnotation", VectorAnnotationToXML, VectorAnnotationFromXML)
 
 
 

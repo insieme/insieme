@@ -55,7 +55,7 @@ std::shared_ptr<OmpBaseAnnotation> ompFromXml(const xml::XmlElement& el) {
 	return std::make_shared<OmpBaseAnnotation>( std::vector<OmpAnnotationPtr>() );
 }
 
-XML_CONVERTER(OmpBaseAnnotation, ompToXml, ompFromXml);
+XML_CONVERTER(OmpBaseAnnotation, "OmpAnnotation", ompToXml, ompFromXml);
 
 } // End annotation namespace
 } // End omp namespace
