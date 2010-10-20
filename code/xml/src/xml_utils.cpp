@@ -656,6 +656,40 @@ public:
 		
 		visitAnnotations(cur->getAnnotations(), vectorExpr);
 	}
+	
+	void visitTupleExpr(const TupleExprPtr& cur) {
+		XmlElement tupleExpr("tupleExpr", doc);
+		tupleExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << tupleExpr;
+		
+		if (const TypePtr& typeT = cur->getType()) {
+			XmlElement type("type", doc);
+			tupleExpr << type;
+
+			XmlElement typePtr("typePtr", doc);
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
+			type << typePtr;
+			
+			visitAnnotations(typeT.getAnnotations(), typePtr);
+		}
+		
+		XmlElement expressions("expressions",doc);
+		tupleExpr << expressions;
+		
+		const vector<ExpressionPtr>& expressionsVec = cur->getExpressions ();
+		for(vector<ExpressionPtr>::const_iterator iter = expressionsVec.begin(); iter != expressionsVec.end(); ++iter) {
+			XmlElement expression("expression", doc);
+			expressions << expression;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+			expression << expressionPtr;
+			
+			visitAnnotations((*iter).getAnnotations(), expressionPtr);
+		}
+		
+		visitAnnotations(cur->getAnnotations(), tupleExpr);
+	}
 };
 
 class error_handler: public DOMErrorHandler {

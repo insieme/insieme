@@ -329,6 +329,7 @@
 		<xs:element name="structExpr" type="T_structExpr"/>
 		<xs:element name="unionExpr" type="T_structExpr"/>
 		<xs:element name="vectorExpr" type="T_vectorExpr"/>
+		<xs:element name="tupleExpr" type="T_vectorExpr"/>
 	</xs:choice>
 </xs:group>
 

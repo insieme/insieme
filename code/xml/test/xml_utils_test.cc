@@ -806,3 +806,40 @@ TEST(XmlTest, VectorExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, TupleExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(literalA);
+	vecA.push_back(literalB);
+	
+	TupleExprPtr tuple = TupleExpr::get(manager, vecA);
+	DummyAnnotationPtr dummy_Te(new DummyAnnotation("tupleExpr e"));
+	DummyAnnotationPtr dummy_Tn(new DummyAnnotation("tupleExpr n"));
+	tuple.addAnnotation(dummy_Te);
+	tuple->addAnnotation(dummy_Tn);
+	
+	NodePtr root = tuple;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
