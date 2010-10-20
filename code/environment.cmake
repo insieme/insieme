@@ -19,7 +19,7 @@ set ( insieme_driver_include_dir ${insieme_code_dir}/driver/include )
 set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
 
 # include boost headers
-find_package( Boost )
+find_package( Boost COMPONENTS program_options )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
