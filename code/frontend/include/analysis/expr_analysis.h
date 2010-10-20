@@ -43,12 +43,12 @@ namespace frontend {
 namespace analysis {
 
 struct lt_ident {
-  bool operator()(const core::VarExprPtr& s1, const core::VarExprPtr& s2) const {
-    return strcmp(s1->getIdentifier().getName().c_str(), s2->getIdentifier().getName().c_str()) < 0;
+  bool operator()(const core::VariablePtr& s1, const core::VariablePtr& s2) const {
+    return s1->getId() < s2->getId();
   }
 };
 
-typedef std::set<core::VarExprPtr, lt_ident> VarSet;
+typedef std::set<core::VariablePtr, lt_ident> VarSet;
 /**
  * Returns the list of variables referenced within an expression
  */
@@ -63,10 +63,10 @@ struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 		VarSet::operator=(nonDecls);
 	}
 
-	void visitVarExpr(const core::VarExprPtr& varExpr) { insert(varExpr); }
+	void visitVarExpr(const core::VariablePtr& varExpr) { insert(varExpr); }
 
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		declaredVars.insert( declStmt->getVarExpression() );
+		declaredVars.insert( declStmt->getVariable() );
 	}
 
 	void visitNode(const core::NodePtr& node) {
