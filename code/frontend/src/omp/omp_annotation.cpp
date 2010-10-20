@@ -48,6 +48,7 @@ const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
 
 
 xml::XmlElement& ompToXml(const OmpBaseAnnotation& ann, xml::XmlElement& el) {
+
 	return el;
 }
 

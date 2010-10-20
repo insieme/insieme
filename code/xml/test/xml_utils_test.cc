@@ -63,21 +63,20 @@ public:
 // initalization of the dummy key
 StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
 
-XmlElement DummyAnnotationToXML(DummyAnnotation ann, XmlElement el){
+typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
+
+XmlElement& DummyAnnotationToXML(const DummyAnnotation& ann, XmlElement& el){
 	XmlElement intNode("int", el.getDoc());
 	intNode.setText(ann.value);
 	el << intNode;
 	return el;
 }
 
-shared_ptr<Annotation> DummyAnnotationFromXML(XmlElement el){
+DummyAnnotationPtr DummyAnnotationFromXML(const XmlElement& el){
 	return std::make_shared<DummyAnnotation>("1");
 }
 
-typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
-
 XML_CONVERTER(DummyAnnotation, "DummyAnnotation", DummyAnnotationToXML, DummyAnnotationFromXML);
-
 
 // ------------------- VectorAnnotation ---------------------------------
 class VectorAnnotation : public Annotation {
@@ -98,7 +97,9 @@ public:
 // initalization of the vector key
 StringKey<VectorAnnotation> VectorAnnotation::VectorKey("VectorKey");
 
-XmlElement VectorAnnotationToXML(VectorAnnotation ann, XmlElement el){
+typedef shared_ptr<VectorAnnotation> VectorAnnotationPtr;
+
+XmlElement& VectorAnnotationToXML(const VectorAnnotation& ann, XmlElement& el){
 	XmlElement entries("entries", el.getDoc());
 	el << entries;
 	for (vector<string>::const_iterator iter = ann.values.begin(); iter != ann.values.end(); ++iter){
@@ -116,7 +117,7 @@ XmlElement VectorAnnotationToXML(VectorAnnotation ann, XmlElement el){
 	return el;
 }
 
-shared_ptr<Annotation> VectorAnnotationFromXML(XmlElement el){
+VectorAnnotationPtr VectorAnnotationFromXML(const XmlElement& el){
 	vector <string> vec;
 	vec.push_back("test1");
 	vec.push_back("test2");
@@ -124,8 +125,6 @@ shared_ptr<Annotation> VectorAnnotationFromXML(XmlElement el){
 }
 
 XML_CONVERTER(VectorAnnotation, "VectorAnnotation", VectorAnnotationToXML, VectorAnnotationFromXML)
-
-typedef shared_ptr<VectorAnnotation> VectorAnnotationPtr;
 
 TEST(XmlTest, GenericTypeTest) {
 	vector <string> vec;
