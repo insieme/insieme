@@ -843,3 +843,29 @@ TEST(XmlTest, TupleExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, CastExprTest) {
+	NodeManager manager;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	CastExprPtr cast = CastExpr::get(manager, lang::TYPE_INT_8_PTR, literalA);
+	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("castExpr e"));
+	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("castExpr n"));
+	cast.addAnnotation(dummy_Ce);
+	cast->addAnnotation(dummy_Cn);
+	
+	NodePtr root = cast;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

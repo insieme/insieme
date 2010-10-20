@@ -158,6 +158,15 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_castExpr">
+	<xs:all>
+		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
+		<xs:element name="subExpression" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_vectorExpr">
 	<xs:all>
 		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
@@ -330,6 +339,7 @@
 		<xs:element name="unionExpr" type="T_structExpr"/>
 		<xs:element name="vectorExpr" type="T_vectorExpr"/>
 		<xs:element name="tupleExpr" type="T_vectorExpr"/>
+		<xs:element name="castExpr" type="T_castExpr"/>
 	</xs:choice>
 </xs:group>
 
