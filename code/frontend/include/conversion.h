@@ -53,11 +53,8 @@ namespace frontend {
 namespace conversion {
 
 struct ConversionContext {
-	typedef std::map<clang::VarDecl*, core::VariablePtr> VarDeclMap;
-	typedef std::map<clang::ParmVarDecl*, core::VariablePtr> ParmVarDeclMap;
-
+	typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
 	VarDeclMap varMap;
-	ParmVarDeclMap parmVarMap;
 };
 
 // ------------------------------------ ConversionFactory ---------------------------

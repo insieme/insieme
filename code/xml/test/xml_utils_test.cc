@@ -769,3 +769,146 @@ TEST(XmlTest, UnionExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);	
 }
+
+TEST(XmlTest, VectorExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(literalA);
+	vecA.push_back(literalB);
+	
+	VectorExprPtr vec = VectorExpr::get(manager, vecA);
+	DummyAnnotationPtr dummy_Ve(new DummyAnnotation("vecExpr e"));
+	DummyAnnotationPtr dummy_Vn(new DummyAnnotation("vecExpr n"));
+	vec.addAnnotation(dummy_Ve);
+	vec->addAnnotation(dummy_Vn);
+	
+	NodePtr root = vec;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, TupleExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	vecA.push_back(literalA);
+	vecA.push_back(literalB);
+	
+	TupleExprPtr tuple = TupleExpr::get(manager, vecA);
+	DummyAnnotationPtr dummy_Te(new DummyAnnotation("tupleExpr e"));
+	DummyAnnotationPtr dummy_Tn(new DummyAnnotation("tupleExpr n"));
+	tuple.addAnnotation(dummy_Te);
+	tuple->addAnnotation(dummy_Tn);
+	
+	NodePtr root = tuple;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, CastExprTest) {
+	NodeManager manager;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	CastExprPtr cast = CastExpr::get(manager, lang::TYPE_INT_8_PTR, literalA);
+	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("castExpr e"));
+	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("castExpr n"));
+	cast.addAnnotation(dummy_Ce);
+	cast->addAnnotation(dummy_Cn);
+	
+	NodePtr root = cast;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, CallExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	LiteralPtr literalC = Literal::get(manager, "3", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lCe(new DummyAnnotation("litC e"));
+	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("litC n"));
+	literalC.addAnnotation(dummy_lCe);
+	literalC->addAnnotation(dummy_lCn);
+	
+	vecA.push_back(literalA);
+	vecA.push_back(literalB);
+	
+	CallExprPtr call = CallExpr::get(manager, lang::TYPE_BOOL_PTR, literalC, vecA); // FIXME: WHY??
+	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("callExpr e"));
+	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("callExpr n"));
+	call.addAnnotation(dummy_Ce);
+	call->addAnnotation(dummy_Cn);
+	
+	NodePtr root = call;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

@@ -393,7 +393,7 @@ class OmpCritical: public OmpAnnotation {
 	core::VariablePtr name;
 
 public:
-	OmpCritical(const core::VarExprPtr& name): name(name) { }
+	OmpCritical(const core::VariablePtr& name): name(name) { }
 
 	bool hasName() { return static_cast<bool>(name); }
 	const core::VariablePtr& getName() { return name; }
