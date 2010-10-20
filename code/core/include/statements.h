@@ -67,7 +67,7 @@ class Statement : public Node {
 
 protected:
 
-	Statement(NodeType type, std::size_t hashCode, bool isExpr = false, const NodeCategory category = NC_Statement) : Node(type, category, hashCode) {}
+	Statement(NodeType type, std::size_t hashCode, const NodeCategory category = NC_Statement) : Node(type, category, hashCode) {}
 
 	virtual bool equals(const Node& node) const;
 	virtual bool equalsStmt(const Statement& stmt) const = 0;

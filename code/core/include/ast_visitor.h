@@ -125,7 +125,7 @@ protected:
 	#undef IS_A
 
 	/**
-	 * Implements a the base not visit. In case none of the visitXXX methods along the forwarding
+	 * Implements a the base node visit. In case none of the visitXXX methods along the forwarding
 	 * chain have been overridden, this method will be reached. By default, it returns an instance
 	 * of a default constructed element of the return type.
 	 */
