@@ -165,7 +165,7 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
 
 namespace detail {
 
-	template<typename Function> struct lambda_traits_helper;
+	template<typename Function> struct lambda_traits_helper { };
 
 	// - for member function pointer -
 	//
@@ -176,14 +176,14 @@ namespace detail {
 	//  typedef R result_type;
 	//};
 
-	template<typename C, typename R>
+	template<typename R, typename C>
 	struct lambda_traits_helper<R (C::*)(void) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
 	  typedef R result_type;
 	};
 
-	template<typename C, typename R, typename T1>
+	template<typename R, typename C, typename T1>
 	struct lambda_traits_helper<R (C::*)(T1) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
@@ -192,7 +192,7 @@ namespace detail {
 	  typedef T1 argument_type;
 	};
 
-	template<typename C, typename R, typename T1, typename T2>
+	template<typename R, typename C, typename T1, typename T2>
 	struct lambda_traits_helper<R (C::*)(T1, T2) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
@@ -203,7 +203,7 @@ namespace detail {
 	  typedef T2 second_argument_type;
 	};
 
-	template<typename C, typename R, typename T1, typename T2, typename T3>
+	template<typename R, typename C, typename T1, typename T2, typename T3>
 	struct lambda_traits_helper<R (C::*)(T1, T2, T3) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
