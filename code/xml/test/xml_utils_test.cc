@@ -869,3 +869,46 @@ TEST(XmlTest, CastExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, CallExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
+	literalA.addAnnotation(dummy_lAe);
+	literalA->addAnnotation(dummy_lAn);
+	
+	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
+	literalB.addAnnotation(dummy_lBe);
+	literalB->addAnnotation(dummy_lBn);
+	
+	LiteralPtr literalC = Literal::get(manager, "3", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lCe(new DummyAnnotation("litC e"));
+	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("litC n"));
+	literalC.addAnnotation(dummy_lCe);
+	literalC->addAnnotation(dummy_lCn);
+	
+	vecA.push_back(literalA);
+	vecA.push_back(literalB);
+	
+	CallExprPtr call = CallExpr::get(manager, lang::TYPE_BOOL_PTR, literalC, vecA); // FIXME: WHY??
+	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("callExpr e"));
+	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("callExpr n"));
+	call.addAnnotation(dummy_Ce);
+	call->addAnnotation(dummy_Cn);
+	
+	NodePtr root = call;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

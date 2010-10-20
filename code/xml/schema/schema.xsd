@@ -150,10 +150,27 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_arguments -->
+<xs:complexType name="T_arguments">
+	<xs:sequence>
+		<xs:element name="argument" type="T_uniqueExpressionPtr" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
 <!-- All IR Node -->
 <xs:complexType name="T_empty">
 	<xs:all>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_callExpr">
+	<xs:all>
+		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
+		<xs:element name="function" type="T_uniqueExpressionPtr" minOccurs="1"/>
+		<xs:element name="arguments" type="T_arguments" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
@@ -340,6 +357,7 @@
 		<xs:element name="vectorExpr" type="T_vectorExpr"/>
 		<xs:element name="tupleExpr" type="T_vectorExpr"/>
 		<xs:element name="castExpr" type="T_castExpr"/>
+		<xs:element name="callExpr" type="T_callExpr"/>
 	</xs:choice>
 </xs:group>
 
