@@ -138,7 +138,7 @@ if (NOT MEMORY_CHECK_SETUP)
 			add_test(ut_${case_name} ut_${case_name})
 
 			# + valgrind as a custom target (only of not explicitly prohibited)
-			if ((NOT (${ARGC} GREATER 1)) OR (${ARG2}))
+			if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 				add_custom_target(valgrind_${case_name} 
 					COMMAND valgrind
 						--leak-check=full
@@ -151,7 +151,7 @@ if (NOT MEMORY_CHECK_SETUP)
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
 				add_dependencies(valgrind valgrind_${case_name})
-			endif ((NOT (${ARGC} GREATER 1)) OR (${ARG2}))
+			endif ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 		endif(USE_VALGRIND)
 	endmacro(add_unit_test)
 
