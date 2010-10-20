@@ -192,6 +192,14 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_program">
+	<xs:all>
+		<xs:element name="expressions" type="T_expressions" minOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_lambdaExpr">
 	<xs:all>
 		<xs:element name="type" type="T_uniqueNodePtr" minOccurs="1"/>
@@ -428,6 +436,7 @@
 		<xs:element name="callExpr" type="T_callExpr"/>
 		<xs:element name="jobExpr" type="T_jobExpr"/>
 		<xs:element name="lambdaExpr" type="T_lambdaExpr"/>
+		<xs:element name="program" type="T_program"/>
 	</xs:choice>
 </xs:group>
 

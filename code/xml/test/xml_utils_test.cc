@@ -1042,3 +1042,46 @@ TEST(XmlTest, LambdaExprTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, ProgramTest) {
+	NodeManager manager;
+	
+	ProgramPtr program = Program::create(manager);
+
+	ExpressionPtr entryA = Variable::get(manager, TYPE_BOOL_PTR, 1);
+	DummyAnnotationPtr dummy_ae(new DummyAnnotation("entrya e"));
+	DummyAnnotationPtr dummy_an(new DummyAnnotation("entrya n"));
+	entryA.addAnnotation(dummy_ae);
+	entryA->addAnnotation(dummy_an);
+	ExpressionPtr entryB = Variable::get(manager, TYPE_BOOL_PTR, 2);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("entryb e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("entryb n"));
+	entryB.addAnnotation(dummy_be);
+	entryB->addAnnotation(dummy_bn);
+	ExpressionPtr entryC = Variable::get(manager, TYPE_BOOL_PTR, 3);
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("entryc e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("entryc n"));
+	entryC.addAnnotation(dummy_ce);
+	entryC->addAnnotation(dummy_cn);
+
+	Program::EntryPointSet entrySet;
+	entrySet.insert(entryA);
+	entrySet.insert(entryB);
+	entrySet.insert(entryC);
+
+	program = Program::addEntryPoints(manager, program, entrySet);
+	DummyAnnotationPtr dummy_pe(new DummyAnnotation("program e"));
+	DummyAnnotationPtr dummy_pn(new DummyAnnotation("program n"));
+	program.addAnnotation(dummy_pe);
+	program->addAnnotation(dummy_pn);
+
+	NodePtr root = program;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}

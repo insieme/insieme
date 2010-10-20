@@ -934,6 +934,31 @@ public:
 		
 		visitAnnotations(cur->getAnnotations(), lambdaExpr);
 	}
+	
+	void visitProgram(const ProgramPtr& cur) {
+		XmlElement program("program", doc);
+		program.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << program;
+		
+		const Program::EntryPointSet& entrySet = cur->getEntryPoints ();
+		if (!entrySet.empty()){
+			XmlElement expressions("expressions",doc);
+			program << expressions;
+			
+			for(Program::EntryPointSet::const_iterator iter = entrySet.begin(); iter != entrySet.end(); ++iter) {
+				XmlElement expression("expression", doc);
+				expressions << expression;
+
+				XmlElement expressionPtr("expressionPtr", doc);
+				expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				expression << expressionPtr;
+			
+				visitAnnotations((*iter).getAnnotations(), expressionPtr);
+			}
+		}
+
+		visitAnnotations(cur->getAnnotations(), program);
+	}
 
 };
 
