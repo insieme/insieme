@@ -45,6 +45,8 @@
 #include "backend_convert.h"
 #include "naming.h"
 
+#include "ast_statistic.h"
+
 #include "checks/typechecks.h"
 
 #include "container_utils.h"
@@ -90,6 +92,14 @@ int main(int argc, char** argv) {
 		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
+
+		// IR statistiscs
+		ASTStatistic stats = ASTStatistic::evaluate(program);
+		LOG(INFO) << "Number of Shared Nodes: " << stats.getNumSharedNodes();
+		LOG(INFO) << "Number of Addressable Nodes: " << stats.getNumAddressableNodes();
+		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
+		LOG(INFO) << "Height of tree: " << stats.getHeight();
+
 
 		// XML dump
 		insieme::xml::xmlWrite(program, "insieme.xml");

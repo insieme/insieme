@@ -155,6 +155,76 @@ TEST(CallExprTypeCheck, Basic) {
 }
 
 
+TEST(DeclarationStmtTypeCheck, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+	TypePtr type = builder.genericType("int");
+	TypePtr type2 = builder.genericType("uint");
+	ExpressionPtr init = builder.literal("4", type);
+	DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(type), init);
+	DeclarationStmtPtr err = builder.declarationStmt(builder.variable(type2), init);
+
+	CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+}
+
+TEST(IfCondition, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+	TypePtr intType = builder.genericType("int");
+	TypePtr boolType = builder.genericType("bool");
+	ExpressionPtr intLit = builder.literal("4", intType);
+	ExpressionPtr boolLit = builder.literal("true", boolType);
+	NodePtr ok = builder.ifStmt(boolLit, lang::STMT_NO_OP_PTR);
+	NodePtr err = builder.ifStmt(intLit, lang::STMT_NO_OP_PTR);
+
+	CheckPtr typeCheck = make_check<IfConditionTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_CONDITION_EXPR, "", Message::ERROR));
+}
+
+TEST(WhileCondition, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+	TypePtr intType = builder.genericType("int");
+	TypePtr boolType = builder.genericType("bool");
+	ExpressionPtr intLit = builder.literal("4", intType);
+	ExpressionPtr boolLit = builder.literal("true", boolType);
+	NodePtr ok = builder.whileStmt(boolLit, lang::STMT_NO_OP_PTR);
+	NodePtr err = builder.whileStmt(intLit, lang::STMT_NO_OP_PTR);
+
+	CheckPtr typeCheck = make_check<WhileConditionTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_CONDITION_EXPR, "", Message::ERROR));
+}
+
+TEST(Switch, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+	TypePtr intType = lang::TYPE_INT_1_PTR;
+	TypePtr boolType = builder.genericType("bool");
+	ExpressionPtr intLit = builder.literal("4", intType);
+	ExpressionPtr boolLit = builder.literal("true", boolType);
+	SwitchStmtPtr ok = builder.switchStmt(intLit, vector<SwitchStmt::Case>());
+	SwitchStmtPtr err = builder.switchStmt(boolLit, vector<SwitchStmt::Case>());
+
+	CheckPtr typeCheck = make_check<SwitchExpressionTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_SWITCH_EXPR, "", Message::ERROR));
+}
 
 } // end namespace checks
 } // end namespace core
