@@ -360,11 +360,23 @@ public:
  * @return the resulting visitor.
  */
 template<
-	template<class Target> class Ptr = AnnotatedPtr,
+	template<class Target> class Ptr,
 	typename Lambda
 >
 inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr> makeLambdaVisitor(Lambda lambda) {
 	return LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr>(lambda);
+};
+
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * lambda function.
+ *
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @return the resulting visitor.
+ */
+template<typename Lambda>
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, AnnotatedPtr> makeLambdaVisitor(Lambda lambda) {
+	return LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, AnnotatedPtr>(lambda);
 };
 
 /**
