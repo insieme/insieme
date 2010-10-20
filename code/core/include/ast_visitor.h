@@ -50,6 +50,12 @@
 #include "statements.h"
 #include "types.h"
 
+// Once more, gcc sucks
+#if defined WIN32
+#define TEMP_OP operator()
+#else
+#define TEMP_OP template operator()
+#endif
 
 namespace insieme {
 namespace core {
@@ -76,7 +82,7 @@ public:
 		// create cast functor instance
 		typename Ptr<const Node>::StaticCast cast;
 
-		Ptr<const Type> type = cast.template operator()<const Type, const Node>(element);
+		Ptr<const Type> type = cast.TEMP_OP<const Type, const Node>(element);
 
 		// dispatch to correct visit method
 		switch(element->getNodeType()) {
@@ -85,7 +91,7 @@ public:
 			#define CONCRETE(name) \
 				case NT_ ## name : \
 					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
-					return visit ## name (cast.template operator()<const name>(element));
+					return visit ## name (cast.TEMP_OP<const name>(element));
 
 					// take all nodes ...
 					#include "ast_nodes.def"
@@ -130,6 +136,7 @@ protected:
 
 };
 
+#undef TEMP_OP
 
 /**
  * A visitor implementation operating on node addresses instead of node
