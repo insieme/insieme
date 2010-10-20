@@ -480,26 +480,30 @@ public:
 		}
 
 		core::ExpressionPtr retLambdaExpr;
-		// this lambda is not yet in the map, we need to create it and add it to the cache
-		core::StatementPtr body = convFact.convertStmt( *funcDecl->getBody() );
 
 		vector<core::VariablePtr> params;
 		std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 			[ &params, this ] (ParmVarDecl* currParam) {
 				ConversionContext::VarDeclMap& varMap = this->convFact.ctx.varMap;
 				ConversionContext::VarDeclMap::const_iterator fit = varMap.find(currParam);
-				assert(fit == varMap.end() && "ParmVarDecl already in the parmVarMap");
 
-				core::TypePtr paramTy = this->convFact.convertType( *currParam->getOriginalType().getTypePtr() );
-				core::VariablePtr&& var = this->convFact.builder.variable( paramTy );
+				core::VariablePtr var;
+				if(fit == varMap.end()) {
+					core::TypePtr paramTy = this->convFact.convertType( *currParam->getOriginalType().getTypePtr() );
+					var = this->convFact.builder.variable( paramTy );
 
-				// Add the C name of this parameter as Annotation
-				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(currParam->getNameAsString()) );
-				// insert the variable into the parmVarMap
-				this->convFact.ctx.varMap.insert( std::make_pair(currParam,var) );
+					// Add the C name of this parameter as Annotation
+					var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(currParam->getNameAsString()) );
+					// insert the variable into the parmVarMap
+					this->convFact.ctx.varMap.insert( std::make_pair(currParam,var) );
+				} else
+					var = fit->second;
 				params.push_back( var );
 			}
 		);
+
+		// this lambda is not yet in the map, we need to create it and add it to the cache
+		core::StatementPtr body = convFact.convertStmt( *funcDecl->getBody() );
 
 		const core::ASTBuilder& builder = convFact.builder;
 		retLambdaExpr = builder.lambdaExpr( convFact.convertType( *GET_TYPE_PTR(funcDecl) ), params, body);
@@ -761,8 +765,6 @@ public:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
 			baseOp = BO_Assign;
-			DLOG(INFO) << *lhs;
-			DLOG(INFO) << *lhs->getType();
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			exprTy = core::lang::TYPE_UNIT_PTR;
@@ -2309,6 +2311,7 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 	core::TypePtr funcType = mFact.convertType( *GET_TYPE_PTR(funcDecl) );
 	// paramlist
 	core::LambdaExpr::ParamList funcParamList;
+
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[&funcParamList, &mFact] (ParmVarDecl* currParam) {
 			core::VariablePtr&& var = mFact.getASTBuilder().variable( mFact.convertType( *GET_TYPE_PTR(currParam) ) );
@@ -2346,7 +2349,7 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 		}
 	}
 
-	core::StatementPtr funcBody(NULL);
+	core::StatementPtr funcBody;
 	assert(funcDecl->getBody() && "Function Definition has no body");
 
 	funcBody = mFact.convertStmt( *funcDecl->getBody() );

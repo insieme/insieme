@@ -112,13 +112,14 @@ public:
 	const vector<XmlElement> getChildren() const;
 };
 
+typedef std::shared_ptr<XmlElement> XmlElementPtr;
 
 // ------------------------------------ XmlConverter ----------------------------
 
 class XmlConverter: public boost::noncopyable {
 	XmlConverter() { }
 public:
-	typedef std::function<std::shared_ptr<XmlElement> (const Annotation&, DOMDocument*)> IrToDomConvertType;
+	typedef std::function<XmlElementPtr (const Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
 	typedef map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
 
 	typedef std::function<std::shared_ptr<Annotation> (const XmlElement&)> DomToIrConvertType;
@@ -126,28 +127,35 @@ public:
 
 	static XmlConverter& get();
 	
-	std::shared_ptr<Annotation> domToIrAnnotation (const XmlElement& el) const;
+	AnnotationPtr domToIrAnnotation (const XmlElement& el) const;
+	XmlElementPtr irToDomAnnotation (const Annotation& ann, xercesc_3_1::DOMDocument* doc) const;
 	
-	std::shared_ptr<XmlElement> irToDomAnnotation (const Annotation& ann, DOMDocument* doc) const;
-	
-	void* registerAnnotation(std::string name, const IrToDomConvertType& toXml, const DomToIrConvertType& fromXml);
+	void* registerAnnotation(const std::string& name, const IrToDomConvertType& toXml, const DomToIrConvertType& fromXml);
 private:
 	IrToDomConvertMapType IrToDomConvertMap;
 	DomToIrConvertMapType DomToIrConvertMap;
 };
 
+template <class AnnotationTy>
+XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement& (const AnnotationTy&, XmlElement&)> toXml,
+		const Annotation& ann, xercesc_3_1::DOMDocument* doc)
+{
+	insieme::xml::XmlElementPtr node( new XmlElement("annotation", doc) );
+	node->setAttr("type", mapName);
+	toXml(dynamic_cast<const AnnotationTy&>(ann), *node);
+	return node;
+}
 
-#define XML_CONVERTER(className_, toXML_, fromXML_) \
-	shared_ptr<XmlElement> convert ## className_ ## ToXML(const Annotation& ann, xercesc::DOMDocument* doc) { \
-	const className_& annotation = dynamic_cast<const className_&>(ann); \
-	shared_ptr<XmlElement> node (new insieme::xml::XmlElement("annotation", doc)); \
-	node->setAttr("type", #className_); \
-	toXML_(annotation, *node); \
-	return node; } \
-	shared_ptr<Annotation> convert ## className_ ## FromXML(const XmlElement& node) { \
-	return fromXML_(node); } \
-	void* hack ## className_ ## hack = insieme::xml::XmlConverter::get().registerAnnotation(#className_, \
-					& convert ## className_ ## ToXML, & convert ## className_ ## FromXML);
+template <class AnnotationTy>
+AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
+	return fromXml(node);
+}
+
+#define XML_CONVERTER(CLASS_NAME, TO_XML, FROM_XML)	\
+	void* hack ## CLASS_NAME ## hack = \
+		insieme::xml::XmlConverter::get().registerAnnotation(#CLASS_NAME, \
+			std::bind(insieme::xml::convertToXML<CLASS_NAME>, #CLASS_NAME, TO_XML, std::placeholders::_1, std::placeholders::_2), \
+			std::bind(insieme::xml::convertFromXML<CLASS_NAME>, FROM_XML, std::placeholders::_1) );
 
 
 // -------------------------Xml Write - Read - Validate----------------------

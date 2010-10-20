@@ -92,8 +92,8 @@
 		<!-- Handle annotations here-->
 	</xsl:template>
 	
-	<!-- Generic visit -->
-	<xsl:template match="*" mode="link">
+	<!-- Generic statement visit -->
+	<xsl:template match="*[contains(local-name(node()),'Stmt')] | *[contains(local-name(node()),'Statement')]" mode="link">
 		<xsl:variable name="id"> <xsl:value-of select="@id"/> </xsl:variable> 
 		<xsl:for-each select="*/*[@ref]">
 			<xsl:variable name="ref"> <xsl:value-of select="@ref"/> </xsl:variable> 
@@ -102,5 +102,39 @@
 		</xsl:for-each>
 		<!-- Handle annotations here-->
 	</xsl:template>
+	
+	<!--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	    @@							   EXPRESSIONS 
+		@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ -->
+	<xsl:template match="vectorExpr" mode="link">
+		<xsl:variable name = "typeRef"> <xsl:value-of select="type/typePtr/@ref"/> </xsl:variable> 
+		<xsl:value-of select="@id"/> -> <xsl:value-of select="$typeRef"/> [label="type"];
+		<xsl:apply-templates select="//*[@id=$typeRef]" mode="link" />
+		
+		<xsl:variable name="id"> <xsl:value-of select="@id"/> </xsl:variable> 
+		<xsl:for-each select="expressions/expression">
+			<xsl:value-of select="$id"/> -> <xsl:value-of select="expressionPtr/@ref"/> [label=I<xsl:value-of select="position()"/>]; 
+			<xsl:variable name = "ref"> <xsl:value-of select="expressionPtr/@ref"/> </xsl:variable> 
+			<xsl:apply-templates select="//*[@id=$ref]" mode="link" />
+		</xsl:for-each>
+		<!-- Handle annotations here-->
+	</xsl:template>
+	
+	<!-- Generic expression visit -->
+	<xsl:template match="*[contains(local-name(node()),'Expr')]" mode="link">
+		<!-- Visit the type -->
+		<xsl:variable name = "typeRef"> <xsl:value-of select="type/typePtr/@ref"/> </xsl:variable> 
+		<xsl:value-of select="@id"/> -> <xsl:value-of select="$typeRef"/> [label="type"];
+		<xsl:apply-templates select="//*[@id=$typeRef]" mode="link" />
+		<!-- Visit child nodes -->
+		<xsl:variable name="id"> <xsl:value-of select="@id"/> </xsl:variable> 
+		<xsl:for-each select="*/*[@ref]">
+			<xsl:variable name="ref"> <xsl:value-of select="@ref"/> </xsl:variable> 
+			<xsl:value-of select="$id"/> -> <xsl:value-of select="$ref"/> [label="<xsl:value-of select="local-name(parent::*)"/>"];
+			<xsl:apply-templates select="//*[@id=$ref]" mode="link" />
+		</xsl:for-each>
+		<!-- Handle annotations here-->
+	</xsl:template>
+	
   
 </xsl:stylesheet>

@@ -24,7 +24,8 @@ include_directories(
 	${LLVM_HOME}/include 
 	${insieme_utils_include_dir} 
 	${insieme_core_include_dir} 
-	${insieme_c_info_include_dir} )
+	${insieme_c_info_include_dir}
+	${insieme_xml_include_dir} )
 	
 
 if(NOT MSVC)
@@ -69,7 +70,7 @@ endif()
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
-target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB})
+target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB} ${insieme_xml}) #FIXME XML
 
 # add dependencies
 add_dependencies( insieme_frontend insieme_core insieme_utils insieme_c_info )
@@ -89,6 +90,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} insieme_c_info)
+	target_link_libraries(ut_${case_name} insieme_xml)	# FIXME
 	target_link_libraries(ut_${case_name} boost_program_options)
 	target_link_libraries(ut_${case_name} ${clang_LIBs})
 	target_link_libraries(ut_${case_name} ${glog_LIB})

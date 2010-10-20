@@ -948,9 +948,9 @@ shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, x
 	}
 }
 
-void* XmlConverter::registerAnnotation(string name, const XmlConverter::IrToDomConvertType& toXml, const XmlConverter::DomToIrConvertType& fromXml) {
-	IrToDomConvertMap[name] = toXml;
-	DomToIrConvertMap[name] = fromXml;
+void* XmlConverter::registerAnnotation(const string& name, const XmlConverter::IrToDomConvertType& toXml, const XmlConverter::DomToIrConvertType& fromXml) {
+	IrToDomConvertMap.insert( std::make_pair(name, toXml) );
+	DomToIrConvertMap.insert( std::make_pair(name, fromXml) );
 	return NULL;
 }
 
