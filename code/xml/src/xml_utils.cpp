@@ -816,10 +816,76 @@ public:
 		visitAnnotations(cur->getAnnotations(), declarationStmt);
 	}
 	
-	/*
-	const VariablePtr& getVariable() const { return variable; }
-	const ExpressionPtr& getInitialization() const { return initExpression; }
-	*/
+	void visitJobExpr(const JobExprPtr& cur) {
+		XmlElement jobExpr("jobExpr", doc);
+		jobExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << jobExpr;
+		
+		if (const TypePtr& typeT = cur->getType()) {
+			XmlElement type("type", doc);
+			jobExpr << type;
+
+			XmlElement typePtr("typePtr", doc);
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
+			type << typePtr;
+			
+			visitAnnotations(typeT.getAnnotations(), typePtr);
+		}
+		
+		const vector<DeclarationStmtPtr>& declarationsVec = cur->getLocalDecls ();
+		if (!declarationsVec.empty()){
+			XmlElement declarations("declarations", doc);
+			jobExpr << declarations;
+			
+			for(vector<DeclarationStmtPtr>::const_iterator iter = declarationsVec.begin(); iter != declarationsVec.end(); ++iter) {
+				XmlElement declaration("declaration", doc);
+				declarations << declaration;
+
+				XmlElement declarationStmtPtr("declarationStmtPtr", doc);
+				declarationStmtPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+				declaration << declarationStmtPtr;
+			
+				visitAnnotations((*iter).getAnnotations(), declarationStmtPtr);
+			}
+		}
+		
+		const vector<JobExpr::GuardedStmt>& stmtsVec = cur->getGuardedStmts ();
+		if (!stmtsVec.empty()){
+			XmlElement guardedStatements("guardedStatements", doc);
+			jobExpr << guardedStatements;
+			
+			for(vector<JobExpr::GuardedStmt>::const_iterator iter = stmtsVec.begin(); iter != stmtsVec.end(); ++iter) {
+				XmlElement guardedStatement("guardedStatement", doc);
+				guardedStatements << guardedStatement;
+				
+				XmlElement expressionPtr("expressionPtr", doc);
+				expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+				guardedStatement << expressionPtr;
+				
+				visitAnnotations((iter->first).getAnnotations(), expressionPtr);
+				
+				XmlElement statementPtr("statementPtr", doc);
+				statementPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+				guardedStatement << statementPtr;
+				
+				visitAnnotations((iter->second).getAnnotations(), statementPtr);
+			}
+		}
+		
+		if (const StatementPtr& defaultT = cur->getDefaultStmt()) {
+			XmlElement defaultStatement("defaultStatement", doc);
+			jobExpr << defaultStatement;
+
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*defaultT)));		
+			defaultStatement << statementPtr;
+			
+			visitAnnotations(defaultT.getAnnotations(), statementPtr);
+		}
+		
+		visitAnnotations(cur->getAnnotations(), jobExpr);
+	}
+	
 	
 	/*void visitLambdaExpr(const LambdaExprPtr& cur) {
 		XmlElement lambdaExpr("lambdaExpr", doc);

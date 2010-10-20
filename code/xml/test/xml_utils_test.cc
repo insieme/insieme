@@ -962,3 +962,53 @@ TEST(XmlTest, VariableTest) {
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 }
+
+TEST(XmlTest, JobExprTest) {
+	NodeManager manager;
+	
+	JobExpr::GuardedStmts guarded;
+	
+	LiteralPtr default1 = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
+	DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
+	default1.addAnnotation(dummy_de);
+	default1->addAnnotation(dummy_dn);
+	
+	LiteralPtr expr1 = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_ee(new DummyAnnotation("expr1 e"));
+	DummyAnnotationPtr dummy_en(new DummyAnnotation("expr1 n"));
+	expr1.addAnnotation(dummy_ee);
+	expr1->addAnnotation(dummy_en);
+	
+	LiteralPtr stat1 = Literal::get(manager, "3", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat e"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat n"));
+	stat1.addAnnotation(dummy_se);
+	stat1->addAnnotation(dummy_sn);
+	
+	guarded.push_back(make_pair(expr1,stat1));
+	
+	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
+	LiteralPtr literalA = Literal::get(manager, "4", lang::TYPE_INT_4_PTR);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, var1, literalA);
+	DummyAnnotationPtr dummy_dece(new DummyAnnotation("decl e"));
+	DummyAnnotationPtr dummy_decn(new DummyAnnotation("decl n"));
+	decl.addAnnotation(dummy_dece);
+	decl->addAnnotation(dummy_decn);
+	
+	JobExpr::LocalDecls decls;
+	
+	decls.push_back(decl);
+	
+	JobExprPtr job = JobExpr::get(manager, default1, guarded, decls);
+	
+	NodePtr root = job;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
