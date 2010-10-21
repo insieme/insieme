@@ -280,13 +280,9 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-//#############################################################################
-//
-//							CLANG EXPRESSION CONVERTER
-//
-//############################################################################
-class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
-	ConversionFactory& convFact;
+struct ConversionFactory::ConversionContext {
+	typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
+	VarDeclMap varDeclMap;
 
 	// Map for resolved lambda functions
 	typedef std::map<const FunctionDecl*, core::ExpressionPtr> LambdaExprMap;
@@ -294,8 +290,8 @@ class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConvert
 
 	// this map keeps naming map between the functiondecl and the variable introduced to represent it in the
 	// recursive definition
-	typedef std::map<const FunctionDecl*, core::VariablePtr> VarMap;
-	VarMap	varMap;
+	// typedef std::map<const FunctionDecl*, core::VariablePtr> VarMap;
+	// VarMap  varMap;
 
 	utils::DependencyGraph<const FunctionDecl*> funcDepGraph;
 
@@ -303,9 +299,19 @@ class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConvert
 	RecVarExprMap recVarExprMap;
 	bool isRecSubType;
 	core::VariablePtr currVar;
+};
+
+//#############################################################################
+//
+//							CLANG EXPRESSION CONVERTER
+//
+//############################################################################
+class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
+	ConversionFactory& convFact;
+	ConversionContext& ctx;
 
 public:
-	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), isRecSubType(false) { }
+	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), ctx(*convFact.ctx) { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
@@ -390,11 +396,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
-		// we do not convert implicit casts
-		START_LOG_EXPR_CONVERSION(implCastExpr);
-		return Visit(implCastExpr->getSubExpr());
-	}
+//	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
+//		// we do not convert implicit casts
+//		START_LOG_EXPR_CONVERSION(implCastExpr);
+//		return Visit(implCastExpr->getSubExpr());
+//	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
@@ -403,161 +409,9 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.convertType( *GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
-		return convFact.builder.castExpr( type, subExpr );
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							FUNCTION DECLARATION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
-		// the function is not extern, a lambdaExpr has to be created
-		assert(funcDecl->hasBody() && "Function has no body!");
-
-		DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
-				 << "\tIsRecSubType: " << isRecSubType << std::endl
-				 << "\tEmpty map: "    << recVarExprMap.size();
-
-		if(!isRecSubType) {
-			// add this type to the type graph (if not present)
-			funcDepGraph.addNode(funcDecl);
-			if( VLOG_IS_ON(2) ) {
-				funcDepGraph.print( std::cout );
-			}
-		}
-
-		// retrieve the strongly connected components for this type
-		std::set<const FunctionDecl*>&& components = funcDepGraph.getStronglyConnectedComponents( funcDecl );
-
-		if( !components.empty() ) {
-			// we are dealing with a recursive type
-			DVLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
-					 << "Number of components in the cycle: " << components.size();
-			std::for_each(components.begin(), components.end(),
-				[ ] (std::set<const FunctionDecl*>::value_type c) {
-					DVLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
-				}
-			);
-
-			if(!isRecSubType) {
-
-				// we create a TypeVar for each type in the mutual dependence
-				recVarExprMap.insert(std::make_pair(funcDecl, convFact.builder.variable(convFact.convertType( *GET_TYPE_PTR(funcDecl) )
-						/*core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )*/))
-				);
-			} else {
-				// we expect the var name to be in currVar
-				recVarExprMap.insert(std::make_pair(funcDecl, currVar));
-			}
-
-			// when a subtype is resolved we expect to already have these variables in the map
-			if(!isRecSubType) {
-				std::for_each(components.begin(), components.end(),
-					[ this ] (std::set<const FunctionDecl*>::value_type fd) {
-
-						// we count how many variables in the map refers to overloaded versions of the same function
-						// this can happen when a function get overloaded and the cycle of recursion can happen between
-						// the overloaded version, we need unique variable for each version of the function
-//						size_t num_of_overloads = std::count_if(this->recVarExprMap.begin(), this->recVarExprMap.end(),
-//							[ &fd ] (RecVarExprMap::value_type curr) {
-//								return fd->getName() == curr.first->getName();
-//							} );
-//
-//						std::stringstream recVarName( boost::to_upper_copy(fd->getNameAsString()) );
-//						if(num_of_overloads)
-//							recVarName << num_of_overloads;
-
-						this->recVarExprMap.insert( std::make_pair(fd, this->convFact.builder.variable(convFact.convertType(*GET_TYPE_PTR(fd)))) );
-					}
-				);
-			}
-
-//			DLOG(INFO) << "MAP: ";
-//			std::for_each(recVarExprMap.begin(), recVarExprMap.end(),
-//				[] (RecVarExprMap::value_type c) {
-//					DLOG(INFO) << "\t" << c.first->getNameAsString() << "[" << (size_t) c.first << "]";
-//				}
-//			);
-		}
-
-		core::ExpressionPtr retLambdaExpr;
-
-		vector<core::VariablePtr> params;
-		std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
-			[ &params, this ] (ParmVarDecl* currParam) {
-				ConversionContext::VarDeclMap& varMap = this->convFact.ctx.varMap;
-				ConversionContext::VarDeclMap::const_iterator fit = varMap.find(currParam);
-
-				core::VariablePtr var;
-				if(fit == varMap.end()) {
-					core::TypePtr paramTy = this->convFact.convertType( *currParam->getOriginalType().getTypePtr() );
-					var = this->convFact.builder.variable( paramTy );
-
-					// Add the C name of this parameter as Annotation
-					var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(currParam->getNameAsString()) );
-					// insert the variable into the parmVarMap
-					this->convFact.ctx.varMap.insert( std::make_pair(currParam,var) );
-				} else
-					var = fit->second;
-				params.push_back( var );
-			}
-		);
-
-		// this lambda is not yet in the map, we need to create it and add it to the cache
-		core::StatementPtr body = convFact.convertStmt( *funcDecl->getBody() );
-
-		const core::ASTBuilder& builder = convFact.builder;
-		retLambdaExpr = builder.lambdaExpr( convFact.convertType( *GET_TYPE_PTR(funcDecl) ), params, body);
-
-		if( !components.empty() ) {
-			// this is a recurive function call
-			if(isRecSubType) {
-				// if we are visiting a nested recursive type it means someone else will take care
-				// of building the rectype node, we just return an intermediate type
-				return retLambdaExpr;
-			}
-
-			// we have to create a recursive type
-			RecVarExprMap::const_iterator tit = recVarExprMap.find(funcDecl);
-			assert(tit != recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
-			const core::VariablePtr& recVarRef = tit->second;
-
-			core::RecLambdaDefinition::RecFunDefs definitions;
-			definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
-
-			// We start building the recursive type. In order to avoid loop the visitor
-			// we have to change its behaviour and let him returns temporarely types
-			// when a sub recursive type is visited.
-			isRecSubType = true;
-
-			std::for_each(components.begin(), components.end(),
-				[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
-
-					RecVarExprMap::const_iterator tit = recVarExprMap.find(fd);
-					assert(tit != recVarExprMap.end() && "Recursive function has no TypeVar associated");
-					currVar = tit->second;
-
-					// we remove the variable from the list in order to fool the solver,
-					// in this way it will create a descriptor for this type (and he will not return the TypeVar
-					// associated with this recursive type). This behaviour is enabled only when the isRecSubType
-					// flag is true
-					recVarExprMap.erase(fd);
-					definitions.insert( std::make_pair(currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->VisitFunctionDecl(fd)) ) );
-
-					// reinsert the TypeVar in the map in order to solve the other recursive types
-					recVarExprMap.insert( std::make_pair(fd, currVar) );
-					currVar = NULL;
-				}
-			);
-			// we reset the behavior of the solver
-			isRecSubType = false;
-			// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
-			recVarExprMap.clear();
-
-			core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
-			retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
-		}
-
-		return retLambdaExpr;
+		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -586,38 +440,33 @@ public:
 						convFact.builder.callExpr(	funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
 				// handle eventual pragmas attached to the Clang node
 				frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
-
 				return irNode;
 			}
 
-			if(!recVarExprMap.empty()) {
+			if(!ctx.recVarExprMap.empty()) {
 				// check if this type has a typevar already associated, in such case return it
-				RecVarExprMap::const_iterator fit = recVarExprMap.find(definition);
-				if( fit != recVarExprMap.end() ) {
+				ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
+				if( fit != ctx.recVarExprMap.end() ) {
 					// we are resolving a parent recursive type, so we shouldn't
 					return builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
 				}
 			}
 
-			if(!isRecSubType) {
-				LambdaExprMap::const_iterator fit = lambdaExprCache.find(definition);
-				if(fit != lambdaExprCache.end()) {
+			if(!ctx.isRecSubType) {
+				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
+				if(fit != ctx.lambdaExprCache.end()) {
 					core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
 					// handle eventual pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
-
 					return irNode;
 				}
 			}
 
 			assert(definition && "No definition found for function");
-			core::ExpressionPtr lambdaExpr = VisitFunctionDecl(definition);
-
-			// Adding the C function name as annotation
-			lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(definition->getName()));
+			core::ExpressionPtr lambdaExpr = convFact.convertFunctionDecl(definition);
 
 			// Adding the lambda function to the list of converted functions
-			lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
+			ctx.lambdaExprCache.insert( std::make_pair(definition, lambdaExpr) );
 
 			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
@@ -964,8 +813,8 @@ public:
 		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
 			// check if the variable is in the context map
 
-			ConversionContext::VarDeclMap::const_iterator fit = convFact.ctx.varMap.find(varDecl);
-			if(fit != convFact.ctx.varMap.end()) {
+			ConversionContext::VarDeclMap::const_iterator fit = convFact.ctx->varDeclMap.find(varDecl);
+			if(fit != convFact.ctx->varDeclMap.end()) {
 				DVLOG(2) << "Variable '" << varDecl->getNameAsString() << "' found in context map";
 				return fit->second;
 			}
@@ -978,7 +827,7 @@ public:
 				varTy = builder.refType(varTy);
 
 			core::VariablePtr&& var = builder.variable(varTy);
-			convFact.ctx.varMap.insert( std::make_pair(varDecl, var) );
+			convFact.ctx->varDeclMap.insert( std::make_pair(varDecl, var) );
 			// else it is a
 			return var;
 		}
@@ -1093,7 +942,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						VARIABLE DECLARATION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::DeclarationStmtPtr VisitVarDecl(clang::VarDecl* varDecl) {
+	core::DeclarationStmtPtr convertVarDecl(clang::VarDecl* varDecl) {
 
 		// logging
 		DVLOG(1) << "\n****************************************************************************************\n"
@@ -1126,16 +975,15 @@ public:
 		}
 
 		// add this var to the map
-		DLOG(INFO) << varDecl->getNameAsString();
-		ConversionContext::VarDeclMap::const_iterator fit = convFact.ctx.varMap.find(varDecl);
-
+		ConversionContext::VarDeclMap::const_iterator fit = convFact.ctx->varDeclMap.find(varDecl);
 		core::VariablePtr var;
-		if(fit != convFact.ctx.varMap.end())
+		if(fit != convFact.ctx->varDeclMap.end())
 			var = fit->second;
 		else {
+			// variable is not in the map, create a new var and add it
 			var = convFact.builder.variable(type);
 			// add the var in the map
-			convFact.ctx.varMap.insert( std::make_pair(varDecl, var) );
+			convFact.ctx->varDeclMap.insert( std::make_pair(varDecl, var) );
 			// Add the C name of this variable as annotation
 			var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(varDecl->getNameAsString()) );
 		}
@@ -1161,13 +1009,13 @@ public:
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
-			return StmtWrapper( VisitVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) ) );
+			return StmtWrapper( convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) ) );
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-				retList.push_back( VisitVarDecl(varDecl) );
+				retList.push_back( convertVarDecl(varDecl) );
 		return retList;
 	}
 
@@ -1233,8 +1081,8 @@ public:
 			StmtWrapper&& initExpr = Visit( initStmt );
 
 			// induction variable for this loop
-			ConversionContext::VarDeclMap::const_iterator vit = convFact.ctx.varMap.find( loopAnalysis.getInductionVar() );
-			assert(vit != convFact.ctx.varMap.end());
+			ConversionContext::VarDeclMap::const_iterator vit = convFact.ctx->varDeclMap.find( loopAnalysis.getInductionVar() );
+			assert(vit != convFact.ctx->varDeclMap.end());
 			const core::VariablePtr& inductionVar = vit->second;
 
 			if( !initExpr.isSingleStmt() ) {
@@ -1326,7 +1174,7 @@ public:
 				// inside a new context
 				Expr* expr = condVarDecl->getInit();
 				condVarDecl->setInit(NULL); // set the expression to null temporarily
-				core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
+				core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
 				condVarDecl->setInit(expr);
 
 				retStmt.push_back( declStmt );
@@ -1368,7 +1216,7 @@ public:
 			//
 			// this will be converted into the following IR representation:
 			// { int a = ...; if(a){ } }
-			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
+			core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -1433,7 +1281,7 @@ public:
 			// { int a = 0; while(a = expr){ } }
 			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null temporarily
-			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
+			core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
 			condVarDecl->setInit(expr);
 
 			retStmt.push_back( declStmt );
@@ -1476,7 +1324,7 @@ public:
 		if( VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
 			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
 
-			core::DeclarationStmtPtr&& declStmt = VisitVarDecl(condVarDecl);
+			core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -2132,7 +1980,7 @@ private:
 // ------------------------------------ ConversionFactory ---------------------------
 
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList):
-	mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
+	ctx(new ConversionContext), mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
 	typeConv( new ClangTypeConverter(*this) ),
 	exprConv( new ClangExprConverter(*this) ),
 	stmtConv( new ClangStmtConverter(*this) ) { }
@@ -2272,56 +2120,104 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmV
 }
 
 ConversionFactory::~ConversionFactory() {
+	delete ctx;
 	delete typeConv;
 	delete stmtConv;
 	delete exprConv;
 }
 
-// ------------------------------------ ClangTypeConverter ---------------------------
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//						CONVERT FUNCTION DECLARATION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl) {
+	// the function is not extern, a lambdaExpr has to be created
+	assert(funcDecl->hasBody() && "Function has no body!");
+	DVLOG(1) << "#----------------------------------------------------------------------------------#";
+	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
+			 << "\tIsRecSubType: " << ctx->isRecSubType << std::endl
+			 << "\tEmpty map: "    << ctx->recVarExprMap.size();
 
-void IRConverter::handleTopLevelDecl(clang::DeclContext* declCtx) {
-
-	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
-		Decl* decl = *it;
-		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
-
-			// finds a definition of this function if any
-			const FunctionDecl* definition = NULL;
-			// if this function is just a declaration, and it has no definition, we just skip it
-			if(!funcDecl->hasBody(definition))
-				continue;
-
-			core::LambdaExprPtr lambdaExpr = handleFunctionDecl(definition);
-			if(definition->isMain())
-				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
+	if(!ctx->isRecSubType) {
+		// add this type to the type graph (if not present)
+		ctx->funcDepGraph.addNode(funcDecl);
+		if( VLOG_IS_ON(2) ) {
+			ctx->funcDepGraph.print( std::cout );
 		}
-//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-//			fact.convertType( *varDecl->getType().getTypePtr() );
-//		}
 	}
 
-}
+	// retrieve the strongly connected components for this type
+	std::set<const FunctionDecl*>&& components = ctx->funcDepGraph.getStronglyConnectedComponents( funcDecl );
 
-core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl) {
-	DVLOG(1) << "**************************************************************************";
-	DVLOG(1) << "Encountered function declaration '" << funcDecl->getNameAsString() << "': "
-			 << frontend::utils::location( funcDecl->getLocStart(), mClangComp.getSourceManager() );
-	DVLOG(1) << "\t* Converting body";
+	if( !components.empty() ) {
+		// we are dealing with a recursive type
+		DVLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
+				 << "Number of components in the cycle: " << components.size();
+		std::for_each(components.begin(), components.end(),
+			[ ] (std::set<const FunctionDecl*>::value_type c) {
+				DVLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+			}
+		);
 
-	core::TypePtr funcType = mFact.convertType( *GET_TYPE_PTR(funcDecl) );
-	// paramlist
-	core::LambdaExpr::ParamList funcParamList;
+		if(!ctx->isRecSubType) {
+			// we create a TypeVar for each type in the mutual dependence
+			ctx->recVarExprMap.insert(std::make_pair(funcDecl, builder.variable( convertType( *GET_TYPE_PTR(funcDecl) )
+					/*core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )*/))
+			);
+		} else {
+			// we expect the var name to be in currVar
+			ctx->recVarExprMap.insert(std::make_pair(funcDecl, ctx->currVar));
+		}
 
+		// when a subtype is resolved we expect to already have these variables in the map
+		if(!ctx->isRecSubType) {
+			std::for_each(components.begin(), components.end(),
+				[ this ] (std::set<const FunctionDecl*>::value_type fd) {
+
+					// we count how many variables in the map refers to overloaded versions of the same function
+					// this can happen when a function get overloaded and the cycle of recursion can happen between
+					// the overloaded version, we need unique variable for each version of the function
+//						size_t num_of_overloads = std::count_if(this->recVarExprMap.begin(), this->recVarExprMap.end(),
+//							[ &fd ] (RecVarExprMap::value_type curr) {
+//								return fd->getName() == curr.first->getName();
+//							} );
+//
+//						std::stringstream recVarName( boost::to_upper_copy(fd->getNameAsString()) );
+//						if(num_of_overloads)
+//							recVarName << num_of_overloads;
+
+					this->ctx->recVarExprMap.insert( std::make_pair(fd, this->builder.variable( this->convertType(*GET_TYPE_PTR(fd))) ) );
+				}
+			);
+		}
+
+//			DLOG(INFO) << "MAP: ";
+//			std::for_each(recVarExprMap.begin(), recVarExprMap.end(),
+//				[] (RecVarExprMap::value_type c) {
+//					DLOG(INFO) << "\t" << c.first->getNameAsString() << "[" << (size_t) c.first << "]";
+//				}
+//			);
+	}
+
+	core::ExpressionPtr retLambdaExpr;
+
+	vector<core::VariablePtr> params;
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
-		[&funcParamList, &mFact] (ParmVarDecl* currParam) {
-			core::VariablePtr&& var = mFact.getASTBuilder().variable( mFact.convertType( *GET_TYPE_PTR(currParam) ) );
-			// TODO: Add to map
-			funcParamList.push_back(var);
+		[ &params, this ] (ParmVarDecl* currParam) {
+			ConversionContext::VarDeclMap& varDeclMap = this->ctx->varDeclMap;
+			ConversionContext::VarDeclMap::const_iterator fit = varDeclMap.find(currParam);
 
-			//port clang attributes to IR annotations
-			core::AnnotationPtr attr = mFact.convertClangAttributes(currParam);
-			if(attr)
-				 funcParamList.back()->addAnnotation(attr);
+			core::VariablePtr var;
+			if(fit == varDeclMap.end()) {
+				core::TypePtr paramTy = this->convertType( *currParam->getOriginalType().getTypePtr() );
+				var = this->builder.variable( paramTy );
+
+				// Add the C name of this parameter as Annotation
+				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(currParam->getNameAsString()) );
+				// insert the variable into the parmVarMap
+				varDeclMap.insert( std::make_pair(currParam,var) );
+			} else
+				var = fit->second;
+			params.push_back( var );
 		}
 	);
 
@@ -2349,23 +2245,101 @@ core::LambdaExprPtr IRConverter::handleFunctionDecl(const clang::FunctionDecl* f
 		}
 	}
 
-	core::StatementPtr funcBody;
-	assert(funcDecl->getBody() && "Function Definition has no body");
+	// this lambda is not yet in the map, we need to create it and add it to the cache
+	core::StatementPtr body = convertStmt( *funcDecl->getBody() );
 
-	funcBody = mFact.convertStmt( *funcDecl->getBody() );
-	core::LambdaExprPtr&& lambdaExpr = mFact.getASTBuilder().lambdaExpr(funcType, funcParamList, funcBody);
-    // if OpenCL related annotations have been found, create OclBaseAnnotation and
-    // add it to the funciton's attribute
-    if(kernelAnnotation.size() > 0)
-        lambdaExpr.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
-	// annotate name of function
-	lambdaExpr.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(funcDecl->getName()));
-	return lambdaExpr;
+	retLambdaExpr = builder.lambdaExpr( convertType( *GET_TYPE_PTR(funcDecl) ), params, body);
+
+	if( !components.empty() ) {
+		// this is a recurive function call
+		if(ctx->isRecSubType) {
+			// if we are visiting a nested recursive type it means someone else will take care
+			// of building the rectype node, we just return an intermediate type
+			return retLambdaExpr;
+		}
+
+		// we have to create a recursive type
+		ConversionContext::RecVarExprMap::const_iterator tit = ctx->recVarExprMap.find(funcDecl);
+		assert(tit != ctx->recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
+		const core::VariablePtr& recVarRef = tit->second;
+
+		core::RecLambdaDefinition::RecFunDefs definitions;
+		definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
+
+		// We start building the recursive type. In order to avoid loop the visitor
+		// we have to change its behaviour and let him returns temporarely types
+		// when a sub recursive type is visited.
+		ctx->isRecSubType = true;
+
+		std::for_each(components.begin(), components.end(),
+			[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
+
+				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
+				assert(tit != this->ctx->recVarExprMap.end() && "Recursive function has no TypeVar associated");
+				this->ctx->currVar = tit->second;
+
+				// we remove the variable from the list in order to fool the solver,
+				// in this way it will create a descriptor for this type (and he will not return the TypeVar
+				// associated with this recursive type). This behaviour is enabled only when the isRecSubType
+				// flag is true
+				this->ctx->recVarExprMap.erase(fd);
+				definitions.insert( std::make_pair(this->ctx->currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->convertFunctionDecl(fd)) ) );
+
+				// reinsert the TypeVar in the map in order to solve the other recursive types
+				this->ctx->recVarExprMap.insert( std::make_pair(fd, this->ctx->currVar) );
+				this->ctx->currVar = NULL;
+			}
+		);
+		// we reset the behavior of the solver
+		ctx->isRecSubType = false;
+		// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
+		ctx->recVarExprMap.clear();
+
+		core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+		retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
+	}
+
+	// ---------------------- Add annotations to this function ------------------------------
+	// --------------------------------- OPENCL ---------------------------------------------
+	// if OpenCL related annotations have been found, create OclBaseAnnotation and
+	// add it to the funciton's attribute
+	if(!kernelAnnotation.empty())
+		retLambdaExpr.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+
+	// --------------------------------- C NAME ----------------------------------------------
+	// annotate with the C name of the function
+	retLambdaExpr.addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+
+	return retLambdaExpr;
+}
+
+// ------------------------------------ ClangTypeConverter ---------------------------
+
+void IRConverter::handleTopLevelDecl(const clang::DeclContext* declCtx) {
+
+	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
+		Decl* decl = *it;
+		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+			// finds a definition of this function if any
+			const FunctionDecl* definition = NULL;
+			// if this function is just a declaration, and it has no definition, we just skip it
+			if(!funcDecl->hasBody(definition))
+				continue;
+
+			core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
+			if(definition->isMain())
+				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
+		}
+//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+//			fact.convertType( *varDecl->getType().getTypePtr() );
+//		}
+	}
+
 }
 
 core::LambdaExprPtr IRConverter::handleBody(const clang::Stmt* body) {
 	core::StatementPtr&& bodyStmt = mFact.convertStmt( *body );
-	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), std::vector<core::StatementPtr>( {bodyStmt} ), core::lang::TYPE_UNIT);
+	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), toVector<core::StatementPtr>(bodyStmt), core::lang::TYPE_UNIT);
 
 	return core::dynamic_pointer_cast<const core::LambdaExpr>(callExpr->getFunctionExpr());
 }
