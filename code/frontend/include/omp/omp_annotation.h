@@ -73,19 +73,15 @@ DEFINE_TYPE(For);
  *
  * The omp::BaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
  */
-class BaseAnnotation : public core::Annotation {
+class BaseAnnotation : public core::CompoundAnnotation< omp::Annotation > {
 public:
-	typedef std::vector<AnnotationPtr> AnnotationList;
     static const core::StringKey<BaseAnnotation> KEY;
 
-    BaseAnnotation(const AnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
+    BaseAnnotation(const core::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
+    	core::CompoundAnnotation< omp::Annotation >(annotationList) { }
+
     const core::AnnotationKey* getKey() const { return &KEY; }
 	const std::string getAnnotationName() const { return "OmpAnnotation"; }
-
-    //Iterator to access annotationList elements
-    AnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
-    const AnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
-
 private:
 	AnnotationList annotationList;
 };
@@ -215,8 +211,8 @@ public:
 };
 
 class CommonClause {
-	VarListPtr			privateClause;
-	VarListPtr			firstPrivateClause;
+	VarListPtr	privateClause;
+	VarListPtr	firstPrivateClause;
 public:
 	CommonClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause):
 			privateClause(privateClause), firstPrivateClause(firstPrivateClause) { }
@@ -232,7 +228,7 @@ public:
  * OpenMP 'parallel' clause
  */
 class Parallel: public Annotation, private CommonClause, private ParallelClause {
-	ReductionPtr		reductionClause;
+	ReductionPtr reductionClause;
 public:
 	Parallel(const core::ExpressionPtr& ifClause,
 		const core::ExpressionPtr& numThreadClause,
@@ -255,7 +251,7 @@ public:
  * OpenMP 'for' clause
  */
 class For: public Annotation, private CommonClause, private ForClause {
-	ReductionPtr	reductionClause;
+	ReductionPtr reductionClause;
 public:
 	For(const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
@@ -277,7 +273,7 @@ public:
  * OpenMP 'parallel for' clause
  */
 class ParallelFor: public Annotation, private CommonClause, private ParallelClause, private ForClause {
-	ReductionPtr		reductionClause;
+	ReductionPtr reductionClause;
 public:
 	ParallelFor(const core::ExpressionPtr& ifClause,
 		const core::ExpressionPtr& numThreadClause,
@@ -301,9 +297,9 @@ public:
 };
 
 class SectionClause {
-	VarListPtr			lastPrivateClause;
-	ReductionPtr		reductionClause;
-	bool 				noWait;
+	VarListPtr		lastPrivateClause;
+	ReductionPtr	reductionClause;
+	bool 			noWait;
 
 public:
 	SectionClause(const VarListPtr& lastPrivateClause,
@@ -370,8 +366,8 @@ public:
  * OpenMP 'single' clause
  */
 class Single: public Annotation, private CommonClause {
-	VarListPtr			copyPrivateClause;
-	bool 				noWait;
+	VarListPtr	copyPrivateClause;
+	bool 		noWait;
 public:
 	Single(const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
@@ -392,7 +388,7 @@ public:
  * OpenMP 'task' clause
  */
 class Task: public Annotation, private CommonClause, private SharedParallelAndTaskClause {
-	bool 				untied;
+	bool 		untied;
 public:
 	Task(const core::ExpressionPtr& ifClause,
 		bool untied,

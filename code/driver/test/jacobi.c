@@ -109,8 +109,9 @@ int main(int argc, char** argv) {
 		#pragma omp for reduction(+: norm)
 		for (i=1; i<N-1; i++)
 			for (int j=1; j<N-1; j++)
+#pragma insieme mark
 				norm += pow( res[i][j], 2 );
-		
+
 		resv = sqrt(norm)/(N-1);
 
 		#pragma omp barrier

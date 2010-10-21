@@ -83,6 +83,28 @@ public:
 
 };
 
+/**
+ * An abstract base class for compound annotations to be attached to a AST node or pointer.
+ * A compound annotation is used to store multiple informations with has the same key to
+ * the same IR node or pointer. Useful to encode both OpenMP and OpenCL annotations.
+ */
+template <class SubAnnTy>
+class CompoundAnnotation: public Annotation {
+public:
+	typedef std::shared_ptr<SubAnnTy> SubAnnotationPtr;
+	typedef std::vector<SubAnnotationPtr> AnnotationList;
+
+	CompoundAnnotation(const AnnotationList& annotationList) : Annotation(), annotationList(annotationList) { }
+
+	virtual const AnnotationKey* getKey() const = 0;
+	virtual const std::string getAnnotationName() const = 0;
+
+	typename AnnotationList::const_iterator getAnnotationListBegin() const { return annotationList.cbegin(); }
+	typename AnnotationList::const_iterator getAnnotationListEnd() const { return annotationList.cend(); }
+
+private:
+	AnnotationList annotationList;
+};
 
 // Some type definitions for combined types required for handling annotations
 typedef std::shared_ptr<Annotation> AnnotationPtr;

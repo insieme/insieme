@@ -64,8 +64,8 @@ TEST(ocl_properties, FunctionAnnotations) {
 
 
     if(ocl::BaseAnnotationPtr oclKernelAnnotation = std::dynamic_pointer_cast<ocl::BaseAnnotation>(oa)) {
-        for(ocl::BaseAnnotation::AnnotationList::const_iterator I = oclKernelAnnotation->getListBegin();
-                I < oclKernelAnnotation->getListEnd(); ++I) {
+        for(ocl::BaseAnnotation::AnnotationList::const_iterator I = oclKernelAnnotation->getAnnotationListBegin();
+                I < oclKernelAnnotation->getAnnotationListEnd(); ++I) {
             ocl::AnnotationPtr ocl = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I);
             if(ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::KernelFctAnnotation>(ocl))
                 EXPECT_TRUE(kf->isKernelFct());
@@ -92,8 +92,8 @@ TEST(ocl_properties, DeclarationAnnotations) {
 
     auto declarationAnnotation = declaration.getAnnotation(ocl::BaseAnnotation::KEY);
 
-    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getListBegin();
-            I < declarationAnnotation->getListEnd(); ++I) {
+    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
+            I < declarationAnnotation->getAnnotationListEnd(); ++I) {
         if(ocl::AddressSpaceAnnotationPtr as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
             EXPECT_EQ(ocl::AddressSpaceAnnotation::addressSpace::PRIVATE, as->getAddressSpace());
         }

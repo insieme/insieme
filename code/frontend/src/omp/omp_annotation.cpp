@@ -50,7 +50,7 @@ xml::XmlElement& ompToXml(const BaseAnnotation& ann, xml::XmlElement& el) {
 	xml::XmlElement entries("pragmas", el.getDoc());
 	el << entries;
 
-	for (BaseAnnotation::AnnotationList::const_iterator it = ann.getListBegin(); it != ann.getListEnd(); ++it) {
+	for (BaseAnnotation::AnnotationList::const_iterator it = ann.getAnnotationListBegin(); it != ann.getAnnotationListEnd(); ++it) {
 		xml::XmlElement entry("pragma", el.getDoc());
 		(*it)->toXml(entry);
 		entries << entry;

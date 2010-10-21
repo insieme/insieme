@@ -52,21 +52,15 @@ DEFINE_TYPE(KernelFctAnnotation);
 DEFINE_TYPE(WorkGroupSizeAnnotation);
 DEFINE_TYPE(AddressSpaceAnnotation);
 
-class BaseAnnotation : public core::Annotation {
+class BaseAnnotation : public core::CompoundAnnotation<ocl::Annotation> {
 public:
-    typedef std::vector<AnnotationPtr> AnnotationList;
     static const core::StringKey<BaseAnnotation> KEY;
 
-    BaseAnnotation(AnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
+    BaseAnnotation(core::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
+    	core::CompoundAnnotation<ocl::Annotation>(annotationList) { }
+
     const core::AnnotationKey* getKey() const { return &KEY; }
-    const std::string getAnnotationName() const { return "OmpAnnotation"; }
-
-    //Iterator to access annotationList elements
-    AnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
-    const AnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
-private:
-    AnnotationList annotationList;
-
+    const std::string getAnnotationName() const { return "OclAnnotation"; }
 };
 
 
@@ -74,7 +68,7 @@ private:
  ** */
 class Annotation {
     //needed to make OclAnnotation polymorphic
-    virtual const std::string getAnnotationName() const { return "OclAnnotation"; };
+    virtual const std::string getAnnotationName() const = 0;
 };
 
 
