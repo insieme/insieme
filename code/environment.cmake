@@ -26,7 +26,11 @@ link_directories(${Boost_LIBRARY_DIRS})
 # glog
 if(MSVC)
 	include_directories( ${GLOG_HOME}/src/windows )
-	set(glog_LIB ${GLOG_HOME}/Release/libglog_static.lib)
+	if (CMAKE_CXX_FLAGS_RELEASE)
+		set(glog_LIB ${GLOG_HOME}/Release/libglog_static.lib)
+	else (CMAKE_CXX_FLAGS_RELEASE)
+		set(glog_LIB ${GLOG_HOME}/Debug/libglog_static.lib)
+	endif (CMAKE_CXX_FLAGS_RELEASE)
 else()
 	include_directories( $ENV{GLOG_HOME}/include )
 	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
@@ -51,6 +55,8 @@ if(MSVC)
 	add_definitions( /Od )
 	# disable some warnings
 	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
+	# Boost: No auto-lib
+	add_definitions( /DBOOST_ALL_NO_LIB )
 	# disable warning "assignment operator could not be generated"
 	add_definitions( /wd"4512" )
 	# disable warning "nonstandard extension: enum '[EnumName::ENUM]' used in qualified name"	

@@ -959,7 +959,79 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), program);
 	}
+	
+	void visitRecLambdaExpr(const RecLambdaExprPtr& cur) {
+		XmlElement recLambdaExpr("recLambdaExpr", doc);
+		recLambdaExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << recLambdaExpr;
+		
+		if (const TypePtr& typeT = cur->getType()) {
+			XmlElement type("type", doc);
+			recLambdaExpr << type;
 
+			XmlElement typePtr("typePtr", doc);
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
+			type << typePtr;
+			
+			visitAnnotations(typeT.getAnnotations(), typePtr);
+		}
+		
+		if (const VariablePtr& varT = cur->getVariable()) {
+			XmlElement variable("variable", doc);
+			recLambdaExpr << variable;
+
+			XmlElement variablePtr("variablePtr", doc);
+			variablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*varT)));		
+			variable << variablePtr;
+			
+			visitAnnotations(varT.getAnnotations(), variablePtr);
+		}
+		
+		if (const RecLambdaDefinitionPtr& recT = cur->getDefinition()) {
+			XmlElement definition("definition", doc);
+			recLambdaExpr << definition;
+
+			XmlElement recLambdaDefinitionPtr("recLambdaDefinitionPtr", doc);
+			recLambdaDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*recT)));		
+			definition << recLambdaDefinitionPtr;
+			
+			visitAnnotations(recT.getAnnotations(), recLambdaDefinitionPtr);
+		}
+
+		visitAnnotations(cur->getAnnotations(), recLambdaExpr);
+	}
+
+	void visitRecLambdaDefinition(const RecLambdaDefinitionPtr& cur) {
+		XmlElement recLambdaDefinition("recLambdaDefinition", doc);
+		recLambdaDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << recLambdaDefinition;
+		
+		const RecLambdaDefinition::RecFunDefs& defs = cur->getDefinitions();
+		if (!defs.empty()){
+			XmlElement definitions("definitions", doc);
+			recLambdaDefinition << definitions;
+			
+			for(RecLambdaDefinition::RecFunDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
+				XmlElement definition("definition", doc);
+				definitions << definition;
+				
+				XmlElement variablePtr("variablePtr", doc);
+				variablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+				definition << variablePtr;
+				
+				visitAnnotations((iter->first).getAnnotations(), variablePtr);
+				
+				XmlElement lambdaExprPtr("lambdaExprPtr", doc);
+				lambdaExprPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+				definition << lambdaExprPtr;
+				
+				visitAnnotations((iter->second).getAnnotations(), lambdaExprPtr);
+			}
+		}
+		
+		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
+	}
+	
 };
 
 class error_handler: public DOMErrorHandler {

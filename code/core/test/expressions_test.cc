@@ -50,8 +50,8 @@ namespace core {
 using namespace insieme::core::lang;
 using namespace insieme::utils::set;
 
-template<typename PT>
-void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children = Node::ChildList());
+//template<typename PT>
+//void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children);
 
 
 TEST(ExpressionsTest, IntLiterals) {
@@ -202,7 +202,7 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
 
 	// test definition node
-	typedef typename std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> Set;
+	typedef std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> Set;
 	EXPECT_TRUE( equal(toSet<Set, NodePtr>(evenVar, evenLambda, oddVar, oddLambda), asSet<Set>(definition->getChildList())) );
 
 	// create recursive lambda nodes
