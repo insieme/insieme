@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 #include "xml_utils.h"
 #include "lang_basic.h"
+#include "ast_builder.h"
 #include <xercesc/util/XercesDefs.hpp>
 
 using namespace std;
@@ -1076,6 +1077,63 @@ TEST(XmlTest, ProgramTest) {
 	program->addAnnotation(dummy_pn);
 
 	NodePtr root = program;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+}
+
+TEST(XmlTest, RecLambdaExprTest) {
+	ASTBuilder builder;
+
+	// create a recursive even/odd example
+	TupleTypePtr argumentType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR));
+	FunctionTypePtr functionType = builder.functionType(argumentType, lang::TYPE_BOOL_PTR);
+	VariablePtr evenVar = builder.variable(functionType, 1);
+	VariablePtr oddVar = builder.variable(functionType, 2);
+
+
+	LambdaExpr::ParamList param;
+	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
+
+	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
+	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
+
+	// build even body ...
+	StatementPtr evenBody = builder.ifStmt(condition,
+			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
+			builder.returnStmt(
+					builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
+							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, oddVar, toVector<ExpressionPtr>(x))))
+			)
+	);
+	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
+
+	// build odd body ...
+	StatementPtr oddBody = builder.ifStmt(condition,
+				builder.returnStmt(lang::CONST_BOOL_FALSE_PTR),
+				builder.returnStmt(
+						builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
+								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evenVar, toVector<ExpressionPtr>(x))))
+				)
+	);
+	LambdaExprPtr oddLambda = builder.lambdaExpr(functionType, param, oddBody);
+
+	// finish definition
+	RecLambdaDefinition::RecFunDefs definitions;
+	definitions.insert(std::make_pair(evenVar, evenLambda));
+	definitions.insert(std::make_pair(oddVar, oddLambda));
+	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+	
+	// create recursive lambda nodes
+	RecLambdaExprPtr even = builder.recLambdaExpr(evenVar, definition);
+	RecLambdaExprPtr odd  = builder.recLambdaExpr(oddVar,  definition);
+	
+	NodePtr root = even;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);

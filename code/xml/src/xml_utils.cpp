@@ -960,7 +960,7 @@ public:
 		visitAnnotations(cur->getAnnotations(), program);
 	}
 	
-/*	void visitRecLambdaExpr(const RecLambdaExpr& cur) {
+	void visitRecLambdaExpr(const RecLambdaExprPtr& cur) {
 		XmlElement recLambdaExpr("recLambdaExpr", doc);
 		recLambdaExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recLambdaExpr;
@@ -981,7 +981,7 @@ public:
 			recLambdaExpr << variable;
 
 			XmlElement variablePtr("variablePtr", doc);
-			variablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
+			variablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*varT)));		
 			variable << variablePtr;
 			
 			visitAnnotations(varT.getAnnotations(), variablePtr);
@@ -999,8 +999,7 @@ public:
 		}
 
 		visitAnnotations(cur->getAnnotations(), recLambdaExpr);
-		
-	}*/
+	}
 };
 
 class error_handler: public DOMErrorHandler {
