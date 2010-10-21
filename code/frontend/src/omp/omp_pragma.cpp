@@ -57,11 +57,11 @@ using namespace insieme::frontend;
 using namespace insieme::frontend::omp;
 
 #define OMP_PRAGMA(TYPE) 	\
-struct Omp ## TYPE: public OmpPragma { \
-	Omp##TYPE(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,	\
+struct OmpPragma ## TYPE: public OmpPragma { \
+	OmpPragma ## TYPE(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,	\
 		   const std::string& name, const insieme::frontend::MatchMap& mmap):	\
 		OmpPragma(startLoc, endLoc, name, mmap) { }	\
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const; 	\
+	virtual AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const; 	\
 }
 
 // Defines basic OpenMP pragma types which will be created by the pragma_matcher class
@@ -207,46 +207,46 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// Add an handler for pragma omp parallel:
 	// #pragma omp parallel [clause[ [, ]clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpParallel>(pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaParallel>(pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp"));
 
 	// omp for
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpFor>(pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFor>(pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp"));
 
 	// #pragma omp sections [clause[[,] clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpSections>(pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSections>(pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp"));
 
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpSection>(pp.getIdentifierInfo("section"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSection>(pp.getIdentifierInfo("section"), tok::eom, "omp"));
 
 	// omp single
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpSingle>(pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSingle>(pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp"));
 
 	// #pragma omp task [clause[[,] clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpTask>(pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTask>(pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp"));
 
 	// #pragma omp master new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpMaster>(pp.getIdentifierInfo("master"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaMaster>(pp.getIdentifierInfo("master"), tok::eom, "omp"));
 
 	// #pragma omp critical [(name)] new-line
-	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpCritical>(pp.getIdentifierInfo("critical"),
+	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaCritical>(pp.getIdentifierInfo("critical"),
 					!(l_paren >> identifier >> r_paren) >> tok::eom, "omp"));
 
 	//#pragma omp barrier new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpBarrier>(pp.getIdentifierInfo("barrier"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaBarrier>(pp.getIdentifierInfo("barrier"), tok::eom, "omp"));
 
 	// #pragma omp taskwait newline
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpTaskWait>(pp.getIdentifierInfo("taskwait"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTaskWait>(pp.getIdentifierInfo("taskwait"), tok::eom, "omp"));
 
 	// #pragma omp atimic newline
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpAtomic>(pp.getIdentifierInfo("atomic"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaAtomic>(pp.getIdentifierInfo("atomic"), tok::eom, "omp"));
 
 	// #pragma omp flush [(list)] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpFlush>(pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFlush>(pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp"));
 
 	// #pragma omp ordered new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpOrdered>(pp.getIdentifierInfo("ordered"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaOrdered>(pp.getIdentifierInfo("ordered"), tok::eom, "omp"));
 
 	// #pragma omp threadprivate(list) new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
 }
 
 /**
@@ -255,19 +255,19 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
  */
 void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
-	std::pair< PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator > iter = pragmaStmtMap.equal_range(clangNode);
+	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
-	omp::annotation::OmpBaseAnnotation::OmpAnnotationList anns;
+	omp::BaseAnnotation::AnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
-			const ::OmpPragma* ompPragma = dynamic_cast<const ::OmpPragma*>(&*(curr.second));
+			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>(&*(curr.second));
 			if(ompPragma) {
 				VLOG(1) << "Statement has an OpenMP pragma attached";
 				anns.push_back( ompPragma->toAnnotation(fact) );
 			}
 	});
 
-	irNode.addAnnotation( std::shared_ptr<core::Annotation>((new omp::annotation::OmpBaseAnnotation(anns))) );
+	irNode.addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 }
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
@@ -294,8 +294,7 @@ using namespace insieme::frontend;
 /**
  * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
  */
-omp::annotation::VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
-	using namespace omp::annotation;
+VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
 
 	auto fit = mmap.find(key);
 	if(fit == mmap.end())
@@ -319,12 +318,11 @@ omp::annotation::VarListPtr handleIdentifierList(const MatchMap& mmap, const std
 
 // reduction(operator: list)
 // operator = + or - or * or & or | or ^ or && or ||
-omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
-	using namespace omp::annotation;
+ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
 
 	auto fit = mmap.find("reduction");
 	if(fit == mmap.end())
-		return OmpReductionPtr();
+		return ReductionPtr();
 
 	// we have a reduction
 	// check the operator
@@ -336,26 +334,25 @@ omp::annotation::OmpReductionPtr handleReductionClause(const MatchMap& mmap, con
 	std::string* opStr = opVar.front()->get<std::string*>();
 	assert(opStr && "Reduction clause with no operator");
 
-	OmpReduction::Operator op;
-	if(*opStr == "+")		op = OmpReduction::PLUS;
-	else if(*opStr == "-")	op = OmpReduction::MINUS;
-	else if(*opStr == "*")	op = OmpReduction::STAR;
-	else if(*opStr == "&")	op = OmpReduction::AND;
-	else if(*opStr == "|")	op = OmpReduction::OR;
-	else if(*opStr == "^")	op = OmpReduction::XOR;
-	else if(*opStr == "&&")	op = OmpReduction::LAND;
-	else if(*opStr == "||")	op = OmpReduction::LOR;
+	Reduction::Operator op;
+	if(*opStr == "+")		op = Reduction::PLUS;
+	else if(*opStr == "-")	op = Reduction::MINUS;
+	else if(*opStr == "*")	op = Reduction::STAR;
+	else if(*opStr == "&")	op = Reduction::AND;
+	else if(*opStr == "|")	op = Reduction::OR;
+	else if(*opStr == "^")	op = Reduction::XOR;
+	else if(*opStr == "&&")	op = Reduction::LAND;
+	else if(*opStr == "||")	op = Reduction::LOR;
 	else assert(false && "Reduction operator not supported.");
 
-	return OmpReductionPtr( new OmpReduction(op, handleIdentifierList(mmap, "reduction", fact)) );
+	return std::make_shared<Reduction>(op, handleIdentifierList(mmap, "reduction", fact));
 }
 
 core::ExpressionPtr handleSingleExpression(const MatchMap& mmap,  const std::string& key, conversion::ConversionFactory& fact) {
-	using namespace omp::annotation;
 
 	auto fit = mmap.find(key);
 	if(fit == mmap.end())
-		return core::ExpressionPtr(NULL);
+		return core::ExpressionPtr();
 
 	// we have an expression
 	const ValueList& expr = fit->second;
@@ -366,35 +363,34 @@ core::ExpressionPtr handleSingleExpression(const MatchMap& mmap,  const std::str
 }
 
 // schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
-omp::annotation::OmpSchedulePtr handleScheduleClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
-	using namespace omp::annotation;
+SchedulePtr handleScheduleClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
 
 	auto fit = mmap.find("schedule");
 	if(fit == mmap.end())
-		return OmpSchedulePtr();
+		return SchedulePtr();
 
 	// we have a schedule clause
 	const ValueList& kind = fit->second;
 	assert(kind.size() == 1);
 	std::string& kindStr = *kind.front()->get<std::string*>();
 
-	OmpSchedule::Kind k;
+	Schedule::Kind k;
 	if(kindStr == "static")
-		k = OmpSchedule::STATIC;
+		k = Schedule::STATIC;
 	else if (kindStr == "dynamic")
-		k = OmpSchedule::DYNAMIC;
+		k = Schedule::DYNAMIC;
 	else if (kindStr == "guided")
-		k = OmpSchedule::GUIDED;
+		k = Schedule::GUIDED;
 	else if (kindStr == "auto")
-		k = OmpSchedule::AUTO;
+		k = Schedule::AUTO;
 	else if (kindStr == "runtime")
-		k = OmpSchedule::RUNTIME;
+		k = Schedule::RUNTIME;
 	else
 		assert(false && "Unsupported scheduling kind");
 
 	// check for chunk_size expression
 	core::ExpressionPtr chunkSize = handleSingleExpression(mmap, "chunk_size", fact);
-	return OmpSchedulePtr( new OmpSchedule(k, chunkSize) );
+	return std::make_shared<Schedule>(k, chunkSize);
 }
 
 bool hasKeyword(const MatchMap& mmap, const std::string& key) {
@@ -402,27 +398,26 @@ bool hasKeyword(const MatchMap& mmap, const std::string& key) {
 	return fit != mmap.end();
 }
 
-omp::annotation::OmpDefaultPtr handleDefaultClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
-	using namespace omp::annotation;
+DefaultPtr handleDefaultClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
 
 	auto fit = mmap.find("default");
 	if(fit == mmap.end())
-		return OmpDefaultPtr();
+		return DefaultPtr();
 
 	// we have a schedule clause
 	const ValueList& kind = fit->second;
 	assert(kind.size() == 1);
 	std::string& kindStr = *kind.front()->get<std::string*>();
 
-	OmpDefault::Kind k;
+	Default::Kind k;
 	if(kindStr == "shared")
-		k = OmpDefault::SHARED;
+		k = Default::SHARED;
 	else if(kindStr == "none")
-		k = OmpDefault::NONE;
+		k = Default::NONE;
 	else
 		assert(false && "Unsupported default kind");
 
-	return OmpDefaultPtr( new OmpDefault(k) );
+	return std::make_shared<Default>(k);
 }
 
 
@@ -434,15 +429,14 @@ omp::annotation::OmpDefaultPtr handleDefaultClause(const MatchMap& mmap, convers
 // shared(list)
 // copyin(list)
 // reduction(operator: list)
-omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 	// check for if clause
 	core::ExpressionPtr	ifClause = handleSingleExpression(map, "if", fact);
 	// check for num_threads clause
 	core::ExpressionPtr	numThreadsClause = handleSingleExpression(map, "num_threads", fact);
 	// check for default clause
-	OmpDefaultPtr defaultClause = handleDefaultClause(map, fact);
+	DefaultPtr defaultClause = handleDefaultClause(map, fact);
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
 	// check for firstprivate clause
@@ -452,23 +446,23 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 	// check for copyin clause
 	VarListPtr copyinClause = handleIdentifierList(map, "copyin", fact);
 	// check for reduction clause
-	OmpReductionPtr reductionClause = handleReductionClause(map, fact);
+	ReductionPtr reductionClause = handleReductionClause(map, fact);
 
 	// check for 'for'
 	if(hasKeyword(map, "for")) {
 		// this is a parallel for
 		VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
 		// check for schedule clause
-		OmpSchedulePtr scheduleClause = handleScheduleClause(map, fact);
+		SchedulePtr scheduleClause = handleScheduleClause(map, fact);
 		// check for collapse cluase
 		core::ExpressionPtr	collapseClause = handleSingleExpression(map, "collapse", fact);
 		// check for nowait keyword
 		bool noWait = hasKeyword(map, "nowait");
 
-		return OmpAnnotationPtr(
-			new omp::annotation::OmpParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
+		return std::make_shared<ParallelFor>(
+				ifClause, numThreadsClause, defaultClause, privateClause,
 					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
-					scheduleClause, collapseClause, noWait)
+					scheduleClause, collapseClause, noWait
 		);
 	}
 
@@ -479,21 +473,20 @@ omp::annotation::OmpAnnotationPtr OmpParallel::toAnnotation(conversion::Conversi
 		// check for nowait keyword
 		bool noWait = hasKeyword(map, "nowait");
 
-		return OmpAnnotationPtr(
-			new omp::annotation::OmpParallelSections(ifClause, numThreadsClause, defaultClause, privateClause,
-					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause, noWait)
+		return std::make_shared<ParallelSections>(
+			ifClause, numThreadsClause, defaultClause, privateClause,
+					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause, noWait
 		);
 	}
 
-	return omp::annotation::OmpAnnotationPtr(
-			new omp::annotation::OmpParallel(ifClause, numThreadsClause, defaultClause, privateClause,
-					firstPrivateClause, sharedClause, copyinClause, reductionClause)
+	return std::make_shared<Parallel>(
+			ifClause, numThreadsClause, defaultClause, privateClause,
+					firstPrivateClause, sharedClause, copyinClause, reductionClause
 	);
 
 }
 
-omp::annotation::OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaFor::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
@@ -502,17 +495,15 @@ omp::annotation::OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFac
 	// check for lastprivate clause
 	VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
 	// check for reduction clause
-	OmpReductionPtr reductionClause = handleReductionClause(map, fact);
+	ReductionPtr reductionClause = handleReductionClause(map, fact);
 	// check for schedule clause
-	OmpSchedulePtr scheduleClause = handleScheduleClause(map, fact);
+	SchedulePtr scheduleClause = handleScheduleClause(map, fact);
 	// check for collapse cluase
 	core::ExpressionPtr	collapseClause = handleSingleExpression(map, "collapse", fact);
 	// check for nowait keyword
 	bool noWait = hasKeyword(map, "nowait");
 
-	return omp::annotation::OmpAnnotationPtr(
-		new omp::annotation::OmpFor(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, collapseClause, noWait)
-	);
+	return std::make_shared<For>( privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, collapseClause, noWait );
 }
 
 // Translate a pragma omp section into a OmpSection annotation
@@ -521,8 +512,7 @@ omp::annotation::OmpAnnotationPtr OmpFor::toAnnotation(conversion::ConversionFac
 // lastprivate(list)
 // reduction(operator: list)
 // nowait
-omp::annotation::OmpAnnotationPtr OmpSections::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaSections::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
@@ -531,26 +521,21 @@ omp::annotation::OmpAnnotationPtr OmpSections::toAnnotation(conversion::Conversi
 	// check for lastprivate clause
 	VarListPtr lastPrivateClause = handleIdentifierList(map, "lastprivate", fact);
 	// check for reduction clause
-	OmpReductionPtr reductionClause = handleReductionClause(map, fact);
+	ReductionPtr reductionClause = handleReductionClause(map, fact);
 	// check for nowait keyword
 	bool noWait = hasKeyword(map, "nowait");
 
-	return omp::annotation::OmpAnnotationPtr(
-		new omp::annotation::OmpSections(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait)
-	);
+	return std::make_shared<Sections>( privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait );
 }
 
-omp::annotation::OmpAnnotationPtr OmpSection::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpSection );
-}
+AnnotationPtr OmpPragmaSection::toAnnotation(conversion::ConversionFactory& fact) const { return std::make_shared<Section>( ); }
 
 // OmpSingle
 // private(list)
 // firstprivate(list)
 // copyprivate(list)
 // nowait
-omp::annotation::OmpAnnotationPtr OmpSingle::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaSingle::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
@@ -561,9 +546,7 @@ omp::annotation::OmpAnnotationPtr OmpSingle::toAnnotation(conversion::Conversion
 	// check for nowait keyword
 	bool noWait = hasKeyword(map, "nowait");
 
-	return omp::annotation::OmpAnnotationPtr(
-		new omp::annotation::OmpSingle(privateClause, firstPrivateClause, copyPrivateClause, noWait)
-	);
+	return std::make_shared<Single>( privateClause, firstPrivateClause, copyPrivateClause, noWait );
 }
 
 // if(scalar-expression)
@@ -572,15 +555,14 @@ omp::annotation::OmpAnnotationPtr OmpSingle::toAnnotation(conversion::Conversion
 // private(list)
 // firstprivate(list)
 // shared(list)
-omp::annotation::OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaTask::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 	// check for if clause
 	core::ExpressionPtr	ifClause = handleSingleExpression(map, "if", fact);
 	// check for nowait keyword
 	bool untied = hasKeyword(map, "untied");
 	// check for default clause
-	OmpDefaultPtr defaultClause = handleDefaultClause(map, fact);
+	DefaultPtr defaultClause = handleDefaultClause(map, fact);
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
 	// check for firstprivate clause
@@ -588,17 +570,14 @@ omp::annotation::OmpAnnotationPtr OmpTask::toAnnotation(conversion::ConversionFa
 	// check for shared clause
 	VarListPtr sharedClause = handleIdentifierList(map, "shared", fact);
 	// We need to check if the
-	return omp::annotation::OmpAnnotationPtr(
-		new omp::annotation::OmpTask(ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause)
-	);
+	return make_shared<omp::Task>( ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause );
 }
 
-omp::annotation::OmpAnnotationPtr OmpMaster::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpMaster );
+AnnotationPtr OmpPragmaMaster::toAnnotation(conversion::ConversionFactory& fact) const {
+	return std::make_shared<Master>( );
 }
 
-omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 
 	// checking region name (if existing)
@@ -615,36 +594,33 @@ omp::annotation::OmpAnnotationPtr OmpCritical::toAnnotation(conversion::Conversi
 		assert(criticalName && "Conversion to Insieme node failed!");
 	}
 
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpCritical(criticalName) );
+	return std::make_shared<Critical>( criticalName );
 }
 
-omp::annotation::OmpAnnotationPtr OmpBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpBarrier );
+AnnotationPtr OmpPragmaBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
+	return std::make_shared<Barrier>( );
 }
 
-omp::annotation::OmpAnnotationPtr OmpTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpTaskWait );
+AnnotationPtr OmpPragmaTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
+	return std::make_shared<TaskWait>( );
 }
 
-omp::annotation::OmpAnnotationPtr OmpAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpAtomic );
+AnnotationPtr OmpPragmaAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
+	return std::make_shared<Atomic>( );
 }
 
-omp::annotation::OmpAnnotationPtr OmpFlush::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaFlush::toAnnotation(conversion::ConversionFactory& fact) const {
 	// check for flush identifier list
 	VarListPtr flushList = handleIdentifierList(getMap(), "flush", fact);
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpFlush(flushList) );
+	return std::make_shared<Flush>( flushList );
 }
 
-omp::annotation::OmpAnnotationPtr OmpOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpOrdered );
+AnnotationPtr OmpPragmaOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
+	return std::make_shared<Ordered>( );
 }
 
-omp::annotation::OmpAnnotationPtr OmpThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
-	using namespace omp::annotation;
+AnnotationPtr OmpPragmaThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
 	VarListPtr threadPrivateClause = handleIdentifierList(getMap(), "threadprivate", fact);
-
-	return omp::annotation::OmpAnnotationPtr( new omp::annotation::OmpThreadPrivate(threadPrivateClause)	);
+	return std::make_shared<ThreadPrivate>( threadPrivateClause );
 }
 } // end anonymous namespace

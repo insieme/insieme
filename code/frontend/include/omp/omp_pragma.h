@@ -48,12 +48,9 @@ class ConversionFactory;
 
 namespace omp {
 
-namespace annotation {
 // forward declaration
-class OmpAnnotation;
-typedef std::shared_ptr<OmpAnnotation> OmpAnnotationPtr;
-
-}
+class Annotation;
+typedef std::shared_ptr<Annotation> AnnotationPtr;
 
 /**
  * Base class for OpenMP pragmas
@@ -65,7 +62,7 @@ public:
 	/**
 	 * Converts the pragma into an annotation which will be attached to the IR.
 	 */
-	virtual omp::annotation::OmpAnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const = 0;
+	virtual omp::AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const = 0;
 
 	const MatchMap& getMap() const { return mMap; }
 };

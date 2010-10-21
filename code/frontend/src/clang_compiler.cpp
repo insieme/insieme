@@ -368,7 +368,6 @@ const core::ProgramPtr& Program::convert() {
 				}
 
 			}
-
 		}
 	}
 

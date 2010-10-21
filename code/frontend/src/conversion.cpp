@@ -280,7 +280,16 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							ConversionContext
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Keeps all the information gathered during the conversion process.
+// Maps for variable names, cached resolved function definitions and so on...
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct ConversionFactory::ConversionContext {
+
+	// Maps Clang variable declarations (VarDecls and ParmVarDecls) to an
+	// IR variable.
 	typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
 	VarDeclMap varDeclMap;
 
@@ -293,10 +302,14 @@ struct ConversionFactory::ConversionContext {
 	// typedef std::map<const FunctionDecl*, core::VariablePtr> VarMap;
 	// VarMap  varMap;
 
+	// CallGraph for functions, used to resolved eventual recursive functions
 	utils::DependencyGraph<const FunctionDecl*> funcDepGraph;
 
+	// Maps a function with the variable which has been introduced to represent
+	// the function in the recursive definition
 	typedef std::map<const FunctionDecl*, core::VariablePtr> RecVarExprMap;
 	RecVarExprMap recVarExprMap;
+
 	bool isRecSubType;
 	core::VariablePtr currVar;
 };
