@@ -237,9 +237,7 @@ public:
 	/**
 	 * Retrieves the definitions of the recursive functions represented by this instance.
 	 */
-	const RecFunDefs& getDefinitions() {
-		return definitions;
-	}
+	const RecFunDefs& getDefinitions() const { return definitions; }
 
 	/**
 	 * Obtains a pointer to the function body defining the recursive function represented
@@ -324,6 +322,10 @@ public:
 	 * @return a reference to the stream
 	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
+	
+	const VariablePtr& getVariable() const { return variable; }
+	
+	const RecLambdaDefinitionPtr& getDefinition() const { return definition; }
 };
 
 
