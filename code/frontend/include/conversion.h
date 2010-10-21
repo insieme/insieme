@@ -52,11 +52,6 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-struct ConversionContext {
-	typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
-	VarDeclMap varMap;
-};
-
 // ------------------------------------ ConversionFactory ---------------------------
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
@@ -67,7 +62,9 @@ class ConversionFactory {
 	class ClangTypeConverter;
 	class ClangExprConverter;
 
-	ConversionContext		 ctx;
+	class ConversionContext;
+	ConversionContext* ctx;
+
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;
@@ -89,6 +86,8 @@ public:
 	core::TypePtr 		convertType(const clang::Type& type) const;
 	core::StatementPtr 	convertStmt(const clang::Stmt& stmt) const;
 	core::ExpressionPtr convertExpr(const clang::Expr& expr) const;
+
+	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	core::AnnotationPtr convertClangAttributes(const clang::VarDecl* varDecl);
 	core::AnnotationPtr convertClangAttributes(const clang::ParmVarDecl* varDecl);
@@ -113,8 +112,8 @@ public:
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
-	void handleTopLevelDecl(clang::DeclContext* declCtx);
-	core::LambdaExprPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl);
+	void handleTopLevelDecl(const clang::DeclContext* declCtx);
+	core::ExpressionPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl) { return mFact.convertFunctionDecl(funcDecl); }
 
 	core::LambdaExprPtr handleBody(const clang::Stmt* body);
 };

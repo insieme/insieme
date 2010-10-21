@@ -42,16 +42,15 @@
 namespace insieme {
 namespace frontend {
 namespace omp {
-namespace annotation {
 
-const core::StringKey<OmpBaseAnnotation> OmpBaseAnnotation::KEY("OpenMP");
+const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
 
 
-xml::XmlElement& ompToXml(const OmpBaseAnnotation& ann, xml::XmlElement& el) {
+xml::XmlElement& ompToXml(const BaseAnnotation& ann, xml::XmlElement& el) {
 	xml::XmlElement entries("pragmas", el.getDoc());
 	el << entries;
 
-	for (OmpBaseAnnotation::OmpAnnotationList::const_iterator it = ann.getListBegin(); it != ann.getListEnd(); ++it) {
+	for (BaseAnnotation::AnnotationList::const_iterator it = ann.getListBegin(); it != ann.getListEnd(); ++it) {
 		xml::XmlElement entry("pragma", el.getDoc());
 		(*it)->toXml(entry);
 		entries << entry;
@@ -60,77 +59,76 @@ xml::XmlElement& ompToXml(const OmpBaseAnnotation& ann, xml::XmlElement& el) {
 	return el;
 }
 
-void OmpBarrier::toXml(insieme::xml::XmlElement& elem) {
+void Barrier::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "barrier");
 }
 
-void OmpMaster::toXml(insieme::xml::XmlElement& elem) {
+void Master::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "master");
 }
 
-void OmpFlush::toXml(insieme::xml::XmlElement& elem) {
+void Flush::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "flush");
 }
 
-void OmpFor::toXml(insieme::xml::XmlElement& elem) {
+void For::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "for");
 }
 
-void OmpParallelFor::toXml(insieme::xml::XmlElement& elem) {
+void ParallelFor::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "parallel for");
 }
 
-void OmpSection::toXml(insieme::xml::XmlElement& elem) {
+void Section::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "section");
 }
 
-void OmpSections::toXml(insieme::xml::XmlElement& elem) {
+void Sections::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "sections");
 }
 
-void OmpParallelSections::toXml(insieme::xml::XmlElement& elem) {
+void ParallelSections::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "parallel sections");
 }
 
-void OmpParallel::toXml(insieme::xml::XmlElement& elem) {
+void Parallel::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "parallel");
 }
 
-void OmpCritical::toXml(insieme::xml::XmlElement& elem) {
+void Critical::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "critical");
 }
 
-void OmpSingle::toXml(insieme::xml::XmlElement& elem) {
+void Single::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "single");
 }
 
-void OmpAtomic::toXml(insieme::xml::XmlElement& elem) {
+void Atomic::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "atomic");
 }
 
-void OmpTask::toXml(insieme::xml::XmlElement& elem) {
+void Task::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "task");
 }
 
-void OmpTaskWait::toXml(insieme::xml::XmlElement& elem) {
+void TaskWait::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "taskwait");
 }
 
-void OmpOrdered::toXml(insieme::xml::XmlElement& elem) {
+void Ordered::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "ordered");
 }
 
-void OmpThreadPrivate::toXml(insieme::xml::XmlElement& elem) {
+void ThreadPrivate::toXml(insieme::xml::XmlElement& elem) {
 	elem.setAttr("name", "threadprivate");
 }
 
-std::shared_ptr<OmpBaseAnnotation> ompFromXml(const xml::XmlElement& el) {
-	return std::make_shared<OmpBaseAnnotation>( std::vector<OmpAnnotationPtr>() );
+std::shared_ptr<BaseAnnotation> ompFromXml(const xml::XmlElement& el) {
+	return std::make_shared<BaseAnnotation>( std::vector<AnnotationPtr>() );
 }
 
-XML_CONVERTER(OmpBaseAnnotation, "OmpAnnotation", ompToXml, ompFromXml);
+XML_CONVERTER(BaseAnnotation, "OmpAnnotation", ompToXml, ompFromXml);
 
-} // End annotation namespace
 } // End omp namespace
 } // End frontend namespace
 } // End insieme namespace

@@ -53,14 +53,13 @@ class XmlElement;
 
 namespace frontend {
 namespace omp {
-namespace annotation {
 
-DEFINE_TYPE(OmpAnnotation);
-DEFINE_TYPE(OmpReduction);
-DEFINE_TYPE(OmpSchedule);
-DEFINE_TYPE(OmpCollapse);
-DEFINE_TYPE(OmpDefault);
-DEFINE_TYPE(OmpFor);
+DEFINE_TYPE(Annotation);
+DEFINE_TYPE(Reduction);
+DEFINE_TYPE(Schedule);
+DEFINE_TYPE(Collapse);
+DEFINE_TYPE(Default);
+DEFINE_TYPE(For);
 
 /**
  * It implements the annotation node which is attached to the insieme IR for OpenMP directives
@@ -72,35 +71,35 @@ DEFINE_TYPE(OmpFor);
  * #pragma barrier
  * i++
  *
- * The OmpBaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
+ * The omp::BaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
  */
-class OmpBaseAnnotation : public core::Annotation {
+class BaseAnnotation : public core::Annotation {
 public:
-	typedef std::vector<OmpAnnotationPtr> OmpAnnotationList;
-    static const core::StringKey<OmpBaseAnnotation> KEY;
+	typedef std::vector<AnnotationPtr> AnnotationList;
+    static const core::StringKey<BaseAnnotation> KEY;
 
-    OmpBaseAnnotation(const OmpAnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
+    BaseAnnotation(const AnnotationList& annotationList) : core::Annotation(), annotationList(annotationList) { }
     const core::AnnotationKey* getKey() const { return &KEY; }
 	const std::string getAnnotationName() const { return "OmpAnnotation"; }
 
     //Iterator to access annotationList elements
-    OmpAnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
-    const OmpAnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
+    AnnotationList::const_iterator getListBegin() const { return annotationList.begin(); }
+    const AnnotationList::const_iterator getListEnd() const { return annotationList.end(); }
 
 private:
-	OmpAnnotationList annotationList;
+	AnnotationList annotationList;
 };
 
 
 /**
  * This is the root class for OpenMP annotations, be aware that this is not an IR Annotation (see OmpBaseAnnotation).
  */
-class OmpAnnotation {
+class Annotation {
 public:
 	virtual void toXml(insieme::xml::XmlElement& elem) = 0;
 };
 
-class OmpBarrier: public OmpAnnotation {
+class Barrier: public Annotation {
 public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -111,11 +110,12 @@ public:
 typedef std::vector<core::VariablePtr> VarList;
 typedef std::shared_ptr<VarList> VarListPtr;
 
-class OmpReduction {
+class Reduction {
 public:
 	// operator = + or - or * or & or | or ^ or && or ||
 	enum Operator { PLUS, MINUS, STAR, AND, OR, XOR, LAND, LOR };
-	OmpReduction(const Operator& op, const VarListPtr& vars): op(op), vars(vars) { }
+
+	Reduction(const Operator& op, const VarListPtr& vars): op(op), vars(vars) { }
 	const Operator& getOperator() const { return op; }
 	const VarListPtr& getVars() const { return vars; }
 private:
@@ -127,11 +127,11 @@ private:
  * Represents the OpenMP Schedule clause that may appears in for and parallelfor.
  * schedule( static | dynamic | guided | auto | runtime, [expression] )
  */
-class OmpSchedule {
+class Schedule {
 public:
 	enum Kind { STATIC, DYNAMIC, GUIDED, AUTO, RUNTIME };
 
-	OmpSchedule(const Kind& kind, const core::ExpressionPtr& chunkExpr): kind(kind), chunkExpr(chunkExpr) { }
+	Schedule(const Kind& kind, const core::ExpressionPtr& chunkExpr): kind(kind), chunkExpr(chunkExpr) { }
 	const Kind& getKind() const { return kind; }
 	const core::ExpressionPtr& getChunkSizeExpr() const { return chunkExpr; }
 private:
@@ -139,35 +139,35 @@ private:
 	core::ExpressionPtr chunkExpr;
 };
 
-class OmpDefault {
+class Default {
 public:
 	enum Kind { SHARED, NONE };
 
-	OmpDefault(const Kind& mode): mode(mode) { }
+	Default(const Kind& mode): mode(mode) { }
 	const Kind& getMode() const { return mode; }
 private:
 	Kind mode;
 };
 
-class OmpMaster: public OmpAnnotation {
+class Master: public Annotation {
 public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
 
-class OmpForClause {
+class ForClause {
 	VarListPtr			lastPrivateClause;
-	OmpSchedulePtr		scheduleClause;
+	SchedulePtr			scheduleClause;
 	core::ExpressionPtr	collapseExpr;
 	bool 				noWait;
 public:
-	OmpForClause( const VarListPtr& lastPrivateClause, const OmpSchedulePtr& scheduleClause, const core::ExpressionPtr& collapseExpr, bool noWait) :
+	ForClause( const VarListPtr& lastPrivateClause, const SchedulePtr& scheduleClause, const core::ExpressionPtr& collapseExpr, bool noWait) :
 		lastPrivateClause(lastPrivateClause), scheduleClause(scheduleClause), collapseExpr(collapseExpr), noWait(noWait) { }
 
 	bool hasLastPrivate() { return static_cast<bool>(lastPrivateClause); }
 	const VarListPtr& getLastPrivate() { return lastPrivateClause; }
 
 	bool hasSchedule() { return static_cast<bool>(scheduleClause); }
-	const OmpSchedulePtr& getSchedule() { return scheduleClause; }
+	const SchedulePtr& getSchedule() { return scheduleClause; }
 
 	bool hasCollapse() { return static_cast<bool>(collapseExpr); }
 	const core::ExpressionPtr& getCollapse() { return collapseExpr; }
@@ -179,29 +179,29 @@ public:
 
 class SharedParallelAndTaskClause {
 	core::ExpressionPtr	ifClause;
-	OmpDefaultPtr		defaultClause;
+	DefaultPtr			defaultClause;
 	VarListPtr			sharedClause;
 public:
-	SharedParallelAndTaskClause(const core::ExpressionPtr& ifClause, const OmpDefaultPtr& defaultClause, const VarListPtr& sharedClause) :
+	SharedParallelAndTaskClause(const core::ExpressionPtr& ifClause, const DefaultPtr& defaultClause, const VarListPtr& sharedClause) :
 		ifClause(ifClause), defaultClause(defaultClause), sharedClause(sharedClause) { }
 
 	bool hasIf() { return static_cast<bool>(ifClause); }
 	const core::ExpressionPtr& getIf() { return ifClause; }
 
 	bool hasDefault() { return static_cast<bool>(defaultClause); }
-	const OmpDefaultPtr& getDefault() { return defaultClause; }
+	const DefaultPtr& getDefault() { return defaultClause; }
 
 	bool hasShared() { return static_cast<bool>(sharedClause); }
 	const VarListPtr& getShared() { return sharedClause; }
 };
 
-class OmpParallelClause: private SharedParallelAndTaskClause {
+class ParallelClause: private SharedParallelAndTaskClause {
 	core::ExpressionPtr numThreadClause;
 	VarListPtr			copyinClause;
 public:
-	OmpParallelClause(const core::ExpressionPtr& ifClause,
+	ParallelClause(const core::ExpressionPtr& ifClause,
 		const core::ExpressionPtr& numThreadClause,
-		const OmpDefaultPtr& defaultClause,
+		const DefaultPtr& defaultClause,
 		const VarListPtr& sharedClause,
 		const VarListPtr& copyinClause):
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause),
@@ -214,11 +214,11 @@ public:
 	const VarListPtr& getCopyin() { return copyinClause; }
 };
 
-class OmpCommonClause {
+class CommonClause {
 	VarListPtr			privateClause;
 	VarListPtr			firstPrivateClause;
 public:
-	OmpCommonClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause):
+	CommonClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause):
 			privateClause(privateClause), firstPrivateClause(firstPrivateClause) { }
 
 	bool hasPrivate() { return static_cast<bool>(privateClause); }
@@ -231,22 +231,22 @@ public:
 /**
  * OpenMP 'parallel' clause
  */
-class OmpParallel: public OmpAnnotation, private OmpCommonClause, private OmpParallelClause {
-	OmpReductionPtr		reductionClause;
+class Parallel: public Annotation, private CommonClause, private ParallelClause {
+	ReductionPtr		reductionClause;
 public:
-	OmpParallel(const core::ExpressionPtr& ifClause,
+	Parallel(const core::ExpressionPtr& ifClause,
 		const core::ExpressionPtr& numThreadClause,
-		const OmpDefaultPtr& defaultClause,
+		const DefaultPtr& defaultClause,
 		const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& sharedClause,
 		const VarListPtr& copyinClause,
-		const OmpReductionPtr& reductionClause) :
-			OmpCommonClause(privateClause, firstPrivateClause),
-			OmpParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause), reductionClause(reductionClause) { }
+		const ReductionPtr& reductionClause) :
+			CommonClause(privateClause, firstPrivateClause),
+			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause), reductionClause(reductionClause) { }
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
-	const OmpReductionPtr& getReduction() { return reductionClause; }
+	const ReductionPtr& getReduction() { return reductionClause; }
 
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -254,21 +254,21 @@ public:
 /**
  * OpenMP 'for' clause
  */
-class OmpFor: public OmpAnnotation, private OmpCommonClause, private OmpForClause {
-	OmpReductionPtr		reductionClause;
+class For: public Annotation, private CommonClause, private ForClause {
+	ReductionPtr	reductionClause;
 public:
-	OmpFor(const VarListPtr& privateClause,
+	For(const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& lastPrivateClause,
-		const OmpReductionPtr& reductionClause,
-		const OmpSchedulePtr& scheduleClause,
+		const ReductionPtr& reductionClause,
+		const SchedulePtr& scheduleClause,
 		const core::ExpressionPtr& collapseExpr,
 		bool noWait) :
-			OmpCommonClause(privateClause, firstPrivateClause),
-			OmpForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
+			CommonClause(privateClause, firstPrivateClause),
+			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
-	const OmpReductionPtr& getReduction() { return reductionClause; }
+	const ReductionPtr& getReduction() { return reductionClause; }
 
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -276,45 +276,45 @@ public:
 /**
  * OpenMP 'parallel for' clause
  */
-class OmpParallelFor: public OmpAnnotation, private OmpCommonClause, private OmpParallelClause, private OmpForClause {
-	OmpReductionPtr		reductionClause;
+class ParallelFor: public Annotation, private CommonClause, private ParallelClause, private ForClause {
+	ReductionPtr		reductionClause;
 public:
-	OmpParallelFor(const core::ExpressionPtr& ifClause,
+	ParallelFor(const core::ExpressionPtr& ifClause,
 		const core::ExpressionPtr& numThreadClause,
-		const OmpDefaultPtr& defaultClause,
+		const DefaultPtr& defaultClause,
 		const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& sharedClause,
 		const VarListPtr& copyinClause,
-		const OmpReductionPtr& reductionClause,
+		const ReductionPtr& reductionClause,
 		const VarListPtr& lastPrivateClause,
-		const OmpSchedulePtr& scheduleClause,
+		const SchedulePtr& scheduleClause,
 		const core::ExpressionPtr& collapseExpr, bool noWait) :
-			OmpCommonClause(privateClause, firstPrivateClause),
-			OmpParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
-			OmpForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
+			CommonClause(privateClause, firstPrivateClause),
+			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
+			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
-	const OmpReductionPtr& getReduction() { return reductionClause; }
+	const ReductionPtr& getReduction() { return reductionClause; }
 
 	void toXml(insieme::xml::XmlElement& elem);
 };
 
-class OmpSectionClause {
+class SectionClause {
 	VarListPtr			lastPrivateClause;
-	OmpReductionPtr		reductionClause;
+	ReductionPtr		reductionClause;
 	bool 				noWait;
 
 public:
-	OmpSectionClause(const VarListPtr& lastPrivateClause,
-		const OmpReductionPtr& reductionClause,
+	SectionClause(const VarListPtr& lastPrivateClause,
+		const ReductionPtr& reductionClause,
 		bool noWait) : lastPrivateClause(lastPrivateClause), reductionClause(reductionClause), noWait(noWait) { }
 
 	bool hasLastPrivate() { return static_cast<bool>(lastPrivateClause); }
 	const VarListPtr& getLastPrivate() { return lastPrivateClause; }
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
-	const OmpReductionPtr& getReduction() { return reductionClause; }
+	const ReductionPtr& getReduction() { return reductionClause; }
 
 	bool hasNoWait() { return noWait; }
 };
@@ -322,16 +322,16 @@ public:
 /**
  * OpenMP 'sections' clause
  */
-class OmpSections: public OmpAnnotation, private OmpCommonClause, private OmpSectionClause {
+class Sections: public Annotation, private CommonClause, private SectionClause {
 
 public:
-	OmpSections(const VarListPtr& privateClause,
+	Sections(const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& lastPrivateClause,
-		const OmpReductionPtr& reductionClause,
+		const ReductionPtr& reductionClause,
 		bool noWait) :
-			OmpCommonClause(privateClause, firstPrivateClause),
-			OmpSectionClause(lastPrivateClause, reductionClause, noWait) { }
+			CommonClause(privateClause, firstPrivateClause),
+			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -339,21 +339,21 @@ public:
 /**
  * OpenMP 'parallel sections' clause
  */
-class OmpParallelSections: public OmpAnnotation, private OmpCommonClause, private OmpParallelClause, private OmpSectionClause {
+class ParallelSections: public Annotation, private CommonClause, private ParallelClause, private SectionClause {
 public:
-	OmpParallelSections(const core::ExpressionPtr& ifClause,
+	ParallelSections(const core::ExpressionPtr& ifClause,
 		const core::ExpressionPtr& numThreadClause,
-		const OmpDefaultPtr& defaultClause,
+		const DefaultPtr& defaultClause,
 		const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& sharedClause,
 		const VarListPtr& copyinClause,
-		const OmpReductionPtr& reductionClause,
+		const ReductionPtr& reductionClause,
 		const VarListPtr& lastPrivateClause,
 		bool noWait) :
-			OmpCommonClause(privateClause, firstPrivateClause),
-			OmpParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
-			OmpSectionClause(lastPrivateClause, reductionClause, noWait) { }
+			CommonClause(privateClause, firstPrivateClause),
+			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
+			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -361,7 +361,7 @@ public:
 /**
  * OpenMP 'section' clause
  */
-class OmpSection: public OmpAnnotation {
+class Section: public Annotation {
 public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -369,15 +369,15 @@ public:
 /**
  * OpenMP 'single' clause
  */
-class OmpSingle: public OmpAnnotation, private OmpCommonClause {
+class Single: public Annotation, private CommonClause {
 	VarListPtr			copyPrivateClause;
 	bool 				noWait;
 public:
-	OmpSingle(const VarListPtr& privateClause,
+	Single(const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& copyPrivateClause,
 		bool noWait) :
-			OmpCommonClause(privateClause, firstPrivateClause),
+			CommonClause(privateClause, firstPrivateClause),
 			copyPrivateClause(copyPrivateClause), noWait(noWait) { }
 
 	bool hasCopyPrivate() { return static_cast<bool>(copyPrivateClause); }
@@ -391,16 +391,16 @@ public:
 /**
  * OpenMP 'task' clause
  */
-class OmpTask: public OmpAnnotation, private OmpCommonClause, private SharedParallelAndTaskClause {
+class Task: public Annotation, private CommonClause, private SharedParallelAndTaskClause {
 	bool 				untied;
 public:
-	OmpTask(const core::ExpressionPtr& ifClause,
+	Task(const core::ExpressionPtr& ifClause,
 		bool untied,
-		const OmpDefaultPtr& defaultClause,
+		const DefaultPtr& defaultClause,
 		const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& sharedClause) :
-			OmpCommonClause(privateClause, firstPrivateClause),
+			CommonClause(privateClause, firstPrivateClause),
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause), untied(untied) { }
 
 	bool hasUntied() { return untied; }
@@ -411,7 +411,7 @@ public:
 /**
  * OpenMP 'taskwait' clause
  */
-class OmpTaskWait: public OmpAnnotation {
+class TaskWait: public Annotation {
 public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -419,7 +419,7 @@ public:
 /**
  * OpenMP 'atomic' clause
  */
-class OmpAtomic: public OmpAnnotation {
+class Atomic: public Annotation {
 public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -427,11 +427,11 @@ public:
 /**
  * OpenMP 'critical' clause
  */
-class OmpCritical: public OmpAnnotation {
+class Critical: public Annotation {
 	core::VariablePtr name;
 
 public:
-	OmpCritical(const core::VariablePtr& name): name(name) { }
+	Critical(const core::VariablePtr& name): name(name) { }
 
 	bool hasName() { return static_cast<bool>(name); }
 	const core::VariablePtr& getName() { return name; }
@@ -442,7 +442,7 @@ public:
 /**
  * OpenMP 'ordered' clause
  */
-class OmpOrdered: public OmpAnnotation {
+class Ordered: public Annotation {
 public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
@@ -450,10 +450,10 @@ public:
 /**
  * OpenMP 'flush' clause
  */
-class OmpFlush: public OmpAnnotation {
+class Flush: public Annotation {
 	VarListPtr varList;
 public:
-	OmpFlush(const VarListPtr& varList): varList(varList) { }
+	Flush(const VarListPtr& varList): varList(varList) { }
 
 	bool hasVarList() { return static_cast<bool>(varList); }
 	const VarListPtr& getVarList() { return varList; }
@@ -464,10 +464,10 @@ public:
 /**
  * OpenMP 'threadprivate' clause
  */
-class OmpThreadPrivate: public OmpAnnotation {
+class ThreadPrivate: public Annotation {
 	VarListPtr threadPrivateClause;
 public:
-	OmpThreadPrivate(const VarListPtr& threadPrivateClause) : threadPrivateClause(threadPrivateClause) { }
+	ThreadPrivate(const VarListPtr& threadPrivateClause) : threadPrivateClause(threadPrivateClause) { }
 
 	bool hasThreadPrivate() { return static_cast<bool>(threadPrivateClause); }
 	const VarListPtr& getThreadPrivate() { return threadPrivateClause; }
@@ -475,7 +475,6 @@ public:
 	void toXml(insieme::xml::XmlElement& elem);
 };
 
-} // End annotation namespace
 } // End omp namespace
 } // End frontend namespace
 } // End insieme namespace

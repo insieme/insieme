@@ -69,6 +69,8 @@ class NameGenerator {
 	unsigned long num;
 
 public:
+	NameGenerator() : num(0) { }
+
 	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
 
 	string getName(const NodePtr& ptr, const char* fragment = "unnamed"); 
@@ -205,15 +207,7 @@ public:
 		cStr << "break";
 	}
 
-	void visitCompoundStmt(const CompoundStmtPtr& ptr) {
-		cStr << "{" << CodeStream::indR << "\n";
-		for_each(ptr->getChildList(), [&, this](const NodePtr& ptr) { 
-			this->visit(ptr); 
-			cStr << ";";
-			if(ptr != ptr->getChildList().back()) cStr << "\n";
-		});
-		cStr << CodeStream::indL << "\n}";
-	}
+	void visitCompoundStmt(const CompoundStmtPtr& ptr);
 
 	void visitContinueStmt(const ContinueStmtPtr&) {
 		cStr << "continue";
