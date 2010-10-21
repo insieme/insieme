@@ -34,56 +34,55 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "ast_check.h"
-
+#include "ast_statistic.h"
+#include "ast_visitor.h"
 
 namespace insieme {
 namespace core {
-namespace checks {
 
-enum {
-	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = 1000,
-	EC_TYPE_INVALID_ARGUMENT_TYPE,
-	EC_TYPE_INVALID_RETURN_TYPE,
+namespace {
 
-	EC_TYPE_INVALID_INITIALIZATION_EXPR,
-
-	EC_TYPE_INVALID_CONDITION_EXPR,
-	EC_TYPE_INVALID_SWITCH_EXPR
-};
-
-/**
- * Obtains a combined check case containing all the checks defined within this header file.
- */
-CheckPtr getFullCheck();
-
-
-/**
- * A small macro to simplify the definition of AST checks.
- *
- * @param Name the name of the new check (without the tailing Check)
- * @param NodeType the type the check should be applied on
- */
-#define SIMPLE_CHECK(Name, NodeType) \
-	class Name ## Check : public ASTCheck { \
-		public: \
-			MessageList visit ## NodeType (const NodeType ## Address& address); \
+	/**
+	 * Obtains the height of the subtree rooted by the given node.
+	 *
+	 * @param node the node representing the root node of the tree to be evaluated
+	 */
+	unsigned evalHeight(const NodePtr& node) {
+		unsigned res = 1;
+		for_each(node->getChildList(), [&res](const NodePtr& cur) {
+			unsigned height = evalHeight(cur)+1;
+			res = (res<height)?height:res;
+		});
+		return res;
 	}
 
-SIMPLE_CHECK(CallExprType, CallExpr);
-SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
-SIMPLE_CHECK(IfConditionType, IfStmt);
-SIMPLE_CHECK(WhileConditionType, WhileStmt);
-SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
+}
 
-// TODO:
-//	- check that only concrete types are used for variables
+ASTStatistic::ASTStatistic(unsigned numSharedNodes, unsigned numAddressableNodes, unsigned height)
+	: numSharedNodes(numSharedNodes), numAddressableNodes(numAddressableNodes), height(height) {};
 
-#undef SIMPLE_CHECK
+ASTStatistic ASTStatistic::evaluate(const NodePtr& node) {
 
-} // end namespace check
+	// count number of shared nodes ...
+	unsigned numNodes = 0;
+	visitAllOnce(node, makeLambdaVisitor([&numNodes](const NodePtr& cur) {
+		numNodes++;
+	}));
+
+	// ... and addressable nodes
+	unsigned numAddressableNodes = 0;
+	visitAll(node, makeLambdaVisitor([&numAddressableNodes](const NodePtr& cur) {
+		numAddressableNodes++;
+	}));
+
+	// ... and height (lightweight)
+	unsigned height = evalHeight(node);
+
+	// build result
+	return ASTStatistic(numNodes, numAddressableNodes, height);
+}
+
+
+
 } // end namespace core
 } // end namespace insieme
-

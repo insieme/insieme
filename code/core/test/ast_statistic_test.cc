@@ -34,56 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "ast_check.h"
-
+#include "ast_builder.h"
+#include "ast_statistic.h"
 
 namespace insieme {
 namespace core {
-namespace checks {
 
-enum {
-	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = 1000,
-	EC_TYPE_INVALID_ARGUMENT_TYPE,
-	EC_TYPE_INVALID_RETURN_TYPE,
+TEST(ASTStatistic, Basic) {
+	ASTBuilder builder;
 
-	EC_TYPE_INVALID_INITIALIZATION_EXPR,
+	// test a diamond
+	TypePtr typeD = builder.genericType("D");
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
+	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
 
-	EC_TYPE_INVALID_CONDITION_EXPR,
-	EC_TYPE_INVALID_SWITCH_EXPR
-};
+	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
-/**
- * Obtains a combined check case containing all the checks defined within this header file.
- */
-CheckPtr getFullCheck();
+	ASTStatistic stat = ASTStatistic::evaluate(typeA);
 
+	EXPECT_EQ((unsigned)5, stat.getNumAddressableNodes());
+	EXPECT_EQ((unsigned)4, stat.getNumSharedNodes());
+	EXPECT_EQ((unsigned)3, stat.getHeight());
+	EXPECT_EQ(5/(float)4, stat.getShareRatio());
+}
 
-/**
- * A small macro to simplify the definition of AST checks.
- *
- * @param Name the name of the new check (without the tailing Check)
- * @param NodeType the type the check should be applied on
- */
-#define SIMPLE_CHECK(Name, NodeType) \
-	class Name ## Check : public ASTCheck { \
-		public: \
-			MessageList visit ## NodeType (const NodeType ## Address& address); \
-	}
-
-SIMPLE_CHECK(CallExprType, CallExpr);
-SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
-SIMPLE_CHECK(IfConditionType, IfStmt);
-SIMPLE_CHECK(WhileConditionType, WhileStmt);
-SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
-
-// TODO:
-//	- check that only concrete types are used for variables
-
-#undef SIMPLE_CHECK
-
-} // end namespace check
 } // end namespace core
 } // end namespace insieme
 

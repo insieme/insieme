@@ -462,7 +462,7 @@ public:
 
 	// TODO: re-add with proper type inferencing of return type
 	// static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
-	static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
+	static CallExprPtr get(NodeManager& manager, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 
 class CastExpr : public Expression {

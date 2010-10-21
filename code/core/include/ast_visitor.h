@@ -409,7 +409,7 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
  * 				   post order will be enforced.
  */
 template<typename NodePtr, typename Visitor>
-inline void visitAll(NodePtr& root, Visitor& visitor, bool preorder = true) {
+inline void visitAll(NodePtr& root, Visitor visitor, bool preorder = true) {
 	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
@@ -440,7 +440,7 @@ inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
 template<typename NodePtr, typename Visitor>
-inline void visitAllOnce(NodePtr& root, Visitor& visitor, bool preorder = true) {
+inline void visitAllOnce(NodePtr& root, Visitor visitor, bool preorder = true) {
 	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }

@@ -46,6 +46,11 @@
 	typedef std::shared_ptr<Type> Type##Ptr;
 
 namespace insieme {
+
+namespace xml {
+class XmlElement;
+}
+
 namespace frontend {
 namespace omp {
 namespace annotation {
@@ -90,9 +95,15 @@ private:
 /**
  * This is the root class for OpenMP annotations, be aware that this is not an IR Annotation (see OmpBaseAnnotation).
  */
-class OmpAnnotation { };
+class OmpAnnotation {
+public:
+	virtual void toXml(insieme::xml::XmlElement& elem) = 0;
+};
 
-class OmpBarrier: public OmpAnnotation { };
+class OmpBarrier: public OmpAnnotation {
+public:
+	void toXml(insieme::xml::XmlElement& elem);
+};
 
 /**
  * Holds a list of identifiers
@@ -133,13 +144,15 @@ public:
 	enum Kind { SHARED, NONE };
 
 	OmpDefault(const Kind& mode): mode(mode) { }
-
 	const Kind& getMode() const { return mode; }
 private:
 	Kind mode;
 };
 
-class OmpMaster: public OmpAnnotation { };
+class OmpMaster: public OmpAnnotation {
+public:
+	void toXml(insieme::xml::XmlElement& elem);
+};
 
 class OmpForClause {
 	VarListPtr			lastPrivateClause;
@@ -160,6 +173,8 @@ public:
 	const core::ExpressionPtr& getCollapse() { return collapseExpr; }
 
 	bool hasNoWait() { return noWait; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 class SharedParallelAndTaskClause {
@@ -232,6 +247,8 @@ public:
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
 	const OmpReductionPtr& getReduction() { return reductionClause; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
@@ -252,6 +269,8 @@ public:
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
 	const OmpReductionPtr& getReduction() { return reductionClause; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
@@ -277,6 +296,8 @@ public:
 
 	bool hasReduction() { return static_cast<bool>(reductionClause); }
 	const OmpReductionPtr& getReduction() { return reductionClause; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 class OmpSectionClause {
@@ -311,6 +332,8 @@ public:
 		bool noWait) :
 			OmpCommonClause(privateClause, firstPrivateClause),
 			OmpSectionClause(lastPrivateClause, reductionClause, noWait) { }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
@@ -331,12 +354,17 @@ public:
 			OmpCommonClause(privateClause, firstPrivateClause),
 			OmpParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
 			OmpSectionClause(lastPrivateClause, reductionClause, noWait) { }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
  * OpenMP 'section' clause
  */
-class OmpSection: public OmpAnnotation { };
+class OmpSection: public OmpAnnotation {
+public:
+	void toXml(insieme::xml::XmlElement& elem);
+};
 
 /**
  * OpenMP 'single' clause
@@ -356,6 +384,8 @@ public:
 	const VarListPtr& getCopyPrivate() { return copyPrivateClause; }
 
 	bool hasNoWait() { return noWait; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
@@ -374,17 +404,25 @@ public:
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause), untied(untied) { }
 
 	bool hasUntied() { return untied; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
  * OpenMP 'taskwait' clause
  */
-class OmpTaskWait: public OmpAnnotation { };
+class OmpTaskWait: public OmpAnnotation {
+public:
+	void toXml(insieme::xml::XmlElement& elem);
+};
 
 /**
  * OpenMP 'atomic' clause
  */
-class OmpAtomic: public OmpAnnotation { };
+class OmpAtomic: public OmpAnnotation {
+public:
+	void toXml(insieme::xml::XmlElement& elem);
+};
 
 /**
  * OpenMP 'critical' clause
@@ -397,12 +435,17 @@ public:
 
 	bool hasName() { return static_cast<bool>(name); }
 	const core::VariablePtr& getName() { return name; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
  * OpenMP 'ordered' clause
  */
-class OmpOrdered: public OmpAnnotation { };
+class OmpOrdered: public OmpAnnotation {
+public:
+	void toXml(insieme::xml::XmlElement& elem);
+};
 
 /**
  * OpenMP 'flush' clause
@@ -414,6 +457,8 @@ public:
 
 	bool hasVarList() { return static_cast<bool>(varList); }
 	const VarListPtr& getVarList() { return varList; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 /**
@@ -426,6 +471,8 @@ public:
 
 	bool hasThreadPrivate() { return static_cast<bool>(threadPrivateClause); }
 	const VarListPtr& getThreadPrivate() { return threadPrivateClause; }
+
+	void toXml(insieme::xml::XmlElement& elem);
 };
 
 } // End annotation namespace
