@@ -50,8 +50,8 @@ using std::vector;
 namespace insieme {
 namespace core {
 
-template<typename PT>
-void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children = Node::ChildList());
+//template<typename PT>
+//void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children);
 
 TEST(TypeTest, NodeManager ) {
 
@@ -363,8 +363,8 @@ TEST(TypeTest, FunctionType) {
 	TypePtr dummyA = GenericType::get(manager, "dummyA");
 	TypePtr alpha = TypeVariable::get(manager, "alpha");
 
-	TupleTypePtr argumentA = TupleType::get(manager, { dummyA } );
-	TupleTypePtr argumentB = TupleType::get(manager, { alpha } );
+	TupleTypePtr argumentA = TupleType::get(manager, toVector( dummyA ) );
+	TupleTypePtr argumentB = TupleType::get(manager, toVector( alpha ) );
 	TypePtr resultA = GenericType::get(manager, "returnA");
 	TypePtr resultB = GenericType::get(manager, "returnB");
 

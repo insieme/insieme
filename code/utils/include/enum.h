@@ -107,11 +107,11 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
 			return (std::size_t) rs;\
 		} \
 		inline enumname count(const enumname &rs) { \
-			return (enumname) (ord(enumname ## MAX) - ord(enumname ## MIN)); \
+			return (enumname) (ord(max(rs)) - ord(min(rs))); \
 		} \
 		inline std::ostream& operator<<(std::ostream &os, const enumname &c) { \
 			return os << name(c);\
-		} \
+		} 
 
 
 /**
