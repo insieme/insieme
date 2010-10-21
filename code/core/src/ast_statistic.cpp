@@ -65,13 +65,13 @@ ASTStatistic ASTStatistic::evaluate(const NodePtr& node) {
 
 	// count number of shared nodes ...
 	unsigned numNodes = 0;
-	visitAllOnce(node, makeLambdaVisitor([&numNodes](const NodePtr& cur) {
+	visitAllOnce(node, makeLambdaVisitor([&numNodes](const NodePtr&) {
 		numNodes++;
 	}));
 
 	// ... and addressable nodes
 	unsigned numAddressableNodes = 0;
-	visitAll(node, makeLambdaVisitor([&numAddressableNodes](const NodePtr& cur) {
+	visitAll(node, makeLambdaVisitor([&numAddressableNodes](const NodePtr&) {
 		numAddressableNodes++;
 	}));
 

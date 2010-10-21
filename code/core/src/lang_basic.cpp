@@ -201,7 +201,7 @@ ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), t
 // -------------------------------- Vector Types ------------------------------
 
 bool isVectorType(const Type& type) {
-    return dynamic_cast<const core::VectorType*>(&type);
+    return dynamic_cast<const core::VectorType*>(&type) != nullptr;
 }
 
 
