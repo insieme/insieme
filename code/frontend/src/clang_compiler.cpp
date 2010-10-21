@@ -39,6 +39,8 @@
 #include "conversion.h"
 #include "insieme_sema.h"
 #include "pragma_handler.h"
+
+#include "ocl/ocl_compiler.h"
 // #include "programs.h"
 
 #include "insieme_pragma.h"
@@ -337,6 +339,14 @@ const Program::TranslationUnitSet& Program::getTranslationUnits() const { return
 
 void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
 
+/**
+ * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
+ */
+const core::ProgramPtr& Program::addParallelism() {
+    ocl::Compiler oclCompiler(mProgram, mMgr);
+    return oclCompiler.lookForOclAnnotations();
+}
+
 const core::ProgramPtr& Program::convert() {
 
 	bool insiemePragmaFound = false;
@@ -368,11 +378,14 @@ const core::ProgramPtr& Program::convert() {
 				}
 
 			}
+
 		}
 	}
 
-	if(insiemePragmaFound)
-		return mProgram;
+	if(insiemePragmaFound) {
+	    return addParallelism();
+//		return mProgram;
+	}
 
 	// For each translation unit we call the IRConverter
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
@@ -391,7 +404,9 @@ const core::ProgramPtr& Program::convert() {
 		mProgram = conv.getProgram();
 	}
 
-	return mProgram;
+	return addParallelism();
+
+//	return mProgram;
 }
 } // End fronend namespace
 } // End insieme namespace
