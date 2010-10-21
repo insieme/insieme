@@ -778,8 +778,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.callExpr(
 				convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(arraySubExpr) ) ),
-				core::lang::OP_SUBSCRIPT_PTR,
-				toVector<core::ExpressionPtr>(base,	idx)
+				core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(base, idx)
 			);
 //		DLOG(INFO) << "EXPR_TY: " << *retExpr->getType();
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -821,28 +820,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		START_LOG_EXPR_CONVERSION(declRef);
-		const core::ASTBuilder& builder = convFact.builder;
 		// check whether this is a reference to a variable
 		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
-			// check if the variable is in the context map
-
-			ConversionContext::VarDeclMap::const_iterator fit = convFact.ctx->varDeclMap.find(varDecl);
-			if(fit != convFact.ctx->varDeclMap.end()) {
-				DVLOG(2) << "Variable '" << varDecl->getNameAsString() << "' found in context map";
-				return fit->second;
-			}
-
-			DVLOG(2) << "Variable '" << varDecl->getNameAsString() << "' NOT found in context map";
-			core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(declRef) );
-
-			// FIXME: is this correct?
-			if(!core::dynamic_pointer_cast<const core::RefType>(varTy))
-				varTy = builder.refType(varTy);
-
-			core::VariablePtr&& var = builder.variable(varTy);
-			convFact.ctx->varDeclMap.insert( std::make_pair(varDecl, var) );
-			// else it is a
-			return var;
+			return convFact.lookUpVariable(varDecl);
 		}
 		// todo: C++ check whether this is a reference to a class field, or method (function).
 		assert(false && "DeclRefExpr not supported!");
@@ -944,19 +924,17 @@ private:
         	return convFact.builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
         }
 
-        assert(false && "default initialization type not defined");
+        assert(false && "Default initialization type not defined");
         return core::lang::CONST_NULL_PTR_PTR;
 	}
 
 public:
-
 	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						VARIABLE DECLARATION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::DeclarationStmtPtr convertVarDecl(clang::VarDecl* varDecl) {
-
 		// logging
 		DVLOG(1) << "\n****************************************************************************************\n"
 				 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
@@ -984,23 +962,11 @@ public:
 		if( varDecl->getInit() ) {
 			initExpr = convFact.convertExpr( *varDecl->getInit() );
 		} else {
-		    initExpr = defaultInitVal(* GET_TYPE_PTR(varDecl), type);
+		    initExpr = defaultInitVal( *GET_TYPE_PTR(varDecl), type);
 		}
 
-		// add this var to the map
-		ConversionContext::VarDeclMap::const_iterator fit = convFact.ctx->varDeclMap.find(varDecl);
-		core::VariablePtr var;
-		if(fit != convFact.ctx->varDeclMap.end())
-			var = fit->second;
-		else {
-			// variable is not in the map, create a new var and add it
-			var = convFact.builder.variable(type);
-			// add the var in the map
-			convFact.ctx->varDeclMap.insert( std::make_pair(varDecl, var) );
-			// Add the C name of this variable as annotation
-			var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(varDecl->getNameAsString()) );
-		}
-
+		// lookup for the variable in the map
+		core::VariablePtr var = convFact.lookUpVariable(varDecl);
         core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( var, initExpr );
 
         /*-------------------------><-----------------------*/
@@ -1094,9 +1060,7 @@ public:
 			StmtWrapper&& initExpr = Visit( initStmt );
 
 			// induction variable for this loop
-			ConversionContext::VarDeclMap::const_iterator vit = convFact.ctx->varDeclMap.find( loopAnalysis.getInductionVar() );
-			assert(vit != convFact.ctx->varDeclMap.end());
-			const core::VariablePtr& inductionVar = vit->second;
+			core::VariablePtr&& inductionVar = convFact.lookUpVariable(loopAnalysis.getInductionVar());
 
 			if( !initExpr.isSingleStmt() ) {
 				assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
@@ -2139,6 +2103,24 @@ ConversionFactory::~ConversionFactory() {
 	delete exprConv;
 }
 
+core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
+	ConversionContext::VarDeclMap::const_iterator fit = ctx->varDeclMap.find(varDecl);
+	if(fit != ctx->varDeclMap.end())
+		// variable found in the map, return it
+		return fit->second;
+
+	core::TypePtr&& type = builder.refType( convertType( *GET_TYPE_PTR(varDecl)  ) );
+	// variable is not in the map, create a new var and add it
+	core::VariablePtr&& var = builder.variable(type);
+	// add the var in the map
+	ctx->varDeclMap.insert( std::make_pair(varDecl, var) );
+
+	// Add the C name of this variable as annotation
+	var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(varDecl->getNameAsString()) );
+
+	return var;
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2202,7 +2184,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 				}
 			);
 		}
-
 //			DLOG(INFO) << "MAP: ";
 //			std::for_each(recVarExprMap.begin(), recVarExprMap.end(),
 //				[] (RecVarExprMap::value_type c) {
@@ -2216,21 +2197,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	vector<core::VariablePtr> params;
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[ &params, this ] (ParmVarDecl* currParam) {
-			ConversionContext::VarDeclMap& varDeclMap = this->ctx->varDeclMap;
-			ConversionContext::VarDeclMap::const_iterator fit = varDeclMap.find(currParam);
-
-			core::VariablePtr var;
-			if(fit == varDeclMap.end()) {
-				core::TypePtr paramTy = this->convertType( *currParam->getOriginalType().getTypePtr() );
-				var = this->builder.variable( paramTy );
-
-				// Add the C name of this parameter as Annotation
-				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(currParam->getNameAsString()) );
-				// insert the variable into the parmVarMap
-				varDeclMap.insert( std::make_pair(currParam,var) );
-			} else
-				var = fit->second;
-			params.push_back( var );
+			params.push_back( this->lookUpVariable(currParam) );
 		}
 	);
 

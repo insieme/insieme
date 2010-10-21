@@ -30,7 +30,7 @@
 	</xsl:template>
 	<!-- genType[count(node()/*)=0] -->
 	<xsl:template match="genType" mode="definition">
-		<xsl:value-of select="@id"/>  [shape=ellipse, label=<xsl:value-of select="@familyName"/>];
+		<xsl:value-of select="@id"/>  [shape=ellipse, color=blue, label=<xsl:value-of select="@familyName"/>];
 	</xsl:template>
 	
 	<!-- this template matches nodes which are different from literals and rootNode. -->

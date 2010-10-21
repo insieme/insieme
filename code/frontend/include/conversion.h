@@ -92,6 +92,8 @@ public:
 	core::AnnotationPtr convertClangAttributes(const clang::VarDecl* varDecl);
 	core::AnnotationPtr convertClangAttributes(const clang::ParmVarDecl* varDecl);
 
+	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
+
 	~ConversionFactory();
 };
 
