@@ -237,9 +237,7 @@ public:
 	/**
 	 * Retrieves the definitions of the recursive functions represented by this instance.
 	 */
-	const RecFunDefs& getDefinitions() {
-		return definitions;
-	}
+	const RecFunDefs& getDefinitions() const { return definitions; }
 
 	/**
 	 * Obtains a pointer to the function body defining the recursive function represented

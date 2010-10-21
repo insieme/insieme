@@ -1000,6 +1000,38 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), recLambdaExpr);
 	}
+
+	void visitRecLambdaDefinition(const RecLambdaDefinitionPtr& cur) {
+		XmlElement recLambdaDefinition("recLambdaDefinition", doc);
+		recLambdaDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << recLambdaDefinition;
+		
+		const RecLambdaDefinition::RecFunDefs& defs = cur->getDefinitions();
+		if (!defs.empty()){
+			XmlElement definitions("definitions", doc);
+			recLambdaDefinition << definitions;
+			
+			for(RecLambdaDefinition::RecFunDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
+				XmlElement definition("definition", doc);
+				definitions << definition;
+				
+				XmlElement variablePtr("variablePtr", doc);
+				variablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+				definition << variablePtr;
+				
+				visitAnnotations((iter->first).getAnnotations(), variablePtr);
+				
+				XmlElement lambdaExprPtr("lambdaExprPtr", doc);
+				lambdaExprPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+				definition << lambdaExprPtr;
+				
+				visitAnnotations((iter->second).getAnnotations(), lambdaExprPtr);
+			}
+		}
+		
+		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
+	}
+	
 };
 
 class error_handler: public DOMErrorHandler {

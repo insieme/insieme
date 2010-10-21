@@ -58,13 +58,11 @@
 	</xs:all>	
 </xs:complexType>
 
-
 <xs:complexType name="T_uniqueRecLambdaDefinitionPtr">
 	<xs:all>
 		<xs:element name="recLambdaDefinitionPtr" type="T_nodePtr" minOccurs="1"/>
 	</xs:all>	
 </xs:complexType>
-
 
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
@@ -143,6 +141,20 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_lambdaDefinitions -->
+<xs:complexType name="T_lambdaDefinitions">
+	<xs:sequence>
+		<xs:element name="definition" type="T_lambdaDefinition" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="T_lambdaDefinition">
+	<xs:sequence>
+		<xs:element name="variablePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="lambdaExprPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
+
 <!-- T_cases -->
 <xs:complexType name="T_cases">
 	<xs:sequence>
@@ -208,6 +220,13 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_recLambdaDefinition">
+	<xs:all>
+		<xs:element name="definitions" type="T_lambdaDefinitions" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
 
 <xs:complexType name="T_recLambdaExpr">
 	<xs:all>
@@ -456,6 +475,7 @@
 		<xs:element name="jobExpr" type="T_jobExpr"/>
 		<xs:element name="lambdaExpr" type="T_lambdaExpr"/>
 		<xs:element name="recLambdaExpr" type="T_recLambdaExpr"/>
+		<xs:element name="recLambdaDefinition" type="T_recLambdaDefinition"/>
 		<xs:element name="program" type="T_program"/>
 	</xs:choice>
 </xs:group>
