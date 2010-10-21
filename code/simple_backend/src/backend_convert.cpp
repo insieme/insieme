@@ -226,6 +226,16 @@ void ConvertVisitor::visitReturnStmt( const ReturnStmtPtr& ptr )
 	cStr << ";";
 }
 
+void ConvertVisitor::visitCompoundStmt( const CompoundStmtPtr& ptr ) {
+	cStr << "{" << CodeStream::indR << "\n";
+	for_each(ptr->getChildList(), [&](const NodePtr& cur) { 
+		this->visit(cur); 
+		cStr << ";";
+		if(cur != ptr->getChildList().back()) cStr << "\n";
+	});
+	cStr << CodeStream::indL << "\n}";
+}
+
 
 
 string TypeManager::getTypeName(const core::TypePtr type) {
@@ -336,7 +346,7 @@ string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unn
 }
 
 string NameGenerator::getVarName(const VariablePtr& var) {
-	if(auto annotation = var.getAnnotation(c_info::CNameAnnotation::KEY)) {
+	if(auto annotation = var->getAnnotation(c_info::CNameAnnotation::KEY)) {
 		return annotation->getName();
 	} else {
 		return string("unnamed_var_") + toString(var->getId());
