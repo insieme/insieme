@@ -177,7 +177,7 @@ std::string getOperationType(const core::TypePtr& type) {
         else
             ss << "vector<" << getOperationType(ref) << ">";
 
-        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
+//        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
         return ss.str();
     }
     // FIXME
