@@ -38,6 +38,7 @@
 #include "ast_node.h"
 #include "ocl/ocl_compiler.h"
 #include "ocl/ocl_annotations.h"
+#include "naming.h"
 
 namespace insieme {
 namespace frontend {
@@ -155,16 +156,25 @@ public:
         if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
             return element;//->substitute(builder.getNodeManager(), *this);
         }
-        // check if we are at a function node
-        if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)){
 
-            auto funcAnnotation = func->getAnnotation(ocl::BaseAnnotation::KEY);
+        //TODO keep annotations when copying, element should not be used after this call
+        // call for subnodes
+        const core::NodePtr& newNode = element->substitute(*builder.getNodeManager(), *this);
+
+//std::cout << " any annotation? " << newNode->hasAnnotation(ocl::BaseAnnotation::KEY) <<  " " << newNode->getNodeType() << (newNode->getNodeType() == core::NodeType::NT_FunctionType) << (newNode->getNodeType() == core::NodeType::NT_LambdaExpr) << std::endl;
+        // check if we are at a function node
+        if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(newNode)){
+//        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
+
+            core::AnnotationMap map = element.getAnnotations();
+            std::cout << "Size in mapper: " << map.size() << std::endl;
+
+            auto funcAnnotation = element.getAnnotation(ocl::BaseAnnotation::KEY);
             if(funcAnnotation) {
 
                 bool isKernelFunction;
                 bool workGroupSizeDefined = false;
                 size_t wgs[3];
-
                 for(ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
                     ocl::AnnotationPtr annot = (*I);
@@ -178,34 +188,61 @@ public:
                         wgs[2] = wgsap->getZdim();
                         assert(wgs[2] > 0 && "Work group Size z-dimension has to be greater than 0.");
                     }
-
                     if(ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::KernelFctAnnotation>(annot)) {
                         isKernelFunction = kf->isKernelFct();
-   //TODO fix                     std::cout << "kernelfct\n";
                     }
 
                 }
-                //if function is not a OpenCL kernel function procede scan
+                //if function is not a OpenCL kernel function nothing to be done
                 if(!isKernelFunction)
-                    return element->substitute(*builder.getNodeManager(), *this);
+                    return func;
             }
+
+
+            //TODO handle subnodes.
+            //Maybe prettier in another mapper
+            const core::StatementPtr& body = func->getBody();
+            const core::Node::ChildList& children = body->getChildList();
+
+            std::for_each(children.begin(), children.end(),
+                    [&builder] (const core::NodePtr& curr) {
+                //look for ocl buildin functions and translate them to IR statements
+
+                }
+            );
+
+            core::LambdaExpr::ParamList params = func->getParams();
+
+            // add vector<uint<4>,3> globalRange and localRange to parameters
+            // params.push_back
+
+            //add three parallel statements for the localRange
+            core::JobExprPtr localZjob = builder.jobExpr(body);
+
+            core::LambdaExprPtr newFunc = builder.lambdaExpr(func->getType(), params, localZjob);
+
+            return newFunc;
         }
-        // not found => return current node
-        // (since nothing within a variable node may be substituted)
-        return element->substitute(*builder.getNodeManager(), *this);
+
+        return element;
     }
 
 };
 
 }
 
-core::ProgramPtr Compiler::lookForOclAnnotations() {
+core::ProgramPtr& Compiler::lookForOclAnnotations() {
 //    core::RecursiveASTVisitor<OclVisitor> visitor(oclAnnotationExpander);
 //    core::visitAll(mProgram, oclAnnotationExpander);
 
     OclMapper oclAnnotationExpander(builder);
 //    visitor.visit(mProgram);
-    oclAnnotationExpander.mapElement(mProgram);
+    const core::NodePtr progNode = oclAnnotationExpander.mapElement(mProgram);
+    if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(progNode))
+        mProgram = newProg;
+    else
+        assert(newProg && "OclCompiler corrupted the program");
+
 
     return mProgram;
 }

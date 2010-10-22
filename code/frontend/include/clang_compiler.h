@@ -202,7 +202,7 @@ class Program: public boost::noncopyable {
 
 private:
 	// Expand various annotations to corresponding parallel constructs
-	void addParallelism();
+	core::ProgramPtr& addParallelism();
 
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
