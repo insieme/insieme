@@ -42,7 +42,7 @@
 #include "ast_visitor.h"
 #include "clang_config.h"
 
-#include <glog/logging.h>
+#include <logging.h>
 
 #include <iostream>
 #include <fstream>
@@ -78,6 +78,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     // Set severity level
     SetStderrLogging(5);
+    CommandLineOptions::Verbosity = 2;
 
     core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
     core::ProgramPtr program = core::Program::create(*sharedManager);

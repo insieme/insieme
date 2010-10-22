@@ -808,9 +808,14 @@ public:
         	assert(insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 && "String is not a number");
         	pos = numStr;
         }
+
         core::TypePtr&& exprTy = convFact.convertType( *GET_TYPE_PTR(vecElemExpr) );
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy);
-        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(exprTy, core::lang::OP_SUBSCRIPT_PTR, toVector( base, idx ));
+        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy?
+        // if the type of the vector is a refType, we deref it
+        if(core::RefTypePtr&& baseTy = core::dynamic_pointer_cast<const core::RefType>(base))
+        	base =  builder.callExpr( baseTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(base) );
+
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(convFact.builder.refType(exprTy), core::lang::OP_SUBSCRIPT_PTR, toVector( base, idx ));
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
     }
