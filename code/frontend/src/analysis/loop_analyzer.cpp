@@ -119,7 +119,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		switch(unOp->getOpcode()) {
 		case UO_PreInc:
 		case UO_PostInc:
-			loopHelper.incrExpr = core::lang::CONST_UINT_ONE_PTR;
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", core::lang::TYPE_INT_GEN);
 			return;
 		case UO_PreDec:
 		case UO_PostDec:

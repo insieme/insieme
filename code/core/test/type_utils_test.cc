@@ -170,7 +170,8 @@ TEST(TypeUtils, Unification) {
 		EXPECT_EQ("f<'x,g<'y>,'x>", toString(*termA));
 		EXPECT_EQ("f<'z,g<'u>,h<'u>>", toString(*termB));
 
-		EXPECT_TRUE(isUnifyable(termA, termB));
+		ASSERT_PRED2(isUnifyable, termA, termB);
+
 		auto unifyingMap = *unify(manager, termA, termB);
 		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA)));
 		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termB)));

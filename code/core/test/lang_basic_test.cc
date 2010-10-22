@@ -78,24 +78,15 @@ TEST(LangBasic, BuildInTest) {
 	NodeManager manager;
 
 	// verify the build-in functionality (not for all types)
-	EXPECT_TRUE( lang::isBuildIn(lang::TYPE_BOOL) );
-	EXPECT_TRUE( lang::isBuildIn(lang::TYPE_BOOL_PTR) );
-	EXPECT_TRUE( lang::isBuildIn(lang::TYPE_BOOL_VAL) );
+	EXPECT_TRUE( lang::isBuildIn(lang::CONST_BOOL_FALSE_PTR->getValue()) );
+	EXPECT_TRUE( lang::isBuildIn(lang::CONST_BOOL_FALSE_PTR) );
+	EXPECT_EQ( lang::CONST_BOOL_FALSE_PTR, lang::getBuildInForValue(lang::CONST_BOOL_FALSE_PTR->getValue()) );
 
 	// same type within other manager
-	auto type = manager.get(lang::TYPE_BOOL);
+	LiteralPtr type = manager.get(lang::CONST_BOOL_FALSE_PTR);
 	EXPECT_TRUE( lang::isBuildIn(type) );
-	EXPECT_TRUE( lang::isBuildIn(*type) );
+	EXPECT_TRUE( lang::isBuildIn(type->getValue()) );
 
-	// create own instance
-	type = GenericType::get(manager, "unit");
-	EXPECT_TRUE( lang::isBuildIn(type) );
-	EXPECT_TRUE( lang::isBuildIn(*type) );
-
-	// create own instance
-	type = GenericType::get(manager, "myStrangeType");
-	EXPECT_FALSE( lang::isBuildIn(type) );
-	EXPECT_FALSE( lang::isBuildIn(*type) );
 }
 
 TEST(LangBasic, Subscript) {

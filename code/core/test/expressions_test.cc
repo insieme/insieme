@@ -122,8 +122,9 @@ TEST(ExpressionsTest, LambdaExpr) {
 TEST(ExpressionsTest, TupleExpr) {
 	NodeManager manager;
 
+	LiteralPtr one = Literal::get(manager, "1", TYPE_UINT_1_PTR);
 	TupleExprPtr empty = TupleExpr::get(manager, toVector<ExpressionPtr>());
-	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(CONST_BOOL_TRUE_PTR, CONST_UINT_ONE_PTR));
+	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(CONST_BOOL_TRUE_PTR, one));
 
 	TypePtr first = TupleType::get(manager, TupleType::ElementTypeList());
 	TypePtr second = TupleType::get(manager, toVector<TypePtr>(TYPE_BOOL_PTR, TYPE_UINT_1_PTR));
@@ -136,7 +137,7 @@ TEST(ExpressionsTest, TupleExpr) {
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, CONST_BOOL_TRUE_PTR, CONST_UINT_ONE_PTR));
+	basicExprTests(more, second, toVector<NodePtr>(second, CONST_BOOL_TRUE_PTR, one));
 }
 
 TEST(ExpressionsTest, VectorExpr) {
@@ -172,8 +173,9 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	LambdaExpr::ParamList param;
 	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
 
+	LiteralPtr zero = builder.literal("0", TYPE_UINT_1_PTR);
 	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
-	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
+	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
 
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,

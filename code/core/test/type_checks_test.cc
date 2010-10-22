@@ -226,6 +226,21 @@ TEST(Switch, Basic) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_SWITCH_EXPR, "", Message::ERROR));
 }
 
+TEST(BuildInLiterals, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+
+	LiteralPtr ok = lang::CONST_BOOL_FALSE_PTR;
+	LiteralPtr err = builder.literal(ok->getValue(), builder.genericType("strangeType"));
+
+	CheckPtr typeCheck = make_check<BuildInLiteralCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_TYPE_OF_LITERAL, "", Message::WARNING));
+}
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme

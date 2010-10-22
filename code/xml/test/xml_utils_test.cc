@@ -1100,8 +1100,9 @@ TEST(XmlTest, RecLambdaExprTest) {
 	LambdaExpr::ParamList param;
 	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
 
+	LiteralPtr zero = builder.literal("0", TYPE_UINT_1_PTR);
 	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
-	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,lang::CONST_UINT_ZERO_PTR));
+	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
 
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,

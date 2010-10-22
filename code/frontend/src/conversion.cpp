@@ -242,7 +242,7 @@ core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, co
 					( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
 						toVector<core::ExpressionPtr>(
 							builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ),
-							core::lang::CONST_UINT_ONE_PTR
+							builder.literal("1", core::lang::TYPE_INT_4_PTR)
 						)
 					) // a - 1
 			)
@@ -1110,7 +1110,7 @@ public:
 				DVLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
 						<< " with variable: " << newIndVar->getId();
 
-				declStmt = builder.declarationStmt( newIndVar, core::lang::CONST_UINT_ZERO_PTR );
+				declStmt = builder.declarationStmt( newIndVar, builder.literal(0, core::lang::TYPE_INT_4_PTR) );
 
 				DVLOG(2) << "Printing body: " << body;
 				core::NodePtr ret = core::transform::replaceNode(convFact.builder, body.getSingleStmt(), inductionVar, newIndVar);

@@ -51,7 +51,9 @@ enum {
 	EC_TYPE_INVALID_INITIALIZATION_EXPR,
 
 	EC_TYPE_INVALID_CONDITION_EXPR,
-	EC_TYPE_INVALID_SWITCH_EXPR
+	EC_TYPE_INVALID_SWITCH_EXPR,
+
+	EC_TYPE_INVALID_TYPE_OF_LITERAL
 };
 
 /**
@@ -77,6 +79,9 @@ SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
 SIMPLE_CHECK(IfConditionType, IfStmt);
 SIMPLE_CHECK(WhileConditionType, WhileStmt);
 SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
+
+SIMPLE_CHECK(BuildInLiteral, Literal);
+
 
 // TODO:
 //	- check that only concrete types are used for variables

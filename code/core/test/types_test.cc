@@ -50,8 +50,8 @@ using std::vector;
 namespace insieme {
 namespace core {
 
-//template<typename PT>
-//void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children);
+template<typename PT>
+void basicTypeTests(PT type, bool concrete, bool functional, const Node::ChildList& children = Node::ChildList());
 
 TEST(TypeTest, NodeManager ) {
 

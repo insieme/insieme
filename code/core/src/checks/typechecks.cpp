@@ -53,7 +53,8 @@ CheckPtr getFullCheck() {
 					make_check<DeclarationStmtTypeCheck>(),
 					make_check<WhileConditionTypeCheck>(),
 					make_check<IfConditionTypeCheck>(),
-					make_check<SwitchExpressionTypeCheck>()
+					make_check<SwitchExpressionTypeCheck>(),
+					make_check<BuildInLiteralCheck>()
 			)
 	));
 }
@@ -98,9 +99,10 @@ MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 	if (!mgu) {
 		res.push_back(Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
-						format("Invalid argument type(s) - expected: %s, actual: %s",
+						format("Invalid argument type(s) - expected: %s, actual: %s - %s",
 								toString(*argumentType).c_str(),
-								toString(*parameterType).c_str()),
+								toString(*parameterType).c_str(),
+								toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}
@@ -189,6 +191,28 @@ MessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& 
 						format("Invalid type of switch expression - expected: integral type, actual: %s",
 								toString(*switchType).c_str()),
 						Message::ERROR));
+	}
+	return res;
+}
+
+MessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& address) {
+
+	MessageList res;
+
+	// check whether it is a build-in literal
+	LiteralPtr buildIn = lang::getBuildInForValue(address->getValue());
+	if (!buildIn) {
+		return res;
+	}
+
+	if (*buildIn->getType() != *address->getType()) {
+		res.push_back(Message(address,
+				EC_TYPE_INVALID_TYPE_OF_LITERAL,
+				format("Deviating type of build in literal %s - expected: %s, actual: %s",
+						address->getValue().c_str(),
+						toString(*buildIn->getType()).c_str(),
+						toString(*address->getType()).c_str()),
+				Message::WARNING));
 	}
 	return res;
 }
