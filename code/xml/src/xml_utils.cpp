@@ -553,20 +553,18 @@ public:
 		rootElem << compoundStmt;
 		
 		const vector<StatementPtr>& stats = cur->getStatements();
-		if (!stats.empty()){
-			XmlElement statements("statements", doc);
-			compoundStmt << statements;
+		XmlElement statements("statements", doc);
+		compoundStmt << statements;
+		
+		for(vector<StatementPtr>::const_iterator iter = stats.begin(); iter != stats.end(); ++iter) {
+			XmlElement statement("statement", doc);
+			statements << statement;
 			
-			for(vector<StatementPtr>::const_iterator iter = stats.begin(); iter != stats.end(); ++iter) {
-				XmlElement statement("statement", doc);
-				statements << statement;
-				
-				XmlElement statementPtr("statementPtr", doc);
-				statementPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));
-				statement << statementPtr;
-				
-				visitAnnotations((*iter).getAnnotations(), statementPtr);
-			}
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));
+			statement << statementPtr;
+			
+			visitAnnotations((*iter).getAnnotations(), statementPtr);
 		}
 
 		visitAnnotations(cur->getAnnotations(), compoundStmt);
