@@ -74,6 +74,7 @@ class ConversionFactory {
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
+	core::ExpressionPtr defaultInitVal(const clang::Type& ty, const core::TypePtr type );
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList = PragmaList());
 
@@ -87,6 +88,7 @@ public:
 	core::ExpressionPtr convertExpr(const clang::Expr& expr) const;
 
 	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
 
