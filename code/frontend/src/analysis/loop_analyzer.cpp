@@ -79,7 +79,7 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL, NULL}) {
+LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper(toVector(NULL, NULL, NULL)) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression
