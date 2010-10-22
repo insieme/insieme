@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 
+#include <logging.h>
 #include "program.h"
 #include "clang_compiler.h"
 #include "conversion.h"
@@ -44,12 +45,17 @@
 
 #include "clang/AST/Decl.h"
 
+#include "ast_check.h"
+#include "checks/typechecks.h"
+
 using namespace insieme::core;
 using namespace insieme::frontend;
 using namespace insieme::frontend::conversion;
 
 TEST(StmtConversion, FileTest) {
 	using namespace clang;
+
+	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);
@@ -60,15 +66,27 @@ TEST(StmtConversion, FileTest) {
 	ConversionFactory convFactory( shared, comp, pl );
 
 	std::for_each(pl.begin(), pl.end(),
-		[ &convFactory ](const PragmaPtr curr) {
+		[ & ](const PragmaPtr curr) {
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
-			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( *tp->getStatement() )->toString() + '\"' );
-			else {
+			if(tp->isStatement()) {
+				StatementPtr&& stmt = convFactory.convertStmt( *tp->getStatement() );
+				EXPECT_EQ(tp->getExpected(), '\"' + stmt->toString() + '\"' );
+				// do type checking
+				MessageList&& msgList = check( stmt, checks::getFullCheck() );
+				EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
+				std::sort(msgList.begin(), msgList.end());
+				std::for_each(msgList.begin(), msgList.end(), [&stmt](const Message& cur) {
+					LOG(INFO) << *stmt;
+					LOG(INFO) << cur << std::endl;
+				});
+
+			} else {
 				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
 				assert(td && "Decl is not of type typedecl");
 				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( *td->getTypeForDecl() )->toString() + '\"' );
 			}
+
+
 	});
 
 }
