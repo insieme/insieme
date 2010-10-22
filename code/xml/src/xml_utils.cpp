@@ -141,20 +141,28 @@ public:
 
 				XmlElement intTypeParam("intTypeParam", doc);
 				intTypeParams << intTypeParam;
+
 				switch (iter->getType()) {
-				case IntTypeParam::VARIABLE:
-					intTypeParam.setAttr("type", "variable");
-					intTypeParam.setAttr("value", numeric_cast<string>(iter->getSymbol()));
+				case IntTypeParam::VARIABLE: {
+					XmlElement variable("variable", doc);
+					variable.setAttr("value", numeric_cast<string>(iter->getSymbol()));
+					intTypeParam << variable;
 					break;
-				case IntTypeParam::CONCRETE:
-					intTypeParam.setAttr("type", "concrete");
-					intTypeParam.setAttr("value", numeric_cast<string>(iter->getValue()));
+					}
+				case IntTypeParam::CONCRETE: {
+					XmlElement concrete("concrete", doc);
+					concrete.setAttr("value", numeric_cast<string>(iter->getValue()));
+					intTypeParam << concrete;
 					break;
-				case IntTypeParam::INFINITE:
-					intTypeParam.setAttr("type", "infinite");
+					}
+				case IntTypeParam::INFINITE: {
+					XmlElement infinite("infinite", doc);
+					intTypeParam << infinite;					
 					break;
+					}
 				default:
-					intTypeParam.setAttr("type", "Invalid Parameter");
+					XmlElement invalide("Invalid Parameter", doc);
+					intTypeParam << invalide;		
 					break;
 				}
 			}	

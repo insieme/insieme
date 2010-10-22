@@ -71,18 +71,29 @@
 </xs:complexType>
 
 <xs:complexType name="T_intTypeParam">
-	<xs:attribute name="type" type="A_intTypeParam_type" use="required"/>
+	<xs:sequence>
+		<xs:group ref="G_intType" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
+<xs:group name="G_intType">
+	<xs:choice>
+		<xs:element name="variable" type="T_intVariable"/>
+		<xs:element name="concrete" type="T_intConcrete"/>
+		<xs:element name="infinite" type="T_intInfinite"/>
+	</xs:choice>
+</xs:group>
+
+<xs:complexType name="T_intVariable">
 	<xs:attribute name="value" type="xs:string" use="required"/>
 </xs:complexType>
 
-<xs:simpleType name="A_intTypeParam_type">
-	<xs:restriction base="xs:string">
-		<xs:enumeration value="variable"/>
-		<xs:enumeration value="concrete"/>
-		<xs:enumeration value="infinite"/>
-	</xs:restriction>
-</xs:simpleType>
+<xs:complexType name="T_intConcrete">
+	<xs:attribute name="value" type="xs:integer" use="required"/>
+</xs:complexType>
 
+<xs:complexType name="T_intInfinite">
+</xs:complexType>
 
 <!-- T_entries -->
 <xs:complexType name="T_entries">
