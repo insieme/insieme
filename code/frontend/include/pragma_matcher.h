@@ -110,10 +110,10 @@ private:
 void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
 
 // forward declarations
-class concat;
-class star;
-class choice;
-class option;
+struct concat;
+struct star;
+struct choice;
+struct option;
 
 // ------------------------------------ ValueUnion ---------------------------
 
