@@ -176,10 +176,10 @@ public:
 		functionType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << functionType;
 		
+		XmlElement argumentType("argumentType", doc);
+		functionType << argumentType;
+		
 		if (const TypePtr& argument = cur->getArgumentType()) {
-			XmlElement argumentType("argumentType", doc);
-			functionType << argumentType;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
 			argumentType << typePtr;
@@ -187,10 +187,10 @@ public:
 			visitAnnotations(argument.getAnnotations(), typePtr);
 		}
 		
+		XmlElement returnType("returnType", doc);
+		functionType << returnType;
+		
 		if (const TypePtr& returnT = cur->getReturnType()) {
-			XmlElement returnType("returnType", doc);
-			functionType << returnType;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
 			returnType << typePtr;
@@ -278,11 +278,11 @@ public:
 		XmlElement recType("recType", doc);
 		recType.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recType;
-		
-		if (const RecTypeDefinitionPtr& definitionT = cur->getDefinition()) {
-			XmlElement definition("definition", doc);
-			recType << definition;
 
+		XmlElement definition("definition", doc);
+		recType << definition;
+
+		if (const RecTypeDefinitionPtr& definitionT = cur->getDefinition()) {
 			XmlElement recTypeDefinitionPtr("recTypeDefinitionPtr", doc);
 			recTypeDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*definitionT)));			
 			definition << recTypeDefinitionPtr;
@@ -298,27 +298,25 @@ public:
 		recTypeDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recTypeDefinition;
 		
+		XmlElement definitions("definitions", doc);
+		recTypeDefinition << definitions;
+		
 		const RecTypeDefinition::RecTypeDefs& defs = cur->getDefinitions();
-		if (!defs.empty()){
-			XmlElement definitions("definitions", doc);
-			recTypeDefinition << definitions;
+		for(RecTypeDefinition::RecTypeDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
+			XmlElement definition("definition", doc);
+			definitions << definition;
 			
-			for(RecTypeDefinition::RecTypeDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
-				XmlElement definition("definition", doc);
-				definitions << definition;
-				
-				XmlElement typeVariablePtr("typeVariablePtr", doc);
-				typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
-				definition << typeVariablePtr;
-				
-				visitAnnotations((iter->first).getAnnotations(), typeVariablePtr);
-				
-				XmlElement typePtr("typePtr", doc);
-				typePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
-				definition << typePtr;
-				
-				visitAnnotations((iter->second).getAnnotations(), typePtr);
-			}
+			XmlElement typeVariablePtr("typeVariablePtr", doc);
+			typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+			definition << typeVariablePtr;
+			
+			visitAnnotations((iter->first).getAnnotations(), typeVariablePtr);
+			
+			XmlElement typePtr("typePtr", doc);
+			typePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+			definition << typePtr;
+			
+			visitAnnotations((iter->second).getAnnotations(), typePtr);
 		}
 		
 		visitAnnotations(cur->getAnnotations(), recTypeDefinition);
@@ -330,10 +328,10 @@ public:
 		literal.setAttr("value", cur->getValue());
 		rootElem << literal;
 		
+		XmlElement type("type", doc);
+		literal << type;
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			literal << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -349,10 +347,10 @@ public:
 		returnStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << returnStmt;
 		
+		XmlElement returnExpression("returnExpression", doc);
+		returnStmt << returnExpression;
+		
 		if (const ExpressionPtr& returnE = cur->getReturnExpr()) {
-			XmlElement returnExpression("returnExpression", doc);
-			returnStmt << returnExpression;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnE)));		
 			returnExpression << expressionPtr;
@@ -368,32 +366,32 @@ public:
 		forStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << forStmt;
 		
+		XmlElement declaration("declaration", doc);
+		forStmt << declaration;
+		
 		if (const DeclarationStmtPtr& declarationR = cur->getDeclaration()) {
-			XmlElement declaration("declaration", doc);
-			forStmt << declaration;
-
 			XmlElement declarationStmtPtr("declarationStmtPtr", doc);
 			declarationStmtPtr.setAttr("ref", numeric_cast<string>((size_t)(&*declarationR)));		
 			declaration << declarationStmtPtr;
 			
 			visitAnnotations(declarationR.getAnnotations(), declarationStmtPtr);
 		}
+
+		XmlElement body("body", doc);
+		forStmt << body;
 		
 		if (const StatementPtr& bodyR = cur->getBody()) {
-			XmlElement body("body", doc);
-			forStmt << body;
-
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyR)));		
 			body << statementPtr;
 			
 			visitAnnotations(bodyR.getAnnotations(), statementPtr);
 		}
+
+		XmlElement end("end", doc);
+		forStmt << end;
 		
 		if (const ExpressionPtr& endR = cur->getEnd()) {
-			XmlElement end("end", doc);
-			forStmt << end;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*endR)));		
 			end << expressionPtr;
@@ -401,10 +399,10 @@ public:
 			visitAnnotations(endR.getAnnotations(), expressionPtr);
 		}
 		
+		XmlElement step("step", doc);
+		forStmt << step;
+		
 		if (const ExpressionPtr& stepR = cur->getStep()) {
-			XmlElement step("step", doc);
-			forStmt << step;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*stepR)));		
 			step << expressionPtr;
@@ -420,10 +418,10 @@ public:
 		ifStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << ifStmt;
 
-		if (const ExpressionPtr& cond = cur->getCondition()) {
-			XmlElement condition("condition", doc);
-			ifStmt << condition;
+		XmlElement condition("condition", doc);
+		ifStmt << condition;
 
+		if (const ExpressionPtr& cond = cur->getCondition()) {
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*cond)));		
 			condition << expressionPtr;
@@ -431,21 +429,21 @@ public:
 			visitAnnotations(cond.getAnnotations(), expressionPtr);
 		}
 		
+		XmlElement thenBody("thenBody", doc);
+		ifStmt << thenBody;
+		
 		if (const StatementPtr& thenBodyR = cur->getThenBody()) {
-			XmlElement thenBody("thenBody", doc);
-			ifStmt << thenBody;
-
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*thenBodyR)));		
 			thenBody << statementPtr;
 			
 			visitAnnotations(thenBodyR.getAnnotations(), statementPtr);
 		}
+
+		XmlElement elseBody("elseBody", doc);
+		ifStmt << elseBody;
 		
 		if (const StatementPtr& elseBodyR = cur->getElseBody()) {
-			XmlElement elseBody("elseBody", doc);
-			ifStmt << elseBody;
-
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*elseBodyR)));		
 			elseBody << statementPtr;
@@ -461,10 +459,10 @@ public:
 		switchStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << switchStmt;
 
+		XmlElement expression("expression", doc);
+		switchStmt << expression;
+		
 		if (const ExpressionPtr& expr = cur->getSwitchExpr()) {
-			XmlElement expression("expression", doc);
-			switchStmt << expression;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*expr)));		
 			expression << expressionPtr;
@@ -494,11 +492,11 @@ public:
 				visitAnnotations((iter->second).getAnnotations(), statementPtr);
 			}
 		}
+
+		XmlElement defaultCase("defaultCase", doc);
+		switchStmt << defaultCase;
 		
 		if (const StatementPtr& defaultC = cur->getDefaultCase()) {
-			XmlElement defaultCase("defaultCase", doc);
-			switchStmt << defaultCase;
-
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*defaultC)));		
 			defaultCase << statementPtr;
@@ -514,10 +512,10 @@ public:
 		whileStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << whileStmt;
 
+		XmlElement condition("condition", doc);
+		whileStmt << condition;
+		
 		if (const ExpressionPtr& cond = cur->getCondition()) {
-			XmlElement condition("condition", doc);
-			whileStmt << condition;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*cond)));		
 			condition << expressionPtr;
@@ -525,10 +523,10 @@ public:
 			visitAnnotations(cond.getAnnotations(), expressionPtr);
 		}
 		
-		if (const StatementPtr& bodyR = cur->getBody()) {
-			XmlElement body("body", doc);
-			whileStmt << body;
+		XmlElement body("body", doc);
+		whileStmt << body;
 
+		if (const StatementPtr& bodyR = cur->getBody()) {
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyR)));		
 			body << statementPtr;
@@ -579,10 +577,10 @@ public:
 	}
 	
 	void visitNamedCompositeExpr_(XmlElement& el, const NamedCompositeExprPtr& cur){
+		XmlElement type("type", doc);
+		el << type;		
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			el << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -635,10 +633,10 @@ public:
 		vectorExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << vectorExpr;
 		
+		XmlElement type("type", doc);
+		vectorExpr << type;
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			vectorExpr << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -669,10 +667,10 @@ public:
 		tupleExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << tupleExpr;
 		
+		XmlElement type("type", doc);
+		tupleExpr << type;
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			tupleExpr << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -703,10 +701,11 @@ public:
 		castExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << castExpr;
 		
+		XmlElement type("type", doc);
+		castExpr << type;
+		
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			castExpr << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -714,10 +713,10 @@ public:
 			visitAnnotations(typeT.getAnnotations(), typePtr);
 		}
 		
+		XmlElement subExpression("subExpression", doc);
+		castExpr << subExpression;
+		
 		if (const ExpressionPtr& expressionT = cur->getSubExpression()) {
-			XmlElement subExpression("subExpression", doc);
-			castExpr << subExpression;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*expressionT)));		
 			subExpression << expressionPtr;
@@ -733,21 +732,21 @@ public:
 		callExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << callExpr;
 		
+		XmlElement type("type", doc);
+		callExpr << type;
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			callExpr << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
 			
 			visitAnnotations(typeT.getAnnotations(), typePtr);
 		}
+
+		XmlElement function("function", doc);
+		callExpr << function;
 		
 		if (const ExpressionPtr& expressionT = cur->getFunctionExpr()) {
-			XmlElement function("function", doc);
-			callExpr << function;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*expressionT)));		
 			function << expressionPtr;
@@ -778,11 +777,11 @@ public:
 		variable.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		variable.setAttr("identifier", numeric_cast<string>(cur->getId()));
 		rootElem << variable;
+
+		XmlElement type("type", doc);
+		variable << type;
 		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			variable << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -798,21 +797,21 @@ public:
 		declarationStmt.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << declarationStmt;
 
-		if (const VariablePtr& varR = cur->getVariable()) {
-			XmlElement variable("variable", doc);
-			declarationStmt << variable;
+		XmlElement variable("variable", doc);
+		declarationStmt << variable;
 
+		if (const VariablePtr& varR = cur->getVariable()) {
 			XmlElement variablePtr("variablePtr", doc);
 			variablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*varR)));		
 			variable << variablePtr;
 			
 			visitAnnotations(varR.getAnnotations(), variablePtr);
 		}
+
+		XmlElement expression("expression", doc);
+		declarationStmt << expression;
 		
 		if (const ExpressionPtr& init = cur->getInitialization()) {
-			XmlElement expression("expression", doc);
-			declarationStmt << expression;
-
 			XmlElement expressionPtr("expressionPtr", doc);
 			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*init)));		
 			expression << expressionPtr;
@@ -828,10 +827,10 @@ public:
 		jobExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << jobExpr;
 		
+		XmlElement type("type", doc);
+		jobExpr << type;
+		
 		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			jobExpr << type;
-
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -879,10 +878,10 @@ public:
 			}
 		}
 		
+		XmlElement defaultStatement("defaultStatement", doc);
+		jobExpr << defaultStatement;
+		
 		if (const StatementPtr& defaultT = cur->getDefaultStmt()) {
-			XmlElement defaultStatement("defaultStatement", doc);
-			jobExpr << defaultStatement;
-
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*defaultT)));		
 			defaultStatement << statementPtr;
@@ -899,10 +898,10 @@ public:
 		lambdaExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << lambdaExpr;
 		
-		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			lambdaExpr << type;
+		XmlElement type("type", doc);
+		lambdaExpr << type;
 
+		if (const TypePtr& typeT = cur->getType()) {
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
@@ -910,27 +909,27 @@ public:
 			visitAnnotations(typeT.getAnnotations(), typePtr);
 		}
 		
-		const vector<VariablePtr>& parList = cur->getParams ();
-		if (!parList.empty()){
-			XmlElement params("params",doc);
-			lambdaExpr << params;
-			
-			for(vector<VariablePtr>::const_iterator iter = parList.begin(); iter != parList.end(); ++iter) {
-				XmlElement param("param", doc);
-				params << param;
 
-				XmlElement variablePtr("variablePtr", doc);
-				variablePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
-				param << variablePtr;
-			
-				visitAnnotations((*iter).getAnnotations(), variablePtr);
-			}
+		XmlElement params("params",doc);
+		lambdaExpr << params;
+		
+		const vector<VariablePtr>& parList = cur->getParams ();
+					
+		for(vector<VariablePtr>::const_iterator iter = parList.begin(); iter != parList.end(); ++iter) {
+			XmlElement param("param", doc);
+			params << param;
+
+			XmlElement variablePtr("variablePtr", doc);
+			variablePtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+			param << variablePtr;
+		
+			visitAnnotations((*iter).getAnnotations(), variablePtr);
 		}
 		
+		XmlElement body("body", doc);
+		lambdaExpr << body;
+		
 		if (const StatementPtr& bodyT = cur->getBody()) {
-			XmlElement body("body", doc);
-			lambdaExpr << body;
-
 			XmlElement statementPtr("statementPtr", doc);
 			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyT)));		
 			body << statementPtr;
@@ -945,22 +944,20 @@ public:
 		XmlElement program("program", doc);
 		program.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << program;
-		
-		const Program::EntryPointSet& entrySet = cur->getEntryPoints ();
-		if (!entrySet.empty()){
-			XmlElement expressions("expressions",doc);
-			program << expressions;
-			
-			for(Program::EntryPointSet::const_iterator iter = entrySet.begin(); iter != entrySet.end(); ++iter) {
-				XmlElement expression("expression", doc);
-				expressions << expression;
 
-				XmlElement expressionPtr("expressionPtr", doc);
-				expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
-				expression << expressionPtr;
-			
-				visitAnnotations((*iter).getAnnotations(), expressionPtr);
-			}
+		XmlElement expressions("expressions",doc);
+		program << expressions;
+				
+		const Program::EntryPointSet& entrySet = cur->getEntryPoints ();
+		for(Program::EntryPointSet::const_iterator iter = entrySet.begin(); iter != entrySet.end(); ++iter) {
+			XmlElement expression("expression", doc);
+			expressions << expression;
+
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&*(*iter)));			
+			expression << expressionPtr;
+		
+			visitAnnotations((*iter).getAnnotations(), expressionPtr);
 		}
 
 		visitAnnotations(cur->getAnnotations(), program);
@@ -970,22 +967,22 @@ public:
 		XmlElement recLambdaExpr("recLambdaExpr", doc);
 		recLambdaExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recLambdaExpr;
-		
-		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement type("type", doc);
-			recLambdaExpr << type;
 
+		XmlElement type("type", doc);
+		recLambdaExpr << type;
+				
+		if (const TypePtr& typeT = cur->getType()) {
 			XmlElement typePtr("typePtr", doc);
 			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
 			type << typePtr;
 			
 			visitAnnotations(typeT.getAnnotations(), typePtr);
 		}
+
+		XmlElement variable("variable", doc);
+		recLambdaExpr << variable;
 		
 		if (const VariablePtr& varT = cur->getVariable()) {
-			XmlElement variable("variable", doc);
-			recLambdaExpr << variable;
-
 			XmlElement variablePtr("variablePtr", doc);
 			variablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*varT)));		
 			variable << variablePtr;
@@ -993,10 +990,10 @@ public:
 			visitAnnotations(varT.getAnnotations(), variablePtr);
 		}
 		
+		XmlElement definition("definition", doc);
+		recLambdaExpr << definition;
+		
 		if (const RecLambdaDefinitionPtr& recT = cur->getDefinition()) {
-			XmlElement definition("definition", doc);
-			recLambdaExpr << definition;
-
 			XmlElement recLambdaDefinitionPtr("recLambdaDefinitionPtr", doc);
 			recLambdaDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*recT)));		
 			definition << recLambdaDefinitionPtr;
@@ -1011,33 +1008,30 @@ public:
 		XmlElement recLambdaDefinition("recLambdaDefinition", doc);
 		recLambdaDefinition.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << recLambdaDefinition;
-		
+
+		XmlElement definitions("definitions", doc);
+		recLambdaDefinition << definitions;
+				
 		const RecLambdaDefinition::RecFunDefs& defs = cur->getDefinitions();
-		if (!defs.empty()){
-			XmlElement definitions("definitions", doc);
-			recLambdaDefinition << definitions;
+		for(RecLambdaDefinition::RecFunDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
+			XmlElement definition("definition", doc);
+			definitions << definition;
 			
-			for(RecLambdaDefinition::RecFunDefs::const_iterator iter = defs.begin(); iter != defs.end(); ++iter) {
-				XmlElement definition("definition", doc);
-				definitions << definition;
-				
-				XmlElement variablePtr("variablePtr", doc);
-				variablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
-				definition << variablePtr;
-				
-				visitAnnotations((iter->first).getAnnotations(), variablePtr);
-				
-				XmlElement lambdaExprPtr("lambdaExprPtr", doc);
-				lambdaExprPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
-				definition << lambdaExprPtr;
-				
-				visitAnnotations((iter->second).getAnnotations(), lambdaExprPtr);
-			}
+			XmlElement variablePtr("variablePtr", doc);
+			variablePtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+			definition << variablePtr;
+			
+			visitAnnotations((iter->first).getAnnotations(), variablePtr);
+			
+			XmlElement lambdaExprPtr("lambdaExprPtr", doc);
+			lambdaExprPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+			definition << lambdaExprPtr;
+			
+			visitAnnotations((iter->second).getAnnotations(), lambdaExprPtr);
 		}
 		
 		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
 	}
-	
 };
 
 class error_handler: public DOMErrorHandler {
