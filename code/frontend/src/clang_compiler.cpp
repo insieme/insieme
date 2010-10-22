@@ -342,9 +342,9 @@ void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
 /**
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
  */
-const core::ProgramPtr& Program::addParallelism() {
+void Program::addParallelism() {
     ocl::Compiler oclCompiler(mProgram, mMgr);
-    return oclCompiler.lookForOclAnnotations();
+    mProgram = oclCompiler.lookForOclAnnotations();
 }
 
 const core::ProgramPtr& Program::convert() {
@@ -383,8 +383,8 @@ const core::ProgramPtr& Program::convert() {
 	}
 
 	if(insiemePragmaFound) {
-	    return addParallelism();
-//		return mProgram;
+	    addParallelism();
+		return mProgram;
 	}
 
 	// For each translation unit we call the IRConverter
@@ -404,9 +404,9 @@ const core::ProgramPtr& Program::convert() {
 		mProgram = conv.getProgram();
 	}
 
-	return addParallelism();
-
-//	return mProgram;
+	addParallelism();
+	return mProgram;
 }
+
 } // End fronend namespace
 } // End insieme namespace
