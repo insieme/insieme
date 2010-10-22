@@ -205,7 +205,7 @@ OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& addr
 		return res;
 	}
 
-	if (*buildIn->getType() != *address->getType()) {
+	if (!isUnifyable(buildIn->getType(),address->getType())) {
 		add(res, Message(address,
 				EC_TYPE_INVALID_TYPE_OF_LITERAL,
 				format("Deviating type of build in literal %s - expected: %s, actual: %s",

@@ -42,22 +42,6 @@
 namespace insieme {
 namespace core {
 
-void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
-	if (!target) {
-		target = *list;
-		return;
-	}
-	::addAll(*target, *list);
-}
-
-void add(OptionalMessageList& target, const Message& msg) {
-	if (!target) {
-		target = toVector(msg);
-		return;
-	}
-	target->push_back(msg);
-}
-
 
 bool Message::operator==(const Message& other) const {
 	return type == other.type && address == other.address && errorCode == other.errorCode;
@@ -223,9 +207,31 @@ namespace {
 
 }
 
+void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
+	// if there is no new element => skip
+	if (!list) {
+		return;
+	}
+
+	// check if there has already been a message within the result
+	if (!target) {
+		target = *list;
+		return;
+	}
+	::addAll(*target, *list);
+}
+
+void add(OptionalMessageList& target, const Message& msg) {
+	if (!target) {
+		target = toVector(msg);
+		return;
+	}
+	target->push_back(msg);
+}
+
 MessageList check(const NodePtr& node, const CheckPtr& check) {
 	// collect messages ..
-	auto res =  check->visit(node);
+	auto res = check->visit(node);
 	if (res) {
 		// => list is not empty ... return list
 		return *res;
