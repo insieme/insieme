@@ -57,37 +57,37 @@ void binary_op_test() {
 	#pragma test "fun(ref<int<4>> v3, ref<int<4>> v4){ {int.add(ref.deref(v4), 1); return int.sub(ref.deref(v3), 1);} }(v1, v2)"
 	(a+1, b-1);
 
-	#pragma test "fun(ref<int<4>> v6){ {int<4> v5 = ref.deref(v6); ref.assign(v6, int.add(ref.deref(v6), cast<int<4>>(1))); return v5;} }(v2)"
+	#pragma test "fun(ref<int<4>> v3){ {int<4> v2 = ref.deref(v3); ref.assign(v3, int.add(ref.deref(v3), cast<int<4>>(1))); return v2;} }(v1)"
 	a++;
 
-	#pragma test "fun(ref<int<4>> v8){ {int<4> v7 = ref.deref(v8); ref.assign(v8, int.sub(ref.deref(v8), cast<int<4>>(1))); return v7;} }(v2)"
+	#pragma test "fun(ref<int<4>> v3){ {int<4> v2 = ref.deref(v3); ref.assign(v3, int.sub(ref.deref(v3), cast<int<4>>(1))); return v2;} }(v1)"
 	a--;
 
-	#pragma test "fun(ref<int<4>> v9){ {ref.assign(v9, int.add(ref.deref(v9), cast<int<4>>(1))); ref.deref(v9);} }(v2)"
+	#pragma test "fun(ref<int<4>> v2){ {ref.assign(v2, int.add(ref.deref(v2), cast<int<4>>(1))); ref.deref(v2);} }(v1)"
 	++a;
 
-	#pragma test "fun(ref<int<4>> v10){ {ref.assign(v10, int.sub(ref.deref(v10), cast<int<4>>(1))); ref.deref(v10);} }(v2)"
+	#pragma test "fun(ref<int<4>> v2){ {ref.assign(v2, int.sub(ref.deref(v2), cast<int<4>>(1))); ref.deref(v2);} }(v1)"
 	--a;
 }
 
 void unary_op_test() {
 
-	#pragma test "ref<int<4>> v11 = ref.var(0)"
+	#pragma test "ref<int<4>> v1 = ref.var(0)"
 	int a = 0;
 
 //	#pragma test "bool.not(a)" TBD
 	!a;
 
-	#pragma test "v11"
+	#pragma test "v1"
 	+a;
 
 //	#pragma test "a" TBD
 	-a;
 
-	#pragma test "ref<ref<int<4>>> v12 = ref.var(v11)"
+	#pragma test "ref<ref<int<4>>> v2 = ref.var(v1)"
 	int* b = &a;
 
-	#pragma test "ref.deref(v12)"
+	#pragma test "ref.deref(v1)"
 	*b;
 }
 
@@ -95,14 +95,14 @@ void if_stmt_test() {
 
 	int cond = 0;
 
-	#pragma test "if(cast<bool>(v13)) {ref.assign(v13, int.add(ref.deref(v13), 1));} else {ref.assign(v13, int.sub(ref.deref(v13), 1));}"
+	#pragma test "if(cast<bool>(v1)) {ref.assign(v1, int.add(ref.deref(v1), 1));} else {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
 	if(cond) {
 		cond += 1;
 	} else {
 		cond -= 1;
 	}
 
-	#pragma test "if(int.eq(ref.deref(v13), 0)) {ref.assign(v13, int.add(ref.deref(v13), ref.deref(v13)));} else {}"
+	#pragma test "if(int.eq(ref.deref(v1), 0)) {ref.assign(v1, int.add(ref.deref(v1), ref.deref(v1)));} else {}"
 	if(cond == 0) {
 		cond += cond;
 	}
@@ -110,26 +110,26 @@ void if_stmt_test() {
 
 void for_stmt_test() {
 
-	#pragma test "ref<int<4>> v14 = ref.var(0)"
+	#pragma test "ref<int<4>> v1 = ref.var(0)"
 	int it = 0;
 	int a;
 
 	// standard for loop
-	#pragma test "for(ref<int<4>> v15 = ref.var(0) .. 100 : 1) {{};}"
+	#pragma test "for(ref<int<4>> v1 = ref.var(0) .. 100 : 1) {{};}"
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
-	#pragma test "{for(ref<int<4>> v17 = ref.var(0) .. 100 : 1) {ref.assign(v16, ref.deref(v17));}; ref.assign(v14, 100);}"
+	#pragma test "{for(ref<int<4>> v3 = ref.var(0) .. 100 : 1) {ref.assign(v2, ref.deref(v3));}; ref.assign(v1, 100);}"
 	for(it=0; it<100; ++it) { a=it; }
 
-	#pragma test "while(int.lt(ref.deref(v14), 100)) {{{};}; ref.assign(v14, int.add(ref.deref(v14), 1));}"
+	#pragma test "while(int.lt(ref.deref(v1), 100)) {{{};}; ref.assign(v1, int.add(ref.deref(v1), 1));}"
 	for(; it<100; it+=1) { ; }
 
-	#pragma test "{ref<int<4>> v19 = ref.var(1); ref<int<4>> v20 = ref.var(2); for(ref<int<4>> v18 = ref.var(0) .. 100 : 1) {ref.assign(v16, ref.deref(v18));};}"
+	#pragma test "{ref<int<4>> v3 = ref.var(1); ref<int<4>> v4 = ref.var(2); for(ref<int<4>> v1 = ref.var(0) .. 100 : 1) {ref.assign(v2, ref.deref(v1));};}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test "{ref.assign(v21, 0); while(int.gt(ref.deref(v22), 1)) {{}; fun(ref<int<4>> v25, ref<int<4>> v26, ref<int<4>> v27){ {fun(ref<int<4>> v27){ {int<4> v23 = ref.deref(v27); ref.assign(v27, int.add(ref.deref(v27), cast<int<4>>(1))); return v23;} }(v25); return ref.assign(v26, int.div(ref.deref(v26), 2));} }(v21, v22, v24);};}"
+	#pragma test "{ref.assign(v1, 0); while(int.gt(ref.deref(v2), 1)) {{}; fun(ref<int<4>> v5, ref<int<4>> v6, ref<int<4>> v7){ {fun(ref<int<4>> v7){ {int<4> v3 = ref.deref(v7); ref.assign(v7, int.add(ref.deref(v7), cast<int<4>>(1))); return v3;} }(v5); return ref.assign(v6, int.div(ref.deref(v6), 2));} }(v1, v2, v4);};}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
 
@@ -137,10 +137,21 @@ void while_stmt_test() {
 
 	int it = 0;
 
-//	#pragma test "while(int.ne(ref.deref(v28), 0)) {ref.assign(v28, int.sub(ref.deref(v28), 1));}"
+	#pragma test "while(int.ne(ref.deref(v1), 0)) {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
 	while(it != 0) { it-=1; }
 
 }
 
+void vector_stmt_test() {
 
+//	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
+	int a[5];
+
+//	#pragma test "ref.assign(subscript(ref.deref(cast<ref<int<4>>>(v1)), ref.deref(0)), 1)"
+	a[0] = 1;
+
+
+
+
+}
 

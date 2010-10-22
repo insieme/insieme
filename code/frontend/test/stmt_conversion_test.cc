@@ -52,6 +52,10 @@ using namespace insieme::core;
 using namespace insieme::frontend;
 using namespace insieme::frontend::conversion;
 
+struct VariableResetHack {
+	static void reset() { Variable::counter = 0; }
+};
+
 TEST(StmtConversion, FileTest) {
 	using namespace clang;
 
@@ -63,11 +67,16 @@ TEST(StmtConversion, FileTest) {
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-	ConversionFactory convFactory( shared, comp, pl );
+
 
 	std::for_each(pl.begin(), pl.end(),
 		[ & ](const PragmaPtr curr) {
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
+			// we reset the counter for variables so we can write independent tests
+			VariableResetHack::reset();
+
+			ConversionFactory convFactory( shared, comp, pl );
+
 			if(tp->isStatement()) {
 				StatementPtr&& stmt = convFactory.convertStmt( *tp->getStatement() );
 				EXPECT_EQ(tp->getExpected(), '\"' + stmt->toString() + '\"' );

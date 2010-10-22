@@ -897,113 +897,9 @@ public:
 //############################################################################
 class ConversionFactory::ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
-private:
-
-	core::ExpressionPtr defaultInitVal(const clang::Type& ty, const core::TypePtr type ) {
-        if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
-            // initialize integer value
-            return convFact.builder.literal("0", type);
-        }
-        if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
-            // in case of floating types we initialize with a zero value
-            return convFact.builder.literal("0.0", type);
-        }
-        if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
-            // initialize pointer/reference types with the null value
-            return core::lang::CONST_NULL_PTR_PTR;
-        }
-        if ( ty.isCharType() || ty.isAnyCharacterType() ) {
-            // TODO
-            return core::lang::CONST_NULL_PTR_PTR;
-        }
-        if ( ty.isBooleanType() ) {
-            // boolean values are initialized to false
-            return convFact.builder.literal("false", core::lang::TYPE_BOOL_PTR);
-        }
-
-        //----------------  INTIALIZE VECTORS ---------------------------------
-        const Type* elemTy = NULL;
-        size_t arraySize = 0;
-        if ( ty.isExtVectorType() ) {
-        	const TypedefType* typedefType = dyn_cast<const TypedefType>(&ty);
-            assert(typedefType && "ExtVectorType has unexpected class");
-            const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
-            assert(vecTy && "ExtVectorType has unexpected class");
-
-			elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
-			arraySize = vecTy->getNumElements();
-        }
-        if ( ty.isConstantArrayType() ) {
-        	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(&ty);
-			assert(arrTy && "ConstantArrayType has unexpected class");
-
-			elemTy = arrTy->getElementType()->getUnqualifiedDesugaredType();
-			arraySize = *arrTy->getSize().getRawData();
-        }
-        if( ty.isExtVectorType() || ty.isConstantArrayType() ) {
-        	core::ExpressionPtr&& initVal = defaultInitVal(*elemTy, convFact.convertType( *elemTy ) );
-        	return convFact.builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
-        }
-
-        assert(false && "Default initialization type not defined");
-        return core::lang::CONST_NULL_PTR_PTR;
-	}
 
 public:
 	ClangStmtConverter(ConversionFactory& convFact): convFact(convFact) { }
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						VARIABLE DECLARATION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::DeclarationStmtPtr convertVarDecl(clang::VarDecl* varDecl) {
-		// logging
-		DVLOG(1) << "\n****************************************************************************************\n"
-				 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
-				 << "-> at location: (" << utils::location(varDecl->getLocation(), convFact.clangComp.getSourceManager()) << "): ";
-		if( VLOG_IS_ON(2) ) { \
-			DVLOG(2) << "Dump of clang VarDecl: \n"
-					 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-			varDecl->dump();
-		}
-
-		clang::QualType clangType = varDecl->getType();
-		if(!clangType.isCanonical())
-			clangType = clangType->getCanonicalTypeInternal();
-
-		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
-        // it is not declared as const, successive dataflow analysis could be used to restrict the access
-		// to this variable
-        core::TypePtr type = clangType.isConstQualified() ?
-            convFact.convertType( *GET_TYPE_PTR(varDecl) ) :
-            convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(varDecl) ) );
-		// todo: initialization for declarations with no initialization value
-
-		// initialization value
-		core::ExpressionPtr initExpr;
-		if( varDecl->getInit() ) {
-			initExpr = convFact.convertExpr( *varDecl->getInit() );
-		} else {
-		    initExpr = defaultInitVal( *GET_TYPE_PTR(varDecl), type);
-		}
-
-		// REF.VAR
-		initExpr = convFact.builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(initExpr) );
-
-		// lookup for the variable in the map
-		core::VariablePtr var = convFact.lookUpVariable(varDecl);
-        core::DeclarationStmtPtr&& retStmt = convFact.builder.declarationStmt( var, initExpr );
-
-        /*-------------------------><-----------------------*/
-        core::AnnotationPtr&& attr = convFact.convertClangAttributes(varDecl);
-        if(attr)
-        	retStmt->addAnnotation(attr);
-
-        // logging
-        DVLOG(1) << "Converted into IR stmt: "; \
-    	DVLOG(1) << "\t" << *retStmt;
-
-    	return retStmt;
-	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DECLARATION STATEMENT
@@ -1012,13 +908,13 @@ public:
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) )
-			return StmtWrapper( convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) ) );
+			return StmtWrapper( convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) ) );
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) )
-				retList.push_back( convertVarDecl(varDecl) );
+				retList.push_back( convFact.convertVarDecl(varDecl) );
 		return retList;
 	}
 
@@ -1182,7 +1078,7 @@ public:
 				// inside a new context
 				Expr* expr = condVarDecl->getInit();
 				condVarDecl->setInit(NULL); // set the expression to null temporarily
-				core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
+				core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 				condVarDecl->setInit(expr);
 
 				retStmt.push_back( declStmt );
@@ -1224,7 +1120,7 @@ public:
 			//
 			// this will be converted into the following IR representation:
 			// { int a = ...; if(a){ } }
-			core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
+			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -1282,7 +1178,7 @@ public:
 		assert(body && "Couldn't convert body of the WhileStmt");
 
 		VLOG(2) << "WhileStmt body: " << body;
-		core::ExpressionPtr condExpr(NULL);
+		core::ExpressionPtr condExpr;
 		if( VarDecl* condVarDecl = whileStmt->getConditionVariable() ) {
 			assert(whileStmt->getCond() == NULL && "WhileStmt condition cannot contains both a variable declaration and an expression");
 
@@ -1293,7 +1189,7 @@ public:
 			// { int a = 0; while(a = expr){ } }
 			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null temporarily
-			core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
+			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 			condVarDecl->setInit(expr);
 
 			retStmt.push_back( declStmt );
@@ -1336,7 +1232,7 @@ public:
 		if( VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
 			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
 
-			core::DeclarationStmtPtr&& declStmt = convertVarDecl(condVarDecl);
+			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
 			// the expression will be a reference to the declared variable
@@ -2013,7 +1909,7 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr& expr) cons
  * currently used for:
  * 	* OpenCL address spaces
  */
-core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDecl* varDecl) {
+core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* varDecl) const {
     if(!varDecl->hasAttrs())
     	return core::AnnotationPtr();
 
@@ -2068,68 +1964,71 @@ core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::VarDe
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
+// @@@@@@@@@@@@@@@@@@@ THIS CODE IS ACTUALLY NOT NEEDED @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ (or is it?) @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 /* Function to convert Clang attributes of declarations to IR annotations (arguments version)
  * currently used for:
  * OpenCL address spaces
  */
-core::AnnotationPtr ConversionFactory::convertClangAttributes(const clang::ParmVarDecl* varDecl) {
-    if(!varDecl->hasAttrs())
-    	return core::AnnotationPtr();
-
-	const AttrVec attrVec = varDecl->getAttrs();
-	std::ostringstream ss;
-	ocl::BaseAnnotation::AnnotationList paramAnnotation;
-
-	try {
-	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-			std::string sr = attr->getAnnotation().str();
-
-			//check if the declaration has attribute __private
-			if(sr == "__private") {
-				DVLOG(2) << "           OpenCL address space __private";
-				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
-				continue;
-			}
-
-			//check if the declaration has attribute __local
-			if(sr == "__local") {
-				DVLOG(2) << "           OpenCL address space __local";
-				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
-				continue;
-			}
-
-			//check if the declaration has attribute __global
-			if(sr == "__global") {
-				DVLOG(2) << "           OpenCL address space __global";
-				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
-				continue;
-			}
-
-			//check if the declaration has attribute __constant
-			if(sr == "__constant") {
-				DVLOG(2) << "           OpenCL address space __constant";
-				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
-				continue;
-			}
-			ss << "Unexpected annotation " << sr;
-
-			throw &ss;
-		}
-		else
-			ss << "Unexpected attribute";
-			throw &ss;
-	}}
-	catch(std::ostringstream *errMsg) {
-        //show errors if unexpected patterns were found
-        printErrorMsg(*errMsg, clangComp, varDecl);
-	}
-	return std::make_shared<ocl::BaseAnnotation>(paramAnnotation);
-}
+//core::AnnotationPtr ConversionFactory::convertAttribute(const clang::ParmVarDecl* varDecl) {
+//    if(!varDecl->hasAttrs())
+//    	return core::AnnotationPtr();
+//
+//	const AttrVec attrVec = varDecl->getAttrs();
+//	std::ostringstream ss;
+//	ocl::BaseAnnotation::AnnotationList paramAnnotation;
+//
+//	try {
+//	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+//		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+//			std::string sr = attr->getAnnotation().str();
+//
+//			//check if the declaration has attribute __private
+//			if(sr == "__private") {
+//				DVLOG(2) << "           OpenCL address space __private";
+//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+//						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
+//				continue;
+//			}
+//
+//			//check if the declaration has attribute __local
+//			if(sr == "__local") {
+//				DVLOG(2) << "           OpenCL address space __local";
+//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+//						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
+//				continue;
+//			}
+//
+//			//check if the declaration has attribute __global
+//			if(sr == "__global") {
+//				DVLOG(2) << "           OpenCL address space __global";
+//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+//						ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
+//				continue;
+//			}
+//
+//			//check if the declaration has attribute __constant
+//			if(sr == "__constant") {
+//				DVLOG(2) << "           OpenCL address space __constant";
+//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+//						ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
+//				continue;
+//			}
+//			ss << "Unexpected annotation " << sr;
+//
+//			throw &ss;
+//		}
+//		else
+//			ss << "Unexpected attribute";
+//			throw &ss;
+//	}}
+//	catch(std::ostringstream *errMsg) {
+//        //show errors if unexpected patterns were found
+//        printErrorMsg(*errMsg, clangComp, varDecl);
+//	}
+//	return std::make_shared<ocl::BaseAnnotation>(paramAnnotation);
+//}
+// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 ConversionFactory::~ConversionFactory() {
 	delete ctx;
@@ -2153,7 +2052,110 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 	// Add the C name of this variable as annotation
 	var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(varDecl->getNameAsString()) );
 
+	// Add OpenCL attributes
+	core::AnnotationPtr&& attr = convertAttribute(varDecl);
+	if(attr)
+		var->addAnnotation(attr);
 	return var;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//						CONVERT VARIABLE DECLARATION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+core::ExpressionPtr ConversionFactory::defaultInitVal(const clang::Type& ty, const core::TypePtr type ) {
+    if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+        // initialize integer value
+        return builder.literal("0", type);
+    }
+    if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+        // in case of floating types we initialize with a zero value
+        return builder.literal("0.0", type);
+    }
+    if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+        // initialize pointer/reference types with the null value
+        return core::lang::CONST_NULL_PTR_PTR;
+    }
+    if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+        return builder.literal("", type);
+    }
+    if ( ty.isBooleanType() ) {
+        // boolean values are initialized to false
+        return builder.literal("false", core::lang::TYPE_BOOL_PTR);
+    }
+
+    //----------------  INTIALIZE VECTORS ---------------------------------
+    const Type* elemTy = NULL;
+    size_t arraySize = 0;
+    if ( ty.isExtVectorType() ) {
+    	const TypedefType* typedefType = dyn_cast<const TypedefType>(&ty);
+        assert(typedefType && "ExtVectorType has unexpected class");
+        const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+        assert(vecTy && "ExtVectorType has unexpected class");
+
+        elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
+		arraySize = vecTy->getNumElements();
+    }
+    if ( ty.isConstantArrayType() ) {
+    	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(&ty);
+		assert(arrTy && "ConstantArrayType has unexpected class");
+
+		elemTy = arrTy->getElementType()->getUnqualifiedDesugaredType();
+		arraySize = *arrTy->getSize().getRawData();
+    }
+    assert(elemTy);
+    if( ty.isExtVectorType() || ty.isConstantArrayType() ) {
+    	core::ExpressionPtr&& initVal = defaultInitVal(*elemTy, convertType(*elemTy) );
+    	return builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
+    }
+
+    assert(false && "Default initialization type not defined");
+    return core::lang::CONST_NULL_PTR_PTR;
+}
+
+core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
+	// logging
+	DVLOG(1) << "\n****************************************************************************************\n"
+			 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
+			 << "-> at location: (" << utils::location(varDecl->getLocation(), clangComp.getSourceManager()) << "): ";
+	if( VLOG_IS_ON(2) ) { \
+		DVLOG(2) << "Dump of clang VarDecl: \n"
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		varDecl->dump();
+	}
+
+	clang::QualType clangType = varDecl->getType();
+	if(!clangType.isCanonical())
+		clangType = clangType->getCanonicalTypeInternal();
+
+	// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
+	// it is not declared as const, successive dataflow analysis could be used to restrict the access
+	// to this variable
+	core::TypePtr type = clangType.isConstQualified() ?
+		convertType( *GET_TYPE_PTR(varDecl) ) :
+		builder.refType( convertType( *GET_TYPE_PTR(varDecl) ) );
+	// todo: initialization for declarations with no initialization value
+
+	// initialization value
+	core::ExpressionPtr initExpr;
+	if( varDecl->getInit() ) {
+		initExpr = convertExpr( *varDecl->getInit() );
+	} else {
+		initExpr = defaultInitVal( *GET_TYPE_PTR(varDecl), type);
+	}
+
+	// REF.VAR
+	initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(initExpr) );
+
+	// lookup for the variable in the map
+	core::VariablePtr var = lookUpVariable(varDecl);
+	core::DeclarationStmtPtr&& retStmt = builder.declarationStmt( var, initExpr );
+
+	// logging
+	DVLOG(1) << "Converted into IR stmt: "; \
+	DVLOG(1) << "\t" << *retStmt;
+
+	return retStmt;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2345,9 +2347,9 @@ void IRConverter::handleTopLevelDecl(const clang::DeclContext* declCtx) {
 			if(definition->isMain())
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
 		}
-//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-//			fact.convertType( *varDecl->getType().getTypePtr() );
-//		}
+		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+			mFact.convertVarDecl( varDecl );
+		}
 	}
 
 }

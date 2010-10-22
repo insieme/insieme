@@ -74,23 +74,23 @@ class ConversionFactory {
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
+	core::ExpressionPtr defaultInitVal(const clang::Type& ty, const core::TypePtr type );
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList = PragmaList());
 
-	const core::ASTBuilder&  getASTBuilder() const { return builder; }
+	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
 
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
-	// void updatePragmaMap(const PragmaList& pragmaList) { pragmaMap = PragmaStmtMap(pragmaList); }
 
 	core::TypePtr 		convertType(const clang::Type& type) const;
 	core::StatementPtr 	convertStmt(const clang::Stmt& stmt) const;
 	core::ExpressionPtr convertExpr(const clang::Expr& expr) const;
 
 	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 
-	core::AnnotationPtr convertClangAttributes(const clang::VarDecl* varDecl);
-	core::AnnotationPtr convertClangAttributes(const clang::ParmVarDecl* varDecl);
+	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
 
 	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
 

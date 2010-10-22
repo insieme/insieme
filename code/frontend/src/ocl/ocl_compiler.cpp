@@ -231,7 +231,7 @@ public:
 
 }
 
-core::ProgramPtr& Compiler::lookForOclAnnotations() {
+void Compiler::lookForOclAnnotations() {
 //    core::RecursiveASTVisitor<OclVisitor> visitor(oclAnnotationExpander);
 //    core::visitAll(mProgram, oclAnnotationExpander);
 
@@ -242,9 +242,6 @@ core::ProgramPtr& Compiler::lookForOclAnnotations() {
         mProgram = newProg;
     else
         assert(newProg && "OclCompiler corrupted the program");
-
-
-    return mProgram;
 }
 
 } //namespace ocl
