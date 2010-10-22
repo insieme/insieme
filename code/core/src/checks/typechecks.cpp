@@ -63,10 +63,10 @@ CheckPtr getFullCheck() {
 	static_pointer_cast<const TargetType>(value)
 
 
-MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
+OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 
 	NodeManager manager;
-	MessageList res;
+	OptionalMessageList res;
 
 	// obtain function type ...
 	TypePtr funType = address->getFunctionExpr()->getType();
@@ -87,7 +87,7 @@ MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 	int numArguments = argumentType->getElementTypes().size();
 	int numParameter = parameterType->getElementTypes().size();
 	if (numArguments != numParameter) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
 						format("Wrong number of arguments - expected: %d, actual: %d", numArguments, numParameter),
 						Message::ERROR));
@@ -97,7 +97,7 @@ MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 	// 2) check types of arguments => by computing most general unifier
 	auto mgu = unify(manager, argumentType, parameterType);
 	if (!mgu) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
 						format("Invalid argument type(s) - expected: %s, actual: %s - %s",
 								toString(*argumentType).c_str(),
@@ -112,7 +112,7 @@ MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 	TypePtr resType = address->getType();
 
 	if (*retType != *resType) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
 						format("Invalid return type - expected: %s, actual: %s",
 								toString(*retType).c_str(),
@@ -125,10 +125,10 @@ MessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 
 
 
-MessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 
 	NodeManager manager;
-	MessageList res;
+	OptionalMessageList res;
 
 	DeclarationStmtPtr declaration = address.getAddressedNode();
 
@@ -137,7 +137,7 @@ MessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmt
 	TypePtr initType = declaration->getInitialization()->getType();
 
 	if (*variableType != *initType) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_INITIALIZATION_EXPR,
 						format("Invalid type of initial value - expected: %s, actual: %s",
 								toString(*variableType).c_str(),
@@ -147,15 +147,15 @@ MessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmt
 	return res;
 }
 
-MessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
+OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
 
 	NodeManager manager;
-	MessageList res;
+	OptionalMessageList res;
 
 	TypePtr conditionType = address->getCondition()->getType();
 
 	if (*conditionType != lang::TYPE_BOOL_VAL) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: %s, actual: %s",
 								toString(*lang::TYPE_BOOL_PTR).c_str(),
@@ -165,12 +165,12 @@ MessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
 	return res;
 }
 
-MessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
+OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
 
-	MessageList res;
+	OptionalMessageList res;
 	TypePtr conditionType = address->getCondition()->getType();
 	if (*conditionType != lang::TYPE_BOOL_VAL) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: %s, actual: %s",
 								toString(*lang::TYPE_BOOL_PTR).c_str(),
@@ -181,12 +181,12 @@ MessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& addr
 }
 
 
-MessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& address) {
+OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& address) {
 
-	MessageList res;
+	OptionalMessageList res;
 	TypePtr switchType = address->getSwitchExpr()->getType();
 	if (!lang::isIntType(*switchType)) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 						EC_TYPE_INVALID_SWITCH_EXPR,
 						format("Invalid type of switch expression - expected: integral type, actual: %s",
 								toString(*switchType).c_str()),
@@ -195,9 +195,9 @@ MessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& 
 	return res;
 }
 
-MessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& address) {
+OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& address) {
 
-	MessageList res;
+	OptionalMessageList res;
 
 	// check whether it is a build-in literal
 	LiteralPtr buildIn = lang::getBuildInForValue(address->getValue());
@@ -206,7 +206,7 @@ MessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& address) {
 	}
 
 	if (*buildIn->getType() != *address->getType()) {
-		res.push_back(Message(address,
+		add(res, Message(address,
 				EC_TYPE_INVALID_TYPE_OF_LITERAL,
 				format("Deviating type of build in literal %s - expected: %s, actual: %s",
 						address->getValue().c_str(),

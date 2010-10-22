@@ -38,6 +38,8 @@
 
 #include <memory>
 
+#include <boost/optional/optional.hpp>
+
 #include "ast_address.h"
 #include "ast_visitor.h"
 #include "enum.h"
@@ -48,8 +50,12 @@ namespace core {
 
 class Message;
 typedef std::vector<Message> MessageList;
+typedef boost::optional<std::vector<Message>> OptionalMessageList;
 
-class ASTCheck : public AddressVisitor<MessageList> {};
+void addAll(OptionalMessageList& target, const OptionalMessageList& list);
+void add(OptionalMessageList& target, const Message& msg);
+
+class ASTCheck : public AddressVisitor<OptionalMessageList> {};
 
 typedef std::shared_ptr<ASTCheck> CheckPtr;
 typedef std::vector<CheckPtr> CheckList;

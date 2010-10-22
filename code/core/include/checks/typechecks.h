@@ -71,7 +71,7 @@ CheckPtr getFullCheck();
 #define SIMPLE_CHECK(Name, NodeType) \
 	class Name ## Check : public ASTCheck { \
 		public: \
-			MessageList visit ## NodeType (const NodeType ## Address& address); \
+		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
 
 SIMPLE_CHECK(CallExprType, CallExpr);

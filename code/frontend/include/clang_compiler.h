@@ -200,10 +200,6 @@ class Program: public boost::noncopyable {
 	// The IR program node containing the converted IR
 	core::ProgramPtr mProgram;
 
-private:
-	// Expand various annotations to corresponding parallel constructs
-	const core::ProgramPtr& addParallelism();
-
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 

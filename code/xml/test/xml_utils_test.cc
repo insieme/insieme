@@ -109,12 +109,6 @@ XmlElement& VectorAnnotationToXML(const VectorAnnotation& ann, XmlElement& el){
 		entries << entry;
 	}
 	
-	/*vector<XmlElement> prova = entries.getChildren();
-	for (vector<XmlElement>::const_iterator iter = prova.begin(); iter != prova.end(); ++iter){
-		std::cout << iter->getName() << std::endl;
-		std::cout << iter->getText() << std::endl;
-	}*/
-	
 	return el;
 }
 
@@ -163,8 +157,10 @@ TEST(XmlTest, GenericTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
-	//
-	//xml.convertDomtoIr();
+	//NodeManager manager2;
+	// ref node manager
+	//sharedNodeManager manager = make_shared<nodeManager>();
+	//xml.convertDomtoIr(manager);
 }
 
 TEST(XmlTest, FunctionTypeTest) {

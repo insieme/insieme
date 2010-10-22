@@ -36,30 +36,30 @@
 
 // builtin types
 void basic_type_test() {
-	#pragma test "ref<int<4>> v1 = 1"
+	#pragma test "ref<int<4>> v1 = ref.var(1)"
 	int a = 1;
 
-	#pragma test "ref<int<8>> v2 = 0"
+	#pragma test "ref<int<8>> v2 = ref.var(0)"
 	long b;
 
-	#pragma test "ref<int<2>> v3 = cast<int<2>>(0xFFFF)"
+	#pragma test "ref<int<2>> v3 = ref.var(cast<int<2>>(0xFFFF))"
 	short c = 0xFFFF;
 
 	char d = 'a';
 
-	#pragma test "ref<ref<unit>> v4 = null"
+	#pragma test "ref<ref<unit>> v4 = ref.var(null)"
 	void* e;
 
-	#pragma test "ref<real<4>> v5 = 0.00f"
+	#pragma test "ref<real<4>> v5 = ref.var(0.00f)"
 	float f = 0.00f;
 
-	#pragma test "ref<real<8>> v6 = 0.0"
+	#pragma test "ref<real<8>> v6 = ref.var(0.0)"
 	double g;
 	
-	#pragma test "ref<vector<ref<real<4>>,3>> v7 = {0.0,0.0,0.0}"
+	#pragma test "ref<vector<ref<real<4>>,3>> v7 = ref.var({0.0,0.0,0.0})"
 	float v[3];
 
-    #pragma test "ref<vector<ref<vector<ref<int<4>>,2>>,3>> v8 = {{0,0},{0,0},{0,0}}"
+    #pragma test "ref<vector<ref<vector<ref<int<4>>,2>>,3>> v8 = ref.var({{0,0},{0,0},{0,0}})"
 	int vv[3][2];
 }
 

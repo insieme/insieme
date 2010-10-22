@@ -47,6 +47,12 @@
 
 #include <numeric_cast.h>
 
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+// 						HACK
+// used to reset the value of the counter from tests
+class VariableResetHack;
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 namespace insieme {
 namespace core {
 
@@ -134,6 +140,11 @@ private:
 	static unsigned int counter;
 
 	const unsigned int id;
+
+	//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	// 						HACK
+	friend class ::VariableResetHack;
+	//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 private:
     Variable(const TypePtr& type, unsigned int id);
