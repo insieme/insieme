@@ -94,8 +94,8 @@ public:
 	 * An enumeration of the various types of messaged that might occure.
 	 */
 	enum Type {
-		WARNING, 	/* < in case something has been discovered that shouldn't be used but is */
-		ERROR		/* < in case a real problem has been discovered */
+		ERROR,		/* < in case a real problem has been discovered */
+		WARNING 	/* < in case something has been discovered that shouldn't be used but is */
 	};
 
 private:

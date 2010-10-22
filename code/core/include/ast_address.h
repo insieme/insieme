@@ -349,7 +349,7 @@ public:
 	 * @return true if this address is lexicographical smaller than the given address
 	 */
 	template<typename S>
-	bool operator<(const Address<S>& other) {
+	bool operator<(const Address<S>& other) const {
 		// get size of paths
 		std::size_t sizeA = path->size();
 		std::size_t sizeB = other.path->size();
