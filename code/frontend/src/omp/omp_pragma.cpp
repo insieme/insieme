@@ -459,11 +459,15 @@ AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::ConversionFactory& fac
 		// check for nowait keyword
 		bool noWait = hasKeyword(map, "nowait");
 
+		/* TODO: This is a Visual Studio 2010 fix.
 		return std::make_shared<ParallelFor>(
 				ifClause, numThreadsClause, defaultClause, privateClause,
 					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
 					scheduleClause, collapseClause, noWait
-		);
+		);*/
+		return std::shared_ptr<ParallelFor>(new ParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
+					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
+					scheduleClause, collapseClause, noWait));
 	}
 
 	// check for 'sections'
