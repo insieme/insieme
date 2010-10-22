@@ -459,7 +459,7 @@ AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::ConversionFactory& fac
 		// check for nowait keyword
 		bool noWait = hasKeyword(map, "nowait");
 
-		/* TODO: This is a Visual Studio 2010 fix.
+		/* TODO: This is a Visual Studio 2010 fix. make_shared cannot be called with 12 parameters (max 10)
 		return std::make_shared<ParallelFor>(
 				ifClause, numThreadsClause, defaultClause, privateClause,
 					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
