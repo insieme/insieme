@@ -43,6 +43,7 @@
 #include "expressions.h"
 #include "statements.h"
 #include "backend_convert.h"
+#include "opencl_convert.h"
 #include "naming.h"
 
 #include "ast_statistic.h"
@@ -111,12 +112,20 @@ int main(int argc, char** argv) {
 		insieme::xml::xmlWrite(program, "insieme.xml");
 
 		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
-		LOG(INFO) << "Converting to C++ ... ";
-		
-		insieme::simple_backend::ConversionContext cc;
-		auto converted = cc.convert(program);
-		// TODO write to output file 
-		std::cout << converted;
+
+		if (CommandLineOptions::OpenCL) {
+			LOG(INFO) << "Converting to OpenCL ... ";
+			insieme::opencl_backend::ConversionContext cc;
+			auto converted = cc.convert(program);
+			// TODO write to output file 
+			std::cout << converted;
+		} else {
+			LOG(INFO) << "Converting to C++ ... ";
+			insieme::simple_backend::ConversionContext cc;
+			auto converted = cc.convert(program);
+			// TODO write to output file 
+			std::cout << converted;
+		}
 
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error while parsing input file: " << e.what() << endl;
