@@ -1119,7 +1119,7 @@ public:
 				condVarDecl->setInit(expr); // restore the init value
 
 				assert(false && "ForStmt with a declaration of a condition variable not supported");
-				// retStmt.push_back( declStmt );
+				retStmt.push_back( declStmt );
 			}
 
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1254,7 +1254,7 @@ public:
 			//			while(a = expr){ }
 			//		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			const Expr* expr = condVarDecl->getInit();
+			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null (temporarily)
 			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 			condVarDecl->setInit(expr); // set back the value of init value
@@ -1291,7 +1291,7 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
-		VLOG(2) << "{ SwitchStmt }";
+		VLOG(2) << "{ Visit SwitchStmt }";
 		core::ExpressionPtr condExpr(NULL);
 		if( const VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
 			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
@@ -1305,6 +1305,19 @@ public:
 			const Expr* cond = switchStmt->getCond();
 			assert(cond && "SwitchStmt with no condition.");
 			condExpr = convFact.convertExpr( cond );
+
+			if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(condExpr->getType())) {
+				// if the type of the condition expression is a ref, we have to add a deref operation
+				condExpr = builder.callExpr(refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(condExpr));
+			}
+
+			// we create a variable to store the value of the condition for this switch
+			core::VariablePtr&& condVar = builder.variable(core::lang::TYPE_INT_GEN_PTR);
+			// int condVar = condExpr;
+			core::DeclarationStmtPtr&& declVar = builder.declarationStmt(condVar, builder.castExpr(core::lang::TYPE_INT_GEN_PTR, condExpr));
+			retStmt.push_back(declVar);
+
+			condExpr = condVar;
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
@@ -1322,13 +1335,6 @@ public:
 			// we bring this code outside after the declaration of the eventual conditional
 			// variable.
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// TODO: a problem could arise when the body depends on the evaluation of the condition expression, i.e.:
-			//		 switch ( a = f() ) {
-			//		    b = a+1;
-			//			case 1: ...
-			//       In this case the a=f() must be assigned to a new variable and replace the occurences of a with the new variable inside
-			//		 the switch body
-
 			if(CompoundStmt* compStmt = dyn_cast<CompoundStmt>(body)) {
 				std::for_each(compStmt->body_begin(), compStmt->body_end(),
 					[ &retStmt, this ] (Stmt* curr) {
@@ -1342,31 +1348,32 @@ public:
 		}
 		vector<core::SwitchStmt::Case> cases;
 		// initialize the default case with an empty compoundstmt
-		core::StatementPtr defStmt = builder.compoundStmt();
 
+		core::StatementPtr&& defStmt = builder.compoundStmt();
 		// the cases can be handled now
-		SwitchCase* switchCaseStmt = switchStmt->getSwitchCaseList();
+		const SwitchCase* switchCaseStmt = switchStmt->getSwitchCaseList();
 		while(switchCaseStmt) {
-			if( CaseStmt* caseStmt = dyn_cast<CaseStmt>(switchCaseStmt) ) {
-				core::StatementPtr subStmt(NULL);
-				if( Expr* rhs = caseStmt->getRHS() ) {
+			if( const CaseStmt* caseStmt = dyn_cast<const CaseStmt>(switchCaseStmt) ) {
+				core::StatementPtr subStmt;
+				if( const Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
 					subStmt = convFact.convertExpr( rhs );
-				} else if( Stmt* sub = caseStmt->getSubStmt() ) {
-					subStmt = tryAggregateStmts( builder, Visit(sub) );
+				} else if( const Stmt* sub = caseStmt->getSubStmt() ) {
+					subStmt = tryAggregateStmts( builder, Visit( const_cast<Stmt*>(sub) ) );
 				}
 				cases.push_back( std::make_pair(convFact.convertExpr( caseStmt->getLHS() ), subStmt) );
 			} else {
 				// default case
-				DefaultStmt* defCase = dyn_cast<DefaultStmt>(switchCaseStmt);
+				const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(switchCaseStmt);
 				assert(defCase && "Case is not the 'default:'.");
-				defStmt = tryAggregateStmts( builder, Visit(defCase->getSubStmt()) );
+				defStmt = tryAggregateStmts( builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
 			}
 			// next case
 			switchCaseStmt = switchCaseStmt->getNextSwitchCase();
 		}
 
-		core::StatementPtr irNode = builder.switchStmt(condExpr, cases, defStmt);
+		core::StatementPtr&& irNode = builder.switchStmt(condExpr, cases, defStmt);
+
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(irNode, switchStmt, convFact);
 
@@ -1413,7 +1420,7 @@ public:
 	//							NULL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
-		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
+		core::StatementPtr&& retStmt = core::lang::STMT_NO_OP_PTR;
 
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retStmt, nullStmt, convFact);

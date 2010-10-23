@@ -140,9 +140,26 @@ void switch_stmt_test() {
 
 	int a=0;
 
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 1: break | default: {} ];}"
 	switch(a) {
 	case 1:
 		break;
+	}
+
+	// EVIL CODE
+	#pragma test "{int<a> v2 = cast<int<a>>(int.add(ref.deref(v1), 8)); ref.assign(v1, int.add(ref.deref(v1), 1)); switch(v2) [ case 1: break | default: {} ];}"
+	switch(a+8) {
+	a += 1;
+	case 1:
+		break;
+	}
+
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 0: break | default: fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v1) ];}"
+	switch(a) {
+	case 0:
+		break;
+	default:
+		a++;
 	}
 
 }
