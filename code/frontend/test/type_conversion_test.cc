@@ -62,6 +62,7 @@ using namespace insieme::frontend::conversion;
 TEST(TypeConversion, HandleBuildinType) {
 
 	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
+
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clangComp;
@@ -370,7 +371,7 @@ TEST(TypeConversion, HandleArrayType) {
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-
+	CommandLineOptions::Verbosity = 2;
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
