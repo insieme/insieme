@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 #endif
 	start_t = clock();
 
-	#pragma insieme mark
+	#pragma insieme asdasd
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for private(resv) reduction(+: resv)

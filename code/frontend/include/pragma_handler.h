@@ -49,8 +49,6 @@
 
 #include "clang/Parse/Parser.h"
 
-#include <glog/logging.h>
-
 // forward declaration
 namespace clang {
 class Stmt;
@@ -62,38 +60,46 @@ namespace insieme {
 namespace frontend {
 
 // ------------------------------------ Pragma ---------------------------
-
 /**
- * Defines a generic pragma which contains the location (start,end), and the target node
+ * Defines a generic pragma which contains the location (start,end), and the
+ * target node
  */
 class Pragma {
 	/**
-	 * Attach the pragma to a statement. If the pragma is already bound to a statement or location, a call to this method will produce an error.
+	 * Attach the pragma to a statement. If the pragma is already bound to a
+	 * statement or location, a call to this method will produce an error.
 	 */
 	void setStatement(clang::Stmt const* stmt);
 
 	/**
-	 * Attach the pragma to a declaration. If the pragma is already bound to a statement or location, a call to this method will produce an error.
+	 * Attach the pragma to a declaration. If the pragma is already bound to a
+	 * statement or location, a call to this method will produce an error.
 	 */
 	void setDecl(clang::Decl const* decl);
 
 	friend class InsiemeSema;
 public:
+
+	/**
+	 * Type representing the target node which could be wither a statement
+	 * or a declaration
+	 */
 	typedef llvm::PointerUnion<clang::Stmt const*, clang::Decl const*> PragmaTarget;
 
 	/**
-	 * Creates an empty pragma starting from source location startLoc and ending ad endLoc.
+	 * Creates an empty pragma starting from source location startLoc and ending
+	 * ad endLoc.
 	 */
 	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type) :
 		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
 
 	/**
-	 * Creates a pragma starting from source location startLoc and ending ad endLoc by passing the content of the map which associates, for each
-	 * key defined in the pragma_matcher, the relative parsed list of values
+	 * Creates a pragma starting from source location startLoc and ending ad endLoc
+	 * by passing the content of the map which associates, for each key defined in
+	 * the pragma_matcher, the relative parsed list of values.
 	 *
 	 */
-	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type,
-			MatchMap const& mmap) :
+	Pragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
 		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
 
 	const clang::SourceLocation& getStartLocation() const { return mStartLoc; }
@@ -109,12 +115,12 @@ public:
 	/**
 	 * Returns true if the AST node associated to this pragma is a statement (clang::Stmt)
 	 */
-	bool isStatement() const { return mTargetNode.is<clang::Stmt const*> ();	}
+	bool isStatement() const { return !mTargetNode.isNull() && mTargetNode.is<clang::Stmt const*> ();	}
 
 	/**
 	 * Returns true if the AST node associated to this pragma is a declaration (clang::Decl)
 	 */
-	bool isDecl() const { return mTargetNode.is<clang::Decl const*> (); }
+	bool isDecl() const { return !mTargetNode.isNull() && mTargetNode.is<clang::Decl const*> (); }
 
 	/**
 	 * Writes the content of the pragma to standard output
@@ -151,19 +157,17 @@ public:
 	const StmtMap& getStatementMap() const { return stmtMap; }
 	const DeclMap& getDeclarationMap() const { return declMap; }
 
-//	const PragmaPtr operator[](const clang::Stmt* stmt) const;
-//	const PragmaPtr operator[](const clang::Decl* decl) const;
 private:
 	StmtMap stmtMap;
 	DeclMap declMap;
 };
 
-// ------------------------------------ BasicPragmaHandler<T> ---------------------------
-
+// -------------------------------- BasicPragmaHandler<T> ---------------------------
 /**
- * Defines a generic pragma handler which uses the pragma_matcher. Pragmas which are syntactically correct are then instantiated and associated with the
- * following node (i.e. a Stmt or Declaration). If an error occurs, the error message is printed out showing the location and the list of tokens the parser
- * was expecting at that location.
+ * Defines a generic pragma handler which uses the pragma_matcher. Pragmas which are
+ * syntactically correct are then instantiated and associated with the following node
+ * (i.e. a Stmt or Declaration). If an error occurs, the error message is printed out
+ * showing the location and the list of tokens the parser was expecting at that location.
  */
 template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
@@ -177,15 +181,17 @@ public:
 
 	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
 		// '#' symbol is 1 position before
-		clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
+		clang::SourceLocation&& startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 
 		MatchMap mmap;
 		ParserStack errStack;
 
 		if (pragma_matcher->MatchPragma(PP, mmap, errStack)) {
-			// the pragma type is formed by concatenation of the base_name and identifier, for example the type for the pragma:
-			// #pragma omp barrier
-			// will be "omp::barrier", the string is passed to the pragma constructur which store the value
+			// the pragma type is formed by concatenation of the base_name and identifier,
+			// for example the type for the pragma:
+			//		#pragma omp barrier
+			// will be "omp::barrier", the string is passed to the pragma constructur which
+			// store the value
 			std::ostringstream pragma_name;
 			if(!base_name.empty())
 				pragma_name << base_name << "::";
@@ -193,13 +199,16 @@ public:
 				pragma_name << getName().str();
 
 			clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
-			// the pragma has been successfully parsed, now we have to instantiate the correct type which is associated to this pragma (T) and
-			// pass the matcher map in order for the pragma to initialize his internal representation. The framework will then take care of
-			// associating the pragma to the following node (i.e. a statement or a declaration).
+			// the pragma has been successfully parsed, now we have to instantiate the correct
+			// type which is associated to this pragma (T) and pass the matcher map in order
+			// for the pragma to initialize his internal representation. The framework will then
+			// take care of associating the pragma to the following node (i.e. a statement or
+			// a declaration).
 			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), mmap, startLoc, endLoc);
 		} else {
+			std::cout << "@@@@@@@@@@@@@@@@@@@@@@MOTHER FUCKERRRRRRRRR!!!!!!!!!!\n";
 			// In case of error, we report it to the console using the clang Diagnostics.
-			ErrorReport(PP, startLoc, errStack);
+			errorReport(PP, startLoc, errStack);
 			PP.DiscardUntilEndOfDirective();
 		}
 	}
@@ -208,7 +217,6 @@ public:
 };
 
 // ------------------------------------ PragmaHandlerFactory ---------------------------
-
 struct PragmaHandlerFactory {
 
 	template<class T>

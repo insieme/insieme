@@ -74,7 +74,10 @@ class ConversionFactory {
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
-	core::ExpressionPtr defaultInitVal(const clang::Type& ty, const core::TypePtr type );
+	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type );
+
+	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
+
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList = PragmaList());
 
@@ -83,41 +86,37 @@ public:
 
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 
-	core::TypePtr 		convertType(const clang::Type& type) const;
-	core::StatementPtr 	convertStmt(const clang::Stmt& stmt) const;
-	core::ExpressionPtr convertExpr(const clang::Expr& expr) const;
+	core::TypePtr 		convertType(const clang::Type* type) const;
+	core::StatementPtr 	convertStmt(const clang::Stmt* stmt) const;
+	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
 
-	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr 	 convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
 
-	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
-
 	~ConversionFactory();
 };
 
-// ------------------------------------ IRConverter ---------------------------
+// ------------------------------------ ASTConverter ---------------------------
 /**
  *
  */
-class IRConverter {
-	const ClangCompiler& mClangComp;
+class ASTConverter {
+	const ClangCompiler& mComp;
 	ConversionFactory    mFact;
 	core::ProgramPtr     mProgram;
 	const PragmaList&	 pragmaList;
 
-
 public:
-	IRConverter(const ClangCompiler& clangComp, const core::ProgramPtr prog, const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
-		mClangComp(clangComp), mFact(mgr, clangComp, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
+	ASTConverter(const ClangCompiler& clangComp, const core::ProgramPtr prog, const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
+		mComp(clangComp), mFact(mgr, clangComp, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
-	void handleTopLevelDecl(const clang::DeclContext* declCtx);
 	core::ExpressionPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl) { return mFact.convertFunctionDecl(funcDecl); }
-
 	core::LambdaExprPtr handleBody(const clang::Stmt* body);
+	core::ProgramPtr handleTranslationUnit(const clang::DeclContext* declCtx);
 };
 
 

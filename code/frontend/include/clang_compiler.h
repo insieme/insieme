@@ -61,7 +61,6 @@ class Expr;
 } // end clang namespace
 
 // ------------------------------------ ParserProxy ---------------------------
-
 /**
  * This is a proxy class which enables the access to internal clang features, i.e. Parser.
  * The main scope of this class is to handle the parsing of pragma(s) of the input file
@@ -113,11 +112,6 @@ public:
 };
 
 namespace insieme {
-
-namespace core {
-class Program;
-}
-
 namespace frontend {
 /**
  * Used to report a parsing error occurred during the parsing of the input file
@@ -136,7 +130,6 @@ class ClangCompiler: boost::noncopyable {
 	struct ClangCompilerImpl;
 
 	ClangCompilerImpl* pimpl;
-	friend class InsiemeTransUnit;
 public:
 	/**
 	 * Creates an empty compiler instance, usefull for test cases
@@ -170,14 +163,19 @@ protected:
 	std::string 	mFileName;
 	ClangCompiler	mClang;
 	PragmaList 		mPragmaList;
+
+	unsigned short mErrorCount;
 public:
 	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
-	const PragmaList& getPragmaList() const { return mPragmaList; }
+	const PragmaList& 	 getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
-	const std::string& getFileName() const { return mFileName; }
+	const std::string& 	 getFileName() const { return mFileName; }
+
+	void incrementErrorCount() { ++mErrorCount; }
+	unsigned short getErrorCount() const { return mErrorCount; }
 };
 
 typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;

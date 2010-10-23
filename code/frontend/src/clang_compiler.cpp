@@ -358,10 +358,10 @@ const core::ProgramPtr& Program::convert() {
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
 
 		const ClangCompiler& comp = (*it)->getCompiler();
-		conversion::IRConverter conv(comp, mProgram, mMgr, (*it)->getPragmaList());
+		const PragmaList& pList = (*it)->getPragmaList();
+		conversion::ASTConverter conv(comp, mProgram, mMgr, pList);
 
-		for(PragmaList::const_iterator pit = (*it)->getPragmaList().begin(), pend = (*it)->getPragmaList().end(); pit != pend; ++pit) {
-
+		for(PragmaList::const_iterator pit = pList.begin(), pend = pList.end(); pit != pend; ++pit) {
 			if((*pit)->getType() == "insieme::mark") {
 				insiemePragmaFound = true;
 				const Pragma& insiemePragma = **pit;
@@ -380,7 +380,6 @@ const core::ProgramPtr& Program::convert() {
 					assert(body && "Pragma matching failed!");
 					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleBody(body));
 				}
-
 			}
 		}
 	}
@@ -397,10 +396,10 @@ const core::ProgramPtr& Program::convert() {
 
 		insieme::utils::Timer t1("Frontend.convert '" + (*it)->getFileName() + "'");
 		t1.start();
-		conversion::IRConverter conv(comp, mProgram, mMgr, pList);
+		conversion::ASTConverter conv(comp, mProgram, mMgr, pList);
 		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
 
-		conv.handleTopLevelDecl(declRef);
+		conv.handleTranslationUnit(declRef);
 		t1.stop();
 
 		t1.print();

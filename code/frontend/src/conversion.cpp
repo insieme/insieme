@@ -83,9 +83,8 @@ namespace {
 
 //TODO put it into a class
 void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& clangComp, const clang::Decl* decl) {
-    Diagnostic& diag = clangComp.getDiagnostics();
-    TextDiagnosticPrinter* tdc = (TextDiagnosticPrinter*) diag.getClient();
-    SourceManager& manager = clangComp.getSourceManager();
+
+	SourceManager& manager = clangComp.getSourceManager();
     clang::SourceLocation errLoc = decl->getLocStart();
     errMsg << " at location (" << frontend::utils::Line(errLoc, manager) << ":" <<
             frontend::utils::Column(errLoc, manager) << ").\n";
@@ -95,9 +94,13 @@ void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& cl
     DiagnosticInfo di(&diag);
     tdc->HandleDiagnostic(Diagnostic::Level::Warning, di);*/
 
-    llvm::errs() << errMsg.str();
-    tdc->EmitCaretDiagnostic(errLoc, NULL, 0, manager, 0, 0, 80, 0, 0, 0);
+    clang::Preprocessor& pp =  clangComp.getPreprocessor();
+    pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, errMsg.str()));
 }
+
+//------------------- StmtWrapper -------------------------------------------------------------
+// Utility class used as a return type for the StmtVisitor. It can store a list of statement
+// as conversion of a single C stmt can result in multiple IR statements.
 
 struct StmtWrapper: public std::vector<core::StatementPtr>{
 	StmtWrapper(): std::vector<core::StatementPtr>() { }
@@ -297,8 +300,8 @@ struct ConversionFactory::ConversionContext {
 	typedef std::map<const FunctionDecl*, core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
-	// this map keeps naming map between the functiondecl and the variable introduced to represent it in the
-	// recursive definition
+	// this map keeps naming map between the functiondecl and the variable
+	// introduced to represent it in the recursive definition
 	// typedef std::map<const FunctionDecl*, core::VariablePtr> VarMap;
 	// VarMap  varMap;
 
@@ -335,7 +338,7 @@ public:
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
 				GetStringFromStream( convFact.clangComp.getSourceManager(), intLit->getExprLoc()),
-				convFact.convertType( *GET_TYPE_PTR(intLit) )
+				convFact.convertType( GET_TYPE_PTR(intLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -350,7 +353,7 @@ public:
 			// retrieve the string representation from the source code
 			convFact.builder.literal(
 				GetStringFromStream( convFact.clangComp.getSourceManager(), floatLit->getExprLoc()),
-				convFact.convertType( *GET_TYPE_PTR(floatLit) )
+				convFact.convertType( GET_TYPE_PTR(floatLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -407,20 +410,11 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							IMPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
-//		// we do not convert implicit casts
-//		START_LOG_EXPR_CONVERSION(implCastExpr);
-//		return Visit(implCastExpr->getSubExpr());
-//	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCastExpr(clang::CastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
-		const core::TypePtr& type = convFact.convertType( *GET_TYPE_PTR(castExpr) );
+		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -441,7 +435,7 @@ public:
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg) ); }
 			);
 
-			core::FunctionTypePtr funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( *GET_TYPE_PTR(funcDecl) ) );
+			core::FunctionTypePtr funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			vector< core::ExpressionPtr >&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
@@ -521,7 +515,7 @@ public:
 			return createCallExpr(builder, toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)), rhs->getType());
 		}
 
-		core::TypePtr exprTy = convFact.convertType( *GET_TYPE_PTR(binOp) );
+		core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 		// create Pair type
 		core::TupleTypePtr tupleTy = builder.tupleType( { exprTy, exprTy } );
@@ -752,7 +746,7 @@ public:
 	//							CONDITIONAL OPERATOR FIXME
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
-		core::TypePtr&& retTy = convFact.convertType( *GET_TYPE_PTR(condOp) );
+		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
@@ -793,7 +787,7 @@ public:
 
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.callExpr(
-				convFact.builder.refType( convFact.convertType( *GET_TYPE_PTR(arraySubExpr) ) ),
+				convFact.builder.refType( convFact.convertType( GET_TYPE_PTR(arraySubExpr) ) ),
 				core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(base, idx)
 			);
 //		DLOG(INFO) << "EXPR_TY: " << *retExpr->getType();
@@ -825,7 +819,7 @@ public:
         	pos = numStr;
         }
 
-        core::TypePtr&& exprTy = convFact.convertType( *GET_TYPE_PTR(vecElemExpr) );
+        core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
         core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy?
         // if the type of the vector is a refType, we deref it
         if(core::RefTypePtr&& baseTy = core::dynamic_pointer_cast<const core::RefType>(base->getType()))
@@ -858,7 +852,7 @@ public:
 
         // get all values of the init expression
         for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-             elements.push_back( convFact.convertExpr(*(initList->getInit(i))) );
+             elements.push_back( convFact.convertExpr( initList->getInit(i)) );
         }
 
         // create vector initializator
@@ -873,7 +867,8 @@ public:
 // 							Printing macros for statements
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define FORWARD_VISITOR_CALL(StmtTy) \
-	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(*stmt) ); }
+	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(stmt) ); }
+
 
 #define START_LOG_STMT_CONVERSION(stmt) \
 	DVLOG(1) << "\n****************************************************************************************\n" \
@@ -925,7 +920,7 @@ public:
 		START_LOG_STMT_CONVERSION(retStmt);
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
 
-		core::StatementPtr ret = convFact.builder.returnStmt( convFact.convertExpr( *retStmt->getRetValue() ) );
+		core::StatementPtr ret = convFact.builder.returnStmt( convFact.convertExpr( retStmt->getRetValue() ) );
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(ret, retStmt, convFact);
 
@@ -955,20 +950,24 @@ public:
 			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
 			if( !initStmt ) {
 				// we are analyzing a loop where the init expression is empty, e.g.:
-				// for(; cond; inc) { body }
+				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				// 		for(; cond; inc) { body }
 				//
-				// As the IR doesn't support loop stmt with no initialization we represent the for loop as while stmt, i.e.
-				// while( cond ) {
-				//	{ body }
-				//  inc;
-				// }
+				// As the IR doesn't support loop stmt with no initialization we represent the
+				// for loop as while stmt, i.e.
+				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				// 		while( cond ) {
+				//			{ body }
+				//  		inc;
+				// 		}
+
 				vector<core::StatementPtr> whileBody;
 				// adding the body
 				std::copy(body.begin(), body.end(), std::back_inserter(whileBody));
 				// adding the incExpr at after the loop body
-				whileBody.push_back( convFact.convertExpr( *forStmt->getInc() ) );
+				whileBody.push_back( convFact.convertExpr( forStmt->getInc() ) );
 
-				core::StatementPtr&& whileStmt =  builder.whileStmt( convFact.convertExpr( *forStmt->getCond() ), builder.compoundStmt(whileBody) );
+				core::StatementPtr&& whileStmt =  builder.whileStmt( convFact.convertExpr( forStmt->getCond() ), builder.compoundStmt(whileBody) );
 
 				// handle eventual pragmas attached to the Clang node
 				frontend::omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
@@ -1018,7 +1017,7 @@ public:
 				core::ExpressionPtr&& init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
 				assert(init);
 
-				core::TypePtr varTy = builder.refType( convFact.convertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) ) );
+				core::TypePtr varTy = builder.refType( convFact.convertType( GET_TYPE_PTR(loopAnalysis.getInductionVar()) ) );
 				newIndVar = builder.variable(varTy);
 
 				// we have to define a new induction variable for the loop and replace every instance in the loop with the new variable
@@ -1057,7 +1056,7 @@ public:
 			if(iteratorChanged) {
 				// in the case we replace the loop iterator with a temporary variable, we have to assign the final value of the
 				// iterator to the old variable so we don't change the semantics of the code
-				core::TypePtr varTy = convFact.convertType( *GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
+				core::TypePtr varTy = convFact.convertType( GET_TYPE_PTR(loopAnalysis.getInductionVar()) );
 				const core::lang::OperatorPtr& refAssign = builder.literal( "ref.assign", core::lang::TYPE_OP_ASSIGN_PTR);
 
 				// inductionVar = cond()
@@ -1087,8 +1086,8 @@ public:
 			// analysis of loop structure failed, we have to build a while statement
 			retStmt.push_back( Visit( forStmt->getInit() ).getSingleStmt() );
 			retStmt.push_back( builder.whileStmt(
-					convFact.convertExpr( *forStmt->getCond() ),
-					builder.compoundStmt(toVector<core::StatementPtr>(body.getSingleStmt(), convFact.convertExpr( *forStmt->getInc() ))))
+					convFact.convertExpr( forStmt->getCond() ),
+					builder.compoundStmt(toVector<core::StatementPtr>(body.getSingleStmt(), convFact.convertExpr( forStmt->getInc() ))))
 			);
 		}
 
@@ -1128,7 +1127,7 @@ public:
 		} else {
 			Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
-			condExpr = convFact.convertExpr( *cond );
+			condExpr = convFact.convertExpr( cond );
 			if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
 				// add a cast expression to bool
 				condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
@@ -1200,7 +1199,7 @@ public:
 		} else {
 			Expr* cond = whileStmt->getCond();
 			assert(cond && "WhileStmt with no condition.");
-			condExpr = convFact.convertExpr( *cond );
+			condExpr = convFact.convertExpr( cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 		VLOG(2) << "WhileStmt 'condition' expression: " << condExpr;
@@ -1240,7 +1239,7 @@ public:
 		} else {
 			Expr* cond = switchStmt->getCond();
 			assert(cond && "SwitchStmt with no condition.");
-			condExpr = convFact.convertExpr( *cond );
+			condExpr = convFact.convertExpr( cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
@@ -1282,11 +1281,11 @@ public:
 				core::StatementPtr subStmt(NULL);
 				if( Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
-					subStmt = convFact.convertExpr( *rhs );
+					subStmt = convFact.convertExpr( rhs );
 				} else if( Stmt* sub = caseStmt->getSubStmt() ) {
 					subStmt = tryAggregateStmts( builder, Visit(sub) );
 				}
-				cases.push_back( std::make_pair(convFact.convertExpr( *caseStmt->getLHS() ), subStmt) );
+				cases.push_back( std::make_pair(convFact.convertExpr( caseStmt->getLHS() ), subStmt) );
 			} else {
 				// default case
 				DefaultStmt* defCase = dyn_cast<DefaultStmt>(switchCaseStmt);
@@ -1893,16 +1892,19 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCom
 	exprConv( new ClangExprConverter(*this) ),
 	stmtConv( new ClangStmtConverter(*this) ) { }
 
-core::TypePtr ConversionFactory::convertType(const clang::Type& type) const {
-	return typeConv->Visit( const_cast<Type*>(&type) );
+core::TypePtr ConversionFactory::convertType(const clang::Type* type) const {
+	assert(type && "Calling convertType with a NULL pointer");
+	return typeConv->Visit( const_cast<Type*>(type) );
 }
 
-core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt& stmt) const {
-	return stmtConv->Visit( const_cast<Stmt*>(&stmt) ).getSingleStmt();
+core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
+	assert(stmt && "Calling convertStmt with a NULL pointer");
+	return stmtConv->Visit( const_cast<Stmt*>(stmt) ).getSingleStmt();
 }
 
-core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr& expr) const {
-	return exprConv->Visit( const_cast<Expr*>(&expr) );
+core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
+	assert(expr && "Calling convertExpr with a NULL pointer");
+	return exprConv->Visit( const_cast<Expr*>(expr) );
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (local version)
@@ -2043,7 +2045,7 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 		// variable found in the map, return it
 		return fit->second;
 
-	core::TypePtr&& type = builder.refType( convertType( *GET_TYPE_PTR(varDecl)  ) );
+	core::TypePtr&& type = builder.refType( convertType( GET_TYPE_PTR(varDecl)  ) );
 	// variable is not in the map, create a new var and add it
 	core::VariablePtr&& var = builder.variable(type);
 	// add the var in the map
@@ -2063,23 +2065,23 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 //						CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-core::ExpressionPtr ConversionFactory::defaultInitVal(const clang::Type& ty, const core::TypePtr type ) {
-    if ( ty.isIntegerType() || ty.isUnsignedIntegerType() ) {
+core::ExpressionPtr ConversionFactory::defaultInitVal(const clang::Type* ty, const core::TypePtr type ) {
+    if ( ty->isIntegerType() || ty->isUnsignedIntegerType() ) {
         // initialize integer value
         return builder.literal("0", type);
     }
-    if( ty.isFloatingType() || ty.isRealType() || ty.isRealFloatingType() ) {
+    if( ty->isFloatingType() || ty->isRealType() || ty->isRealFloatingType() ) {
         // in case of floating types we initialize with a zero value
         return builder.literal("0.0", type);
     }
-    if ( ty.isAnyPointerType() || ty.isRValueReferenceType() || ty.isLValueReferenceType() ) {
+    if ( ty->isAnyPointerType() || ty->isRValueReferenceType() || ty->isLValueReferenceType() ) {
         // initialize pointer/reference types with the null value
         return core::lang::CONST_NULL_PTR_PTR;
     }
-    if ( ty.isCharType() || ty.isAnyCharacterType() ) {
+    if ( ty->isCharType() || ty->isAnyCharacterType() ) {
         return builder.literal("", type);
     }
-    if ( ty.isBooleanType() ) {
+    if ( ty->isBooleanType() ) {
         // boolean values are initialized to false
         return builder.literal("false", core::lang::TYPE_BOOL_PTR);
     }
@@ -2087,8 +2089,8 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const clang::Type& ty, con
     //----------------  INTIALIZE VECTORS ---------------------------------
     const Type* elemTy = NULL;
     size_t arraySize = 0;
-    if ( ty.isExtVectorType() ) {
-    	const TypedefType* typedefType = dyn_cast<const TypedefType>(&ty);
+    if ( ty->isExtVectorType() ) {
+    	const TypedefType* typedefType = dyn_cast<const TypedefType>(ty);
         assert(typedefType && "ExtVectorType has unexpected class");
         const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
         assert(vecTy && "ExtVectorType has unexpected class");
@@ -2096,16 +2098,16 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const clang::Type& ty, con
         elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
 		arraySize = vecTy->getNumElements();
     }
-    if ( ty.isConstantArrayType() ) {
-    	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(&ty);
+    if ( ty->isConstantArrayType() ) {
+    	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(ty);
 		assert(arrTy && "ConstantArrayType has unexpected class");
 
 		elemTy = arrTy->getElementType()->getUnqualifiedDesugaredType();
 		arraySize = *arrTy->getSize().getRawData();
     }
-    assert(elemTy);
-    if( ty.isExtVectorType() || ty.isConstantArrayType() ) {
-    	core::ExpressionPtr&& initVal = defaultInitVal(*elemTy, convertType(*elemTy) );
+    if( ty->isExtVectorType() || ty->isConstantArrayType() ) {
+    	assert(elemTy);
+    	core::ExpressionPtr&& initVal = defaultInitVal(elemTy, convertType(elemTy) );
     	return builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
     }
 
@@ -2132,16 +2134,16 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// it is not declared as const, successive dataflow analysis could be used to restrict the access
 	// to this variable
 	core::TypePtr type = clangType.isConstQualified() ?
-		convertType( *GET_TYPE_PTR(varDecl) ) :
-		builder.refType( convertType( *GET_TYPE_PTR(varDecl) ) );
+		convertType( GET_TYPE_PTR(varDecl) ) :
+		builder.refType( convertType( GET_TYPE_PTR(varDecl) ) );
 	// todo: initialization for declarations with no initialization value
 
 	// initialization value
 	core::ExpressionPtr initExpr;
 	if( varDecl->getInit() ) {
-		initExpr = convertExpr( *varDecl->getInit() );
+		initExpr = convertExpr( varDecl->getInit() );
 	} else {
-		initExpr = defaultInitVal( *GET_TYPE_PTR(varDecl), type);
+		initExpr = defaultInitVal( GET_TYPE_PTR(varDecl), type);
 	}
 
 	// REF.VAR
@@ -2192,7 +2194,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 		if(!ctx->isRecSubType) {
 			// we create a TypeVar for each type in the mutual dependence
-			ctx->recVarExprMap.insert(std::make_pair(funcDecl, builder.variable( convertType( *GET_TYPE_PTR(funcDecl) )
+			ctx->recVarExprMap.insert(std::make_pair(funcDecl, builder.variable( convertType( GET_TYPE_PTR(funcDecl) )
 					/*core::Identifier( boost::to_upper_copy(funcDecl->getNameAsString()) )*/))
 			);
 		} else {
@@ -2217,7 +2219,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 //						if(num_of_overloads)
 //							recVarName << num_of_overloads;
 
-					this->ctx->recVarExprMap.insert( std::make_pair(fd, this->builder.variable( this->convertType(*GET_TYPE_PTR(fd))) ) );
+					this->ctx->recVarExprMap.insert( std::make_pair(fd, this->builder.variable( this->convertType(GET_TYPE_PTR(fd))) ) );
 				}
 			);
 		}
@@ -2263,9 +2265,9 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	core::StatementPtr body = convertStmt( *funcDecl->getBody() );
+	core::StatementPtr body = convertStmt( funcDecl->getBody() );
 
-	retLambdaExpr = builder.lambdaExpr( convertType( *GET_TYPE_PTR(funcDecl) ), params, body);
+	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), params, body);
 
 	if( !components.empty() ) {
 		// this is a recurive function call
@@ -2332,7 +2334,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 // ------------------------------------ ClangTypeConverter ---------------------------
 
-void IRConverter::handleTopLevelDecl(const clang::DeclContext* declCtx) {
+core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx) {
 
 	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
@@ -2347,15 +2349,16 @@ void IRConverter::handleTopLevelDecl(const clang::DeclContext* declCtx) {
 			if(definition->isMain())
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
 		}
-		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-			mFact.convertVarDecl( varDecl );
-		}
+//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+//			mFact.convertVarDecl( varDecl );
+//		}
 	}
 
+	return mProgram;
 }
 
-core::LambdaExprPtr IRConverter::handleBody(const clang::Stmt* body) {
-	core::StatementPtr&& bodyStmt = mFact.convertStmt( *body );
+core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body) {
+	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
 	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), toVector<core::StatementPtr>(bodyStmt), core::lang::TYPE_UNIT);
 
 	return core::dynamic_pointer_cast<const core::LambdaExpr>(callExpr->getFunctionExpr());
