@@ -128,7 +128,7 @@ const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const {
  * This function is used to report an error occurred during the pragma matching. Clang utilities are used
  * to report the carret location of the error.
  */
-std::string errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
+void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 	using namespace insieme::frontend::utils;
 
 	std::string str;

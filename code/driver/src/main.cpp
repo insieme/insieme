@@ -58,6 +58,9 @@
 
 #include "xml_utils.h"
 
+#include "dot_printer.h"
+#include <fstream>
+
 using namespace std;
 using namespace google;
 namespace fe = insieme::frontend;
@@ -100,6 +103,9 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
 		LOG(INFO) << "Height of tree: " << stats.getHeight();
 
+		std::fstream dotFile("inspire.dot", std::fstream::out);
+		printDotGraph(program, dotFile);
+		dotFile.close();
 
 		// XML dump
 		insieme::xml::xmlWrite(program, "insieme.xml");

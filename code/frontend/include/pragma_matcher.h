@@ -106,7 +106,7 @@ private:
  * It reports to std error the location at which the parser found the error and the list
  * of keywords he was expecting.
  */
-std::string errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
+void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
 
 // forward declarations
 struct concat;
