@@ -120,7 +120,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		switch(unOp->getOpcode()) {
 		case UO_PreInc:
 		case UO_PostInc:
-			loopHelper.incrExpr = core::lang::CONST_UINT_ONE_PTR;
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", core::lang::TYPE_INT_GEN);
 			return;
 		case UO_PreDec:
 		case UO_PostDec:
@@ -138,7 +138,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 			assert(isa<const DeclRefExpr>(binOp->getLHS()));
 			const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 			assert(lhs->getDecl() == loopHelper.inductionVar);
-			loopHelper.incrExpr = convFact.convertExpr( *binOp->getRHS() );
+			loopHelper.incrExpr = convFact.convertExpr( binOp->getRHS() );
 			break;
 		}
 		default:
@@ -159,7 +159,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		assert(isa<const DeclRefExpr>(binOp->getLHS()));
 		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 		assert(lhs->getDecl() == loopHelper.inductionVar);
-		loopHelper.condExpr = convFact.convertExpr( *binOp->getRHS() );
+		loopHelper.condExpr = convFact.convertExpr( binOp->getRHS() );
 		return;
 	}
 	throw LoopNormalizationError();

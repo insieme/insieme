@@ -54,7 +54,7 @@ using namespace insieme::frontend::conversion;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
 	{ clang::Type* builtin = new clang::BuiltinType(clang::BuiltinType::TypeName); \
-	TypePtr convType = convFactory.convertType( *builtin ); \
+	TypePtr convType = convFactory.convertType( builtin ); \
 	EXPECT_TRUE(convType); \
 	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); \
 	operator delete (builtin); }
@@ -62,6 +62,7 @@ using namespace insieme::frontend::conversion;
 TEST(TypeConversion, HandleBuildinType) {
 
 	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
+
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clangComp;
@@ -123,7 +124,7 @@ TEST(TypeConversion, HandlePointerType) {
 	BuiltinType intTy(BuiltinType::Int);
 	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
 
-	TypePtr insiemeTy = convFactory.convertType( *pointerTy.getTypePtr() );
+	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
 
@@ -142,7 +143,7 @@ TEST(TypeConversion, HandleReferenceType) {
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
 
-	TypePtr insiemeTy = convFactory.convertType( *refTy.getTypePtr() );
+	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
 
@@ -184,7 +185,7 @@ TEST(TypeConversion, HandleStructType) {
 	QualType type = clang.getASTContext().getTagDeclType(decl);
 
 	// convert the type into an IR type
-	TypePtr insiemeTy = convFactory.convertType( *type.getTypePtr() );
+	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("struct<name:ref<char>,age:uint<2>>", insiemeTy->toString());
 
@@ -217,7 +218,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
 	decl->completeDefinition();
 
-	TypePtr insiemeTy = convFactory.convertType( *declType.getTypePtr() );
+	TypePtr insiemeTy = convFactory.convertType( declType.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<char>,age:int<8>,mate:ref<'Person>>}", insiemeTy->toString());
 
@@ -270,23 +271,23 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 //			clang.getASTContext().getPointerType(clang.getASTContext().getTagDeclType(declB)), 0, 0, false));
 //	declE->completeDefinition();
 
-	TypePtr insiemeTy = convFactory.convertType( *clang.getASTContext().getTagDeclType(declA).getTypePtr() );
+	TypePtr insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declA).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("rec 'A.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
 
-	insiemeTy = convFactory.convertType( *clang.getASTContext().getTagDeclType(declB).getTypePtr() );
+	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declB).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("rec 'B.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
 
-	insiemeTy = convFactory.convertType( *clang.getASTContext().getTagDeclType(declC).getTypePtr() );
+	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declC).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("rec 'C.{'A=struct<b:ref<'B>>, 'B=struct<c:ref<'C>>, 'C=struct<b:ref<'B>,a:ref<'A>,d:ref<struct<e:ref<E>>>>}", insiemeTy->toString());
 
-	insiemeTy = convFactory.convertType( *clang.getASTContext().getTagDeclType(declD).getTypePtr() );
+	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declD).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("struct<e:ref<E>>", insiemeTy->toString());
 
-	insiemeTy = convFactory.convertType( *clang.getASTContext().getTagDeclType(declE).getTypePtr() );
+	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declE).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("E", insiemeTy->toString());
 }
@@ -313,7 +314,7 @@ TEST(TypeConversion, HandleFunctionType) {
 				clang::FunctionType::ExtInfo(false, 0, CallingConv::CC_Default));
 
 		// convert into IR type
-		TypePtr insiemeTy = convFactory.convertType( *funcTy.getTypePtr() );
+		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("((ref<real<8>>,ref<ref<real<4>>>)->int<4>)", insiemeTy->toString());
 	}
@@ -323,7 +324,7 @@ TEST(TypeConversion, HandleFunctionType) {
 		QualType funcTy = ctx.getFunctionNoProtoType(QualType(intTy, 0));
 
 		// convert into IR type
-		TypePtr insiemeTy = convFactory.convertType( *funcTy.getTypePtr() );
+		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("(()->int<4>)", insiemeTy->toString());
 	}
@@ -347,7 +348,7 @@ TEST(TypeConversion, HandleArrayType) {
 	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
 	{
 		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
-		TypePtr insiemeTy = convFactory.convertType( *arrayTy.getTypePtr() );
+		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("vector<ref<int<4>>,8>", insiemeTy->toString());
 	}
@@ -357,7 +358,7 @@ TEST(TypeConversion, HandleArrayType) {
 	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
 	{
 		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
-		TypePtr insiemeTy = convFactory.convertType( *arrayTy.getTypePtr() );
+		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("array<ref<ref<char>>,1>", insiemeTy->toString());
 	}
@@ -370,7 +371,7 @@ TEST(TypeConversion, HandleArrayType) {
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-
+	CommandLineOptions::Verbosity = 2;
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
@@ -382,11 +383,11 @@ TEST(TypeConversion, FileTest) {
 		[ &convFactory ](const PragmaPtr curr) {
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
 			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( *tp->getStatement() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
 			else {
 				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
 				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( *td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
 			}
 	});
 }

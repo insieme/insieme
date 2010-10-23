@@ -82,14 +82,6 @@ class IntTypeParam;
 class Type: public Node {
 
 	/**
-	 * Allow the test case to access private methods.
-	 */
-	template<typename PT>
-	friend void basicTypeTests(PT, bool, bool, const Node::ChildList& children = Node::ChildList());
-
-private:
-
-	/**
 	 * The name of this type. This name is used to uniquely identify the represented type. Since types
 	 * are generally immutable, the type name is marked to be constant.
 	 *

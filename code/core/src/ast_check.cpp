@@ -42,6 +42,7 @@
 namespace insieme {
 namespace core {
 
+
 bool Message::operator==(const Message& other) const {
 	return type == other.type && address == other.address && errorCode == other.errorCode;
 }
@@ -77,10 +78,11 @@ namespace {
 
 	protected:
 
-		MessageList visitNode(const NodeAddress& node) {
+		OptionalMessageList visitNode(const NodeAddress& node) {
 			// aggregate list of all error / warning messages
-			MessageList list;
+			OptionalMessageList list;
 			for_each(checks.begin(), checks.end(), [&list, &node](const CheckPtr& cur) {
+				// merge overall list and messages of current visitor
 				addAll(list, cur->visit(node));
 			});
 			return list;
@@ -110,10 +112,10 @@ namespace {
 
 	protected:
 
-		MessageList visitNode(const NodeAddress& node) {
+		OptionalMessageList visitNode(const NodeAddress& node) {
 
 			// create resulting message list
-			MessageList res;
+			OptionalMessageList res;
 
 			// create internally maintained visitor performing the actual check
 			// NOTE: the visitor pointer is required to support recursion
@@ -163,10 +165,10 @@ namespace {
 
 	protected:
 
-		MessageList visitNode(const NodeAddress& node) {
+		OptionalMessageList visitNode(const NodeAddress& node) {
 
 			// create resulting message list
-			MessageList res;
+			OptionalMessageList res;
 
 			// the list of nodes already visited
 			std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> all;
@@ -205,8 +207,37 @@ namespace {
 
 }
 
+void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
+	// if there is no new element => skip
+	if (!list) {
+		return;
+	}
+
+	// check if there has already been a message within the result
+	if (!target) {
+		target = *list;
+		return;
+	}
+	::addAll(*target, *list);
+}
+
+void add(OptionalMessageList& target, const Message& msg) {
+	if (!target) {
+		target = toVector(msg);
+		return;
+	}
+	target->push_back(msg);
+}
+
 MessageList check(const NodePtr& node, const CheckPtr& check) {
-	return check->visit(node);
+	// collect messages ..
+	auto res = check->visit(node);
+	if (res) {
+		// => list is not empty ... return list
+		return *res;
+	}
+	// return an empty list ...
+	return MessageList();
 }
 
 CheckPtr makeRecursive(const CheckPtr& check) {

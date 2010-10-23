@@ -149,8 +149,8 @@ ADD_TYPE(FunctionType, OP_ASSIGN);
 	extern const Literal CONST_ ## NAME; \
 	extern const LiteralPtr CONST_ ## NAME ## _PTR;
 
-ADD_CONST(UINT_ZERO);
-ADD_CONST(UINT_ONE);
+//ADD_CONST(UINT_ZERO);
+//ADD_CONST(UINT_ONE);
 
 ADD_CONST(BOOL_TRUE);
 ADD_CONST(BOOL_FALSE);
@@ -296,10 +296,29 @@ extern const NoOpStmtPtr STMT_NO_OP_PTR;
 
 // ---------------------------------- Utility -------------------------------
 
-bool isBuildIn(const Node* ptr);
-bool isBuildIn(const Node& node);
-bool isBuildIn(const NodePtr& ptr);
+/**
+ * Tests whether there is a build-in literal using the given value.
+ *
+ * @param name the value of the literal to be looking for
+ * @return true if there is such a literal, false otherwise
+ */
+bool isBuildIn(const string& value);
 
+/**
+ * Tests whether there is a build-in literal equivalent to the given literal.
+ *
+ * @param literal the literal to be looking for
+ * @return true if there is such a literal, false otherwise
+ */
+bool isBuildIn(const LiteralPtr& literal);
+
+/**
+ * Looks up a build in literal with the given value.
+ *
+ * @param value the value to be looking for
+ * @return a pointer to the build-in literal
+ */
+LiteralPtr getBuildInForValue(const string& value);
 
 } // end namespace: lang
 } // end namespace: core

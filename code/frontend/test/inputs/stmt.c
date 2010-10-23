@@ -112,7 +112,7 @@ void for_stmt_test() {
 
 	#pragma test "ref<int<4>> v1 = ref.var(0)"
 	int it = 0;
-	int a;
+	int a = 1;
 
 	// standard for loop
 	#pragma test "for(ref<int<4>> v1 = ref.var(0) .. 100 : 1) {{};}"
@@ -121,6 +121,9 @@ void for_stmt_test() {
 	// for loop using a variable declared outside
 	#pragma test "{for(ref<int<4>> v3 = ref.var(0) .. 100 : 1) {ref.assign(v2, ref.deref(v3));}; ref.assign(v1, 100);}"
 	for(it=0; it<100; ++it) { a=it; }
+
+	#pragma test "{for(ref<int<4>> v3 = ref.var(ref.deref(v2)) .. 100 : 6) {ref.assign(v2, ref.deref(v3));}; ref.assign(v1, 100);}"
+	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test "while(int.lt(ref.deref(v1), 100)) {{{};}; ref.assign(v1, int.add(ref.deref(v1), 1));}"
 	for(; it<100; it+=1) { ; }
@@ -132,6 +135,35 @@ void for_stmt_test() {
 	#pragma test "{ref.assign(v1, 0); while(int.gt(ref.deref(v2), 1)) {{}; fun(ref<int<4>> v5, ref<int<4>> v6, ref<int<4>> v7){ {fun(ref<int<4>> v7){ {int<4> v3 = ref.deref(v7); ref.assign(v7, int.add(ref.deref(v7), cast<int<4>>(1))); return v3;} }(v5); return ref.assign(v6, int.div(ref.deref(v6), 2));} }(v1, v2, v4);};}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
+
+void switch_stmt_test() {
+
+	int a=0;
+
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 1: break | default: {} ];}"
+	switch(a) {
+	case 1:
+		break;
+	}
+
+	// EVIL CODE
+	#pragma test "{int<a> v2 = cast<int<a>>(int.add(ref.deref(v1), 8)); ref.assign(v1, int.add(ref.deref(v1), 1)); switch(v2) [ case 1: break | default: {} ];}"
+	switch(a+8) {
+	a += 1;
+	case 1:
+		break;
+	}
+
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 0: break | default: fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v1) ];}"
+	switch(a) {
+	case 0:
+		break;
+	default:
+		a++;
+	}
+
+}
+
 
 void while_stmt_test() {
 
@@ -149,9 +181,6 @@ void vector_stmt_test() {
 
 //	#pragma test "ref.assign(subscript(ref.deref(cast<ref<int<4>>>(v1)), ref.deref(0)), 1)"
 	a[0] = 1;
-
-
-
 
 }
 

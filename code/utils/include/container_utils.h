@@ -141,6 +141,16 @@ inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const 
 }
 
 /**
+ * Create a vector containing six elements.
+ */
+template<typename T>
+inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const T& e, const T& f) {
+	vector<T> res = toVector(a,b,c,d,e);
+	res.push_back(f);
+	return res;
+}
+
+/**
  * A small utility function capable of appending all elements of one vector to another.
  *
  * @tparam T the element type of the target vector

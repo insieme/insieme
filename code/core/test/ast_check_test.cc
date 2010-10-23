@@ -47,13 +47,13 @@ namespace core {
 class AllFine : public ASTCheck {};
 
 class IDontLikeAnythingCheck : public ASTCheck {
-	MessageList visitNode(const NodeAddress& node) {
+	OptionalMessageList visitNode(const NodeAddress& node) {
 		return toVector(Message(node, 1, "I hate it!"));
 	}
 };
 
 class IAmScaredCheck : public ASTCheck {
-	MessageList visitNode(const NodeAddress& node) {
+	OptionalMessageList visitNode(const NodeAddress& node) {
 		return toVector(Message(node, 2, "Don't know - I'm scared!", Message::WARNING));
 	}
 };

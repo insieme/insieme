@@ -78,7 +78,7 @@ TEST(StmtConversion, FileTest) {
 			ConversionFactory convFactory( shared, comp, pl );
 
 			if(tp->isStatement()) {
-				StatementPtr&& stmt = convFactory.convertStmt( *tp->getStatement() );
+				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
 				EXPECT_EQ(tp->getExpected(), '\"' + stmt->toString() + '\"' );
 				// do type checking
 				MessageList&& msgList = check( stmt, checks::getFullCheck() );
@@ -92,7 +92,7 @@ TEST(StmtConversion, FileTest) {
 			} else {
 				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
 				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( *td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
 			}
 
 

@@ -46,6 +46,14 @@ namespace core {
 namespace lang {
 
 
+// collect list of all literals
+namespace {
+
+	typedef std::unordered_map<const string, LiteralPtr, boost::hash<string>> LiteralMap;
+
+	LiteralMap buildInLiterals;
+}
+
 #define ADD_TYPE(TYPE, NAME, VALUE) \
 	const TYPE TYPE_ ## NAME ## _VAL = VALUE; \
 	const TYPE ## Ptr TYPE_ ## NAME = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL); \
@@ -221,10 +229,11 @@ ADD_TYPE(GenericType, VAR_LIST, GenericType("var_list"));
 
 #define ADD_CONST(NAME, VALUE) \
 	const Literal CONST_ ## NAME = VALUE; \
-	const LiteralPtr CONST_ ## NAME ## _PTR = LiteralPtr(&CONST_ ## NAME);
+	const LiteralPtr CONST_ ## NAME ## _PTR = LiteralPtr(&CONST_ ## NAME); \
+	namespace { auto dummy_const_ ## NAME = buildInLiterals.insert(std::make_pair(VALUE.getValue(), CONST_ ## NAME ## _PTR)); } \
 
-ADD_CONST(UINT_ZERO, Literal(TYPE_UINT_1_PTR, "0"));
-ADD_CONST(UINT_ONE, Literal(TYPE_UINT_1_PTR, "1"));
+//ADD_CONST(UINT_ZERO, Literal(TYPE_UINT_1_PTR, "0"));
+//ADD_CONST(UINT_ONE, Literal(TYPE_UINT_1_PTR, "1"));
 
 ADD_CONST(BOOL_TRUE, Literal(TYPE_BOOL_PTR, "true"));
 ADD_CONST(BOOL_FALSE, Literal(TYPE_BOOL_PTR, "false"));
@@ -240,6 +249,7 @@ ADD_CONST(NULL_PTR, Literal(TYPE_REF_GEN, "null"));
 		const Operator OP_ ## Name ##_VAL(Type, Symbol); \
 		const OperatorPtr OP_ ## Name ## _PTR = OperatorPtr(&OP_ ## Name ## _VAL); \
 		const OperatorPtr OP_ ## Name = OperatorPtr(&OP_ ## Name ## _VAL); \
+		namespace { auto dummy_op_ ## Name = buildInLiterals.insert(std::make_pair(Symbol, OP_ ## Name ## _PTR)); } \
 
 
 ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
@@ -405,35 +415,32 @@ const NoOpStmt STMT_NO_OP(toVector<StatementPtr>());
 const NoOpStmtPtr STMT_NO_OP_PTR = NoOpStmtPtr(&STMT_NO_OP);
 
 
-// --------------------------------- Grouping -------------------------------
-
-typedef std::unordered_set<const Node*, hash_target<const Node*>, equal_target<const Node*>> NodeSet;
-
-NodeSet createBuildInSet();
-const NodeSet BUILD_IN_SET = createBuildInSet();
-
-
-NodeSet createBuildInSet() {
-	NodeSet res;
-
-	res.insert(&TYPE_BOOL_VAL);
-	res.insert(&TYPE_UNIT_VAL);
-
-	return res;
-}
-
 // ---------------------------------- Utility -------------------------------
 
-bool isBuildIn(const Node* ptr) {
-	return BUILD_IN_SET.find(ptr) != BUILD_IN_SET.end();
+bool isBuildIn(const string& value) {
+	// check whether identifier is within the map
+	return buildInLiterals.find(value) != buildInLiterals.end();
 }
 
-bool isBuildIn(const Node& node) {
-	return isBuildIn(&node);
+bool isBuildIn(const LiteralPtr& literal) {
+	// check whether the literal is pointing to null ...
+	if (!literal) {
+		return false;
+	}
+	// lookup literal within map ..
+	auto pos = buildInLiterals.find(literal->getValue());
+
+	// see whether something has been found + compare associated element
+	return pos != buildInLiterals.end() && *(*pos).second == *literal;
 }
 
-bool isBuildIn(const NodePtr& ptr) {
-	return isBuildIn(&*ptr);
+
+LiteralPtr getBuildInForValue(const string& value) {
+	auto pos = buildInLiterals.find(value);
+	if (pos == buildInLiterals.end()) {
+		return LiteralPtr();
+	}
+	return (*pos).second;
 }
 
 

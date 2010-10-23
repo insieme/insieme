@@ -43,7 +43,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <stack>
 
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
@@ -107,7 +106,7 @@ private:
  * It reports to std error the location at which the parser found the error and the list
  * of keywords he was expecting.
  */
-void ErrorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
+void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack);
 
 // forward declarations
 struct concat;
