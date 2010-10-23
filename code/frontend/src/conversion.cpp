@@ -1795,7 +1795,7 @@ public:
 		core::TypePtr retTy;
 		DVLOG(2) << "Converting TagType: " << tagType->getDecl()->getName().str();
 
-		TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
+		const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
 		// iterate through all the re-declarations to see if one of them provides a definition
 		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
 		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
@@ -1808,7 +1808,7 @@ public:
 				assert(false && "Enum types not supported yet");
 			} else {
 				// handle struct/union/class
-				RecordDecl* recDecl = dyn_cast<RecordDecl>(tagDecl);
+				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 
 				if(!ctx.isRecSubType) {
@@ -1899,6 +1899,7 @@ public:
 							ctx.recVarMap.erase(ty);
 
 							definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty))) );
+							var.addAnnotation( std::make_shared<insieme::c_info::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
 
 							// reinsert the TypeVar in the map in order to solve the other recursive types
 							ctx.recVarMap.insert( std::make_pair(tagTy, var) );
