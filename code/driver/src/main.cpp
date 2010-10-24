@@ -104,8 +104,8 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
 		LOG(INFO) << "Height of tree: " << stats.getHeight();
 
-		std::fstream dotFile("inspire.dot", std::fstream::out);
-		printDotGraph(program, dotFile);
+		std::fstream dotFile("inspire.dot", std::fstream::out | std::fstream::trunc);
+		insieme::printDotGraph(program, dotFile);
 		dotFile.close();
 
 		// XML dump

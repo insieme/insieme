@@ -101,7 +101,7 @@ public:
 	COpAnnotation(const std::string& opStr) : core::Annotation(), opStr(opStr) { }
 
 	const std::string getOperator() const { return opStr; }
-	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
+	const std::string getAnnotationName() const {return "COpAnnotation";}
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };

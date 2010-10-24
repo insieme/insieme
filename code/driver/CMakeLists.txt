@@ -25,7 +25,7 @@ include_directories( ${insieme_driver_include_dir} )
 include_directories( ${insieme_xml_include_dir} )
 
 # Build dummy executable
-add_executable( main src/main.cpp )
+add_executable( main ${insieme_driver_srcs} )
 
 # add dependencies
 add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
