@@ -45,76 +45,69 @@
 
 using namespace insieme::core;
 
-class DotVisitor : public ASTVisitor<> {
+namespace insieme {
 
-	std::ostream& out;
+template <class NodeIdTy>
+class GraphBuilder {
 public:
-	DotVisitor(std::ostream& out) : out(out) { }
+	class Node {
+		NodeIdTy id;
+	public:
+		Node(const NodeIdTy& id): id(id) { }
+		const NodeIdTy& getId() const { return id; }
+	};
 
-	template <class ElemTy>
-	void visitChildList(const std::vector<ElemTy>& children, const insieme::core::NodePtr& parent, const std::string& labelPrefix) {
-		unsigned short elemCount=1;
-		std::for_each(children.begin(), children.end(), [&](const ElemTy& curr) {
-			out << (size_t)&*parent << " -> " << (size_t)&*curr <<
-					"[label=\""<< labelPrefix <<
-						(children.size() > 1 ? ("_" + insieme::utils::numeric_cast<std::string>(elemCount++)) : "") << "\"];" << std::endl;
-		});
-	}
+	class Link {
+		NodeIdTy src;
+		NodeIdTy dest;
+	public:
+		Link(const NodeIdTy& src, const NodeIdTy& dest) : src(src), dest(dest) { }
 
-	void visitGenericType(const insieme::core::GenericTypePtr& genTy) {
-		std::ostringstream ss;
-		// special handling for integer type parameters
-		if(!genTy->getIntTypeParameter().empty()) {
-			ss << "<" << join(", ", genTy->getIntTypeParameter(), [ ](std::ostream& out, const IntTypeParam& cur) {
-				out << (cur.isConcrete() ? insieme::utils::numeric_cast<std::string>(cur.getValue()) : ""+cur.getSymbol());
-			}) << ">";
-		}
-		out << (size_t)&*genTy << "\t[label=\"" << genTy->getFamilyName() << " " << ss.str() <<"\", shape=ellipse];" << std::endl;
-		visitChildList(genTy->getTypeParameter(), genTy, "typeVar");
-	}
+		const NodeIdTy& getSrc() const { return src; }
+		const NodeIdTy& getDest() const { return dest; }
+	};
 
-	void visitFunctionType(const FunctionTypePtr& funcType) {
-		out << (size_t)&*funcType << "\t[label=\"funcType\", shape=ellipse]" << std::endl;
-		visitChildList(toVector(funcType->getReturnType()), funcType, "retTy");
-		visitChildList(toVector(funcType->getArgumentType()), funcType, "argTy");
-	}
+	template <class ProperyIdTy, class PropertyValueTy>
+	class Decoration : public std::map<const ProperyIdTy, PropertyValueTy> { };
 
-	void visitTupleType(const TupleTypePtr& tupleTy) {
-		out << (size_t)&*tupleTy << "\t[label=\"tupleType\", shape=ellipse]" << std::endl;
-		visitChildList(tupleTy->getElementTypes(), tupleTy, "elemTy");
-	}
+	virtual const void addNode(const Node& node) = 0;
 
-	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy) {
-		std::string name;
-		if(dynamic_pointer_cast<const StructType>(compTy))
-			name = "structType";
-		else
-			name = "unionType";
-
-		out << (size_t)&*compTy << "\t[label=\"" << name << "\", shape=ellipse]" << std::endl;
-		// TODO
-	}
-
-	void visitStatement(const insieme::core::StatementPtr& stmt) {
-		out << (size_t)&*stmt << "\t[label=\"STMT\", shape=box, style=filled]" << std::endl;
-		const Node::ChildList& children = stmt->getChildList();
-		std::for_each(children.begin(), children.end(), [&](const NodePtr& curr) {
-			out << (size_t)&*stmt << " -> " << (size_t)&*curr << std::endl;
-		});
-	}
-
-	void visitNode(const insieme::core::NodePtr& node) {
-		out << (size_t)&*node << " [label=\"" << node->getNodeCategory() << "\"]" << std::endl;
-		const Node::ChildList& children = node->getChildList();
-		std::for_each(children.begin(), children.end(), [&](const NodePtr& curr) {
-			out << (size_t)&*node << " -> " << (size_t)&*curr << std::endl;
-		});
-	}
+	virtual void addLink(const Link& link) = 0;
 };
 
-void printDotGraph(const insieme::core::NodePtr& root, std::ostream& out) {
-	DotVisitor dv(out);
-	out << "digraph inspire {" << std::endl;
-	insieme::core::visitAllOnce(root, dv);
-	out << "}" << std::endl;
+template <class NodeIdTy>
+class GraphPrinter: public ASTVisitor<> {
+	std::ostream&			out;
+	GraphBuilder<NodeIdTy>*	builder;
+public:
+	GraphPrinter(std::ostream& out);
+
+	static NodeIdTy getNodeId(const core::NodePtr& node);
+
+	void visitGenericType(const core::GenericTypePtr& genTy);
+	void visitFunctionType(const FunctionTypePtr& funcType);
+	void visitTupleType(const TupleTypePtr& tupleTy);
+	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
+
+	void visitCompoundStmt(const CompoundStmtPtr& comp);
+	void visitForStmt(const ForStmtPtr& forStmt);
+	void visitIfStmt(const IfStmtPtr& ifStmt);
+	void visitWhileStmt(const WhileStmtPtr& whileStmt);
+	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt);
+	void visitReturnStmt(const ReturnStmtPtr& retStmt);
+
+	void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
+	void visitVariable(const VariablePtr& var);
+	void visitCallExpr(const CallExprPtr& callExpr);
+	void visitLiteral(const LiteralPtr& lit);
+	void visitCastExpr(const CastExprPtr& castExpr);
+
+	void visitStatement(const insieme::core::StatementPtr& stmt);
+	void visitNode(const insieme::core::NodePtr& node);
+
+	void visitProgram(const insieme::core::ProgramPtr& root);
+};
+
+void printDotGraph(const insieme::core::NodePtr& root, std::ostream& out);
+
 }

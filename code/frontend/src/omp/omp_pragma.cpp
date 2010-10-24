@@ -45,7 +45,7 @@
 #include <clang/AST/Expr.h>
 #include "conversion.h"
 
-#include <glog/logging.h>
+#include <logging.h>
 
 #include <iostream>
 
@@ -260,14 +260,15 @@ void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNo
 	omp::BaseAnnotation::AnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
-			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>(&*(curr.second));
+			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) );
 			if(ompPragma) {
 				VLOG(1) << "Statement has an OpenMP pragma attached";
 				anns.push_back( ompPragma->toAnnotation(fact) );
 			}
 	});
-
-	irNode.addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
+	// If we find annotations, attach them to the pointer
+	if(!anns.empty())
+		irNode.addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 }
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
