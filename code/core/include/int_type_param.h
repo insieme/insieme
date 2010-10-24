@@ -185,6 +185,7 @@ public:
 			return ::toString("Inf");
 		default:
 			assert(false && "Invalid parameter type discovered!");
+			return "undefined";
 		}
 	}
 

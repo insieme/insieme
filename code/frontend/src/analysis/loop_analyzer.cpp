@@ -79,7 +79,8 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper({NULL, NULL, NULL}) {
+	//TODO: Recheck: Visual Studio 2010 fix: loopHelper( { NULL, NULL, NULL } ) do not work
+	LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper(LoopHelper()) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression

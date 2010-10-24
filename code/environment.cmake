@@ -17,6 +17,7 @@ set ( insieme_xml_include_dir ${insieme_code_dir}/xml/include )
 set ( insieme_frontend_include_dir ${insieme_code_dir}/frontend/include )
 set ( insieme_driver_include_dir ${insieme_code_dir}/driver/include )
 set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
+set ( insieme_opencl_backend_include_dir ${insieme_code_dir}/opencl_backend/include )
 
 # include boost headers
 find_package( Boost COMPONENTS program_options )

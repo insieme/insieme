@@ -530,7 +530,7 @@ public:
 		core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 		// create Pair type
-		core::TupleTypePtr tupleTy = builder.tupleType( { exprTy, exprTy } );
+		core::TupleTypePtr tupleTy = builder.tupleType(toVector( exprTy, exprTy ) );
 		std::string opType = getOperationType(exprTy);
 
 		// we take care of compound operators first,

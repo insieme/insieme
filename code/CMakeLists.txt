@@ -13,6 +13,7 @@ add_subdirectory( c_info )
 add_subdirectory( xml )
 add_subdirectory( frontend )
 add_subdirectory( simple_backend )
+add_subdirectory( opencl_backend )
 add_subdirectory( driver )
 
 #-- Add an Option to toggle the generation of the API documentation

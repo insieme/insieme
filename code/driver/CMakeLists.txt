@@ -19,6 +19,7 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
+include_directories( ${insieme_opencl_backend_include_dir} )
 include_directories( ${insieme_c_info_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
 include_directories( ${insieme_xml_include_dir} )
@@ -30,7 +31,7 @@ add_executable( main ${insieme_driver_srcs} )
 add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
 
 # register linked libraries
-target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info insieme_xml )
+target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_opencl_backend insieme_c_info insieme_xml )
 
 # add boost_program_options library
 target_link_libraries( main boost_program_options ${glog_LIB})
@@ -42,12 +43,13 @@ include_directories(${GTEST_INCLUDE_DIRS})
 file(GLOB test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_frontend)
 	target_link_libraries(ut_${case_name} insieme_simple_backend)
+	target_link_libraries(ut_${case_name} insieme_opencl_backend)
 	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} insieme_xml)	# FIXME
