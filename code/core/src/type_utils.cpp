@@ -62,7 +62,7 @@ public:
 		}
 
 		// lookup current variable within the mapping
-		auto pos = mapping.find(static_pointer_cast<TypeVariable>(element));
+		auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
 		if (pos != mapping.end()) {
 			// found! => replace
 			return (*pos).second;
@@ -242,8 +242,8 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 
 			// convert current pair into substitution
 			Substitution mapping(
-					static_pointer_cast<TypeVariable>(a),
-					static_pointer_cast<Type>(b)
+					static_pointer_cast<const TypeVariable>(a),
+					static_pointer_cast<const Type>(b)
 			);
 
 			// apply substitution to remaining pairs
@@ -270,8 +270,8 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 
 		// => check family of generic type
 		if (typeOfA == NT_GenericType) {
-			const GenericTypePtr& genericTypeA = static_pointer_cast<GenericType>(a);
-			const GenericTypePtr& genericTypeB = static_pointer_cast<GenericType>(b);
+			const GenericTypePtr& genericTypeA = static_pointer_cast<const GenericType>(a);
+			const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
 
 			if (genericTypeA->getFamilyName() != genericTypeB->getFamilyName()) {
 				return boost::optional<Substitution>();
@@ -334,8 +334,8 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 
 				[&list](const std::pair<NodePtr, NodePtr>& cur) {
 					list.push_front(std::make_pair(
-							static_pointer_cast<Type>(cur.first),
-							static_pointer_cast<Type>(cur.second)
+							static_pointer_cast<const Type>(cur.first),
+							static_pointer_cast<const Type>(cur.second)
 					));
 		});
 	}

@@ -153,6 +153,7 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type d
  */
 template<typename B, typename T>
 inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>&>::type static_pointer_cast(InstancePtr<T>& src) {
+	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return *(reinterpret_cast<InstancePtr<B>* >(&src));
 }
 

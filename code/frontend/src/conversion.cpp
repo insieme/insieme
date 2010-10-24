@@ -2396,6 +2396,13 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		ctx->recVarExprMap.clear();
 
 		core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+
+		// FIXME: the variable is no longer a variable!
+		if (!dynamic_cast<const core::Variable*>(&*core::NodePtr(recVarRef))) {
+			std::cout << "Should be a variable but is: " << *recVarRef << std::endl;
+		}
+		assert(dynamic_cast<const core::Variable*>(&*core::NodePtr(recVarRef)) && "By any reason, the variable is no variable any more ...");
+
 		retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
 	}
 

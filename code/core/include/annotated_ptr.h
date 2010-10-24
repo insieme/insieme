@@ -78,12 +78,14 @@ dynamic_pointer_cast(AnnotatedPtr<T> src) {
 template<typename B, typename T>
 inline typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>&>::type
 static_pointer_cast(AnnotatedPtr<T>& src) {
+	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return reinterpret_cast<AnnotatedPtr<B>&>(src);
 }
 
 template<typename B, typename T>
 inline typename boost::enable_if<boost::is_base_of<T,B>, const AnnotatedPtr<B>&>::type
 static_pointer_cast(const AnnotatedPtr<T>& src) {
+	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return reinterpret_cast<const AnnotatedPtr<B>&>(src);
 }
 

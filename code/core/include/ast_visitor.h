@@ -82,8 +82,6 @@ public:
 		// create cast functor instance
 		typename Ptr<const Node>::StaticCast cast;
 
-		Ptr<const Type> type = cast.TEMP_OP<const Type, const Node>(element);
-
 		// dispatch to correct visit method
 		switch(element->getNodeType()) {
 
