@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Height of tree: " << stats.getHeight();
 
 		std::fstream dotFile("inspire.dot", std::fstream::out | std::fstream::trunc);
-		insieme::printDotGraph(program, errors, dotFile);
+		insieme::driver::printDotGraph(program, errors, dotFile);
 		dotFile.close();
 
 		// XML dump

@@ -215,10 +215,10 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 		cur->substitute(manager, mapper);
 
 		// check number of visited children
-		EXPECT_EQ(cur->getChildList().size(), count);
+		EXPECT_EQ(cur->getChildList().size(), static_cast<size_t>(count));
 
 		// all children have to be visited (mask should have all 1s)
-		EXPECT_EQ((1<<count) - 1, mask);
+		EXPECT_EQ(static_cast<unsigned>((1<<count) - 1), mask);
 	}
 }
 

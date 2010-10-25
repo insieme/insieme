@@ -47,10 +47,11 @@
 using namespace insieme::core;
 
 namespace insieme {
+namespace driver {
 
-template <class NodeIdTy>
-class GraphBuilder {
-public:
+template <class NodeTy, class NodeIdTy>
+struct GraphBuilder {
+
 	class Node {
 		NodeIdTy id;
 	public:
@@ -69,28 +70,29 @@ public:
 	};
 
 	template <class ProperyIdTy, class PropertyValueTy>
-	class Decoration : public std::map<const ProperyIdTy, PropertyValueTy> { };
+	struct Decorator : public std::map<const ProperyIdTy, PropertyValueTy> { };
 
-	virtual const void addNode(const Node& node) = 0;
+	template <class GraphNodeTy>
+	void addNode(const NodeTy& node) { addNode(GraphNodeTy( getNodeId(node) )); }
+	virtual void addNode(const Node& node) = 0;
 
 	virtual void addLink(const Link& link) = 0;
+	virtual NodeIdTy getNodeId(const NodeTy& fromNode) = 0;
 };
 
-template <class NodeIdTy>
-class GraphPrinter: public ASTVisitor<> {
-	std::ostream&			out;
-	const MessageList& 		errors;
-	GraphBuilder<NodeIdTy>*	builder;
+class ASTPrinter: public insieme::core::ASTVisitor<> {
 public:
-	GraphPrinter(const MessageList& errors, std::ostream& out);
+	typedef GraphBuilder<core::NodePtr, size_t> IRBuilder;
+	typedef std::shared_ptr<IRBuilder> IRBuilderPtr;
 
-	static NodeIdTy getNodeId(const core::NodePtr& node);
-
+	ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors);
+	// Types
 	void visitGenericType(const core::GenericTypePtr& genTy);
 	void visitFunctionType(const FunctionTypePtr& funcType);
 	void visitTupleType(const TupleTypePtr& tupleTy);
 	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
 
+	// Statements
 	void visitCompoundStmt(const CompoundStmtPtr& comp);
 	void visitForStmt(const ForStmtPtr& forStmt);
 	void visitIfStmt(const IfStmtPtr& ifStmt);
@@ -98,18 +100,23 @@ public:
 	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt);
 	void visitReturnStmt(const ReturnStmtPtr& retStmt);
 
+	// Expressions
 	void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
 	void visitVariable(const VariablePtr& var);
 	void visitCallExpr(const CallExprPtr& callExpr);
-	void visitLiteral(const LiteralPtr& lit);
 	void visitCastExpr(const CastExprPtr& castExpr);
-
+	void visitLiteral(const LiteralPtr& lit);
 	void visitStatement(const insieme::core::StatementPtr& stmt);
 	void visitNode(const insieme::core::NodePtr& node);
-
-	void visitProgram(const insieme::core::ProgramPtr& root);
+	void visitProgram(const core::ProgramPtr& prog);
+private:
+	IRBuilderPtr builder;
+	const MessageList& errors;
 };
+
+std::shared_ptr<ASTPrinter> makeDotPrinter(std::ostream& out, const MessageList& errors);
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
 
+}
 }
