@@ -119,7 +119,8 @@ struct numeric_cast_impl<RetTy, InTy, 2> {
 
 template <class RetTy, class InTy>
 struct numeric_cast_impl<RetTy, InTy, 2>;
-}
+
+} // end anonymous namespace
 
 namespace insieme {
 namespace utils {
