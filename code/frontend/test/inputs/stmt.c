@@ -38,6 +38,7 @@
 void binary_op_test() {
 
 	int a = 0;
+	unsigned c;
 
 	#pragma test "ref<int<4>> v1 = ref.var(0)"
 	int b = 0;
@@ -50,6 +51,9 @@ void binary_op_test() {
 
 	#pragma test "int.sub(ref.deref(v2), ref.deref(v1))"
 	a - b;
+
+	#pragma test "uint.sub(ref.deref(v1), cast<uint<4>>(1))"
+	c - 1;
 
 	#pragma test "ref.assign(v2, int.sub(ref.deref(v2), ref.deref(v1)))"
 	a -= b;
