@@ -43,6 +43,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Decl.h"
+#include "clang/Sema/Sema.h"
 
 #include <glog/logging.h>
 
@@ -114,7 +115,8 @@ struct InsiemeSema::InsiemeSemaImpl {
 
 InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer, bool CompleteTranslationUnit,
 						 clang::CodeCompleteConsumer* CompletionConsumer) :
-	clang::Sema::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
+	clang::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
+	//TODO: Visual Studios 2010 fix - please recheck (clang::Sema::Sema -> clang::Sema and include header)
 
 
 /*
@@ -396,9 +398,12 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 }
 
 void InsiemeSema::dump() {
+//Visual Studios 2010 fix: Release mode (without debug) evaluates DLOG(INFO) to "(void) 0"
+#ifndef NDEBUG
 	DVLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
 		(*I)->dump(DLOG(INFO), SourceMgr);
+#endif
 }
 
 } // End frontend namespace

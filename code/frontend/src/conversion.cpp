@@ -1432,7 +1432,8 @@ public:
 	//							NULL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
-		core::StatementPtr&& retStmt = core::lang::STMT_NO_OP_PTR;
+		//TODO: Visual Studio 2010 fix: && removed
+		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
 
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retStmt, nullStmt, convFact);
@@ -1887,7 +1888,8 @@ public:
 							const TagType* tagTy = dyn_cast<const TagType>(ty);
 							assert(tagTy && "Type is not of TagType type");
 
-							ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
+							//Visual Studio 2010 fix: full namespace
+							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
 							assert(tit != this->ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
@@ -2375,7 +2377,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		std::for_each(components.begin(), components.end(),
 			[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
 
-				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
+				//Visual Studios 2010 fix: full namespace
+				insieme::frontend::conversion::ConversionFactory::ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
 				assert(tit != this->ctx->recVarExprMap.end() && "Recursive function has no TypeVar associated");
 				this->ctx->currVar = tit->second;
 
