@@ -259,8 +259,8 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false, false);
 	// add headers
 	std::for_each(CommandLineOptions::IncludePaths.begin(), CommandLineOptions::IncludePaths.end(),
-		[ pimpl ](std::string& curr) {
-			pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
+		[ this ](std::string& curr) {
+			this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
 		}
 	);
 
@@ -292,8 +292,8 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	LO.LaxVectorConversions = 1;
 
 	// set -D macros
-	std::for_each(CommandLineOptions::Defs.begin(), CommandLineOptions::Defs.end(), [ pimpl ](std::string& curr) {
-		pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
+	std::for_each(CommandLineOptions::Defs.begin(), CommandLineOptions::Defs.end(), [ this ](std::string& curr) {
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
 	});
 
 	// Do this AFTER setting preprocessor options
