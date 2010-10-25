@@ -362,16 +362,71 @@ namespace {
 				}
 		});
 
+		PRINT(TupleExpr, {
+				out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) {
+					this->visit(cur);
+				}) << ")";
+		});
+
+		PRINT(VectorExpr, {
+				out << "[" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) {
+					this->visit(cur);
+				}) << "]";
+		});
+
+		PRINT(RecLambdaExpr, {
+				out << "recFun ";
+				this->visit(node->getVariable());
+				out << " ";
+				this->visit(node->getDefinition());
+		});
+
 	//	AST_TERMINAL(JobExpr, Expression)
-	//	AST_TERMINAL(TupleExpr, Expression)
-	//	AST_TERMINAL(VectorExpr, Expression)
-	//	AST_TERMINAL(RecLambdaExpr, Expression)
-	//
 	//	AST_TERMINAL(StructExpr, NamedCompositeExpr)
 	//	AST_TERMINAL(UnionExpr, NamedCompositeExpr)
-	//
-	//	AST_TERMINAL(RecTypeDefinition, Node)
-	//	AST_TERMINAL(RecLambdaDefinition, Node)
+
+
+		PRINT(RecTypeDefinition, {
+				auto defs = node->getDefinitions();
+				if (defs.empty()) {
+					out << "{ }";
+					return;
+				}
+
+				out << "{"; increaseIndent(); newLine();
+				std::size_t count = 0;
+				for_each(defs.begin(), defs.end(), [&](const std::pair<const TypeVariablePtr, TypePtr>& cur) {
+					out << *cur.first << " = ";
+					this->visit(cur.second);
+					out << ";";
+					if (count++ < defs.size() -1) newLine();
+				});
+
+				decreaseIndent();
+				newLine();
+				out << "}";
+		});
+
+		PRINT(RecLambdaDefinition, {
+				auto defs = node->getDefinitions();
+				if (defs.empty()) {
+					out << "{ }";
+					return;
+				}
+
+				out << "{"; increaseIndent(); newLine();
+				std::size_t count = 0;
+				for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaExprPtr>& cur) {
+					out << *cur.first << " = ";
+					this->visit(cur.second);
+					out << ";";
+					if (count++ < defs.size() -1) newLine();
+				});
+
+				decreaseIndent();
+				newLine();
+				out << "}";
+		});
 
 
 		PRINT(Program, {
