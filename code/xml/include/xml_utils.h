@@ -68,7 +68,7 @@ public:
 
 	void convertDomToXml(const string fileName);
 
-	void convertDomToIr(NodeManager& manager);
+	NodePtr convertDomToIr(NodeManager& manager);
 
 	void convertIrToDom(const NodePtr& node);
 
