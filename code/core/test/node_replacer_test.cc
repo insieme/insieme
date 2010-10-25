@@ -117,8 +117,41 @@ TEST(NodeReplacer, AnnotationPreservation) {
 	mod = transform::replaceNode(builder, typeE, typeB, typeD, false);
 	EXPECT_EQ("E<C<A,D,A>>", toString(*mod));
 	EXPECT_FALSE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
+}
 
+TEST(NodeReplacer, ReplaceByAddress) {
+	ASTBuilder builder;
 
+	// OK ... create a simple AST construct
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
+	TypePtr typeC = builder.genericType("C", toVector(typeA, typeB, typeA));
+	TypePtr typeD = builder.genericType("D", toVector(typeC));
+	TypePtr typeX = builder.genericType("X");
+
+	EXPECT_EQ("D<C<A,B,A>>", toString(*typeD));
+
+	typeD->getChildList()[0].addAnnotation(std::make_shared<DummyAnnotation>(12));
+	EXPECT_TRUE(typeD->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
+
+	NodeAddress addrD(typeD);
+	NodeAddress addrC = addrD.getAddressOfChild(0);
+	NodeAddress addrA1 = addrC.getAddressOfChild(0);
+	NodeAddress addrB = addrC.getAddressOfChild(1);
+	NodeAddress addrA2 = addrC.getAddressOfChild(2);
+
+	NodePtr mod;
+	NodeManager manager;
+	mod = transform::replaceNode(manager, addrA1, typeX);
+	EXPECT_EQ("D<C<X,B,A>>", toString(*mod));
+	EXPECT_FALSE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
+
+	mod = transform::replaceNode(manager, addrA2, typeX, true);
+	EXPECT_EQ("D<C<A,B,X>>", toString(*mod));
+	EXPECT_TRUE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
+
+	mod = transform::replaceNode(manager, addrD, typeX, true);
+	EXPECT_EQ("X", toString(*mod));
 }
 
 

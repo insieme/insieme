@@ -50,7 +50,7 @@ bool even(unsigned x) {
 }
 
 bool odd(unsigned x) {
-	//return (x==0)?false:even(x-1);
+	return (x==0)?false:even(x-1);
 }
 
 int main(int argc, char* argv[]) {

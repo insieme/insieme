@@ -55,7 +55,7 @@ public:
 	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
 		: manager(manager), mapping(substitution.getMapping()), paramMapping(substitution.getIntTypeParamMapping()) {};
 
-	const NodePtr mapElement(const NodePtr& element) {
+	const NodePtr mapElement(unsigned, const NodePtr& element) {
 		// quick check - only variables are substituted
 		if (element->getNodeType() != NT_TypeVariable) {
 			return element->substitute(manager, *this);
@@ -100,7 +100,7 @@ Substitution::Substitution(const IntTypeParam& var, const IntTypeParam& type) {
 TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
 	// perform substitution
 	SubstitutionMapper mapper(manager, *this);
-	return mapper.map(type);
+	return mapper.map(0, type);
 }
 
 IntTypeParam Substitution::applyTo(const IntTypeParam& param) const {

@@ -36,6 +36,7 @@
 
 #include "transform/node_replacer.h"
 #include "ast_builder.h"
+#include "ast_address.h"
 
 namespace {
 
@@ -64,7 +65,7 @@ private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
-	virtual const NodePtr mapElement(const NodePtr& ptr) {
+	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 		// check whether the element has been found
 		if(*(ptr) == *(toReplace)) {
 			return replacement;
@@ -81,7 +82,7 @@ private:
 		NodePtr res = ptr->substitute(manager, *this);
 
 		// check whether something has changed ...
-		if ((*res) == (*ptr)) {
+		if (res == ptr) {
 			// => nothing changed
 			return ptr;
 		}
@@ -94,6 +95,35 @@ private:
 		// done
 		return res;
 	}
+};
+
+
+class NodeAddressReplacer : public NodeMapping {
+	const unsigned indexToReplace;
+	const NodePtr& replacement;
+
+	public:
+
+		NodeAddressReplacer(unsigned index, const NodePtr& replacement)
+			: indexToReplace(index), replacement(replacement) { }
+
+	private:
+
+		/**
+		 * Represents an identity-operation except for the one element to be replaced,
+		 * which is identified by its index.
+		 *
+		 * @param index the index of the element to be mapped
+		 * @param ptr a pointer to the element to be mapped
+		 * @return a pointer to the mapped element
+		 */
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+			if (indexToReplace == index) {
+				return replacement;
+			}
+			return ptr;
+		}
+
 };
 
 }
@@ -111,7 +141,7 @@ NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const Nod
 	NodePtr res = root->substitute(*mgr, mapper);
 
 	// check whether something has changed
-	if (*res == *root) {
+	if (res == root) {
 		// nothing changed => return handed in node
 		return root;
 	}
@@ -128,6 +158,35 @@ NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const Nod
 NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
 	return replaceNode(builder.getNodeManager(), root, toReplace, replacement, preservePtrAnnotationsWhenModified);
 }
+
+NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+	assert( toReplace.isValid() && "Invalid node address provided!");
+
+	// create result
+	NodePtr res = replacement;
+
+	// process the path bottom up => replace one node after another
+	const Path& path = toReplace.getPath();
+	unsigned lastPos = path[path.size()-1].first;
+	std::for_each(path.rbegin()+1, path.rend(), [&](const PathEntry& cur) {
+		// conduct replace operation
+		auto mapper = NodeAddressReplacer(lastPos, res);
+		res = cur.second->substitute(manager, mapper);
+
+		// restore annotations
+		if (preservePtrAnnotationsWhenModified) {
+			// copy annotations from parent pointer ...
+			res->getChildList()[lastPos].setAnnotations(cur.second->getChildList()[lastPos].getAnnotations());
+		}
+
+		// update last-pos
+		lastPos = cur.first;
+	});
+
+	// done
+	return res;
+}
+
 
 } // End transform namespace
 } // End core namespace

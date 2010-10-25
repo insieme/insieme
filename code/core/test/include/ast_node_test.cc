@@ -196,6 +196,30 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 			});
 		}
 	}
+
+	// TODO: check child list vs. node mapper argument
+	for (int i=0; i<3; i++) {
+
+		NP cur = allPtr[i];
+
+		int count = 0;
+		unsigned mask = 0;
+		auto mapper = makeLambdaMapper([&](unsigned pos, const NodePtr& ptr)-> const NodePtr {
+			count++;
+			EXPECT_EQ(ptr, cur->getChildList()[pos]);
+			EXPECT_FALSE(mask & (1<<pos));
+			mask |= 1<<pos;
+			return ptr;
+		});
+
+		cur->substitute(manager, mapper);
+
+		// check number of visited children
+		EXPECT_EQ(cur->getChildList().size(), count);
+
+		// all children have to be visited (mask should have all 1s)
+		EXPECT_EQ((1<<count) - 1, mask);
+	}
 }
 
 } // end namespace core

@@ -57,7 +57,7 @@ std::size_t hash(const Program::EntryPointSet& entryPoints) {
 }
 
 Program* Program::createCopyUsing(NodeMapping& mapper) const {
-	return new Program(mapper.map(entryPoints));
+	return new Program(mapper.map(0, entryPoints));
 }
 
 /**

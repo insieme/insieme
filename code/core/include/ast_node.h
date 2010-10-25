@@ -87,14 +87,12 @@ enum NodeCategory {
  * Implements a node manager to be used for maintaining AST node instances.
  */
 class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
+
+// A type definition for a shared node manager
 typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
+// forward declaration of the clonePtr operation
 template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
-
-/**
- * This class is used to represent integer parameters of generic types.
- */
-class IntTypeParam;
 
 
 /**
@@ -107,14 +105,21 @@ class NodeMapping {
 protected:
 
 	/**
-	 * Implements the actual mapping operation by mapping one ptr to another.
+	 * Implements the actual mapping operation by mapping the given pointer (and the context information)
+	 * to a new pointer.
 	 *
+	 * @param index the index of the ptr within the parents child list
 	 * @param ptr the pointer to be resolved
 	 * @return the pointer the given pointer is mapped to by this mapper
 	 */
-	virtual const NodePtr mapElement(const NodePtr& ptr) =0;
+	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) =0;
 
 public:
+
+	/**
+	 * A virtual destructor of the mapping for a proper cleanup.
+	 */
+	virtual ~NodeMapping() {};
 
 	/**
 	 * Requests to map the given integer type parameter to another element.
@@ -127,22 +132,17 @@ public:
 	virtual vector<IntTypeParam> mapParam(const vector<IntTypeParam>& list);
 
 	/**
-	 * A virtual destructor of the mapping for a proper cleanup.
-	 */
-	virtual ~NodeMapping() {};
-
-	/**
 	 * A generic version of the map operation handling pointer types properly.
 	 */
 	template<typename T>
-	inline AnnotatedPtr<T> map(const AnnotatedPtr<T>& ptr) {
+	inline AnnotatedPtr<T> map(unsigned index, const AnnotatedPtr<T>& ptr) {
 		// short-cut for null
 		if (!ptr) {
 			return static_pointer_cast<T>(ptr);
 		}
 
 		// map and cast
-		NodePtr res = mapElement(ptr);
+		NodePtr res = mapElement(index, ptr);
 
 		// during development, make cast secure
 		assert(dynamic_pointer_cast<T>(res) && "Invalid conversion");
@@ -153,46 +153,25 @@ public:
 	 * Obtains a container of pointers referencing clones of nodes referenced by a given
 	 * container of pointers. Thereby, annotations are properly preserved and isolated.
 	 *
-	 * @param manager the manager which should maintain the nodes referenced by the resulting pointer
 	 * @param container the container including the pointers to be cloned
 	 * @return a new container including pointers referencing clones of the nodes referenced
 	 * 		   by the original container.
 	 */
 	template<typename Container>
-	Container map(const Container& container) {
+	Container map(unsigned offset, const Container& container) {
 		Container res;
 
-		// --- Begin: STRANGE CASE ---
 		auto first = container.begin();
 		auto last = container.end();
 		auto out = inserter(res, res.end());
 		for (auto it = first; it != last; ++it) {
-			*out = map(*it);
+			*out = map(offset++, *it);
 			out++;
 		}
-		// The equivalent construct
-		//   map(container.cbegin(), container.cend(), inserter(res, res.end()));
-		// produces a segmentation fault
-		// --- End: STRANGE CASE ---
 
 		return res;
 	}
 
-	/**
-	 * Obtains pointers to clones of nodes referenced by a range of pointers.
-	 *
-	 * @param manager the manager which should maintain the nodes referenced by the resulting pointer
-	 * @param first the first element of the range
-	 * @param last the last element of the range
-	 * @param out the output iterator to which resulting elements are forwarded
-	 */
-	template<typename InputIterator, typename OutputIterator>
-	void map(InputIterator first, InputIterator last, OutputIterator out) {
-		typedef typename std::iterator_traits<InputIterator>::value_type Element;
-		std::transform(first, last, out, [&](const Element& cur) {
-			return this->map(cur);
-		});
-	}
 };
 
 template<typename Lambda>
@@ -201,8 +180,8 @@ class LambdaNodeMapper : public NodeMapping {
 public:
 	LambdaNodeMapper(Lambda lambda) : lambda(lambda) {};
 
-	const NodePtr mapElement(const NodePtr& ptr) {
-		return lambda(ptr);
+	const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+		return lambda(index, ptr);
 	}
 };
 
@@ -281,7 +260,7 @@ private:
 		}
 
 		// trigger the creation of a clone
-		auto cloner = makeLambdaMapper([&manager](const NodePtr& ptr) {
+		auto cloner = makeLambdaMapper([&manager](unsigned, const NodePtr& ptr) {
 			return clonePtr(manager, ptr);
 		});
 		Node* res = createCopyUsing(cloner);
