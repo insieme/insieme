@@ -207,7 +207,7 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 			elemTy.push_back( parmVar->getType() );
 
 			// we have to replace the variable of the body with the newly created parmVar
-			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceNode(builder, bodyStmt, bodyVar, parmVar) );
+			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceNode(builder, bodyStmt, bodyVar, parmVar, true) );
 			assert(bodyStmt);
 		}
 	);
@@ -1081,7 +1081,7 @@ public:
 				init = callExpr->getArguments()[1]; // getting RHS
 
 				declStmt = builder.declarationStmt( newIndVar, builder.callExpr(varTy, core::lang::OP_REF_VAR_PTR, toVector(init)) );
-				core::NodePtr&& ret = core::transform::replaceNode(builder, body.getSingleStmt(), inductionVar, newIndVar);
+				core::NodePtr&& ret = core::transform::replaceNode(builder, body.getSingleStmt(), inductionVar, newIndVar, true);
 
 				// replace the body with the newly modified one
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
