@@ -48,7 +48,6 @@
 #include <math.h>
 #include <time.h>
 
-//#pragma insieme mark
 double init_func(int x, int y) {
 	return 40 * sin((double)(16 * (2 * x - 1) * y));
 }
@@ -88,7 +87,6 @@ int main(int argc, char** argv) {
 	
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
-		#pragma insieme mark
 		#pragma omp parallel for private(resv) reduction(+: resv)
 		for (int i=1; i < N-1; i++) {
 			 for (int j=1; j < N-1; j++)
@@ -103,17 +101,15 @@ int main(int argc, char** argv) {
 				res[i][j] = f[i][j] - 4 * u[i][j] + u[i-1][j] + u[i+1][j] + u[i][j-1] + u[i][j+1];
 		}
 
-		#pragma insieme mark
-		{
 		// normalize
 		double norm = 0;
 		#pragma omp for reduction(+: norm)
 		for (int i=1; i<N-1; i++) {
-//			for (int j=1; j<N-1; j++)
-//				norm += pow( res[i][j], 2 );
+			for (int j=1; j<N-1; j++)
+				norm += pow( res[i][j], 2 );
 		}
+
 		resv = sqrt(norm)/(N-1);
-		}
 		#pragma omp barrier
 		#pragma omp flush
 		#pragma omp barrier

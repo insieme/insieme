@@ -207,7 +207,7 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 			elemTy.push_back( parmVar->getType() );
 
 			// we have to replace the variable of the body with the newly created parmVar
-			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceNode(builder, bodyStmt, bodyVar, parmVar) );
+			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceNode(builder, bodyStmt, bodyVar, parmVar, true) );
 			assert(bodyStmt);
 		}
 	);
@@ -1017,7 +1017,7 @@ public:
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 				std::function<bool (const core::StatementPtr&, bool)> inductionVarFilter =
-					[ this, inductionVar ](const core::StatementPtr& curr, bool negateResult) {
+					[ this, inductionVar ](const core::StatementPtr& curr, bool negateResult) -> bool {
 						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
 						assert(declStmt && "Not a declaration statement");
 						bool ret = (declStmt->getVariable() == inductionVar);
@@ -1081,7 +1081,7 @@ public:
 				init = callExpr->getArguments()[1]; // getting RHS
 
 				declStmt = builder.declarationStmt( newIndVar, builder.callExpr(varTy, core::lang::OP_REF_VAR_PTR, toVector(init)) );
-				core::NodePtr&& ret = core::transform::replaceNode(builder, body.getSingleStmt(), inductionVar, newIndVar);
+				core::NodePtr&& ret = core::transform::replaceNode(builder, body.getSingleStmt(), inductionVar, newIndVar, true);
 
 				// replace the body with the newly modified one
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
@@ -1352,7 +1352,7 @@ public:
 					[ &retStmt, this ] (Stmt* curr) {
 						if(!isa<SwitchCase>(curr)) {
 							StmtWrapper&& visitedStmt = this->Visit(curr);
-							std::copy(visitedStmt.begin(), visitedStmt.end(), back_inserter(retStmt));
+							std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
 						}
 					}
 				);
@@ -1681,12 +1681,7 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-
-				// we add a ref type for function parameters if they are not const qualified
-				core::TypePtr&& type = currArgType.isConstQualified() ? this->Visit( currArgType.getTypePtr() ) :
-						this->convFact.builder.refType( this->Visit( currArgType.getTypePtr() ) );
-
-				argTypes.push_back( type );
+				argTypes.push_back( this->Visit( currArgType.getTypePtr() ) );
 			}
 		);
 
@@ -1843,11 +1838,11 @@ public:
 					// when a subtype is resolved we aspect to already have these variables in the map
 					if(!ctx.isRecSubType) {
 						std::for_each(components.begin(), components.end(),
-							[ this, &ctx] (std::set<const Type*>::value_type ty) {
+							[ this ] (std::set<const Type*>::value_type ty) {
 								const TagType* tagTy = dyn_cast<const TagType>(ty);
 								assert(tagTy && "Type is not of TagType type");
 
-								ctx.recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
+								this->ctx.recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
 							}
 						);
 					}
@@ -1888,25 +1883,25 @@ public:
 					ctx.isRecSubType = true;
 
 					std::for_each(components.begin(), components.end(),
-						[ this, &definitions, &ctx ] (std::set<const Type*>::value_type ty) {
+						[ this, &definitions ] (std::set<const Type*>::value_type ty) {
 							const TagType* tagTy = dyn_cast<const TagType>(ty);
 							assert(tagTy && "Type is not of TagType type");
 
-							ConversionContext::TypeRecVarMap::const_iterator tit = ctx.recVarMap.find(ty);
-							assert(tit != ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
+							ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
+							assert(tit != this->ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
 							// we remove the variable from the list in order to fool the solver,
 							// in this way it will create a descriptor for this type (and he will not return the TypeVar
 							// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 							// flag is true
-							ctx.recVarMap.erase(ty);
+							this->ctx.recVarMap.erase(ty);
 
 							definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty))) );
 							var.addAnnotation( std::make_shared<insieme::c_info::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
 
 							// reinsert the TypeVar in the map in order to solve the other recursive types
-							ctx.recVarMap.insert( std::make_pair(tagTy, var) );
+							this->ctx.recVarMap.insert( std::make_pair(tagTy, var) );
 						}
 					);
 					// we reset the behavior of the solver

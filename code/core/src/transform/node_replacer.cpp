@@ -50,11 +50,14 @@ class NodeReplacer : public NodeMapping {
 	const NodePtr& toReplace;
 	const NodePtr& replacement;
 	const bool targetIsType;
+	const bool preservePtrAnnotationsWhenModified;
 
 public:
 
-	NodeReplacer(NodeManager& manager, const NodePtr& toReplace, const NodePtr& replacement):
-		manager(manager), toReplace(toReplace), replacement(replacement), targetIsType(toReplace->getNodeCategory() == NC_Type || toReplace->getNodeType() == NT_RecTypeDefinition) { }
+	NodeReplacer(NodeManager& manager, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
+		: manager(manager), toReplace(toReplace), replacement(replacement),
+		  targetIsType(toReplace->getNodeCategory() == NC_Type || toReplace->getNodeType() == NT_RecTypeDefinition),
+		  preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
 
 private:
 
@@ -75,7 +78,21 @@ private:
 		}
 
 		// recursive replacement has to be continued
-		return ptr->substitute(manager, *this);
+		NodePtr res = ptr->substitute(manager, *this);
+
+		// check whether something has changed ...
+		if ((*res) == (*ptr)) {
+			// => nothing changed
+			return ptr;
+		}
+
+		// restore annotations if requested
+		if (preservePtrAnnotationsWhenModified) {
+			res.setAnnotations(ptr.getAnnotations());
+		}
+
+		// done
+		return res;
 	}
 };
 
@@ -85,17 +102,31 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement) {
+NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
 
-	auto mapper = ::NodeReplacer(*mgr, toReplace, replacement);
-	return root->substitute(*mgr, mapper);
+	auto mapper = ::NodeReplacer(*mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
+	NodePtr res = root->substitute(*mgr, mapper);
+
+	// check whether something has changed
+	if (*res == *root) {
+		// nothing changed => return handed in node
+		return root;
+	}
+
+	// if annotations should be preserved anyway ...
+	if (preservePtrAnnotationsWhenModified) {
+		// ... restore annotations.
+		res.setAnnotations(root.getAnnotations());
+	}
+
+	return res;
 }
 
-NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement) {
-	return replaceNode(builder.getNodeManager(), root, toReplace, replacement);
+NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+	return replaceNode(builder.getNodeManager(), root, toReplace, replacement, preservePtrAnnotationsWhenModified);
 }
 
 } // End transform namespace

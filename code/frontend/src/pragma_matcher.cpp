@@ -48,6 +48,7 @@
 #include <glog/logging.h>
 #include <boost/algorithm/string/join.hpp>
 
+
 using namespace clang;
 using namespace insieme::frontend;
 
@@ -116,8 +117,9 @@ size_t ParserStack::getFirstValidRecord() {
 }
 
 void ParserStack::discardPrevRecords(size_t recordId) {
-	std::for_each(mRecords.begin(), mRecords.begin()+recordId, [](LocErrorList& cur) {
-		cur = LocErrorList();
+	//TODO: Recheck this Visual Studio 2010 fix!
+	std::for_each(mRecords.begin(), mRecords.begin()+recordId, [](ParserStack::LocErrorList& cur) {
+		cur = ParserStack::LocErrorList();
 	} );
 }
 
