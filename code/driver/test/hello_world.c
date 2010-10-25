@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-extern int printf(char *, ...);
+extern int printf(const char, ...);
 
 int main(int argc, char* argv[]) {
 	#pragma omp parallel for default(none)
