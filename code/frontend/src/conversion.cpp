@@ -2361,7 +2361,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		// we have to create a recursive type
 		ConversionContext::RecVarExprMap::const_iterator tit = ctx->recVarExprMap.find(funcDecl);
 		assert(tit != ctx->recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
-		const core::VariablePtr& recVarRef = tit->second;
+		core::VariablePtr recVarRef = tit->second;
 
 		core::RecLambdaDefinition::RecFunDefs definitions;
 		definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
@@ -2397,11 +2397,13 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 		core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
 
+		DLOG(INFO) << "RECVARREF:" << *recVarRef;
+
 		// FIXME: the variable is no longer a variable!
-		if (!dynamic_cast<const core::Variable*>(&*core::NodePtr(recVarRef))) {
+		if (!dynamic_cast<const core::Variable*>(&*recVarRef)) {
 			std::cout << "Should be a variable but is: " << *recVarRef << std::endl;
 		}
-		assert(dynamic_cast<const core::Variable*>(&*core::NodePtr(recVarRef)) && "By any reason, the variable is no variable any more ...");
+		assert(dynamic_cast<const core::Variable*>(&*recVarRef) && "By any reason, the variable is no variable any more ...");
 
 		retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
 	}
