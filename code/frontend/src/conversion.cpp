@@ -1681,12 +1681,7 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-
-				// we add a ref type for function parameters if they are not const qualified
-				core::TypePtr&& type = currArgType.isConstQualified() ? this->Visit( currArgType.getTypePtr() ) :
-						this->convFact.builder.refType( this->Visit( currArgType.getTypePtr() ) );
-
-				argTypes.push_back( type );
+				argTypes.push_back( this->Visit( currArgType.getTypePtr() ) );
 			}
 		);
 
