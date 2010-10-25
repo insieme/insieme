@@ -755,17 +755,30 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							CONDITIONAL OPERATOR FIXME
+	//							CONDITIONAL OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
+		START_LOG_EXPR_CONVERSION(condOp);
+
+		assert(condOp->getSaveExpr() == NULL && "Conditional operation with 'gcc save' expession not supperted.");
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
-		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
 
-		return createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
+		// add ref.deref if needed
+		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(condExpr->getType()))
+			condExpr = convFact.builder.callExpr(refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(condExpr));
+
+		if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
+			// the return type of the condition is not a boolean, we add a cast expression
+			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
+		}
+		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
+		core::ExpressionPtr&& retExpr = createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -832,7 +845,7 @@ public:
         }
 
         core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy?
+        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy? and not ref<rexprTy>?
         // if the type of the vector is a refType, we deref it
         if(core::RefTypePtr&& baseTy = core::dynamic_pointer_cast<const core::RefType>(base->getType()))
         	base =  convFact.builder.callExpr( baseTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(base) );
@@ -1432,7 +1445,8 @@ public:
 	//							NULL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
-		core::StatementPtr&& retStmt = core::lang::STMT_NO_OP_PTR;
+		//TODO: Visual Studio 2010 fix: && removed
+		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
 
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retStmt, nullStmt, convFact);
@@ -1887,7 +1901,8 @@ public:
 							const TagType* tagTy = dyn_cast<const TagType>(ty);
 							assert(tagTy && "Type is not of TagType type");
 
-							ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
+							//Visual Studio 2010 fix: full namespace
+							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
 							assert(tit != this->ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
@@ -2375,7 +2390,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		std::for_each(components.begin(), components.end(),
 			[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
 
-				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
+				//Visual Studios 2010 fix: full namespace
+				insieme::frontend::conversion::ConversionFactory::ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
 				assert(tit != this->ctx->recVarExprMap.end() && "Recursive function has no TypeVar associated");
 				this->ctx->currVar = tit->second;
 

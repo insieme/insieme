@@ -63,10 +63,6 @@ struct OctTo {
         return in;
     }
 };
-}
-
-namespace insieme {
-namespace utils {
 
 template <class RetTy, class InTy, int Case>
 struct numeric_cast_impl {
@@ -123,6 +119,11 @@ struct numeric_cast_impl<RetTy, InTy, 2> {
 
 template <class RetTy, class InTy>
 struct numeric_cast_impl<RetTy, InTy, 2>;
+
+} // end anonymous namespace
+
+namespace insieme {
+namespace utils {
 
 template <class RetTy, class InTy>
 RetTy numeric_cast(const InTy& in) {

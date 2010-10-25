@@ -204,8 +204,9 @@ public:
             const core::StatementPtr& body = func->getBody();
             const core::Node::ChildList& children = body->getChildList();
 
+			//&builder should be captured, but is member variable
             std::for_each(children.begin(), children.end(),
-                    [&builder] (const core::NodePtr& curr) {
+                    [] (const core::NodePtr& curr) {
                 //look for ocl buildin functions and translate them to IR statements
 
                 }

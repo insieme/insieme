@@ -575,7 +575,7 @@ AnnotationPtr OmpPragmaTask::toAnnotation(conversion::ConversionFactory& fact) c
 	// check for shared clause
 	VarListPtr sharedClause = handleIdentifierList(map, "shared", fact);
 	// We need to check if the
-	return make_shared<omp::Task>( ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause );
+	return make_shared<Task>( ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause );
 }
 
 AnnotationPtr OmpPragmaMaster::toAnnotation(conversion::ConversionFactory& fact) const {
