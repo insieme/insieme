@@ -133,8 +133,10 @@ public:
 void visitAnnotationList(GraphBuilder<size_t>& builder, size_t parentId, const core::AnnotationMap& map) {
 	for(core::AnnotationMap::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
 		size_t annotationId = (size_t)&*it->second;
-
-		builder.addNode(DotGraphBuilder::AnnotationNode(annotationId, it->second->getAnnotationName()));
+		std::string label = it->second->getAnnotationName();
+		if(!it->second->toString().empty())
+			label = "\"" + label + " \\n[" + it->second->toString() + "]\"";
+		builder.addNode(DotGraphBuilder::AnnotationNode(annotationId,label));
 		DotGraphBuilder::DotLink l1(parentId, annotationId, "");
 		l1[DotGraphBuilder::DIRECTION] = "none";
 		l1[DotGraphBuilder::STYLE] = "dashed";
@@ -327,7 +329,8 @@ void GraphPrinter<T>::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 
 template <class T>
 void GraphPrinter<T>::visitVariable(const VariablePtr& var) {
-	DotGraphBuilder::StmtNode varNode( getNodeId(var), "var");
+	std::string label = "\"var\\n(" + var->toString() + ")\"";
+	DotGraphBuilder::StmtNode varNode( getNodeId(var), label);
 	checkSemanticErrors(errors, varNode, var);
 	builder->addNode(varNode);
 
