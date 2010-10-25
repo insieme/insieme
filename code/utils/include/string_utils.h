@@ -69,13 +69,12 @@ struct print : public std::binary_function<std::ostream&, const typename Extract
 template<typename Container, typename Printer>
 struct Joinable {
 
-	const string& separator;
+	const string separator;
 	const Container& container;
 	const Printer& printer;
 
 	Joinable(const string& separator, const Container& container, const Printer& printer) :
 		separator(separator), container(container), printer(printer) {};
-
 };
 
 

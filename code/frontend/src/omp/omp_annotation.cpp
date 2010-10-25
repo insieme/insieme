@@ -45,6 +45,15 @@ namespace omp {
 
 const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
 
+const std::string BaseAnnotation::toString() const {
+	std::ostringstream ss;
+	for(typename AnnotationList::const_iterator it = getAnnotationListBegin(), end = getAnnotationListEnd(); it != end; ++it) {
+		(*it)->dump(ss);
+		if(it+1 != end)
+			ss << "\\n";
+	}
+	return ss.str();
+};
 
 xml::XmlElement& ompToXml(const BaseAnnotation& ann, xml::XmlElement& el) {
 	xml::XmlElement entries("pragmas", el.getDoc());

@@ -68,7 +68,7 @@ public:
 
 	void convertDomToXml(const string fileName);
 
-	void convertDomToIr(const SharedNodeManager& manager);
+	NodePtr convertDomToIr(NodeManager& manager);
 
 	void convertIrToDom(const NodePtr& node);
 
@@ -89,9 +89,9 @@ public:
 	XmlElement(std::string name, DOMDocument* doc);
 	XmlElement(DOMElement* base, DOMDocument* doc);
 	
-	DOMElement* getBase();
+	DOMElement* getBase() const;
 	
-	DOMDocument* getDoc();
+	DOMDocument* getDoc() const;
 	
 	XmlElement& operator<<(XmlElement& childNode);
 	
@@ -110,6 +110,8 @@ public:
 	std::string getName() const;
 	
 	const vector<XmlElement> getChildren() const;
+	
+	const vector<XmlElement> getChildrenByName(const string& name) const;
 };
 
 typedef std::shared_ptr<XmlElement> XmlElementPtr;
@@ -162,7 +164,7 @@ AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const 
 
 void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
 
-void xmlRead(const SharedNodeManager& manager, const std::string fileName, const bool validate);
+void xmlRead(NodeManager& manager, const std::string fileName, const bool validate);
 
 void xmlValidate(const std::string fileName);
 
