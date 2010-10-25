@@ -1145,7 +1145,7 @@ string XmlElement::getName() const {
 const vector<XmlElement> XmlElement::getChildrenByName(const string& name) const {
 	vector<XmlElement> vec;
 	DOMNodeList* list = base->getElementsByTagName(toUnicode(name));
-	for (uint i = 0; i < list->getLength(); ++i){
+	for (unsigned int i = 0; i < list->getLength(); ++i){
 		vec.push_back(XmlElement(dynamic_cast<DOMElement*>(list->item(i)), doc));
 	}
 	return vec;
