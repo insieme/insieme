@@ -110,6 +110,13 @@ void if_stmt_test() {
 	if(cond == 0) {
 		cond += cond;
 	}
+
+	int a=1;
+	#pragma test "fun(ref<int<4>> v2){ {if(cast<bool>(ref.deref(v2))) int.add(ref.deref(v2), 1) else int.sub(ref.deref(v2), 1);} }(v1)"
+	a ? a+1 : a-1;
+
+	#pragma test "fun(ref<int<4>> v2){ {if(int.eq(ref.deref(v2), 0)) int.add(ref.deref(v2), 1) else int.sub(ref.deref(v2), 1);} }(v1)"
+	a == 0 ? a+1 : a-1;
 }
 
 void for_stmt_test() {

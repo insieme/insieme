@@ -755,17 +755,30 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							CONDITIONAL OPERATOR FIXME
+	//							CONDITIONAL OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
+		START_LOG_EXPR_CONVERSION(condOp);
+
+		assert(condOp->getSaveExpr() == NULL && "Conditional operation with 'gcc save' expession not supperted.");
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
-		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
 
-		return createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
+		// add ref.deref if needed
+		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(condExpr->getType()))
+			condExpr = convFact.builder.callExpr(refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(condExpr));
+
+		if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
+			// the return type of the condition is not a boolean, we add a cast expression
+			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
+		}
+		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
+		core::ExpressionPtr&& retExpr = createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -832,7 +845,7 @@ public:
         }
 
         core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy?
+        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy? and not ref<rexprTy>?
         // if the type of the vector is a refType, we deref it
         if(core::RefTypePtr&& baseTy = core::dynamic_pointer_cast<const core::RefType>(base->getType()))
         	base =  convFact.builder.callExpr( baseTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(base) );

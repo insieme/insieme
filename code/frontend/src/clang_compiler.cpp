@@ -353,6 +353,8 @@ core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::Shared
 
 const core::ProgramPtr& Program::convert() {
 
+	insieme::utils::Timer t1("Frontend.convert ");
+	t1.start();
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
@@ -361,7 +363,7 @@ const core::ProgramPtr& Program::convert() {
 		const PragmaList& pList = (*it)->getPragmaList();
 		conversion::ASTConverter conv(comp, mProgram, mMgr, pList);
 
-		for(PragmaList::const_iterator pit = pList.begin(), pend = pList.end(); pit != pend; ++pit) {
+		for(PragmaList::const_iterator pit = pList.begin(), pend = pList.end(); pit != pend; ++pit)
 			if((*pit)->getType() == "insieme::mark") {
 				insiemePragmaFound = true;
 				const Pragma& insiemePragma = **pit;
@@ -381,10 +383,11 @@ const core::ProgramPtr& Program::convert() {
 					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleBody(body));
 				}
 			}
-		}
 	}
 
 	if(insiemePragmaFound) {
+		t1.stop();
+		t1.print();
 //	    return addParallelism();
 		return mProgram;
 	}
@@ -394,17 +397,14 @@ const core::ProgramPtr& Program::convert() {
 		const ClangCompiler& comp = (*it)->getCompiler();
 		const PragmaList& pList = (*it)->getPragmaList();
 
-		insieme::utils::Timer t1("Frontend.convert '" + (*it)->getFileName() + "'");
-		t1.start();
 		conversion::ASTConverter conv(comp, mProgram, mMgr, pList);
 		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
 
 		conv.handleTranslationUnit(declRef);
-		t1.stop();
-
-		t1.print();
 		mProgram = conv.getProgram();
 	}
+	t1.stop();
+	t1.print();
 
 	mProgram = addParallelism(mProgram, mMgr);
 
