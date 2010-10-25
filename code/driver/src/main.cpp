@@ -49,6 +49,7 @@
 #include "ast_statistic.h"
 
 #include "checks/typechecks.h"
+#include "printer/pretty_printer.h"
 
 #include "container_utils.h"
 #include "string_utils.h"
@@ -103,6 +104,13 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Number of Addressable Nodes: " << stats.getNumAddressableNodes();
 		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
 		LOG(INFO) << "Height of tree: " << stats.getHeight();
+
+		// a pretty print of the AST
+		LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
+		LOG(INFO) << insieme::core::printer::PrettyPrint(program);
+		LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
+		LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
+		LOG(INFO) << "================================= END ===========================================";
 
 		std::fstream dotFile("inspire.dot", std::fstream::out | std::fstream::trunc);
 		insieme::printDotGraph(program, errors, dotFile);
