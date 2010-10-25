@@ -157,10 +157,9 @@ TEST(XmlTest, GenericTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
-	//NodeManager manager2;
-	// ref node manager
-	//sharedNodeManager manager = make_shared<nodeManager>();
-	//xml.convertDomtoIr(manager);
+	
+	NodeManager manager2;
+	xml.convertDomToIr(manager2);
 }
 
 TEST(XmlTest, FunctionTypeTest) {
