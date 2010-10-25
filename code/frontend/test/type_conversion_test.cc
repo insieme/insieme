@@ -316,7 +316,7 @@ TEST(TypeConversion, HandleFunctionType) {
 		// convert into IR type
 		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("((ref<real<8>>,ref<ref<real<4>>>)->int<4>)", insiemeTy->toString());
+		EXPECT_EQ("((real<8>,ref<real<4>>)->int<4>)", insiemeTy->toString());
 	}
 	// check conversion of function with no prototype
 	// int f()
