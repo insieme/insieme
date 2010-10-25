@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 #endif
 	start_t = clock();
 
-	
+	#pragma insieme mark
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for private(resv) reduction(+: resv)
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 
 		resv = sqrt(norm)/(N-1);
 		#pragma omp barrier
-		#pragma omp flush
+		#pragma omp flush norm
 		#pragma omp barrier
 	}
 

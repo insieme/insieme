@@ -44,7 +44,7 @@ class DotGraphBuilder: public GraphBuilder<size_t> {
 	std::ostream& 	out;
 
 public:
-	enum DotAttributes{ LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH };
+	enum DotAttributes{ LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR};
 
 	static std::string attributeIdToString(const DotAttributes& attr) {
 		switch(attr) {
@@ -54,6 +54,7 @@ public:
 		case DIRECTION: return "dir";
 		case HEIGHT: return "height";
 		case WIDTH: return "width";
+		case COLOR: return "color";
 		default:	assert(false);
 		}
 	}
@@ -132,8 +133,10 @@ public:
 void visitAnnotationList(GraphBuilder<size_t>& builder, size_t parentId, const core::AnnotationMap& map) {
 	for(core::AnnotationMap::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
 		size_t annotationId = (size_t)&*it->second;
-
-		builder.addNode(DotGraphBuilder::AnnotationNode(annotationId, it->second->getAnnotationName()));
+		std::string label = it->second->getAnnotationName();
+		if(!it->second->toString().empty())
+			label = "\"" + label + " \\n[" + it->second->toString() + "]\"";
+		builder.addNode(DotGraphBuilder::AnnotationNode(annotationId,label));
 		DotGraphBuilder::DotLink l1(parentId, annotationId, "");
 		l1[DotGraphBuilder::DIRECTION] = "none";
 		l1[DotGraphBuilder::STYLE] = "dashed";
@@ -169,10 +172,21 @@ void visitChildList(GraphBuilder<size_t>& builder, const std::vector<ElemTy>& ch
 	});
 }
 
+void checkSemanticErrors(const MessageList& errors, DotGraphBuilder::DotNode& currNode, const core::NodePtr& node) {
+	std::for_each(errors.begin(), errors.end(), [&currNode, node](const Message& cur) {
+		if(*node == *cur.getAddress().getAddressedNode()) {
+			currNode[DotGraphBuilder::COLOR] = "red";
+			currNode[DotGraphBuilder::LABEL] =
+					"\"" + currNode[DotGraphBuilder::LABEL] + "\\n{ ERR_CODE: " + utils::numeric_cast<std::string>(cur.getErrorCode()) + "}\"";
+		}
+	});
 }
+
+}
+
 namespace insieme {
 
-template <class size_t>
+template <>
 size_t GraphPrinter<size_t>::getNodeId(const NodePtr& node) {
 	return (size_t)&*node;
 }
@@ -186,7 +200,9 @@ void GraphPrinter<T>::visitGenericType(const core::GenericTypePtr& genTy) {
 			out << (cur.isConcrete() ? insieme::utils::numeric_cast<std::string>(cur.getValue()) : ""+cur.getSymbol());
 		}) << ">";
 	}
-	builder->addNode(DotGraphBuilder::TypeNode(getNodeId(genTy), "\"" + genTy->getFamilyName().getName() + " " + ss.str() + "\""));
+	DotGraphBuilder::TypeNode genNode(getNodeId(genTy), "\"" + genTy->getFamilyName().getName() + " " + ss.str() + "\"");
+	checkSemanticErrors(errors, genNode, genTy);
+	builder->addNode(genNode);
 
 	visitAnnotationList(*builder, getNodeId(genTy), genTy->getAnnotations());
 	visitChildList(*builder, genTy->getTypeParameter(), genTy, "typeVar");
@@ -194,7 +210,9 @@ void GraphPrinter<T>::visitGenericType(const core::GenericTypePtr& genTy) {
 
 template <class T>
 void GraphPrinter<T>::visitFunctionType(const FunctionTypePtr& funcType) {
-	builder->addNode(DotGraphBuilder::TypeNode( getNodeId(funcType), "func"));
+	DotGraphBuilder::TypeNode funcNode( getNodeId(funcType), "func");
+	checkSemanticErrors(errors, funcNode, funcType);
+	builder->addNode(funcNode);
 
 	visitAnnotationList(*builder, getNodeId(funcType), funcType->getAnnotations());
 	visitChildList(*builder, toVector(funcType->getReturnType()), funcType, "retTy");
@@ -203,7 +221,9 @@ void GraphPrinter<T>::visitFunctionType(const FunctionTypePtr& funcType) {
 
 template <class T>
 void GraphPrinter<T>::visitTupleType(const TupleTypePtr& tupleTy) {
-	builder->addNode(DotGraphBuilder::TypeNode( getNodeId(tupleTy), "tuple") );
+	DotGraphBuilder::TypeNode tupleNode( getNodeId(tupleTy), "tuple");
+	checkSemanticErrors(errors, tupleNode, tupleTy);
+	builder->addNode(tupleNode);
 
 	visitAnnotationList(*builder, getNodeId(tupleTy), tupleTy->getAnnotations());
 	visitChildList(*builder, tupleTy->getElementTypes(), tupleTy, "elemTy");
@@ -223,7 +243,9 @@ void GraphPrinter<T>::visitNamedCompositeType(const NamedCompositeTypePtr& compT
 
 template <class T>
 void GraphPrinter<T>::visitCompoundStmt(const CompoundStmtPtr& comp) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(comp), "compound"));
+	DotGraphBuilder::StmtNode compNode( getNodeId(comp), "compound");
+	checkSemanticErrors(errors, compNode, comp);
+	builder->addNode(compNode);
 
 	visitAnnotationList(*builder, getNodeId(comp), comp->getAnnotations());
 	visitChildList(*builder, comp->getChildList(), comp, "stmt");
@@ -231,7 +253,9 @@ void GraphPrinter<T>::visitCompoundStmt(const CompoundStmtPtr& comp) {
 
 template <class T>
 void GraphPrinter<T>::visitForStmt(const ForStmtPtr& forStmt) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(forStmt), "for"));
+	DotGraphBuilder::StmtNode forNode( getNodeId(forStmt), "for");
+	checkSemanticErrors(errors, forNode, forStmt);
+	builder->addNode(forNode);
 
 	visitAnnotationList(*builder, getNodeId(forStmt), forStmt->getAnnotations());
 
@@ -243,7 +267,9 @@ void GraphPrinter<T>::visitForStmt(const ForStmtPtr& forStmt) {
 
 template <class T>
 void GraphPrinter<T>::visitIfStmt(const IfStmtPtr& ifStmt) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(ifStmt), "if"));
+	DotGraphBuilder::StmtNode ifNode( getNodeId(ifStmt), "if");
+	checkSemanticErrors(errors, ifNode, ifStmt);
+	builder->addNode(ifNode);
 
 	visitAnnotationList(*builder, getNodeId(ifStmt), ifStmt->getAnnotations());
 
@@ -254,7 +280,9 @@ void GraphPrinter<T>::visitIfStmt(const IfStmtPtr& ifStmt) {
 
 template <class T>
 void GraphPrinter<T>::visitWhileStmt(const WhileStmtPtr& whileStmt) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(whileStmt), "while"));
+	DotGraphBuilder::StmtNode whileNode( getNodeId(whileStmt), "while");
+	checkSemanticErrors(errors, whileNode, whileStmt);
+	builder->addNode(whileNode);
 
 	visitAnnotationList(*builder, getNodeId(whileStmt), whileStmt->getAnnotations());
 
@@ -264,7 +292,9 @@ void GraphPrinter<T>::visitWhileStmt(const WhileStmtPtr& whileStmt) {
 
 template <class T>
 void GraphPrinter<T>::visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(declStmt), "decl"));
+	DotGraphBuilder::StmtNode declNode( getNodeId(declStmt), "decl");
+	checkSemanticErrors(errors, declNode, declStmt);
+	builder->addNode(declNode);
 
 	visitAnnotationList(*builder, getNodeId(declStmt), declStmt->getAnnotations());
 
@@ -274,7 +304,9 @@ void GraphPrinter<T>::visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
 
 template <class T>
 void GraphPrinter<T>::visitReturnStmt(const ReturnStmtPtr& retStmt) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(retStmt), "return"));
+	DotGraphBuilder::StmtNode retNode( getNodeId(retStmt), "return");
+	checkSemanticErrors(errors, retNode, retStmt);
+	builder->addNode(retNode);
 
 	visitAnnotationList(*builder, getNodeId(retStmt), retStmt->getAnnotations());
 
@@ -283,7 +315,9 @@ void GraphPrinter<T>::visitReturnStmt(const ReturnStmtPtr& retStmt) {
 
 template <class T>
 void GraphPrinter<T>::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(lambdaExpr), "lambda"));
+	DotGraphBuilder::StmtNode lambdaNode( getNodeId(lambdaExpr), "lambda");
+	checkSemanticErrors(errors, lambdaNode, lambdaExpr);
+	builder->addNode(lambdaNode);
 
 	visitAnnotationList(*builder, getNodeId(lambdaExpr), lambdaExpr->getAnnotations());
 
@@ -295,7 +329,10 @@ void GraphPrinter<T>::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 
 template <class T>
 void GraphPrinter<T>::visitVariable(const VariablePtr& var) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(var), "var"));
+	std::string label = "\"var\\n(" + var->toString() + ")\"";
+	DotGraphBuilder::StmtNode varNode( getNodeId(var), label);
+	checkSemanticErrors(errors, varNode, var);
+	builder->addNode(varNode);
 
 	visitAnnotationList(*builder, getNodeId(var), var->getAnnotations());
 	visitChildList(*builder, toVector(var->getType()), var, "type");
@@ -303,7 +340,9 @@ void GraphPrinter<T>::visitVariable(const VariablePtr& var) {
 
 template <class T>
 void GraphPrinter<T>::visitCallExpr(const CallExprPtr& callExpr) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(callExpr), "call"));
+	DotGraphBuilder::StmtNode currNode( getNodeId(callExpr), "call");
+	checkSemanticErrors(errors, currNode, callExpr);
+	builder->addNode(currNode);
 
 	visitAnnotationList(*builder, getNodeId(callExpr), callExpr->getAnnotations());
 
@@ -315,7 +354,9 @@ void GraphPrinter<T>::visitCallExpr(const CallExprPtr& callExpr) {
 
 template <class T>
 void GraphPrinter<T>::visitCastExpr(const CastExprPtr& castExpr) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(castExpr), "cast"));
+	DotGraphBuilder::StmtNode castNode( getNodeId(castExpr), "cast");
+	checkSemanticErrors(errors, castNode, castExpr);
+	builder->addNode(castNode);
 
 	visitAnnotationList(*builder, getNodeId(castExpr), castExpr->getAnnotations());
 
@@ -329,7 +370,9 @@ void GraphPrinter<T>::visitLiteral(const LiteralPtr& lit) {
 	if(label.find('\"') == std::string::npos) {
 		label = "\"" + label +"\"";
 	}
-	builder->addNode(DotGraphBuilder::LiteralNode( getNodeId(lit), label));
+	DotGraphBuilder::LiteralNode litNode( getNodeId(lit), label);
+	checkSemanticErrors(errors, litNode, lit);
+	builder->addNode(litNode);
 
 	visitAnnotationList(*builder, getNodeId(lit), lit->getAnnotations());
 	visitChildList(*builder, toVector(lit->getType()), lit, "type");
@@ -337,7 +380,9 @@ void GraphPrinter<T>::visitLiteral(const LiteralPtr& lit) {
 
 template <class T>
 void GraphPrinter<T>::visitStatement(const insieme::core::StatementPtr& stmt) {
-	builder->addNode(DotGraphBuilder::StmtNode( getNodeId(stmt), "STMT"));
+	DotGraphBuilder::StmtNode stmtNode( getNodeId(stmt), "STMT");
+	checkSemanticErrors(errors, stmtNode, stmt);
+	builder->addNode(stmtNode);
 
 	visitAnnotationList(*builder, getNodeId(stmt), stmt->getAnnotations());
 	visitChildList(*builder, stmt->getChildList(), stmt, "child");
@@ -364,10 +409,10 @@ void GraphPrinter<T>::visitProgram(const core::ProgramPtr& prog) {
 }
 
 template <class T>
-GraphPrinter<T>::GraphPrinter(std::ostream& out) : out(out), builder( new DotGraphBuilder(out) ) { }
+GraphPrinter<T>::GraphPrinter(const MessageList& errors, std::ostream& out) : out(out), errors(errors), builder( new DotGraphBuilder(out) ) { }
 
-void printDotGraph(const insieme::core::NodePtr& root, std::ostream& out) {
-	GraphPrinter<size_t> dv(out);
+void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out) {
+	GraphPrinter<size_t> dv(errors, out);
 	out << "digraph inspire {" << std::endl;
 	insieme::core::visitAllOnce(root, dv);
 	out << "}" << std::endl;

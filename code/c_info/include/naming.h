@@ -62,6 +62,8 @@ public:
 	const std::string& getName() const { return ident.getName(); }
 	const std::string getAnnotationName() const {return "CNameAnnotation";}
 
+	const std::string toString() const { return ident.getName(); }
+
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
@@ -88,6 +90,8 @@ public:
 	const std::string& getName(const core::Identifier& recVarName);
 	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
 
+	const std::string toString() const { return "TBD"; }
+
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
@@ -104,6 +108,9 @@ public:
 	const std::string getAnnotationName() const {return "COpAnnotation";}
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
+
+	const std::string toString() const { return opStr; }
+
 };
 
 } // namespace c_info

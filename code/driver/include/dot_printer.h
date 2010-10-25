@@ -37,6 +37,7 @@
 #pragma once
 
 #include "ast_visitor.h"
+#include "ast_check.h"
 #include "numeric_cast.h"
 #include "string_utils.h"
 
@@ -78,9 +79,10 @@ public:
 template <class NodeIdTy>
 class GraphPrinter: public ASTVisitor<> {
 	std::ostream&			out;
+	const MessageList& 		errors;
 	GraphBuilder<NodeIdTy>*	builder;
 public:
-	GraphPrinter(std::ostream& out);
+	GraphPrinter(const MessageList& errors, std::ostream& out);
 
 	static NodeIdTy getNodeId(const core::NodePtr& node);
 
@@ -108,6 +110,6 @@ public:
 	void visitProgram(const insieme::core::ProgramPtr& root);
 };
 
-void printDotGraph(const insieme::core::NodePtr& root, std::ostream& out);
+void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
 
 }

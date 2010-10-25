@@ -81,6 +81,11 @@ public:
 	
 	virtual const std::string getAnnotationName() const = 0;
 
+	/**
+	 * Returns a string representation for this annotation, by default it returns the annotation name
+	 */
+	virtual const std::string toString() const { return std::string(); };
+
 };
 
 /**
