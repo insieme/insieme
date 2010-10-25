@@ -173,6 +173,7 @@ ADD_TYPE(FunctionType, BINARY_BOOL_OP);
 
 ADD_OP(BOOL_NOT);
 ADD_OP(BOOL_AND);
+ADD_OP(BOOL_OR);
 ADD_OP(BOOL_EQ);
 
 // --- Arithmetic ---
