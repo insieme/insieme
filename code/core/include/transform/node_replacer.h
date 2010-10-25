@@ -45,9 +45,39 @@ class ASTBuilder;
 
 namespace transform {
 
-NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement);
+/**
+ * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param toReplace the node to be replaced during this operation
+ * @param replacement the node to be used as a substitution for the toReplace node
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ */
+NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root,
+		const NodePtr& toReplace, const NodePtr& replacement,
+		bool preservePtrAnnotationsWhenModified = false);
 
-NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement);
+/**
+ * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
+ *
+ * @param builder the builder used to construct new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param toReplace the node to be replaced during this operation
+ * @param replacement the node to be used as a substitution for the toReplace node
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ */
+NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root,
+		const NodePtr& toReplace, const NodePtr& replacement,
+		bool preservePtrAnnotationsWhenModified = false);
 
 } // End transform namespace
 } // End core namespace
