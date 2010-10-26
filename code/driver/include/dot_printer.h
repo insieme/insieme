@@ -49,17 +49,19 @@ using namespace insieme::core;
 namespace insieme {
 namespace driver {
 
-template <class NodeTy, class NodeIdTy>
+template <class NodeTy, class NodeIdTy, class ProperyIdTy, class PropertyValueTy>
 struct GraphBuilder {
 
-	class Node {
+	typedef std::map<const ProperyIdTy, PropertyValueTy> Decorator;
+
+	class Node: public Decorator {
 		NodeIdTy id;
 	public:
 		Node(const NodeIdTy& id): id(id) { }
 		const NodeIdTy& getId() const { return id; }
 	};
 
-	class Link {
+	class Link: public Decorator {
 		NodeIdTy src;
 		NodeIdTy dest;
 	public:
@@ -69,9 +71,6 @@ struct GraphBuilder {
 		const NodeIdTy& getDest() const { return dest; }
 	};
 
-	template <class ProperyIdTy, class PropertyValueTy>
-	struct Decorator : public std::map<const ProperyIdTy, PropertyValueTy> { };
-
 	template <class GraphNodeTy>
 	void addNode(const NodeTy& node) { addNode(GraphNodeTy( getNodeId(node) )); }
 	virtual void addNode(const Node& node) = 0;
@@ -80,17 +79,36 @@ struct GraphBuilder {
 	virtual NodeIdTy getNodeId(const NodeTy& fromNode) = 0;
 };
 
+enum NodeProperty{ LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR };
+
+class DOTGraphBuilder: public GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> {
+	std::ostream& 	out;
+public:
+	typedef typename GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Node 		Node;
+	typedef typename GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Link 		Link;
+	typedef typename GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Decorator	Properties;
+
+	DOTGraphBuilder(std::ostream& out): out(out) { }
+
+	virtual void addNode(const Node& node);
+	virtual void addLink(const Link& link);
+	virtual size_t getNodeId(const core::NodePtr& fromNode);
+};
+
 class ASTPrinter: public insieme::core::ASTVisitor<> {
 public:
-	typedef GraphBuilder<core::NodePtr, size_t> IRBuilder;
+	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> IRBuilder;
 	typedef std::shared_ptr<IRBuilder> IRBuilderPtr;
 
 	ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors);
 	// Types
-	void visitGenericType(const core::GenericTypePtr& genTy);
+	void visitTypeVariable(const TypeVariablePtr& typeVar);
+	void visitGenericType(const GenericTypePtr& genTy);
 	void visitFunctionType(const FunctionTypePtr& funcType);
 	void visitTupleType(const TupleTypePtr& tupleTy);
 	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
+	void visitRecType(const RecTypePtr& recTy);
+	void visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy);
 
 	// Statements
 	void visitCompoundStmt(const CompoundStmtPtr& comp);

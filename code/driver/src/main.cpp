@@ -89,7 +89,6 @@ int main(int argc, char** argv) {
 
 		// do the actual clang to IR conversion
 		insieme::core::ProgramPtr program = p.convert();
-		LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
 		// perform checks
 		MessageList errors = check(program, insieme::core::checks::getFullCheck());
@@ -112,6 +111,7 @@ int main(int argc, char** argv) {
 		LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
 		LOG(INFO) << "================================= END ===========================================";
 
+		// creates dot graph of the generated IR
 		std::fstream dotFile("inspire.dot", std::fstream::out | std::fstream::trunc);
 		insieme::driver::printDotGraph(program, errors, dotFile);
 		dotFile.close();

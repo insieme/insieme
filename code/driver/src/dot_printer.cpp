@@ -37,165 +37,165 @@
 #include "dot_printer.h"
 
 using namespace insieme;
+using namespace driver;
 
-namespace {
-
-
-class DotGraphBuilder: public insieme::driver::GraphBuilder<insieme::core::NodePtr, size_t> {
-	std::ostream& 	out;
-
-public:
-	enum DotAttributes{ LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR};
-
-	typedef GraphBuilder::Decorator<DotAttributes, std::string> DotProperties;
-
-	static std::string attributeIdToString(const DotAttributes& attr) {
-		switch(attr) {
-		case LABEL: return "label";
-		case SHAPE: return "shape";
-		case STYLE: return "style";
-		case DIRECTION: return "dir";
-		case HEIGHT: return "height";
-		case WIDTH: return "width";
-		case COLOR: return "color";
-		default:	assert(false);
-		}
+std::string attributeIdToString(const NodeProperty& prop) {
+	switch(prop) {
+	case NodeProperty::LABEL: return "label";
+	case NodeProperty::SHAPE: return "shape";
+	case NodeProperty::STYLE: return "style";
+	case NodeProperty::DIRECTION: return "dir";
+	case NodeProperty::HEIGHT: return "height";
+	case NodeProperty::WIDTH: return "width";
+	case NodeProperty::COLOR: return "color";
+	default:	assert(false);
 	}
+}
 
-	void dumpProperties(const DotProperties& dec, std::ostream& out) const {
-		out << "[" << join(", ", dec,
-			[ ](std::ostream& out, const DotProperties::value_type& cur) {
-				out << attributeIdToString(cur.first) << "=" << cur.second;
-			}) <<
-		"];" << std::endl;
+void dumpProperties(const DOTGraphBuilder::Properties& dec, std::ostream& out) {
+	out << "[" << join(", ", dec,
+		[ ](std::ostream& out, const DOTGraphBuilder::Properties::value_type& cur) {
+			out << attributeIdToString(cur.first) << "=" << cur.second;
+		}) <<
+	"];" << std::endl;
+}
+
+struct DotNode: public DOTGraphBuilder::Node {
+	DotNode(size_t id): Node(id) { }
+
+	DotNode(size_t id, const std::string& label) : Node(id) {
+		if(!label.empty())
+			(*this)[LABEL] = label;
 	}
-
-	struct DotNode: public DotGraphBuilder::Node, public DotProperties {
-		DotNode(size_t id): Node(id) { }
-
-		DotNode(size_t id, const std::string& label) : Node(id) {
-			if(!label.empty())
-				(*this)[LABEL] = label;
-		}
-	};
-
-	struct DotLink: public DotGraphBuilder::Link, public DotProperties {
-		DotLink(const size_t& src, const size_t& dest, const std::string& label): Link(src, dest) {
-			if(!label.empty())
-				(*this)[LABEL] = label;
-		}
-	};
-
-	struct TypeNode: public DotNode {
-		TypeNode(size_t id, const std::string& label): DotNode(id, label) {
-			(*this)[SHAPE] = "ellipse";
-		}
-	};
-
-	struct StmtNode: public DotNode {
-		StmtNode(size_t id, const std::string& label): DotNode(id, label) {
-			(*this)[SHAPE] = "box";
-			(*this)[STYLE] = "filled";
-		}
-	};
-
-	struct JunctionNode: public DotNode {
-		JunctionNode(size_t id): DotNode(id, "\"\"") {
-			(*this)[SHAPE] = "circle";
-			(*this)[STYLE] = "filled";
-			(*this)[HEIGHT] = ".15";
-			(*this)[WIDTH] = ".15";
-		}
-	};
-
-	struct AnnotationNode: public DotNode {
-		AnnotationNode(size_t id, const std::string& label): DotNode(id, label) {
-			(*this)[SHAPE] = "hexagon";
-			(*this)[STYLE] = "dashed";
-		}
-	};
-
-	struct LiteralNode: public DotNode {
-		LiteralNode(size_t id, const std::string& label): DotNode(id, label) {
-			(*this)[SHAPE] = "diamond";
-		}
-	};
-
-	DotGraphBuilder(std::ostream& out): out(out) { }
-
-	void addNode(const GraphBuilder<insieme::core::NodePtr, size_t>::Node& node) {
-		out << node.getId()  << "\t";
-		dumpProperties( static_cast<const DotNode&>(node), out );
-	}
-
-	void addLink(const GraphBuilder<insieme::core::NodePtr, size_t>::Link& link) {
-		out << link.getSrc() << " -> " << link.getDest() << "\t";
-		dumpProperties( static_cast<const DotLink&>(link), out );
-	}
-
-	size_t getNodeId(const core::NodePtr& fromNode) { return (size_t) &*fromNode; }
 };
 
-template <class NodeId, class NodeIdTy>
-void visitAnnotationList(insieme::driver::GraphBuilder<NodeId,NodeIdTy>& builder, size_t parentId, const core::AnnotationMap& map) {
+struct DotLink: public DOTGraphBuilder::Link {
+	DotLink(const size_t& src, const size_t& dest, const std::string& label): Link(src, dest) {
+		if(!label.empty())
+			(*this)[LABEL] = label;
+	}
+};
+
+struct TypeNode: public DotNode {
+	TypeNode(size_t id, const std::string& label): DotNode(id, label) {
+		(*this)[SHAPE] = "ellipse";
+	}
+};
+
+struct StmtNode: public DotNode {
+	StmtNode(size_t id, const std::string& label): DotNode(id, label) {
+		(*this)[SHAPE] = "box";
+		(*this)[STYLE] = "filled";
+	}
+};
+
+struct RootNode: public DotNode {
+	RootNode(size_t id): DotNode(id, "\"\"") {
+		(*this)[NodeProperty::SHAPE] = "doublecircle";
+		(*this)[NodeProperty::STYLE] = "filled";
+		(*this)[NodeProperty::WIDTH] = ".4";
+	}
+};
+
+struct JunctionNode: public DotNode {
+	JunctionNode(size_t id): DotNode(id, "\"\"") {
+		(*this)[SHAPE] = "circle";
+		(*this)[STYLE] = "filled";
+		(*this)[HEIGHT] = ".15";
+		(*this)[WIDTH] = ".15";
+	}
+};
+
+struct AnnotationNode: public DotNode {
+	AnnotationNode(size_t id, const std::string& label): DotNode(id, label) {
+		(*this)[SHAPE] = "hexagon";
+		(*this)[STYLE] = "dashed";
+	}
+};
+
+struct LiteralNode: public DotNode {
+	LiteralNode(size_t id, const std::string& label): DotNode(id, label) {
+		(*this)[SHAPE] = "diamond";
+	}
+};
+
+#define NODE_ID(node)	this->builder->getNodeId(node)
+
+namespace insieme {
+namespace driver {
+
+void DOTGraphBuilder::addNode(const DOTGraphBuilder::Node& node) {
+	out << node.getId()  << "\t";
+	dumpProperties( static_cast<const DotNode&>(node), out );
+}
+
+void DOTGraphBuilder::addLink(const DOTGraphBuilder::Link& link) {
+	out << link.getSrc() << " -> " << link.getDest() << "\t";
+	dumpProperties( static_cast<const DotLink&>(link), out );
+}
+
+size_t DOTGraphBuilder::getNodeId(const core::NodePtr& fromNode) { return (size_t) &*fromNode; }
+
+template <class BuilderTy>
+void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::AnnotationMap& map) {
 	for(core::AnnotationMap::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
 		size_t annotationId = (size_t)&*it->second;
 		std::string label = it->second->getAnnotationName();
 		if(!it->second->toString().empty())
 			label = "\"" + label + " \\n[" + it->second->toString() + "]\"";
-		builder.addNode(DotGraphBuilder::AnnotationNode(annotationId,label));
-		DotGraphBuilder::DotLink l1(parentId, annotationId, "");
-		l1[DotGraphBuilder::DIRECTION] = "none";
-		l1[DotGraphBuilder::STYLE] = "dashed";
+		builder.addNode( AnnotationNode(annotationId,label) );
+		DotLink l1(parentId, annotationId, "");
+		l1[NodeProperty::DIRECTION] = "none";
+		l1[NodeProperty::STYLE] = "dashed";
 		builder.addLink( l1 );
 	}
 }
 
-
-template <class NodeId, class NodeIdTy, class ElemTy>
-void visitChildList(insieme::driver::GraphBuilder<NodeId,NodeIdTy>& builder,
+template <class BuilderTy, class ElemTy>
+void visitChildList(BuilderTy& builder,
 		const std::vector<ElemTy>& children, const core::NodePtr& parent, const std::string& labelPrefix)
 {
 	unsigned elemCount = 0;
 	std::for_each(children.begin(), children.end(), [ & ](const ElemTy& curr) {
 		std::string label = labelPrefix + (children.size() > 1 ? ("_" + utils::numeric_cast<std::string>(elemCount++)) : "");
 		if(curr.getAnnotations().empty()) {
-			builder.addLink( DotGraphBuilder::DotLink(builder.getNodeId(parent), builder.getNodeId(curr), label) );
+			builder.addLink( DotLink(builder.getNodeId(parent), builder.getNodeId(curr), label) );
 		} else {
 			// introducing an intermediate node to attach annotations to the pointer
 			size_t interId = builder.getNodeId(parent) ^ builder.getNodeId(curr);
 
-			DotGraphBuilder::JunctionNode node(interId);
+			JunctionNode node(interId);
 			builder.addNode(node);
 
-			DotGraphBuilder::DotLink l1(builder.getNodeId(parent), interId, label);
-			l1[DotGraphBuilder::DIRECTION] = "none";
+			DotLink l1(builder.getNodeId(parent), interId, label);
+			l1[NodeProperty::DIRECTION] = "none";
 			builder.addLink( l1 );
-			builder.addLink( DotGraphBuilder::DotLink(interId, builder.getNodeId(curr), "") );
+			builder.addLink( DotLink(interId, builder.getNodeId(curr), "") );
 
 			visitAnnotationList(builder, interId, curr.getAnnotations());
 		}
 	});
 }
 
-void checkSemanticErrors(const MessageList& errors, DotGraphBuilder::DotNode& currNode, const core::NodePtr& node) {
+void checkSemanticErrors(const MessageList& errors, DotNode& currNode, const core::NodePtr& node) {
 	std::for_each(errors.begin(), errors.end(), [&currNode, node](const Message& cur) {
 		if(*node == *cur.getAddress().getAddressedNode()) {
-			currNode[DotGraphBuilder::COLOR] = "red";
-			currNode[DotGraphBuilder::LABEL] =
-					"\"" + currNode[DotGraphBuilder::LABEL] + "\\n{ ERR_CODE: " + utils::numeric_cast<std::string>(cur.getErrorCode()) + "}\"";
+			currNode[NodeProperty::COLOR] = "red";
+			currNode[NodeProperty::LABEL] =
+					"\"" + currNode[NodeProperty::LABEL] + "\\n{ ERR_CODE: " + utils::numeric_cast<std::string>(cur.getErrorCode()) + "}\"";
 		}
 	});
 }
 
-}
-
-namespace insieme {
-namespace driver {
-
-#define NODE_ID(node)	builder.getNodeId(node)
-
 ASTPrinter::ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors): builder(builder), errors(errors) { }
+
+void ASTPrinter::visitTypeVariable(const TypeVariablePtr& typeVar) {
+	TypeNode varNode( NODE_ID(typeVar), "\"var\\n{" + typeVar->getName() + "}\"");
+	checkSemanticErrors(errors, varNode, typeVar);
+	builder->addNode(varNode);
+
+	visitAnnotationList(*builder, NODE_ID(typeVar), typeVar->getAnnotations());
+}
 
 void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 	std::ostringstream ss("");
@@ -205,7 +205,7 @@ void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 			out << (cur.isConcrete() ? insieme::utils::numeric_cast<std::string>(cur.getValue()) : ""+cur.getSymbol());
 		}) << ">";
 	}
-	DotGraphBuilder::TypeNode genNode(builder->getNodeId(genTy), "\"" + genTy->getFamilyName().getName() + " " + ss.str() + "\"");
+	TypeNode genNode(NODE_ID(genTy), "\"" + genTy->getFamilyName().getName() + " " + ss.str() + "\"");
 	checkSemanticErrors(errors, genNode, genTy);
 	builder->addNode(genNode);
 
@@ -214,7 +214,7 @@ void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 }
 
 void ASTPrinter::visitFunctionType(const FunctionTypePtr& funcType) {
-	DotGraphBuilder::TypeNode funcNode( builder->getNodeId(funcType), "func");
+	TypeNode funcNode( NODE_ID(funcType), "func");
 	checkSemanticErrors(errors, funcNode, funcType);
 	builder->addNode(funcNode);
 
@@ -224,27 +224,75 @@ void ASTPrinter::visitFunctionType(const FunctionTypePtr& funcType) {
 }
 
 void ASTPrinter::visitTupleType(const TupleTypePtr& tupleTy) {
-	DotGraphBuilder::TypeNode tupleNode( builder->getNodeId(tupleTy), "tuple");
+	TypeNode tupleNode( NODE_ID(tupleTy), "tuple");
 	checkSemanticErrors(errors, tupleNode, tupleTy);
 	builder->addNode(tupleNode);
 
-	visitAnnotationList(*builder, builder->getNodeId(tupleTy), tupleTy->getAnnotations());
+	visitAnnotationList(*builder, NODE_ID(tupleTy), tupleTy->getAnnotations());
 	visitChildList(*builder, tupleTy->getElementTypes(), tupleTy, "elemTy");
 }
 
 void ASTPrinter::visitNamedCompositeType(const NamedCompositeTypePtr& compTy) {
 	std::string name;
 	if(dynamic_pointer_cast<const StructType>(compTy))
-		name = "structType";
+		name = "struct";
 	else
-		name = "unionType";
+		name = "union";
 
-//		out << "\t" << (size_t)&*compTy << "\t[label=\"" << name << "\", shape=ellipse]" << std::endl;
-	// TODO
+	TypeNode structNode( NODE_ID(compTy), name);
+	checkSemanticErrors(errors, structNode, compTy);
+	builder->addNode(structNode);
+
+	std::for_each(compTy->getEntries().begin(), compTy->getEntries().end(),
+		[ this, compTy ](const NamedCompositeType::Entry& cur){
+			this->builder->addLink( DotLink(NODE_ID(compTy), NODE_ID(cur.second), cur.first.getName()) );
+			// TODO: VISIT ANNOTATIONS IN THE POINTER
+	});
+	visitAnnotationList(*builder, NODE_ID(compTy), compTy->getAnnotations());
+}
+
+void ASTPrinter::visitRecType(const RecTypePtr& recTy) {
+	TypeNode recNode( NODE_ID(recTy), "rec");
+	checkSemanticErrors(errors, recNode, recTy);
+	builder->addNode(recNode);
+
+	visitAnnotationList(*builder, NODE_ID(recTy), recTy->getAnnotations());
+	visitChildList(*builder, toVector(recTy->getTypeVariable()), recTy, "var");
+	visitChildList(*builder, toVector(recTy->getDefinition()), recTy, "def");
+}
+
+void ASTPrinter::visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy) {
+	TypeNode recNode( NODE_ID(recTy), "rec_def");
+	checkSemanticErrors(errors, recNode, recTy);
+	builder->addNode(recNode);
+
+	unsigned num = 0;
+	std::for_each(recTy->getDefinitions().begin(), recTy->getDefinitions().end(),
+		[ this, recTy, &num ](const RecTypeDefinition::RecTypeDefs::value_type& cur){
+			// this->builder->addLink( DotLink(NODE_ID(recTy), NODE_ID(cur.second), "\"\"") );
+			size_t interId = NODE_ID(recTy) ^ NODE_ID(cur.first) ^ NODE_ID(cur.second);
+
+			JunctionNode node(interId);
+			node[NodeProperty::SHAPE] = "diamond";
+			node[NodeProperty::HEIGHT] = ".25";
+			node[NodeProperty::WIDTH] = ".25";
+			this->builder->addNode(node);
+			std::string label = "def";
+			if(recTy->getDefinitions().size() > 1)
+				label += "_" + utils::numeric_cast<std::string>(num++);
+
+			DotLink link(NODE_ID(recTy), interId, label);
+			this->builder->addLink( link );
+			this->builder->addLink( DotLink(interId, NODE_ID(cur.first), "") );
+			this->builder->addLink( DotLink(interId, NODE_ID(cur.second), "") );
+			// TODO: VISIT ANNOTATIONS IN THE POINTER
+	});
+
+	visitAnnotationList(*builder, NODE_ID(recTy), recTy->getAnnotations());
 }
 
 void ASTPrinter::visitCompoundStmt(const CompoundStmtPtr& comp) {
-	DotGraphBuilder::StmtNode compNode( builder->getNodeId(comp), "compound");
+	StmtNode compNode( NODE_ID(comp), "compound");
 	checkSemanticErrors(errors, compNode, comp);
 	builder->addNode(compNode);
 
@@ -253,7 +301,7 @@ void ASTPrinter::visitCompoundStmt(const CompoundStmtPtr& comp) {
 }
 
 void ASTPrinter::visitForStmt(const ForStmtPtr& forStmt) {
-	DotGraphBuilder::StmtNode forNode( NODE_ID(forStmt), "for");
+	StmtNode forNode( NODE_ID(forStmt), "for");
 	checkSemanticErrors(errors, forNode, forStmt);
 	builder->addNode(forNode);
 
@@ -266,7 +314,7 @@ void ASTPrinter::visitForStmt(const ForStmtPtr& forStmt) {
 }
 
 void ASTPrinter::visitIfStmt(const IfStmtPtr& ifStmt) {
-	DotGraphBuilder::StmtNode ifNode( NODE_ID(ifStmt), "if");
+	StmtNode ifNode( NODE_ID(ifStmt), "if");
 	checkSemanticErrors(errors, ifNode, ifStmt);
 	builder->addNode(ifNode);
 
@@ -278,7 +326,7 @@ void ASTPrinter::visitIfStmt(const IfStmtPtr& ifStmt) {
 }
 
 void ASTPrinter::visitWhileStmt(const WhileStmtPtr& whileStmt) {
-	DotGraphBuilder::StmtNode whileNode( NODE_ID(whileStmt), "while");
+	StmtNode whileNode( NODE_ID(whileStmt), "while");
 	checkSemanticErrors(errors, whileNode, whileStmt);
 	builder->addNode(whileNode);
 
@@ -289,7 +337,7 @@ void ASTPrinter::visitWhileStmt(const WhileStmtPtr& whileStmt) {
 }
 
 void ASTPrinter::visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
-	DotGraphBuilder::StmtNode declNode( NODE_ID(declStmt), "decl");
+	StmtNode declNode( NODE_ID(declStmt), "decl");
 	checkSemanticErrors(errors, declNode, declStmt);
 	builder->addNode(declNode);
 
@@ -300,7 +348,7 @@ void ASTPrinter::visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
 }
 
 void ASTPrinter::visitReturnStmt(const ReturnStmtPtr& retStmt) {
-	DotGraphBuilder::StmtNode retNode( NODE_ID(retStmt), "return");
+	StmtNode retNode( NODE_ID(retStmt), "return");
 	checkSemanticErrors(errors, retNode, retStmt);
 	builder->addNode(retNode);
 
@@ -310,7 +358,7 @@ void ASTPrinter::visitReturnStmt(const ReturnStmtPtr& retStmt) {
 }
 
 void ASTPrinter::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
-	DotGraphBuilder::StmtNode lambdaNode( NODE_ID(lambdaExpr), "lambda");
+	StmtNode lambdaNode( NODE_ID(lambdaExpr), "lambda");
 	checkSemanticErrors(errors, lambdaNode, lambdaExpr);
 	builder->addNode(lambdaNode);
 
@@ -323,7 +371,7 @@ void ASTPrinter::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 
 void ASTPrinter::visitVariable(const VariablePtr& var) {
 	std::string label = "\"var\\n(" + var->toString() + ")\"";
-	DotGraphBuilder::StmtNode varNode( NODE_ID(var), label);
+	StmtNode varNode( NODE_ID(var), label);
 	checkSemanticErrors(errors, varNode, var);
 	builder->addNode(varNode);
 
@@ -332,7 +380,7 @@ void ASTPrinter::visitVariable(const VariablePtr& var) {
 }
 
 void ASTPrinter::visitCallExpr(const CallExprPtr& callExpr) {
-	DotGraphBuilder::StmtNode currNode( NODE_ID(callExpr), "call");
+	StmtNode currNode( NODE_ID(callExpr), "call");
 	checkSemanticErrors(errors, currNode, callExpr);
 	builder->addNode(currNode);
 
@@ -341,11 +389,11 @@ void ASTPrinter::visitCallExpr(const CallExprPtr& callExpr) {
 	visitChildList(*builder, toVector(callExpr->getType()), callExpr, "type");
 	visitChildList(*builder, toVector(callExpr->getFunctionExpr()), callExpr, "func_expr");
 
-	visitChildList(*builder, callExpr->getArguments(), callExpr, "arguments");
+	visitChildList(*builder, callExpr->getArguments(), callExpr, "argument");
 }
 
 void ASTPrinter::visitCastExpr(const CastExprPtr& castExpr) {
-	DotGraphBuilder::StmtNode castNode( NODE_ID(castExpr), "cast");
+	StmtNode castNode( NODE_ID(castExpr), "cast");
 	checkSemanticErrors(errors, castNode, castExpr);
 	builder->addNode(castNode);
 
@@ -360,7 +408,7 @@ void ASTPrinter::visitLiteral(const LiteralPtr& lit) {
 	if(label.find('\"') == std::string::npos) {
 		label = "\"" + label +"\"";
 	}
-	DotGraphBuilder::LiteralNode litNode( NODE_ID(lit), label);
+	LiteralNode litNode( NODE_ID(lit), label);
 	checkSemanticErrors(errors, litNode, lit);
 	builder->addNode(litNode);
 
@@ -369,7 +417,7 @@ void ASTPrinter::visitLiteral(const LiteralPtr& lit) {
 }
 
 void ASTPrinter::visitStatement(const insieme::core::StatementPtr& stmt) {
-	DotGraphBuilder::StmtNode stmtNode( NODE_ID(stmt), "STMT");
+	StmtNode stmtNode( NODE_ID(stmt), "stmt");
 	checkSemanticErrors(errors, stmtNode, stmt);
 	builder->addNode(stmtNode);
 
@@ -378,29 +426,27 @@ void ASTPrinter::visitStatement(const insieme::core::StatementPtr& stmt) {
 }
 
 void ASTPrinter::visitNode(const insieme::core::NodePtr& node) {
-	builder->addNode(DotGraphBuilder::DotNode( builder->getNodeId(node), utils::numeric_cast<std::string>(node->getNodeCategory()) ));
+	builder->addNode( DotNode( NODE_ID(node), utils::numeric_cast<std::string>(node->getNodeCategory()) ));
 
-	visitAnnotationList(*builder, builder->getNodeId(node), node->getAnnotations());
+	visitAnnotationList(*builder, NODE_ID(node), node->getAnnotations());
 	visitChildList(*builder, node->getChildList(), node, "child");
 }
 
 void ASTPrinter::visitProgram(const core::ProgramPtr& prog) {
-	DotGraphBuilder::DotNode root( builder->getNodeId(prog), "\"\"" );
-	root[DotGraphBuilder::SHAPE] = "doublecircle";
-	root[DotGraphBuilder::STYLE] = "filled";
-	root[DotGraphBuilder::WIDTH] = ".4";
-	builder->addNode( root );
+	builder->addNode( RootNode( NODE_ID(prog)) );
 
 	visitAnnotationList(*builder, builder->getNodeId(prog), prog->getAnnotations());
 	visitChildList(*builder, prog->getChildList(), prog, "entry_point");
 }
 
 std::shared_ptr<ASTPrinter> makeDotPrinter(std::ostream& out, const MessageList& errors) {
-	return std::make_shared<ASTPrinter>( std::make_shared<DotGraphBuilder>(out), errors );
+	return std::make_shared<ASTPrinter>( std::make_shared<DOTGraphBuilder>(out), errors );
 }
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out) {
+	out << "digraph inspire {" << std::endl;
 	insieme::core::visitAllOnce(root, *makeDotPrinter(out, errors));
+	out << "}" << std::endl;
 }
 }
 }
