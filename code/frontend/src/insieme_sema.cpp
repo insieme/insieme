@@ -45,7 +45,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/Sema/Sema.h"
 
-#include <glog/logging.h>
+//#include <glog/logging.h>
+#include "logging.h"
 
 using namespace clang;
 using namespace insieme::frontend;
