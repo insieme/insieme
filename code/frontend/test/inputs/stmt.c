@@ -190,8 +190,8 @@ void vector_stmt_test() {
 //	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
 	int a[5];
 
-//	#pragma test "ref.assign(subscript(ref.deref(cast<ref<int<4>>>(v1)), ref.deref(0)), 1)"
-	a[0] = 1;
+	#pragma test "subscript(ref.deref(v1), 0)"
+	a[0];
 
 }
 

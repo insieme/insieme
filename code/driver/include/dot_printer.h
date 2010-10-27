@@ -124,6 +124,8 @@ public:
 	void visitCallExpr(const CallExprPtr& callExpr);
 	void visitCastExpr(const CastExprPtr& castExpr);
 	void visitLiteral(const LiteralPtr& lit);
+	void visitVectorExpr(const VectorExprPtr& init);
+
 	void visitStatement(const insieme::core::StatementPtr& stmt);
 	void visitNode(const insieme::core::NodePtr& node);
 	void visitProgram(const core::ProgramPtr& prog);

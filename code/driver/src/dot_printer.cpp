@@ -416,6 +416,15 @@ void ASTPrinter::visitLiteral(const LiteralPtr& lit) {
 	visitChildList(*builder, toVector(lit->getType()), lit, "type");
 }
 
+void ASTPrinter::visitVectorExpr(const VectorExprPtr& vexp) {
+	StmtNode vectNode( NODE_ID(vexp), "vect_expr");
+	checkSemanticErrors(errors, vectNode, vexp);
+	builder->addNode(vectNode);
+
+	visitAnnotationList(*builder, NODE_ID(vexp), vexp->getAnnotations());
+	visitChildList(*builder, vexp->getChildList(), vexp, "expr");
+}
+
 void ASTPrinter::visitStatement(const insieme::core::StatementPtr& stmt) {
 	StmtNode stmtNode( NODE_ID(stmt), "stmt");
 	checkSemanticErrors(errors, stmtNode, stmt);

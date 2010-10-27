@@ -422,6 +422,18 @@ public:
 		return Visit( parExpr->getSubExpr() );
 	}
 
+//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//	//						   IMPLICIT CAST EXPRESSION
+//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
+//		START_LOG_EXPR_CONVERSION(implCastExpr);
+////		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
+//		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
+////		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
+//		END_LOG_EXPR_CONVERSION(subExpr);
+//		return subExpr;
+//	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -786,36 +798,38 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
-		core::ExpressionPtr&& base = Visit( arraySubExpr->getBase() );
 
-//		if( !core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ) {
-//			// CLANG doesn't recognize this as a vector type, but a subscript operator has been called,
-//			// so we assume this was originally a vector type
-//
-//		}
+		// CLANG introduces implicit cast for the base expression of array subscripts
+		// which cast the array type into a simple pointer. As insieme supports subscripts
+		// only for array or vector types, we skip eventual implicit cast operations
+		Expr* baseExpr = arraySubExpr->getBase();
+		while(ImplicitCastExpr *castExpr = dyn_cast<ImplicitCastExpr>(baseExpr))
+			baseExpr = castExpr->getSubExpr();
+
+		core::ExpressionPtr&& base = Visit( baseExpr );
 
 		core::ExpressionPtr&& idx = Visit( arraySubExpr->getIdx() );
-
-//		TODO: we need better checking for vector type
-//		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
-//				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) && "Base expression of array subscript is not a vector/array type.");
-
-		// BASE
-		if(core::TypePtr&& baseSubTy = core::dynamic_pointer_cast<const core::RefType>(base->getType())) {
-			base = convFact.builder.callExpr( baseSubTy, core::lang::OP_REF_DEREF_PTR, toVector(base) );
+		// Deref BASE
+		if(core::RefTypePtr&& baseSubTy = core::dynamic_pointer_cast<const core::RefType>(base->getType())) {
+			base = convFact.builder.callExpr( baseSubTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(base) );
 		}
 
+		// TODO: we need better checking for vector type
+		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
+				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&
+				"Base expression of array subscript is not a vector/array type.");
+
+		// We are sure the type of base is either a vector or an array
+		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
+
 		// IDX
-		if(core::TypePtr&& idxSubTy = core::dynamic_pointer_cast<const core::RefType>(base->getType())) {
-			idx = convFact.builder.callExpr( idxSubTy, core::lang::OP_REF_DEREF_PTR, toVector(idx) );
+		if(core::RefTypePtr&& idxSubTy = core::dynamic_pointer_cast<const core::RefType>(base->getType())) {
+			idx = convFact.builder.callExpr( idxSubTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(idx) );
 		}
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr(
-				convFact.builder.refType( convFact.convertType( GET_TYPE_PTR(arraySubExpr) ) ),
-				core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(base, idx)
-			);
-//		DLOG(INFO) << "EXPR_TY: " << *retExpr->getType();
+			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(base, idx) );
+
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}

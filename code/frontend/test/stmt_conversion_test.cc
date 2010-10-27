@@ -60,6 +60,7 @@ TEST(StmtConversion, FileTest) {
 	using namespace clang;
 
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
+	CommandLineOptions::Verbosity = 0;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);
