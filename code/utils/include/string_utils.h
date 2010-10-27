@@ -105,3 +105,16 @@ template<typename Container>
 Joinable<Container, print<id<const typename Container::value_type&>>> join(const string& separator, const Container& container) {
 	return Joinable<Container, print<id<const typename Container::value_type&>>>(separator, container, print<id<const typename Container::value_type&>>());
 }
+
+template<typename SeparatorFunc, typename Container, typename Printer>
+void functionalJoin(SeparatorFunc seperatorFunc, Container container, Printer printer) {
+	if(container.size() > 0) {
+		auto iter = container.cbegin();
+		printer(*iter);
+		++iter;
+		std::for_each(iter, container.cend(), [&](const typename Container::value_type& cur) {
+			seperatorFunc();
+			printer(cur);
+		});
+	}
+}

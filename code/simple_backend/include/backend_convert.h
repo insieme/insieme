@@ -78,37 +78,26 @@ public:
 	string getVarName(const VariablePtr& var);
 };
 
-/** Converts simple IR types to their corresponding C(++) representations.
- ** Examples of "simple" types are integers, booleans, reals and strings.
- ** */
-class SimpleTypeConverter : public ASTVisitor<string> {
-	NameGenerator& nameGen;
-	bool firstRef;
-
-public:
-	SimpleTypeConverter(NameGenerator& nameGen) : nameGen(nameGen), firstRef(true) { }
-
-	string visitRefType(const RefTypePtr& ptr);
-
-	string visitGenericType(const GenericTypePtr& ptr);
-
-	string visitStructType(const StructTypePtr& ptr);
-};
-
 // TODO more sane dependency handling / move forward declaration
 class ConversionContext;
 
 /** Manages C type generation and lookup for IR types.
  ** */
-class TypeManager {
+class TypeManager : public ASTVisitor<string> {
 	ConversionContext& cc;
+	bool visitStarting, declVisit;
 
 public:
 	TypeManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
-	string getTypeName(const core::TypePtr type);
+	string getTypeName(const core::TypePtr type, bool inDecl = false);
 	string getTypeDecl(const core::TypePtr type);
 	CodePtr getTypeDefinition(const core::TypePtr type);
+
+	string visitRefType(const RefTypePtr& ptr);
+	string visitGenericType(const GenericTypePtr& ptr);
+	string visitStructType(const StructTypePtr& ptr);
+	string visitVectorType(const VectorTypePtr& ptr);
 };
 
 /** Manages C function generation and lookup for named lambda expressions.
@@ -173,10 +162,6 @@ class ConvertVisitor : public ASTVisitor<> {
 	CodePtr defCodePtr;
 	CodeStream& cStr;
 	
-	string printTypeName(const TypePtr& typ) {
-		return cc.getTypeMan().getTypeName(typ);
-	}
-
 	template<typename Functor>
 	void runWithCodeStream(CodeStream& cs, Functor f) {
 		CodeStream& oldCodeStream = cStr;
@@ -264,11 +249,7 @@ public:
 
 	void visitCallExpr(const CallExprPtr& ptr);
 
-	void visitCastExpr(const CastExprPtr& ptr) {
-		cStr << "((" << printTypeName(ptr->getType()) << ")(";
-		visit(ptr->getSubExpression());
-		cStr << "))";
-	}
+	void visitCastExpr(const CastExprPtr& ptr);
 
 	void visitJobExpr(const JobExprPtr& ptr) {
 		//// check if local decls exist, if so generate struct to hold them and populate it

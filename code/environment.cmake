@@ -77,7 +77,7 @@ if(MSVC)
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-	find_library(llvm_LIB   NAMES LLVM-2.8rc 	PATHS ${LLVM_HOME}/lib)
+	find_library(llvm_LIBs   NAMES LLVM-2.8rc 	PATHS ${LLVM_HOME}/lib)
 	#find_library(clang_CompilerDriver_LIB 	NAMES CompilerDriver 		PATHS ${LLVM_HOME}/lib)
 endif(MSVC)
 
