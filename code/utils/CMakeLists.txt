@@ -31,6 +31,7 @@ foreach ( case_file ${test_cases} )
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_utils)
+	target_link_libraries(ut_${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name})
