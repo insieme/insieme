@@ -180,9 +180,16 @@ void visitChildList(BuilderTy& builder,
 void checkSemanticErrors(const MessageList& errors, DotNode& currNode, const core::NodePtr& node) {
 	std::for_each(errors.begin(), errors.end(), [&currNode, node](const Message& cur) {
 		if(*node == *cur.getAddress().getAddressedNode()) {
-			currNode[NodeProperty::COLOR] = "red";
+			if(cur.getType() == core::Message::ERROR)
+				currNode[NodeProperty::COLOR] = "red";
+			else
+				currNode[NodeProperty::COLOR] = "yellow";
+			currNode[NodeProperty::STYLE] = "filled";
+			std::string label = currNode[NodeProperty::LABEL];
+			if(label.at(0) == '\"')
+				label = label.substr(1,label.size()-2);
 			currNode[NodeProperty::LABEL] =
-					"\"" + currNode[NodeProperty::LABEL] + "\\n{ ERR_CODE: " + utils::numeric_cast<std::string>(cur.getErrorCode()) + "}\"";
+					"\"" + label + "\\n{ CODE: " + utils::numeric_cast<std::string>(cur.getErrorCode()) + "}\"";
 		}
 	});
 }

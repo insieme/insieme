@@ -664,12 +664,6 @@ public:
 			assert(false && "Operator not supported");
 		}
 
-		if(isLogical)
-			exprTy = core::lang::TYPE_BOOL_PTR;
-
-		if(!isAssignment)
-			opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
-
 		// build a callExpr with the 2 arguments
 		rhs = tryDeref(builder, rhs);
 
@@ -686,6 +680,15 @@ public:
 //			// add a castepxr
 //			rhs = convFact.builder.castExpr(opTy->getElementTypes()[1], rhs);
 //		}
+
+		if(isLogical) {
+			exprTy = core::lang::TYPE_BOOL_PTR;
+			tupleTy = builder.tupleType(toVector(lhs->getType(), rhs->getType())); // FIXME
+		}
+
+		if(!isAssignment)
+			opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
+
 		core::ExpressionPtr retExpr = convFact.builder.callExpr( exprTy, opFunc, toVector(lhs, rhs) );
 
 		// add the operator name in order to help the convertion process in the backend
