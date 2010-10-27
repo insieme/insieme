@@ -36,7 +36,18 @@
 
 #pragma once
 
+#ifdef _MSVC
+#  define GOOGLE_GLOG_DLL_DECL
+#  pragma warning(push)
+#  pragma warning(disable:4244)
+#endif
+
 #include <glog/logging.h>
+
+#ifdef _MSVC
+#  pragma warning(pop)
+#endif
+
 #include "cmd_line_utils.h"
 
 using namespace google;

@@ -42,7 +42,8 @@
 #include "driver_config.h"
 #include "backend_convert.h"
 
-#include <glog/logging.h>
+//#include <glog/logging.h>
+#include "logging.h"
 
 #include <iostream>
 #include <fstream>

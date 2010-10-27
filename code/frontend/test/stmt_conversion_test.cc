@@ -60,6 +60,7 @@ TEST(StmtConversion, FileTest) {
 	using namespace clang;
 
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
+	CommandLineOptions::Verbosity = 0;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);
@@ -90,9 +91,11 @@ TEST(StmtConversion, FileTest) {
 				});
 
 			} else {
-				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
-				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp->getDecl())) {
+					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp->getDecl())) {
+					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertFunctionDecl( fd )->toString() + '\"' );
+				}
 			}
 
 

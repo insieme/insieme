@@ -40,6 +40,8 @@
 #include "expressions.h"
 #include "string_utils.h"
 
+#include "boost/optional.hpp"
+
 #include <memory.h>
 
 #define DEFINE_TYPE(Type) \

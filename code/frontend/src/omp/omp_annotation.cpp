@@ -47,7 +47,7 @@ const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
 
 const std::string BaseAnnotation::toString() const {
 	std::ostringstream ss;
-	for(typename AnnotationList::const_iterator it = getAnnotationListBegin(), end = getAnnotationListEnd(); it != end; ++it) {
+	for(AnnotationList::const_iterator it = getAnnotationListBegin(), end = getAnnotationListEnd(); it != end; ++it) {
 		(*it)->dump(ss);
 		if(it+1 != end)
 			ss << "\\n";
