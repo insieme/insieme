@@ -2102,8 +2102,11 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 		return fit->second;
 
 	QualType&& varTy = varDecl->getType();
-	core::TypePtr&& type = varTy.isConstQualified() ? convertType( varTy.getTypePtr() ) : builder.refType( convertType( varTy.getTypePtr() ) );
-
+	core::TypePtr&& type = convertType( varTy.getTypePtr() );
+	if(varTy.isConstQualified() || !isa<const clang::ParmVarDecl>(varDecl)) {
+		// add a ref in the case of variable which are not function parameters
+		type = builder.refType(type);
+	}
 	// variable is not in the map, create a new var and add it
 	core::VariablePtr&& var = builder.variable(type);
 	// add the var in the map
@@ -2340,7 +2343,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		core::RecLambdaDefinition::RecFunDefs definitions;
 		definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
 
-		DLOG(INFO) << "START BUILDING REC FUNC";
 		// We start building the recursive type. In order to avoid loop the visitor
 		// we have to change its behaviour and let him returns temporarely types
 		// when a sub recursive type is visited.
