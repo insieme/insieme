@@ -258,7 +258,16 @@ public:
 	 * 				   this recursive function definition.
 	 * @return a copy of the internally maintained pointer to the actual function definition.
 	 */
-	const LambdaExprPtr getDefinitionOf(const VariablePtr& variable) const;
+	LambdaExprPtr getDefinitionOf(const VariablePtr& variable) const;
+
+	/**
+	 * Unrolls this definition once for the given variable.
+	 *
+	 * @param manager the manager to be used for maintaining the resulting reference
+	 * @param variable the variable defining the definition to be unrolled once
+	 * @return the resulting, unrolled lambda expression
+	 */
+	LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const;
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.

@@ -106,7 +106,7 @@ class FunctionManager {
 	ConversionContext& cc;
 
 public:
-	typedef std::unordered_map<Identifier, CodePtr, boost::hash<Identifier>> FunctionMap;
+	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> FunctionMap;
 
 private:
 	FunctionMap functionMap;
@@ -114,8 +114,9 @@ private:
 public:
 	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
-	CodePtr getFunction(const core::LambdaExprPtr& lambda, const Identifier& ident);
-	CodePtr getFunctionLiteral(const core::FunctionTypePtr& type, const string& name);
+	CodePtr getFunction(const core::LambdaExprPtr& lambda);
+	CodePtr getFunction(const core::RecLambdaExprPtr& lambda);
+	CodePtr getFunctionLiteral(const LiteralPtr& literal);
 	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
 };
 
@@ -139,6 +140,7 @@ class ConversionContext {
 	NameGenerator nameGen;
 	TypeManager typeMan;
 	FunctionManager funcMan;
+	NodeManager nodeManager;
 
 public:
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
@@ -152,6 +154,8 @@ public:
 	FunctionManager& getFuncMan() { return funcMan; }
 
 	ConvertedCode convert(const core::ProgramPtr& prog);
+
+	NodeManager& getNodeManager() { return nodeManager; }
 };
 
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
@@ -279,9 +283,7 @@ public:
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr);
 
-	void visitRecLambdaExpr(const LambdaExprPtr& ptr) {
-		// TODO when cname annotations are standardized
-	}
+	void visitRecLambdaExpr(const RecLambdaExprPtr& ptr);
 
 	void visitLiteral(const LiteralPtr& ptr);
 
