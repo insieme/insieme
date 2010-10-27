@@ -37,11 +37,6 @@
 // extern int printf(char*, ...);
 
 int main(int argc, char* argv[]) {
-	#pragma omp parallel for default(none)
-	{
-		int a[2];
-		a[1] = 4;
-		// printf("Hallo Insieme, \n\t\"the number %d in compilers!\"", 1);
-	}
+	printf("Hallo Insieme, \n\t\"the number %d in compilers!\"", 1);
 	return 0;
 }
