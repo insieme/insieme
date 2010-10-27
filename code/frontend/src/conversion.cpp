@@ -189,6 +189,13 @@ std::string getOperationType(const core::TypePtr& type) {
 	// assert(false && "Type not supported");
 }
 
+core::ExpressionPtr tryDeref(const core::ASTBuilder& builder, const core::ExpressionPtr& expr) {
+	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		return builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(expr) );
+	}
+	return expr;
+}
+
 // creates a function call from a list of expressions,
 // usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
 core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vector<core::StatementPtr>& body, core::TypePtr retTy) {
@@ -582,13 +589,12 @@ public:
 			core::lang::OperatorPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
 			// we check if the RHS is a ref, in that case we use the deref operator
-			if( core::RefTypePtr&& rhsTy = core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
-				rhs = builder.callExpr( rhsTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(rhs) );
+			rhs = tryDeref(builder, rhs);
 
 			const core::TypePtr& lhsSubTy = lhsTy->getElementType();
-
 			rhs = builder.callExpr(lhsSubTy, opFunc,
 				toVector<core::ExpressionPtr>(builder.callExpr( lhsSubTy, core::lang::OP_REF_DEREF_PTR, toVector(lhs) ), rhs) );
+
 			// add an annotation to the subexpression
 			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
 		}
@@ -665,11 +671,10 @@ public:
 			opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
 		// build a callExpr with the 2 arguments
-		if( core::RefTypePtr&& subTy = core::dynamic_pointer_cast<const core::RefType>(rhs->getType()) )
-			rhs = builder.callExpr( subTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(rhs) );
+		rhs = tryDeref(builder, rhs);
+
 		if( !isAssignment )
-			if(core::RefTypePtr&& subTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) )
-				lhs = builder.callExpr( subTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(lhs) );
+			lhs = tryDeref(builder, lhs);
 
 		// check the types
 //		const core::TupleTypePtr& opTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType())->getArgumentType();
@@ -780,14 +785,13 @@ public:
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
 
 		// add ref.deref if needed
-		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(condExpr->getType()))
-			condExpr = convFact.builder.callExpr(refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(condExpr));
+		condExpr = tryDeref(convFact.builder, condExpr);
 
 		if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
 			// the return type of the condition is not a boolean, we add a cast expression
 			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 		}
-		core::StatementPtr ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
+		core::StatementPtr&& ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
 		core::ExpressionPtr&& retExpr = createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -806,13 +810,10 @@ public:
 		while(ImplicitCastExpr *castExpr = dyn_cast<ImplicitCastExpr>(baseExpr))
 			baseExpr = castExpr->getSubExpr();
 
-		core::ExpressionPtr&& base = Visit( baseExpr );
-
-		core::ExpressionPtr&& idx = Visit( arraySubExpr->getIdx() );
-		// Deref BASE
-		if(core::RefTypePtr&& baseSubTy = core::dynamic_pointer_cast<const core::RefType>(base->getType())) {
-			base = convFact.builder.callExpr( baseSubTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(base) );
-		}
+		// IDX
+		core::ExpressionPtr&& idx = tryDeref(convFact.builder, Visit( arraySubExpr->getIdx() ));
+		// BASE
+		core::ExpressionPtr&& base = tryDeref(convFact.builder, Visit( baseExpr ) );
 
 		// TODO: we need better checking for vector type
 		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
@@ -821,11 +822,6 @@ public:
 
 		// We are sure the type of base is either a vector or an array
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
-
-		// IDX
-		if(core::RefTypePtr&& idxSubTy = core::dynamic_pointer_cast<const core::RefType>(base->getType())) {
-			idx = convFact.builder.callExpr( idxSubTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(idx) );
-		}
 
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(base, idx) );
@@ -861,8 +857,7 @@ public:
         core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
         core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy? and not ref<rexprTy>?
         // if the type of the vector is a refType, we deref it
-        if(core::RefTypePtr&& baseTy = core::dynamic_pointer_cast<const core::RefType>(base->getType()))
-        	base =  convFact.builder.callExpr( baseTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(base) );
+        base = tryDeref(convFact.builder, base);
 
         core::ExpressionPtr&& retExpr = convFact.builder.callExpr(convFact.builder.refType(exprTy), core::lang::OP_SUBSCRIPT_PTR, toVector( base, idx ));
         END_LOG_EXPR_CONVERSION(retExpr);
@@ -1043,21 +1038,24 @@ public:
 				//		}
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-				std::function<bool (const core::StatementPtr&, bool)> inductionVarFilter =
-					[ this, inductionVar ](const core::StatementPtr& curr, bool negateResult) -> bool {
+				auto inductionVarFilter =
+					[ this, inductionVar ](const core::StatementPtr& curr) -> bool {
 						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
 						assert(declStmt && "Not a declaration statement");
-						bool ret = (declStmt->getVariable() == inductionVar);
-						return negateResult ? !ret : ret;
+						return declStmt->getVariable() == inductionVar;
 					};
+
+				auto negation =
+					[](std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr) -> bool { return !functor(curr); };
 
 				// we insert all the variable declarations (excluded the induction variable)
 				// before the body of the for loop
-				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt), std::bind( inductionVarFilter, std::placeholders::_1, true ) );
+				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt),
+						std::bind(negation, inductionVarFilter, std::placeholders::_1) );
 
 				// we now look for the declaration statement which contains the induction variable
 				std::vector<core::StatementPtr>::const_iterator fit =
-						std::find_if(initExpr.begin(), initExpr.end(), std::bind( inductionVarFilter, std::placeholders::_1, false ));
+						std::find_if(initExpr.begin(), initExpr.end(), std::bind( inductionVarFilter, std::placeholders::_1));
 				assert(fit != initExpr.end() && "Induction variable not declared in the loop initialization expression");
 				// replace the initExpr with the declaration statement of the induction variable
 				initExpr = *fit;
@@ -1343,12 +1341,7 @@ public:
 		} else {
 			const Expr* cond = switchStmt->getCond();
 			assert(cond && "SwitchStmt with no condition.");
-			condExpr = convFact.convertExpr( cond );
-
-			if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(condExpr->getType())) {
-				// if the type of the condition expression is a ref, we have to add a deref operation
-				condExpr = builder.callExpr(refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(condExpr));
-			}
+			condExpr = tryDeref( builder, convFact.convertExpr( cond ) );
 
 			// we create a variable to store the value of the condition for this switch
 			core::VariablePtr&& condVar = builder.variable(core::lang::TYPE_INT_GEN_PTR);
@@ -2334,12 +2327,14 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 				}
 			);
 		}
-//			DLOG(INFO) << "MAP: ";
-//			std::for_each(recVarExprMap.begin(), recVarExprMap.end(),
-//				[] (RecVarExprMap::value_type c) {
-//					DLOG(INFO) << "\t" << c.first->getNameAsString() << "[" << (size_t) c.first << "]";
-//				}
-//			);
+		if( VLOG_IS_ON(2) ) {
+			DVLOG(2) << "MAP: ";
+			std::for_each(ctx->recVarExprMap.begin(), ctx->recVarExprMap.end(),
+				[] (ConversionContext::RecVarExprMap::value_type c) {
+					DVLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "]";
+				}
+			);
+		}
 	}
 
 	core::ExpressionPtr retLambdaExpr;

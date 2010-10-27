@@ -185,6 +185,21 @@ void while_stmt_test() {
 
 }
 
+#pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.add(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.sub(ref.deref(v3), 1));} }}"
+int f(int x) {
+	return g(x-1);
+}
+
+#pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.sub(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.add(ref.deref(v3), 1));} }}"
+int g(int x) {
+	return f(x+1);
+}
+
+void rec_function_call_test() {
+	#pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.add(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.sub(ref.deref(v3), 1));} }}(10)"
+	f(10);
+}
+
 void vector_stmt_test() {
 
 //	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
