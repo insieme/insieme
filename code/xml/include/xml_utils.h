@@ -112,6 +112,8 @@ public:
 	const vector<XmlElement> getChildren() const;
 	
 	const vector<XmlElement> getChildrenByName(const string& name) const;
+	
+	const std::shared_ptr<XmlElement> getFirstChildByName(const string& name) const;
 };
 
 typedef std::shared_ptr<XmlElement> XmlElementPtr;

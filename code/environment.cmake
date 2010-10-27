@@ -27,11 +27,19 @@ link_directories(${Boost_LIBRARY_DIRS})
 # glog
 if(MSVC)
 	include_directories( ${GLOG_HOME}/src/windows )
-	if (CMAKE_CXX_FLAGS_RELEASE)
-		set(glog_LIB ${GLOG_HOME}/Release/libglog_static.lib)
-	else (CMAKE_CXX_FLAGS_RELEASE)
-		set(glog_LIB ${GLOG_HOME}/Debug/libglog_static.lib)
-	endif (CMAKE_CXX_FLAGS_RELEASE)
+#	if (1) #LINKING_TYPE == STATIC
+#		if (CMAKE_CXX_FLAGS_RELEASE)
+#			set(glog_LIB ${GLOG_HOME}/Release/libglog_static.lib)
+#		else (CMAKE_CXX_FLAGS_RELEASE)
+#			set(glog_LIB ${GLOG_HOME}/Debug/libglog_static.lib)
+#		endif (CMAKE_CXX_FLAGS_RELEASE)
+#	else ()
+		if (CMAKE_CXX_FLAGS_RELEASE)
+			set(glog_LIB ${GLOG_HOME}/Release/libglog.lib)
+		else (CMAKE_CXX_FLAGS_RELEASE)
+			set(glog_LIB ${GLOG_HOME}/Debug/libglog.lib)
+		endif (CMAKE_CXX_FLAGS_RELEASE)
+#	endif ()
 else()
 	include_directories( $ENV{GLOG_HOME}/include )
 	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
@@ -47,6 +55,42 @@ find_package( Perl )
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
+
+
+#Fix LLVM path
+if(NOT DEFINED LLVM_HOME)
+	set (LLVM_HOME $ENV{LLVM_HOME})
+endif()
+
+if(MSVC)
+  set( llvm_LList System;Core;CodeGen;SelectionDAG;AsmPrinter;BitReader;BitWriter;TransformUtils;${llvm_LList})
+  set( llvm_LList X86AsmParser;X86AsmPrinter;X86CodeGen;X86Info;X86Disassembler;${llvm_LList})
+  set( llvm_LList Instrumentation;InstCombine;ScalarOpts;ipo;Linker;Analysis;ipa;${llvm_LList})
+  set( llvm_LList ExecutionEngine;Interpreter;JIT;Target;AsmParser;Archive;${llvm_LList})
+  set( llvm_LList Support;SelectionDAG;MC;MCDisassembler;MCParser;${llvm_LList})
+
+  # Find all llvm libraries
+  foreach (name ${llvm_LList})
+      find_library(llvm_${name}_LIB   NAMES LLVM${name}   PATHS ${LLVM_HOME}/lib)
+      set(llvm_LIBs ${llvm_${name}_LIB} ${llvm_LIBs})
+  endforeach(name)
+
+else(MSVC)
+	# On Linux we have a .so file for all LLVM
+	find_library(llvm_LIBs   NAMES LLVM-2.8rc 	PATHS ${LLVM_HOME}/lib)
+	#find_library(clang_CompilerDriver_LIB 	NAMES CompilerDriver 		PATHS ${LLVM_HOME}/lib)
+endif(MSVC)
+
+# Find (all?) clang libraries
+#FIXME: clang.lib have to be copied manually in Windows!
+set(clang_LList clangBasic;clangChecker;clangSema;clang;clangIndex;clangDriver;clangAST;clangRewrite;clangAnalysis;clangLex;clangFrontend;clangFrontendTool;clangParse;clangSerialization)
+foreach (name ${clang_LList})
+    find_library(${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
+    set(clang_LIBs ${${name}_LIB} ${clang_LIBs})
+endforeach(name)
+
+
+
 
 # Visual Studio customization
 if(MSVC) 

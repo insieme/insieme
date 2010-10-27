@@ -143,7 +143,7 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test "{ref.assign(v1, 0); while(int.gt(ref.deref(v2), 1)) {{}; fun(ref<int<4>> v5, ref<int<4>> v6, ref<int<4>> v7){ {fun(ref<int<4>> v7){ {int<4> v3 = ref.deref(v7); ref.assign(v7, int.add(ref.deref(v7), cast<int<4>>(1))); return v3;} }(v5); return ref.assign(v6, int.div(ref.deref(v6), 2));} }(v1, v2, v4);};}"
+	#pragma test "{ref.assign(v1, 0); while(int.gt(ref.deref(v2), 1)) {{}; fun(ref<int<4>> v5, ref<int<4>> v6){ {fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v5); return ref.assign(v6, int.div(ref.deref(v6), 2));} }(v1, v2);};}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
 
@@ -177,12 +177,24 @@ void switch_stmt_test() {
 
 
 void while_stmt_test() {
-
 	int it = 0;
-
 	#pragma test "while(int.ne(ref.deref(v1), 0)) {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
 	while(it != 0) { it-=1; }
+}
 
+#pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.add(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.sub(ref.deref(v3), 1));} }}"
+int f(int x) {
+	return g(x-1);
+}
+
+#pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.sub(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.add(ref.deref(v3), 1));} }}"
+int g(int x) {
+	return f(x+1);
+}
+
+void rec_function_call_test() {
+	#pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.add(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.sub(ref.deref(v3), 1));} }}(10)"
+	f(10);
 }
 
 void vector_stmt_test() {
@@ -190,8 +202,19 @@ void vector_stmt_test() {
 //	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
 	int a[5];
 
-	#pragma test "subscript(ref.deref(v1), 0)"
+	#pragma test "subscript_single(ref.deref(v1), 0)"
 	a[0];
+
+	#pragma test "ref.assign(subscript_single(ref.deref(v1), 0), 1)"
+	a[0] = 1;
+
+	int b[2][2];
+
+	#pragma test "subscript_single(ref.deref(subscript_single(ref.deref(v1), 0)), 0)"
+	b[0][0];
+
+	#pragma test "ref.assign(subscript_single(ref.deref(subscript_single(ref.deref(v1), 1)), 1), 0)"
+	b[1][1] = 0;
 
 }
 
