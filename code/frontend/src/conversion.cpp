@@ -816,6 +816,7 @@ public:
 		// BASE
 		core::ExpressionPtr&& base = tryDeref(convFact.builder, Visit( baseExpr ) );
 
+		DLOG(INFO) << *base->getType();
 		// TODO: we need better checking for vector type
 		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&
@@ -2103,8 +2104,8 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );
-	if(varTy.isConstQualified() || !isa<const clang::ParmVarDecl>(varDecl)) {
-		// add a ref in the case of variable which are not function parameters
+	if(!varTy.isConstQualified() && !isa<const clang::ParmVarDecl>(varDecl)) {
+		// add a ref in the case of variable which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
 	// variable is not in the map, create a new var and add it
@@ -2194,10 +2195,9 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
 	// it is not declared as const, successive dataflow analysis could be used to restrict the access
 	// to this variable
-	core::TypePtr type = clangType.isConstQualified() ?
-		convertType( GET_TYPE_PTR(varDecl) ) :
-		builder.refType( convertType( GET_TYPE_PTR(varDecl) ) );
-	// todo: initialization for declarations with no initialization value
+	core::TypePtr&& type = convertType( clangType.getTypePtr() );
+	if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(varDecl))
+		type = builder.refType( type );
 
 	// initialization value
 	core::ExpressionPtr initExpr;
@@ -2254,9 +2254,12 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		);
 
 		if(!ctx->isRecSubFunc) {
-			if(ctx->recVarExprMap.find(funcDecl) == ctx->recVarExprMap.end())
+			if(ctx->recVarExprMap.find(funcDecl) == ctx->recVarExprMap.end()) {
 				// we create a TypeVar for each type in the mutual dependence
-				ctx->recVarExprMap.insert( std::make_pair(funcDecl, builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) )) );
+				core::VariablePtr&& var = builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) );
+				ctx->recVarExprMap.insert( std::make_pair(funcDecl, var) );
+				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+			}
 		} else {
 			// we expect the var name to be in currVar
 			ctx->recVarExprMap.insert(std::make_pair(funcDecl, ctx->currVar));
@@ -2271,8 +2274,11 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 					// this can happen when a function get overloaded and the cycle of recursion can happen between
 					// the overloaded version, we need unique variable for each version of the function
 
-					if(this->ctx->recVarExprMap.find(fd) == this->ctx->recVarExprMap.end())
-						this->ctx->recVarExprMap.insert( std::make_pair(fd, this->builder.variable( this->convertType(GET_TYPE_PTR(fd))) ) );
+					if(this->ctx->recVarExprMap.find(fd) == this->ctx->recVarExprMap.end()) {
+						core::VariablePtr&& var = this->builder.variable( this->convertType(GET_TYPE_PTR(fd)) );
+						this->ctx->recVarExprMap.insert( std::make_pair(fd, var ) );
+						var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
+					}
 				}
 			);
 		}
@@ -2311,7 +2317,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
 				}
 			}
-			if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+			else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
 				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
 						attr->getXDim(), attr->getYDim(), attr->getZDim())
 				);
