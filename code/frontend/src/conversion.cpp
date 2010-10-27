@@ -1038,15 +1038,14 @@ public:
 				//			for(int b=0;...) { }
 				//		}
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-				auto inductionVarFilter =
+				std::function<bool (const core::StatementPtr&)> inductionVarFilter =
 					[ this, inductionVar ](const core::StatementPtr& curr) -> bool {
 						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
 						assert(declStmt && "Not a declaration statement");
 						return declStmt->getVariable() == inductionVar;
 					};
 
-				auto negation =
+				std::function<bool (std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr)> negation =
 					[](std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr) -> bool { return !functor(curr); };
 
 				// we insert all the variable declarations (excluded the induction variable)
