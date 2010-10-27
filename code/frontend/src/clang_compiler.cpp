@@ -345,10 +345,9 @@ namespace {
  */
 core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::SharedNodeManager& mgr) {
     ocl::Compiler oclCompiler(prog, mgr);
-    oclCompiler.lookForOclAnnotations();
-
-    return oclCompiler.getProgram();
+    return oclCompiler.lookForOclAnnotations();
 }
+
 } // end anonymous namespace
 
 const core::ProgramPtr& Program::convert() {
@@ -388,7 +387,8 @@ const core::ProgramPtr& Program::convert() {
 	if(insiemePragmaFound) {
 		t1.stop();
 		t1.print();
-//	    return addParallelism();
+
+	    mProgram = addParallelism(mProgram, mMgr);
 		return mProgram;
 	}
 
@@ -407,7 +407,6 @@ const core::ProgramPtr& Program::convert() {
 	t1.print();
 
 	mProgram = addParallelism(mProgram, mMgr);
-
 	return mProgram;
 }
 

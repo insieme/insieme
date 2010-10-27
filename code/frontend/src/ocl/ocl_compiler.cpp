@@ -36,15 +36,17 @@
 
 #include "expressions.h"
 #include "ast_node.h"
+#include "naming.h"
 #include "ocl/ocl_compiler.h"
 #include "ocl/ocl_annotations.h"
-#include "naming.h"
+#include "utils/types_lenght.h"
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
 namespace {
+
 /* does not work at all
 class OclVisitor : public core::ASTVisitor<core::ProgramPtr> {
 private:
@@ -140,8 +142,21 @@ public:
 };
 */
 
-class OclMapper : public core::NodeMapping {
+class KernelMapper : public core::NodeMapping {
+    const core::ASTBuilder& builder;
 
+public:
+
+    KernelMapper(core::ASTBuilder& astBuilder)
+    : builder(astBuilder) { };
+
+    const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
+        return element;
+    }
+};
+
+class OclMapper : public core::NodeMapping {
+    const KernelMapper kernelMapper;
     const core::ASTBuilder& builder;
 //    const core::Substitution::Mapping& mapping;
 
@@ -149,7 +164,7 @@ class OclMapper : public core::NodeMapping {
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
-        : builder(astBuilder) { };
+        : kernelMapper(astBuilder), builder(astBuilder) { };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
         // quick check - stop recursion at variables
@@ -161,13 +176,12 @@ public:
         // call for subnodes
         const core::NodePtr& newNode = element->substitute(*builder.getNodeManager(), *this);
 
-//std::cout << " any annotation? " << newNode->hasAnnotation(ocl::BaseAnnotation::KEY) <<  " " << newNode->getNodeType() << (newNode->getNodeType() == core::NodeType::NT_FunctionType) << (newNode->getNodeType() == core::NodeType::NT_LambdaExpr) << std::endl;
         // check if we are at a function node
         if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(newNode)){
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
-
+//            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
+//return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());;
             core::AnnotationMap map = element.getAnnotations();
-            std::cout << "Size in mapper: " << map.size() << std::endl;
 
             auto funcAnnotation = element.getAnnotation(ocl::BaseAnnotation::KEY);
             if(funcAnnotation) {
@@ -196,6 +210,8 @@ public:
                 //if function is not a OpenCL kernel function nothing to be done
                 if(!isKernelFunction)
                     return func;
+            } else {
+                return func;
             }
 
 
@@ -215,34 +231,62 @@ public:
             core::LambdaExpr::ParamList params = func->getParams();
 
             // add vector<uint<4>,3> globalRange and localRange to parameters
-            // params.push_back
+
+            core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
+            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+            params.push_back(globalRange);
+            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+            params.push_back(localRange);
+
+            // update the type of the function
+            core::FunctionTypePtr newFuncType;
+            if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
+                core::FunctionType ft = *funcType;
+                core::TypePtr retTy = ft.getReturnType();
+
+                //check return type
+                assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
+
+                core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+                args.push_back(globalRange->getType());
+                args.push_back(localRange->getType());
+
+                newFuncType = builder.functionType(builder.tupleType(args), retTy);
+            } else {
+                assert(funcType && "Function has unexpected type");
+            }
+
+  //          core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
+
 
             //add three parallel statements for the localRange
             core::JobExprPtr localZjob = builder.jobExpr(body);
-
-            core::LambdaExprPtr newFunc = builder.lambdaExpr(func->getType(), params, localZjob);
+            core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
 
             return newFunc;
         }
 
-        return element;
+        return newNode;
     }
 
 };
 
 }
 
-void Compiler::lookForOclAnnotations() {
+core::ProgramPtr Compiler::lookForOclAnnotations() {
 //    core::RecursiveASTVisitor<OclVisitor> visitor(oclAnnotationExpander);
 //    core::visitAll(mProgram, oclAnnotationExpander);
 
     OclMapper oclAnnotationExpander(builder);
 //    visitor.visit(mProgram);
     const core::NodePtr progNode = oclAnnotationExpander.mapElement(0, mProgram);
-    if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(progNode))
+    if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(progNode)) {
         mProgram = newProg;
+        return newProg;
+    }
     else
         assert(newProg && "OclCompiler corrupted the program");
+    return mProgram;
 }
 
 } //namespace ocl

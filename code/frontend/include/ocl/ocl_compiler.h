@@ -55,7 +55,7 @@ private:
 public:
     Compiler(const core::ProgramPtr& program, const core::SharedNodeManager& mgr) : mProgram(program), builder(mgr) {}
 
-    void lookForOclAnnotations();
+    core::ProgramPtr lookForOclAnnotations();
 
     core::ProgramPtr getProgram() { return mProgram; }
 };
