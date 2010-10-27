@@ -45,7 +45,8 @@
 
 #include <llvm/Support/raw_ostream.h>
 
-#include <glog/logging.h>
+//#include <glog/logging.h>
+#include "logging.h"
 #include <boost/algorithm/string/join.hpp>
 
 

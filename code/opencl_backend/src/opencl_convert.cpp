@@ -36,7 +36,8 @@
 
 #include "opencl_convert.h"
 
-#include <glog/logging.h>
+//#include <glog/logging.h>
+#include "logging.h"
 
 #include "annotated_ptr.h"
 #include "types.h"
