@@ -1182,7 +1182,7 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	if(fit != DomToIrConvertMap.end()) {
 		return (fit->second)(el);
 	} else {
-		DLOG(WARNING) << "Annotation \"" << type << "\" is not registred for Xml_write!";
+		DLOG(WARNING) << "Annotation \"" << type << "\" is not registred for Xml_Read!";
 		return shared_ptr<Annotation>();
 	}
 }
@@ -1313,20 +1313,36 @@ void XmlUtil::convertDomToXml(const string outputFile){
 namespace { // begin namespace
 typedef map<string, pair <const XmlElement*, NodePtr>> elemMapType;
 
+void buildAnnotations(const XmlElementPtr, const NodePtr, const bool);
 void buildNode(NodeManager&, const XmlElement&, elemMapType&);
 void checkRef(NodeManager&, const XmlElement&, elemMapType&);
 
-
+void buildAnnotations(const XmlElement& type, const NodePtr baseType, const bool value){
+	XmlElementPtr annotations = type.getFirstChildByName("annotations");
+	if (annotations){
+		XmlConverter& xmlConverter = XmlConverter::get();
+		vector<XmlElement> ann = annotations->getChildrenByName("annotation");
+		for(vector<XmlElement>::const_iterator iter = ann.begin(); iter != ann.end(); ++iter) {
+			if (value)
+				baseType.addAnnotation(xmlConverter.domToIrAnnotation(*iter));
+			else
+				baseType->addAnnotation(xmlConverter.domToIrAnnotation(*iter));
+		}
+	}
+}
 	
 void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMap) {
 	checkRef(manager, elem, elemMap);
 	
-	// different type of node
+	// different types of nodes
 	if (elem.getName() == "genType") {
 		TypePtr baseType = NULL;
 		XmlElementPtr base = elem.getFirstChildByName("baseType");
 		if (base){
-			baseType = dynamic_pointer_cast<const Type>(elemMap[(base->getFirstChildByName("typePtr"))->getAttr("ref")].second);
+			XmlElementPtr type = base->getFirstChildByName("typePtr");
+			baseType = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+			
+			//buildAnnotations(*type, baseType, true);
 		}
 		
 		vector<TypePtr> typeParams;
@@ -1334,8 +1350,9 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		if (param){
 			vector<XmlElement> types = param->getChildrenByName("typePtr");
 			for(vector<XmlElement>::const_iterator iter = types.begin(); iter != types.end(); ++iter) {
-				if (!dynamic_pointer_cast<const Type>(elemMap[iter->getAttr("ref")].second)) std::cout << "CIAO\n";
-				typeParams.push_back(dynamic_pointer_cast<const Type>(elemMap[iter->getAttr("ref")].second));
+				TypePtr typeParam = dynamic_pointer_cast<const Type>(elemMap[iter->getAttr("ref")].second);
+				//buildAnnotations(*iter, typeParam, true);
+				typeParams.push_back(typeParam);
 			}
 		}
 
@@ -1345,10 +1362,10 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			vector<XmlElement> intPar = intParam->getChildrenByName("intTypeParam");
 			for(vector<XmlElement>::const_iterator iter = intPar.begin(); iter != intPar.end(); ++iter) {
 				if (iter->getChildrenByName("variable").size() != 0){
-					intTypeParams.push_back(IntTypeParam::getVariableIntParam(iter->getChildrenByName("variable")[0].getAttr("value")[0]));
+					intTypeParams.push_back(IntTypeParam::getVariableIntParam((iter->getFirstChildByName("variable"))->getAttr("value")[0]));
 				}
 				else if (iter->getChildrenByName("concrete").size() != 0){
-					intTypeParams.push_back(IntTypeParam::getConcreteIntParam(iter->getChildrenByName("concrete")[0].getAttr("value")[0]));
+					intTypeParams.push_back(IntTypeParam::getConcreteIntParam((iter->getFirstChildByName("concrete"))->getAttr("value")[0]));
 				}
 				else {
 					intTypeParams.push_back(IntTypeParam::getInfiniteIntParam());
@@ -1356,10 +1373,13 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			}
 		}
 		
+		GenericTypePtr gen = GenericType::get(manager, elem.getAttr("familyName"), typeParams, intTypeParams, baseType);
+		buildAnnotations(elem, gen, false);
+		
 		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-		elemMap[id] = make_pair(oldPair.first, GenericType::get(manager, elem.getAttr("familyName"), typeParams, intTypeParams, baseType));
+		elemMap[id] = make_pair(oldPair.first, gen);
 	}
 }
 
@@ -1384,7 +1404,7 @@ NodePtr XmlUtil::convertDomToIr(NodeManager& manager){
 	
 	vector<XmlElement> elemVec = inspire.getChildren();
 	for(vector<XmlElement>::const_iterator iter = elemVec.begin(); iter != elemVec.end(); ++iter) {
-		elemMap[iter->getAttr("id")] = make_pair(&(*iter), NodePtr()); // fare check del rootNode ??
+		elemMap[iter->getAttr("id")] = make_pair(&(*iter), NodePtr());
 	}
 	
 	XmlElementPtr root = inspire.getFirstChildByName("rootNode");
