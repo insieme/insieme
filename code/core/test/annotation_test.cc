@@ -279,8 +279,40 @@ TEST(Annotation, CastTest) {
 	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE(type2.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(type2.hasAnnotation(DummyAnnotation2::DummyKey));
+}
+
+TEST(Annotation, EqualsTest) {
+
+	NodeManager manager1;
+	NodeManager manager2;
 
 
+	// create a node
+	TypePtr child = GenericType::get(manager1, "B");
+	GenericTypePtr type1 = GenericType::get(manager1, "A", toVector(child));
+	GenericTypePtr type2 = GenericType::get(manager2, "A", toVector(child));
+	EXPECT_EQ(*type1, *type2);
+
+	// add an annotation
+	type1->getTypeParameter()[0].addAnnotation(std::make_shared<DummyAnnotation>(1));
+
+	EXPECT_TRUE(type1->getTypeParameter()[0].hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type2->getTypeParameter()[0].hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_EQ(*type1, *type2);
+
+	EXPECT_FALSE(equalsWithAnnotations(type1, type2));
+	EXPECT_FALSE(equalsWithAnnotations(type1->getTypeParameter()[0], type2->getTypeParameter()[0]));
+
+	// add an annotation
+	type1->getTypeParameter()[0].remAnnotation(DummyAnnotation::DummyKey);
+	type1->getTypeParameter()[0]->addAnnotation(std::make_shared<DummyAnnotation>(1));
+
+	EXPECT_TRUE(type1->getTypeParameter()[0]->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type2->getTypeParameter()[0]->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_EQ(*type1, *type2);
+
+	EXPECT_FALSE(equalsWithAnnotations(type1, type2));
+	EXPECT_FALSE(equalsWithAnnotations(type1->getTypeParameter()[0], type2->getTypeParameter()[0]));
 }
 
 } // end namespace core

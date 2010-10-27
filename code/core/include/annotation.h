@@ -86,6 +86,30 @@ public:
 	 */
 	virtual const std::string toString() const { return std::string(); };
 
+	/**
+	 * Checks whether this annotation is equivalent to the given annotation. The default
+	 * implementation returns true if and only if the given object is the same instance
+	 * (object identity).
+	 *
+	 * @param other the annotation to be compared with
+	 * @return true if equivalent, false otherwise.
+	 */
+	virtual bool operator==(const Annotation& other) const {
+		return this == &other;
+	}
+
+	/**
+	 * Checks whether this annotation is not equivalent to the given annotation. The default
+	 * implementation returns returns true whenever the given annotation is not the same
+	 * instance as this annotation (object identity).
+	 *
+	 * @param other the annotation to be compared to
+	 * @return true if not equivalent, false otherwise
+	 */
+	virtual bool operator!=(const Annotation& other) const {
+		return this!=&other;
+	}
+
 };
 
 /**
@@ -342,6 +366,16 @@ public:
 	 */
 	StringKey(const string& value) : SimpleKey<string, AnnotationType, std::equal_to<string>>(value) {};
 };
+
+
+/**
+ * Checks whether the given two annotatable objects are equipped with the same set of annotations.
+ *
+ * @param annotatableA the first of the annotatable objects to be compared
+ * @param annotatableB the second of the annotatable objects to be compared
+ * @return true if both have the same set of annotations, false otherwise
+ */
+bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& annotatableB);
 
 } // end namespace core
 } // end namespace insieme

@@ -501,6 +501,17 @@ inline AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr
 	return res;
 }
 
+/**
+ * Checks whether the given two node pointer are the root of the same AST tree
+ * containing the same set of annotations on the nodes and the pointer between
+ * nodes.
+ *
+ * @param nodeA the root of the first tree
+ * @param nodeB the root of the second tree
+ * @return true if they are equivalent, false otherwiser
+ */
+bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB);
+
 } // end namespace core
 } // end namespace insieme
 

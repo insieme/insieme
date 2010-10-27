@@ -178,9 +178,9 @@ public:
 
 	CodePtr getCode() { return defCodePtr; }
 
-	//void visitNode(const NodePtr& node) {
-	//	std::cout << *node << std::endl;
-	//}
+	void visitNode(const NodePtr& node) {
+		cStr << "<?>" << toString(*node) << "</?>";
+	}
 
 	void visitProgram(const ProgramPtr&) {
 		assert(0 && "ConvertVisitor should never encounter program node");

@@ -117,11 +117,18 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 
 
 void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
+
+	// obtain a name for the lambda ...
 	string cFunName = cc.getNameGen().getName(ptr);
 	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
+		// => take original c name
 		cFunName = cnameAnn->getName();
 	}
+
+	// add a dependency to the function definition
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cFunName));
+
+	// print name
 	cStr << cFunName;
 }
 
@@ -350,13 +357,14 @@ string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unn
 	if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
 	// generate a new name string
 	std::stringstream name;
+
 	switch(ptr->getNodeCategory()) {
 	case NC_Support:
 		name << "supp"; break;
 	case NC_Type:
 		name << "type"; break;
 	case NC_Expression:
-		name << "expr"; break;
+		name << ((ptr->getNodeType() == NT_LambdaExpr) ? "fun" : "expr") ; break;
 	case NC_Statement:
 		name << "stat"; break;
 	case NC_Program:
