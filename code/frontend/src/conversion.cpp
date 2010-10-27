@@ -2041,25 +2041,43 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 				continue;
 			}
 
-			//check if the declaration has attribute __global
-			if(sr == "__global") {
-				ss << "Address space __global not allowed for local variable";
-				throw &ss;
-			}
+            // keywords global and local are only allowed for parameters
+            // TODO global also for global variables
+            if(dyn_cast<clang::ParmVarDecl>(varDecl)) {
 
-			//check if the declaration has attribute __constant
-			if(sr == "__constant") {
-				ss << "Address space __constant not allowed for local variable";
-				throw &ss;
-			}
+                //check if the declaration has attribute __global
+                if(sr == "__global") {
+                    DVLOG(2) << "           OpenCL address space __global";
+                    declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+                            ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
+                    continue;
+                }
 
-			ss << "Unexpected annotation " << sr;
+                //check if the declaration has attribute __constant
+                if(sr == "__constant") {
+                    DVLOG(2) << "           OpenCL address space __constant";
+                    declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
+                            ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
+                    continue;
+                }
+            } else {
+                //check if the declaration has attribute __global
+                if(sr == "__global") {
+                    ss << "Address space __global not allowed for local variable";
+                    throw &ss;
+                }
 
-			throw &ss;
+                //check if the declaration has attribute __constant
+                if(sr == "__constant") {
+                    ss << "Address space __constant not allowed for local variable";
+                    throw &ss;
+                }
+            }
 		}
-		else
-			ss << "Unexpected attribute";
-			throw &ss;
+
+		// Throw an error if an unhandled attribute is found
+		ss << "Unexpected attribute";
+		throw &ss;
 	}}
 	catch(std::ostringstream *errMsg) {
         //show errors if unexpected patterns were found
@@ -2068,71 +2086,6 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
-// @@@@@@@@@@@@@@@@@@@ THIS CODE IS ACTUALLY NOT NEEDED @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ (or is it?) @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-/* Function to convert Clang attributes of declarations to IR annotations (arguments version)
- * currently used for:
- * OpenCL address spaces
- */
-//core::AnnotationPtr ConversionFactory::convertAttribute(const clang::ParmVarDecl* varDecl) {
-//    if(!varDecl->hasAttrs())
-//    	return core::AnnotationPtr();
-//
-//	const AttrVec attrVec = varDecl->getAttrs();
-//	std::ostringstream ss;
-//	ocl::BaseAnnotation::AnnotationList paramAnnotation;
-//
-//	try {
-//	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-//		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-//			std::string sr = attr->getAnnotation().str();
-//
-//			//check if the declaration has attribute __private
-//			if(sr == "__private") {
-//				DVLOG(2) << "           OpenCL address space __private";
-//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-//						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
-//				continue;
-//			}
-//
-//			//check if the declaration has attribute __local
-//			if(sr == "__local") {
-//				DVLOG(2) << "           OpenCL address space __local";
-//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-//						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
-//				continue;
-//			}
-//
-//			//check if the declaration has attribute __global
-//			if(sr == "__global") {
-//				DVLOG(2) << "           OpenCL address space __global";
-//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-//						ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
-//				continue;
-//			}
-//
-//			//check if the declaration has attribute __constant
-//			if(sr == "__constant") {
-//				DVLOG(2) << "           OpenCL address space __constant";
-//				paramAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-//						ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
-//				continue;
-//			}
-//			ss << "Unexpected annotation " << sr;
-//
-//			throw &ss;
-//		}
-//		else
-//			ss << "Unexpected attribute";
-//			throw &ss;
-//	}}
-//	catch(std::ostringstream *errMsg) {
-//        //show errors if unexpected patterns were found
-//        printErrorMsg(*errMsg, clangComp, varDecl);
-//	}
-//	return std::make_shared<ocl::BaseAnnotation>(paramAnnotation);
-//}
-// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 ConversionFactory::~ConversionFactory() {
 	delete ctx;

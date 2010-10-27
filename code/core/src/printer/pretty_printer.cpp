@@ -242,7 +242,7 @@ namespace {
 				for_each(list.begin(), list.end()-1, [&](const NodePtr& cur) {
 					this->visit(cur);
 					out << ";";
-					newLine();
+					this->newLine();
 				});
 				this->visit(*(list.end()-1));
 				out << ";";decreaseIndent(); newLine();
@@ -269,9 +269,9 @@ namespace {
 
 				NodePtr body = node->getBody();
 				if (body->getNodeType() != NT_CompoundStmt) {
-					increaseIndent(); newLine();
+					increaseIndent(); this->newLine();
 					this->visit(body);
-					decreaseIndent(); newLine();
+					decreaseIndent(); this->newLine();
 				} else {
 					this->visit(node->getBody());
 				}
@@ -291,17 +291,17 @@ namespace {
 				// variables can be directly printed
 				out << "switch(";
 				this->visit(node->getSwitchExpr());
-				out << ") {"; increaseIndent(); newLine();
+				out << ") {"; increaseIndent(); this->newLine();
 				for_each(node->getCases(), [&](const SwitchStmt::Case& cur) {
 					out << "case ";
 					this->visit(cur.first);
 					out << ": ";
 					this->visit(cur.second);
-					newLine();
+					this->newLine();
 				});
 				out << "default: ";
 				this->visit(node->getDefaultCase());
-				decreaseIndent(); newLine(); out << "}";
+				decreaseIndent(); this->newLine(); out << "}";
 		});
 
 		PRINT(Variable, {
@@ -399,7 +399,7 @@ namespace {
 					out << *cur.first << " = ";
 					this->visit(cur.second);
 					out << ";";
-					if (count++ < defs.size() -1) newLine();
+					if (count++ < defs.size() -1) this->newLine();
 				});
 
 				decreaseIndent();
@@ -420,7 +420,7 @@ namespace {
 					out << *cur.first << " = ";
 					this->visit(cur.second);
 					out << ";";
-					if (count++ < defs.size() -1) newLine();
+					if (count++ < defs.size() -1) this->newLine();
 				});
 
 				decreaseIndent();
@@ -432,10 +432,10 @@ namespace {
 		PRINT(Program, {
 			out << "// Inspire Program "; newLine();
 			for_each(node->getEntryPoints(), [&](const NodePtr& cur) {
-				this->out << "//  Entry Point: "; newLine();
-				increaseIndent();
+				this->out << "//  Entry Point: "; this->newLine();
+				this->increaseIndent();
 				this->visit(cur);
-				decreaseIndent();
+				this->decreaseIndent();
 			});
 		});
 
