@@ -177,12 +177,9 @@ void switch_stmt_test() {
 
 
 void while_stmt_test() {
-
 	int it = 0;
-
 	#pragma test "while(int.ne(ref.deref(v1), 0)) {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
 	while(it != 0) { it-=1; }
-
 }
 
 #pragma test "rec v1.{v2=fun(ref<int<4>> v4){ {return v1(int.add(ref.deref(v4), 1));} }, v1=fun(ref<int<4>> v3){ {return v2(int.sub(ref.deref(v3), 1));} }}"
@@ -205,7 +202,7 @@ void vector_stmt_test() {
 //	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
 	int a[5];
 
-	#pragma test "subscript(ref.deref(v1), 0)"
+	#pragma test "subscript_single(ref.deref(v1), 0)"
 	a[0];
 
 }
