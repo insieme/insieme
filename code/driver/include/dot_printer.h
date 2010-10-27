@@ -84,9 +84,9 @@ enum NodeProperty{ LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR };
 class DOTGraphBuilder: public GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> {
 	std::ostream& 	out;
 public:
-	typedef typename GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Node 		Node;
-	typedef typename GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Link 		Link;
-	typedef typename GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Decorator	Properties;
+	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Node 		Node;
+	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Link 		Link;
+	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Decorator	Properties;
 
 	DOTGraphBuilder(std::ostream& out): out(out) { }
 
