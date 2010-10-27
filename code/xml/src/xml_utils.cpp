@@ -1369,7 +1369,7 @@ void checkRef(NodeManager& manager, const XmlElement& elem, elemMapType& elemMap
 
 } // end namespace
 
-void XmlUtil::convertDomToIr(NodeManager& manager){
+NodePtr XmlUtil::convertDomToIr(NodeManager& manager){
 	elemMapType elemMap;
 	
 	XmlElement inspire(doc->getDocumentElement(), doc);
@@ -1383,6 +1383,8 @@ void XmlUtil::convertDomToIr(NodeManager& manager){
 	assert(rootVec.size() == 1 && "There are more than one rootNode!!");	
 	
 	buildNode(manager, rootVec[0], elemMap);
+	
+	return elemMap[(rootVec[0].getChildrenByName("nodePtr")[0]).getAttr("ref")].second;
 }
 
 void XmlUtil::convertIrToDom(const NodePtr& node){

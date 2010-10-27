@@ -76,7 +76,7 @@ Literal::Literal(const TypePtr& type, const string& value) :
 
 
 Literal* Literal::createCopyUsing(NodeMapping& mapper) const {
-	return new Literal(mapper.map(type), value);
+	return new Literal(mapper.map(0, type), value);
 }
 
 bool Literal::equalsExpr(const Expression& expr) const {
@@ -106,7 +106,7 @@ Variable::Variable(const TypePtr& type, unsigned int id)
 	: Expression(NT_Variable, type, hashVariable(type, id)), id(id) {};
 
 Variable* Variable::createCopyUsing(NodeMapping& mapper) const {
-	return new Variable(mapper.map(type), id);
+	return new Variable(mapper.map(0, type), id);
 }
 
 bool Variable::equalsExpr(const Expression& expr) const {
@@ -141,9 +141,9 @@ LambdaExpr::LambdaExpr(const TypePtr& type, const ParamList& params, const State
 
 LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(
-			mapper.map(type),
-			mapper.map(params),
-			mapper.map(body)
+			mapper.map(0, type),
+			mapper.map(1, params),
+			mapper.map(1+params.size(), body)
 	);
 }
 
@@ -185,8 +185,8 @@ TupleExpr::TupleExpr(const TupleTypePtr& type, const vector<ExpressionPtr>& expr
 
 TupleExpr* TupleExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new TupleExpr(
-			mapper.map(static_pointer_cast<const TupleType>(type)),
-			mapper.map(expressions)
+			mapper.map(0, static_pointer_cast<const TupleType>(type)),
+			mapper.map(1, expressions)
 		);
 }
 
@@ -228,8 +228,8 @@ VectorExpr::VectorExpr(const VectorTypePtr& type, const vector<ExpressionPtr>& e
 
 VectorExpr* VectorExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new VectorExpr(
-			mapper.map(static_pointer_cast<const VectorType>(type)),
-			mapper.map(expressions)
+			mapper.map(0, static_pointer_cast<const VectorType>(type)),
+			mapper.map(1, expressions)
 	);
 }
 
@@ -282,11 +282,12 @@ bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
 		return l.first == r.first && *l.second == *r.second; });
 }
 
-NamedCompositeExpr::Members copyMembersUsing(NodeMapping& mapper, const NamedCompositeExpr::Members& members) {
+NamedCompositeExpr::Members copyMembersUsing(NodeMapping& mapper, unsigned offset, const NamedCompositeExpr::Members& members) {
 	NamedCompositeExpr::Members res;
+	unsigned index = offset;
 	std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
-			[&mapper](const NamedCompositeExpr::Member& m) {
-				return NamedCompositeExpr::Member(m.first, mapper.map(m.second));
+			[&mapper, &index](const NamedCompositeExpr::Member& m) {
+				return NamedCompositeExpr::Member(m.first, mapper.map(index++, m.second));
 	});
 	return res;
 }
@@ -322,7 +323,7 @@ StructExpr::StructExpr(const TypePtr& type, const Members& members)
 	: NamedCompositeExpr(NT_StructExpr, type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
 
 StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new StructExpr(mapper.map(type), copyMembersUsing(mapper, members));
+	return new StructExpr(mapper.map(0, type), copyMembersUsing(mapper, 1, members));
 }
 
 std::ostream& StructExpr::printTo(std::ostream& out) const {
@@ -341,7 +342,7 @@ UnionExpr::UnionExpr(const TypePtr& type, const Members& members)
 	: NamedCompositeExpr(NT_UnionExpr, type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
 
 UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new UnionExpr(mapper.map(type), copyMembersUsing(mapper, members));
+	return new UnionExpr(mapper.map(0, type), copyMembersUsing(mapper, 1, members));
 }
 
 std::ostream& UnionExpr::printTo(std::ostream& out) const {
@@ -376,11 +377,16 @@ const JobExpr::GuardedStmts& isolateGuardedStmts(const JobExpr::GuardedStmts& st
 	return stmts;
 }
 
-const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, const JobExpr::GuardedStmts& stmts) {
+const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, unsigned offset, const JobExpr::GuardedStmts& stmts) {
 	JobExpr::GuardedStmts localGuardedStmts;
 	std::transform(stmts.cbegin(), stmts.cend(), back_inserter(localGuardedStmts),
-		[&localGuardedStmts, &mapper](const JobExpr::GuardedStmt& stmt) {
-			return JobExpr::GuardedStmt(mapper.map(stmt.first), mapper.map(stmt.second));
+		[&localGuardedStmts, &mapper, &offset](const JobExpr::GuardedStmt& stmt)->JobExpr::GuardedStmt {
+			JobExpr::GuardedStmt res = JobExpr::GuardedStmt(
+					mapper.map(offset, stmt.first),
+					mapper.map(offset+1, stmt.second)
+			);
+			offset+=2;
+			return res;
 	});
 	return localGuardedStmts;
 }
@@ -393,10 +399,10 @@ JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const Gua
 
 JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new JobExpr(
-			mapper.map(type),
-			mapper.map(defaultStmt),
-			copyGuardedStmtsUsing(mapper, guardedStmts),
-			mapper.map(localDecls));
+			mapper.map(0, type),
+			mapper.map(2 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
+			copyGuardedStmtsUsing(mapper, 2 + localDecls.size(), guardedStmts),
+			mapper.map(1, localDecls));
 }
 
 Node::OptionChildList JobExpr::getChildNodes() const {
@@ -459,10 +465,11 @@ CallExpr::CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr
 		  functionExpr(isolate(functionExpr)), arguments(isolate(arguments)) { }
 
 CallExpr* CallExpr::createCopyUsing(NodeMapping& mapper) const {
+	NodePtr parent(this);
 	return new CallExpr(
-			mapper.map(type),
-			mapper.map(functionExpr),
-			mapper.map(arguments)
+			mapper.map(0, type),
+			mapper.map(1, functionExpr),
+			mapper.map(2, arguments)
 		);
 }
 
@@ -507,7 +514,7 @@ CastExpr::CastExpr(const TypePtr& type, const ExpressionPtr& subExpression)
 		: Expression(NT_CastExpr, type, hashCastExpr(type, subExpression)), subExpression(isolate(subExpression)) { }
 
 CastExpr* CastExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new CastExpr(mapper.map(type), mapper.map(subExpression));
+	return new CastExpr(mapper.map(0, type), mapper.map(1, subExpression));
 }
 
 bool CastExpr::equalsExpr(const Expression& expr) const {
@@ -549,14 +556,16 @@ const RecLambdaDefinition::RecFunDefs& isolateRecFunDef(const RecLambdaDefinitio
 	return definitions;
 }
 
-RecLambdaDefinition::RecFunDefs copyRecFunDefUsing(NodeMapping& mapper, const RecLambdaDefinition::RecFunDefs& definitions) {
+RecLambdaDefinition::RecFunDefs copyRecFunDefUsing(NodeMapping& mapper, unsigned offset, const RecLambdaDefinition::RecFunDefs& definitions) {
 	RecLambdaDefinition::RecFunDefs res;
 	std::transform(definitions.begin(), definitions.end(), inserter(res, res.end()),
-		[&mapper](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
-			return RecLambdaDefinition::RecFunDefs::value_type(
-					mapper.map(cur.first),
-					mapper.map(cur.second)
+		[&mapper, &offset](const RecLambdaDefinition::RecFunDefs::value_type& cur)->RecLambdaDefinition::RecFunDefs::value_type {
+			auto res = RecLambdaDefinition::RecFunDefs::value_type(
+					mapper.map(offset, cur.first),
+					mapper.map(offset+1, cur.second)
 			);
+			offset +=2;
+			return res;
 	});
 	return res;
 }
@@ -569,7 +578,7 @@ RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecL
 }
 
 RecLambdaDefinition* RecLambdaDefinition::createCopyUsing(NodeMapping& mapper) const {
-	return new RecLambdaDefinition(copyRecFunDefUsing(mapper, definitions));
+	return new RecLambdaDefinition(copyRecFunDefUsing(mapper, 0, definitions));
 }
 
 bool RecLambdaDefinition::equals(const Node& other) const {
@@ -620,7 +629,7 @@ RecLambdaExpr::RecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinit
 	  variable(isolate(variable)), definition(isolate(definition)) { }
 
 RecLambdaExpr* RecLambdaExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new RecLambdaExpr(mapper.map(variable), mapper.map(definition));
+	return new RecLambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
 }
 
 Node::OptionChildList RecLambdaExpr::getChildNodes() const {

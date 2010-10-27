@@ -151,7 +151,7 @@ public:
     OclMapper(core::ASTBuilder& astBuilder)
         : builder(astBuilder) { };
 
-    const core::NodePtr mapElement(const core::NodePtr& element) {
+    const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
         // quick check - stop recursion at variables
         if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
             return element;//->substitute(builder.getNodeManager(), *this);
@@ -238,7 +238,7 @@ void Compiler::lookForOclAnnotations() {
 
     OclMapper oclAnnotationExpander(builder);
 //    visitor.visit(mProgram);
-    const core::NodePtr progNode = oclAnnotationExpander.mapElement(mProgram);
+    const core::NodePtr progNode = oclAnnotationExpander.mapElement(0, mProgram);
     if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(progNode))
         mProgram = newProg;
     else

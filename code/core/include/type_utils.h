@@ -48,7 +48,6 @@
 namespace insieme {
 namespace core {
 
-
 class Substitution {
 
 public:

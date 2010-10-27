@@ -124,7 +124,7 @@ TupleType::TupleType(const ElementTypeList& elementTypes) :
 
 
 TupleType* TupleType::createCopyUsing(NodeMapping& mapper) const {
-	return new TupleType(mapper.map(elementTypes));
+	return new TupleType(mapper.map(0, elementTypes));
 }
 
 TupleTypePtr TupleType::getEmpty(NodeManager& manager) {
@@ -155,7 +155,7 @@ FunctionTypePtr FunctionType::get(NodeManager& manager, const TupleTypePtr& argu
 }
 
 FunctionType* FunctionType::createCopyUsing(NodeMapping& mapper) const {
-	return new FunctionType(mapper.map(argumentType),mapper.map(returnType));
+	return new FunctionType(mapper.map(0, argumentType),mapper.map(1, returnType));
 }
 
 Node::OptionChildList FunctionType::getChildNodes() const {
@@ -222,7 +222,11 @@ GenericType::GenericType(NodeType nodeType, const Identifier& name,
 		baseType(isolate(baseType)) { }
 
 GenericType* GenericType::createCopyUsing(NodeMapping& mapper) const {
-	return new GenericType(familyName, mapper.map(typeParams), mapper.mapParam(intParams), mapper.map(baseType));
+	return new GenericType(familyName,
+			mapper.map(0, typeParams),
+			mapper.mapParam(intParams),
+			mapper.map(0+typeParams.size(), baseType)
+	);
 }
 
 /**
@@ -278,13 +282,15 @@ namespace { // some anonymous functions for the Rec Definition
 		return definitions;
 	}
 
-	RecTypeDefinition::RecTypeDefs copyRecDefinitonsUsing(NodeMapping& mapper, const RecTypeDefinition::RecTypeDefs& definitions) {
+	RecTypeDefinition::RecTypeDefs copyRecDefinitonsUsing(NodeMapping& mapper, unsigned offset, const RecTypeDefinition::RecTypeDefs& definitions) {
 		RecTypeDefinition::RecTypeDefs localDefinitions;
 		std::transform(definitions.begin(), definitions.end(), inserter(localDefinitions, localDefinitions.end()),
-			[&mapper](const RecTypeDefinition::RecTypeDefs::value_type& cur) {
-				return RecTypeDefinition::RecTypeDefs::value_type(
-						mapper.map(cur.first),
-						mapper.map(cur.second));
+			[&mapper, &offset](const RecTypeDefinition::RecTypeDefs::value_type& cur)->RecTypeDefinition::RecTypeDefs::value_type {
+				auto res = RecTypeDefinition::RecTypeDefs::value_type(
+						mapper.map(offset, cur.first),
+						mapper.map(offset+1, cur.second));
+				offset += 2;
+				return res;
 		});
 		return localDefinitions;
 	}
@@ -300,7 +306,7 @@ RecTypeDefinitionPtr RecTypeDefinition::get(NodeManager& manager, const RecTypeD
 }
 
 RecTypeDefinition* RecTypeDefinition::createCopyUsing(NodeMapping& mapper) const {
-	return new RecTypeDefinition(copyRecDefinitonsUsing(mapper, definitions));
+	return new RecTypeDefinition(copyRecDefinitonsUsing(mapper, 0, definitions));
 }
 
 bool RecTypeDefinition::equals(const Node& other) const {
@@ -368,7 +374,7 @@ RecType::RecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& de
 
 
 RecType* RecType::createCopyUsing(NodeMapping& mapper) const {
-	return new RecType(mapper.map(typeVariable), mapper.map(definition));
+	return new RecType(mapper.map(0, typeVariable), mapper.map(1, definition));
 }
 
 Node::OptionChildList RecType::getChildNodes() const {
@@ -392,7 +398,7 @@ const NamedCompositeType::Entries& isolateEntries(const NamedCompositeType::Entr
 	return entries;
 }
 
-NamedCompositeType::Entries copyEntriesUsing(NodeMapping& mapper, const NamedCompositeType::Entries& entries) {
+NamedCompositeType::Entries copyEntriesUsing(NodeMapping& mapper, unsigned offset, const NamedCompositeType::Entries& entries) {
 	// quick check ..
 	if (entries.empty()) {
 		return entries;
@@ -401,8 +407,8 @@ NamedCompositeType::Entries copyEntriesUsing(NodeMapping& mapper, const NamedCom
 	// obtain elements by looking up one after another ...
 	NamedCompositeType::Entries res;
 	std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
-		[&mapper](const NamedCompositeType::Entry& cur) {
-			return NamedCompositeType::Entry(cur.first, mapper.map(cur.second));
+		[&mapper, &offset](const NamedCompositeType::Entry& cur) {
+			return NamedCompositeType::Entry(cur.first, mapper.map(offset++, cur.second));
 	});
 	return res;
 }
@@ -472,7 +478,7 @@ StructTypePtr StructType::get(NodeManager& manager, const Entries& entries) {
 }
 
 StructType* StructType::createCopyUsing(NodeMapping& mapper) const {
-	return new StructType(copyEntriesUsing(mapper, getEntries()));
+	return new StructType(copyEntriesUsing(mapper, 0, getEntries()));
 }
 
 // ------------------------------------ Union Type ---------------------------
@@ -483,7 +489,7 @@ UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 }
 
 UnionType* UnionType::createCopyUsing(NodeMapping& mapper) const {
-	return new UnionType(copyEntriesUsing(mapper, getEntries()));
+	return new UnionType(copyEntriesUsing(mapper, 0, getEntries()));
 }
 
 
@@ -500,7 +506,7 @@ ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParam& dim) :
 	SingleElementType(NT_ArrayType, "array", elementType, toVector(dim)) {}
 
 ArrayType* ArrayType::createCopyUsing(NodeMapping& mapper) const {
-	return new ArrayType(mapper.map(getElementType()), getDimension());
+	return new ArrayType(mapper.map(0, getElementType()), mapper.mapParam(getDimension()));
 }
 
 ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim) {
@@ -518,7 +524,7 @@ VectorType::VectorType(const TypePtr& elementType, const IntTypeParam& size) :
 	SingleElementType(NT_VectorType, "vector", elementType, toVector(size)) {}
 
 VectorType* VectorType::createCopyUsing(NodeMapping& mapper) const {
-	return new VectorType(mapper.map(getElementType()), getIntTypeParameter()[0]);
+	return new VectorType(mapper.map(0, getElementType()), mapper.mapParam(getSize()));
 }
 
 VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
@@ -539,7 +545,7 @@ RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
 }
 
 RefType* RefType::createCopyUsing(NodeMapping& mapper) const {
-	return new RefType(mapper.map(getElementType()));
+	return new RefType(mapper.map(0, getElementType()));
 }
 
 
@@ -549,7 +555,7 @@ ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParam& size) :
 	SingleElementType(NT_ChannelType, "channel", elementType, toVector(size)) {}
 
 ChannelType* ChannelType::createCopyUsing(NodeMapping& mapper) const {
-	return new ChannelType(mapper.map(getElementType()), getSize());
+	return new ChannelType(mapper.map(0, getElementType()), mapper.mapParam(getSize()));
 }
 
 ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {

@@ -74,7 +74,7 @@ class ConversionFactory {
 	ClangExprConverter* exprConv;
 	ClangStmtConverter* stmtConv;
 
-	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type );
+	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type);
 
 	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
 

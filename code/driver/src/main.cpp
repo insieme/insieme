@@ -49,6 +49,7 @@
 #include "ast_statistic.h"
 
 #include "checks/typechecks.h"
+#include "printer/pretty_printer.h"
 
 #include "container_utils.h"
 #include "string_utils.h"
@@ -88,7 +89,6 @@ int main(int argc, char** argv) {
 
 		// do the actual clang to IR conversion
 		insieme::core::ProgramPtr program = p.convert();
-		LOG(INFO) << "Parsed Program: " << std::endl << *program;
 
 		// perform checks
 		MessageList errors = check(program, insieme::core::checks::getFullCheck());
@@ -104,8 +104,16 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
 		LOG(INFO) << "Height of tree: " << stats.getHeight();
 
+		// a pretty print of the AST
+		LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
+		LOG(INFO) << insieme::core::printer::PrettyPrint(program);
+		LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
+		LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
+		LOG(INFO) << "================================= END ===========================================";
+
+		// creates dot graph of the generated IR
 		std::fstream dotFile("inspire.dot", std::fstream::out | std::fstream::trunc);
-		insieme::printDotGraph(program, errors, dotFile);
+		insieme::driver::printDotGraph(program, errors, dotFile);
 		dotFile.close();
 
 		// XML dump

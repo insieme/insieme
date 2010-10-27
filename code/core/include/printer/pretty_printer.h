@@ -34,29 +34,60 @@
  * regarding third party software licenses.
  */
 
-//typedef int bool;
-#define bool int
+#pragma once
 
-#define true 1
-#define false 0
+#include <iostream>
 
-extern int printf(char *, ...);
+#include "ast_node.h"
 
-bool even(unsigned x);
-bool odd(unsigned x);
+namespace insieme {
+namespace core {
+namespace printer {
 
-bool even(unsigned x) {
-	return (x==0)?true:odd(x-1);
-}
+/**
+ * A struct representing a pretty print of a AST subtree. Instances may be streamed
+ * into an output stream to obtain a readable version of an AST.
+ */
+struct PrettyPrint {
 
-bool odd(unsigned x) {
-	return (x==0)?false:even(x-1);
-}
+	/**
+	 * The root node of the sub-try to be printed
+	 */
+	const NodePtr& root;
 
-int main(int argc, char* argv[]) {
-	int x = 10;
-	printf("x=%d\n", x);
-	printf("even(x)=%s\n", (even(x))?"true":"false");
-	printf("odd(x)=%s\n", (odd(x))?"true":"false");
-	return 0;
-}
+	/**
+	 * A flag to indicate whether ref.deref operations should be visible or not.
+	 */
+	const bool hideDeref;
+
+	/**
+	 * A flag to indicate whether cast operations should be visible or not.
+	 */
+	const bool hideCasts;
+
+	/**
+	 * A flag to indicate whether brackets fixing operater precidence should be ommited or
+	 * not.
+	 */
+	const bool hideBrackets;
+
+	/**
+	 * Creates a new pretty print instance.
+	 *
+	 * @param root the root node of the AST to be printed
+	 * @param hideDeref if set to true, no deref operations will be printed
+	 * @param hideCasts if set to true, no casts will be printed
+	 * @param hideBrackets if set to true, no brackets to fix the order of operations within a expression will be printed
+	 */
+	PrettyPrint(const NodePtr& root, bool hideDeref = true, bool hideCasts = true, bool hideBrackets = true)
+		: root(root), hideDeref(hideDeref), hideCasts(hideCasts), hideBrackets(hideBrackets) {}
+};
+
+} // end of namespace printer
+} // end of namespace core
+} // end of namespace insieme
+
+/**
+ * Allows pretty prints to be directly printed into output streams.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrint& print);

@@ -74,10 +74,28 @@ NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root,
  * 				and it should be used with care. In case on of the resulting nodes is already present
  * 				within the manager, the present node and its version of the annotations will be preserved
  * 				and returned.
+ * @return the root node of the modified AST tree
  */
 NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root,
 		const NodePtr& toReplace, const NodePtr& replacement,
 		bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * Replaces the node specified by the given address and returns the root node of the modified tree.
+ *
+ * @param manager the manager to be used for maintaining node instances
+ * @param toReplace the address of the node to be replaced
+ * @param replacement the node to be used as a substitution for the toReplace node
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace,
+		const NodePtr& replacement, bool preservePtrAnnotationsWhenModified = false);
+
 
 } // End transform namespace
 } // End core namespace

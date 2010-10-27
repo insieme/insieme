@@ -52,7 +52,7 @@ double init_func(int x, int y) {
 	return 40 * sin((double)(16 * (2 * x - 1) * y));
 }
 
-#define N 100
+#define N 5
 
 int main(int argc, char** argv) {
 	clock_t start_t, end_t;
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 #endif
 	start_t = clock();
 
-	#pragma insieme mark
+//	#pragma insieme mark
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for private(resv) reduction(+: resv)

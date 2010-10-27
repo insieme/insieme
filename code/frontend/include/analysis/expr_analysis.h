@@ -65,6 +65,10 @@ struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 
 	void visitVariable(const core::VariablePtr& varExpr) { insert(varExpr); }
 
+	// don't look inside the body of functions
+	void visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { }
+	void visitRecLambdaExpr(const core::RecLambdaExprPtr& lambdaExpr) { }
+
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
 		declaredVars.insert( declStmt->getVariable() );
 	}

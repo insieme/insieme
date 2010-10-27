@@ -619,6 +619,8 @@ public:
 
 	const RecTypeDefinitionPtr getDefinition() const { return definition; }
 
+	const TypeVariablePtr getTypeVariable() const { return typeVariable; }
+
 	/**
 	 * A factory method for obtaining a new recursive type instance.
 	 *

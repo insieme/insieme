@@ -74,7 +74,7 @@ XmlElement& DummyAnnotationToXML(const DummyAnnotation& ann, XmlElement& el){
 }
 
 DummyAnnotationPtr DummyAnnotationFromXML(const XmlElement& el){
-	return std::make_shared<DummyAnnotation>("1");
+	return std::make_shared<DummyAnnotation>(el.getChildrenByName("int")[0].getText());
 }
 
 XML_CONVERTER(DummyAnnotation, "DummyAnnotation", DummyAnnotationToXML, DummyAnnotationFromXML);
@@ -114,9 +114,12 @@ XmlElement& VectorAnnotationToXML(const VectorAnnotation& ann, XmlElement& el){
 
 VectorAnnotationPtr VectorAnnotationFromXML(const XmlElement& el){
 	vector <string> vec;
-	vec.push_back("test1");
-	vec.push_back("test2");
-	return std::make_shared<VectorAnnotation>( vec );
+	XmlElement entries = el.getChildrenByName("entries")[0];
+	vector<XmlElement> entryVec = entries.getChildrenByName("entry");
+	for (vector<XmlElement>::const_iterator iter = entryVec.begin(); iter != entryVec.end(); ++iter){
+		vec.push_back(iter->getText());
+	}
+	return std::make_shared<VectorAnnotation>(vec);
 }
 
 XML_CONVERTER(VectorAnnotation, "VectorAnnotation", VectorAnnotationToXML, VectorAnnotationFromXML)
@@ -159,7 +162,9 @@ TEST(XmlTest, GenericTypeTest) {
 	EXPECT_EQ (s1, s2);
 	
 	NodeManager manager2;
-	xml.convertDomToIr(manager2);
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
 }
 
 TEST(XmlTest, FunctionTypeTest) {
