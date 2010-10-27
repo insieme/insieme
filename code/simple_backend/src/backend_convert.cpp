@@ -46,6 +46,7 @@ namespace simple_backend {
 	
 using namespace core;
 
+
 CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifier& ident) {
 	auto codeIt = functionMap.find(ident);
 	if(codeIt != functionMap.end()) {
@@ -125,6 +126,7 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 }
 
 void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
+	//DLOG(INFO) << "CALLEXPR - " << ptr->getFunctionExpr() << ". prev cStr: \n" << cStr.getString();
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
 	auto funExp = ptr->getFunctionExpr();
 	// generic built in C operator handling
@@ -144,26 +146,30 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		//LOG(INFO) << "+++++++ val: " << funName << "\n";
 		if(funName == "ref.deref") {
 			// TODO decide whether no-op or *
-			visit(ptr->getArguments().front());
+			visit(args.front());
 			return;
-		} else if(funName == "subscript") {
-			visit(ptr->getArguments().front());
+		} if(funName == "ref.var") {
+			// TODO handle case where not RHS of local var decl
+			visit(args.front());
+			return;
+		} else if(funName == "subscript_single") {
+			visit(args.front());
 			cStr << "[";
-			visit(ptr->getArguments().back());
+			visit(args.back());
 			cStr << "]";
+			return;
+		} else if(funName == "pack") {
+			//DLOG(INFO) << cStr.getString();
+			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			//DLOG(INFO) << cStr.getString();
+			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
 			return;
 		}
 	}
 	// non built-in handling
 	visit(funExp);
 	cStr << "(";
-	if(args.size()>0) {
-		visit(args.front());
-		for_each(args.cbegin()+1, args.cend(), [&, this](const ExpressionPtr& curArg) {
-			this->cStr << ", ";
-			this->visit(curArg);
-		});
-	}
+	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 	cStr << ")";
 }
 
@@ -186,13 +192,13 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	}
 	if(!vecLengths.empty()) { // TODO check that innerType is "simple" enough to be part of C array
 		//LOG(INFO) << "+++++++ innerType " << innerType << "\n";
-		cStr << printTypeName(innerType) << " " << nameGen.getVarName(var);
+		cStr << cc.getTypeMan().getTypeName(innerType, true) << " " << nameGen.getVarName(var);
 		for_each(vecLengths, [this](unsigned vl) { this->cStr << "[" << vl << "]"; });
 		// TODO initialization
 		return;
 	}
 	// standard handling
-	cStr << printTypeName(var->getType()) << " " << nameGen.getVarName(var) << " = ";
+	cStr << cc.getTypeMan().getTypeName(var->getType(), true) << " " << nameGen.getVarName(var) << " = ";
 	visit(ptr->getInitialization());
 }
 
@@ -217,7 +223,7 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	}
 }
 
-void ConvertVisitor::visitReturnStmt( const ReturnStmtPtr& ptr )
+void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
 {
 	cStr << "return ";
 	if(*ptr->getReturnExpr()->getType() != lang::TYPE_UNIT_VAL) {
@@ -226,21 +232,30 @@ void ConvertVisitor::visitReturnStmt( const ReturnStmtPtr& ptr )
 	cStr << ";";
 }
 
-void ConvertVisitor::visitCompoundStmt( const CompoundStmtPtr& ptr ) {
-	cStr << "{" << CodeStream::indR << "\n";
-	for_each(ptr->getChildList(), [&](const NodePtr& cur) { 
-		this->visit(cur); 
-		cStr << ";";
-		if(cur != ptr->getChildList().back()) cStr << "\n";
-	});
-	cStr << CodeStream::indL << "\n}";
+void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
+	if(ptr->getStatements().size() > 0) {
+		cStr << "{" << CodeStream::indR << "\n";
+		for_each(ptr->getChildList(), [&](const NodePtr& cur) { 
+			this->visit(cur); 
+			cStr << ";";
+			if(cur != ptr->getChildList().back()) cStr << "\n";
+		});
+		cStr << CodeStream::indL << "\n}";
+	}
+}
+
+void ConvertVisitor::visitCastExpr(const CastExprPtr& ptr) {
+	cStr << "((" << cc.getTypeMan().getTypeName(ptr->getType()) << ")(";
+	visit(ptr->getSubExpression());
+	cStr << "))";
 }
 
 
 
-string TypeManager::getTypeName(const core::TypePtr type) {
-	SimpleTypeConverter conv(cc.getNameGen());
-	return conv.visit(type);
+string TypeManager::getTypeName(const core::TypePtr type, bool inDecl /* = false */) {
+	visitStarting = true;
+	declVisit = inDecl;
+	return visit(type);
 	// TODO handle complex types
 }
 
@@ -255,8 +270,8 @@ CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
 }
 
 
-string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
-	firstRef = true;
+string TypeManager::visitGenericType(const GenericTypePtr& ptr) {
+	visitStarting = false;
 	if(lang::isUnitType(*ptr)) {
 		return "void";
 	} else
@@ -293,21 +308,22 @@ string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 	return string("[[unhandled_simple_type: ") + ptr->getName() + "]]";
 }
 
-string SimpleTypeConverter::visitRefType(const RefTypePtr& ptr) {
-	if(firstRef) {
-		firstRef = false;
+string TypeManager::visitRefType(const RefTypePtr& ptr) {
+	if((declVisit && visitStarting) || !visitStarting) {
+		visitStarting = false;
 		return visit(ptr->getElementType());
 	}
+	visitStarting = false;
 	return visit(ptr->getElementType()) + "*";
 }
 
-string SimpleTypeConverter::visitStructType(const StructTypePtr& ptr) {
-	firstRef = true;
+string TypeManager::visitStructType(const StructTypePtr& ptr) {
+	visitStarting = false;
 	string structName;
 	if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
 		structName = annotation->getName();
 	} else {
-		structName = nameGen.getName(ptr, "unnamed_struct");
+		structName = cc.getNameGen().getName(ptr, "unnamed_struct");
 	}
 	std::ostringstream ret; // TODO use code stream
 	ret << "struct " << structName << " {\n";
@@ -315,6 +331,11 @@ string SimpleTypeConverter::visitStructType(const StructTypePtr& ptr) {
 		ret << this->visit(entry.second) << " " << entry.first.getName() << ";";
 	});
 	return ret.str();
+}
+
+string TypeManager::visitVectorType(const VectorTypePtr& ptr) {
+	visitStarting = false;
+	return visit(ptr->getElementType()) + "[" + toString(ptr->getSize()) + "]";
 }
 
 
