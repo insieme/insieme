@@ -1151,6 +1151,14 @@ const vector<XmlElement> XmlElement::getChildrenByName(const string& name) const
 	return vec;
 }
 
+const XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
+	DOMNodeList* list = base->getElementsByTagName(toUnicode(name));
+	if (list->getLength()){
+		return XmlElementPtr(new XmlElement(dynamic_cast<DOMElement*>(list->item(0)), doc));
+	}
+	return XmlElementPtr();
+}
+
 const vector<XmlElement> XmlElement::getChildren() const {
 	vector<XmlElement> vec;
 	DOMElement* first = base->getFirstElementChild();
@@ -1316,15 +1324,15 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 	// different type of node
 	if (elem.getName() == "genType") {
 		TypePtr baseType = NULL;
-		vector<XmlElement> base = elem.getChildrenByName("baseType");
-		if (base.size() != 0){
-			baseType = dynamic_pointer_cast<const Type>(elemMap[(base[0].getChildrenByName("typePtr")[0]).getAttr("ref")].second);
+		XmlElementPtr base = elem.getFirstChildByName("baseType");
+		if (base){
+			baseType = dynamic_pointer_cast<const Type>(elemMap[(base->getFirstChildByName("typePtr"))->getAttr("ref")].second);
 		}
 		
 		vector<TypePtr> typeParams;
-		vector<XmlElement> param = elem.getChildrenByName("typeParams");
-		if (param.size() != 0){
-			vector<XmlElement> types = param[0].getChildrenByName("typePtr");
+		XmlElementPtr param = elem.getFirstChildByName("typeParams");
+		if (param){
+			vector<XmlElement> types = param->getChildrenByName("typePtr");
 			for(vector<XmlElement>::const_iterator iter = types.begin(); iter != types.end(); ++iter) {
 				if (!dynamic_pointer_cast<const Type>(elemMap[iter->getAttr("ref")].second)) std::cout << "CIAO\n";
 				typeParams.push_back(dynamic_pointer_cast<const Type>(elemMap[iter->getAttr("ref")].second));
@@ -1332,9 +1340,9 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		}
 
 		vector<IntTypeParam> intTypeParams;
-		vector<XmlElement> intParam = elem.getChildrenByName("intTypeParams");
-		if (intParam.size() != 0){
-			vector<XmlElement> intPar = intParam[0].getChildrenByName("intTypeParam");
+		XmlElementPtr intParam = elem.getFirstChildByName("intTypeParams");
+		if (intParam){
+			vector<XmlElement> intPar = intParam->getChildrenByName("intTypeParam");
 			for(vector<XmlElement>::const_iterator iter = intPar.begin(); iter != intPar.end(); ++iter) {
 				if (iter->getChildrenByName("variable").size() != 0){
 					intTypeParams.push_back(IntTypeParam::getVariableIntParam(iter->getChildrenByName("variable")[0].getAttr("value")[0]));
@@ -1379,12 +1387,13 @@ NodePtr XmlUtil::convertDomToIr(NodeManager& manager){
 		elemMap[iter->getAttr("id")] = make_pair(&(*iter), NodePtr()); // fare check del rootNode ??
 	}
 	
-	vector<XmlElement> rootVec = inspire.getChildrenByName("rootNode");
-	assert(rootVec.size() == 1 && "There are more than one rootNode!!");	
+	XmlElementPtr root = inspire.getFirstChildByName("rootNode");
 	
-	buildNode(manager, rootVec[0], elemMap);
+	assert ( root && "RootNode is not present in DOM");
 	
-	return elemMap[(rootVec[0].getChildrenByName("nodePtr")[0]).getAttr("ref")].second;
+	buildNode(manager, *root, elemMap);
+	
+	return elemMap[(*root->getFirstChildByName("nodePtr")).getAttr("ref")].second;
 }
 
 void XmlUtil::convertIrToDom(const NodePtr& node){
