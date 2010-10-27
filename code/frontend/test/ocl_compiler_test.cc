@@ -58,8 +58,30 @@ namespace {
 class OclTestVisitor : public core::ASTVisitor<void> {
 public:
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
-        core::NodePtr node = func->getChildList()[1];
+//        core::AnnotationMap map = func.getAnnotations();
+ //       std::cout << "Size: " << map.size() << std::endl;
 
+        if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
+            core::FunctionType ft = *funcType;
+            core::TypePtr retTy = ft.getReturnType();
+
+            //check return type
+            EXPECT_EQ("unit", retTy->getName());
+
+            //check globalRange and localRange arguments
+            core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+            EXPECT_LE(2, args.size());
+            core::TypePtr globalRange = args.at(args.size()-2);
+            EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
+            core::TypePtr localRange = args.back();
+            EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
+
+        } else {
+            assert(funcType && "Function has unexpected type");
+        }
+
+
+        core::NodePtr node = func->getChildList()[0];
         std::cout << "this is lambdaaaa" << node->toString() << "\n";
     }
 
@@ -78,7 +100,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     // Set severity level
     SetStderrLogging(5);
-    CommandLineOptions::Verbosity = 2;
+//    CommandLineOptions::Verbosity = 2;
 
     core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
     core::ProgramPtr program = core::Program::create(*sharedManager);
