@@ -36,8 +36,7 @@
 
 #include "backend_convert.h"
 
-//#include <glog/logging.h>
-#include "logging.h"
+#include <glog/logging.h>
 
 #include "annotated_ptr.h"
 #include "types.h"
@@ -310,12 +309,13 @@ string TypeManager::visitGenericType(const GenericTypePtr& ptr) {
 }
 
 string TypeManager::visitRefType(const RefTypePtr& ptr) {
-	if((declVisit && visitStarting) || !visitStarting) {
+	auto elemType = ptr->getElementType();
+	if((declVisit && visitStarting) || elemType->getNodeType() == NT_VectorType ) {
 		visitStarting = false;
-		return visit(ptr->getElementType());
+		return visit(elemType);
 	}
 	visitStarting = false;
-	return visit(ptr->getElementType()) + "*";
+	return visit(elemType) + "*";
 }
 
 string TypeManager::visitStructType(const StructTypePtr& ptr) {
