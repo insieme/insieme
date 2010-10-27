@@ -237,3 +237,6 @@ public:
 } // end namespace core
 } // end namespace insieme
 
+namespace std {
+	ostream& operator<<(ostream& os, const insieme::core::IntTypeParam& p);
+}
