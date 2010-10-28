@@ -47,7 +47,7 @@ void basic_type_test() {
 
 	char d = 'a';
 
-	#pragma test "ref<ref<unit>> v4 = ref.var(null)"
+	#pragma test "ref<ref<'a>> v4 = ref.var(null)"
 	void* e;
 
 	#pragma test "ref<real<4>> v5 = ref.var(0.00f)"
@@ -66,15 +66,20 @@ void basic_type_test() {
 // Simple struct
 #pragma test "struct<name:ref<char>,age:int<4>>"
 struct Person {
+	// cppcheck-suppress unusedStructMember
 	char* name;
+	// cppcheck-suppress unusedStructMember
 	int age;
 };
 
 // Self recursive struct
 #pragma test "rec 'PersonList.{'PersonList=struct<name:ref<char>,age:int<4>,next:ref<'PersonList>>}"
 struct PersonList {
+	// cppcheck-suppress unusedStructMember
 	char* name;
+	// cppcheck-suppress unusedStructMember
 	int age;
+	// cppcheck-suppress unusedStructMember
 	struct PersonList* next;
 };
 
@@ -85,18 +90,23 @@ struct C;
 
 #pragma test "rec 'A.{'A=struct<b:ref<'B>,c:ref<'C>>, 'B=struct<b:ref<'C>>, 'C=struct<a:ref<'A>,b:ref<'B>>}"
 struct A {
+	// cppcheck-suppress unusedStructMember
 	struct B* b;
+	// cppcheck-suppress unusedStructMember
 	struct C* c;
 };
 
 #pragma test "rec 'B.{'A=struct<b:ref<'B>,c:ref<'C>>, 'B=struct<b:ref<'C>>, 'C=struct<a:ref<'A>,b:ref<'B>>}"
 struct B {
+	// cppcheck-suppress unusedStructMember
 	struct C* b;
 };
 
 #pragma test "rec 'C.{'A=struct<b:ref<'B>,c:ref<'C>>, 'B=struct<b:ref<'C>>, 'C=struct<a:ref<'A>,b:ref<'B>>}"
 struct C {
+	// cppcheck-suppress unusedStructMember
 	struct A* a;
+	// cppcheck-suppress unusedStructMember
 	struct B* b;
 };
 
@@ -108,22 +118,27 @@ struct D1;
 
 #pragma test "struct<b:ref<rec 'B1.{'C1=struct<b:ref<'B1>,d:ref<struct<val:int<4>>>>, 'B1=struct<b:ref<'C1>>}>>"
 struct A1 {
+	// cppcheck-suppress unusedStructMember
 	struct B1* b;
 };
 
 #pragma test "rec 'B1.{'C1=struct<b:ref<'B1>,d:ref<struct<val:int<4>>>>, 'B1=struct<b:ref<'C1>>}"
 struct B1 {
+	// cppcheck-suppress unusedStructMember
 	struct C1* b;
 };
 
 #pragma test "rec 'C1.{'C1=struct<b:ref<'B1>,d:ref<struct<val:int<4>>>>, 'B1=struct<b:ref<'C1>>}"
 struct C1 {
+	// cppcheck-suppress unusedStructMember
 	struct B1* b;
+	// cppcheck-suppress unusedStructMember
 	struct D1* d;
 };
 
 #pragma test "struct<val:int<4>>"
 struct D1 {
+	// cppcheck-suppress unusedStructMember
 	int val;
 };
 

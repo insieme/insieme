@@ -66,6 +66,7 @@ namespace lang {
 DEF_TYPE(GenericType, UnitType);
 bool isUnitType(const Type& type);
 
+ADD_TYPE(TypeVariable, ALPHA);
 ADD_TYPE(UnitType, UNIT);
 
 // -------------------------------- Boolean Type -------------------------------

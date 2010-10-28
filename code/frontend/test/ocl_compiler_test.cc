@@ -70,7 +70,7 @@ public:
 
             //check globalRange and localRange arguments
             core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
-            EXPECT_LE(2, args.size());
+            EXPECT_LE(static_cast<unsigned>(2), args.size());
             core::TypePtr globalRange = args.at(args.size()-2);
             EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
             core::TypePtr localRange = args.back();

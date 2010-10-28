@@ -227,49 +227,6 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 	return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>(args.begin(), args.end()) );
 }
 
-// build lambda expression for post/pre increment/decrement unary operators
-core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, core::ExpressionPtr subExpr, bool post, bool additive) {
-	core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
-	assert( expTy && "LHS operand must of type ref<a'>." );
-	const core::TypePtr& subTy = expTy->getElementType();
-
-	core::VariablePtr tmpVar;
-	std::vector<core::StatementPtr> stmts;
-	if(post) {
-		tmpVar = builder.variable(subTy);
-		// ref<a'> __tmp = subexpr
-		stmts.push_back(builder.declarationStmt(tmpVar,
-				builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) ));
-	}
-	// subexpr op= 1
-	stmts.push_back(
-		builder.callExpr(
-			core::lang::TYPE_UNIT_PTR,
-			core::lang::OP_REF_ASSIGN_PTR,
-			toVector<core::ExpressionPtr>(
-				subExpr, // ref<a'> a
-				builder.callExpr(
-					subTy,
-					( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
-						toVector<core::ExpressionPtr>(
-							builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ),
-							builder.castExpr( subTy, builder.literal("1", core::lang::TYPE_INT_4_PTR))
-						)
-					) // a - 1
-			)
-		)
-	);
-	if(post) {
-		assert(tmpVar);
-		// return __tmp
-		stmts.push_back( builder.returnStmt( tmpVar ) );
-	} else {
-		// return the variable
-		stmts.push_back( builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) );
-	}
-	return createCallExpr(builder, std::vector<core::StatementPtr>(stmts), subTy);
-}
-
 } // End empty namespace
 
 
@@ -336,7 +293,9 @@ struct ConversionFactory::ConversionContext {
 	typedef std::map<const Type*, core::TypePtr> RecTypeMap;
 	RecTypeMap recTypeCache;
 
-	ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false) { }
+	bool isResolvingFunctionType;
+
+	ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 };
 
 //#############################################################################
@@ -463,7 +422,7 @@ public:
 			const core::ASTBuilder& builder = convFact.builder;
 
 			// collects the type of each argument of the expression
-			vector< core::ExpressionPtr > args;
+			vector<core::ExpressionPtr> args;
 			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg) ); }
 			);
@@ -481,6 +440,9 @@ public:
 				return irNode;
 			}
 
+			// If we are resolving the body of a recursive function we have to return the associated
+			// variable every time a function in the strongly connected graph of function calls
+			// is encountred.
 			if(ctx.isResolvingRecFuncBody) {
 				// check if this type has a typevar already associated, in such case return it
 				ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
@@ -556,25 +518,25 @@ public:
 		clang::BinaryOperatorKind baseOp;
 		switch( binOp->getOpcode() ) {
 		// a *= b
-		case BO_MulAssign: op = "mul"; baseOp = BO_Mul; break;
+		case BO_MulAssign: 	op = "mul"; baseOp = BO_Mul; break;
 		// a /= b
-		case BO_DivAssign: op = "div"; baseOp = BO_Div; break;
+		case BO_DivAssign: 	op = "div"; baseOp = BO_Div; break;
 		// a %= b
-		case BO_RemAssign: op = "mod"; baseOp = BO_Rem; break;
+		case BO_RemAssign:	op = "mod"; baseOp = BO_Rem; break;
 		// a += b
-		case BO_AddAssign: op = "add"; baseOp = BO_Add; break;
+		case BO_AddAssign: 	op = "add"; baseOp = BO_Add; break;
 		// a -= b
-		case BO_SubAssign: op = "sub"; baseOp = BO_Sub; break;
+		case BO_SubAssign:	op = "sub"; baseOp = BO_Sub; break;
 		// a <<= b
-		case BO_ShlAssign: op = "shl"; baseOp = BO_Shl; break;
+		case BO_ShlAssign: 	op = "shl"; baseOp = BO_Shl; break;
 		// a >>= b
-		case BO_ShrAssign: op = "shr"; baseOp = BO_Shr; break;
+		case BO_ShrAssign: 	op = "shr"; baseOp = BO_Shr; break;
 		// a &= b
-		case BO_AndAssign: op = "and"; baseOp = BO_And; break;
+		case BO_AndAssign: 	op = "and"; baseOp = BO_And; break;
 		// a |= b
-		case BO_OrAssign: op = "or"; baseOp = BO_Or; break;
+		case BO_OrAssign: 	op = "or"; 	baseOp = BO_Or; break;
 		// a ^= b
-		case BO_XorAssign: op = "xor"; baseOp = BO_Xor; break;
+		case BO_XorAssign: 	op = "xor"; baseOp = BO_Xor; break;
 		default:
 			break;
 		}
@@ -706,6 +668,49 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
 
+		// build lambda expression for post/pre increment/decrement unary operators
+		auto encloseIncrementOperator = [ &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
+			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
+			assert( expTy && "LHS operand must of type ref<a'>." );
+			const core::TypePtr& subTy = expTy->getElementType();
+
+			core::VariablePtr tmpVar;
+			std::vector<core::StatementPtr> stmts;
+			if(post) {
+				tmpVar = builder.variable(subTy);
+				// ref<a'> __tmp = subexpr
+				stmts.push_back(builder.declarationStmt(tmpVar,
+						builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) ));
+			}
+			// subexpr op= 1
+			stmts.push_back(
+				builder.callExpr(
+					core::lang::TYPE_UNIT_PTR,
+					core::lang::OP_REF_ASSIGN_PTR,
+					toVector<core::ExpressionPtr>(
+						subExpr, // ref<a'> a
+						builder.callExpr(
+							subTy,
+							( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
+								toVector<core::ExpressionPtr>(
+									builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ),
+									builder.castExpr( subTy, builder.literal("1", core::lang::TYPE_INT_4_PTR))
+								)
+							) // a - 1
+					)
+				)
+			);
+			if(post) {
+				assert(tmpVar);
+				// return __tmp
+				stmts.push_back( builder.returnStmt( tmpVar ) );
+			} else {
+				// return the variable
+				stmts.push_back( builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) );
+			}
+			return createCallExpr(builder, std::vector<core::StatementPtr>(stmts), subTy);
+		};
+
 		bool post = true;
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
@@ -716,14 +721,14 @@ public:
 			post = false;
 		// a--
 		case UO_PostDec:
-			subExpr = encloseIncrementOperator(builder, subExpr, post, false);
+			subExpr = encloseIncrementOperator(subExpr, post, false);
 			break;
 		// a++
 		case UO_PreInc:
 			post = false;
 		// ++a
 		case UO_PostInc:
-			subExpr = encloseIncrementOperator(builder, subExpr, post, true);
+			subExpr = encloseIncrementOperator(subExpr, post, true);
 			break;
 		// &a
 		case UO_AddrOf:
@@ -816,6 +821,7 @@ public:
 		// BASE
 		core::ExpressionPtr&& base = tryDeref(convFact.builder, Visit( baseExpr ) );
 
+		DLOG(INFO) << *base->getType();
 		// TODO: we need better checking for vector type
 		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&
@@ -1038,14 +1044,15 @@ public:
 				//			for(int b=0;...) { }
 				//		}
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				std::function<bool (const core::StatementPtr&)> inductionVarFilter =
+				typedef std::function<bool (const core::StatementPtr&)> InductionVarFilterFunc;
+				InductionVarFilterFunc inductionVarFilter =
 					[ this, inductionVar ](const core::StatementPtr& curr) -> bool {
 						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
 						assert(declStmt && "Not a declaration statement");
 						return declStmt->getVariable() == inductionVar;
 					};
 
-				std::function<bool (std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr)> negation =
+				std::function<bool (const InductionVarFilterFunc& functor, const core::StatementPtr& curr)> negation =
 					[](std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr) -> bool { return !functor(curr); };
 
 				// we insert all the variable declarations (excluded the induction variable)
@@ -1702,7 +1709,10 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-				argTypes.push_back( this->Visit( currArgType.getTypePtr() ) );
+				this->ctx.isResolvingFunctionType = true;
+				core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
+				argTypes.push_back( argTy );
+				this->ctx.isResolvingFunctionType = false;
 			}
 		);
 
@@ -1909,7 +1919,9 @@ public:
 							assert(tagTy && "Type is not of TagType type");
 
 							//Visual Studio 2010 fix: full namespace
-							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
+							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit =
+									this->ctx.recVarMap.find(ty);
+
 							assert(tit != this->ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
@@ -1962,7 +1974,14 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitPointerType(PointerType* pointerTy) {
 		START_LOG_TYPE_CONVERSION(pointerTy);
-		core::TypePtr&& retTy = convFact.builder.refType( Visit(pointerTy->getPointeeType().getTypePtr()) );
+
+		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
+		// ~~~~~ Handling of special cases ~~~~~~~
+		// void* -> ref<'a>
+		if(*subTy == core::lang::TYPE_UNIT_VAL)
+			subTy = core::lang::TYPE_ALPHA_PTR;
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		core::TypePtr&& retTy = convFact.builder.refType( subTy );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -1989,9 +2008,14 @@ private:
 // ------------------------------------ ConversionFactory ---------------------------
 
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList):
-	ctx(new ConversionContext), mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
+	// cppcheck-suppress exceptNew
+	ctx(new ConversionContext),
+	mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
+	// cppcheck-suppress exceptNew
 	typeConv( new ClangTypeConverter(*this) ),
+	// cppcheck-suppress exceptNew
 	exprConv( new ClangExprConverter(*this) ),
+	// cppcheck-suppress exceptNew
 	stmtConv( new ClangStmtConverter(*this) ) { }
 
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) const {
@@ -2028,51 +2052,40 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
 				DVLOG(2) << "           OpenCL address space __private";
-				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
+				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE ));
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
 				DVLOG(2) << "           OpenCL address space __local";
-				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
+				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL ));
 				continue;
 			}
 
-            // keywords global and local are only allowed for parameters
             // TODO global also for global variables
-            if(dyn_cast<clang::ParmVarDecl>(varDecl)) {
 
-                //check if the declaration has attribute __global
-                if(sr == "__global") {
-                    DVLOG(2) << "           OpenCL address space __global";
-                    declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-                            ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
-                    continue;
-                }
+			//check if the declaration has attribute __global
+			if(sr == "__global") {
+				// keywords global and local are only allowed for parameters
+				if(isa<const clang::ParmVarDecl>(varDecl)) {
+					DVLOG(2) << "           OpenCL address space __global";
+					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL ));
+					continue;
+				}
+				ss << "Address space __global not allowed for local variable";
+				throw &ss;
+			}
 
-                //check if the declaration has attribute __constant
-                if(sr == "__constant") {
-                    DVLOG(2) << "           OpenCL address space __constant";
-                    declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-                            ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
-                    continue;
-                }
-            } else {
-                //check if the declaration has attribute __global
-                if(sr == "__global") {
-                    ss << "Address space __global not allowed for local variable";
-                    throw &ss;
-                }
-
-                //check if the declaration has attribute __constant
-                if(sr == "__constant") {
-                    ss << "Address space __constant not allowed for local variable";
-                    throw &ss;
-                }
-            }
+			//check if the declaration has attribute __constant
+			if(sr == "__constant") {
+				if(isa<const clang::ParmVarDecl>(varDecl)) {
+					DVLOG(2) << "           OpenCL address space __constant";
+					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));					continue;
+				}
+				ss << "Address space __constant not allowed for local variable";
+				throw &ss;
+			}
 		}
 
 		// Throw an error if an unhandled attribute is found
@@ -2086,14 +2099,6 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
-
-ConversionFactory::~ConversionFactory() {
-	delete ctx;
-	delete typeConv;
-	delete stmtConv;
-	delete exprConv;
-}
-
 core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
 	ConversionContext::VarDeclMap::const_iterator fit = ctx->varDeclMap.find(varDecl);
 	if(fit != ctx->varDeclMap.end())
@@ -2102,8 +2107,8 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );
-	if(varTy.isConstQualified() || !isa<const clang::ParmVarDecl>(varDecl)) {
-		// add a ref in the case of variable which are not function parameters
+	if(!varTy.isConstQualified() && !isa<const clang::ParmVarDecl>(varDecl)) {
+		// add a ref in the case of variable which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
 	// variable is not in the map, create a new var and add it
@@ -2193,10 +2198,9 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
 	// it is not declared as const, successive dataflow analysis could be used to restrict the access
 	// to this variable
-	core::TypePtr type = clangType.isConstQualified() ?
-		convertType( GET_TYPE_PTR(varDecl) ) :
-		builder.refType( convertType( GET_TYPE_PTR(varDecl) ) );
-	// todo: initialization for declarations with no initialization value
+	core::TypePtr&& type = convertType( clangType.getTypePtr() );
+	if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(varDecl))
+		type = builder.refType( type );
 
 	// initialization value
 	core::ExpressionPtr initExpr;
@@ -2253,9 +2257,12 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		);
 
 		if(!ctx->isRecSubFunc) {
-			if(ctx->recVarExprMap.find(funcDecl) == ctx->recVarExprMap.end())
+			if(ctx->recVarExprMap.find(funcDecl) == ctx->recVarExprMap.end()) {
 				// we create a TypeVar for each type in the mutual dependence
-				ctx->recVarExprMap.insert( std::make_pair(funcDecl, builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) )) );
+				core::VariablePtr&& var = builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) );
+				ctx->recVarExprMap.insert( std::make_pair(funcDecl, var) );
+				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+			}
 		} else {
 			// we expect the var name to be in currVar
 			ctx->recVarExprMap.insert(std::make_pair(funcDecl, ctx->currVar));
@@ -2270,8 +2277,11 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 					// this can happen when a function get overloaded and the cycle of recursion can happen between
 					// the overloaded version, we need unique variable for each version of the function
 
-					if(this->ctx->recVarExprMap.find(fd) == this->ctx->recVarExprMap.end())
-						this->ctx->recVarExprMap.insert( std::make_pair(fd, this->builder.variable( this->convertType(GET_TYPE_PTR(fd))) ) );
+					if(this->ctx->recVarExprMap.find(fd) == this->ctx->recVarExprMap.end()) {
+						core::VariablePtr&& var = this->builder.variable( this->convertType(GET_TYPE_PTR(fd)) );
+						this->ctx->recVarExprMap.insert( std::make_pair(fd, var ) );
+						var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
+					}
 				}
 			);
 		}
@@ -2310,7 +2320,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
 				}
 			}
-			if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+			else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
 				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
 						attr->getXDim(), attr->getYDim(), attr->getZDim())
 				);
@@ -2319,9 +2329,10 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
+	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened ~~~");
 	if(!components.empty())
 		ctx->isResolvingRecFuncBody = true;
-	core::StatementPtr body = convertStmt( funcDecl->getBody() );
+	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx->isResolvingRecFuncBody = false;
 
 	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), params, body);
