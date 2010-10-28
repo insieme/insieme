@@ -88,10 +88,10 @@ void unary_op_test() {
 //	#pragma test "a" TBD
 	-a;
 
-	#pragma test "ref<ref<int<4>>> v2 = ref.var(v1)"
+	// #pragma test "ref<array<ref<int<4>>,1>> v2 = ref.var(v1)"
 	int* b = &a;
 
-	#pragma test "ref.deref(v1)"
+//	#pragma test "subscript_single(ref.deref(v1), 0)"
 	*b;
 }
 
@@ -218,7 +218,7 @@ void vector_stmt_test() {
 	#pragma test "ref.assign(subscript_single(ref.deref(subscript_single(ref.deref(v1), 1)), 1), 0)"
 	b[1][1] = 0;
 
-	#pragma test "fun(ref<'a> v2){ {} }(cast<ref<'a>>(cast<ref<vector<ref<int<4>>,2>>>(v1)))"
+	#pragma test "fun(array<ref<'a>,1> v2){ {} }(cast<array<ref<'a>,1>>(cast<array<ref<vector<ref<int<4>>,2>>,1>>(v1)))"
 	evil(b);
 }
 
