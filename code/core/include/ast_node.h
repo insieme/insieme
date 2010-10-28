@@ -143,7 +143,6 @@ public:
 
 		// map and cast
 		NodePtr res = mapElement(index, ptr);
-std::cout << "count\n";
 		// during development, make cast secure
 		assert(dynamic_pointer_cast<T>(res) && "Invalid conversion");
 		return static_pointer_cast<T>(res);
