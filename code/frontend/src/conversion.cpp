@@ -2008,9 +2008,14 @@ private:
 // ------------------------------------ ConversionFactory ---------------------------
 
 ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList):
-	ctx(new ConversionContext), mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
+	// cppcheck-suppress exceptNew
+	ctx(new ConversionContext),
+	mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
+	// cppcheck-suppress exceptNew
 	typeConv( new ClangTypeConverter(*this) ),
+	// cppcheck-suppress exceptNew
 	exprConv( new ClangExprConverter(*this) ),
+	// cppcheck-suppress exceptNew
 	stmtConv( new ClangStmtConverter(*this) ) { }
 
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) const {
