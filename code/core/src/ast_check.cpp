@@ -126,8 +126,7 @@ namespace {
 				addAll(res, this->check->visit(node));
 
 				// visit / check all child nodes
-				int numChildren = node->getChildList().size();
-				for (int i=0; i<numChildren; i++) {
+				for (int i=0, e=node->getChildList().size(); i<e; i++) {
 					visitor->visit(node.getAddressOfChild(i));
 				}
 			});
@@ -214,7 +213,7 @@ void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
 
 	// check if there has already been a message within the result
 	if (!target) {
-		target = *list;
+		target.reset( *list );
 		return;
 	}
 	::addAll(*target, *list);
@@ -222,7 +221,7 @@ void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
 
 void add(OptionalMessageList& target, const Message& msg) {
 	if (!target) {
-		target = toVector(msg);
+		target.reset( toVector(msg) );
 		return;
 	}
 	target->push_back(msg);

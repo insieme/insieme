@@ -160,7 +160,9 @@ TEST(TypeConversion, HandleStructType) {
 
 	SourceLocation emptyLoc;
 
+	// cppcheck-suppress exceptNew
 	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
+	// cppcheck-suppress exceptNew
 	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
 
 	// create a struct:
@@ -200,7 +202,9 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	ClangCompiler clang;
 	ConversionFactory convFactory( shared, clang );
 
+	// cppcheck-suppress exceptNew
 	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
+	// cppcheck-suppress exceptNew
 	clang::BuiltinType* longTy = new clang::BuiltinType(clang::BuiltinType::Long);
 
 	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
@@ -304,9 +308,11 @@ TEST(TypeConversion, HandleFunctionType) {
 	ASTContext& ctx = clang.getASTContext();
 	// Defines a function with the following prototype:
 	// int f(double a, float* b)
-
+	// cppcheck-suppress exceptNew
 	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
+	// cppcheck-suppress exceptNew
 	BuiltinType* doubleTy = new BuiltinType(BuiltinType::Double);
+	// cppcheck-suppress exceptNew
 	BuiltinType* floatTy = new BuiltinType(BuiltinType::Float);
 	{
 		QualType argTy[] = { QualType(doubleTy, 0), ctx.getPointerType(QualType(floatTy, 0)) };
@@ -371,7 +377,7 @@ TEST(TypeConversion, HandleArrayType) {
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	CommandLineOptions::Verbosity = 2;
+	CommandLineOptions::Verbosity = 0;
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 

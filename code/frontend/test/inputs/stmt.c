@@ -197,6 +197,8 @@ void rec_function_call_test() {
 	f(10);
 }
 
+void evil(void* anything) { }
+
 void vector_stmt_test() {
 
 //	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
@@ -216,5 +218,7 @@ void vector_stmt_test() {
 	#pragma test "ref.assign(subscript_single(ref.deref(subscript_single(ref.deref(v1), 1)), 1), 0)"
 	b[1][1] = 0;
 
+	#pragma test "fun(ref<'a> v2){ {} }(cast<ref<'a>>(cast<ref<vector<ref<int<4>>,2>>>(v1)))"
+	evil(b);
 }
 
