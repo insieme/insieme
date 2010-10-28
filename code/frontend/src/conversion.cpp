@@ -1039,14 +1039,15 @@ public:
 				//			for(int b=0;...) { }
 				//		}
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				std::function<bool (const core::StatementPtr&)> inductionVarFilter =
+				typedef std::function<bool (const core::StatementPtr&)> InductionVarFilterFunc;
+				InductionVarFilterFunc inductionVarFilter =
 					[ this, inductionVar ](const core::StatementPtr& curr) -> bool {
 						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
 						assert(declStmt && "Not a declaration statement");
 						return declStmt->getVariable() == inductionVar;
 					};
 
-				std::function<bool (std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr)> negation =
+				std::function<bool (const InductionVarFilterFunc& functor, const core::StatementPtr& curr)> negation =
 					[](std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr) -> bool { return !functor(curr); };
 
 				// we insert all the variable declarations (excluded the induction variable)
@@ -1963,7 +1964,14 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitPointerType(PointerType* pointerTy) {
 		START_LOG_TYPE_CONVERSION(pointerTy);
-		core::TypePtr&& retTy = convFact.builder.refType( Visit(pointerTy->getPointeeType().getTypePtr()) );
+
+		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
+		// ~~~~~ Handling of special cases ~~~~~~~
+		// void* -> ref<'a>
+		if(*subTy == core::lang::TYPE_UNIT_VAL)
+			subTy = core::lang::TYPE_ALPHA_PTR;
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		core::TypePtr&& retTy = convFact.builder.refType( subTy );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -2325,9 +2333,10 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
+	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened ~~~");
 	if(!components.empty())
 		ctx->isResolvingRecFuncBody = true;
-	core::StatementPtr body = convertStmt( funcDecl->getBody() );
+	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx->isResolvingRecFuncBody = false;
 
 	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), params, body);
