@@ -36,15 +36,19 @@
 
 #pragma once
 
-#ifdef _MSVC
+#include <iostream>
+
+//FIXME: which define for Visual Studio?
+#ifdef WIN32
 #  define GOOGLE_GLOG_DLL_DECL
 #  pragma warning(push)
 #  pragma warning(disable:4244)
 #endif
 
+//FIXME: InstallFailureSignalHandler had to be deactivated (Visual Studio 2010 link fix)
 #include <glog/logging.h>
 
-#ifdef _MSVC
+#ifdef WIN32
 #  pragma warning(pop)
 #endif
 
@@ -57,10 +61,22 @@ using namespace google;
 #undef DVLOG
 #undef VLOG_IS_ON
 
+#ifndef WIN32
 #define VLOG(level) 		LOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
 #define DVLOG(level) 		DLOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
-
 #define VLOG_IS_ON(level) 	( (level) <= CommandLineOptions::Verbosity )
+#else
+#define VLOG(level)   std::cout  << "\n"
+#define DVLOG(level)  std::cout  << "\n"
+#undef LOG
+#undef DLOG
+#define LOG(x) std::cout << "\n"
+#define DLOG(x) std::cout << "\n"
+#define VLOG_IS_ON(level) false
+#endif
+
+
+
 
 namespace insieme {
 namespace utils {

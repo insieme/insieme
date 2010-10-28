@@ -78,6 +78,7 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	return cptr;
 }
 
+//TODO OCL: Kernels should not be literally exist - can we be sure?
 CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, const string& name) {
 	// TODO refactor duplication w/ above
 	auto ident = Identifier(string("fundecl_codefragment_") + name);
@@ -256,6 +257,7 @@ CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
 }
 
 
+//TODO OCL: vector<4> etc pp
 string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 	firstRef = true;
 	if(lang::isUnitType(*ptr)) {

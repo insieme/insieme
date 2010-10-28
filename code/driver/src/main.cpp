@@ -44,6 +44,7 @@
 #include "statements.h"
 #include "backend_convert.h"
 #include "opencl_convert.h"
+#include "opencl_checker.h"
 #include "naming.h"
 
 #include "ast_statistic.h"
@@ -123,6 +124,10 @@ int main(int argc, char** argv) {
 
 		if (CommandLineOptions::OpenCL) {
 			LOG(INFO) << "Converting to OpenCL ... ";
+
+			insieme::opencl_backend::OpenCLChecker oc;
+			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc->check(program) ? "CHECKED" : "WRONG");
+
 			insieme::opencl_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
 			// TODO write to output file 
