@@ -37,7 +37,7 @@
 #include "ocl_device.h"
 
 #pragma insieme mark
-__kernel int hallo() {
+__kernel __attribute__((reqd_work_group_size(1,2,3))) void hallo(__global float dfb, int pa) {
     const float4 x = {0.0f, 0.1f, 0.2f, 5.3f};
     __local float a;
     float4 b;
@@ -48,5 +48,4 @@ __kernel int hallo() {
     //int id = get_global_id(0);
 
 
-    return 0;
 }

@@ -47,21 +47,24 @@ namespace simple_backend {
 using namespace core;
 
 
-CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifier& ident) {
-	auto codeIt = functionMap.find(ident);
+CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
+	auto codeIt = functionMap.find(lambda);
 	if(codeIt != functionMap.end()) {
 		return codeIt->second;
 	}
+
+	// get the name for the new function
+	string ident = cc.getNameGen().getName(lambda);
 
 	auto funType = dynamic_pointer_cast<const FunctionType>(lambda->getType());
 	auto body = lambda->getBody();
 	bool isCompoundBody = !!dynamic_pointer_cast<const CompoundStmt>(body);
 
 	// generate a new function from the lambda expression
-	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident.getName());
+	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
 	CodeStream& cs = cptr->getCodeStream();
 	// write the function header
-	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident.getName() << "(";
+	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
 	// handle arguments
 	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
 		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
@@ -74,18 +77,74 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	if(!isCompoundBody) cs << CodeStream::indL << "\n}\n";
 	cs << "\n";
 	// insert into function map and return
-	functionMap.insert(std::make_pair(ident, cptr));
+	functionMap.insert(std::make_pair(lambda, cptr));
 	return cptr;
 }
 
-CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, const string& name) {
-	// TODO refactor duplication w/ above
-	auto ident = Identifier(string("fundecl_codefragment_") + name);
-	auto codeIt = functionMap.find(ident);
+CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda) {
+
+	// check whether code has already been generated
+	auto codeIt = functionMap.find(lambda);
 	if(codeIt != functionMap.end()) {
 		return codeIt->second;
 	}
-	CodePtr cptr = std::make_shared<CodeFragment>(ident.getName());
+
+	// generate forward declarations for all functions within this recursive type
+	const RecLambdaDefinitionPtr& definition = lambda->getDefinition();
+	typedef RecLambdaDefinition::RecFunDefs::value_type Pair;
+	for_each(definition->getDefinitions(), [&](const Pair& cur){
+
+		// create forward declaration
+		auto funType = dynamic_pointer_cast<const FunctionType>(cur.second->getType());
+		auto body = cur.second->getBody();
+
+		// get a name (for the defined recursive function)
+		RecLambdaExprPtr recLambda = RecLambdaExpr::get(cc.getNodeManager(), cur.first, definition);
+		string ident = cc.getNameGen().getName(recLambda);
+
+		// generate a new function from the lambda expression
+		CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
+		CodeStream& cs = cptr->getCodeStream();
+		// write the function header
+		cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
+		// handle arguments
+		cs << join(", ", cur.second->getParams(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
+			return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
+		});
+		cs << ");\n";
+
+		// bind forward declaration to name
+		functionMap.insert(std::make_pair(recLambda, cptr));
+	});
+
+	// generate the actual definition of the functions
+	for_each(definition->getDefinitions(), [&](const Pair& cur){
+
+		// use normal function generator for this work (by printing unrolled version)
+		CodePtr cptr = getFunction(definition->unrollOnce(cc.getNodeManager(), cur.first));
+
+		// add dependency to code definition
+		RecLambdaExprPtr recLambda = RecLambdaExpr::get(cc.getNodeManager(), cur.first, definition);
+		cptr->addDependency(getFunction(recLambda));
+
+	});
+
+	// return lambda now registered within function map
+	return getFunction(lambda);
+}
+
+CodePtr FunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
+	// TODO refactor duplication w/ above
+	auto codeIt = functionMap.find(literal);
+	if(codeIt != functionMap.end()) {
+		return codeIt->second;
+	}
+
+	const FunctionTypePtr type = dynamic_pointer_cast<const FunctionType>(literal->getType());
+	assert(type && "Literal is not a function!");
+
+	const string& name = literal->getValue();
+	CodePtr cptr = std::make_shared<CodeFragment>("fundef_codefragment_" + name);
 	CodeStream& cs = cptr->getCodeStream();
 	cs << cc.getTypeMan().getTypeName(type->getReturnType()) << " " << name << "(";
 	auto argType = type->getArgumentType();
@@ -96,7 +155,7 @@ CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, c
 	} // TODO handle other argument types
 	cs << ");\n";
 	// insert into function map and return
-	functionMap.insert(std::make_pair(ident, cptr));
+	functionMap.insert(std::make_pair(literal, cptr));
 	return cptr;
 }
 
@@ -117,11 +176,26 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 
 
 void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
+
+	// obtain a name for the function ...
 	string cFunName = cc.getNameGen().getName(ptr);
-	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
-		cFunName = cnameAnn->getName();
-	}
-	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cFunName));
+
+	// add a dependency to the function definition
+	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
+
+	// print name
+	cStr << cFunName;
+}
+
+void ConvertVisitor::visitRecLambdaExpr(const RecLambdaExprPtr& ptr) {
+
+	// generate random name ...
+	string cFunName = cc.getNameGen().getName(ptr);
+
+	// add a dependency to the function definition
+	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
+
+	// print function name (for the invocation)
 	cStr << cFunName;
 }
 
@@ -214,7 +288,7 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 		}
 	} 
 	else if(auto funType = dynamic_pointer_cast<const FunctionType>(typePtr)) {
-		auto funLiteralDeclCode = cc.getFuncMan().getFunctionLiteral(funType, val); 
+		auto funLiteralDeclCode = cc.getFuncMan().getFunctionLiteral(ptr);
 		defCodePtr->addDependency(funLiteralDeclCode);
 		cStr << val;
 	}
@@ -346,17 +420,34 @@ const ProgramPtr& ConvertedCode::getProgram() const {
 
 
 string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unnamed"*/ ) {
+
+	// thest whether a name has already been picked
 	auto it = nameMap.find(ptr);
-	if(it != nameMap.end()) return string("__insieme_") + fragment + "_" + it->second;
+	if(it != nameMap.end()) return it->second;
+
+	// test whether a name is attached ...
+	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
+		// => take original c name
+		string name = cnameAnn->getName();
+		nameMap.insert(make_pair(ptr, name));
+		return name;
+	}
+
 	// generate a new name string
 	std::stringstream name;
+	name << string("__insieme_") << fragment << "_";
+
 	switch(ptr->getNodeCategory()) {
 	case NC_Support:
 		name << "supp"; break;
 	case NC_Type:
 		name << "type"; break;
 	case NC_Expression:
-		name << "expr"; break;
+		switch(ptr->getNodeType()) {
+		case NT_LambdaExpr: name << "fun"; break;
+		case NT_RecLambdaExpr: name << "recFun"; break;
+		default: name << "expr"; break;
+		} ; break;
 	case NC_Statement:
 		name << "stat"; break;
 	case NC_Program:

@@ -1143,20 +1143,24 @@ string XmlElement::getName() const {
 }
 
 const vector<XmlElement> XmlElement::getChildrenByName(const string& name) const {
-	vector<XmlElement> vec;
-	DOMNodeList* list = base->getElementsByTagName(toUnicode(name));
-	for (unsigned int i = 0; i < list->getLength(); ++i){
-		vec.push_back(XmlElement(dynamic_cast<DOMElement*>(list->item(i)), doc));
+	vector<XmlElement> vec2;
+	vector<XmlElement> vec = XmlElement::getChildren();
+	for (auto iter = vec.begin(); iter != vec.end(); ++iter ){
+		if ((*iter).getName() == name){
+			vec2.push_back(*iter);
+		}
 	}
-	return vec;
+	return vec2;
 }
 
 const XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
-	DOMNodeList* list = base->getElementsByTagName(toUnicode(name));
-	if (list->getLength()){
-		return XmlElementPtr(new XmlElement(dynamic_cast<DOMElement*>(list->item(0)), doc));
+	vector<XmlElement> vec = XmlElement::getChildren();
+	for (auto iter = vec.begin(); iter != vec.end(); ++iter ){
+		if ((*iter).getName() == name){
+			return make_shared<XmlElement>(*iter);
+		}
 	}
-	return XmlElementPtr();
+	return shared_ptr<XmlElement>();
 }
 
 const vector<XmlElement> XmlElement::getChildren() const {
@@ -1342,7 +1346,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			XmlElementPtr type = base->getFirstChildByName("typePtr");
 			baseType = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
 			
-			//buildAnnotations(*type, baseType, true);
+			buildAnnotations(*type, baseType, true);
 		}
 		
 		vector<TypePtr> typeParams;
@@ -1351,7 +1355,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			vector<XmlElement> types = param->getChildrenByName("typePtr");
 			for(vector<XmlElement>::const_iterator iter = types.begin(); iter != types.end(); ++iter) {
 				TypePtr typeParam = dynamic_pointer_cast<const Type>(elemMap[iter->getAttr("ref")].second);
-				//buildAnnotations(*iter, typeParam, true);
+				buildAnnotations(*iter, typeParam, true);
 				typeParams.push_back(typeParam);
 			}
 		}
@@ -1380,6 +1384,10 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, gen);
+	}
+	else if (elem.getName() == "rootNode") {
+		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
+		buildAnnotations(*type, elemMap[type->getAttr("ref")].second, true);
 	}
 }
 

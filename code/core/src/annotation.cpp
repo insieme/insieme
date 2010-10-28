@@ -35,6 +35,7 @@
  */
 
 #include "annotation.h"
+#include "map_utils.h"
 
 namespace insieme {
 namespace core {
@@ -63,6 +64,15 @@ void Annotatable::addAnnotation(const AnnotationPtr& annotation) const {
 };
 
 
+bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& annotatableB) {
+
+	// extract maps
+	const AnnotationMap& mapA = annotatableA.getAnnotations();
+	const AnnotationMap& mapB = annotatableB.getAnnotations();
+
+	// compare maps
+	return insieme::utils::map::equal(mapA, mapB, equal_target<AnnotationPtr>());
+}
 
 
 } // end namespace core

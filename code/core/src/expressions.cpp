@@ -606,12 +606,55 @@ std::ostream& RecLambdaDefinition::printTo(std::ostream& out) const {
 	}) << "}";
 }
 
-const LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VariablePtr& variable) const {
+LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VariablePtr& variable) const {
 	auto it = definitions.find(variable);
 	if (it == definitions.end()) {
 		return LambdaExprPtr(NULL);
 	}
 	return (*it).second;
+}
+
+namespace {
+
+	class RecLambdaUnroller : public NodeMapping {
+
+		NodeManager& manager;
+		const RecLambdaDefinition& definition;
+
+
+	public:
+
+		RecLambdaUnroller(NodeManager& manager, const RecLambdaDefinition& definition)
+			: manager(manager), definition(definition) { }
+
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+			// check whether it is a known variable
+			if (ptr->getNodeType() == NT_Variable) {
+				VariablePtr var = static_pointer_cast<const Variable>(ptr);
+				LambdaExprPtr def = definition.getDefinitionOf(var);
+				if (def) {
+					// construct recursive type ...
+					return RecLambdaExpr::get(manager, var, RecLambdaDefinitionPtr(&definition));
+				}
+			}
+
+			// replace recurively
+			return ptr->substitute(manager, *this);
+		}
+
+		NodePtr apply(const NodePtr& node) {
+			if (!node) {
+				return node;
+			}
+			return node->substitute(manager, *this);
+		}
+
+	};
+
+}
+
+LambdaExprPtr RecLambdaDefinition::unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
+	return static_pointer_cast<const LambdaExpr>(RecLambdaUnroller(manager, *this).apply(getDefinitionOf(variable)));
 }
 
 

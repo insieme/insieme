@@ -164,8 +164,9 @@ TEST(XmlTest, GenericTypeTest) {
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
 	/*
-	xml.convertIrToDom(root2);
-	xml.convertDomToXml("dump3.xml");
+	XmlUtil xml2;
+	xml2.convertIrToDom(root2);
+	xml2.convertDomToXml("dump3.xml");
 	*/
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
