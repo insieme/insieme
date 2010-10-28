@@ -51,7 +51,7 @@ public:
 	static StringKey<DummyAnnotation> DummyKey;
 	string value;
 	DummyAnnotation(string value) : value(value) { };
-
+	
 	virtual AnnotationKey* getKey() const {
 		return &DummyKey;
 	}
@@ -59,6 +59,17 @@ public:
 	const std::string getAnnotationName() const {
 		 return "DummyAnnotation"; 
 	}
+	
+	bool operator==(const Annotation& other) const {
+		if(typeid(other) != typeid(*this)) return false;
+		const DummyAnnotation& dummy = dynamic_cast<const DummyAnnotation&>(other); 
+		return (value.compare(dummy.value) == 0);
+	}
+	
+	bool operator!=(const Annotation& other) const {
+		return !operator==(other);
+	}
+	
 };
 
 // initalization of the dummy key
@@ -92,6 +103,16 @@ public:
 	
 	const std::string getAnnotationName() const {
 		 return "VectorAnnotation"; 
+	}
+	
+	bool operator==(const Annotation& other) const {
+		if(typeid(other) != typeid(*this)) return false;
+		const VectorAnnotation& vec = dynamic_cast<const VectorAnnotation&>(other);
+		return (equals(values, vec.values));
+	}
+	
+	bool operator!=(const Annotation& other) const {
+		return !operator==(other);
 	}
 };
 
@@ -163,13 +184,10 @@ TEST(XmlTest, GenericTypeTest) {
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
-	/*
-	XmlUtil xml2;
-	xml2.convertIrToDom(root2);
-	xml2.convertDomToXml("dump3.xml");
-	*/
+	
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, FunctionTypeTest) {
