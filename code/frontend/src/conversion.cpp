@@ -227,49 +227,6 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 	return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>(args.begin(), args.end()) );
 }
 
-// build lambda expression for post/pre increment/decrement unary operators
-core::ExpressionPtr encloseIncrementOperator(const core::ASTBuilder& builder, core::ExpressionPtr subExpr, bool post, bool additive) {
-	core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
-	assert( expTy && "LHS operand must of type ref<a'>." );
-	const core::TypePtr& subTy = expTy->getElementType();
-
-	core::VariablePtr tmpVar;
-	std::vector<core::StatementPtr> stmts;
-	if(post) {
-		tmpVar = builder.variable(subTy);
-		// ref<a'> __tmp = subexpr
-		stmts.push_back(builder.declarationStmt(tmpVar,
-				builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) ));
-	}
-	// subexpr op= 1
-	stmts.push_back(
-		builder.callExpr(
-			core::lang::TYPE_UNIT_PTR,
-			core::lang::OP_REF_ASSIGN_PTR,
-			toVector<core::ExpressionPtr>(
-				subExpr, // ref<a'> a
-				builder.callExpr(
-					subTy,
-					( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
-						toVector<core::ExpressionPtr>(
-							builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ),
-							builder.castExpr( subTy, builder.literal("1", core::lang::TYPE_INT_4_PTR))
-						)
-					) // a - 1
-			)
-		)
-	);
-	if(post) {
-		assert(tmpVar);
-		// return __tmp
-		stmts.push_back( builder.returnStmt( tmpVar ) );
-	} else {
-		// return the variable
-		stmts.push_back( builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) );
-	}
-	return createCallExpr(builder, std::vector<core::StatementPtr>(stmts), subTy);
-}
-
 } // End empty namespace
 
 
@@ -336,7 +293,9 @@ struct ConversionFactory::ConversionContext {
 	typedef std::map<const Type*, core::TypePtr> RecTypeMap;
 	RecTypeMap recTypeCache;
 
-	ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false) { }
+	bool isResolvingFunctionType;
+
+	ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 };
 
 //#############################################################################
@@ -463,7 +422,7 @@ public:
 			const core::ASTBuilder& builder = convFact.builder;
 
 			// collects the type of each argument of the expression
-			vector< core::ExpressionPtr > args;
+			vector<core::ExpressionPtr> args;
 			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
 				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg) ); }
 			);
@@ -481,6 +440,9 @@ public:
 				return irNode;
 			}
 
+			// If we are resolving the body of a recursive function we have to return the associated
+			// variable every time a function in the strongly connected graph of function calls
+			// is encountred.
 			if(ctx.isResolvingRecFuncBody) {
 				// check if this type has a typevar already associated, in such case return it
 				ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
@@ -556,25 +518,25 @@ public:
 		clang::BinaryOperatorKind baseOp;
 		switch( binOp->getOpcode() ) {
 		// a *= b
-		case BO_MulAssign: op = "mul"; baseOp = BO_Mul; break;
+		case BO_MulAssign: 	op = "mul"; baseOp = BO_Mul; break;
 		// a /= b
-		case BO_DivAssign: op = "div"; baseOp = BO_Div; break;
+		case BO_DivAssign: 	op = "div"; baseOp = BO_Div; break;
 		// a %= b
-		case BO_RemAssign: op = "mod"; baseOp = BO_Rem; break;
+		case BO_RemAssign:	op = "mod"; baseOp = BO_Rem; break;
 		// a += b
-		case BO_AddAssign: op = "add"; baseOp = BO_Add; break;
+		case BO_AddAssign: 	op = "add"; baseOp = BO_Add; break;
 		// a -= b
-		case BO_SubAssign: op = "sub"; baseOp = BO_Sub; break;
+		case BO_SubAssign:	op = "sub"; baseOp = BO_Sub; break;
 		// a <<= b
-		case BO_ShlAssign: op = "shl"; baseOp = BO_Shl; break;
+		case BO_ShlAssign: 	op = "shl"; baseOp = BO_Shl; break;
 		// a >>= b
-		case BO_ShrAssign: op = "shr"; baseOp = BO_Shr; break;
+		case BO_ShrAssign: 	op = "shr"; baseOp = BO_Shr; break;
 		// a &= b
-		case BO_AndAssign: op = "and"; baseOp = BO_And; break;
+		case BO_AndAssign: 	op = "and"; baseOp = BO_And; break;
 		// a |= b
-		case BO_OrAssign: op = "or"; baseOp = BO_Or; break;
+		case BO_OrAssign: 	op = "or"; 	baseOp = BO_Or; break;
 		// a ^= b
-		case BO_XorAssign: op = "xor"; baseOp = BO_Xor; break;
+		case BO_XorAssign: 	op = "xor"; baseOp = BO_Xor; break;
 		default:
 			break;
 		}
@@ -706,6 +668,49 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
 
+		// build lambda expression for post/pre increment/decrement unary operators
+		auto encloseIncrementOperator = [ &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
+			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
+			assert( expTy && "LHS operand must of type ref<a'>." );
+			const core::TypePtr& subTy = expTy->getElementType();
+
+			core::VariablePtr tmpVar;
+			std::vector<core::StatementPtr> stmts;
+			if(post) {
+				tmpVar = builder.variable(subTy);
+				// ref<a'> __tmp = subexpr
+				stmts.push_back(builder.declarationStmt(tmpVar,
+						builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) ));
+			}
+			// subexpr op= 1
+			stmts.push_back(
+				builder.callExpr(
+					core::lang::TYPE_UNIT_PTR,
+					core::lang::OP_REF_ASSIGN_PTR,
+					toVector<core::ExpressionPtr>(
+						subExpr, // ref<a'> a
+						builder.callExpr(
+							subTy,
+							( additive ? core::lang::OP_INT_ADD_PTR : core::lang::OP_INT_SUB_PTR ),
+								toVector<core::ExpressionPtr>(
+									builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ),
+									builder.castExpr( subTy, builder.literal("1", core::lang::TYPE_INT_4_PTR))
+								)
+							) // a - 1
+					)
+				)
+			);
+			if(post) {
+				assert(tmpVar);
+				// return __tmp
+				stmts.push_back( builder.returnStmt( tmpVar ) );
+			} else {
+				// return the variable
+				stmts.push_back( builder.callExpr( subTy, core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(subExpr) ) );
+			}
+			return createCallExpr(builder, std::vector<core::StatementPtr>(stmts), subTy);
+		};
+
 		bool post = true;
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
@@ -716,14 +721,14 @@ public:
 			post = false;
 		// a--
 		case UO_PostDec:
-			subExpr = encloseIncrementOperator(builder, subExpr, post, false);
+			subExpr = encloseIncrementOperator(subExpr, post, false);
 			break;
 		// a++
 		case UO_PreInc:
 			post = false;
 		// ++a
 		case UO_PostInc:
-			subExpr = encloseIncrementOperator(builder, subExpr, post, true);
+			subExpr = encloseIncrementOperator(subExpr, post, true);
 			break;
 		// &a
 		case UO_AddrOf:
@@ -1704,7 +1709,10 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-				argTypes.push_back( this->Visit( currArgType.getTypePtr() ) );
+				this->ctx.isResolvingFunctionType = true;
+				core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
+				argTypes.push_back( argTy );
+				this->ctx.isResolvingFunctionType = false;
 			}
 		);
 

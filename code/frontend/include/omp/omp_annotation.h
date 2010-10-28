@@ -297,7 +297,7 @@ public:
 		if(hasNumThreads())
 			out << "num_threads(" << *numThreadClause << "), ";
 		if(hasCopyin())
-			out << "shared(" << join(",", *copyinClause) << "), ";
+			out << "copyin(" << join(",", *copyinClause) << "), ";
 		return out;
 	}
 };
@@ -319,7 +319,7 @@ public:
 		if(hasPrivate())
 			out << "private(" << join(",", *privateClause) << "), ";
 		if(hasFirstPrivate())
-			out << "private(" << join(",", *firstPrivateClause) << "), ";
+			out << "firstprivate(" << join(",", *firstPrivateClause) << "), ";
 		return out;
 	}
 };
@@ -643,7 +643,7 @@ public:
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "flush";
-		if(varList)
+		if(hasVarList())
 			out << "(" << join(",", *varList) << ")";
 		return out;
 	}
