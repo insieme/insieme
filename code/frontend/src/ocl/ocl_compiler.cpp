@@ -151,12 +151,104 @@ public:
     : builder(astBuilder) { };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
+std::cout << "found \t";
+
+        if(core::dynamic_pointer_cast<const core::LambdaExpr>(element)){
+            std::cout << "the function \n";
+            return element;
+        }
+        if(core::dynamic_pointer_cast<const core::FunctionType>(element)){
+            std::cout << "the type \n";
+            return element;
+        }
+        if(core::StatementPtr body = dynamic_pointer_cast<const core::Statement>(element)){
+            std::cout << "the body\n";
+/* do this recursively
+            const core::Node::ChildList& children = body->getChildList();
+
+            //&builder should be captured, but is member variable
+            std::for_each(children.begin(), children.end(),
+                    [] (const core::NodePtr& curr) {
+                //look for ocl buildin functions and translate them to IR statements
+
+                }
+            );*/
+            //add three parallel statements for the localRange
+ //           if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(body->substitute(*builder.getNodeManager(), *this))){
+                core::JobExprPtr localZjob = builder.jobExpr(body);
+                core::LambdaExpr::ParamList params;
+                params.push_back(localZjob);
+//                core::LambdaExpr localZparallel = builder.l
+     //           core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
+
+                return body;
+/*            }
+            else
+                assert(newBody && "KenrnelMapper corrupted function body.");*/
+        }
+
+        if(false){
+/*            core::LambdaExpr::ParamList params = func->getParams();
+
+            // add vector<uint<4>,3> globalRange and localRange to parameters
+
+            core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
+            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+            params.push_back(globalRange);
+            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+            params.push_back(localRange);
+
+            // update the type of the function
+            core::FunctionTypePtr newFuncType;
+            if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
+                core::TypePtr retTy = funcType->getReturnType();
+
+                //check return type
+                assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
+
+                core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+                args.push_back(globalRange->getType());
+                args.push_back(localRange->getType());
+
+                newFuncType = builder.functionType(builder.tupleType(args), retTy);
+            } else {
+                assert(funcType && "Function has unexpected type");
+            }*/
+        }
+
+//          newFuncType = func->substitute(*builder.getNodeManager(), kernelMapper);
+//          core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
+
+
         return element;
     }
+
+/*    const core::NodePtr mapElement(unsigned, const core::FunctionType& funcType) {
+       std::cout << "found parameters\n";
+        core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
+        core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+        params.push_back(globalRange);
+        core::VariablePtr localRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+        params.push_back(localRange);
+
+        // update the type of the function
+        core::FunctionTypePtr newFuncType;
+        core::TypePtr retTy = funcType->getReturnType();
+
+        //check return type
+        assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
+
+        core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+        args.push_back(globalRange->getType());
+        args.push_back(localRange->getType());
+
+        return builder.functionType(builder.tupleType(args), retTy)
+        return funcType;
+    }*/
 };
 
 class OclMapper : public core::NodeMapping {
-    const KernelMapper kernelMapper;
+    KernelMapper kernelMapper;
     const core::ASTBuilder& builder;
 //    const core::Substitution::Mapping& mapping;
 
@@ -172,22 +264,21 @@ public:
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
+
         //TODO keep annotations when copying, element should not be used after this call
-        // call for subnodes
-        const core::NodePtr& newNode = element->substitute(*builder.getNodeManager(), *this);
 
         // check if we are at a function node
-        if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(newNode)){
+        if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)){
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
 //return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());;
             core::AnnotationMap map = element.getAnnotations();
 
+            bool isKernelFunction = false;
+            bool workGroupSizeDefined = false;
             auto funcAnnotation = element.getAnnotation(ocl::BaseAnnotation::KEY);
             if(funcAnnotation) {
 
-                bool isKernelFunction;
-                bool workGroupSizeDefined = false;
                 size_t wgs[3];
                 for(ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
@@ -207,11 +298,16 @@ public:
                     }
 
                 }
-                //if function is not a OpenCL kernel function nothing to be done
-                if(!isKernelFunction)
-                    return func;
+            }
+
+            assert(!(workGroupSizeDefined & !isKernelFunction) && "Attribute Reqd_work_group_size can only be defined for kernel functions");
+
+            //if function is not a OpenCL kernel function recursively check for child nodes
+            if(!isKernelFunction) {
+                return element->substitute(*builder.getNodeManager(), *this);
             } else {
-                return func;
+                // call for kernel function mapper for subnodes
+                return element->substitute(*builder.getNodeManager(), kernelMapper);
             }
 
 
@@ -241,8 +337,7 @@ public:
             // update the type of the function
             core::FunctionTypePtr newFuncType;
             if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-                core::FunctionType ft = *funcType;
-                core::TypePtr retTy = ft.getReturnType();
+                core::TypePtr retTy = funcType->getReturnType();
 
                 //check return type
                 assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
@@ -256,6 +351,7 @@ public:
                 assert(funcType && "Function has unexpected type");
             }
 
+  //          newFuncType = func->substitute(*builder.getNodeManager(), kernelMapper);
   //          core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
 
 
@@ -266,7 +362,7 @@ public:
             return newFunc;
         }
 
-        return newNode;
+        return element->substitute(*builder.getNodeManager(), *this);
     }
 
 };

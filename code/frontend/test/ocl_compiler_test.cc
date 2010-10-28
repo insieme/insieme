@@ -80,6 +80,7 @@ public:
             assert(funcType && "Function has unexpected type");
         }
 
+std::cout << "Nchilds: " << func->getChildList().size() << std::endl;
 
         core::NodePtr node = func->getChildList()[0];
         std::cout << "this is lambdaaaa" << node->toString() << "\n";
