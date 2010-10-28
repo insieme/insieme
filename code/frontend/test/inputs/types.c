@@ -47,7 +47,7 @@ void basic_type_test() {
 
 	char d = 'a';
 
-	#pragma test "ref<ref<unit>> v4 = ref.var(null)"
+	#pragma test "ref<ref<'a>> v4 = ref.var(null)"
 	void* e;
 
 	#pragma test "ref<real<4>> v5 = ref.var(0.00f)"

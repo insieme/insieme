@@ -371,7 +371,7 @@ TEST(TypeConversion, HandleArrayType) {
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	CommandLineOptions::Verbosity = 2;
+	CommandLineOptions::Verbosity = 0;
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 

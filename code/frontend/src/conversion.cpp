@@ -1911,7 +1911,9 @@ public:
 							assert(tagTy && "Type is not of TagType type");
 
 							//Visual Studio 2010 fix: full namespace
-							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit = this->ctx.recVarMap.find(ty);
+							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit =
+									this->ctx.recVarMap.find(ty);
+
 							assert(tit != this->ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
@@ -2037,51 +2039,40 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
 				DVLOG(2) << "           OpenCL address space __private";
-				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::PRIVATE));
+				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE ));
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
 				DVLOG(2) << "           OpenCL address space __local";
-				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-						ocl::AddressSpaceAnnotation::addressSpace::LOCAL));
+				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL ));
 				continue;
 			}
 
-            // keywords global and local are only allowed for parameters
             // TODO global also for global variables
-            if(dyn_cast<clang::ParmVarDecl>(varDecl)) {
 
-                //check if the declaration has attribute __global
-                if(sr == "__global") {
-                    DVLOG(2) << "           OpenCL address space __global";
-                    declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-                            ocl::AddressSpaceAnnotation::addressSpace::GLOBAL));
-                    continue;
-                }
+			//check if the declaration has attribute __global
+			if(sr == "__global") {
+				// keywords global and local are only allowed for parameters
+				if(isa<const clang::ParmVarDecl>(varDecl)) {
+					DVLOG(2) << "           OpenCL address space __global";
+					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL ));
+					continue;
+				}
+				ss << "Address space __global not allowed for local variable";
+				throw &ss;
+			}
 
-                //check if the declaration has attribute __constant
-                if(sr == "__constant") {
-                    DVLOG(2) << "           OpenCL address space __constant";
-                    declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>(
-                            ocl::AddressSpaceAnnotation::addressSpace::CONSTANT));
-                    continue;
-                }
-            } else {
-                //check if the declaration has attribute __global
-                if(sr == "__global") {
-                    ss << "Address space __global not allowed for local variable";
-                    throw &ss;
-                }
-
-                //check if the declaration has attribute __constant
-                if(sr == "__constant") {
-                    ss << "Address space __constant not allowed for local variable";
-                    throw &ss;
-                }
-            }
+			//check if the declaration has attribute __constant
+			if(sr == "__constant") {
+				if(isa<const clang::ParmVarDecl>(varDecl)) {
+					DVLOG(2) << "           OpenCL address space __constant";
+					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));					continue;
+				}
+				ss << "Address space __constant not allowed for local variable";
+				throw &ss;
+			}
 		}
 
 		// Throw an error if an unhandled attribute is found
