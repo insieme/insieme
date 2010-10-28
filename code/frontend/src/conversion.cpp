@@ -2094,14 +2094,6 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
-
-ConversionFactory::~ConversionFactory() {
-	delete ctx;
-	delete typeConv;
-	delete stmtConv;
-	delete exprConv;
-}
-
 core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
 	ConversionContext::VarDeclMap::const_iterator fit = ctx->varDeclMap.find(varDecl);
 	if(fit != ctx->varDeclMap.end())

@@ -63,16 +63,16 @@ class ConversionFactory {
 	class ClangExprConverter;
 
 	class ConversionContext;
-	ConversionContext* ctx;
+	std::auto_ptr<ConversionContext> ctx;
 
 	core::SharedNodeManager  mgr;
 	const core::ASTBuilder   builder;
     const ClangCompiler& 	 clangComp;
     PragmaStmtMap 	 		 pragmaMap;
 
-	ClangTypeConverter* typeConv;
-	ClangExprConverter* exprConv;
-	ClangStmtConverter* stmtConv;
+	std::auto_ptr<ClangTypeConverter> typeConv;
+	std::auto_ptr<ClangExprConverter> exprConv;
+	std::auto_ptr<ClangStmtConverter> stmtConv;
 
 	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type);
 
@@ -94,8 +94,6 @@ public:
 	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
-
-	~ConversionFactory();
 };
 
 // ------------------------------------ ASTConverter ---------------------------

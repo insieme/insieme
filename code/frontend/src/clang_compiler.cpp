@@ -152,7 +152,9 @@ void InsiemeParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx, b
 
 void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOptions& diagOpts) {
 	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
+	// cppcheck-suppress exceptNew
 	Diagnostic* diags = new Diagnostic(diagClient);
+	// clang will take care of memory deallocation of diags
 	clang.setDiagnostics(diags);
 }
 
