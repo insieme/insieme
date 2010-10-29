@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "Converting to OpenCL ... ";
 
 			insieme::opencl_backend::OpenCLChecker oc;
-			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc->check(program) ? "CHECKED" : "WRONG");
+			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "CHECKED" : "WRONG");
 
 			insieme::opencl_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
