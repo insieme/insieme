@@ -271,10 +271,17 @@ TEST(XmlTest, StructTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
+	xml.convertDomToXml("dump2.xml");
+	xml.convertXmlToDom("dump2.xml", true);
 	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);	
+	EXPECT_EQ (s1, s2);
+
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, UnionTypeTest) {
@@ -317,7 +324,14 @@ TEST(XmlTest, UnionTypeTest) {
 	xml.convertDomToXml("dump1.xml");
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);	
+	EXPECT_EQ (s1, s2);
+
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, TupleTypeTest) {
@@ -395,6 +409,13 @@ TEST(XmlTest, TypeVariableTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, RecTypeTest) {
@@ -436,6 +457,13 @@ TEST(XmlTest, RecTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, LiteralTest) {
@@ -760,25 +788,25 @@ TEST(XmlTest, DeclarationStmtTest) {
 TEST(XmlTest, StructExprTest) {
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	Identifier ident1("j");
+	Identifier ident2("k");
 	
 	vector<NamedCompositeExpr::Member> vecA;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literal1 = Literal::get(manager, "111", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_l1e(new DummyAnnotation("lit1 e"));
+	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("lit1 n"));
+	literal1.addAnnotation(dummy_l1e);
+	literal1->addAnnotation(dummy_l1n);
 	
-	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
-	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
-	literalB.addAnnotation(dummy_lBe);
-	literalB->addAnnotation(dummy_lBn);
+	LiteralPtr literal2 = Literal::get(manager, "222", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_l2e(new DummyAnnotation("lit2 e"));
+	DummyAnnotationPtr dummy_l2n(new DummyAnnotation("lit2 n"));
+	literal2.addAnnotation(dummy_l2e);
+	literal2->addAnnotation(dummy_l2n);
 	
-	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
-	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+	vecA.push_back(NamedCompositeExpr::Member(ident1, literal1));
+	vecA.push_back(NamedCompositeExpr::Member(ident2, literal2));
 
 	StructExprPtr structA = StructExpr::get(manager, vecA);
 	
@@ -802,25 +830,25 @@ TEST(XmlTest, StructExprTest) {
 TEST(XmlTest, UnionExprTest) {
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	Identifier identC("c");
+	Identifier identD("d");
 	
 	vector<NamedCompositeExpr::Member> vecA;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literalC = Literal::get(manager, "10", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lCe(new DummyAnnotation("litC e"));
+	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("litC n"));
+	literalC.addAnnotation(dummy_lCe);
+	literalC->addAnnotation(dummy_lCn);
 	
-	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
-	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
-	literalB.addAnnotation(dummy_lBe);
-	literalB->addAnnotation(dummy_lBn);
+	LiteralPtr literalD = Literal::get(manager, "20", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lDe(new DummyAnnotation("litD e"));
+	DummyAnnotationPtr dummy_lDn(new DummyAnnotation("litD n"));
+	literalD.addAnnotation(dummy_lDe);
+	literalD->addAnnotation(dummy_lDn);
 	
-	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
-	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+	vecA.push_back(NamedCompositeExpr::Member(identC, literalC));
+	vecA.push_back(NamedCompositeExpr::Member(identD, literalD));
 
 	UnionExprPtr unionA = UnionExpr::get(manager, vecA);
 	
@@ -846,20 +874,20 @@ TEST(XmlTest, VectorExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literalE = Literal::get(manager, "11", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lEe(new DummyAnnotation("litE e"));
+	DummyAnnotationPtr dummy_lEn(new DummyAnnotation("litE n"));
+	literalE.addAnnotation(dummy_lEe);
+	literalE->addAnnotation(dummy_lEn);
 	
-	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
-	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
-	literalB.addAnnotation(dummy_lBe);
-	literalB->addAnnotation(dummy_lBn);
+	LiteralPtr literalF = Literal::get(manager, "21", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lFe(new DummyAnnotation("litF e"));
+	DummyAnnotationPtr dummy_lFn(new DummyAnnotation("litF n"));
+	literalF.addAnnotation(dummy_lFe);
+	literalF->addAnnotation(dummy_lFn);
 	
-	vecA.push_back(literalA);
-	vecA.push_back(literalB);
+	vecA.push_back(literalE);
+	vecA.push_back(literalF);
 	
 	VectorExprPtr vec = VectorExpr::get(manager, vecA);
 	DummyAnnotationPtr dummy_Ve(new DummyAnnotation("vecExpr e"));
@@ -883,20 +911,20 @@ TEST(XmlTest, TupleExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literalG = Literal::get(manager, "12", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lGe(new DummyAnnotation("litG e"));
+	DummyAnnotationPtr dummy_lGn(new DummyAnnotation("litG n"));
+	literalG.addAnnotation(dummy_lGe);
+	literalG->addAnnotation(dummy_lGn);
 	
-	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
-	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
-	literalB.addAnnotation(dummy_lBe);
-	literalB->addAnnotation(dummy_lBn);
+	LiteralPtr literalH = Literal::get(manager, "22", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lHe(new DummyAnnotation("litH e"));
+	DummyAnnotationPtr dummy_lHn(new DummyAnnotation("litH n"));
+	literalH.addAnnotation(dummy_lHe);
+	literalH->addAnnotation(dummy_lHn);
 	
-	vecA.push_back(literalA);
-	vecA.push_back(literalB);
+	vecA.push_back(literalG);
+	vecA.push_back(literalH);
 	
 	TupleExprPtr tuple = TupleExpr::get(manager, vecA);
 	DummyAnnotationPtr dummy_Te(new DummyAnnotation("tupleExpr e"));
@@ -918,13 +946,13 @@ TEST(XmlTest, TupleExprTest) {
 TEST(XmlTest, CastExprTest) {
 	NodeManager manager;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literal = Literal::get(manager, "16", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_le(new DummyAnnotation("lit e"));
+	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lit n"));
+	literal.addAnnotation(dummy_le);
+	literal->addAnnotation(dummy_ln);
 	
-	CastExprPtr cast = CastExpr::get(manager, lang::TYPE_INT_8_PTR, literalA);
+	CastExprPtr cast = CastExpr::get(manager, lang::TYPE_INT_8_PTR, literal);
 	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("castExpr e"));
 	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("castExpr n"));
 	cast.addAnnotation(dummy_Ce);
@@ -946,28 +974,28 @@ TEST(XmlTest, CallExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literal_A = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("lit A e"));
+	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("lit A n"));
+	literal_A.addAnnotation(dummy_lAe);
+	literal_A->addAnnotation(dummy_lAn);
 	
-	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
-	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
-	literalB.addAnnotation(dummy_lBe);
-	literalB->addAnnotation(dummy_lBn);
+	LiteralPtr literal_B = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("lit B e"));
+	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("lit B n"));
+	literal_B.addAnnotation(dummy_lBe);
+	literal_B->addAnnotation(dummy_lBn);
 	
-	LiteralPtr literalC = Literal::get(manager, "3", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lCe(new DummyAnnotation("litC e"));
-	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("litC n"));
-	literalC.addAnnotation(dummy_lCe);
-	literalC->addAnnotation(dummy_lCn);
+	LiteralPtr literal_C = Literal::get(manager, "3", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_lCe(new DummyAnnotation("lit C e"));
+	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("lit C n"));
+	literal_C.addAnnotation(dummy_lCe);
+	literal_C->addAnnotation(dummy_lCn);
 	
-	vecA.push_back(literalA);
-	vecA.push_back(literalB);
+	vecA.push_back(literal_A);
+	vecA.push_back(literal_B);
 	
-	CallExprPtr call = CallExpr::get(manager, lang::TYPE_BOOL_PTR, literalC, vecA);
+	CallExprPtr call = CallExpr::get(manager, lang::TYPE_BOOL_PTR, literal_C, vecA);
 	DummyAnnotationPtr dummy_Ce(new DummyAnnotation("callExpr e"));
 	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("callExpr n"));
 	call.addAnnotation(dummy_Ce);
@@ -1129,49 +1157,47 @@ TEST(XmlTest, ProgramTest) {
 TEST(XmlTest, RecLambdaExprTest) {
 	ASTBuilder builder;
 
-	// create a recursive even/odd example
-	TupleTypePtr argumentType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR));
-	FunctionTypePtr functionType = builder.functionType(argumentType, lang::TYPE_BOOL_PTR);
-	VariablePtr evenVar = builder.variable(functionType, 1);
-	VariablePtr oddVar = builder.variable(functionType, 2);
+	TupleTypePtr argType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_8_PTR));
+	FunctionTypePtr funType = builder.functionType(argType, lang::TYPE_BOOL_PTR);
+	VariablePtr evVar = builder.variable(funType, 1);
+	VariablePtr odVar = builder.variable(funType, 2);
 
 
-	LambdaExpr::ParamList param;
-	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
+	LambdaExpr::ParamList params;
+	params.push_back(builder.variable(lang::TYPE_UINT_8_PTR, 3));
 
 	LiteralPtr zero = builder.literal("0", TYPE_UINT_1_PTR);
-	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
-	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
+	VariablePtr x = builder.variable(lang::TYPE_UINT_8_PTR, 3);
+	ExpressionPtr cond = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
 
-	// build even body ...
-	StatementPtr evenBody = builder.ifStmt(condition,
+	StatementPtr evBody = builder.ifStmt(cond,
 			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
 			builder.returnStmt(
 					builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
-							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, oddVar, toVector<ExpressionPtr>(x))))
+							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, odVar, toVector<ExpressionPtr>(x))))
 			)
 	);
-	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
+	LambdaExprPtr evLambda = builder.lambdaExpr(funType, params, evBody);
 
 	// build odd body ...
-	StatementPtr oddBody = builder.ifStmt(condition,
+	StatementPtr odBody = builder.ifStmt(cond,
 				builder.returnStmt(lang::CONST_BOOL_FALSE_PTR),
 				builder.returnStmt(
 						builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
-								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evenVar, toVector<ExpressionPtr>(x))))
+								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evVar, toVector<ExpressionPtr>(x))))
 				)
 	);
-	LambdaExprPtr oddLambda = builder.lambdaExpr(functionType, param, oddBody);
+	LambdaExprPtr odLambda = builder.lambdaExpr(funType, params, odBody);
 
 	// finish definition
-	RecLambdaDefinition::RecFunDefs definitions;
-	definitions.insert(std::make_pair(evenVar, evenLambda));
-	definitions.insert(std::make_pair(oddVar, oddLambda));
-	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+	RecLambdaDefinition::RecFunDefs defs;
+	defs.insert(std::make_pair(evVar, evLambda));
+	defs.insert(std::make_pair(odVar, odLambda));
+	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(defs);
 	
 	// create recursive lambda nodes
-	RecLambdaExprPtr even = builder.recLambdaExpr(evenVar, definition);
-	RecLambdaExprPtr odd  = builder.recLambdaExpr(oddVar,  definition);
+	RecLambdaExprPtr even = builder.recLambdaExpr(evVar, definition);
+	RecLambdaExprPtr odd  = builder.recLambdaExpr(odVar,  definition);
 	
 	NodePtr root = even;
 	

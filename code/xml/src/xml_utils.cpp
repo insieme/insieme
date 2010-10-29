@@ -290,6 +290,17 @@ public:
 			visitAnnotations(definitionT.getAnnotations(), recTypeDefinitionPtr);
 		}
 		
+		XmlElement typeVariable("typeVariable", doc);
+		recType << typeVariable;
+
+		if (const TypeVariablePtr& typeT = cur->getTypeVariable()) {
+			XmlElement typeVariablePtr("typeVariablePtr", doc);
+			typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));			
+			typeVariable << typeVariablePtr;
+
+			visitAnnotations(typeT.getAnnotations(), typeVariablePtr);
+		}
+		
 		visitAnnotations(cur->getAnnotations(), recType);
 	}
 	
@@ -1082,7 +1093,7 @@ XmlElement& XmlElement::operator<<(XmlElement& childNode) {
 	return childNode;
 }
 
-XmlElement& XmlElement::operator<<(shared_ptr<XmlElement> childNode) {
+XmlElement& XmlElement::operator<<(XmlElementPtr childNode) {
 	if (childNode) {
 		base->appendChild(childNode->base);
 		return *childNode;
@@ -1191,7 +1202,7 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	}
 }
 
-shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
+XmlElementPtr XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
 	const string& type = ann.getAnnotationName();
 	IrToDomConvertMapType::const_iterator fit = IrToDomConvertMap.find(type);
 	if(fit != IrToDomConvertMap.end()) {
@@ -1339,7 +1350,9 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 	checkRef(manager, elem, elemMap);
 	
 	// different types of nodes
-	if (elem.getName() == "genType") {
+	string nodeName = elem.getName();
+	
+	if (nodeName == "genType") {
 		TypePtr baseType = NULL;
 		XmlElementPtr base = elem.getFirstChildByName("baseType");
 		if (base){
@@ -1385,7 +1398,8 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, gen);
 	}
-	else if (elem.getName() == "functionType") {
+	
+	else if (nodeName == "functionType") {
 		XmlElementPtr type = elem.getFirstChildByName("argumentType")->getFirstChildByName("tupleTypePtr");
 		TupleTypePtr argType = dynamic_pointer_cast<const TupleType>(elemMap[type->getAttr("ref")].second);
 		buildAnnotations(*type, argType, true);
@@ -1402,7 +1416,37 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, fun);
 	}
-	else if (elem.getName() == "tupleType") {
+	
+	else if (nodeName == "unionType" || nodeName == "structType") {
+		vector<XmlElement> entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
+		vector<NamedCompositeType::Entry> entryVec;
+		for(auto iter = entries.begin(); iter != entries.end(); ++iter) {
+			Identifier ident = iter->getFirstChildByName("id")->getText();
+			
+			XmlElementPtr type = iter->getFirstChildByName("typePtr");
+			TypePtr el = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, el, true);
+			entryVec.push_back(NamedCompositeType::Entry(ident, el));
+		}
+		if (nodeName == "structType") {
+			StructTypePtr structT = StructType::get(manager, entryVec);
+			buildAnnotations(elem, structT, false);
+			// update the map
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, structT);
+		}
+		else {
+			UnionTypePtr unionT = UnionType::get(manager, entryVec);
+			buildAnnotations(elem, unionT, false);
+			// update the map
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, unionT);			
+		}
+	}
+	
+	else if (nodeName == "tupleType") {
 		vector<XmlElement> types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("elementType");
 		vector<TypePtr> elementList;
 		for(auto iter = types.begin(); iter != types.end(); ++iter) {
@@ -1420,7 +1464,59 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, tuple);
 	}
-	else if (elem.getName() == "rootNode") {
+	
+	else if (nodeName == "typeVariable") {
+		TypeVariablePtr var = TypeVariable::get(manager, elem.getAttr("name"));
+		buildAnnotations(elem, var, false);
+		
+		// update the map
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, var);
+	}
+	
+	else if (nodeName == "recType") {
+		XmlElementPtr type = elem.getFirstChildByName("definition")->getFirstChildByName("recTypeDefinitionPtr");
+		RecTypeDefinitionPtr definition = dynamic_pointer_cast<const RecTypeDefinition>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, definition, true);
+		
+		type = elem.getFirstChildByName("typeVariable")->getFirstChildByName("typeVariablePtr");
+		TypeVariablePtr var = dynamic_pointer_cast<const TypeVariable>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, var, true);
+		
+		RecTypePtr recType = RecType::get(manager, var, definition);
+		buildAnnotations(elem, recType, false);
+		
+		// update the map
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, recType);
+	}
+	
+	else if (nodeName == "recTypeDefinition") {
+		vector<XmlElement> defs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
+		RecTypeDefinition::RecTypeDefs defVec;
+		for(auto iter = defs.begin(); iter != defs.end(); ++iter) {
+			XmlElementPtr type = iter->getFirstChildByName("typeVariablePtr");
+			TypeVariablePtr var = dynamic_pointer_cast<const TypeVariable>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, var, true);
+			
+			type = iter->getFirstChildByName("typePtr");
+			TypePtr ty = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, ty, true);
+			
+			defVec.insert(std::make_pair(var, ty));
+		}
+		
+		RecTypeDefinitionPtr rec = RecTypeDefinition::get(manager, defVec);
+		buildAnnotations(elem, rec, false);
+		
+		// update the map
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, rec);
+	}
+	else if (nodeName == "rootNode") {
 		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
 		buildAnnotations(*type, elemMap[type->getAttr("ref")].second, true);
 	}

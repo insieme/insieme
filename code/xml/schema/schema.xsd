@@ -51,6 +51,12 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_typeVariablePtr">
+	<xs:all>
+		<xs:element name="typeVariablePtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
 <xs:complexType name="T_VariablePtr">
 	<xs:all>
 		<xs:element name="variablePtr" type="T_nodePtr" minOccurs="1"/>
@@ -388,6 +394,7 @@
 
 <xs:complexType name="T_recType">
 	<xs:all>
+		<xs:element name="typeVariable" type="T_typeVariablePtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="definition" type="T_RecTypeDefinitionPtr" minOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
