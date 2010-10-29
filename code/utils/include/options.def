@@ -37,6 +37,7 @@
 //FLAG(opt_name, opt_id, var_name, var_help)
 FLAG("help,h", "help", Help, "produce help message")
 FLAG("version,V", "version", Version, "print version string")
+FLAG("pretty-print,P", "pretty-print", PrettyPrint, "pretty print the IR after frontend conversion")
 
 //For debug:
 FLAG("opencl,OCL", "opencl", OpenCL, "produces code by OpenCL backend (debug)")
@@ -48,7 +49,8 @@ OPTION("std,std", "std-compatibility", STD, std::string, "Set compatibility mode
 OPTION("definitions,D", "definitions", Defs, std::vector<std::string>, "Add a preprocessor definition")
 OPTION("show-ir,", "show-ir", ShowIR, std::string, "Print a dot representation of the IR")
 OPTION("dump-xml,", "dump-xml", DumpXML, std::string, "Print the xml representation of the IR")
-
+OPTION("dump-ir,", "dump-ir", DumpIR, std::string, "Print the pretty printed representation of the IR")
+OPTION("out-file,o", "out-file", Output, std::string, "output file")
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")
