@@ -781,25 +781,25 @@ TEST(XmlTest, DeclarationStmtTest) {
 TEST(XmlTest, StructExprTest) {
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	Identifier ident1("j");
+	Identifier ident2("k");
 	
 	vector<NamedCompositeExpr::Member> vecA;
 	
-	LiteralPtr literalA = Literal::get(manager, "1", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lAe(new DummyAnnotation("litA e"));
-	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
-	literalA.addAnnotation(dummy_lAe);
-	literalA->addAnnotation(dummy_lAn);
+	LiteralPtr literal1 = Literal::get(manager, "111", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_l1e(new DummyAnnotation("lit1 e"));
+	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("lit1 n"));
+	literal1.addAnnotation(dummy_l1e);
+	literal1->addAnnotation(dummy_l1n);
 	
-	LiteralPtr literalB = Literal::get(manager, "2", lang::TYPE_INT_4_PTR);
-	DummyAnnotationPtr dummy_lBe(new DummyAnnotation("litB e"));
-	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
-	literalB.addAnnotation(dummy_lBe);
-	literalB->addAnnotation(dummy_lBn);
+	LiteralPtr literal2 = Literal::get(manager, "222", lang::TYPE_INT_4_PTR);
+	DummyAnnotationPtr dummy_l2e(new DummyAnnotation("lit2 e"));
+	DummyAnnotationPtr dummy_l2n(new DummyAnnotation("lit2 n"));
+	literal2.addAnnotation(dummy_l2e);
+	literal2->addAnnotation(dummy_l2n);
 	
-	vecA.push_back(NamedCompositeExpr::Member(identA, literalA));
-	vecA.push_back(NamedCompositeExpr::Member(identB, literalB));
+	vecA.push_back(NamedCompositeExpr::Member(ident1, literal1));
+	vecA.push_back(NamedCompositeExpr::Member(ident2, literal2));
 
 	StructExprPtr structA = StructExpr::get(manager, vecA);
 	

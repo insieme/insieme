@@ -1082,7 +1082,7 @@ XmlElement& XmlElement::operator<<(XmlElement& childNode) {
 	return childNode;
 }
 
-XmlElement& XmlElement::operator<<(shared_ptr<XmlElement> childNode) {
+XmlElement& XmlElement::operator<<(XmlElementPtr childNode) {
 	if (childNode) {
 		base->appendChild(childNode->base);
 		return *childNode;
@@ -1191,7 +1191,7 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	}
 }
 
-shared_ptr<XmlElement> XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
+XmlElementPtr XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {
 	const string& type = ann.getAnnotationName();
 	IrToDomConvertMapType::const_iterator fit = IrToDomConvertMap.find(type);
 	if(fit != IrToDomConvertMap.end()) {
