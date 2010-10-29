@@ -785,6 +785,40 @@ public:
 
 };
 
+// --------------------------------- Job Type ----------------------------
+
+/**
+ * This type represents job expressions ment for parallel execution
+ */
+class JobType : public GenericType {
+protected:
+
+    /**
+     * Creates a new instance of this class using
+     *
+     */
+    JobType();
+
+public:
+
+    /**
+     * A factory method allowing to obtain a pointer to a array type representing
+     * an instance managed by the given manager.
+     *
+     * @param manager       the manager which should be responsible for maintaining the new
+     *                      type instance and all its referenced elements.
+     */
+    static JobTypePtr get(NodeManager& manager);
+
+
+private:
+    /**
+     * Creates a clone of this type.
+     */
+    virtual JobType* createCopyUsing(NodeMapping& mapper) const;
+};
+
+
 // --------------------------------- Single Element Type ----------------------------
 
 /**

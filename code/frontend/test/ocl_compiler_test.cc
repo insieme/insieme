@@ -41,6 +41,7 @@
 #include "clang_compiler.h"
 #include "ast_visitor.h"
 #include "clang_config.h"
+#include "naming.h"
 
 #include <logging.h>
 
@@ -61,6 +62,11 @@ public:
 //        core::AnnotationMap map = func.getAnnotations();
  //       std::cout << "Size: " << map.size() << std::endl;
 
+        // kernel function has at least 4 child nodes (type, 2 args, body)
+        //TODO make me pretty
+        if(func->getChildList().size() >= 4) {
+
+
         if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
             core::FunctionType ft = *funcType;
             core::TypePtr retTy = ft.getReturnType();
@@ -80,16 +86,25 @@ public:
             assert(funcType && "Function has unexpected type");
         }
 
+//std::cout << "Nchilds: " << func->getChildList().size() << std::endl;
 
         core::NodePtr node = func->getChildList()[0];
         std::cout << "this is lambdaaaa" << node->toString() << "\n";
-    }
 
+        if(core::CompoundStmtPtr body = core::dynamic_pointer_cast<const core::CompoundStmt>(func->getChildList().back())){
+            core::StatementPtr parFunc = body->getStatements().at(0);
+            if(core::CallExprPtr parallelFunctionCall = dynamic_pointer_cast<const core::CallExpr>(parFunc))
+                std::cout << "Found call for parallel  in function body\n";// Noop
+            else
+                EXPECT_TRUE(parallelFunctionCall);
+        }
+    }}
+/*
     void visitJobExpr(const core::JobExprPtr& job) {
         std::cout << "get a job!\n";
 
         core::JobExpr j = *job;
-    }
+    }*/
 };
 
 }

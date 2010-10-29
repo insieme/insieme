@@ -495,6 +495,19 @@ UnionType* UnionType::createCopyUsing(NodeMapping& mapper) const {
 
 // ------------------------------------ Single Element Type ---------------------------
 
+JobType::JobType() : GenericType(NT_JobExpr, "job") {};
+
+JobTypePtr JobType::get(NodeManager& manager) {
+    return manager.get(JobType());
+}
+
+JobType* JobType::createCopyUsing(NodeMapping&) const {
+    return new JobType();
+}
+
+
+// ------------------------------------ Single Element Type ---------------------------
+
 SingleElementType::SingleElementType(NodeType nodeType, const string& name,
 		const TypePtr& elementType, const vector<IntTypeParam>& intTypeParams) :
 	GenericType(nodeType, name, toVector(isolate(elementType)), intTypeParams) {};
