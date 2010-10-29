@@ -36,7 +36,7 @@
 
 #include "timer.h"
 
-#include "logging.h"
+#include <sstream>
 #include <cassert>
 
 namespace insieme {
@@ -54,9 +54,12 @@ double Timer::getTime() const {
 }
 
 std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-	out << "\n********************************************************************************" << std::endl;
-	out << "* " << timer.mName << ":\t" << timer.getTime() << " secs" << std::endl;
-	return out << "********************************************************************************" << std::endl;
+	std::ostringstream time;
+	time << timer.getTime();
+	std::string frame =  std::string(timer.mName.size() + time.str().size() + 14, '*');
+	out << std::endl << frame << std::endl;
+	out << "* " << timer.mName << ":    " << time.str() << " secs *" << std::endl;
+	return out << frame << std::endl;
 }
 
 } // end utils namespace

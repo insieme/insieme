@@ -84,26 +84,37 @@ int main(int argc, char** argv) {
 		LOG(INFO) << "Parsing input files: ";
 		std::copy(inputFiles.begin(), inputFiles.end(), std::ostream_iterator<std::string>( std::cout, ", " ) );
 		fe::Program p(manager);
+		insieme::utils::Timer clangTimer("Frontend.load [clang]");
 		p.addTranslationUnits(inputFiles);
+		clangTimer.stop();
+		LOG(INFO) << clangTimer;
 
 		// do the actual clang to IR conversion
+		insieme::utils::Timer convertTimer("Frontend.convert ");
 		insieme::core::ProgramPtr program = p.convert();
+		convertTimer.stop();
+		LOG(INFO) << convertTimer;
 
 		// perform checks
+		LOG(INFO) << "=========================== IR Semantic Checks ==================================";
+		insieme::utils::Timer timer("Checks");
 		MessageList&& errors = check(program, insieme::core::checks::getFullCheck());
 		std::sort(errors.begin(), errors.end());
 		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
+		timer.stop();
+		LOG(INFO) << timer;
+		LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 		// IR statistiscs
 		ASTStatistic&& stats = ASTStatistic::evaluate(program);
 		LOG(INFO) << "============================ IR Statistics ======================================";
-		LOG(INFO) << "\tNumber of Shared Nodes: " << stats.getNumSharedNodes();
-		LOG(INFO) << "\tNumber of Addressable Nodes: " << stats.getNumAddressableNodes();
-		LOG(INFO) << "\tShare Ratio: " << stats.getShareRatio();
-		LOG(INFO) << "\tHeight of tree: " << stats.getHeight();
-		LOG(INFO) << "================================= END ===========================================";
+		LOG(INFO) << "Number of Shared Nodes: " << stats.getNumSharedNodes();
+		LOG(INFO) << "Number of Addressable Nodes: " << stats.getNumAddressableNodes();
+		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
+		LOG(INFO) << "Height of tree: " << stats.getHeight();
+		LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 		if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
 			// a pretty print of the AST
@@ -116,18 +127,26 @@ int main(int argc, char** argv) {
 				LOG(INFO) << insieme::core::printer::PrettyPrint(program);
 			LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
 			LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
-			LOG(INFO) << "================================= END ===========================================";
+			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
+
 		// Creates dot graph of the generated IR
 		if(!CommandLineOptions::ShowIR.empty()) {
+			insieme::utils::Timer timer("Show.graph");
 			std::fstream dotFile(CommandLineOptions::ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
 			insieme::driver::printDotGraph(program, errors, dotFile);
-			dotFile.close();
+			timer.stop();
+			DLOG(INFO) << timer;
 		}
 
 		// XML dump
 		if(!CommandLineOptions::DumpXML.empty()) {
+			LOG(INFO) << "================================== XML DUMP =====================================";
+			insieme::utils::Timer timer("Xml.dump");
 			insieme::xml::xmlWrite(program, CommandLineOptions::DumpXML);
+			timer.stop();
+			LOG(INFO) << timer;
+			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 
 		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
@@ -145,7 +164,7 @@ int main(int argc, char** argv) {
 		} else {
 			insieme::utils::Timer timer("Simple.Backend");
 
-			LOG(INFO) << "Converting to C++ ... ";
+			LOG(INFO) << "========================== Converting to C++ ================================";
 			insieme::simple_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
 
@@ -154,8 +173,9 @@ int main(int argc, char** argv) {
 				outFile << converted;
 			} else
 				LOG(INFO) << converted;
+
 			timer.stop();
-			DLOG(INFO) << timer;
+			LOG(INFO) << timer;
 		}
 
 	} catch (fe::ClangParsingError& e) {
