@@ -45,6 +45,8 @@
 
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Index/Indexer.h"
+#include "clang/Index/Program.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -66,7 +68,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clangComp;
-	ConversionFactory convFactory( shared, clangComp );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clangComp, idx, p );
 
 	// VOID
 	//CHECK_BUILTIN_TYPE(Void, "unit");
@@ -119,7 +123,9 @@ TEST(TypeConversion, HandlePointerType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clang, idx, p);
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
@@ -138,7 +144,9 @@ TEST(TypeConversion, HandleReferenceType) {
 	core::ProgramPtr prog = core::Program::create(*shared);
 
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clang, idx, p );
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
@@ -155,8 +163,10 @@ TEST(TypeConversion, HandleStructType) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	ConversionFactory convFactory( shared, clang, idx, p );
 
 	SourceLocation emptyLoc;
 
@@ -200,7 +210,9 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clang, idx, p );
 
 	// cppcheck-suppress exceptNew
 	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
@@ -236,7 +248,9 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clang, idx, p );
 	SourceLocation emptyLoc;
 
 	RecordDecl* declA = RecordDecl::Create(clang.getASTContext(), TTK_Struct, NULL, emptyLoc, clang.getPreprocessor().getIdentifierInfo("A"));
@@ -306,7 +320,9 @@ TEST(TypeConversion, HandleFunctionType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clang, idx, p );
 
 	ASTContext& ctx = clang.getASTContext();
 	// Defines a function with the following prototype:
@@ -349,7 +365,9 @@ TEST(TypeConversion, HandleArrayType) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	core::ProgramPtr prog = core::Program::create(*shared);
 	ClangCompiler clang;
-	ConversionFactory convFactory( shared, clang );
+	clang::idx::Program p;
+	clang::idx::Indexer idx(p);
+	ConversionFactory convFactory( shared, clang, idx, p );
 
 	ASTContext& ctx = clang.getASTContext();
 
@@ -386,7 +404,8 @@ TEST(TypeConversion, FileTest) {
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-	ConversionFactory convFactory( shared, comp, pl );
+
+	ConversionFactory convFactory( shared, comp, prog.getClangIndexer(), prog.getClangProgram(), pl );
 
 	std::for_each(pl.begin(), pl.end(),
 		[ &convFactory ](const PragmaPtr curr) {

@@ -58,7 +58,15 @@ class Parser;
 class Token;
 class Scope;
 class Expr;
+
+namespace idx {
+class Program;
+class Indexer;
+}
 } // end clang namespace
+
+class TypeConversion_FileTest_Test;
+class StmtConversion_FileTest_Test;
 
 // ------------------------------------ ParserProxy ---------------------------
 /**
@@ -173,9 +181,6 @@ public:
 	const PragmaList& 	 getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
 	const std::string& 	 getFileName() const { return mFileName; }
-
-	void incrementErrorCount() { ++mErrorCount; }
-	unsigned short getErrorCount() const { return mErrorCount; }
 };
 
 typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
@@ -198,6 +203,11 @@ class Program: public boost::noncopyable {
 	// The IR program node containing the converted IR
 	core::ProgramPtr mProgram;
 
+	friend class ::TypeConversion_FileTest_Test;
+	friend class ::StmtConversion_FileTest_Test;
+
+	clang::idx::Program& getClangProgram();
+	clang::idx::Indexer& getClangIndexer();
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 

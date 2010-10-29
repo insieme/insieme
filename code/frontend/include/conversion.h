@@ -46,7 +46,11 @@ namespace clang {
 class ASTContext;
 class DeclGroupRef;
 class FunctionDecl;
-}
+namespace idx {
+class Indexer;
+class Program;
+} // End idx namespace
+} // End clang namespace
 
 namespace insieme {
 namespace frontend {
@@ -65,21 +69,23 @@ class ConversionFactory {
 	class ConversionContext;
 	std::auto_ptr<ConversionContext> ctx;
 
-	core::SharedNodeManager  mgr;
-	const core::ASTBuilder   builder;
-    const ClangCompiler& 	 clangComp;
-    PragmaStmtMap 	 		 pragmaMap;
+	core::SharedNodeManager mgr;
+	const core::ASTBuilder  builder;
+    const ClangCompiler& 	clangComp;
+    clang::idx::Indexer& 	indexer;
+    clang::idx::Program& 	clangProg;
+    PragmaStmtMap 	 		pragmaMap;
 
 	std::auto_ptr<ClangTypeConverter> typeConv;
 	std::auto_ptr<ClangExprConverter> exprConv;
 	std::auto_ptr<ClangStmtConverter> stmtConv;
 
 	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type);
-
 	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
 
 public:
-	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList = PragmaList());
+	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, clang::idx::Indexer& indexer, clang::idx::Program& clangProg,
+			const PragmaList& pragmaList = PragmaList());
 
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
@@ -107,8 +113,9 @@ class ASTConverter {
 	const PragmaList&	 pragmaList;
 
 public:
-	ASTConverter(const ClangCompiler& clangComp, const core::ProgramPtr prog, const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
-		mComp(clangComp), mFact(mgr, clangComp, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
+	ASTConverter(const ClangCompiler& clangComp, clang::idx::Indexer& indexer, clang::idx::Program& clangProg, const core::ProgramPtr prog,
+		const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
+			mComp(clangComp), mFact(mgr, clangComp, indexer, clangProg, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 

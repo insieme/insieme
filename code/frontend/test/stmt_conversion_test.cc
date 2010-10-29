@@ -44,6 +44,8 @@
 #include "insieme_pragma.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/Index/Indexer.h"
+#include "clang/Index/Program.h"
 
 #include "ast_check.h"
 #include "checks/typechecks.h"
@@ -76,7 +78,10 @@ TEST(StmtConversion, FileTest) {
 			// we reset the counter for variables so we can write independent tests
 			VariableResetHack::reset();
 
-			ConversionFactory convFactory( shared, comp, pl );
+			clang::idx::Program p;
+			clang::idx::Indexer idx(p);
+
+			ConversionFactory convFactory( shared, comp, prog.getClangIndexer(), prog.getClangProgram(), pl );
 
 			if(tp->isStatement()) {
 				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );

@@ -34,62 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "a.h"
+#include "b.h"
 
-#include "program.h"
-
-#include "clang_compiler.h"
-#include "driver_config.h"
-#include "backend_convert.h"
-
-//#include <glog/logging.h>
-#include "logging.h"
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
-namespace fe = insieme::frontend;
-namespace core = insieme::core;
-using namespace insieme::c_info;
-using namespace insieme::utils::set;
-using namespace insieme::simple_backend;
-using namespace google;
-
-TEST(DriverTest, HelloWorldTest) {
-
-	// force logging to stderr
-	LogToStderr();
-
-	// Set severity level
-	SetStderrLogging(INFO);
-
-	core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
-	core::ProgramPtr program = core::Program::create(*sharedManager);
-
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
-	fe::Program prog(sharedManager);
-	prog.addTranslationUnit(std::string(SRC_DIR) + "/hello_world.c");
-	program = prog.convert();
-	LOG(INFO) << "Done.";
-
-	LOG(INFO) << "Printing the IR: " << program;
-
-	LOG(INFO) << "Converting IR to C...";
-
-	ConversionContext cc;
-	auto converted = cc.convert(program);
-
-	std::ostringstream ss;
-	for_each(program->getEntryPoints(), [&converted, &ss](const ExpressionPtr& ep) {
-		ss << converted[ep] << std::endl;
-	});
-
-	LOG(INFO) << "Printing converted code: " << ss.str();
-
-	std::ofstream out( std::string(SRC_DIR) + "/hello_world.insieme.c" );
-	out << ss.str();
-	out.close();
-
-	LOG(INFO) << "Wrote source to " << SRC_DIR << "/hello_world.insieme.c" << std::endl;
+int f(int a, int b) {
+	return g(a+b);
 }
