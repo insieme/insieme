@@ -12,20 +12,22 @@
 
 # -------------------------------------------------------------- define some code locations
 
+SET(CMAKE_BUILD_TYPE "Debug")
+
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 
-set ( insieme_core_src_dir 	             ${insieme_code_dir}/core/src )
-set ( insieme_utils_src_dir 	         ${insieme_code_dir}/utils/src )
+set ( insieme_core_src_dir 	            ${insieme_code_dir}/core/src )
+set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 
 set ( insieme_core_include_dir 	         ${insieme_code_dir}/core/include )
-set ( insieme_utils_include_dir          ${insieme_code_dir}/utils/include )
-set ( insieme_c_info_include_dir         ${insieme_code_dir}/c_info/include )
-set ( insieme_xml_include_dir            ${insieme_code_dir}/xml/include )
-set ( insieme_frontend_include_dir       ${insieme_code_dir}/frontend/include )
-set ( insieme_driver_include_dir         ${insieme_code_dir}/driver/include )
-set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
-set ( insieme_opencl_backend_include_dir ${insieme_code_dir}/opencl_backend/include )
+set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
+set ( insieme_c_info_include_dir         	${insieme_code_dir}/c_info/include )
+set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
+set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
+set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
+set ( insieme_simple_backend_include_dir 	${insieme_code_dir}/simple_backend/include )
+set ( insieme_opencl_backend_include_dir 	${insieme_code_dir}/opencl_backend/include )
 
 
 # ------------------------------------------------------------- configuration for platforms
