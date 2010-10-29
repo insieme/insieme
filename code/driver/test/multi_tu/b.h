@@ -34,35 +34,4 @@
  * regarding third party software licenses.
  */
 
-#include "timer.h"
-
-#include "numeric_cast.h"
-
-#include <sstream>
-#include <cassert>
-
-namespace insieme {
-namespace utils {
-
-double Timer::stop() {
-	mElapsed = elapsed();
-	isStopped = true;
-	return mElapsed;
-}
-
-double Timer::getTime() const {
-	assert(isStopped && "Cannnot read time of a running timer.");
-	return mElapsed;
-}
-
-std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-	std::string&& time = utils::numeric_cast<std::string>(timer.getTime());
-
-	std::string&& frame =  std::string(timer.mName.size() + time.size() + 14, '*');
-	out << std::endl << frame << std::endl;
-	out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
-	return out << frame << std::endl;
-}
-
-} // end utils namespace
-} // end insieme namespace
+int g(int);

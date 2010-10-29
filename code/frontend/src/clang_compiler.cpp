@@ -331,6 +331,9 @@ void Program::addTranslationUnit(const std::string& file_name) {
 
 const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
+clang::idx::Program& Program::getClangProgram() { return pimpl->mProg; }
+clang::idx::Indexer& Program::getClangIndexer() { return pimpl->mIdx; }
+
 void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
 
 namespace {
@@ -351,7 +354,7 @@ const core::ProgramPtr& Program::convert() {
 
 		const ClangCompiler& comp = (*it)->getCompiler();
 		const PragmaList& pList = (*it)->getPragmaList();
-		conversion::ASTConverter conv(comp, mProgram, mMgr, pList);
+		conversion::ASTConverter conv(comp, pimpl->mIdx, pimpl->mProg, mProgram, mMgr, pList);
 
 		for(PragmaList::const_iterator pit = pList.begin(), pend = pList.end(); pit != pend; ++pit)
 			if((*pit)->getType() == "insieme::mark") {
@@ -385,7 +388,7 @@ const core::ProgramPtr& Program::convert() {
 		const ClangCompiler& comp = (*it)->getCompiler();
 		const PragmaList& pList = (*it)->getPragmaList();
 
-		conversion::ASTConverter conv(comp, mProgram, mMgr, pList);
+		conversion::ASTConverter conv(comp, pimpl->mIdx, pimpl->mProg, mProgram, mMgr, pList);
 		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
 
 		conv.handleTranslationUnit(declRef);

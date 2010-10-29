@@ -69,6 +69,9 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
+#include "clang/Index/Entity.h"
+#include "clang/Index/Indexer.h"
+
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <boost/algorithm/string.hpp>
 
@@ -430,8 +433,10 @@ public:
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 			vector<core::ExpressionPtr>&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
-			const FunctionDecl* definition = NULL;
-			if( !funcDecl->hasBody(definition) ) {
+			clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, const_cast<clang::idx::Program&>(convFact.clangProg));
+			const FunctionDecl* definition = convFact.indexer.getDefinitionFor(funcEntity).first;
+
+			if(!definition) {
 				// in the case the function is extern, a literal is build
 				core::ExpressionPtr irNode =
 						convFact.builder.callExpr(	funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
@@ -1614,9 +1619,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitConstantArrayType(ConstantArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
-//		if(arrTy->isSugared())
-//			// if the type is sugared, we Visit the desugared type
-//			return Visit( arrTy->desugar().getTypePtr() );
+		if(arrTy->isSugared())
+			// if the type is sugared, we Visit the desugared type
+			return Visit( arrTy->desugar().getTypePtr() );
 
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -1637,9 +1642,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitIncompleteArrayType(IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
-//		if(arrTy->isSugared())
-//			// if the type is sugared, we Visit the desugared type
-//			return Visit( arrTy->desugar().getTypePtr() );
+		if(arrTy->isSugared())
+			// if the type is sugared, we Visit the desugared type
+			return Visit( arrTy->desugar().getTypePtr() );
 
 		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -1665,9 +1670,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitVariableArrayType(VariableArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
-//		if(arrTy->isSugared())
-//			// if the type is sugared, we Visit the desugared type
-//			return Visit( arrTy->desugar().getTypePtr() );
+		if(arrTy->isSugared())
+			// if the type is sugared, we Visit the desugared type
+			return Visit( arrTy->desugar().getTypePtr() );
 
 		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -2012,10 +2017,11 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, const PragmaList& pragmaList):
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, clang::idx::Indexer& indexer,
+	clang::idx::Program& clangProg, const PragmaList& pragmaList):
 	// cppcheck-suppress exceptNew
 	ctx(new ConversionContext),
-	mgr(mgr),  builder(mgr), clangComp(clang), pragmaMap(pragmaList),
+	mgr(mgr),  builder(mgr), clangComp(clang), indexer(indexer), clangProg(clangProg), pragmaMap(pragmaList),
 	// cppcheck-suppress exceptNew
 	typeConv( new ClangTypeConverter(*this) ),
 	// cppcheck-suppress exceptNew
