@@ -435,7 +435,7 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
-	auto type = GenericType::get(manager, "Job"); // TODO
+	auto type = lang::TYPE_JOB_PTR;
 	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
 }
 

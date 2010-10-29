@@ -81,7 +81,18 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 	return cptr;
 }
 
-CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda) {
+namespace {
+	string getNameForRecursiveFunction(NodeManager& manager, const RecLambdaDefinitionPtr& definition, const VariablePtr& variable, NameGenerator& generator) {
+		if(auto cnameAnn = variable->getAnnotation(c_info::CNameAnnotation::KEY)) {
+			// => take original c name
+			return cnameAnn->getName();
+		}
+		// => generate fresh name
+		return generator.getName(RecLambdaExpr::get(manager, variable, definition));
+	}
+}
+
+CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodePtr& surrounding) {
 
 	// check whether code has already been generated
 	auto codeIt = functionMap.find(lambda);
@@ -92,6 +103,7 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda) {
 	// generate forward declarations for all functions within this recursive type
 	const RecLambdaDefinitionPtr& definition = lambda->getDefinition();
 	typedef RecLambdaDefinition::RecFunDefs::value_type Pair;
+	TypeManager& typeManager = cc.getTypeMan();
 	for_each(definition->getDefinitions(), [&](const Pair& cur){
 
 		// create forward declaration
@@ -100,16 +112,16 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda) {
 
 		// get a name (for the defined recursive function)
 		RecLambdaExprPtr recLambda = RecLambdaExpr::get(cc.getNodeManager(), cur.first, definition);
-		string ident = cc.getNameGen().getName(recLambda);
+		string ident = getNameForRecursiveFunction(cc.getNodeManager(), definition, cur.first, cc.getNameGen());
 
 		// generate a new function from the lambda expression
 		CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
 		CodeStream& cs = cptr->getCodeStream();
 		// write the function header
-		cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
+		cs << typeManager.getTypeName(funType->getReturnType()) << " " << ident << "(";
 		// handle arguments
-		cs << join(", ", cur.second->getParams(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
-			return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
+		cs << join(", ", cur.second->getParams(), [&](std::ostream& os, const VariablePtr& param) -> std::ostream& {
+			return (os << typeManager.getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
 		});
 		cs << ");\n";
 
@@ -120,17 +132,26 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda) {
 	// generate the actual definition of the functions
 	for_each(definition->getDefinitions(), [&](const Pair& cur){
 
+		// construct current recursive function
+		RecLambdaExprPtr recLambda = RecLambdaExpr::get(cc.getNodeManager(), cur.first, definition);
+
 		// use normal function generator for this work (by printing unrolled version)
-		CodePtr cptr = getFunction(definition->unrollOnce(cc.getNodeManager(), cur.first));
+		LambdaExprPtr unrolled = definition->unrollOnce(cc.getNodeManager(), cur.first);
+
+		// get name for function
+		Identifier name = getNameForRecursiveFunction(cc.getNodeManager(), definition, cur.first, cc.getNameGen());
+		unrolled.addAnnotation(std::make_shared<c_info::CNameAnnotation>(name));
+		CodePtr cptr = getFunction(unrolled);
 
 		// add dependency to code definition
-		RecLambdaExprPtr recLambda = RecLambdaExpr::get(cc.getNodeManager(), cur.first, definition);
-		cptr->addDependency(getFunction(recLambda));
+		cptr->addDependency(getFunction(recLambda, surrounding));
 
+		// make surrounding depending on function definition
+		surrounding->addDependency(cptr);
 	});
 
 	// return lambda now registered within function map
-	return getFunction(lambda);
+	return getFunction(lambda, surrounding);
 }
 
 CodePtr FunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
@@ -190,10 +211,10 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 void ConvertVisitor::visitRecLambdaExpr(const RecLambdaExprPtr& ptr) {
 
 	// generate random name ...
-	string cFunName = cc.getNameGen().getName(ptr);
+	string cFunName = getNameForRecursiveFunction(cc.getNodeManager(), ptr->getDefinition(), ptr->getVariable(), cc.getNameGen());
 
 	// add a dependency to the function definition
-	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
+	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
 
 	// print function name (for the invocation)
 	cStr << cFunName;
@@ -471,7 +492,7 @@ string NameGenerator::getVarName(const VariablePtr& var) {
 
 std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
 	for_each(code.getProgram()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
-		out << "---\n" << *code.find(ep);
+		out << "---\n" << (*code.find(ep)).second;
 	});
 	return out;
 }

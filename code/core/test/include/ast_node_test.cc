@@ -80,11 +80,14 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 
 	// copy and clone the type
 	NodeManager manager;
+	NodeManager manager2;
 	T copy = T(*node);
 	T* clone = &*manager.get(node);
+	T* clone2 = &*manager2.get(node);
 
 	// cloning had to be successful
 	EXPECT_TRUE(clone);
+	EXPECT_TRUE(clone2);
 
 	// and all children have to be in the new manager
 	const Node::ChildList& list = clone->getChildList();
@@ -92,10 +95,15 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 		EXPECT_TRUE(manager.addressesLocal(cur));
 	});
 
+	const Node::ChildList& list2 = clone2->getChildList();
+	std::for_each(list2.begin(), list2.end(), [&manager2](const NodePtr& cur) {
+		EXPECT_TRUE(manager2.addressesLocal(cur));
+	});
+
 	// check whether all are equal
-	T* all[] = { &*node, &copy, clone };
-	for (int i=0; i<3; i++) {
-		for (int j=0; j<3; j++) {
+	T* all[] = { &*node, &copy, clone, clone2 };
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<4; j++) {
 
 			T* a = all[i];
 			T* b = all[j];
@@ -108,7 +116,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	}
 
 	// check type properties
-	for (int i=0; i<3; i++) {
+	for (int i=0; i<4; i++) {
 
 		T* cur = all[i];
 

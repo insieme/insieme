@@ -285,7 +285,21 @@ ADD_OP(LENGTH);
 ADD_OP(VAR_LIST_PACK);
 
 
-#undef ADD_OP
+// ---------------------------- Parallel Constructs -------------------------
+
+ADD_TYPE(GenericType, JOB);
+ADD_TYPE(GenericType, THREAD_GROUP);
+
+ADD_OP(PARALLEL);
+ADD_OP(PARALLEL_DETACHED);
+
+ADD_OP(MERGE);
+ADD_OP(MERGEALL);
+
+ADD_OP(BARRIER);
+ADD_OP(REDUCE);
+//ADD_OP(REDISTRIBUTE);
+//ADD_OP(PFOR);
 
 // -------------------------------- Statements ------------------------------
 
@@ -294,6 +308,7 @@ DEF_TYPE(CompoundStmt, NoOpStmt);
 extern const NoOpStmt STMT_NO_OP;
 extern const NoOpStmtPtr STMT_NO_OP_PTR;
 
+#undef ADD_OP
 #undef ADD_TYPE
 #undef DEF_TYPE
 

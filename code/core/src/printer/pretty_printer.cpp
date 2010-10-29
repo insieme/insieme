@@ -581,6 +581,8 @@ namespace {
 } // end of namespace core
 } // end of namespace insieme
 
+namespace std {
+
 /**
  * Prints the given pretty print to the given output stream.
  *
@@ -597,5 +599,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 	insieme::core::printer::InspirePrinter printer(out, print);
 	printer.visit(print.root);
 	return out;
+}
+
 }
 

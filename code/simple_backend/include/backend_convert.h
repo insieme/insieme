@@ -115,7 +115,7 @@ public:
 	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
 	CodePtr getFunction(const core::LambdaExprPtr& lambda);
-	CodePtr getFunction(const core::RecLambdaExprPtr& lambda);
+	CodePtr getFunction(const core::RecLambdaExprPtr& lambda, const CodePtr& surrounding);
 	CodePtr getFunctionLiteral(const LiteralPtr& literal);
 	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
 };
@@ -223,7 +223,7 @@ public:
 		visit(ptr->getCondition());
 		cStr << ") ";
 		visit(ptr->getThenBody());
-		cStr << "else ";
+		cStr << " else ";
 		visit(ptr->getElseBody());
 	}
 

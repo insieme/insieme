@@ -61,6 +61,7 @@ namespace {
 
 ADD_TYPE(TypeVariable, ALPHA, (TypeVariable("a")));
 ADD_TYPE(TupleType, SINGLE_ALPHA_TUPLE, (TupleType(TYPE_ALPHA_PTR)));
+ADD_TYPE(TupleType, ALPHA_PAIR, (TupleType(TYPE_ALPHA_PTR, TYPE_ALPHA_PTR)));
 
 // -------------------------------- Unit Type -------------------------------
 
@@ -412,6 +413,42 @@ ADD_TYPE(TupleType, SINGLE_CHANNEL_GEN, (TupleType(TYPE_CHANNEL_GEN)));
 // --- VAR_LIST packing ---
 ADD_TYPE(FunctionType, OP_VAR_LIST_PACK, FunctionType(TYPE_SINGLE_ALPHA_TUPLE_PTR, TYPE_VAR_LIST_PTR));
 ADD_OP(VAR_LIST_PACK, TYPE_OP_VAR_LIST_PACK_PTR, "pack");
+
+// ---------------------------- Parallel Constructs -------------------------
+
+const Identifier TYPE_NAME_JOB("Job");
+
+ADD_TYPE(GenericType, JOB, GenericType(TYPE_NAME_JOB));
+ADD_TYPE(GenericType, THREAD_GROUP, GenericType("ThreadGroup"));
+
+ADD_TYPE(TupleType, PARALLEL_ARGUMENT, (TupleType(toVector<TypePtr>(TYPE_UINT_4_PTR, TYPE_UINT_4_PTR, TYPE_JOB_PTR))));
+ADD_TYPE(FunctionType, OP_PARALLEL, (FunctionType(TYPE_PARALLEL_ARGUMENT_PTR, TYPE_THREAD_GROUP_PTR)));
+
+
+ADD_OP(PARALLEL, TYPE_OP_PARALLEL_PTR ,"parallel");
+ADD_OP(PARALLEL_DETACHED, TYPE_OP_PARALLEL_PTR ,"parallel&");
+
+ADD_TYPE(TupleType, SINGLE_THREAD_GROUP, (TupleType(TYPE_THREAD_GROUP_PTR)));
+ADD_TYPE(FunctionType, OP_MERGE, (FunctionType(TYPE_SINGLE_THREAD_GROUP_PTR, TYPE_UNIT_PTR)));
+
+ADD_OP(MERGE, TYPE_OP_MERGE_PTR ,"merge");
+
+ADD_TYPE(TupleType, EMPTY_TUPLE, (TupleType()));
+ADD_TYPE(FunctionType, OP_MERGE_ALL, (FunctionType(TYPE_EMPTY_TUPLE, TYPE_UNIT_PTR)));
+ADD_OP(MERGEALL, TYPE_OP_MERGE_ALL_PTR ,"mergeAll");
+
+ADD_OP(BARRIER, TYPE_OP_MERGE_PTR ,"barrier");
+
+ADD_TYPE(FunctionType, REDUCTION_FUNCTION, (FunctionType(TYPE_ALPHA_PAIR_PTR, TYPE_ALPHA_PTR)));
+ADD_TYPE(TupleType, REDUCE_ARGUMENTS, (TupleType(toVector<TypePtr>(TYPE_THREAD_GROUP_PTR, TYPE_REDUCTION_FUNCTION_PTR, TYPE_ALPHA_PTR, TYPE_ALPHA_PTR))));
+ADD_TYPE(FunctionType, OP_REDUCE, (FunctionType(TYPE_REDUCE_ARGUMENTS_PTR, TYPE_ALPHA_PTR)));
+
+ADD_OP(REDUCE, TYPE_OP_REDUCE_PTR ,"reduce");
+
+// TODO: with type parser!
+//ADD_OP(REDISTRIBUTE,,"redistribute");
+//ADD_OP(PFOR,,"pfor");
+
 
 #undef ADD_OP
 

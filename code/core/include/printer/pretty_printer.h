@@ -87,7 +87,11 @@ struct PrettyPrint {
 } // end of namespace core
 } // end of namespace insieme
 
-/**
- * Allows pretty prints to be directly printed into output streams.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrint& print);
+namespace std {
+
+	/**
+	 * Allows pretty prints to be directly printed into output streams.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrint& print);
+
+}
