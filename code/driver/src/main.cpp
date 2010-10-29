@@ -85,9 +85,6 @@ int main(int argc, char** argv) {
 		fe::Program p(manager);
 		p.addTranslationUnits(inputFiles);
 
-		std::cerr << "*** CALL GRAPH ***\n";
-		p.dumpCallGraph();
-
 		// do the actual clang to IR conversion
 		insieme::core::ProgramPtr program = p.convert();
 
@@ -112,13 +109,17 @@ int main(int argc, char** argv) {
 		LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
 		LOG(INFO) << "================================= END ===========================================";
 
-		// creates dot graph of the generated IR
-		std::fstream dotFile("inspire.dot", std::fstream::out | std::fstream::trunc);
-		insieme::driver::printDotGraph(program, errors, dotFile);
-		dotFile.close();
+		// Creates dot graph of the generated IR
+		if(!CommandLineOptions::ShowIR.empty()) {
+			std::fstream dotFile(CommandLineOptions::ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
+			insieme::driver::printDotGraph(program, errors, dotFile);
+			dotFile.close();
+		}
 
 		// XML dump
-		insieme::xml::xmlWrite(program, "insieme.xml");
+		if(!CommandLineOptions::DumpXML.empty()) {
+			insieme::xml::xmlWrite(program, CommandLineOptions::DumpXML);
+		}
 
 		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
 
@@ -137,7 +138,7 @@ int main(int argc, char** argv) {
 			insieme::simple_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
 			// TODO write to output file 
-			std::cout << converted;
+			LOG(INFO) << converted;
 		}
 
 	} catch (fe::ClangParsingError& e) {
