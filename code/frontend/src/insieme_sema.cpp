@@ -45,7 +45,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/Sema/Sema.h"
 
-//#include <glog/logging.h>
 #include "logging.h"
 
 using namespace clang;
@@ -401,9 +400,11 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 void InsiemeSema::dump() {
 //Visual Studios 2010 fix: Release mode (without debug) evaluates DLOG(INFO) to "(void) 0"
 #ifndef NDEBUG
-	DVLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
-	for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
-		(*I)->dump(DLOG(INFO), SourceMgr);
+	if(VLOG_IS_ON(2)) {
+		DVLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
+		for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
+			(*I)->dump(DLOG(INFO), SourceMgr);
+	}
 #endif
 }
 
