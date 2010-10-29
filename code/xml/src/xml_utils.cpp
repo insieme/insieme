@@ -1407,15 +1407,14 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		vector<XmlElement> entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
 		vector<NamedCompositeType::Entry> entryVec;
 		for(auto iter = entries.begin(); iter != entries.end(); ++iter) {
-			Identifier ident(iter->getText());
+			Identifier ident = iter->getFirstChildByName("id")->getText();
 			
 			XmlElementPtr type = iter->getFirstChildByName("typePtr");
 			TypePtr el = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
 			buildAnnotations(*type, el, true);
-			
 			entryVec.push_back(NamedCompositeType::Entry(ident, el));
 		}
-		if (nodeName == "unionType") {
+		if (nodeName == "structType") {
 			StructTypePtr structT = StructType::get(manager, entryVec);
 			buildAnnotations(elem, structT, false);
 			// update the map
@@ -1449,6 +1448,15 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, tuple);
+	}
+	else if (nodeName == "typeVariable") {
+		TypeVariablePtr var = TypeVariable::get(manager, elem.getAttr("name"));
+		buildAnnotations(elem, var, false);
+		
+		// update the map
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, var);
 	}
 	else if (nodeName == "rootNode") {
 		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
