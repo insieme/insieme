@@ -2,98 +2,144 @@
 # This file sets up some general variables and include paths for the build environment
 #
 
-# - define some code locations
+# Configuration:
+#   $ENV{XERCES_HOME}           Both
+#   ${GLOG_HOME}                Windows
+#   $ENV{GLOG_HOME}             Linux
+#   LINKING_TYPE                Linux
+#   LLVM_HOME/$ENV{LLVM_HOME}   Both
+
+
+# -------------------------------------------------------------- define some code locations
 
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 
-set ( insieme_core_src_dir 	${insieme_code_dir}/core/src )
-set ( insieme_core_include_dir 	${insieme_code_dir}/core/include )
+set ( insieme_core_src_dir 	             ${insieme_code_dir}/core/src )
+set ( insieme_utils_src_dir 	         ${insieme_code_dir}/utils/src )
 
-set ( insieme_utils_src_dir 	${insieme_code_dir}/utils/src )
-set ( insieme_utils_include_dir ${insieme_code_dir}/utils/include )
-set ( insieme_c_info_include_dir ${insieme_code_dir}/c_info/include )
-set ( insieme_xml_include_dir ${insieme_code_dir}/xml/include )
-set ( insieme_frontend_include_dir ${insieme_code_dir}/frontend/include )
-set ( insieme_driver_include_dir ${insieme_code_dir}/driver/include )
+set ( insieme_core_include_dir 	         ${insieme_code_dir}/core/include )
+set ( insieme_utils_include_dir          ${insieme_code_dir}/utils/include )
+set ( insieme_c_info_include_dir         ${insieme_code_dir}/c_info/include )
+set ( insieme_xml_include_dir            ${insieme_code_dir}/xml/include )
+set ( insieme_frontend_include_dir       ${insieme_code_dir}/frontend/include )
+set ( insieme_driver_include_dir         ${insieme_code_dir}/driver/include )
 set ( insieme_simple_backend_include_dir ${insieme_code_dir}/simple_backend/include )
 set ( insieme_opencl_backend_include_dir ${insieme_code_dir}/opencl_backend/include )
 
-# include boost headers
+
+# ------------------------------------------------------------- configuration for platforms
+if(MSVC)   # Windows Visual Studios
+
+  # MSVC can compile insieme statical only
+  set(LINKING_TYPE STATIC)
+
+  # ATM GLog needs non-static compile
+  #set(GLOG_STATIC_APPEND "_static")
+  set(GLOG_STATIC_APPEND "")
+
+  # Therefore Boost needs to be linked statically
+  set(Boost_USE_STATIC_LIBS ON)
+
+
+else(MSVC) # Linux or Cygwin/MinGW
+
+    # Default is here: shared linking
+    if(NOT LINKING_TYPE)
+  	    set(LINKING_TYPE SHARED)
+    endif(NOT LINKING_TYPE)
+
+endif(MSVC)
+
+
+# --------------------------------------------------------------------- including libraries
+
+# - boost
 find_package( Boost COMPONENTS program_options )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
-# glog
+# - glog
 if(MSVC)
 	include_directories( ${GLOG_HOME}/src/windows )
-#	if (1) #LINKING_TYPE == STATIC
-#		if (CMAKE_CXX_FLAGS_RELEASE)
-#			set(glog_LIB ${GLOG_HOME}/Release/libglog_static.lib)
-#		else (CMAKE_CXX_FLAGS_RELEASE)
-#			set(glog_LIB ${GLOG_HOME}/Debug/libglog_static.lib)
-#		endif (CMAKE_CXX_FLAGS_RELEASE)
-#	else ()
-		if (CMAKE_CXX_FLAGS_RELEASE)
-			set(glog_LIB ${GLOG_HOME}/Release/libglog.lib)
-		else (CMAKE_CXX_FLAGS_RELEASE)
-			set(glog_LIB ${GLOG_HOME}/Debug/libglog.lib)
-		endif (CMAKE_CXX_FLAGS_RELEASE)
-#	endif ()
+	if (CMAKE_CXX_FLAGS_RELEASE)
+		set(glog_LIB ${GLOG_HOME}/Release/libglog${GLOG_STATIC_APPEND}.lib)
+	else (CMAKE_CXX_FLAGS_RELEASE)
+		set(glog_LIB ${GLOG_HOME}/Debug/libglog${GLOG_STATIC_APPEND}.lib)
+	endif (CMAKE_CXX_FLAGS_RELEASE)
 else()
 	include_directories( $ENV{GLOG_HOME}/include )
 	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
 endif()
 
-# xerces
+
+# - xerces
 include_directories( $ENV{XERCES_HOME}/include )
 find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
-
 
 # lookup perl
 find_package( Perl )
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
+# http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
+#find_package(Threads REQUIRED)
+#target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
+
+# -------------------------------------------------------------- LLVM / CLANG 2.8 libraries
 
 #Fix LLVM path
 if(NOT DEFINED LLVM_HOME)
 	set (LLVM_HOME $ENV{LLVM_HOME})
 endif()
 
-if(MSVC)
-  set( llvm_LList System;Core;CodeGen;SelectionDAG;AsmPrinter;BitReader;BitWriter;TransformUtils;${llvm_LList})
-  set( llvm_LList X86AsmParser;X86AsmPrinter;X86CodeGen;X86Info;X86Disassembler;${llvm_LList})
-  set( llvm_LList Instrumentation;InstCombine;ScalarOpts;ipo;Linker;Analysis;ipa;${llvm_LList})
-  set( llvm_LList ExecutionEngine;Interpreter;JIT;Target;AsmParser;Archive;${llvm_LList})
-  set( llvm_LList Support;SelectionDAG;MC;MCDisassembler;MCParser;${llvm_LList})
+# Full (?) list of clang libraries
+# TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
+set(clang_LList
+    clangBasic clangChecker clangSema clangIndex clangDriver clangAST
+    clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
+    clangParse clangSerialization
+)
 
-  # Find all llvm libraries
-  foreach (name ${llvm_LList})
-      find_library(llvm_${name}_LIB   NAMES LLVM${name}   PATHS ${LLVM_HOME}/lib)
-      set(llvm_LIBs ${llvm_${name}_LIB} ${llvm_LIBs})
-  endforeach(name)
+if(MSVC)
+    # Manual list - TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
+    set( llvm_LList
+       LLVMSystem LLVMCore LLVMCodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMBitReader 
+       LLVMBitWriter LLVMTransformUtils LLVMX86AsmParser LLVMX86AsmPrinter LLVMX86CodeGen
+       LLVMX86Info LLVMX86Disassembler LLVMInstrumentation LLVMInstCombine LLVMScalarOpts 
+       LLVMipo LLVMLinker LLVMAnalysis LLVMipa LLVMExecutionEngine LLVMInterpreter 
+       LLVMJIT LLVMTarget LLVMAsmParser LLVMArchive LLVMSupport LLVMSelectionDAG LLVMMC 
+       LLVMMCDisassembler LLVMMCParser
+    )
+    set(clang_LList libclang ${clang_LList})
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-	find_library(llvm_LIBs   NAMES LLVM-2.8rc 	PATHS ${LLVM_HOME}/lib)
-	#find_library(clang_CompilerDriver_LIB 	NAMES CompilerDriver 		PATHS ${LLVM_HOME}/lib)
+    set(llvm_LList  LLVM-2.8rc )
+    set(clang_LList clang ${clang_LList})
 endif(MSVC)
 
+
+# Find all llvm libraries
+foreach (name ${llvm_LList})
+    find_library(llvm_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
+    set(llvm_LIBs ${llvm_${name}_LIB} ${llvm_LIBs})
+endforeach(name)
+
+
 # Find (all?) clang libraries
-#FIXME: clang.lib have to be copied manually in Windows!
-set(clang_LList clangBasic;clangChecker;clangSema;clang;clangIndex;clangDriver;clangAST;clangRewrite;clangAnalysis;clangLex;clangFrontend;clangFrontendTool;clangParse;clangSerialization)
 foreach (name ${clang_LList})
-    find_library(${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
-    set(clang_LIBs ${${name}_LIB} ${clang_LIBs})
+    find_library(clang_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
+    set(clang_LIBs ${clang_${name}_LIB} ${clang_LIBs})
 endforeach(name)
 
 
 
+# ------------------------------------------------------------- configuration for platforms
 
 # Visual Studio customization
-if(MSVC) 
+if(MSVC)
 	# enable minimal rebuild
 	add_definitions( /Gm )
 	# disable optimizations (compilation speed)
@@ -134,6 +180,7 @@ endif()
 if(MSVC) 
 	add_definitions( /W4 )
 endif()
+
 if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -Wall )
 endif()
@@ -143,11 +190,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -g )
 endif()
 
-# Optionally build shared libraries
-if(NOT LINKING_TYPE)
-	set(LINKING_TYPE SHARED)
-endif(NOT LINKING_TYPE)
-
+# --------------------------------------------------------- Valgrind / GTest testiong suite
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
@@ -205,7 +248,6 @@ if (NOT MEMORY_CHECK_SETUP)
 			endif ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 		endif(USE_VALGRIND)
 	endmacro(add_unit_test)
-
 endif (NOT MEMORY_CHECK_SETUP)
 
 # mark as defined

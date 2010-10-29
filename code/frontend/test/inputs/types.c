@@ -47,7 +47,7 @@ void basic_type_test() {
 
 	char d = 'a';
 
-	#pragma test "ref<ref<'a>> v4 = ref.var(null)"
+	#pragma test "ref<array<ref<'a>,1>> v4 = ref.var(null)"
 	void* e;
 
 	#pragma test "ref<real<4>> v5 = ref.var(0.00f)"
@@ -64,7 +64,7 @@ void basic_type_test() {
 }
 
 // Simple struct
-#pragma test "struct<name:ref<char>,age:int<4>>"
+#pragma test "struct<name:array<ref<char>,1>,age:int<4>>"
 struct Person {
 	// cppcheck-suppress unusedStructMember
 	char* name;
@@ -73,7 +73,7 @@ struct Person {
 };
 
 // Self recursive struct
-#pragma test "rec 'PersonList.{'PersonList=struct<name:ref<char>,age:int<4>,next:ref<'PersonList>>}"
+#pragma test "rec 'PersonList.{'PersonList=struct<name:array<ref<char>,1>,age:int<4>,next:array<ref<'PersonList>,1>>}"
 struct PersonList {
 	// cppcheck-suppress unusedStructMember
 	char* name;
@@ -88,7 +88,7 @@ struct A;
 struct B;
 struct C;
 
-#pragma test "rec 'A.{'A=struct<b:ref<'B>,c:ref<'C>>, 'B=struct<b:ref<'C>>, 'C=struct<a:ref<'A>,b:ref<'B>>}"
+#pragma test "rec 'A.{'A=struct<b:array<ref<'B>,1>,c:array<ref<'C>,1>>, 'B=struct<b:array<ref<'C>,1>>, 'C=struct<a:array<ref<'A>,1>,b:array<ref<'B>,1>>}"
 struct A {
 	// cppcheck-suppress unusedStructMember
 	struct B* b;
@@ -96,13 +96,13 @@ struct A {
 	struct C* c;
 };
 
-#pragma test "rec 'B.{'A=struct<b:ref<'B>,c:ref<'C>>, 'B=struct<b:ref<'C>>, 'C=struct<a:ref<'A>,b:ref<'B>>}"
+#pragma test "rec 'B.{'A=struct<b:array<ref<'B>,1>,c:array<ref<'C>,1>>, 'B=struct<b:array<ref<'C>,1>>, 'C=struct<a:array<ref<'A>,1>,b:array<ref<'B>,1>>}"
 struct B {
 	// cppcheck-suppress unusedStructMember
 	struct C* b;
 };
 
-#pragma test "rec 'C.{'A=struct<b:ref<'B>,c:ref<'C>>, 'B=struct<b:ref<'C>>, 'C=struct<a:ref<'A>,b:ref<'B>>}"
+#pragma test "rec 'C.{'A=struct<b:array<ref<'B>,1>,c:array<ref<'C>,1>>, 'B=struct<b:array<ref<'C>,1>>, 'C=struct<a:array<ref<'A>,1>,b:array<ref<'B>,1>>}"
 struct C {
 	// cppcheck-suppress unusedStructMember
 	struct A* a;
@@ -116,19 +116,19 @@ struct B1;
 struct C1;
 struct D1;
 
-#pragma test "struct<b:ref<rec 'B1.{'C1=struct<b:ref<'B1>,d:ref<struct<val:int<4>>>>, 'B1=struct<b:ref<'C1>>}>>"
+#pragma test "struct<b:array<ref<rec 'B1.{'C1=struct<b:array<ref<'B1>,1>,d:array<ref<struct<val:int<4>>>,1>>, 'B1=struct<b:array<ref<'C1>,1>>}>,1>>"
 struct A1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;
 };
 
-#pragma test "rec 'B1.{'C1=struct<b:ref<'B1>,d:ref<struct<val:int<4>>>>, 'B1=struct<b:ref<'C1>>}"
+#pragma test "rec 'B1.{'C1=struct<b:array<ref<'B1>,1>,d:array<ref<struct<val:int<4>>>,1>>, 'B1=struct<b:array<ref<'C1>,1>>}"
 struct B1 {
 	// cppcheck-suppress unusedStructMember
 	struct C1* b;
 };
 
-#pragma test "rec 'C1.{'C1=struct<b:ref<'B1>,d:ref<struct<val:int<4>>>>, 'B1=struct<b:ref<'C1>>}"
+#pragma test "rec 'C1.{'C1=struct<b:array<ref<'B1>,1>,d:array<ref<struct<val:int<4>>>,1>>, 'B1=struct<b:array<ref<'C1>,1>>}"
 struct C1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;

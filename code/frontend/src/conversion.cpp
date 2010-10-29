@@ -736,10 +736,16 @@ public:
 			break;
 		// *a
 		case UO_Deref: {
-			// return ExprWrapper( builder.callExpr( core::lang::OP_REF_DEREF_PTR, {subExpr} ) );
-			core::RefTypePtr&& subTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
-			assert( subTy && "LHS operand must of type ref<a'>." );
-			subExpr = builder.callExpr( subTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector(subExpr) );
+			subExpr = tryDeref(builder, subExpr);
+
+			if(core::dynamic_pointer_cast<const core::VectorType>(subExpr->getType()) ||
+				core::dynamic_pointer_cast<const core::ArrayType>(subExpr->getType())) {
+
+				core::SingleElementTypePtr subTy = core::dynamic_pointer_cast<const core::SingleElementType>(subExpr->getType());
+				assert(subTy);
+				subExpr = builder.callExpr( subTy->getElementType(), core::lang::OP_SUBSCRIPT_SINGLE_PTR,
+						toVector<core::ExpressionPtr>(subExpr, builder.literal("0", core::lang::TYPE_INT_4_PTR)) );
+			}
 			break;
 		}
 		// +a
@@ -821,7 +827,6 @@ public:
 		// BASE
 		core::ExpressionPtr&& base = tryDeref(convFact.builder, Visit( baseExpr ) );
 
-		DLOG(INFO) << *base->getType();
 		// TODO: we need better checking for vector type
 		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&
@@ -1609,9 +1614,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitConstantArrayType(ConstantArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
-		if(arrTy->isSugared())
-			// if the type is sugared, we Visit the desugared type
-			return Visit( arrTy->desugar().getTypePtr() );
+//		if(arrTy->isSugared())
+//			// if the type is sugared, we Visit the desugared type
+//			return Visit( arrTy->desugar().getTypePtr() );
 
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -1632,9 +1637,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitIncompleteArrayType(IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
-		if(arrTy->isSugared())
-			// if the type is sugared, we Visit the desugared type
-			return Visit( arrTy->desugar().getTypePtr() );
+//		if(arrTy->isSugared())
+//			// if the type is sugared, we Visit the desugared type
+//			return Visit( arrTy->desugar().getTypePtr() );
 
 		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -1660,9 +1665,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitVariableArrayType(VariableArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
-		if(arrTy->isSugared())
-			// if the type is sugared, we Visit the desugared type
-			return Visit( arrTy->desugar().getTypePtr() );
+//		if(arrTy->isSugared())
+//			// if the type is sugared, we Visit the desugared type
+//			return Visit( arrTy->desugar().getTypePtr() );
 
 		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -1981,7 +1986,7 @@ public:
 		if(*subTy == core::lang::TYPE_UNIT_VAL)
 			subTy = core::lang::TYPE_ALPHA_PTR;
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr&& retTy = convFact.builder.refType( subTy );
+		core::TypePtr&& retTy = convFact.builder.arrayType( convFact.builder.refType(subTy) );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

@@ -61,7 +61,6 @@ using namespace core;
 using namespace insieme::simple_backend;
 
 // Forward declarations
-//class insieme::simple_backend::CodeFragment;
 typedef std::shared_ptr<CodeFragment> CodePtr;
 
 
