@@ -60,6 +60,7 @@
 #include "logging.h"
 
 #include "xml_utils.h"
+#include "timer.h"
 
 #include "dot_printer.h"
 #include <fstream>
@@ -89,26 +90,34 @@ int main(int argc, char** argv) {
 		insieme::core::ProgramPtr program = p.convert();
 
 		// perform checks
-		MessageList errors = check(program, insieme::core::checks::getFullCheck());
+		MessageList&& errors = check(program, insieme::core::checks::getFullCheck());
 		std::sort(errors.begin(), errors.end());
 		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
 
 		// IR statistiscs
-		ASTStatistic stats = ASTStatistic::evaluate(program);
-		LOG(INFO) << "Number of Shared Nodes: " << stats.getNumSharedNodes();
-		LOG(INFO) << "Number of Addressable Nodes: " << stats.getNumAddressableNodes();
-		LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
-		LOG(INFO) << "Height of tree: " << stats.getHeight();
-
-		// a pretty print of the AST
-		LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
-		LOG(INFO) << insieme::core::printer::PrettyPrint(program);
-		LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-		LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
+		ASTStatistic&& stats = ASTStatistic::evaluate(program);
+		LOG(INFO) << "============================ IR Statistics ======================================";
+		LOG(INFO) << "\tNumber of Shared Nodes: " << stats.getNumSharedNodes();
+		LOG(INFO) << "\tNumber of Addressable Nodes: " << stats.getNumAddressableNodes();
+		LOG(INFO) << "\tShare Ratio: " << stats.getShareRatio();
+		LOG(INFO) << "\tHeight of tree: " << stats.getHeight();
 		LOG(INFO) << "================================= END ===========================================";
 
+		if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
+			// a pretty print of the AST
+			LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
+			if(!CommandLineOptions::DumpIR.empty()) {
+				// write into the file
+				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
+				fout << insieme::core::printer::PrettyPrint(program);
+			} else
+				LOG(INFO) << insieme::core::printer::PrettyPrint(program);
+			LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
+			LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
+			LOG(INFO) << "================================= END ===========================================";
+		}
 		// Creates dot graph of the generated IR
 		if(!CommandLineOptions::ShowIR.empty()) {
 			std::fstream dotFile(CommandLineOptions::ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
@@ -134,11 +143,19 @@ int main(int argc, char** argv) {
 			// TODO write to output file 
 			std::cout << converted;
 		} else {
+			insieme::utils::Timer timer("Simple.Backend");
+
 			LOG(INFO) << "Converting to C++ ... ";
 			insieme::simple_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
-			// TODO write to output file 
-			LOG(INFO) << converted;
+
+			if(!CommandLineOptions::Output.empty()) {
+				std::fstream outFile(CommandLineOptions::Output.c_str(), std::fstream::out | std::fstream::trunc);
+				outFile << converted;
+			} else
+				LOG(INFO) << converted;
+			timer.stop();
+			DLOG(INFO) << timer;
 		}
 
 	} catch (fe::ClangParsingError& e) {

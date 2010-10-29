@@ -172,8 +172,6 @@ public:
 		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
 
 		insieme::utils::Timer t1("Frontend.load '" + file_name + "'");
-		t1.start();
-
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
@@ -196,7 +194,7 @@ public:
 		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
 		t1.stop();
 
-		t1.print();
+		DLOG(INFO) << t1;
 	}
 
 	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
@@ -355,7 +353,6 @@ core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::Shared
 const core::ProgramPtr& Program::convert() {
 
 	insieme::utils::Timer t1("Frontend.convert ");
-	t1.start();
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
@@ -388,7 +385,7 @@ const core::ProgramPtr& Program::convert() {
 
 	if(insiemePragmaFound) {
 		t1.stop();
-		t1.print();
+		DLOG(INFO) << t1;
 
 	    mProgram = addParallelism(mProgram, mMgr);
 		return mProgram;
@@ -406,7 +403,7 @@ const core::ProgramPtr& Program::convert() {
 		mProgram = conv.getProgram();
 	}
 	t1.stop();
-	t1.print();
+	DLOG(INFO) << t1;
 
 	mProgram = addParallelism(mProgram, mMgr);
 	return mProgram;
