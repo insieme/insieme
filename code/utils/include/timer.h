@@ -50,12 +50,9 @@ class Timer: public boost::timer {
 	std::string mName;
 	bool isStopped;
 
+	friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
 public:
 	Timer(const std::string& name): boost::timer(), mName(name), isStopped(false) { }
-	/**
-	 * Starts the timer
-	 */
-	void start();
 	/**
 	 * Stops the timer returning the elapsed amount of seconds
 	 */
@@ -65,9 +62,9 @@ public:
 	 * Return the elapsed amount of seconds
 	 */
 	double getTime() const;
-
-	void print() const;
 };
+
+std::ostream& operator<<(std::ostream& out, const Timer& timer);
 
 } // end utils namespace
 } // end insieme namespace

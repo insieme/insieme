@@ -206,7 +206,6 @@ public:
 			// a declaration).
 			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).ActOnPragma<T>(pragma_name.str(), mmap, startLoc, endLoc);
 		} else {
-			std::cout << "@@@@@@@@@@@@@@@@@@@@@@MOTHER FUCKERRRRRRRRR!!!!!!!!!!\n";
 			// In case of error, we report it to the console using the clang Diagnostics.
 			errorReport(PP, startLoc, errStack);
 			PP.DiscardUntilEndOfDirective();

@@ -42,10 +42,6 @@
 namespace insieme {
 namespace utils {
 
-void Timer::start() {
-	restart();
-}
-
 double Timer::stop() {
 	mElapsed = elapsed();
 	isStopped = true;
@@ -57,10 +53,10 @@ double Timer::getTime() const {
 	return mElapsed;
 }
 
-void Timer::print() const {
-	DLOG(INFO) << "********************************************************************************";
-	DLOG(INFO) << "* " << mName << ":\t" << getTime() << " secs";
-	DLOG(INFO) << "********************************************************************************";
+std::ostream& operator<<(std::ostream& out, const Timer& timer) {
+	out << "\n********************************************************************************" << std::endl;
+	out << "* " << timer.mName << ":\t" << timer.getTime() << " secs" << std::endl;
+	return out << "********************************************************************************" << std::endl;
 }
 
 } // end utils namespace
