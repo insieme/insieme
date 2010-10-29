@@ -195,6 +195,8 @@ TEST(XmlTest, FunctionTypeTest) {
 	
 	GenericTypePtr type1 = GenericType::get(manager, "val");
 	GenericTypePtr type2 = GenericType::get(manager, "int");
+	GenericTypePtr type3 = GenericType::get(manager, "var");
+
 
 	DummyAnnotationPtr dummy_fe(new DummyAnnotation("fun e"));
 	DummyAnnotationPtr dummy_fn(new DummyAnnotation("fun n"));
@@ -209,7 +211,7 @@ TEST(XmlTest, FunctionTypeTest) {
 	type2.addAnnotation(dummy_re);
 	type2->addAnnotation(dummy_rn);
 	
-	FunctionTypePtr funType1 = FunctionType::get(manager, TupleType::get(manager, toVector<TypePtr>(type1)), type2);
+	FunctionTypePtr funType1 = FunctionType::get(manager, TupleType::get(manager, toVector<TypePtr>(type1, type3)), type2);
 	
 	funType1.addAnnotation(dummy_fe);
 	funType1->addAnnotation(dummy_fn);
@@ -223,6 +225,13 @@ TEST(XmlTest, FunctionTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, StructTypeTest) {
@@ -349,6 +358,13 @@ TEST(XmlTest, TupleTypeTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, TypeVariableTest) {

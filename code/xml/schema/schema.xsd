@@ -63,6 +63,13 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_tupleTypePtr">
+	<xs:all>
+		<xs:element name="tupleTypePtr" type="T_nodePtr" minOccurs="1"/>
+	</xs:all>	
+</xs:complexType>
+
+
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
 	<xs:sequence>
@@ -442,7 +449,7 @@
 
 <xs:complexType name="T_functionType">
 	<xs:all>
-		<xs:element name="argumentType" type="T_typePtr" minOccurs="1"/>
+		<xs:element name="argumentType" type="T_tupleTypePtr" minOccurs="1"/>
 		<xs:element name="returnType" type="T_typePtr" minOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
