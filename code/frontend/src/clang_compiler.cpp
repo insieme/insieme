@@ -169,9 +169,6 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public cla
 public:
 	TranslationUnitImpl(const std::string& file_name, const ProgramPtr& prog, const SharedNodeManager& mgr):
 		insieme::frontend::TranslationUnit(file_name) {
-		// conversion::IRConsumer cons(mClang, prog, mgr, mPragmaList, doConversion);
-
-		insieme::utils::Timer t1("Frontend.load '" + file_name + "'");
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
@@ -192,9 +189,6 @@ public:
 		// the translation unit has been correctly parsed
 		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
 		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
-		t1.stop();
-
-		DLOG(INFO) << t1;
 	}
 
 	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
@@ -351,8 +345,6 @@ core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::Shared
 } // end anonymous namespace
 
 const core::ProgramPtr& Program::convert() {
-
-	insieme::utils::Timer t1("Frontend.convert ");
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
 	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
@@ -384,9 +376,6 @@ const core::ProgramPtr& Program::convert() {
 	}
 
 	if(insiemePragmaFound) {
-		t1.stop();
-		DLOG(INFO) << t1;
-
 	    mProgram = addParallelism(mProgram, mMgr);
 		return mProgram;
 	}
@@ -402,9 +391,6 @@ const core::ProgramPtr& Program::convert() {
 		conv.handleTranslationUnit(declRef);
 		mProgram = conv.getProgram();
 	}
-	t1.stop();
-	DLOG(INFO) << t1;
-
 	mProgram = addParallelism(mProgram, mMgr);
 	return mProgram;
 }
