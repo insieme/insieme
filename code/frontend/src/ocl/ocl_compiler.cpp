@@ -145,23 +145,95 @@ public:
 class KernelMapper : public core::NodeMapping {
     const core::ASTBuilder& builder;
 
+    //prototype for parallel function, just for testing
+    core::LambdaExprPtr fakePar;
+
+    //TODO remove these two, should be empty anyway
+    std::vector<core::VariablePtr> constantVars;
+    std::vector<core::VariablePtr> globalVars;
+
+    std::vector<core::VariablePtr> localVars;
+    std::vector<core::VariablePtr> privateVars;
+
+private:
+    void append(std::vector<core::VariablePtr>& sink, std::vector<core::VariablePtr>& source) {
+        for(std::vector<core::VariablePtr>::iterator I = source.begin(), E = source.end(); I != E; I++) {
+            sink.push_back(*I);
+        }
+    }
+
 public:
 
+
     KernelMapper(core::ASTBuilder& astBuilder)
-    : builder(astBuilder) { };
+    : builder(astBuilder) {
+        core::LambdaExpr::ParamList params;
+        //TODO remove dirty workaround
+//        params.push_back(builder.variable(builder.jobType()));
+
+        core::TupleType::ElementTypeList args;
+//        args.push_back(builder.jobType());
+
+        builder.functionType(builder.tupleType(args), builder.getUnitType());//, builder.compoundStmt());
+
+        fakePar = builder.lambdaExpr(builder.functionType(builder.tupleType(args), builder.getUnitType()), params, builder.compoundStmt());
+    };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
-std::cout << "found \t";
+//std::cout << "\t * found " << element->toString() << std::endl;
 
         if(core::dynamic_pointer_cast<const core::LambdaExpr>(element)){
             std::cout << "the function \n";
             return element;
         }
         if(core::dynamic_pointer_cast<const core::FunctionType>(element)){
-            std::cout << "the type \n";
+ //           std::cout << "the type \n";
             return element;
         }
-        if(core::StatementPtr body = dynamic_pointer_cast<const core::Statement>(element)){
+        if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
+//            std::cout << "a variable declaration " << (element.hasAnnotation(ocl::BaseAnnotation::KEY) ? "with . attributes " : " -  ") <<
+//                    (element->hasAnnotation(ocl::BaseAnnotation::KEY) ? "with -> attributes \n" : " -  \n");
+//            std::cout << "variable: " << decl->toString() << std::endl;
+
+            if(decl->getVariable()->hasAnnotation(ocl::BaseAnnotation::KEY)) {
+                ocl::BaseAnnotationPtr annot = decl->getVariable()->getAnnotation(ocl::BaseAnnotation::KEY);
+                for(ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
+                        E = annot->getAnnotationListEnd(); I != E; ++I) {
+                    if(ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)) {
+                        switch(asa->getAddressSpace()) {
+                        case ocl::AddressSpaceAnnotation::LOCAL: {
+                            localVars.push_back(decl->getVariable());
+                            break;
+                        }
+                        case ocl::AddressSpaceAnnotation::PRIVATE: {
+                            privateVars.push_back(decl->getVariable());
+                            //TODO remove declaration from source code
+                            break;
+                        }
+                        case ocl::AddressSpaceAnnotation::CONSTANT: {
+                            assert(false && "Address space CONSTANT not allowed for local variables");
+                        }
+                        case ocl::AddressSpaceAnnotation::GLOBAL: {
+                            assert(false && "Address space GLOBAL not allowed for local variables");
+                        }
+                        default:
+                            assert(false && "Unexpected OpenCL address space attribute for local variable");
+                        }
+                    } else {
+                        assert(false && "No other OpenCL attribute than oclAddressSpaceAnnotation allowed for variables");
+                    }
+
+                }
+            }
+            return element;//->substitute(builder.getNodeManager(), *this);
+        }
+/*
+        if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(element)) {
+            core::Variable v = *var;
+            std::cout << "VarID: " << v.getId() << " VarType: " << v.getType() << std::endl;
+        }
+*/
+        if(core::CompoundStmtPtr body = dynamic_pointer_cast<const core::CompoundStmt>(element->substitute(*builder.getNodeManager(), *this))){
             std::cout << "the body\n";
 /* do this recursively
             const core::Node::ChildList& children = body->getChildList();
@@ -173,19 +245,25 @@ std::cout << "found \t";
 
                 }
             );*/
-            //add three parallel statements for the localRange
- //           if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(body->substitute(*builder.getNodeManager(), *this))){
+            //TODO add three parallel statements for the localRange
+ //           if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(body/*->substitute(*builder.getNodeManager(), *this)*/)){
                 core::JobExprPtr localZjob = builder.jobExpr(body);
-                core::LambdaExpr::ParamList params;
-                params.push_back(localZjob);
-//                core::LambdaExpr localZparallel = builder.l
-     //           core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
+                std::vector<core::ExpressionPtr> expr;
+//                expr.push_back(localZjob);
+
+                core::ExpressionPtr p = builder.callExpr(dynamic_pointer_cast<const core::FunctionType>(fakePar->getType())->getReturnType(), fakePar, expr);
+
+                core::StatementPtr parBody = builder.compoundStmt(p);
+
+                return parBody;
 
                 return body;
-/*            }
-            else
-                assert(newBody && "KenrnelMapper corrupted function body.");*/
-        }
+//                core::LambdaExpr localZparallel = builder.l
+     //           core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
+            }
+ //           else
+   //             assert(body && "KenrnelMapper corrupted function body.");
+//        }
 
         if(false){
 /*            core::LambdaExpr::ParamList params = func->getParams();
@@ -245,6 +323,21 @@ std::cout << "found \t";
         return builder.functionType(builder.tupleType(args), retTy)
         return funcType;
     }*/
+
+    void getMemspaces(std::vector<core::VariablePtr>& constantV, std::vector<core::VariablePtr>& globalV,
+            std::vector<core::VariablePtr>& localV, std::vector<core::VariablePtr>& privateV){
+        append(globalV, globalVars);
+        append(constantV, constantVars);
+        append(localV, localVars);
+        append(privateV, privateVars);
+    }
+
+    void resetMemspaces() {
+        globalVars.clear();
+        constantVars.clear();
+        localVars.clear();
+        privateVars.clear();
+    }
 };
 
 class OclMapper : public core::NodeMapping {
@@ -252,11 +345,31 @@ class OclMapper : public core::NodeMapping {
     const core::ASTBuilder& builder;
 //    const core::Substitution::Mapping& mapping;
 
+    //prototype for parallel function, just for testing
+    core::LambdaExprPtr fakePar;
+
+    std::vector<core::VariablePtr> constantVars;
+    std::vector<core::VariablePtr> globalVars;
+    std::vector<core::VariablePtr> localVars;
+    std::vector<core::VariablePtr> privateVars;
 
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
-        : kernelMapper(astBuilder), builder(astBuilder) { };
+        : kernelMapper(astBuilder), builder(astBuilder) {
+        core::LambdaExpr::ParamList params;
+
+        //TODO remove dirty workaround
+//        params.push_back(builder.variable(builder.jobType()));
+
+        core::TupleType::ElementTypeList args;
+//        args.push_back(builder.jobType());
+
+        builder.functionType(builder.tupleType(args), builder.getUnitType());//, builder.compoundStmt());
+
+        fakePar = builder.lambdaExpr(builder.functionType(builder.tupleType(args), builder.getUnitType()), params, builder.compoundStmt());
+
+    };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
         // quick check - stop recursion at variables
@@ -271,7 +384,7 @@ public:
         if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)){
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
-//return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());;
+
             core::AnnotationMap map = element.getAnnotations();
 
             bool isKernelFunction = false;
@@ -305,29 +418,46 @@ public:
             //if function is not a OpenCL kernel function recursively check for child nodes
             if(!isKernelFunction) {
                 return element->substitute(*builder.getNodeManager(), *this);
-            } else {
-                // call for kernel function mapper for subnodes
-                return element->substitute(*builder.getNodeManager(), kernelMapper);
             }
 
 
-            //TODO handle subnodes.
-            //Maybe prettier in another mapper
-            const core::StatementPtr& body = func->getBody();
-            const core::Node::ChildList& children = body->getChildList();
-
-			//&builder should be captured, but is member variable
-            std::for_each(children.begin(), children.end(),
-                    [] (const core::NodePtr& curr) {
-                //look for ocl buildin functions and translate them to IR statements
-
-                }
-            );
-
             core::LambdaExpr::ParamList params = func->getParams();
 
-            // add vector<uint<4>,3> globalRange and localRange to parameters
+            // store memory spaces of arguments
+            for(core::LambdaExpr::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
+                core::VariablePtr var = *pi;
+                if(var->hasAnnotation(ocl::BaseAnnotation::KEY)) {
+                    ocl::BaseAnnotationPtr annot = var->getAnnotation(ocl::BaseAnnotation::KEY);
+                    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
+                            E = annot->getAnnotationListEnd(); I != E; ++I) {
+                        if(ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)) {
+                            switch(asa->getAddressSpace()) {
+                            case ocl::AddressSpaceAnnotation::GLOBAL: {
+                                globalVars.push_back(var);
+                                break;
+                            }
+                            case ocl::AddressSpaceAnnotation::CONSTANT: {
+                                constantVars.push_back(var);
+                                break;
+                            }
+                            case ocl::AddressSpaceAnnotation::LOCAL: {
+                                localVars.push_back(var);
+                                break;
+                            }
+                            case ocl::AddressSpaceAnnotation::PRIVATE: {
+                                privateVars.push_back(var);
+                                //TODO think about what to do with local variable arguments
+                                break;
+                            }
+                            default:
+                                assert(false && "Unexpected OpenCL address space attribute for local variable");
+                            }
+                        }
+                    }
+                }
+            }
 
+            // add vector<uint<4>,3> globalRange and localRange to parameters
             core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
             core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
             params.push_back(globalRange);
@@ -351,20 +481,62 @@ public:
                 assert(funcType && "Function has unexpected type");
             }
 
+
+            //TODO handle subnodes.
+            //Maybe prettier in another mapper
+            const core::StatementPtr& body = func->getBody();
+
+            //TODO add three parallel statements for the localRange
+            if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(body->substitute(*builder.getNodeManager(), kernelMapper))){
+                core::JobExprPtr localZjob = builder.jobExpr(newBody);
+                std::vector<core::ExpressionPtr> expr;
+                //TODO remove dirty workaround
+//                expr.push_back(localZjob);
+
+                core::ExpressionPtr p = builder.callExpr(dynamic_pointer_cast<const core::FunctionType>
+                    (fakePar->getType())->getReturnType(), fakePar, expr);
+
+                core::StatementPtr parBody = builder.compoundStmt(p);
+
+                core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params, parBody);
+
+                return newFunc;
+            }
+
+            // get address spaces of variables in body
+            kernelMapper.getMemspaces(globalVars, constantVars, localVars, privateVars);
+
+/*            const core::Node::ChildList& children = body->getChildList();
+
+            std::for_each(children.begin(), children.end(),
+                    [] (const core::NodePtr& curr) {
+                //look for ocl buildin functions and translate them to IR statements
+
+                }
+            );*/
+
   //          newFuncType = func->substitute(*builder.getNodeManager(), kernelMapper);
   //          core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
 
 
             //add three parallel statements for the localRange
-            core::JobExprPtr localZjob = builder.jobExpr(body);
-            core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
+//            core::JobExprPtr localZjob = builder.jobExpr(body);
+/*            core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params, localZjob);
 
-            return newFunc;
+            return newFunc;*/
         }
 
         return element->substitute(*builder.getNodeManager(), *this);
     }
 
+    //TODO remove, for debugging only
+    void showKernelMapper() {
+
+        std::cout << "Constant vars: " << constantVars.size() << std::endl;
+        std::cout << "Global vars: " << globalVars.size() << std::endl;
+        std::cout << "Local vars: " << localVars.size() << std::endl;
+        std::cout << "Private vars: " << privateVars.size() << std::endl;
+    }
 };
 
 }
@@ -376,6 +548,8 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
     OclMapper oclAnnotationExpander(builder);
 //    visitor.visit(mProgram);
     const core::NodePtr progNode = oclAnnotationExpander.mapElement(0, mProgram);
+    oclAnnotationExpander.showKernelMapper();
+
     if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(progNode)) {
         mProgram = newProg;
         return newProg;
