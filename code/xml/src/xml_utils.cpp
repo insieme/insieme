@@ -1386,39 +1386,40 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		elemMap[id] = make_pair(oldPair.first, gen);
 	}
 	else if (elem.getName() == "functionType") {
-		/*XmlElementPtr type = elem.getFirstChildByName("argumentType")->getFirstChildByName("typePtr");
-		TypePtr argType = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+		XmlElementPtr type = elem.getFirstChildByName("argumentType")->getFirstChildByName("tupleTypePtr");
+		TupleTypePtr argType = dynamic_pointer_cast<const TupleType>(elemMap[type->getAttr("ref")].second);
 		buildAnnotations(*type, argType, true);
 		
 		type = elem.getFirstChildByName("returnType")->getFirstChildByName("typePtr");
 		TypePtr retType = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
 		buildAnnotations(*type, retType, true);
 		
-		//GenericTypePtr gen = GenericType::get(manager, elem.getAttr("familyName"), typeParams, intTypeParams, baseType);
+		FunctionTypePtr fun = FunctionType::get(manager, argType, retType);
 		buildAnnotations(elem, fun, false);
 		
 		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-		elemMap[id] = make_pair(oldPair.first, gen);*/
-		
+		elemMap[id] = make_pair(oldPair.first, fun);
 	}
-	/*
-		
-		XmlElement returnType("returnType", doc);
-		functionType << returnType;
-		
-		if (const TypePtr& returnT = cur->getReturnType()) {
-			XmlElement typePtr("typePtr", doc);
-			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
-			returnType << typePtr;
-
-			visitAnnotations(returnT.getAnnotations(), typePtr);
+	else if (elem.getName() == "tupleType") {
+		vector<XmlElement> types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("elementType");
+		vector<TypePtr> elementList;
+		for(auto iter = types.begin(); iter != types.end(); ++iter) {
+			XmlElementPtr type = iter->getFirstChildByName("typePtr");
+			TypePtr elType = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, elType, true);
+			elementList.push_back(elType);
 		}
 		
-		visitAnnotations(cur->getAnnotations(), functionType);
+		TupleTypePtr tuple = TupleType::get(manager, elementList);
+		buildAnnotations(elem, tuple, false);
+		
+		// update the map
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, tuple);
 	}
-	*/
 	else if (elem.getName() == "rootNode") {
 		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
 		buildAnnotations(*type, elemMap[type->getAttr("ref")].second, true);
