@@ -58,11 +58,14 @@
 #include "ast_visitor.h"
 #include "container_utils.h"
 #include "logging.h"
+#include "location.h"
 
 #include "omp/omp_pragma.h"
 #include "ocl/ocl_annotations.h"
 
 #include "transform/node_replacer.h"
+
+#include "clang/Basic/FileManager.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -2399,6 +2402,17 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 		// Adding the lambda function to the list of converted functions
 		ctx->lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
+		// we also need to cache all the other recursive definition, so when we will resolve
+		// another function in the recursion we will not repeat the process again
+		std::for_each(components.begin(), components.end(),
+			[ this, &definition ] (std::set<const FunctionDecl*>::value_type fd) {
+				auto fit = this->ctx->recVarExprMap.find(fd);
+				assert(fit != this->ctx->recVarExprMap.end());
+				core::ExpressionPtr&& func = builder.recLambdaExpr(fit->second, definition);
+				ctx->lambdaExprCache.insert( std::make_pair(fd, func) );
+			}
+		);
+
 	}
 
 	// ---------------------- Add annotations to this function ------------------------------
@@ -2411,6 +2425,19 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// --------------------------------- C NAME ----------------------------------------------
 	// annotate with the C name of the function
 	retLambdaExpr.addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+
+	// ----------------------- SourceLocation Annotation -------------------------------------
+	// for each entry function being converted we register the location where it was originally
+	// defined in the C program
+	auto convertClangSrcLoc = [ this ](const SourceLocation& loc) -> c_info::SourceLocation {
+		SourceManager& sm = this->clangComp.getSourceManager();
+		FileID&& fileId = sm.getFileID(loc);
+		const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+		return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
+	};
+
+	retLambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+			convertClangSrcLoc(funcDecl->getLocStart()), convertClangSrcLoc(funcDecl->getLocEnd()) ) );
 
 	return retLambdaExpr;
 }

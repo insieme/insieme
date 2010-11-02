@@ -34,4 +34,8 @@
  * regarding third party software licenses.
  */
 
+struct A {
+	char* name;
+};
+
 int f(int, int);

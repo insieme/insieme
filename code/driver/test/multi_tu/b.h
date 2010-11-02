@@ -34,4 +34,9 @@
  * regarding third party software licenses.
  */
 
+struct A;
+struct B{
+	struct A* a;
+};
+
 int g(int);
