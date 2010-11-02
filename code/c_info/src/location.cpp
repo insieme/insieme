@@ -34,9 +34,26 @@
  * regarding third party software licenses.
  */
 
-struct A;
-struct B{
-	struct A* a;
-};
+#include "location.h"
 
-int g(int);
+#include <sstream>
+
+namespace insieme {
+namespace c_info {
+
+const core::StringKey<CLocAnnotation> CLocAnnotation::KEY("CLocAnnotationKey");
+
+std::string SourceLocation::toString() const {
+	std::ostringstream ss;
+	ss << fileName << ":" << lineNo << ":" << columnNo;
+	return ss.str();
+}
+
+const std::string CLocAnnotation::toString() const {
+	std::ostringstream ss;
+	ss << begin.toString() << " - " << end.toString();
+	return ss.str();
+}
+
+} // End c_info namespace
+} // End insieem namespace

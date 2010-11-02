@@ -100,4 +100,7 @@ TEST(LangBasic, Subscript) {
 //	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT->getType()));
 //	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT));
 //	EXPECT_EQ ("", toString(*lang::OP_LENGTH_VAL.getType()));
+
+//	EXPECT_EQ("", toString(*lang::OP_ITE_PTR->getType()));
+
 }

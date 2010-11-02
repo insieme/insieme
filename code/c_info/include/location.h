@@ -34,9 +34,47 @@
  * regarding third party software licenses.
  */
 
-struct A;
-struct B{
-	struct A* a;
+#pragma once
+
+#include <string>
+#include "annotation.h"
+
+namespace insieme {
+namespace c_info {
+
+class SourceLocation {
+	const std::string 	fileName;
+	const size_t		lineNo;
+	const size_t 		columnNo;
+public:
+	SourceLocation(const std::string& fileName, const size_t& lineNo, const size_t& columnNo):
+		fileName(fileName), lineNo(lineNo), columnNo(columnNo) { }
+
+	const std::string& getFileName() const { return fileName; }
+
+	size_t getLine() const { return lineNo; }
+	size_t getColumn() const { return columnNo; }
+
+	std::string toString() const;
 };
 
-int g(int);
+/**
+ * Annotation which contains the range within an element in the IR was defined.
+ */
+class CLocAnnotation : public insieme::core::Annotation {
+	const SourceLocation begin;
+	const SourceLocation end;
+
+public:
+	static const insieme::core::StringKey<CLocAnnotation> KEY;
+
+	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end) : insieme::core::Annotation(), begin(begin), end(end) { }
+	const std::string getAnnotationName() const {return "CLocAnnotation";}
+
+	const std::string toString() const;
+
+	const insieme::core::AnnotationKey* getKey() const { return &KEY; }
+};
+
+} // End c_info namespace
+} // End insieme namespace

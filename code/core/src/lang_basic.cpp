@@ -450,6 +450,13 @@ ADD_OP(REDUCE, TYPE_OP_REDUCE_PTR ,"reduce");
 //ADD_OP(PFOR,,"pfor");
 
 
+// --- if-then-else ---
+ADD_TYPE(FunctionType, LAZY_GEN, (FunctionType(TYPE_EMPTY_TUPLE_PTR, TYPE_ALPHA_PTR)));
+ADD_TYPE(TupleType, ITE_ARGUMENTS, (TupleType(toVector<TypePtr>(TYPE_BOOL_PTR, TYPE_LAZY_GEN_PTR, TYPE_LAZY_GEN_PTR))));
+ADD_TYPE(FunctionType, ITE_TYPE, (FunctionType(TYPE_ITE_ARGUMENTS_PTR, TYPE_ALPHA_PTR)));
+
+ADD_OP(ITE, TYPE_ITE_TYPE, "ite");
+
 #undef ADD_OP
 
 // -------------------------------- Statements ------------------------------
