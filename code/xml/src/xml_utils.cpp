@@ -1382,7 +1382,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 					intTypeParams.push_back(IntTypeParam::getVariableIntParam((iter->getFirstChildByName("variable"))->getAttr("value")[0]));
 				}
 				else if (iter->getChildrenByName("concrete").size() != 0){
-					intTypeParams.push_back(IntTypeParam::getConcreteIntParam((iter->getFirstChildByName("concrete"))->getAttr("value")[0]));
+					intTypeParams.push_back(IntTypeParam::getConcreteIntParam(atoi(&(iter->getFirstChildByName("concrete"))->getAttr("value")[0])));
 				}
 				else {
 					intTypeParams.push_back(IntTypeParam::getInfiniteIntParam());
@@ -1516,6 +1516,21 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, rec);
 	}
+	
+	else if (nodeName == "literal") {
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		TypePtr typeT = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);
+		
+		LiteralPtr lit = Literal::get(manager, elem.getAttr("value"), typeT);
+		buildAnnotations(elem, lit, false);
+		
+		// update the map
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, lit);
+	}
+
 	else if (nodeName == "rootNode") {
 		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
 		buildAnnotations(*type, elemMap[type->getAttr("ref")].second, true);
