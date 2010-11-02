@@ -39,6 +39,7 @@
 #include <sstream>
 #include <assert.h>
 #include <unordered_map>
+#include <memory>
 
 #include "ast_node.h"
 #include "ast_visitor.h"
