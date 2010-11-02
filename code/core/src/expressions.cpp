@@ -37,8 +37,10 @@
 #include "expressions.h"
 
 #include "statements.h"
-#include "string_utils.h"
+
+#include "container_utils.h"
 #include "functional_utils.h"
+#include "string_utils.h"
 #include "lang_basic.h"
 #include "map_utils.h"
 
@@ -136,39 +138,53 @@ std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& par
 	return seed;
 }
 
-LambdaExpr::LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body)
-		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), body(isolate(body)), params(isolate(params)) { };
+LambdaExpr::LambdaExpr(const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body)
+		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), captureList(isolate(captureList)), params(isolate(params)), body(isolate(body)) { };
 
 LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(
 			mapper.map(0, type),
-			mapper.map(1, params),
-			mapper.map(1+params.size(), body)
+			mapper.map(1, captureList),
+			mapper.map(1 + captureList.size(), params),
+			mapper.map(1 + captureList.size() + params.size(), body)
 	);
 }
 
 bool LambdaExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const LambdaExpr& rhs = static_cast<const LambdaExpr&>(expr);
-	return (*body == *rhs.body) && std::equal(params.cbegin(), params.cend(), rhs.params.cbegin(), equal_target<ExpressionPtr>());
+	return (*body == *rhs.body)
+			&& ::equals(captureList, rhs.captureList, equal_target<DeclarationStmtPtr>())
+			&& ::equals(params, rhs.params, equal_target<VariablePtr>());
 }
 
 Node::OptionChildList LambdaExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
-	std::copy(params.cbegin(), params.cend(), back_inserter(*res));
+	std::copy(captureList.begin(), captureList.end(), back_inserter(*res));
+	std::copy(params.begin(), params.end(), back_inserter(*res));
 	res->push_back(body);
 	return res;
 }
 
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-	return out << "fun(" << join(", ", params, [](std::ostream& out, const VariablePtr& cur)->std::ostream& {
-			return out << (*cur->getType()) << " " << *cur;
-	}) << "){ " << *body << " }";
+	out << "fun";
+	if (!captureList.empty()) {
+		out << "[" << join(", ", captureList, print<deref<DeclarationStmtPtr>>()) << "]";
+	}
+
+	return out << "("
+		<< join(", ", params, [](std::ostream& out, const VariablePtr& cur)->std::ostream& {
+				return out << (*cur->getType()) << " " << *cur;
+		}) << "){ " << *body << " }";
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
-	return manager.get(LambdaExpr(type, params, body));
+	return get(manager, type, toVector<DeclarationStmtPtr>(), params, body);
+}
+
+LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body) {
+	return manager.get(LambdaExpr(type, captureList, params, body));
 }
 
 // ------------------------------------- TupleExpr ---------------------------------

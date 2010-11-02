@@ -166,13 +166,15 @@ public:
 
 class LambdaExpr : public Expression {
 public:
+	typedef std::vector<DeclarationStmtPtr> CaptureList;
 	typedef vector<VariablePtr> ParamList;
 
 private:
-	const StatementPtr body;
+	const CaptureList captureList;
 	const ParamList params;
+	const StatementPtr body;
 
-	LambdaExpr(const TypePtr& type, const ParamList& params, const StatementPtr& body);
+	LambdaExpr(const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
 	virtual LambdaExpr* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -182,10 +184,12 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
-	const StatementPtr& getBody() const { return body; }
+	const CaptureList& getCaptureList() const { return captureList; }
 	const ParamList& getParams() const { return params; }
+	const StatementPtr& getBody() const { return body; }
 
 	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
+	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
 };
 
 
