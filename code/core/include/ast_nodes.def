@@ -153,7 +153,6 @@ AST_TERMINAL(RecType, Type)
 // + generic types
 AST_NODE(GenericType, Type)
 CONCRETE(GenericType)
-AST_TERMINAL(JobType, GenericType)
 
 // + single element types
 AST_NODE(SingleElementType, GenericType)
