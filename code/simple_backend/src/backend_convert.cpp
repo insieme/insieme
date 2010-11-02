@@ -103,7 +103,6 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodeP
 	// generate forward declarations for all functions within this recursive type
 	const RecLambdaDefinitionPtr& definition = lambda->getDefinition();
 	typedef RecLambdaDefinition::RecFunDefs::value_type Pair;
-	TypeManager& typeManager = cc.getTypeMan();
 	for_each(definition->getDefinitions(), [&](const Pair& cur){
 
 		// create forward declaration
@@ -115,13 +114,14 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodeP
 		string ident = getNameForRecursiveFunction(cc.getNodeManager(), definition, cur.first, cc.getNameGen());
 
 		// generate a new function from the lambda expression
-		CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
+		CodePtr cptr(new CodeFragment(string("fundef_codefragment_") + ident));
 		CodeStream& cs = cptr->getCodeStream();
 		// write the function header
-		cs << typeManager.getTypeName(funType->getReturnType()) << " " << ident << "(";
+		cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
 		// handle arguments
+		auto &cci = cc;
 		cs << join(", ", cur.second->getParams(), [&](std::ostream& os, const VariablePtr& param) -> std::ostream& {
-			return (os << typeManager.getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
+			return (os << cci.getTypeMan().getTypeName(param->getType()) << " " << cci.getNameGen().getVarName(param));
 		});
 		cs << ");\n";
 
