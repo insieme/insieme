@@ -284,6 +284,9 @@ ADD_OP(LENGTH);
 
 ADD_OP(VAR_LIST_PACK);
 
+// --- if-then-else ---
+
+ADD_OP(ITE);
 
 // ---------------------------- Parallel Constructs -------------------------
 
