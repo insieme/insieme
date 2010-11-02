@@ -59,7 +59,9 @@ class ASTBuilder {
 public:
 	ASTBuilder(const SharedNodeManager& manager = SharedNodeManager(new NodeManager())) : sharedManager(manager), manager(*sharedManager) { }
 
+	typedef vector<DeclarationStmtPtr> CaptureList;
 	typedef vector<VariablePtr> ParamList;
+
 	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
 	typedef vector<TypePtr> ElementTypeList;
