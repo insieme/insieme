@@ -2238,6 +2238,55 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	return retStmt;
 }
 
+void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
+	// ---------------------- Add annotations to this function ------------------------------
+	//check Attributes of the function definition
+	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
+	if(funcDecl->hasAttrs()) {
+		const clang::AttrVec attrVec = funcDecl->getAttrs();
+
+		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+				//get annotate string
+				llvm::StringRef sr = attr->getAnnotation();
+
+				//check if it is an OpenCL kernel function
+				if(sr == "__kernel") {
+					DVLOG(1) << "is OpenCL kernel function";
+					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
+				}
+			}
+			else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
+						attr->getXDim(), attr->getYDim(), attr->getZDim())
+				);
+			}
+		}
+	}
+	// --------------------------------- OPENCL ---------------------------------------------
+	// if OpenCL related annotations have been found, create OclBaseAnnotation and
+	// add it to the funciton's attribute
+	if(!kernelAnnotation.empty())
+		node.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+
+	// --------------------------------- C NAME ----------------------------------------------
+	// annotate with the C name of the function
+	node.addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+
+	// ----------------------- SourceLocation Annotation -------------------------------------
+	// for each entry function being converted we register the location where it was originally
+	// defined in the C program
+	auto convertClangSrcLoc = [ this ](const SourceLocation& loc) -> c_info::SourceLocation {
+		SourceManager& sm = this->clangComp.getSourceManager();
+		FileID&& fileId = sm.getFileID(loc);
+		const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+		return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
+	};
+
+	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+			convertClangSrcLoc(funcDecl->getLocStart()), convertClangSrcLoc(funcDecl->getLocEnd()) ) );
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2318,30 +2367,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		}
 	);
 
-	//check Attributes of the function definition
-	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
-	if(funcDecl->hasAttrs()) {
-		const clang::AttrVec attrVec = funcDecl->getAttrs();
-
-		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-				//get annotate string
-				llvm::StringRef sr = attr->getAnnotation();
-
-				//check if it is an OpenCL kernel function
-				if(sr == "__kernel") {
-					DVLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
-				}
-			}
-			else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
-				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
-						attr->getXDim(), attr->getYDim(), attr->getZDim())
-				);
-			}
-		}
-	}
-
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened ~~~");
 	if(!components.empty())
@@ -2351,95 +2376,74 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), params, body);
 
-	if( !components.empty() ) {
-		// this is a recurive function call
-		if(ctx->isRecSubFunc) {
-			// if we are visiting a nested recursive type it means someone else will take care
-			// of building the rectype node, we just return an intermediate type
-			return retLambdaExpr;
-		}
-
-		// we have to create a recursive type
-		ConversionContext::RecVarExprMap::const_iterator tit = ctx->recVarExprMap.find(funcDecl);
-		assert(tit != ctx->recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
-		core::VariablePtr recVarRef = tit->second;
-
-		core::RecLambdaDefinition::RecFunDefs definitions;
-		definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
-
-		// We start building the recursive type. In order to avoid loop the visitor
-		// we have to change its behaviour and let him returns temporarely types
-		// when a sub recursive type is visited.
-		ctx->isRecSubFunc = true;
-
-		std::for_each(components.begin(), components.end(),
-			[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
-
-				//Visual Studios 2010 fix: full namespace
-				insieme::frontend::conversion::ConversionFactory::ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
-				assert(tit != this->ctx->recVarExprMap.end() && "Recursive function has no TypeVar associated");
-				this->ctx->currVar = tit->second;
-
-				// we remove the variable from the list in order to fool the solver,
-				// in this way it will create a descriptor for this type (and he will not return the TypeVar
-				// associated with this recursive type). This behaviour is enabled only when the isRecSubType
-				// flag is true
-				this->ctx->recVarExprMap.erase(fd);
-				definitions.insert( std::make_pair(this->ctx->currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->convertFunctionDecl(fd)) ) );
-
-				// reinsert the TypeVar in the map in order to solve the other recursive types
-				this->ctx->recVarExprMap.insert( std::make_pair(fd, this->ctx->currVar) );
-				this->ctx->currVar = NULL;
-			}
-		);
-		// we reset the behavior of the solver
-		ctx->isRecSubFunc = false;
-		// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
-		// ctx->recVarExprMap.clear();
-
-		core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
-		retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
-
-		// Adding the lambda function to the list of converted functions
-		// ctx->lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
-
-		// we also need to cache all the other recursive definition, so when we will resolve
-		// another function in the recursion we will not repeat the process again
-		std::for_each(components.begin(), components.end(),
-			[ this, &definition ] (std::set<const FunctionDecl*>::value_type fd) {
-				auto fit = this->ctx->recVarExprMap.find(fd);
-				assert(fit != this->ctx->recVarExprMap.end());
-				core::ExpressionPtr&& func = builder.recLambdaExpr(fit->second, definition);
-				ctx->lambdaExprCache.insert( std::make_pair(fd, func) );
-			}
-		);
-
+	if( components.empty() ) {
+		attachFuncAnnotations(retLambdaExpr, funcDecl);
+		return retLambdaExpr;
 	}
 
-	// ---------------------- Add annotations to this function ------------------------------
-	// --------------------------------- OPENCL ---------------------------------------------
-	// if OpenCL related annotations have been found, create OclBaseAnnotation and
-	// add it to the funciton's attribute
-	if(!kernelAnnotation.empty())
-		retLambdaExpr.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+	// this is a recurive function call
+	if(ctx->isRecSubFunc) {
+		// if we are visiting a nested recursive type it means someone else will take care
+		// of building the rectype node, we just return an intermediate type
+		return retLambdaExpr;
+	}
 
-	// --------------------------------- C NAME ----------------------------------------------
-	// annotate with the C name of the function
-	retLambdaExpr.addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+	// we have to create a recursive type
+	ConversionContext::RecVarExprMap::const_iterator tit = ctx->recVarExprMap.find(funcDecl);
+	assert(tit != ctx->recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
+	core::VariablePtr recVarRef = tit->second;
 
-	// ----------------------- SourceLocation Annotation -------------------------------------
-	// for each entry function being converted we register the location where it was originally
-	// defined in the C program
-	auto convertClangSrcLoc = [ this ](const SourceLocation& loc) -> c_info::SourceLocation {
-		SourceManager& sm = this->clangComp.getSourceManager();
-		FileID&& fileId = sm.getFileID(loc);
-		const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-		return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
-	};
+	core::RecLambdaDefinition::RecFunDefs definitions;
+	definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
 
-	retLambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-			convertClangSrcLoc(funcDecl->getLocStart()), convertClangSrcLoc(funcDecl->getLocEnd()) ) );
+	// We start building the recursive type. In order to avoid loop the visitor
+	// we have to change its behaviour and let him returns temporarely types
+	// when a sub recursive type is visited.
+	ctx->isRecSubFunc = true;
 
+	std::for_each(components.begin(), components.end(),
+		[ this, &definitions ] (std::set<const FunctionDecl*>::value_type fd) {
+
+			//Visual Studios 2010 fix: full namespace
+			insieme::frontend::conversion::ConversionFactory::ConversionContext::RecVarExprMap::const_iterator tit = this->ctx->recVarExprMap.find(fd);
+			assert(tit != this->ctx->recVarExprMap.end() && "Recursive function has no TypeVar associated");
+			this->ctx->currVar = tit->second;
+
+			// we remove the variable from the list in order to fool the solver,
+			// in this way it will create a descriptor for this type (and he will not return the TypeVar
+			// associated with this recursive type). This behaviour is enabled only when the isRecSubType
+			// flag is true
+			this->ctx->recVarExprMap.erase(fd);
+			definitions.insert( std::make_pair(this->ctx->currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->convertFunctionDecl(fd)) ) );
+
+			// reinsert the TypeVar in the map in order to solve the other recursive types
+			this->ctx->recVarExprMap.insert( std::make_pair(fd, this->ctx->currVar) );
+			this->ctx->currVar = NULL;
+		}
+	);
+	// we reset the behavior of the solver
+	ctx->isRecSubFunc = false;
+	// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
+	// ctx->recVarExprMap.clear();
+
+	core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+	retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
+
+	// Adding the lambda function to the list of converted functions
+	// ctx->lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
+
+	// we also need to cache all the other recursive definition, so when we will resolve
+	// another function in the recursion we will not repeat the process again
+	std::for_each(components.begin(), components.end(),
+		[ this, &definition ] (std::set<const FunctionDecl*>::value_type fd) {
+			auto fit = this->ctx->recVarExprMap.find(fd);
+			assert(fit != this->ctx->recVarExprMap.end());
+			core::ExpressionPtr&& func = builder.recLambdaExpr(fit->second, definition);
+			ctx->lambdaExprCache.insert( std::make_pair(fd, func) );
+
+			this->attachFuncAnnotations(func, fd);
+		}
+	);
 	return retLambdaExpr;
 }
 

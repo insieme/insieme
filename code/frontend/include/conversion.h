@@ -82,6 +82,7 @@ class ConversionFactory {
 
 	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type);
 	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
+	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, clang::idx::Indexer& indexer, clang::idx::Program& clangProg,
