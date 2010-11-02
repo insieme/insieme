@@ -121,8 +121,8 @@ public:
 	core::ProgramPtr getProgram() const { return mProgram; }
 
 	core::ExpressionPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl) { return mFact.convertFunctionDecl(funcDecl); }
-	core::LambdaExprPtr handleBody(const clang::Stmt* body);
-	core::ProgramPtr handleTranslationUnit(const clang::DeclContext* declCtx);
+	core::LambdaExprPtr	handleBody(const clang::Stmt* body);
+	core::ProgramPtr 	handleTranslationUnit(const clang::DeclContext* declCtx);
 };
 
 

@@ -62,18 +62,25 @@ public:
  * Annotation which contains the range within an element in the IR was defined.
  */
 class CLocAnnotation : public insieme::core::Annotation {
-	const SourceLocation begin;
-	const SourceLocation end;
-
 public:
+	typedef std::vector<std::string> ArgumentList;
 	static const insieme::core::StringKey<CLocAnnotation> KEY;
 
-	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end) : insieme::core::Annotation(), begin(begin), end(end) { }
+	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end, bool isFuncDecl=true, const ArgumentList& args = ArgumentList()) :
+		insieme::core::Annotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) { }
+
 	const std::string getAnnotationName() const {return "CLocAnnotation";}
 
 	const std::string toString() const;
 
 	const insieme::core::AnnotationKey* getKey() const { return &KEY; }
+
+private:
+	const SourceLocation begin;
+	const SourceLocation end;
+
+	bool isFunctionDef;
+	ArgumentList args;
 };
 
 } // End c_info namespace

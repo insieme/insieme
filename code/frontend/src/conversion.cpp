@@ -233,6 +233,13 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 	return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>(args.begin(), args.end()) );
 }
 
+// Covert clang source location into a c_info::SourceLocation object to be inserted in an CLocAnnotation
+c_info::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
+	FileID&& fileId = sm.getFileID(loc);
+	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
+};
+
 } // End empty namespace
 
 
@@ -2276,15 +2283,10 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 	// ----------------------- SourceLocation Annotation -------------------------------------
 	// for each entry function being converted we register the location where it was originally
 	// defined in the C program
-	auto convertClangSrcLoc = [ this ](const SourceLocation& loc) -> c_info::SourceLocation {
-		SourceManager& sm = this->clangComp.getSourceManager();
-		FileID&& fileId = sm.getFileID(loc);
-		const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-		return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
-	};
-
 	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-			convertClangSrcLoc(funcDecl->getLocStart()), convertClangSrcLoc(funcDecl->getLocEnd()) ) );
+		convertClangSrcLoc(clangComp.getSourceManager(), funcDecl->getLocStart()),
+		convertClangSrcLoc(clangComp.getSourceManager(), funcDecl->getLocEnd()) )
+	);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2368,7 +2370,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	);
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened ~~~");
+	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened, blame Simone ~~~");
 	if(!components.empty())
 		ctx->isResolvingRecFuncBody = true;
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
@@ -2476,7 +2478,30 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body) {
 	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
 	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), toVector<core::StatementPtr>(bodyStmt), core::lang::TYPE_UNIT);
 
-	return core::dynamic_pointer_cast<const core::LambdaExpr>(callExpr->getFunctionExpr());
+	c_info::CLocAnnotation::ArgumentList args;
+	// look for variable names
+	for_each(callExpr->getArguments().begin(), callExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
+		// because this callexpr was created out of a stmt block, we are sure
+		// input arguments are Variables
+		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
+		assert(var && "Argument of call expression is not a variable.");
+		// we also have to look at the CNameAnnotation in order to find the name of the original variable
+
+		std::shared_ptr<c_info::CNameAnnotation>&& nameAnn = var->getAnnotation(c_info::CNameAnnotation::KEY);
+		assert(nameAnn && "Variable has not CName associated");
+		args.push_back( nameAnn->getName() );
+	});
+
+	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
+	// ------ Adding source location annotation (CLocAnnotation) -------
+	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+		convertClangSrcLoc(mComp.getSourceManager(), body->getLocStart()),
+		convertClangSrcLoc(mComp.getSourceManager(), body->getLocEnd()),
+		false, // this is not a function decl
+		args)
+	);
+
+	return lambdaExpr;
 }
 
 

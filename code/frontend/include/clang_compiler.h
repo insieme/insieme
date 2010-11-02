@@ -137,7 +137,7 @@ struct ClangParsingError: public std::logic_error {
 class ClangCompiler: boost::noncopyable {
 	struct ClangCompilerImpl;
 
-	ClangCompilerImpl* pimpl;
+	std::auto_ptr<ClangCompilerImpl> pimpl;
 public:
 	/**
 	 * Creates an empty compiler instance, usefull for test cases
@@ -194,7 +194,7 @@ class Program: public boost::noncopyable {
 
 	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang headers
 	class ProgramImpl;
-	typedef std::shared_ptr<ProgramImpl> ProgramImplPtr;
+	typedef std::auto_ptr<ProgramImpl> ProgramImplPtr;
 	ProgramImplPtr pimpl;
 
 	// Reference to the NodeManager used to convert the translation units into IR code

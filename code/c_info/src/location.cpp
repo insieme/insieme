@@ -52,6 +52,9 @@ std::string SourceLocation::toString() const {
 const std::string CLocAnnotation::toString() const {
 	std::ostringstream ss;
 	ss << begin.toString() << " - " << end.toString();
+	if(!isFunctionDef) {
+		ss << "\\ncallExpr(" << join(", ", args) << ")";
+	}
 	return ss.str();
 }
 
