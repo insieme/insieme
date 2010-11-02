@@ -2401,7 +2401,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
 
 		// Adding the lambda function to the list of converted functions
-		ctx->lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
+		// ctx->lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
+
 		// we also need to cache all the other recursive definition, so when we will resolve
 		// another function in the recursion we will not repeat the process again
 		std::for_each(components.begin(), components.end(),
