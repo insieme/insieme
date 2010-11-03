@@ -179,24 +179,23 @@ public:
 		XmlElement argumentType("argumentType", doc);
 		functionType << argumentType;
 		
-		if (const TupleTypePtr& argument = cur->getArgumentType()) {
-			XmlElement tupleTypePtr("tupleTypePtr", doc);
-			tupleTypePtr.setAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
-			argumentType << tupleTypePtr;
+		const TupleTypePtr& argument = cur->getArgumentType();
+		XmlElement tupleTypePtr("tupleTypePtr", doc);
+		tupleTypePtr.setAttr("ref", numeric_cast<string>((size_t)(&*argument)));			
+		argumentType << tupleTypePtr;
 
-			visitAnnotations(argument.getAnnotations(), tupleTypePtr);
-		}
+		visitAnnotations(argument.getAnnotations(), tupleTypePtr);
+		
 		
 		XmlElement returnType("returnType", doc);
 		functionType << returnType;
 		
-		if (const TypePtr& returnT = cur->getReturnType()) {
-			XmlElement typePtr("typePtr", doc);
-			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
-			returnType << typePtr;
+		const TypePtr& returnT = cur->getReturnType();
+		XmlElement typePtr("typePtr", doc);
+		typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnT)));			
+		returnType << typePtr;
 
-			visitAnnotations(returnT.getAnnotations(), typePtr);
-		}
+		visitAnnotations(returnT.getAnnotations(), typePtr);
 		
 		visitAnnotations(cur->getAnnotations(), functionType);
 	}
@@ -282,24 +281,22 @@ public:
 		XmlElement definition("definition", doc);
 		recType << definition;
 
-		if (const RecTypeDefinitionPtr& definitionT = cur->getDefinition()) {
-			XmlElement recTypeDefinitionPtr("recTypeDefinitionPtr", doc);
-			recTypeDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*definitionT)));			
-			definition << recTypeDefinitionPtr;
+		const RecTypeDefinitionPtr& definitionT = cur->getDefinition();
+		XmlElement recTypeDefinitionPtr("recTypeDefinitionPtr", doc);
+		recTypeDefinitionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*definitionT)));			
+		definition << recTypeDefinitionPtr;
 
-			visitAnnotations(definitionT.getAnnotations(), recTypeDefinitionPtr);
-		}
+		visitAnnotations(definitionT.getAnnotations(), recTypeDefinitionPtr);
 		
 		XmlElement typeVariable("typeVariable", doc);
 		recType << typeVariable;
 
-		if (const TypeVariablePtr& typeT = cur->getTypeVariable()) {
-			XmlElement typeVariablePtr("typeVariablePtr", doc);
-			typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));			
-			typeVariable << typeVariablePtr;
+		const TypeVariablePtr& typeT = cur->getTypeVariable();
+		XmlElement typeVariablePtr("typeVariablePtr", doc);
+		typeVariablePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));			
+		typeVariable << typeVariablePtr;
 
-			visitAnnotations(typeT.getAnnotations(), typeVariablePtr);
-		}
+		visitAnnotations(typeT.getAnnotations(), typeVariablePtr);
 		
 		visitAnnotations(cur->getAnnotations(), recType);
 	}
@@ -342,13 +339,12 @@ public:
 		XmlElement type("type", doc);
 		literal << type;
 		
-		if (const TypePtr& typeT = cur->getType()) {
-			XmlElement typePtr("typePtr", doc);
-			typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
-			type << typePtr;
+		const TypePtr& typeT = cur->getType();
+		XmlElement typePtr("typePtr", doc);
+		typePtr.setAttr("ref", numeric_cast<string>((size_t)(&*typeT)));		
+		type << typePtr;
 			
-			visitAnnotations(typeT.getAnnotations(), typePtr);
-		}
+		visitAnnotations(typeT.getAnnotations(), typePtr);
 		
 		visitAnnotations(cur->getAnnotations(), literal);
 	}
@@ -361,14 +357,13 @@ public:
 		XmlElement returnExpression("returnExpression", doc);
 		returnStmt << returnExpression;
 		
-		if (const ExpressionPtr& returnE = cur->getReturnExpr()) {
-			XmlElement expressionPtr("expressionPtr", doc);
-			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnE)));		
-			returnExpression << expressionPtr;
-			
-			visitAnnotations(returnE.getAnnotations(), expressionPtr);
-		}
-		
+		const ExpressionPtr& returnE = cur->getReturnExpr();
+		XmlElement expressionPtr("expressionPtr", doc);
+		expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*returnE)));		
+		returnExpression << expressionPtr;
+
+		visitAnnotations(returnE.getAnnotations(), expressionPtr);
+				
 		visitAnnotations(cur->getAnnotations(), returnStmt);
 	}
 	
@@ -380,46 +375,42 @@ public:
 		XmlElement declaration("declaration", doc);
 		forStmt << declaration;
 		
-		if (const DeclarationStmtPtr& declarationR = cur->getDeclaration()) {
-			XmlElement declarationStmtPtr("declarationStmtPtr", doc);
-			declarationStmtPtr.setAttr("ref", numeric_cast<string>((size_t)(&*declarationR)));		
-			declaration << declarationStmtPtr;
+		const DeclarationStmtPtr& declarationR = cur->getDeclaration();
+		XmlElement declarationStmtPtr("declarationStmtPtr", doc);
+		declarationStmtPtr.setAttr("ref", numeric_cast<string>((size_t)(&*declarationR)));		
+		declaration << declarationStmtPtr;
 			
-			visitAnnotations(declarationR.getAnnotations(), declarationStmtPtr);
-		}
+		visitAnnotations(declarationR.getAnnotations(), declarationStmtPtr);
 
 		XmlElement body("body", doc);
 		forStmt << body;
 		
-		if (const StatementPtr& bodyR = cur->getBody()) {
-			XmlElement statementPtr("statementPtr", doc);
-			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyR)));		
-			body << statementPtr;
+		const StatementPtr& bodyR = cur->getBody();
+		XmlElement statementPtr("statementPtr", doc);
+		statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*bodyR)));		
+		body << statementPtr;
 			
-			visitAnnotations(bodyR.getAnnotations(), statementPtr);
-		}
+		visitAnnotations(bodyR.getAnnotations(), statementPtr);
 
 		XmlElement end("end", doc);
 		forStmt << end;
 		
-		if (const ExpressionPtr& endR = cur->getEnd()) {
-			XmlElement expressionPtr("expressionPtr", doc);
-			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*endR)));		
-			end << expressionPtr;
+		const ExpressionPtr& endR = cur->getEnd();
+		XmlElement expressionPtr("expressionPtr", doc);
+		expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*endR)));		
+		end << expressionPtr;
 			
-			visitAnnotations(endR.getAnnotations(), expressionPtr);
-		}
+		visitAnnotations(endR.getAnnotations(), expressionPtr);
 		
 		XmlElement step("step", doc);
 		forStmt << step;
 		
-		if (const ExpressionPtr& stepR = cur->getStep()) {
-			XmlElement expressionPtr("expressionPtr", doc);
-			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*stepR)));		
-			step << expressionPtr;
+		const ExpressionPtr& stepR = cur->getStep();
+		XmlElement expressionPtr2("expressionPtr", doc);
+		expressionPtr2.setAttr("ref", numeric_cast<string>((size_t)(&*stepR)));		
+		step << expressionPtr2;
 			
-			visitAnnotations(stepR.getAnnotations(), expressionPtr);
-		}
+		visitAnnotations(stepR.getAnnotations(), expressionPtr2);
 		
 		visitAnnotations(cur->getAnnotations(), forStmt);
 	}
@@ -473,47 +464,43 @@ public:
 		XmlElement expression("expression", doc);
 		switchStmt << expression;
 		
-		if (const ExpressionPtr& expr = cur->getSwitchExpr()) {
-			XmlElement expressionPtr("expressionPtr", doc);
-			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*expr)));		
-			expression << expressionPtr;
+		const ExpressionPtr& expr = cur->getSwitchExpr();
+		XmlElement expressionPtr("expressionPtr", doc);
+		expressionPtr.setAttr("ref", numeric_cast<string>((size_t)(&*expr)));		
+		expression << expressionPtr;
 			
-			visitAnnotations(expr.getAnnotations(), expressionPtr);
-		}
+		visitAnnotations(expr.getAnnotations(), expressionPtr);
+		
+		XmlElement cases("cases", doc);
+		switchStmt << cases;
 		
 		const vector<SwitchStmt::Case>& cas = cur->getCases();
-		if (!cas.empty()){
-			XmlElement cases("cases", doc);
-			switchStmt << cases;
+		for(vector<SwitchStmt::Case>::const_iterator iter = cas.begin(); iter != cas.end(); ++iter) {
+			XmlElement caseEl("case", doc);
+			cases << caseEl;
 			
-			for(vector<SwitchStmt::Case>::const_iterator iter = cas.begin(); iter != cas.end(); ++iter) {
-				XmlElement caseEl("case", doc);
-				cases << caseEl;
-				
-				XmlElement expressionPtr("expressionPtr", doc);
-				expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
-				caseEl << expressionPtr;
-				
-				visitAnnotations((iter->first).getAnnotations(), expressionPtr);
-				
-				XmlElement statementPtr("statementPtr", doc);
-				statementPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
-				caseEl << statementPtr;
-				
-				visitAnnotations((iter->second).getAnnotations(), statementPtr);
-			}
+			XmlElement expressionPtr("expressionPtr", doc);
+			expressionPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->first)));
+			caseEl << expressionPtr;
+			
+			visitAnnotations((iter->first).getAnnotations(), expressionPtr);
+			
+			XmlElement statementPtr("statementPtr", doc);
+			statementPtr.setAttr("ref", numeric_cast<string>((size_t)&(*iter->second)));
+			caseEl << statementPtr;
+			
+			visitAnnotations((iter->second).getAnnotations(), statementPtr);
 		}
 
 		XmlElement defaultCase("defaultCase", doc);
 		switchStmt << defaultCase;
 		
-		if (const StatementPtr& defaultC = cur->getDefaultCase()) {
-			XmlElement statementPtr("statementPtr", doc);
-			statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*defaultC)));		
-			defaultCase << statementPtr;
+		const StatementPtr& defaultC = cur->getDefaultCase();
+		XmlElement statementPtr("statementPtr", doc);
+		statementPtr.setAttr("ref", numeric_cast<string>((size_t)(&*defaultC)));		
+		defaultCase << statementPtr;
 			
-			visitAnnotations(defaultC.getAnnotations(), statementPtr);
-		}
+		visitAnnotations(defaultC.getAnnotations(), statementPtr);
 
 		visitAnnotations(cur->getAnnotations(), switchStmt);
 	}
@@ -1382,7 +1369,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 					intTypeParams.push_back(IntTypeParam::getVariableIntParam((iter->getFirstChildByName("variable"))->getAttr("value")[0]));
 				}
 				else if (iter->getChildrenByName("concrete").size() != 0){
-					intTypeParams.push_back(IntTypeParam::getConcreteIntParam((iter->getFirstChildByName("concrete"))->getAttr("value")[0]));
+					intTypeParams.push_back(IntTypeParam::getConcreteIntParam(numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value"))));
 				}
 				else {
 					intTypeParams.push_back(IntTypeParam::getInfiniteIntParam());
@@ -1393,7 +1380,6 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		GenericTypePtr gen = GenericType::get(manager, elem.getAttr("familyName"), typeParams, intTypeParams, baseType);
 		buildAnnotations(elem, gen, false);
 		
-		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, gen);
@@ -1411,7 +1397,6 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		FunctionTypePtr fun = FunctionType::get(manager, argType, retType);
 		buildAnnotations(elem, fun, false);
 		
-		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, fun);
@@ -1431,7 +1416,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		if (nodeName == "structType") {
 			StructTypePtr structT = StructType::get(manager, entryVec);
 			buildAnnotations(elem, structT, false);
-			// update the map
+
 			string id = elem.getAttr("id");
 			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 			elemMap[id] = make_pair(oldPair.first, structT);
@@ -1439,7 +1424,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		else {
 			UnionTypePtr unionT = UnionType::get(manager, entryVec);
 			buildAnnotations(elem, unionT, false);
-			// update the map
+
 			string id = elem.getAttr("id");
 			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 			elemMap[id] = make_pair(oldPair.first, unionT);			
@@ -1459,7 +1444,6 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		TupleTypePtr tuple = TupleType::get(manager, elementList);
 		buildAnnotations(elem, tuple, false);
 		
-		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, tuple);
@@ -1469,7 +1453,6 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		TypeVariablePtr var = TypeVariable::get(manager, elem.getAttr("name"));
 		buildAnnotations(elem, var, false);
 		
-		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, var);
@@ -1487,7 +1470,6 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		RecTypePtr recType = RecType::get(manager, var, definition);
 		buildAnnotations(elem, recType, false);
 		
-		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, recType);
@@ -1511,11 +1493,181 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		RecTypeDefinitionPtr rec = RecTypeDefinition::get(manager, defVec);
 		buildAnnotations(elem, rec, false);
 		
-		// update the map
 		string id = elem.getAttr("id");
 		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
 		elemMap[id] = make_pair(oldPair.first, rec);
 	}
+	
+	else if (nodeName == "literal") {
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		TypePtr typeT = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);
+		
+		LiteralPtr lit = Literal::get(manager, elem.getAttr("value"), typeT);
+		buildAnnotations(elem, lit, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, lit);
+	}
+	
+	else if (nodeName == "returnStmt") {
+		XmlElementPtr type = elem.getFirstChildByName("returnExpression")->getFirstChildByName("expressionPtr");
+		ExpressionPtr expression = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, expression, true);
+		
+		ReturnStmtPtr ret = ReturnStmt::get(manager, expression);
+		buildAnnotations(elem, ret, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, ret);
+	}
+	
+	else if (nodeName == "forStmt") {
+		XmlElementPtr type = elem.getFirstChildByName("declaration")->getFirstChildByName("declarationStmtPtr");
+		DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, decl, true);
+
+		type = elem.getFirstChildByName("body")->getFirstChildByName("statementPtr");
+		StatementPtr body = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, body, true);
+
+		type = elem.getFirstChildByName("end")->getFirstChildByName("expressionPtr");
+		ExpressionPtr end = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, end, true);
+
+		type = elem.getFirstChildByName("step")->getFirstChildByName("expressionPtr");
+		ExpressionPtr step = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, step, true);
+
+		ForStmtPtr fstmt = ForStmt::get(manager, decl, body, end, step);
+		buildAnnotations(elem, fstmt, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, fstmt);
+	}
+	
+	else if (nodeName == "ifStmt") {
+		XmlElementPtr type = elem.getFirstChildByName("condition")->getFirstChildByName("expressionPtr");
+		ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, expr, true);
+
+		type = elem.getFirstChildByName("thenBody")->getFirstChildByName("statementPtr");
+		StatementPtr thenStmt = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, thenStmt, true);
+		
+		type = elem.getFirstChildByName("elseBody")->getFirstChildByName("statementPtr");
+		StatementPtr elseStmt = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, elseStmt, true);
+
+		IfStmtPtr stmt = IfStmt::get(manager, expr, thenStmt, elseStmt);
+		buildAnnotations(elem, stmt, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, stmt);
+	}
+	
+	else if (nodeName == "switchStmt") {
+		XmlElementPtr type = elem.getFirstChildByName("expression")->getFirstChildByName("expressionPtr");
+		ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, expr, true);
+		
+		vector<XmlElement> cases = elem.getFirstChildByName("cases")->getChildrenByName("case");
+		vector<SwitchStmt::Case> caseVector;
+		for(auto iter = cases.begin(); iter != cases.end(); ++iter) {
+			XmlElementPtr type = iter->getFirstChildByName("expressionPtr");
+			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, expr, true);
+			
+			type = iter->getFirstChildByName("statementPtr");
+			StatementPtr stat = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, stat, true);
+			
+			caseVector.push_back(std::make_pair(expr, stat));
+		}
+
+		type = elem.getFirstChildByName("defaultCase")->getFirstChildByName("statementPtr");
+		StatementPtr defaultCase = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, defaultCase, true);
+
+		SwitchStmtPtr stmt = SwitchStmt::get(manager, expr, caseVector, defaultCase);
+		buildAnnotations(elem, stmt, false);
+
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, stmt);
+	}
+	
+	else if (nodeName == "breakStmt") {
+		BreakStmtPtr stmt = BreakStmt::get(manager);
+		buildAnnotations(elem, stmt, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, stmt);		
+	}
+	
+	else if (nodeName == "continueStmt") {
+		ContinueStmtPtr stmt = ContinueStmt::get(manager);
+		buildAnnotations(elem, stmt, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, stmt);		
+	}
+	
+	else if (nodeName == "compoundStmt") {
+		vector<XmlElement> stats = elem.getFirstChildByName("statements")->getChildrenByName("statement");
+		vector<StatementPtr> stmtVec;
+		for(auto iter = stats.begin(); iter != stats.end(); ++iter) {
+			XmlElementPtr type = iter->getFirstChildByName("statementPtr");
+			const StatementPtr stat = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, stat, true);
+			
+			stmtVec.push_back(stat);
+		}
+		
+		CompoundStmtPtr comp = CompoundStmt::get(manager, stmtVec);
+		buildAnnotations(elem, comp, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, comp);		
+	}
+	
+	else if (nodeName == "declarationStmt") {
+		XmlElementPtr type = elem.getFirstChildByName("variable")->getFirstChildByName("variablePtr");
+		VariablePtr var = dynamic_pointer_cast<const Variable>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, var, true);
+		
+		type = elem.getFirstChildByName("expression")->getFirstChildByName("expressionPtr");
+		ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, expr, true);
+		
+		DeclarationStmtPtr dstmt = DeclarationStmt::get(manager, var, expr);
+		buildAnnotations(elem, dstmt, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, dstmt);
+	}
+	
+	else if (nodeName == "variable") {
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		TypePtr typeT = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);
+		
+		VariablePtr var = Variable::get(manager, typeT, numeric_cast<int>(elem.getAttr("identifier")));
+		buildAnnotations(elem, var, false);
+		
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, var);
+	}
+	
 	else if (nodeName == "rootNode") {
 		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
 		buildAnnotations(*type, elemMap[type->getAttr("ref")].second, true);
