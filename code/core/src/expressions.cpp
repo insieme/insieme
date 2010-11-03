@@ -269,7 +269,7 @@ std::ostream& VectorExpr::printTo(std::ostream& out) const {
 
 VectorExprPtr VectorExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
 
-	TypePtr elementType = TypeVariable::get(manager, "a");
+	TypePtr elementType = TypeVariable::get(manager, string("a"));
 	if (!expressions.empty()) {
 		elementType = expressions[0]->getType();
 	}

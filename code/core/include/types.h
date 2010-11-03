@@ -233,6 +233,8 @@ public:
 	 */
 	static TypeVariablePtr get(NodeManager& manager, const string& name);
 
+	static TypeVariablePtr getFromId(NodeManager& manager, const Identifier& id);
+
 	/**
 	 * Obtains the name of the variable represented by this instance.
 	 */
