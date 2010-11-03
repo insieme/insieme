@@ -339,11 +339,11 @@ std::size_t hashStructMember(size_t seed, const StructExpr::Members& members) {
 
 // ------------------------------------- StructExpr ---------------------------------
 
-StructExpr::StructExpr(const TypePtr& type, const Members& members)
+StructExpr::StructExpr(const StructTypePtr& type, const Members& members)
 	: Expression(NT_StructExpr, type, ::hashStructMember(HASHVAL_STRUCTEXPR, members)), members(isolateMembers(members)) { }
 
 StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new StructExpr(mapper.map(0, type), copyMembersUsing(mapper, 1, members));
+	return new StructExpr(static_pointer_cast<const StructType>(mapper.map(0, type)), copyMembersUsing(mapper, 1, members));
 }
 
 Node::OptionChildList StructExpr::getChildNodes() const {
@@ -377,11 +377,11 @@ std::size_t hashUnionExpr(size_t seed, const Identifier& memberName, const Expre
 	return seed;
 }
 
-UnionExpr::UnionExpr(const TypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
+UnionExpr::UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
 	: Expression(NT_UnionExpr, type, ::hashUnionExpr(HASHVAL_UNIONEXPR, memberName, member)), memberName(memberName), member(isolate(member)) { }
 
 UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new UnionExpr(mapper.map(0, type), memberName, mapper.map(1,member));
+	return new UnionExpr(static_pointer_cast<const UnionType>(mapper.map(0, type)), memberName, mapper.map(1,member));
 }
 
 bool UnionExpr::equalsExpr(const Expression& expr) const {

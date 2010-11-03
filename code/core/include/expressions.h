@@ -403,7 +403,7 @@ public:
 private:
 	const Members members;
 
-	StructExpr(const TypePtr& type, const Members& members);
+	StructExpr(const StructTypePtr& type, const Members& members);
 	virtual StructExpr* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -422,7 +422,7 @@ class UnionExpr : public Expression {
 	const Identifier memberName;
 	const ExpressionPtr member;
 
-	UnionExpr(const TypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
+	UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
 	virtual UnionExpr* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
