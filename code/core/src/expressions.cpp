@@ -90,6 +90,10 @@ LiteralPtr Literal::get(NodeManager& manager, const string& value, const TypePtr
 	return manager.get(Literal(type, value) );
 }
 
+LiteralPtr Literal::get(NodeManager& manager, const TypePtr& type, const string& value) {
+	return manager.get(Literal(type, value) );
+}
+
 
 // ------------------------------------- Variable ---------------------------------
 
@@ -227,7 +231,11 @@ std::ostream& TupleExpr::printTo(std::ostream& out) const {
 TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
 	TupleType::ElementTypeList elemTypes;
 	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](const ExpressionPtr& e) { return e->getType(); });
-	return manager.get(TupleExpr(TupleType::get(manager, elemTypes), expressions));
+	return get(manager, TupleType::get(manager, elemTypes), expressions);
+}
+
+TupleExprPtr TupleExpr::get(NodeManager& manager, const TupleTypePtr& type, const vector<ExpressionPtr>& expressions) {
+	return manager.get(TupleExpr(type, expressions));
 }
 
 // ------------------------------------- VectorExpr ---------------------------------
@@ -275,7 +283,12 @@ VectorExprPtr VectorExpr::get(NodeManager& manager, const vector<ExpressionPtr>&
 	}
 
 	VectorTypePtr resultType = VectorType::get(manager, elementType, IntTypeParam::getConcreteIntParam(expressions.size()));
-	return manager.get(VectorExpr(resultType, expressions));
+	return get(manager, resultType, expressions);
+}
+
+VectorExprPtr VectorExpr::get(NodeManager& manager, const VectorTypePtr& type, const vector<ExpressionPtr>& expressions) {
+	assert (type->getSize().getType() == IntTypeParam::CONCRETE && type->getSize().getValue() == expressions.size() && "Invalid vector type specified!");
+	return manager.get(VectorExpr(type, expressions));
 }
 
 
@@ -349,7 +362,11 @@ std::ostream& StructExpr::printTo(std::ostream& out) const {
 }
 
 StructExprPtr StructExpr::get(NodeManager& manager, const Members& members) {
-	return manager.get(StructExpr(StructType::get(manager, getTypeEntries(members)), members));
+	return get(manager, StructType::get(manager, getTypeEntries(members)), members);
+}
+
+StructExprPtr StructExpr::get(NodeManager& manager, const StructTypePtr& type, const Members& members) {
+	return manager.get(StructExpr(type, members));
 }
 
 // ------------------------------------- UnionExpr ---------------------------------
@@ -367,8 +384,8 @@ std::ostream& UnionExpr::printTo(std::ostream& out) const {
 	return out;
 }
 
-UnionExprPtr UnionExpr::get(NodeManager& manager, const Members& members) {
-	return manager.get(UnionExpr(UnionType::get(manager, getTypeEntries(members)), members));
+UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, const Members& members) {
+	return manager.get(UnionExpr(type, members));
 }
 
 // ------------------------------------- JobExpr ---------------------------------
