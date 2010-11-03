@@ -69,16 +69,16 @@ TEST(CallExprTypeCheck, Basic) {
 	EXPECT_EQ("((int<a>,int<a>)->int<a>)", toString(*binary));
 
 	// define literals
-	LiteralPtr x = builder.literal("1",type);
+	LiteralPtr x = builder.literal(type, "1");
 	EXPECT_EQ("1", toString(*x));
 
 	TypePtr concreteType = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(4)));
-	LiteralPtr y = builder.literal("2", concreteType);
+	LiteralPtr y = builder.literal(concreteType, "2");
 	EXPECT_EQ("2", toString(*y));
 
-	LiteralPtr constFun = builder.literal("zero", nullary);
-	LiteralPtr unaryFun = builder.literal("succ", unary);
-	LiteralPtr binaryFun = builder.literal("sum", binary);
+	LiteralPtr constFun = builder.literal(nullary, "zero");
+	LiteralPtr unaryFun = builder.literal(unary, "succ");
+	LiteralPtr binaryFun = builder.literal(binary, "sum");
 
 
 	ExpressionPtr expr = constFun;
@@ -123,11 +123,11 @@ TEST(CallExprTypeCheck, Basic) {
 
 	// invalid argument types
 	TypePtr concreteType2 = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(2)));
-	LiteralPtr z = builder.literal("3", concreteType2);
+	LiteralPtr z = builder.literal(concreteType2, "3");
 	EXPECT_EQ("3", toString(*z));
 
 	TypePtr boolType = builder.genericType("bool");
-	LiteralPtr w = builder.literal("true", boolType);
+	LiteralPtr w = builder.literal(boolType, "true");
 	EXPECT_EQ("true", toString(*w));
 
 	// => not unifyable arguments ...
@@ -161,7 +161,7 @@ TEST(DeclarationStmtTypeCheck, Basic) {
 	// OK ... create a function literal
 	TypePtr type = builder.genericType("int");
 	TypePtr type2 = builder.genericType("uint");
-	ExpressionPtr init = builder.literal("4", type);
+	ExpressionPtr init = builder.literal(type, "4");
 	DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(type), init);
 	DeclarationStmtPtr err = builder.declarationStmt(builder.variable(type2), init);
 
@@ -178,8 +178,8 @@ TEST(IfCondition, Basic) {
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
 	TypePtr boolType = builder.genericType("bool");
-	ExpressionPtr intLit = builder.literal("4", intType);
-	ExpressionPtr boolLit = builder.literal("true", boolType);
+	ExpressionPtr intLit = builder.literal(intType, "4");
+	ExpressionPtr boolLit = builder.literal(boolType, "true");
 	NodePtr ok = builder.ifStmt(boolLit, lang::STMT_NO_OP_PTR);
 	NodePtr err = builder.ifStmt(intLit, lang::STMT_NO_OP_PTR);
 
@@ -196,8 +196,8 @@ TEST(WhileCondition, Basic) {
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
 	TypePtr boolType = builder.genericType("bool");
-	ExpressionPtr intLit = builder.literal("4", intType);
-	ExpressionPtr boolLit = builder.literal("true", boolType);
+	ExpressionPtr intLit = builder.literal(intType, "4");
+	ExpressionPtr boolLit = builder.literal(boolType, "true");
 	NodePtr ok = builder.whileStmt(boolLit, lang::STMT_NO_OP_PTR);
 	NodePtr err = builder.whileStmt(intLit, lang::STMT_NO_OP_PTR);
 
@@ -214,8 +214,8 @@ TEST(Switch, Basic) {
 	// OK ... create a function literal
 	TypePtr intType = lang::TYPE_INT_1_PTR;
 	TypePtr boolType = builder.genericType("bool");
-	ExpressionPtr intLit = builder.literal("4", intType);
-	ExpressionPtr boolLit = builder.literal("true", boolType);
+	ExpressionPtr intLit = builder.literal(intType, "4");
+	ExpressionPtr boolLit = builder.literal(boolType, "true");
 	SwitchStmtPtr ok = builder.switchStmt(intLit, vector<SwitchStmt::Case>());
 	SwitchStmtPtr err = builder.switchStmt(boolLit, vector<SwitchStmt::Case>());
 
@@ -232,7 +232,7 @@ TEST(BuildInLiterals, Basic) {
 	// OK ... create a function literal
 
 	LiteralPtr ok = lang::CONST_BOOL_FALSE_PTR;
-	LiteralPtr err = builder.literal(ok->getValue(), builder.genericType("strangeType"));
+	LiteralPtr err = builder.literal(builder.genericType("strangeType"), ok->getValue());
 
 	CheckPtr typeCheck = make_check<BuildInLiteralCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());

@@ -57,11 +57,11 @@ using namespace insieme::utils::set;
 TEST(ExpressionsTest, IntLiterals) {
 	ASTBuilder builder;
 
-	LiteralPtr i5 = builder.literal("5", TYPE_INT_GEN_PTR);
-	LiteralPtr i7 = builder.literal("7", TYPE_INT_GEN_PTR);
-	LiteralPtr i5long = builder.literal("5", TYPE_INT_8_PTR);
+	LiteralPtr i5 = builder.literal(TYPE_INT_GEN_PTR, "5");
+	LiteralPtr i7 = builder.literal(TYPE_INT_GEN_PTR, "7");
+	LiteralPtr i5long = builder.literal(TYPE_INT_8_PTR, "5");
 	
-	EXPECT_EQ( *i5, *builder.literal("5", TYPE_INT_GEN_PTR) );
+	EXPECT_EQ( *i5, *builder.literal(TYPE_INT_GEN_PTR, "5") );
 	EXPECT_NE( *i5, *i5long );
 	EXPECT_NE( *i5, *i7 );
 	EXPECT_EQ( i5->getValueAs<int>(), 5 );
@@ -74,7 +74,7 @@ TEST(ExpressionsTest, IntLiterals) {
 TEST(ExpressionsTest, FloatLiterals) {
 	ASTBuilder builder;
 
-	LiteralPtr f5_s = builder.literal("5.0", TYPE_REAL_4_PTR);
+	LiteralPtr f5_s = builder.literal(TYPE_REAL_4_PTR, "5.0");
 	
 	basicExprTests(f5_s, TYPE_REAL_4_PTR, toList(toVector<NodePtr>(TYPE_REAL_4_PTR)));
 
@@ -148,7 +148,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 TEST(ExpressionsTest, TupleExpr) {
 	NodeManager manager;
 
-	LiteralPtr one = Literal::get(manager, "1", TYPE_UINT_1_PTR);
+	LiteralPtr one = Literal::get(manager, TYPE_UINT_1_PTR, "1");
 	TupleExprPtr empty = TupleExpr::get(manager, toVector<ExpressionPtr>());
 	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(CONST_BOOL_TRUE_PTR, one));
 
@@ -199,7 +199,7 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	LambdaExpr::ParamList param;
 	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
 
-	LiteralPtr zero = builder.literal("0", TYPE_UINT_1_PTR);
+	LiteralPtr zero = builder.literal(TYPE_UINT_1_PTR, "0");
 	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
 	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
 

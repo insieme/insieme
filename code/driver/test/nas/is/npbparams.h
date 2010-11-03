@@ -34,34 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
-
-#include <gtest/gtest.h>
-
-#include "ast_builder.h"
-#include "lang_basic.h"
-
-using namespace insieme::core;
-using namespace insieme::core::lang;
-
-TEST(ASTBuilder, Basic) {
-
-
-	// With Builder
-	ASTBuilder build;
-	VariablePtr var1 = build.variable(TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements;
-	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(var1, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound = build.compoundStmt(statements);
-
-	// Without Builder
-	NodeManager manager;
-	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements2;
-	statements2.push_back(BreakStmt::get(manager));
-	statements2.push_back(DeclarationStmt::get(manager, var2, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound2 = CompoundStmt::get(manager, statements2);
-
-	EXPECT_EQ(*compound2, *compound);
-}
+#define CLASS 'S'
+/*
+   This file is generated automatically by the setparams utility.
+   It sets the number of processors and the class of the NPB
+   in this directory. Do not modify it by hand.   */
+   
+#define COMPILETIME "03 Nov 2010"
+#define NPBVERSION "2.3"
+#define CC "cc"
+#define CFLAGS "-O3 "
+#define CLINK "cc"
+#define CLINKFLAGS "-lm"
+#define C_LIB "-lm"
+#define C_INC "-I../common"

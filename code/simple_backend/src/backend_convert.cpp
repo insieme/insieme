@@ -81,17 +81,6 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 	return cptr;
 }
 
-namespace {
-	string getNameForRecursiveFunction(NodeManager& manager, const RecLambdaDefinitionPtr& definition, const VariablePtr& variable, NameGenerator& generator) {
-		if(auto cnameAnn = variable->getAnnotation(c_info::CNameAnnotation::KEY)) {
-			// => take original c name
-			return cnameAnn->getName();
-		}
-		// => generate fresh name
-		return generator.getName(RecLambdaExpr::get(manager, variable, definition));
-	}
-}
-
 CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodePtr& surrounding) {
 
 	// check whether code has already been generated
@@ -111,10 +100,10 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodeP
 
 		// get a name (for the defined recursive function)
 		RecLambdaExprPtr recLambda = RecLambdaExpr::get(cc.getNodeManager(), cur.first, definition);
-		string ident = getNameForRecursiveFunction(cc.getNodeManager(), definition, cur.first, cc.getNameGen());
+		string ident = cc.getNameGen().getName(recLambda);
 
 		// generate a new function from the lambda expression
-		CodePtr cptr(new CodeFragment(string("fundef_codefragment_") + ident));
+		CodePtr cptr(new CodeFragment(string("fundecl_codefragment_") + ident));
 		CodeStream& cs = cptr->getCodeStream();
 		// write the function header
 		cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
@@ -139,7 +128,7 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodeP
 		LambdaExprPtr unrolled = definition->unrollOnce(cc.getNodeManager(), cur.first);
 
 		// get name for function
-		Identifier name = getNameForRecursiveFunction(cc.getNodeManager(), definition, cur.first, cc.getNameGen());
+		string name = cc.getNameGen().getName(recLambda);
 		unrolled.addAnnotation(std::make_shared<c_info::CNameAnnotation>(name));
 		CodePtr cptr = getFunction(unrolled);
 
@@ -203,21 +192,15 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 
 	// add a dependency to the function definition
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
-
-	// print name
-	cStr << cFunName;
 }
 
 void ConvertVisitor::visitRecLambdaExpr(const RecLambdaExprPtr& ptr) {
 
-	// generate random name ...
-	string cFunName = getNameForRecursiveFunction(cc.getNodeManager(), ptr->getDefinition(), ptr->getVariable(), cc.getNameGen());
+	// get name of lambda Expr ...
+	string cFunName = cc.getNameGen().getName(ptr);
 
 	// add a dependency to the function definition
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
-
-	// print function name (for the invocation)
-	cStr << cFunName;
 }
 
 void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
@@ -261,8 +244,14 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			return;
 		}
 	}
-	// non built-in handling
+	// non built-in handling (generate function body if necessary)
 	visit(funExp);
+
+	// add method invocation
+	if (funExp->getNodeType() != NT_Literal) {
+		cStr << cc.getNameGen().getName(funExp);
+	}
+
 	cStr << "(";
 	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 	cStr << ")";
@@ -369,7 +358,7 @@ string TypeManager::visitGenericType(const GenericTypePtr& ptr) {
 	visitStarting = false;
 	if(lang::isUnitType(*ptr)) {
 		return "void";
-	} else
+	}
 	if(lang::isIntegerType(*ptr)) {
 		string qualifier = lang::isUIntType(*ptr) ? "unsigned " : "";
 		switch(lang::getNumBytes(*ptr)) {
@@ -379,26 +368,50 @@ string TypeManager::visitGenericType(const GenericTypePtr& ptr) {
 			case 8: return qualifier + "long"; // long long ?
 			default: return ptr->getName();
 		}
-	} else
+	}
 	if(lang::isBoolType(*ptr)) {
 		return "bool";
-	} else
+	}
 	if(lang::isRealType(*ptr)) {
 		switch(lang::getNumBytes(*ptr)) {
 			case 4: return "float";
 			case 8: return "double";
 			default: return ptr->getName();
 		}
-	} else
+	}
 	if(*ptr == lang::TYPE_STRING_VAL) {
 		return "string";
-	} else
+	}
 	if(*ptr == lang::TYPE_CHAR_VAL) {
 		return "char";
-	} else
+	}
 	if(*ptr == lang::TYPE_VAR_LIST_VAL) {
 		return "...";
 	}
+
+	// handle arrays
+	if (ArrayTypePtr arrayType = dynamic_pointer_cast<const ArrayType>(ptr)) {
+
+		// test whether dimension is final
+		IntTypeParam dim = arrayType->getDimension();
+		if (dim.getType() == IntTypeParam::CONCRETE) {
+			TypePtr elementType = arrayType->getElementType();
+			string res = visit(elementType);
+			int numStars = dim.getValue();
+			if (elementType->getNodeType() == NT_RefType) {
+				numStars -= 1;
+			}
+
+			for (int i=0; i < numStars; i++) {
+				res += "*";
+			}
+
+			// res += " /* " + toString(*arrayType) + " */ ";
+
+			return res;
+		}
+	}
+
 	//assert(0 && "Unhandled generic type.");
 	return string("[[unhandled_simple_type: ") + ptr->getName() + "]]";
 }
@@ -454,6 +467,16 @@ string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unn
 		return name;
 	}
 
+	// test whether recursive function name is attached
+	if (RecLambdaExprPtr recLambda = dynamic_pointer_cast<const RecLambdaExpr>(ptr)) {
+		if(auto cnameAnn = recLambda->getVariable()->getAnnotation(c_info::CNameAnnotation::KEY)) {
+			// => take original c name
+			string name = cnameAnn->getName();
+			nameMap.insert(make_pair(ptr, name));
+			return name;
+		}
+	}
+
 	// generate a new name string
 	std::stringstream name;
 	name << string("__insieme_") << fragment << "_";
@@ -492,7 +515,11 @@ string NameGenerator::getVarName(const VariablePtr& var) {
 
 std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
 	for_each(code.getProgram()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
-		out << "---\n" << (*code.find(ep)).second;
+		out << "// --- Generated Inspire Code ---\n";
+		out << "#define bool int\n";
+		out << "#define true 1\n";
+		out << "#define false 0\n";
+		out << (*code.find(ep)).second;
 	});
 	return out;
 }

@@ -53,12 +53,12 @@ TEST(ASTVisitor, NodeReplacementTest) {
 
 	GenericTypePtr type = builder.genericType("int");
 
-	LiteralPtr toReplace = builder.literal("14", type);
-	LiteralPtr replacement = builder.literal("0", type);
+	LiteralPtr toReplace = builder.literal(type, "14");
+	LiteralPtr replacement = builder.literal(type, "0");
 
-	IfStmtPtr ifStmt = builder.ifStmt( builder.literal("12", type), toReplace, builder.compoundStmt() );
+	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
 
 	NodePtr newTree = transform::replaceNode(manager, ifStmt, toReplace, replacement);
-	EXPECT_EQ(newTree, builder.ifStmt(builder.literal("12", type), replacement, builder.compoundStmt()) );
+	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
 
 }

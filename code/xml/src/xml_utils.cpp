@@ -1477,7 +1477,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		TypePtr typeT = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
 		buildAnnotations(*type, typeT, true);
 		
-		LiteralPtr lit = Literal::get(manager, elem.getAttr("value"), typeT);
+		LiteralPtr lit = Literal::get(manager, typeT, elem.getAttr("value"));
 		buildAnnotations(elem, lit, false);
 		
 		string id = elem.getAttr("id");

@@ -131,6 +131,7 @@ public:
 	const string& getValue() const { return value; }
 
 	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
+	static LiteralPtr get(NodeManager& manager, const TypePtr& type, const string& value);
 };
 
 
@@ -370,6 +371,7 @@ public:
 	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
 
 	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
+	static TupleExprPtr get(NodeManager& manager, const TupleTypePtr& type, const vector<ExpressionPtr>& expressions);
 };
 
 
@@ -390,6 +392,7 @@ public:
 	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
 
 	static VectorExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
+	static VectorExprPtr get(NodeManager& manager, const VectorTypePtr& type, const vector<ExpressionPtr>& expressions);
 };
 
 
@@ -418,6 +421,7 @@ class StructExpr : public NamedCompositeExpr {
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 	static StructExprPtr get(NodeManager& manager, const Members& members);
+	static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const Members& members);
 };
 
 class UnionExpr : public NamedCompositeExpr {
@@ -426,7 +430,7 @@ class UnionExpr : public NamedCompositeExpr {
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
-	static UnionExprPtr get(NodeManager& manager, const Members& members);
+	static UnionExprPtr get(NodeManager& manager, const UnionTypePtr& type, const Members& members);
 };
 
 

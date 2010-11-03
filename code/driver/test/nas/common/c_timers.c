@@ -34,34 +34,64 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#include "wtime.h"
+#include <stdlib.h>
 
-#include <gtest/gtest.h>
-
-#include "ast_builder.h"
-#include "lang_basic.h"
-
-using namespace insieme::core;
-using namespace insieme::core::lang;
-
-TEST(ASTBuilder, Basic) {
+/*  Prototype  */
+void wtime( double * );
 
 
-	// With Builder
-	ASTBuilder build;
-	VariablePtr var1 = build.variable(TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements;
-	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(var1, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound = build.compoundStmt(statements);
+/*****************************************************************/
+/******         E  L  A  P  S  E  D  _  T  I  M  E          ******/
+/*****************************************************************/
+double elapsed_time( void )
+{
+    double t;
 
-	// Without Builder
-	NodeManager manager;
-	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements2;
-	statements2.push_back(BreakStmt::get(manager));
-	statements2.push_back(DeclarationStmt::get(manager, var2, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound2 = CompoundStmt::get(manager, statements2);
-
-	EXPECT_EQ(*compound2, *compound);
+    wtime( &t );
+    return( t );
 }
+
+
+double start[64], elapsed[64];
+
+/*****************************************************************/
+/******            T  I  M  E  R  _  C  L  E  A  R          ******/
+/*****************************************************************/
+void timer_clear( int n )
+{
+    elapsed[n] = 0.0;
+}
+
+
+/*****************************************************************/
+/******            T  I  M  E  R  _  S  T  A  R  T          ******/
+/*****************************************************************/
+void timer_start( int n )
+{
+    start[n] = elapsed_time();
+}
+
+
+/*****************************************************************/
+/******            T  I  M  E  R  _  S  T  O  P             ******/
+/*****************************************************************/
+void timer_stop( int n )
+{
+    double t, now;
+
+    now = elapsed_time();
+    t = now - start[n];
+    elapsed[n] += t;
+
+}
+
+
+/*****************************************************************/
+/******            T  I  M  E  R  _  R  E  A  D             ******/
+/*****************************************************************/
+double timer_read( int n )
+{
+    return( elapsed[n] );
+}
+

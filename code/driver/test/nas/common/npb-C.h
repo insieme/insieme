@@ -34,34 +34,45 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+/*
+  NAS Parallel Benchmarks 2.3 OpenMP C Versions
+ */
 
-#include <gtest/gtest.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#if defined(_OPENMP)
+#include <omp.h>
+#endif /* _OPENMP */
 
-#include "ast_builder.h"
-#include "lang_basic.h"
+typedef int boolean;
+typedef struct { double real; double imag; } dcomplex;
 
-using namespace insieme::core;
-using namespace insieme::core::lang;
+#define TRUE	1
+#define FALSE	0
 
-TEST(ASTBuilder, Basic) {
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define	pow2(a) ((a)*(a))
 
+#define get_real(c) c.real
+#define get_imag(c) c.imag
+#define cadd(c,a,b) (c.real = a.real + b.real, c.imag = a.imag + b.imag)
+#define csub(c,a,b) (c.real = a.real - b.real, c.imag = a.imag - b.imag)
+#define cmul(c,a,b) (c.real = a.real * b.real - a.imag * b.imag, \
+                     c.imag = a.real * b.imag + a.imag * b.real)
+#define crmul(c,a,b) (c.real = a.real * b, c.imag = a.imag * b)
 
-	// With Builder
-	ASTBuilder build;
-	VariablePtr var1 = build.variable(TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements;
-	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(var1, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound = build.compoundStmt(statements);
+extern double randlc(double *, double);
+extern void vranlc(int, double *, double, double *);
+extern void timer_clear(int);
+extern void timer_start(int);
+extern void timer_stop(int);
+extern double timer_read(int);
 
-	// Without Builder
-	NodeManager manager;
-	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements2;
-	statements2.push_back(BreakStmt::get(manager));
-	statements2.push_back(DeclarationStmt::get(manager, var2, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound2 = CompoundStmt::get(manager, statements2);
-
-	EXPECT_EQ(*compound2, *compound);
-}
+extern void c_print_results(char *name, char class, int n1, int n2,
+			    int n3, int niter, int nthreads, double t,
+			    double mops, char *optype, int passed_verification,
+			    char *npbversion, char *compiletime, char *cc,
+			    char *clink, char *c_lib, char *c_inc,
+			    char *cflags, char *clinkflags, char *rand);

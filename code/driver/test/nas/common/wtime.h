@@ -34,34 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
-
-#include <gtest/gtest.h>
-
-#include "ast_builder.h"
-#include "lang_basic.h"
-
-using namespace insieme::core;
-using namespace insieme::core::lang;
-
-TEST(ASTBuilder, Basic) {
+/* C/Fortran interface is different on different machines. 
+ * You may need to tweak this.
+ */
 
 
-	// With Builder
-	ASTBuilder build;
-	VariablePtr var1 = build.variable(TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements;
-	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(var1, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound = build.compoundStmt(statements);
-
-	// Without Builder
-	NodeManager manager;
-	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR, 1);
-	std::vector<StatementPtr> statements2;
-	statements2.push_back(BreakStmt::get(manager));
-	statements2.push_back(DeclarationStmt::get(manager, var2, build.literal(TYPE_BOOL_PTR, "true")));
-	auto compound2 = CompoundStmt::get(manager, statements2);
-
-	EXPECT_EQ(*compound2, *compound);
-}
+#if defined(IBM)
+#define wtime wtime
+#elif defined(CRAY)
+#define wtime WTIME
+#else
+#define wtime wtime_
+#endif
