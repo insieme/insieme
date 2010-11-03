@@ -1647,8 +1647,11 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 	}
 	
 	else if (nodeName == "structExpr" || nodeName == "unionExpr") {
+		// FIXME
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+
 		vector<XmlElement> membs = elem.getFirstChildByName("members")->getChildrenByName("member");
-		vector<NamedCompositeExpr::Member> membVec;
+		NamedCompositeExpr::Members membVec;
 		for(auto iter = membs.begin(); iter != membs.end(); ++iter) {
 			Identifier ident(iter->getFirstChildByName("id")->getText());
 
@@ -1668,7 +1671,12 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			elemMap[id] = make_pair(oldPair.first, structT);
 		}
 		else {
-			UnionExprPtr unionT = UnionExpr::get(manager, membVec);
+			// FIXME
+			UnionTypePtr typeT = dynamic_pointer_cast<const UnionType>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, typeT, true);
+			assert(typeT);
+
+			UnionExprPtr unionT = UnionExpr::get(manager, typeT, membVec);
 			buildAnnotations(elem, unionT, false);
 
 			string id = elem.getAttr("id");
