@@ -382,8 +382,8 @@ class VectorExpr : public Expression {
 	virtual VectorExpr* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
-	bool equalsExpr(const Expression& expr) const;
 
+	bool equalsExpr(const Expression& expr) const;
 	virtual OptionChildList getChildNodes() const;
 
 public:
@@ -395,42 +395,45 @@ public:
 	static VectorExprPtr get(NodeManager& manager, const VectorTypePtr& type, const vector<ExpressionPtr>& expressions);
 };
 
-
-class NamedCompositeExpr : public Expression {
+class StructExpr : public Expression {
 public:
 	typedef std::pair<Identifier, ExpressionPtr> Member;
 	typedef std::vector<Member> Members;
 
-protected:
-	NamedCompositeExpr(NodeType nodeType, const TypePtr& type, size_t hashval, const Members& members);
-
+private:
 	const Members members;
-	bool equalsExpr(const Expression& expr) const;
 
+	StructExpr(const StructTypePtr& type, const Members& members);
+	virtual StructExpr* createCopyUsing(NodeMapping& mapper) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
 	virtual OptionChildList getChildNodes() const;
-	static NamedCompositeType::Entries getTypeEntries(const Members& mem);
 
 public:
 	const Members& getMembers() const{ return members; }
-};
-
-class StructExpr : public NamedCompositeExpr {
-	StructExpr(const TypePtr& type, const Members& members);
-	virtual StructExpr* createCopyUsing(NodeMapping& mapper) const;
-
-public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 	static StructExprPtr get(NodeManager& manager, const Members& members);
 	static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const Members& members);
 };
 
-class UnionExpr : public NamedCompositeExpr {
-	UnionExpr(const TypePtr& type, const Members& members);
+class UnionExpr : public Expression {
+
+	const Identifier memberName;
+	const ExpressionPtr member;
+
+	UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
 	virtual UnionExpr* createCopyUsing(NodeMapping& mapper) const;
 
+protected:
+	bool equalsExpr(const Expression& expr) const;
+	virtual OptionChildList getChildNodes() const;
+
 public:
+	const Identifier& getMemberName() const { return memberName; }
+	const ExpressionPtr& getMember() const { return member; }
 	virtual std::ostream& printTo(std::ostream& out) const;
-	static UnionExprPtr get(NodeManager& manager, const UnionTypePtr& type, const Members& members);
+	static UnionExprPtr get(NodeManager& manager, const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
 };
 
 

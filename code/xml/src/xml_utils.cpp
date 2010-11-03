@@ -397,17 +397,44 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), compoundStmt);
 	}
+
+//	void visitNamedCompositeExpr_(XmlElement& el, const NamedCompositeExprPtr& cur){
+//		XmlElement type("type", doc);
+//		append(type, cur->getType(), "typePtr");
+//		el << type;
+//
+//		XmlElement members("members",doc);
+//
+//		const NamedCompositeExpr::Members& membersVec = cur->getMembers();
+//		std::for_each(membersVec.begin(), membersVec.end(),
+//			[this, &members](const NamedCompositeExpr::Member& curr) {
+//				XmlElement member("member", this->doc);
+//				members << member;
+//
+//				XmlElement id("id", this->doc);
+//				id.setText(curr.first.getName());
+//				member << id;
+//
+//				this->append(member, curr.second, "expressionPtr");
+//			}
+//		);
+//		el << members;
+//
+//		visitAnnotations(cur->getAnnotations(), el);
+//	}
 	
-	void visitNamedCompositeExpr_(XmlElement& el, const NamedCompositeExprPtr& cur){
+	void visitStructExpr(const StructExprPtr& cur) {
+		XmlElement structExpr("structExpr",doc);
+		rootElem << (structExpr << XmlElement::Attribute("id", GET_ID(cur)));
+
 		XmlElement type("type", doc);
 		append(type, cur->getType(), "typePtr");
-		el << type;		
-		
-		XmlElement members("members",doc);
+		structExpr << type;
 
-		const NamedCompositeExpr::Members& membersVec = cur->getMembers();
+		XmlElement members("members",doc);
+		const StructExpr::Members& membersVec = cur->getMembers();
 		std::for_each(membersVec.begin(), membersVec.end(),
-			[this, &members](const NamedCompositeExpr::Member& curr) {
+			[this, &members](const StructExpr::Member& curr) {
 				XmlElement member("member", this->doc);
 				members << member;
 
@@ -418,23 +445,20 @@ public:
 				this->append(member, curr.second, "expressionPtr");
 			}
 		);
-		el << members;
+		structExpr << members;
 
-		visitAnnotations(cur->getAnnotations(), el);
+		visitAnnotations(cur->getAnnotations(), structExpr);
 	}
-	
-	void visitStructExpr(const StructExprPtr& cur) {
-		XmlElement structExpr("structExpr",doc);
-		rootElem << (structExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
-		visitNamedCompositeExpr_(structExpr, cur);
-	}
-	
 	void visitUnionExpr(const UnionExprPtr& cur) {
 		XmlElement unionExpr("unionExpr", doc);
 		rootElem << (unionExpr << XmlElement::Attribute("id", GET_ID(cur)));
 		
-		visitNamedCompositeExpr_(unionExpr, cur);
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "typePtr");
+		unionExpr << type;
+
+		// visitNamedCompositeExpr_(unionExpr, cur);
 	}
 	
 	void visitVectorExpr(const VectorExprPtr& cur) {
@@ -1275,7 +1299,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
 
 		vector<XmlElement> membs = elem.getFirstChildByName("members")->getChildrenByName("member");
-		NamedCompositeExpr::Members membVec;
+		StructExpr::Members membVec;
 		for(auto iter = membs.begin(); iter != membs.end(); ++iter) {
 			Identifier ident(iter->getFirstChildByName("id")->getText());
 
@@ -1283,7 +1307,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
 			buildAnnotations(*type, expr, true);
 
-			membVec.push_back(NamedCompositeExpr::Member(ident, expr));
+			membVec.push_back(StructExpr::Member(ident, expr));
 		}
 		
 		if (nodeName == "structExpr") {
@@ -1300,15 +1324,15 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			buildAnnotations(*type, typeT, true);
 			assert(typeT);
 
-			UnionExprPtr unionT = UnionExpr::get(manager, typeT, membVec);
+			UnionExprPtr unionT = UnionExpr::get(manager, typeT, Identifier("FxME"), ExpressionPtr()); // FIXME
 			buildAnnotations(elem, unionT, false);
 
 			string id = elem.getAttr("id");
 			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-			elemMap[id] = make_pair(oldPair.first, unionT);			
+			elemMap[id] = make_pair(oldPair.first, unionT);
 		}
 	}
-	
+
 	else if (nodeName == "vectorExpr") {
 		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		vector<ExpressionPtr> exprVec;

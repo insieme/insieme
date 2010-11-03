@@ -294,70 +294,70 @@ VectorExprPtr VectorExpr::get(NodeManager& manager, const VectorTypePtr& type, c
 
 // ------------------------------------- NamedCompositeExpr ---------------------------------
 
-const NamedCompositeExpr::Members& isolateMembers(const NamedCompositeExpr::Members& members) {
-	for_each(members, [](const NamedCompositeExpr::Member& cur) {
+const StructExpr::Members& isolateMembers(const StructExpr::Members& members) {
+	for_each(members, [](const StructExpr::Member& cur) {
 		isolate(cur.second);
 	});
 	return members;
 }
 
-NamedCompositeExpr::NamedCompositeExpr(NodeType nodeType, const TypePtr& type, size_t hashval, const Members& members)
-	: Expression(nodeType, type, hashval), members(isolateMembers(members)) { }
-
-bool NamedCompositeExpr::equalsExpr(const Expression& expr) const {
+bool StructExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const NamedCompositeExpr& rhs = static_cast<const NamedCompositeExpr&>(expr);
+	const StructExpr& rhs = static_cast<const StructExpr&>(expr);
 	return ::equals(members, rhs.members, [](const Member& l, const Member& r) {
-		return l.first == r.first && *l.second == *r.second; });
+		return l.first == r.first && *l.second == *r.second;
+	});
 }
 
-NamedCompositeExpr::Members copyMembersUsing(NodeMapping& mapper, unsigned offset, const NamedCompositeExpr::Members& members) {
-	NamedCompositeExpr::Members res;
+StructExpr::Members copyMembersUsing(NodeMapping& mapper, unsigned offset, const StructExpr::Members& members) {
+	StructExpr::Members res;
 	unsigned index = offset;
 	std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
-			[&mapper, &index](const NamedCompositeExpr::Member& m) {
-				return NamedCompositeExpr::Member(m.first, mapper.map(index++, m.second));
+			[&mapper, &index](const StructExpr::Member& m) {
+				return StructExpr::Member(m.first, mapper.map(index++, m.second));
 	});
 	return res;
 }
 
-NamedCompositeType::Entries NamedCompositeExpr::getTypeEntries(const Members& mem) {
+NamedCompositeType::Entries getTypeEntries(const StructExpr::Members& member) {
 	NamedCompositeType::Entries entries;
 
 	// NOTE: transform would be equivalent but causes an internal error in GCC 4.5.1
 //	std::transform(mem.begin(), mem.end(), back_inserter(entries), [](const Member& m)
 //		{ return NamedCompositeType::Entry(m.first, m.second->getType()); } );
 
-	std::for_each(mem.begin(), mem.end(), [&entries](const Member& m) {
-		entries.push_back(NamedCompositeType::Entry(m.first, m.second->getType()));
+	std::for_each(member.begin(), member.end(), [&entries](const StructExpr::Member& cur) {
+		entries.push_back(NamedCompositeType::Entry(cur.first, cur.second->getType()));
 	});
 	return entries;
 }
 
-std::size_t hashStructOrUnionExpr(size_t seed, const StructExpr::Members& members) {
+std::size_t hashStructMember(size_t seed, const StructExpr::Members& members) {
 	std::for_each(members.cbegin(), members.cend(), [&](const StructExpr::Member &m) { boost::hash_combine(seed, m); });
 	return seed;
 }
 
-Node::OptionChildList NamedCompositeExpr::getChildNodes() const {
+// ------------------------------------- StructExpr ---------------------------------
+
+StructExpr::StructExpr(const StructTypePtr& type, const Members& members)
+	: Expression(NT_StructExpr, type, ::hashStructMember(HASHVAL_STRUCTEXPR, members)), members(isolateMembers(members)) { }
+
+StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
+	return new StructExpr(static_pointer_cast<const StructType>(mapper.map(0, type)), copyMembersUsing(mapper, 1, members));
+}
+
+Node::OptionChildList StructExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
 	std::transform(members.cbegin(), members.cend(), back_inserter(*res), extractSecond<Member>());
 	return res;
 }
 
-// ------------------------------------- StructExpr ---------------------------------
-
-StructExpr::StructExpr(const TypePtr& type, const Members& members)
-	: NamedCompositeExpr(NT_StructExpr, type, ::hashStructOrUnionExpr(HASHVAL_STRUCTEXPR, members), members) { }
-
-StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new StructExpr(mapper.map(0, type), copyMembersUsing(mapper, 1, members));
-}
-
 std::ostream& StructExpr::printTo(std::ostream& out) const {
-	// TODO fugly
-	//out << "struct(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
+	// print struct using member - value pairs
+	out << "struct{" << join(", ", members, [](std::ostream& out, const Member& cur) {
+		out << cur.first << "=" << *cur.second;
+	}) << "}";
 	return out;
 }
 
@@ -371,21 +371,42 @@ StructExprPtr StructExpr::get(NodeManager& manager, const StructTypePtr& type, c
 
 // ------------------------------------- UnionExpr ---------------------------------
 
-UnionExpr::UnionExpr(const TypePtr& type, const Members& members)
-	: NamedCompositeExpr(NT_UnionExpr, type, ::hashStructOrUnionExpr(HASHVAL_UNIONEXPR, members), members) { }
+std::size_t hashUnionExpr(size_t seed, const Identifier& memberName, const ExpressionPtr& member) {
+	boost::hash_combine(seed, memberName);
+	boost::hash_combine(seed, member);
+	return seed;
+}
+
+UnionExpr::UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
+	: Expression(NT_UnionExpr, type, ::hashUnionExpr(HASHVAL_UNIONEXPR, memberName, member)), memberName(memberName), member(isolate(member)) { }
 
 UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new UnionExpr(mapper.map(0, type), copyMembersUsing(mapper, 1, members));
+	return new UnionExpr(static_pointer_cast<const UnionType>(mapper.map(0, type)), memberName, mapper.map(1,member));
+}
+
+bool UnionExpr::equalsExpr(const Expression& expr) const {
+	// type is guaranteed by super class
+	const UnionExpr& other = static_cast<const UnionExpr&>(expr);
+
+	// check element name and expression
+	return memberName == other.memberName && *member == *other.member;
+}
+
+Node::OptionChildList UnionExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(type);
+	res->push_back(member);
+	return res;
 }
 
 std::ostream& UnionExpr::printTo(std::ostream& out) const {
 	// TODO fugly
 	//out << "union(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
-	return out;
+	return out << "<?>I owe you a union print!</?>";
 }
 
-UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, const Members& members) {
-	return manager.get(UnionExpr(type, members));
+UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member) {
+	return manager.get(UnionExpr(type, memberName, member));
 }
 
 // ------------------------------------- JobExpr ---------------------------------

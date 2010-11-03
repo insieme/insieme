@@ -205,10 +205,8 @@ AST_TERMINAL(TupleExpr, Expression)
 AST_TERMINAL(VectorExpr, Expression)
 AST_TERMINAL(RecLambdaExpr, Expression)
 
-AST_NODE(NamedCompositeExpr, Expression)
-ABSTRACT(NamedCompositeExpr)
-AST_TERMINAL(StructExpr, NamedCompositeExpr)
-AST_TERMINAL(UnionExpr, NamedCompositeExpr)
+AST_TERMINAL(StructExpr, Expression)
+AST_TERMINAL(UnionExpr, Expression)
 
 
 //

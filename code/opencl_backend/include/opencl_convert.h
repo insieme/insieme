@@ -308,14 +308,6 @@ public:
 
 	void visitLiteral(const LiteralPtr& ptr);
 
-private:
-	void internalVisitComposite(const NamedCompositeExprPtr& ptr) {
-		//auto members = ptr->getMembers();
-		//cStr << CodeStream::indR << "{\n"
-		//for_each(members, [&](const NamedCompositeExpr::Member& cur) {
-		//	
-		//};
-	}
 public:
 
 	void visitStructExpr(const StructExprPtr& ptr) {
