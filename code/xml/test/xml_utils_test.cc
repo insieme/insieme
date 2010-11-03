@@ -1115,6 +1115,13 @@ TEST(XmlTest, CallExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, VariableTest) {
@@ -1191,10 +1198,34 @@ TEST(XmlTest, JobExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, LambdaExprTest) {
 	NodeManager manager;
+	
+	LambdaExpr::CaptureList capList;
+	
+	DeclarationStmtPtr decl1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 65), Literal::get(manager, "7", lang::TYPE_INT_4_PTR));
+	DummyAnnotationPtr dummy_l1e(new DummyAnnotation("lit1 e"));
+	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("lit1 n"));
+	decl1.addAnnotation(dummy_l1e);
+	decl1->addAnnotation(dummy_l1n);
+	
+	DeclarationStmtPtr decl2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 75), Literal::get(manager, "8", lang::TYPE_INT_4_PTR));
+	DummyAnnotationPtr dummy_l2e(new DummyAnnotation("lit2 e"));
+	DummyAnnotationPtr dummy_l2n(new DummyAnnotation("lit2 n"));
+	decl2.addAnnotation(dummy_l2e);
+	decl2->addAnnotation(dummy_l2n);
+	
+	capList.push_back(decl1);
+	capList.push_back(decl2);
 	
 	LambdaExpr::ParamList list;
 	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
@@ -1221,6 +1252,13 @@ TEST(XmlTest, LambdaExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, ProgramTest) {
@@ -1264,6 +1302,13 @@ TEST(XmlTest, ProgramTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, RecLambdaExprTest) {
@@ -1320,4 +1365,11 @@ TEST(XmlTest, RecLambdaExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
