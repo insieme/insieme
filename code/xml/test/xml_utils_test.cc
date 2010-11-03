@@ -711,6 +711,13 @@ TEST(XmlTest, WhileStmtTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, BreakStmtTest) {
@@ -887,7 +894,14 @@ TEST(XmlTest, StructExprTest) {
 	xml.convertDomToXml("dump1.xml");
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);	
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, UnionExprTest) {
@@ -929,7 +943,14 @@ TEST(XmlTest, UnionExprTest) {
 	xml.convertDomToXml("dump1.xml");
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);	
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, VectorExprTest) {
@@ -967,6 +988,13 @@ TEST(XmlTest, VectorExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, TupleExprTest) {
@@ -1004,6 +1032,13 @@ TEST(XmlTest, TupleExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, CastExprTest) {
@@ -1030,6 +1065,13 @@ TEST(XmlTest, CastExprTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, CallExprTest) {
