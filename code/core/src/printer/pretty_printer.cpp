@@ -314,7 +314,13 @@ namespace {
 		});
 
 		PRINT(LambdaExpr, {
-				out << "fun(" << ::join(", ", node->getParams(), [&](std::ostream&, const VariablePtr& cur) {
+				out << "fun";
+				if (!node->getCaptureList().empty()) {
+					out << "[" << ::join(", ", node->getCaptureList(), [&](std::ostream&, const DeclarationStmtPtr& cur) {
+						this->visit(cur);
+					}) << "]";
+				}
+				out << "(" << ::join(", ", node->getParams(), [&](std::ostream& out, const VariablePtr& cur) {
 					out << *cur->getType() << " " << *cur;
 				}) << ") ";
 				this->visit(node->getBody());
@@ -381,10 +387,29 @@ namespace {
 				this->visit(node->getDefinition());
 		});
 
-	//	AST_TERMINAL(JobExpr, Expression)
+		PRINT(JobExpr, {
+				// prints the job expression quite similar to a switch expression
+				out << "job";
+				if (!node->getLocalDecls().empty()) {
+					out << "[" << ::join(", ", node->getLocalDecls(), [&](std::ostream&, const DeclarationStmtPtr& cur) {
+						this->visit(cur);
+					}) << "]";
+				}
+				out << "{"; increaseIndent(); this->newLine();
+				for_each(node->getGuardedStmts(), [&](const JobExpr::GuardedStmt& cur) {
+					out << "if ";
+					this->visit(cur.first);
+					out << " do: ";
+					this->visit(cur.second);
+					this->newLine();
+				});
+				out << "default: ";
+				this->visit(node->getDefaultStmt());
+				decreaseIndent(); this->newLine(); out << "}";
+		});
+
 	//	AST_TERMINAL(StructExpr, NamedCompositeExpr)
 	//	AST_TERMINAL(UnionExpr, NamedCompositeExpr)
-
 
 		PRINT(RecTypeDefinition, {
 				auto defs = node->getDefinitions();

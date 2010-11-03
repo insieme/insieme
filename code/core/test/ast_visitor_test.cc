@@ -109,7 +109,7 @@ TEST(ASTVisitor, DispatcherTest) {
 	EXPECT_EQ ( 2, visitor.countGenericTypes );
 	EXPECT_EQ ( 0, visitor.countRefTypes );
 
-	LiteralPtr literal = Literal::get(manager, "3", type);
+	LiteralPtr literal = Literal::get(manager, type, "3");
 	visitor.visit(literal);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );
@@ -195,8 +195,8 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	EXPECT_EQ ( 4, visitor.counter );
 
 	IfStmtPtr ifStmt = IfStmt::get(manager,
-		Literal::get(manager, "12", type),
-		Literal::get(manager, "14", type),
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
 	);
 
