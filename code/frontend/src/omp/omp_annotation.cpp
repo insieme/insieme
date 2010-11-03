@@ -69,67 +69,67 @@ xml::XmlElement& ompToXml(const BaseAnnotation& ann, xml::XmlElement& el) {
 }
 
 void Barrier::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "barrier");
+//	elem.setAttr("name", "barrier");
 }
 
 void Master::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "master");
+//	elem.setAttr("name", "master");
 }
 
 void Flush::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "flush");
+//	elem << ("name", "flush");
 }
 
 void For::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "for");
+//	elem.setAttr("name", "for");
 }
 
 void ParallelFor::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "parallel for");
+//	elem.setAttr("name", "parallel for");
 }
 
 void Section::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "section");
+//	elem.setAttr("name", "section");
 }
 
 void Sections::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "sections");
+//	elem.setAttr("name", "sections");
 }
 
 void ParallelSections::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "parallel sections");
+//	elem.setAttr("name", "parallel sections");
 }
 
 void Parallel::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "parallel");
+//	elem.setAttr("name", "parallel");
 }
 
 void Critical::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "critical");
+//	elem.setAttr("name", "critical");
 }
 
 void Single::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "single");
+//	elem.setAttr("name", "single");
 }
 
 void Atomic::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "atomic");
+//	elem.setAttr("name", "atomic");
 }
 
 void Task::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "task");
+//	elem.setAttr("name", "task");
 }
 
 void TaskWait::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "taskwait");
+//	elem.setAttr("name", "taskwait");
 }
 
 void Ordered::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "ordered");
+//	elem.setAttr("name", "ordered");
 }
 
 void ThreadPrivate::toXml(insieme::xml::XmlElement& elem) {
-	elem.setAttr("name", "threadprivate");
+//	elem.setAttr("name", "threadprivate");
 }
 
 std::shared_ptr<BaseAnnotation> ompFromXml(const xml::XmlElement& el) {

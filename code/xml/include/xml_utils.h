@@ -85,6 +85,9 @@ class XmlElement {
 	DOMElement* base;
 	
 public:
+
+	typedef std::pair<std::string, std::string> Attribute;
+
 	XmlElement(DOMElement* elem);
 	XmlElement(std::string name, DOMDocument* doc);
 	XmlElement(DOMElement* base, DOMDocument* doc);
@@ -93,13 +96,13 @@ public:
 	
 	DOMDocument* getDoc() const;
 	
-	XmlElement& operator<<(XmlElement& childNode);
+	const XmlElement& operator<<(const XmlElement& childNode);
 	
-	XmlElement& operator<<(std::shared_ptr<XmlElement> childNode);
+	XmlElement& operator<<(const std::shared_ptr<XmlElement>& childNode);
 	
 	const vector<XmlElement> operator[](const std::string&) const;
 	
-	XmlElement& setAttr(const std::string& id, const std::string& value);
+	XmlElement& operator<<(const Attribute& attr);
 
 	XmlElement& setText(const std::string& text);
 	
@@ -145,7 +148,7 @@ XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement&
 		const Annotation& ann, xercesc_3_1::DOMDocument* doc)
 {
 	insieme::xml::XmlElementPtr node( new XmlElement("annotation", doc) );
-	node->setAttr("type", mapName);
+	*node << XmlElement::Attribute("type", mapName);
 	toXml(dynamic_cast<const AnnotationTy&>(ann), *node);
 	return node;
 }
