@@ -227,6 +227,13 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_captureList -->
+<xs:complexType name="T_captureList">
+	<xs:sequence>
+		<xs:element name="declarationStmtPtr" type="T_DeclarationStmtPtr" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
 <!-- All IR Node -->
 <xs:complexType name="T_empty">
 	<xs:all>
@@ -264,6 +271,7 @@
 <xs:complexType name="T_lambdaExpr">
 	<xs:all>
 		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
+		<xs:element name="captureList" type="T_captureList" minOccurs="1"/>
 		<xs:element name="params" type="T_params" minOccurs="1"/>	
 		<xs:element name="body" type="T_StatementPtr" minOccurs="1"/>	
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
