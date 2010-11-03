@@ -1646,37 +1646,34 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		elemMap[id] = make_pair(oldPair.first, dstmt);
 	}
 	
-//	else if (nodeName == "structExpr" || nodeName == "unionExpr") {
-//		vector<XmlElement> membs = elem.getFirstChildByName("members")->getChildrenByName("member");
-//		vector<NamedCompositeExpr::Member> membVec;
-//		for(auto iter = membs.begin(); iter != membs.end(); ++iter) {
-//			Identifier ident(iter->getFirstChildByName("id")->getText());
-//
-//			XmlElementPtr type = iter->getFirstChildByName("expressionPtr");
-//			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
-//			buildAnnotations(*type, expr, true);
-//
-//			membVec.push_back(NamedCompositeExpr::Member(ident, expr));
-//		}
-//
-//		if (nodeName == "structExpr") {
-//			StructExprPtr structT = StructExpr::get(manager, membVec);
-//			buildAnnotations(elem, structT, false);
-//
-//			string id = elem.getAttr("id");
-//			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-//			elemMap[id] = make_pair(oldPair.first, structT);
-//		}
-//		else {
-//			UnionExprPtr unionT = UnionExpr::get(manager, membVec);
-//			buildAnnotations(elem, unionT, false);
-//
-//			string id = elem.getAttr("id");
-//			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-//			elemMap[id] = make_pair(oldPair.first, unionT);
-//		}
-//	}
-	
+	else if (nodeName == "structExpr") {
+		// FIXME: review this - it has been changed during the correction regarding the union expression
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+
+		vector<XmlElement> membs = elem.getFirstChildByName("members")->getChildrenByName("member");
+		StructExpr::Members membVec;
+		for(auto iter = membs.begin(); iter != membs.end(); ++iter) {
+			Identifier ident(iter->getFirstChildByName("id")->getText());
+
+			XmlElementPtr type = iter->getFirstChildByName("expressionPtr");
+			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, expr, true);
+
+			membVec.push_back(StructExpr::Member(ident, expr));
+		}
+		
+		StructExprPtr structT = StructExpr::get(manager, membVec);
+		buildAnnotations(elem, structT, false);
+
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, structT);
+	}
+
+	else if (nodeName == "unionExpr") {
+		// TODO: implement support for new union expression!
+	}
+
 	else if (nodeName == "vectorExpr") {
 		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		vector<ExpressionPtr> exprVec;
