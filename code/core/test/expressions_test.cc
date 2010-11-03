@@ -117,6 +117,32 @@ TEST(ExpressionsTest, LambdaExpr) {
 
 	// check hash codes, children and cloning
 	basicExprTests(expr, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, list[0], list[1], body));
+
+
+	// check capture list
+	LambdaExpr::CaptureList capture;
+	capture.push_back(DeclarationStmt::get(manager, Variable::get(manager, TYPE_BOOL_PTR, 3), lang::CONST_BOOL_FALSE_PTR));
+	LambdaExprPtr lambdaA = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, capture, list, body);
+
+	EXPECT_EQ ("fun[bool v3 = false](bool v1, bool v2){ return true }", toString(*lambdaA));
+
+
+	capture.push_back(DeclarationStmt::get(manager, Variable::get(manager, TYPE_BOOL_PTR, 4), lang::CONST_BOOL_TRUE_PTR));
+	LambdaExprPtr lambdaB = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, capture, list, body);
+
+	EXPECT_EQ ("fun[bool v3 = false, bool v4 = true](bool v1, bool v2){ return true }", toString(*lambdaB));
+
+	EXPECT_EQ(*expr, *expr);
+	EXPECT_EQ(*lambdaA, *lambdaA);
+	EXPECT_EQ(*lambdaB, *lambdaB);
+
+	EXPECT_NE(*expr, *lambdaA);
+	EXPECT_NE(*expr, *lambdaB);
+	EXPECT_NE(*lambdaA, *lambdaB);
+
+	basicExprTests(lambdaA, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, capture[0], list[0], list[1], body));
+	basicExprTests(lambdaB, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, capture[0], capture[1], list[0], list[1], body));
+
 }
 
 TEST(ExpressionsTest, TupleExpr) {

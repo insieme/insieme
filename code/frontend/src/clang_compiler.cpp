@@ -305,7 +305,6 @@ SourceManager& 	ClangCompiler::getSourceManager() const { return pimpl->clang.ge
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
-	delete pimpl;
 }
 
 struct Program::ProgramImpl {
@@ -370,10 +369,10 @@ const core::ProgramPtr& Program::convert() {
 				} else {
 					// insieme pragma associated to a statement, in this case we convert the body
 					// and create an anonymous lambda expression to enclose it
-
 					const clang::Stmt* body = insiemePragma.getStatement();
 					assert(body && "Pragma matching failed!");
-					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleBody(body));
+					core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body);
+					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
 				}
 			}
 	}

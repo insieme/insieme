@@ -64,10 +64,14 @@ int main(int argc, char** argv) {
 	memset(u, 0, N*N);    // 	initialize it with zeros
 
 	// init F
+	#pragma insieme mark
+	{
+
 	memset(f, 0, N*N);
 	for (int i=0; i<N; i++){
 		for (int j=0; j<N; j++)
 			f[i][j] = init_func(i, j);
+	}
 	}
 
 	double comm_time = 0;
@@ -84,7 +88,7 @@ int main(int argc, char** argv) {
 #endif
 	start_t = clock();
 
-//	#pragma insieme mark
+	#pragma insieme mark
 	for(int it=0; it<100; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for private(resv) reduction(+: resv)
