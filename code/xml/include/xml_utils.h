@@ -166,7 +166,7 @@ AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const 
 
 void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
 
-void xmlRead(NodeManager& manager, const std::string fileName, const bool validate);
+void xmlRead(NodeManager& manager, const std::string fileName);
 
 void xmlValidate(const std::string fileName);
 
