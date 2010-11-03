@@ -38,6 +38,7 @@
 
 #include <string>
 #include <vector>
+#include <limits>
 
 #include "string_utils.h"
 
@@ -126,6 +127,7 @@ private:
 	}
 
 public:
+	IntTypeParam() : type(CONCRETE), value(std::numeric_limits<int>::max()) { }
 
 	/**
 	 * A factory method to obtain a integer type parameter variable.

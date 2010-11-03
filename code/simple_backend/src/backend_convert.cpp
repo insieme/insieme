@@ -130,10 +130,10 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodeP
 		// get name for function
 		string name = cc.getNameGen().getName(recLambda);
 		unrolled.addAnnotation(std::make_shared<c_info::CNameAnnotation>(name));
-		CodePtr cptr = getFunction(unrolled);
+		CodePtr cptr = this->getFunction(unrolled);
 
 		// add dependency to code definition
-		cptr->addDependency(getFunction(recLambda, surrounding));
+		cptr->addDependency(this->getFunction(recLambda, surrounding));
 
 		// make surrounding depending on function definition
 		surrounding->addDependency(cptr);

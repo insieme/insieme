@@ -220,11 +220,8 @@ public:
 		//TODO: check wether it is an external function (disallowed)
 		
 		// non built-in handling
-		bool res = true;
 		//res &= this->visit(funExp); //funname
-		for_each(args.cbegin(), args.cend(), [this, &res](const ExpressionPtr& curArg) {
-			res &= this->visit(curArg);
-		});
+		return all(args, [&](const ExpressionPtr& curArg) { return this->visit(curArg); });
 	}
 
 	//TODO: check for vector types

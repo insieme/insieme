@@ -72,6 +72,10 @@ TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
 	return manager.get(TypeVariable(name));
 }
 
+TypeVariablePtr TypeVariable::getFromId(NodeManager& manager, const Identifier& id) {
+	return manager.get(TypeVariable(id.getName()));
+}
+
 TypeVariable* TypeVariable::createCopyUsing(NodeMapping&) const {
 	return new TypeVariable(*this);
 }
@@ -565,4 +569,3 @@ ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType
 const IntTypeParam ChannelType::getSize() const {
 	return getIntTypeParameter()[0];
 }
-
