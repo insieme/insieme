@@ -573,10 +573,15 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), compoundStmt);
 	}
-	
-	void visitNamedCompositeExpr_(XmlElement& el, const NamedCompositeExprPtr& cur){
+
+	void visitStructExpr(const StructExprPtr& cur) {
+		XmlElement structExpr("structExpr",doc);
+		structExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
+		rootElem << structExpr;
+
+
 		XmlElement type("type", doc);
-		el << type;		
+		structExpr << type;
 		
 		if (const TypePtr& typeT = cur->getType()) {
 			XmlElement typePtr("typePtr", doc);
@@ -587,10 +592,10 @@ public:
 		}
 		
 		XmlElement members("members",doc);
-		el << members;
+		structExpr << members;
 		
-		const vector<NamedCompositeExpr::Member>& membersVec = cur->getMembers ();
-		for(vector<NamedCompositeExpr::Member>::const_iterator iter = membersVec.begin(); iter != membersVec.end(); ++iter) {
+		const vector<StructExpr::Member>& membersVec = cur->getMembers ();
+		for(vector<StructExpr::Member>::const_iterator iter = membersVec.begin(); iter != membersVec.end(); ++iter) {
 			XmlElement member("member", doc);
 			members << member;
 			
@@ -604,15 +609,8 @@ public:
 			
 			visitAnnotations((iter->second).getAnnotations(), expressionPtr);
 		}
-	}
-	
-	void visitStructExpr(const StructExprPtr& cur) {
-		XmlElement structExpr("structExpr",doc);
-		structExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
-		rootElem << structExpr;
 		
-		visitNamedCompositeExpr_(structExpr, cur);
-		
+
 		visitAnnotations(cur->getAnnotations(), structExpr);
 	}
 	
@@ -621,7 +619,9 @@ public:
 		unionExpr.setAttr("id", numeric_cast<string>((size_t)(&*cur)));
 		rootElem << unionExpr;
 		
-		visitNamedCompositeExpr_(unionExpr, cur);
+		// TODO: fix this!
+		// => there is only one member in the unit
+		//visitNamedCompositeExpr_(unionExpr, cur);
 		
 		visitAnnotations(cur->getAnnotations(), unionExpr);
 	}
