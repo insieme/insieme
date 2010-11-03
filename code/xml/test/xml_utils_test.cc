@@ -582,7 +582,7 @@ TEST(XmlTest, IfStmtTest) {
 
 	VariablePtr var = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	
-	StatementPtr thenStmt = manager.get(lang::STMT_NO_OP_PTR);
+	LiteralPtr thenStmt  = Literal::get(manager, "7", lang::TYPE_INT_4_PTR);
 	DummyAnnotationPtr dummy_te(new DummyAnnotation("then e"));
 	DummyAnnotationPtr dummy_tn(new DummyAnnotation("then n"));
 	thenStmt.addAnnotation(dummy_te);
@@ -609,6 +609,13 @@ TEST(XmlTest, IfStmtTest) {
 	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, SwitchStmtTest) {
@@ -660,10 +667,17 @@ TEST(XmlTest, SwitchStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
+	xml.convertDomToXml("dump2.xml");
+	xml.convertXmlToDom("dump2.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 
