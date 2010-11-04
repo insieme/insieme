@@ -327,6 +327,15 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_unionExpr">
+	<xs:all>
+		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
+		<xs:element name="member" type="T_member" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_declarationStmt">
 	<xs:all>
 		<xs:element name="variable" type="T_VariablePtr" minOccurs="1"/>
@@ -504,7 +513,7 @@
 		<xs:element name="vectorExpr" type="T_vectorExpr"/>
 		
 		<xs:element name="structExpr" type="T_namedCompositeExpr"/>
-		<xs:element name="unionExpr" type="T_namedCompositeExpr"/>
+		<xs:element name="unionExpr" type="T_unionExpr"/>
 
 		<xs:element name="functionType" type="T_functionType"/>
 		<xs:element name="genType" type="T_genType"/>

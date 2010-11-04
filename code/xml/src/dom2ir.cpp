@@ -417,10 +417,11 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		elemMap[id] = make_pair(oldPair.first, dstmt);
 	}
 
-	else if (nodeName == "structExpr" || nodeName == "unionExpr") {
-		// FIXME
+	else if (nodeName == "structExpr") {
 		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
-
+		StructTypePtr typeT = dynamic_pointer_cast<const StructType>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);
+		
 		vector<XmlElement> membs = elem.getFirstChildByName("members")->getChildrenByName("member");
 		StructExpr::Members membVec;
 		for(auto iter = membs.begin(); iter != membs.end(); ++iter) {
@@ -433,30 +434,38 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			membVec.push_back(StructExpr::Member(ident, expr));
 		}
 
-		if (nodeName == "structExpr") {
-			StructExprPtr structT = StructExpr::get(manager, membVec);
-			buildAnnotations(elem, structT, false);
+		StructExprPtr structT = StructExpr::get(manager, typeT, membVec);
+		buildAnnotations(elem, structT, false);
 
-			string id = elem.getAttr("id");
-			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-			elemMap[id] = make_pair(oldPair.first, structT);
-		}
-		else {
-			// FIXME
-			UnionTypePtr typeT = dynamic_pointer_cast<const UnionType>(elemMap[type->getAttr("ref")].second);
-			buildAnnotations(*type, typeT, true);
-			assert(typeT);
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, structT);
+	}
+	
+	else if(nodeName == "unionExpr"){
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		UnionTypePtr typeT = dynamic_pointer_cast<const UnionType>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);
+		
+		Identifier ident(elem.getFirstChildByName("member")->getFirstChildByName("id")->getText());
+		
+		type = elem.getFirstChildByName("member")->getFirstChildByName("expressionPtr");
+		ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, expr, true);
 
-			UnionExprPtr unionT = UnionExpr::get(manager, typeT, Identifier("FxME"), ExpressionPtr()); // FIXME
-			buildAnnotations(elem, unionT, false);
+		UnionExprPtr unionT = UnionExpr::get(manager, typeT, ident, expr);
+		buildAnnotations(elem, unionT, false);
 
-			string id = elem.getAttr("id");
-			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-			elemMap[id] = make_pair(oldPair.first, unionT);
-		}
+		string id = elem.getAttr("id");
+		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+		elemMap[id] = make_pair(oldPair.first, unionT);		
 	}
 
 	else if (nodeName == "vectorExpr") {
+		/*XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		VectorTypePtr typeT = dynamic_pointer_cast<const VectorType>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);*/
+		
 		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		vector<ExpressionPtr> exprVec;
 		for(auto iter = exprs.begin(); iter != exprs.end(); ++iter) {
@@ -476,6 +485,10 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 	}
 
 	else if (nodeName == "tupleExpr") {
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		TupleTypePtr typeT = dynamic_pointer_cast<const TupleType>(elemMap[type->getAttr("ref")].second);
+		buildAnnotations(*type, typeT, true);
+		
 		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		vector<ExpressionPtr> exprVec;
 		for(auto iter = exprs.begin(); iter != exprs.end(); ++iter) {
@@ -486,7 +499,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			exprVec.push_back(expr);
 		}
 
-		TupleExprPtr tuple = TupleExpr::get(manager, exprVec);
+		TupleExprPtr tuple = TupleExpr::get(manager, typeT, exprVec);
 		buildAnnotations(elem, tuple, false);
 
 		string id = elem.getAttr("id");
@@ -552,10 +565,6 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 	}
 
 	else if (nodeName == "jobExpr") {
-		/*XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
-		TypePtr typeT = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
-		buildAnnotations(*type, typeT, true);*/
-
 		vector<XmlElement> decls = elem.getFirstChildByName("declarations")->getChildrenByName("declaration");
 		vector<DeclarationStmtPtr> declVec;
 		for(auto iter = decls.begin(); iter != decls.end(); ++iter) {

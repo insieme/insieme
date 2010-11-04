@@ -379,31 +379,6 @@ public:
 		visitAnnotations(cur->getAnnotations(), compoundStmt);
 	}
 
-//	void visitNamedCompositeExpr_(XmlElement& el, const NamedCompositeExprPtr& cur){
-//		XmlElement type("type", doc);
-//		append(type, cur->getType(), "typePtr");
-//		el << type;
-//
-//		XmlElement members("members",doc);
-//
-//		const NamedCompositeExpr::Members& membersVec = cur->getMembers();
-//		std::for_each(membersVec.begin(), membersVec.end(),
-//			[this, &members](const NamedCompositeExpr::Member& curr) {
-//				XmlElement member("member", this->doc);
-//				members << member;
-//
-//				XmlElement id("id", this->doc);
-//				id.setText(curr.first.getName());
-//				member << id;
-//
-//				this->append(member, curr.second, "expressionPtr");
-//			}
-//		);
-//		el << members;
-//
-//		visitAnnotations(cur->getAnnotations(), el);
-//	}
-
 	void visitStructExpr(const StructExprPtr& cur) {
 		XmlElement structExpr("structExpr",doc);
 		rootElem << (structExpr << XmlElement::Attribute("id", GET_ID(cur)));
@@ -438,8 +413,17 @@ public:
 		XmlElement type("type", doc);
 		append(type, cur->getType(), "typePtr");
 		unionExpr << type;
-
-		// visitNamedCompositeExpr_(unionExpr, cur);
+		
+		XmlElement member("member", doc);
+		unionExpr << member;
+		
+		XmlElement id("id", doc);
+		id.setText(cur->getMemberName().getName());
+		member << id;
+		
+		append(member, cur->getMember(), "expressionPtr");
+		
+		visitAnnotations(cur->getAnnotations(), unionExpr);	
 	}
 
 	void visitVectorExpr(const VectorExprPtr& cur) {
