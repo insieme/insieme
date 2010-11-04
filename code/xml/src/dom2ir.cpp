@@ -573,15 +573,16 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
 			buildAnnotations(*type, expr, true);
 
-			type = iter->getFirstChildByName("statementPtr");
-			StatementPtr stmt = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+			type = iter->getFirstChildByName("lambdaExprPtr");
+			LambdaExprPtr stmt = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second); //FIXME
 			buildAnnotations(*type, stmt, true);
 
 			stmtVec.push_back(make_pair(expr, stmt));
 		}
 
-		XmlElementPtr type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("statementPtr");
-		StatementPtr default1 = dynamic_pointer_cast<const Statement>(elemMap[type->getAttr("ref")].second);
+		XmlElementPtr type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("lambdaExprPtr"); //FIXME
+
+		LambdaExprPtr default1 = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second); //FIXME
 		buildAnnotations(*type, default1, true);
 
 		JobExprPtr job = JobExpr::get(manager, default1, stmtVec, declVec);

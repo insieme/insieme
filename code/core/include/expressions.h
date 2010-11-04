@@ -440,15 +440,15 @@ public:
 class JobExpr : public Expression {
 public:
 	typedef std::vector<DeclarationStmtPtr> LocalDecls;
-	typedef std::pair<ExpressionPtr, StatementPtr> GuardedStmt;
+	typedef std::pair<ExpressionPtr, LambdaExprPtr> GuardedStmt;
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
 private:
 	const LocalDecls localDecls;
 	const GuardedStmts guardedStmts;
-	const StatementPtr defaultStmt;
+	const LambdaExprPtr defaultStmt;
 
-	JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, 
+	JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt,
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
 	virtual JobExpr* createCopyUsing(NodeMapping& mapper) const;
 	
@@ -462,9 +462,9 @@ public:
 
 	const LocalDecls& getLocalDecls() const { return localDecls; }
 	const GuardedStmts& getGuardedStmts() const { return guardedStmts; }
-	const StatementPtr& getDefaultStmt() const { return defaultStmt; }
+	const LambdaExprPtr& getDefaultStmt() const { return defaultStmt; }
 
-	static JobExprPtr get(NodeManager& manager, const StatementPtr& defaultStmt, 
+	static JobExprPtr get(NodeManager& manager, const LambdaExprPtr& defaultStmt,
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
 };
 
