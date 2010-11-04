@@ -99,12 +99,12 @@ public:
                 EXPECT_TRUE(parallelFunctionCall);
         }
     }}
-/*
+
     void visitJobExpr(const core::JobExprPtr& job) {
         std::cout << "get a job!\n";
 
         core::JobExpr j = *job;
-    }*/
+    }
 };
 
 }
