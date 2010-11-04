@@ -44,7 +44,7 @@ namespace parse {
 
 namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
-namespace phoenix = boost::phoenix;
+namespace ph = boost::phoenix;
 
 //typedef std::map<Identifier, ExpressionPtr> IdentMap;
 //
