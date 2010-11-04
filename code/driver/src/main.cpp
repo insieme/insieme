@@ -169,8 +169,7 @@ int main(int argc, char** argv) {
 			insieme::simple_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
 
-			insieme::backend::Rewriter r(program);
-			r();
+			insieme::backend::Rewriter::writeBack(program);
 
 			if(!CommandLineOptions::Output.empty()) {
 				std::fstream outFile(CommandLineOptions::Output.c_str(), std::fstream::out | std::fstream::trunc);
