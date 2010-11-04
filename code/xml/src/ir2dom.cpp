@@ -538,13 +538,13 @@ public:
 			[ this, &guardedStatements ](const JobExpr::GuardedStmt& curr) {
 				XmlElement guardedStatement("guardedStatement", this->doc);
 				this->append(guardedStatement, curr.first, "expressionPtr");
-				this->append(guardedStatement, curr.second, "statementPtr");
+				this->append(guardedStatement, curr.second, "lambdaExprPtr");
 				guardedStatements << guardedStatement;
 			}
 		);
 
 		XmlElement defaultStatement("defaultStatement", doc);
-		append(defaultStatement, cur->getDefaultStmt(), "statementPtr");
+		append(defaultStatement, cur->getDefaultStmt(), "lambdaExprPtr");
 		jobExpr << defaultStatement;
 
 		visitAnnotations(cur->getAnnotations(), jobExpr);

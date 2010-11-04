@@ -445,9 +445,17 @@ const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, unsigned 
 	return localGuardedStmts;
 }
 
-JobExpr::JobExpr(const TypePtr& type, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
+JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
 	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
-	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) { }
+	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
+
+    assert(*static_pointer_cast<const FunctionType>(defaultStmt->getType())->getArgumentType() == TupleType() &&
+            "Default statement is not allowed to have any arguments");
+    assert(static_pointer_cast<const FunctionType>(defaultStmt->getType())->getReturnType()->getName() == "unit" &&
+            "Return value of default statement must be void.");
+
+    //TODO check guarded statements
+}
 
 
 
@@ -488,7 +496,7 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 	return out;
 }
 
-JobExprPtr JobExpr::get(NodeManager& manager, const StatementPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
+JobExprPtr JobExpr::get(NodeManager& manager, const LambdaExprPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
 	auto type = lang::TYPE_JOB_PTR;
 	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
 }
