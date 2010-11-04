@@ -2283,9 +2283,16 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 	// ----------------------- SourceLocation Annotation -------------------------------------
 	// for each entry function being converted we register the location where it was originally
 	// defined in the C program
+	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(funcDecl->getLocStart(), funcDecl->getLocEnd());
+	PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
+	if(fit != pragmaMap.getDeclarationMap().end()) {
+		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+		loc.first = fit->second->getStartLocation();
+	}
+
 	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-		convertClangSrcLoc(clangComp.getSourceManager(), funcDecl->getLocStart()),
-		convertClangSrcLoc(clangComp.getSourceManager(), funcDecl->getLocEnd()) )
+		convertClangSrcLoc(clangComp.getSourceManager(), loc.first),
+		convertClangSrcLoc(clangComp.getSourceManager(), loc.second))
 	);
 }
 
@@ -2370,7 +2377,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	);
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened, blame Simone ~~~");
+	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
 	if(!components.empty())
 		ctx->isResolvingRecFuncBody = true;
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
@@ -2494,9 +2501,15 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body) {
 
 	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
 	// ------ Adding source location annotation (CLocAnnotation) -------
+	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
+	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
+	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
+		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+		loc.first = fit->second->getStartLocation();
+	}
 	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-		convertClangSrcLoc(mComp.getSourceManager(), body->getLocStart()),
-		convertClangSrcLoc(mComp.getSourceManager(), body->getLocEnd()),
+		convertClangSrcLoc(mComp.getSourceManager(), loc.first),
+		convertClangSrcLoc(mComp.getSourceManager(), loc.second),
 		false, // this is not a function decl
 		args)
 	);

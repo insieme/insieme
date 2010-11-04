@@ -80,6 +80,11 @@ public:
 		InsiemePragma(startLoc, endLoc, type, mmap) { }
 };
 
+class InsiemeIgnore: public InsiemePragma {
+public:
+	InsiemeIgnore(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
+		InsiemePragma(startLoc, endLoc, type, mmap) { }
+};
 
 } // End frontend namespace
 } // End insieme namespace

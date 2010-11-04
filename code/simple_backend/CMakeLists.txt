@@ -22,6 +22,8 @@ add_library(insieme_simple_backend ${LINKING_TYPE} ${insieme_simple_backend_srcs
 # add dependencies
 add_dependencies( insieme_simple_backend insieme_core insieme_c_info insieme_utils )
 target_link_libraries(insieme_simple_backend insieme_c_info)
+# target_link_libraries( insieme_simple_backend ${Boost_SYSTEM_LIBRARY})
+# target_link_libraries( insieme_simple_backend ${Boost_FILESYSTEM_LIBRARY})
 
 # enable tests for this project
 find_package(GTest REQUIRED)

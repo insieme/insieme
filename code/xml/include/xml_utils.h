@@ -46,12 +46,13 @@ class DOMLSParser;
 using namespace insieme::core;
 
 namespace insieme {
-namespace xml{
+namespace xml {
 
 using namespace xercesc_3_1;
 
-// ------------------------------------ XmlUtil ----------------------------
+// const uint16_t* toUnicode(const std::string& str);
 
+// ------------------------------------ XmlUtil ----------------------------
 class XmlUtil {
 public:
 	DOMImplementation* impl;
@@ -75,7 +76,6 @@ public:
 	string convertDomToString();
 
 };
-
 
 // ------------------------------------ XmlElement ----------------------------
 

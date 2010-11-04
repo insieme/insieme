@@ -38,22 +38,38 @@
 
 #include <string>
 #include "annotation.h"
+#include <boost/operators.hpp>
 
 namespace insieme {
 namespace c_info {
 
-class SourceLocation {
+class SourceLocation: public boost::less_than_comparable<SourceLocation, SourceLocation> {
 	const std::string 	fileName;
 	const size_t		lineNo;
 	const size_t 		columnNo;
+	const bool 			valid;
 public:
+	SourceLocation(): fileName(), lineNo(0), columnNo(0), valid(false) { }
+
 	SourceLocation(const std::string& fileName, const size_t& lineNo, const size_t& columnNo):
-		fileName(fileName), lineNo(lineNo), columnNo(columnNo) { }
+		fileName(fileName), lineNo(lineNo), columnNo(columnNo), valid(true) { }
 
-	const std::string& getFileName() const { return fileName; }
+	const std::string& getFileName() const { assert(valid && "Source location is not valid!"); return fileName; }
 
-	size_t getLine() const { return lineNo; }
-	size_t getColumn() const { return columnNo; }
+	bool isValid() const { return valid; }
+	size_t getLine() const { assert(valid && "Source location is not valid!"); return lineNo; }
+	size_t getColumn() const { assert(valid && "Source location is not valid!"); return columnNo; }
+
+	bool operator<(const SourceLocation& other) const {
+		assert(valid && "Source location is not valid!");
+		return fileName == other.fileName && (lineNo < other.lineNo || (lineNo == other.lineNo && columnNo < other.columnNo));
+	}
+
+	bool operator==(const SourceLocation& other) const {
+		if(!isValid() || !other.isValid())
+			return false;
+		return fileName == other.fileName && lineNo == other.lineNo && columnNo == other.columnNo;
+	}
 
 	std::string toString() const;
 };
@@ -67,11 +83,16 @@ public:
 	static const insieme::core::StringKey<CLocAnnotation> KEY;
 
 	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end, bool isFuncDecl=true, const ArgumentList& args = ArgumentList()) :
-		insieme::core::Annotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) { }
+		insieme::core::Annotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) {
+		assert(begin.getFileName() == end.getFileName() && "Source locations belongs to different files.");
+	}
 
 	const std::string getAnnotationName() const {return "CLocAnnotation";}
 
 	const std::string toString() const;
+
+	const SourceLocation getStartLoc() const { return begin; }
+	const SourceLocation getEndLoc() const { return end; }
 
 	const insieme::core::AnnotationKey* getKey() const { return &KEY; }
 

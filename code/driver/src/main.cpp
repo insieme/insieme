@@ -43,6 +43,7 @@
 #include "expressions.h"
 #include "statements.h"
 #include "backend_convert.h"
+#include "rewrite.h"
 #include "opencl_convert.h"
 #include "opencl_checker.h"
 #include "naming.h"
@@ -167,6 +168,9 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "========================== Converting to C++ ================================";
 			insieme::simple_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
+
+			insieme::backend::Rewriter r(program);
+			r();
 
 			if(!CommandLineOptions::Output.empty()) {
 				std::fstream outFile(CommandLineOptions::Output.c_str(), std::fstream::out | std::fstream::trunc);
