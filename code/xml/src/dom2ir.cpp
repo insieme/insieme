@@ -121,13 +121,48 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 				}
 			}
 		}
+		
+		string name = elem.getAttr("familyName");
+		if (name == "vector"){
+			VectorTypePtr vec = VectorType::get(manager, typeParams[0], intTypeParams[0]);
+			buildAnnotations(elem, vec, false);
 
-		GenericTypePtr gen = GenericType::get(manager, elem.getAttr("familyName"), typeParams, intTypeParams, baseType);
-		buildAnnotations(elem, gen, false);
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, vec);
+		}
+		else if (name == "array"){
+			ArrayTypePtr arr = ArrayType::get(manager, typeParams[0], intTypeParams[0]);
+			buildAnnotations(elem, arr, false);
 
-		string id = elem.getAttr("id");
-		pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
-		elemMap[id] = make_pair(oldPair.first, gen);
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, arr);
+		}
+		else if (name == "channel"){
+			ChannelTypePtr chan = ChannelType::get(manager, typeParams[0], intTypeParams[0]);
+			buildAnnotations(elem, chan, false);
+
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, chan);
+		}
+		else if (name == "ref"){
+			RefTypePtr ref = RefType::get(manager, typeParams[0]);
+			buildAnnotations(elem, ref, false);
+
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, ref);
+		}
+		else {
+			GenericTypePtr gen = GenericType::get(manager, name, typeParams, intTypeParams, baseType);
+			buildAnnotations(elem, gen, false);
+
+			string id = elem.getAttr("id");
+			pair <const XmlElement*, NodePtr> oldPair = elemMap[id];
+			elemMap[id] = make_pair(oldPair.first, gen);
+		}
 	}
 
 	else if (nodeName == "functionType") {
@@ -462,9 +497,9 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 	}
 
 	else if (nodeName == "vectorExpr") {
-		/*XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
+		XmlElementPtr type = elem.getFirstChildByName("type")->getFirstChildByName("typePtr");
 		VectorTypePtr typeT = dynamic_pointer_cast<const VectorType>(elemMap[type->getAttr("ref")].second);
-		buildAnnotations(*type, typeT, true);*/
+		buildAnnotations(*type, typeT, true);
 		
 		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		vector<ExpressionPtr> exprVec;
@@ -476,7 +511,7 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 			exprVec.push_back(expr);
 		}
 
-		VectorExprPtr vecT = VectorExpr::get(manager, exprVec);
+		VectorExprPtr vecT = VectorExpr::get(manager, typeT, exprVec);
 		buildAnnotations(elem, vecT, false);
 
 		string id = elem.getAttr("id");
