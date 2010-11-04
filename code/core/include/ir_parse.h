@@ -36,61 +36,61 @@
 
 #pragma once
 
+#include <exception>
 
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/qi.hpp>
+
+#include "types.h"
 
 namespace insieme {
 namespace core {
 namespace parse {
 
+class ParseException : std::exception {
+	const char* what() const throw() {
+		return "IR Parsing failed";
+	}
+};
+
+/** A helper function for parsing an IR type declaration.
+ ** If more than one definition should be parsed it is better to generate a parser object and call the parseType method
+ ** @param nodeMan the NodeManager the generated definitions will be added to
+ ** @param input the string representation of the IR definition to be parsed
+ ** @return a pointer to an AST node representing the generated type
+ **/
+TypePtr parseType(NodeManager& nodeMan, const string& input);
+
 namespace qi = boost::spirit::qi;
-namespace ascii = boost::spirit::ascii;
-namespace ph = boost::phoenix;
+typedef std::string::const_iterator ParseIt;
 
-//typedef std::map<Identifier, ExpressionPtr> IdentMap;
-//
-//template<typename Iterator>
-//struct IRParser : qi::grammar<Iterator, IdentMap> {
-//
-//	qi::rule<Iterator, Identifier> identifier;
-//	qi::rule<Iterator, IdentMap> root;
-//	qi::rule<Iterator, Definition> definition;
-//
-//
-//	IRParser() : IRParser::base_type(root)	{
-//		using qi::eps;
-//		using qi::lit;
-//		using ascii::char_;
-//
-//		identifier = (ascii::alpha << +ascii::graph)[ [](vector<char> chars) { return Identifier(string(chars)) } ];
-//
-//		definition = lit("define") << identifier << ':' << typerule;
-//
-//		root = definition % char_(';');
-//	}
-//
-//	qi::rule<Iterator, unsigned()> start;
-//};
+class IRParser {
 
+	// terminal rules, no skip parsing
+	qi::rule<ParseIt, Identifier()> identifier;
+	qi::rule<ParseIt, TypePtr()> typeVarLabel;
+	qi::rule<ParseIt, IntTypeParam()> intTypeParamLabel;
 
-//template<typename Iterator>
-//bool parse_numbers(Iterator first, Iterator last)
-//{
-//	using qi::double_;
-//	using qi::phrase_parse;
-//	using ascii::space;
-//
-//	bool r = phrase_parse(
-//		first,                          /*< start iterator >*/
-//		last,                           /*< end iterator >*/
-//		double_ >> *(',' >> double_),   /*< the parser >*/
-//		space                           /*< the skip-parser >*/
-//		);
-//	if (first != last) // fail if we did not get a full match
-//		return false;
-//	return r;
-//}
+	// nonterminal rules with skip parsing
+	qi::rule<ParseIt, TypePtr(), qi::space_type> functionType;
+	qi::rule<ParseIt, TypePtr(), qi::space_type> typeVariable;
+	qi::rule<ParseIt, IntTypeParam(), qi::space_type> intTypeParam;
+	qi::rule<ParseIt, RefTypePtr(), qi::space_type> refType;
+	qi::rule<ParseIt, ChannelTypePtr(), qi::space_type> channelType;
+	qi::rule<ParseIt, VectorTypePtr(), qi::space_type> vectorType;
+	qi::rule<ParseIt, ArrayTypePtr(), qi::locals<TypePtr, IntTypeParam>, qi::space_type> arrayType;
+	qi::rule<ParseIt, TupleTypePtr(), qi::locals<vector<TypePtr>>, qi::space_type> tupleType;
+	qi::rule<ParseIt, StructTypePtr(), qi::locals<StructType::Entries>, qi::space_type> structType;
+	qi::rule<ParseIt, UnionTypePtr(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
+	qi::rule<ParseIt, TypePtr(), qi::locals<Identifier, vector<TypePtr>, vector<IntTypeParam>>, qi::space_type> genericType;
+	qi::rule<ParseIt, TypePtr(), qi::space_type> typeRule;
+
+public:
+	IRParser(NodeManager& nodeMan);
+
+	TypePtr parseType(const std::string& input);
+};
 
 } // namespace parse 
 } // namespace core
 } // namespace insieme
-

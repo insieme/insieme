@@ -402,17 +402,24 @@ public:
 		return Visit( parExpr->getSubExpr() );
 	}
 
-//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	//						   IMPLICIT CAST EXPRESSION
-//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
-//		START_LOG_EXPR_CONVERSION(implCastExpr);
-////		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
-//		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
-////		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
-//		END_LOG_EXPR_CONVERSION(subExpr);
-//		return subExpr;
-//	}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						   IMPLICIT CAST EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
+		START_LOG_EXPR_CONVERSION(implCastExpr);
+		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
+		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
+		core::ExpressionPtr&& nonRefExpr = tryDeref(convFact.builder, subExpr);
+
+		// if the subexpression is an array or a vector, remove all the C implicit casts
+		if( dynamic_pointer_cast<const core::ArrayType>(nonRefExpr->getType()) ||
+			dynamic_pointer_cast<const core::VectorType>(nonRefExpr->getType()) )
+			return subExpr;
+
+		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
+		END_LOG_EXPR_CONVERSION(retExpr);
+		return retExpr;
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION

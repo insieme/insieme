@@ -94,6 +94,9 @@ public:
 	const SourceLocation getStartLoc() const { return begin; }
 	const SourceLocation getEndLoc() const { return end; }
 
+	bool isFunctionDefinition() const { return isFunctionDef; }
+	const ArgumentList& getArgumentList() const { return args; }
+
 	const insieme::core::AnnotationKey* getKey() const { return &KEY; }
 
 private:

@@ -83,9 +83,11 @@ public:
 } // end namespace insieme
 
 
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& identifier);
+namespace std {
+	/**
+	 * Allows this type to be printed to a stream (especially useful during debugging and
+	 * within test cases where equals values to be printable).
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& identifier);
+}
 
