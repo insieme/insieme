@@ -40,11 +40,13 @@ using namespace insieme::core;
 
 // ---------------------------------------------- Utility Functions ------------------------------------
 
-/**
- * Allows identifiers to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Identifier& identifier) {
-	out << identifier.getName();
-	return out;
+namespace std {
+	/**
+	 * Allows identifiers to be printed to a stream (especially useful during debugging and
+	 * within test cases where equals values to be printable).
+	 */
+	std::ostream& operator<<(std::ostream& out, const Identifier& identifier) {
+		out << identifier.getName();
+		return out;
+	}
 }
