@@ -52,11 +52,12 @@
 
 // ----------------------- SPIRIT QI/PHOENIX survival hints
 // What to do if
-// - error: invalid initialization ... --> check whether phoenix::ref is used to pass references
-//									   --> check if you're using the right placeholders (characters count as auto attribs, literals do NOT)
+// - error: invalid initialization ... --> check whether ph::ref is used to pass references
+//									   --> check if you're using the right placeholders (char_ counts as auto attrib, literals and plain characters do NOT)
 // - error: template substitution failure --> check potential ambiguities, try supplying default parameters explicitly
 // - error: some operator can not be applied (eg =) --> attribute type may be different from expected
-// - error: invalid use of void expression --> trying to do a phoenix::ref of a reference? Placeholders are already references!
+// - error: invalid use of void expression --> trying to do a ph::ref of a reference? Placeholders are already references!
+// - other: use phoenix::bind and phoenix::construct instead of plain calls
 // ----------------------- - Peter
 
 
@@ -189,15 +190,17 @@ TEST(IRParser, RuleTest) {
 	
 
 	NodeManager nMan;
-	auto nManRef = phoenix::ref(nMan);
+	auto nManRef = ph::ref(nMan);
 
 	typedef string::iterator IT;
 
+	// terminals, no skip parsing
 	qi::rule<IT, Identifier()> identifier;
 	//qi::rule<IT, Identifier()> typeLabel;
 	qi::rule<IT, TypePtr()> typeVarLabel;
 	qi::rule<IT, IntTypeParam()> intTypeParamLabel;
 
+	// nonterminals with skip parsers
 	qi::rule<IT, TypePtr(), qi::space_type> typeRule;
 	qi::rule<IT, TypePtr(), qi::space_type> typeVariable;
 	qi::rule<IT, IntTypeParam(), qi::space_type> intTypeParam;
@@ -208,85 +211,86 @@ TEST(IRParser, RuleTest) {
 	qi::rule<IT, TupleTypePtr(), qi::locals<vector<TypePtr>>, qi::space_type> tupleType;
 	qi::rule<IT, TypePtr(), qi::locals<Identifier, vector<TypePtr>, vector<IntTypeParam>>, qi::space_type> genericType;
 	qi::rule<IT, TypePtr(), qi::space_type> functionType;
-	//qi::rule<IT, StructTypePtr(), qi::locals<StructType::Entries>, qi::space_type> structType;
-	//qi::rule<IT, UnionTypePtr(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
+	qi::rule<IT, StructTypePtr(), qi::locals<StructType::Entries>, qi::space_type> structType;
+	qi::rule<IT, UnionTypePtr(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
 
 	identifier = 
-		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = phoenix::bind(&makeId, qi::_1, qi::_2) ];
+		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = ph::bind(&makeId, qi::_1, qi::_2) ];
 	
 	//typeLabel =
-	//	( qi::char_('$') >> identifier )							[ qi::_val = phoenix::bind(&makePrefixId, qi::_1, qi::_2) ];
+	//	( qi::char_('$') >> identifier )							[ qi::_val = ph::bind(&makePrefixId, qi::_1, qi::_2) ];
 
 	typeVarLabel =
-		( qi::char_('\'') >> identifier )							[ qi::_val = phoenix::bind(&TypeVariable::getFromId, nManRef, qi::_2) ];
+		( qi::char_('\'') >> identifier )							[ qi::_val = ph::bind(&TypeVariable::getFromId, nManRef, qi::_2) ];
 
 	intTypeParamLabel = 
-		( qi::char_('#') >> qi::char_ )								[ qi::_val = phoenix::bind(&IntTypeParam::getVariableIntParam, qi::_2) ];
+		( qi::char_('#') >> qi::char_ )								[ qi::_val = ph::bind(&IntTypeParam::getVariableIntParam, qi::_2) ];
 
 	typeVariable =
-	//	typeLabel													[ qi::_val = phoenix::bind(&TypeVariable::getFromId, nManRef, qi::_1) /* lookup type */ ]
-		typeRule													[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | typeVarLabel												[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ];
+	//	typeLabel													[ qi::_val = ph::bind(&TypeVariable::getFromId, nManRef, qi::_1) /* lookup type */ ]
+		typeRule													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
 
 	intTypeParam =
-		qi::uint_													[ qi::_val = phoenix::bind(&IntTypeParam::getConcreteIntParam, qi::_1) ]
-	  | qi::lit("#inf")												[ qi::_val = phoenix::bind(&IntTypeParam::getInfiniteIntParam) ]
+		qi::uint_													[ qi::_val = ph::bind(&IntTypeParam::getConcreteIntParam, qi::_1) ]
+	  | qi::lit("#inf")												[ qi::_val = ph::bind(&IntTypeParam::getInfiniteIntParam) ]
 	  | intTypeParamLabel;
 	
 	arrayType =
 		( qi::lit("array<") >> typeRule								[ qi::_a = qi::_1 ]
 	  >> ( ',' >> intTypeParam										[ qi::_b = qi::_1 ] )
-	  >> '>' )														[ qi::_val = phoenix::bind(&ArrayType::get, nManRef, qi::_a, qi::_b) ];
+	  >> '>' )														[ qi::_val = ph::bind(&ArrayType::get, nManRef, qi::_a, qi::_b) ];
 
 	vectorType =
 		( qi::lit("vector<") >> typeRule 
-	  >> ',' >> intTypeParam >> '>' )								[ qi::_val = phoenix::bind(&VectorType::get, nManRef, qi::_1, qi::_2) ];
+	  >> ',' >> intTypeParam >> '>' )								[ qi::_val = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2) ];
 	
 	refType =
-		( qi::lit("ref<") >> typeRule >> '>' )						[ qi::_val = phoenix::bind(&RefType::get, nManRef, qi::_1) ];
+		( qi::lit("ref<") >> typeRule >> '>' )						[ qi::_val = ph::bind(&RefType::get, nManRef, qi::_1) ];
 
 	channelType =
 		( qi::lit("channel<") >> typeRule 
-		>> ',' >> intTypeParam >> '>' )								[ qi::_val = phoenix::bind(&ChannelType::get, nManRef, qi::_1, qi::_2) ];
+		>> ',' >> intTypeParam >> '>' )								[ qi::_val = ph::bind(&ChannelType::get, nManRef, qi::_1, qi::_2) ];
 
 	genericType =
 		( identifier												[ qi::_a = qi::_1 ]
-	  >> -( '<' >> -( typeVariable									[ phoenix::push_back(qi::_b, qi::_1) ]
+	  >> -( '<' >> -( typeVariable									[ ph::push_back(qi::_b, qi::_1) ]
 	  % ',' )
-	  >> -qi::char_(',') >> -( intTypeParam							[ phoenix::push_back(qi::_c, qi::_1) ]
+	  >> -qi::char_(',') >> -( intTypeParam							[ ph::push_back(qi::_c, qi::_1) ]
 	  % ',' )
-	  >> '>') )														[ qi::_val = phoenix::bind(&GenericType::get, nManRef, qi::_a, qi::_b, qi::_c, TypePtr()) ];
+	  >> '>') )														[ qi::_val = ph::bind(&GenericType::get, nManRef, qi::_a, qi::_b, qi::_c, TypePtr()) ];
 
 	tupleType =
-		( qi::char_('(') >> -( typeRule								[ phoenix::push_back(qi::_a, qi::_1) ]
-		% ',' ) >> ')' )											[ qi::_val = phoenix::bind(&TupleType::get, nManRef, qi::_a) ];
+		( qi::char_('(') >> -( typeRule								[ ph::push_back(qi::_a, qi::_1) ]
+		% ',' ) >> ')' )											[ qi::_val = ph::bind(&TupleType::get, nManRef, qi::_a) ];
 
 	functionType =
-		( qi::char_('(') >> tupleType >> qi::lit("->") >> typeRule >> qi::char_(')') ) 
-																	[ qi::_val = phoenix::bind(&FunctionType::get, nManRef, qi::_2, qi::_3) ];
+		( tupleType >> qi::lit("->") >> typeRule ) 					[ qi::_val = ph::bind(&FunctionType::get, nManRef, qi::_1, qi::_2) ];
 
-	//structType =
-	//	( qi::lit("struct<") >> (( identifier >> ':' >> typeRule )	[ phoenix::push_back(qi::_a, std::pair<Identifier,TypePtr>(qi::_1, qi::_2)) ]
-	//	% ',' ) >> '>' )											[ qi::_val = phoenix::bind(&StructType::get, nManRef, qi::_a) ];
-	//
-	//unionType =
-	//	( qi::lit("union<") >> (( identifier >> ':' >> typeRule )	[ phoenix::push_back(qi::_a, std::pair<Identifier,TypePtr>(qi::_1, qi::_2)) ]
-	//	% ',' ) >> '>' )											[ qi::_val = phoenix::bind(&UnionType::get, nManRef, qi::_a) ];
+	structType =
+		( qi::lit("struct<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<Identifier,TypePtr>>(qi::_1, qi::_2)) ]
+		% ',' ) >> '>' )											[ qi::_val = ph::bind(&StructType::get, nManRef, qi::_a) ];
+	
+	unionType =
+		( qi::lit("union<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<Identifier,TypePtr>>(qi::_1, qi::_2)) ]
+		% ',' ) >> '>' )											[ qi::_val = ph::bind(&UnionType::get, nManRef, qi::_a) ];
 
 	typeRule = 
-		(qi::char_('(') >> typeRule >> qi::char_(')'))				[ qi::_val = phoenix::construct<TypePtr>(qi::_2) ]
-	  | arrayType													[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | vectorType													[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | refType														[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | channelType													[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | genericType													[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | tupleType													[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | functionType												[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ]
-	  | typeVarLabel												[ qi::_val = phoenix::construct<TypePtr>(qi::_1) ];
+	  functionType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | (qi::char_('(') >> typeRule >> qi::char_(')'))				[ qi::_val = ph::construct<TypePtr>(qi::_2) ]
+	  | arrayType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | vectorType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | refType														[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | channelType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | tupleType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | structType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | unionType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+	  | genericType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
 	//		| typeLabel;
 
 	//qi::rule<IT, TypeDefinition()> typeDefinition = 
-	//	(qi::lit("define") >> typeLabel >> ':' >> typeRule)			[ qi::_val = phoenix::construct<TypeDefinition>(qi::_1, qi::_2) ];
+	//	(qi::lit("define") >> typeLabel >> ':' >> typeRule)			[ qi::_val = ph::construct<TypeDefinition>(qi::_1, qi::_2) ];
 
 
 	//BOOST_SPIRIT_DEBUG_NODE(typeRule);
