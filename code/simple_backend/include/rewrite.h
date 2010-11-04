@@ -39,142 +39,58 @@
 #include "location.h"
 #include "program.h"
 
-#include <fstream>
-#include <limits>
-
-// #include <boost/filesystem.hpp>
-
 namespace insieme {
 namespace backend {
 
 using namespace insieme::c_info;
 using namespace insieme::core;
 
-class CodeModification: public boost::less_than_comparable<SourceLocation, SourceLocation> {
-public:
-	enum ModificationType { INSERT, REMOVE, REPLACE };
-
-	// this operation is needed by the sort algorithm in order to order the modification hints
-	// accordingly with the file name and their location.
-	bool operator<(const CodeModification& other) const {
-		if(fileName == other.fileName) {
-			assert((locEnd <= other.locStart || locStart >= other.locEnd) && "Overlapping code modification hints.");
-			return locStart < other.locStart;
-		}
-		// order the modification hints accordingly to the file name
-		return fileName < other.fileName;
-	}
-
-	bool operator==(const CodeModification& other) const {
-		return fileName == other.fileName && locStart == other.locStart && locEnd == other.locEnd && type == other.type;
-	}
-
-	const std::string getFileName() const { return fileName; }
-	const SourceLocation getStartLoc() const { return locStart; }
-	const SourceLocation getEndLoc() const { return locEnd; }
-	const ModificationType getType() const { return type; }
-
-	const std::string getCode() const { return code; }
-
-	static CodeModification createInsertion(const SourceLocation& locStart, const std::string& insertionCode) {
-		return CodeModification(locStart, SourceLocation(), insertionCode, INSERT);
-	}
-	static CodeModification createRemoval(const SourceLocation& locStart, const SourceLocation& locEnd) {
-		return CodeModification(locStart, locEnd, std::string(), REMOVE);
-	}
-	static CodeModification createReplacement(const SourceLocation& locStart, const SourceLocation& locEnd, const std::string& insertionCode);
-
-private:
-	const std::string 		fileName;
-	const SourceLocation 	locStart;
-	const SourceLocation 	locEnd;
-	const std::string 		code;
-	const ModificationType	type;
-
-	CodeModification(const SourceLocation& locStart, const SourceLocation& locEnd, const std::string& code, const ModificationType& type) :
-			fileName(locStart.getFileName()), locStart(locStart), locEnd(locEnd), code(code), type(type) {
-		assert(locStart.isValid());
-		if(locEnd.isValid())
-			assert(locStart.getFileName() == fileName && locEnd.getFileName() == fileName);
-	}
-};
-
-typedef std::set<CodeModification> CodeModificationList;
-
 class Rewriter {
 	const ProgramPtr program;
 
-	// rewrite code modifications belonging to the same file
-	void rewriterFile(CodeModificationList::const_iterator& modIt, const CodeModificationList::const_iterator& end) {
-		const std::string currFile = modIt->getFileName();
-		std::fstream in(currFile.c_str(), std::fstream::in);
-		// path srcFile(currFile);
-		// std::string insimeSrc = srcFile.filename() + ".insieme" + srcFile.extension();
-		std::string insiemeSrc = currFile + ".insieme";
-		std::fstream out(insiemeSrc.c_str(), std::fstream::out | std::fstream::trunc);
-		char line[32768]; // FIXME: is this enough
-		size_t lineNo = 1;
-		while(modIt != end && modIt->getFileName() == currFile) {
-			while(lineNo < modIt->getStartLoc().getLine()) {
-				// copy input file lines to output file
-				in.getline(line, std::numeric_limits<std::streamsize>::max());
-				out.write(line, in.gcount()-1); // the -1 represent the new-line characther
-				out << std::endl;
-				lineNo++;
-			}
-			// todo: copy until the column
-			// do the modification
-			if(modIt->getType() == CodeModification::REMOVE) {
-				// SKIP LINES
-				in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-				while(lineNo++ <= modIt->getEndLoc().getLine())
-					in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			} else if (modIt->getType() == CodeModification::INSERT) {
-				// INSERT CODE
-				out.write(modIt->getCode().c_str(), modIt->getCode().size());
-				out << std::endl;
-			}
-			++modIt; // get the next modification
-		}
-		// finish to write back the current opened file
-		while(!in.eof()) {
-			in.getline(line, std::numeric_limits<std::streamsize>::max());
-			out.write(line, in.gcount()-1); // the -1 represent the new-line characther
-			out << std::endl;
-		}
-		in.close();
-		out.close();
-	}
-
 public:
-	Rewriter(const ProgramPtr& program, const std::string& insiemeFileName = "insieme.c") : program(program) { }
+	class CodeModification: public boost::less_than_comparable<CodeModification, CodeModification> {
+	public:
+		enum ModificationType { INSERT, REMOVE, REPLACE };
 
-	void operator()() {
-//		using namespace boost::filesystem;
+		// this operation is needed by the sort algorithm in order to order the modification hints
+		// accordingly with the file name and their location.
+		bool operator<(const CodeModification& other) const;
 
-		CodeModificationList list;
+		bool operator==(const CodeModification& other) const {
+			return fileName == other.fileName && locStart == other.locStart && locEnd == other.locEnd && type == other.type;
+		}
 
-		std::for_each(program->getEntryPoints().begin(),  program->getEntryPoints().end(),
-			[ &list ](const core::ExpressionPtr& curr) {
-				// we expect entry point to have annotations with corresponding source locations
-				std::shared_ptr<insieme::c_info::CLocAnnotation>&& locAnn = curr.getAnnotation(insieme::c_info::CLocAnnotation::KEY);
-				assert(locAnn && "Entry point has not source location annotation, impossible to rewrite it back in the correct location");
+		const std::string getFileName() const { return fileName; }
+		const SourceLocation getStartLoc() const { return locStart; }
+		const SourceLocation getEndLoc() const { return locEnd; }
+		const ModificationType getType() const { return type; }
 
-				// in case of function decl we wipe out the old definition from the source file
-				list.insert( CodeModification::createRemoval(locAnn->getStartLoc(), locAnn->getEndLoc()) );
+		const std::string getCode() const { return code; }
 
-				// the removed function definition has to be defined as extern now because it will be written in the insieme file
-				list.insert( CodeModification::createInsertion( SourceLocation(locAnn->getStartLoc().getFileName(), 15, 0), "extern f();") );
-		});
+		static CodeModification createInsertion(const SourceLocation& locStart, const std::string& insertionCode) {
+			return CodeModification(locStart, SourceLocation(), insertionCode, INSERT);
+		}
+		static CodeModification createRemoval(const SourceLocation& locStart, const SourceLocation& locEnd) {
+			return CodeModification(locStart, locEnd, std::string(), REMOVE);
+		}
+		static CodeModification createReplacement(const SourceLocation& locStart, const SourceLocation& locEnd, const std::string& replacementCode) {
+			return CodeModification(locStart, locEnd, replacementCode, REPLACE);
+		}
 
-		if(list.empty())
-			return;
+	private:
+		const std::string 		fileName;
+		const SourceLocation 	locStart;
+		const SourceLocation 	locEnd;
+		const std::string 		code;
+		const ModificationType	type;
 
-		CodeModificationList::const_iterator it = list.begin();
-		while(it != list.end())
-			rewriterFile(it, list.end());
-	}
+		CodeModification(const SourceLocation& locStart, const SourceLocation& locEnd, const std::string& code, const ModificationType& type);
+	};
 
+	typedef std::set<CodeModification> CodeModificationList;
+
+	static void writeBack(const ProgramPtr& program, const std::string& insiemeFileName = "insieme.c");
 };
 
 
