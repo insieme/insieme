@@ -45,6 +45,12 @@
 	</xs:all>	
 </xs:complexType>
 
+<xs:complexType name="T_LambdaExprPtr">
+    <xs:all>
+        <xs:element name="lambdaExprPtr" type="T_nodePtr" minOccurs="1"/>
+    </xs:all>   
+</xs:complexType>
+
 <xs:complexType name="T_StatementPtr">
 	<xs:all>
 		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1"/>
@@ -178,6 +184,15 @@
 	</xs:sequence>
 </xs:complexType>
 
+<!-- T_guards -->
+<xs:complexType name="T_guards">
+    <xs:sequence>
+        <xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="lambdaExprPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+</xs:complexType>
+
+
 <!-- T_cases -->
 <xs:complexType name="T_cases">
 	<xs:sequence>
@@ -186,10 +201,10 @@
 </xs:complexType>
 
 <xs:complexType name="T_case">
-	<xs:sequence>
-		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
-		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
-	</xs:sequence>
+    <xs:sequence>
+        <xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="statementPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
 </xs:complexType>
 
 <!-- T_statements -->
@@ -216,7 +231,7 @@
 <!-- T_guardedStatements -->
 <xs:complexType name="T_guardedStatements">
 	<xs:sequence>
-		<xs:element name="guardedStatement" type="T_case" minOccurs="0" maxOccurs="unbounded"/>
+		<xs:element name="guardedStatement" type="T_guards" minOccurs="0" maxOccurs="unbounded"/>
 	</xs:sequence>
 </xs:complexType>
 
@@ -284,7 +299,7 @@
 		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
 		<xs:element name="declarations" type="T_declarations" minOccurs="1"/>
 		<xs:element name="guardedStatements" type="T_guardedStatements" minOccurs="1"/>		
-		<xs:element name="defaultStatement" type="T_StatementPtr" minOccurs="1"/>	
+		<xs:element name="defaultStatement" type="T_LambdaExprPtr" minOccurs="1"/>	
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
