@@ -41,6 +41,8 @@
 #include <fstream>
 #include <limits>
 
+#include "backend_convert.h"
+
 namespace {
 
 using namespace insieme::backend;
@@ -152,10 +154,10 @@ bool Rewriter::CodeModification::operator<(const CodeModification& other) const 
 //								Rewriter
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFileName) {
-//	using namespace boost::filesystem;
 
 	CodeModificationList list;
-	std::for_each(program->getEntryPoints().begin(),  program->getEntryPoints().end(),
+	const Program::EntryPointSet& entryPoints = program->getEntryPoints();
+	std::for_each(entryPoints.begin(), entryPoints.end(),
 		[ &list ](const core::ExpressionPtr& curr) {
 			// we expect entry point to have annotations with corresponding source locations
 			std::shared_ptr<insieme::c_info::CLocAnnotation>&& locAnn = curr.getAnnotation(insieme::c_info::CLocAnnotation::KEY);
@@ -166,13 +168,12 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 
 			if( locAnn->isFunctionDefinition() ) {
 				// the removed function definition has to be defined as extern now because it will be written in the insieme file
-				list.insert( CodeModification::createInsertion( locAnn->getStartLoc(), "extern f();") );
+				list.insert( CodeModification::createInsertion( locAnn->getStartLoc(), "extern f();") ); // FIXME
 				return;
 			}
 			// else we are replacing a code region, a function call has to be created
 //			std::shared_ptr<insieme::c_info::CNameAnnotation>&& nameAnn = curr.getAnnotation(insieme::c_info::CNameAnnotation::KEY);
 //			assert(nameAnn && "No name associated to this lambda expr");
-//			name->get
 	});
 
 	if(list.empty()) {
@@ -180,11 +181,21 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 		return;
 	}
 
+	// Rewrite the original files with the new modifications
 	CodeModificationList::const_iterator it = list.begin();
 	while(it != list.end()) {
-		DVLOG(1) << "Rewriting compilation unit: " << it->getFileName();
+		DVLOG(1) << "==== Rewriting compilation unit: " << it->getFileName() << " =================";
 		rewriterFile(it, list.end());
 	}
+
+	DVLOG(1) << "==== Writing insieme file : " << insiemeFileName << " =================";
+	// Write the insieme file contaning the insieme handled code
+	insieme::simple_backend::ConversionContext convCtx;
+	auto converted = convCtx.convert(program);
+	std::fstream outFile(insiemeFileName.c_str(), std::fstream::out | std::fstream::trunc);
+	outFile << converted;
+
+	DVLOG(1) << "Write back completed!";
 }
 
 } // end backend namespace
