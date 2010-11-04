@@ -218,7 +218,7 @@ void vector_stmt_test() {
 	#pragma test "ref.assign(subscript_single(ref.deref(subscript_single(ref.deref(v1), 1)), 1), 0)"
 	b[1][1] = 0;
 
-	#pragma test "fun(array<ref<'a>,1> v2){ {} }(cast<array<ref<'a>,1>>(cast<array<ref<vector<ref<int<4>>,2>>,1>>(v1)))"
+	// #pragma test "fun(array<ref<'a>,1> v2){ {} }(v1)"
 	evil(b);
 }
 

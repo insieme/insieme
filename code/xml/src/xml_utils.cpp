@@ -218,7 +218,7 @@ const vector<XmlElement> XmlElement::getChildren() const {
 
 // ------------------------------------ XmlConverter ----------------------------
 
-XmlConverter& XmlConverter::get(){
+XmlConverter& XmlConverter::get() {
 	static XmlConverter instance;
 	return instance;
 }
@@ -236,13 +236,13 @@ XmlUtil::XmlUtil(): doc(NULL), rootElem(NULL), parser(NULL) {
 		impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
 }
 
-XmlUtil::~XmlUtil(){
+XmlUtil::~XmlUtil() {
 	if (parser) parser->release();
 	if (doc) doc->release();
 	XMLPlatformUtils::Terminate();
 }
 
-void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
+void XmlUtil::convertXmlToDom(const string fileName, const bool validate) {
 	((DOMImplementationLS*)impl)->createLSSerializer();
 	parser = ((DOMImplementationLS*)impl)->createLSParser (DOMImplementationLS::MODE_SYNCHRONOUS, 0);
 	
@@ -298,7 +298,7 @@ void XmlUtil::convertXmlToDom(const string fileName, const bool validate){
 	}
 }
 
-void XmlUtil::convertDomToXml(const string outputFile){
+void XmlUtil::convertDomToXml(const string outputFile) {
 	DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
 	assert(implLS);
 	DOMLSSerializer*	theSerializer = implLS->createLSSerializer();
@@ -323,7 +323,7 @@ void XmlUtil::convertDomToXml(const string outputFile){
 	delete myFormTarget;
 }
 
-string XmlUtil::convertDomToString(){
+string XmlUtil::convertDomToString() {
 	if (doc){
 		DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
 		DOMLSSerializer*	theSerializer = implLS->createLSSerializer();
@@ -331,16 +331,14 @@ string XmlUtil::convertDomToString(){
 		theSerializer->release();
 		
 		string stringDump = "";
-		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it){
+		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it) {
 	    	if (!isspace (*it))
 	      		stringDump += *it;
 		}
 		return stringDump;
 	}
-	throw "DOM is empty";
+	throw "DOM is empty"; // FIXME add an exception type for this
 }
-
-
 
 // -------------------------Xml Write - Read - Validate----------------------
 
