@@ -1162,9 +1162,14 @@ TEST(XmlTest, JobExprTest) {
     list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
     list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
 
-    StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-    LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
 
+    StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+
+    //TODO remove
+        ASTBuilder builder;
+        FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.getUnitType());
+
+    LambdaExprPtr stat1 = LambdaExpr::get(manager, funType, list, body);
 
     LambdaExpr::CaptureList capList2;
 
@@ -1181,7 +1186,7 @@ TEST(XmlTest, JobExprTest) {
 
     StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
 
-    LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list2, body2);
+    LambdaExprPtr default1 = LambdaExpr::get(manager, funType, list2, body2);
 
 	guarded.push_back(make_pair(expr1,stat1));
 	
