@@ -37,6 +37,7 @@
 #include "rewrite.h"
 #include "logging.h"
 
+#include <algorithm>
 #include <fstream>
 #include <limits>
 
@@ -56,10 +57,12 @@ void rewriterFile(Rewriter::CodeModificationList::const_iterator& modIt, const R
 
 	char line[32768]; // FIXME: is 32768 this enough?
 
-	auto copyLine = [&in, &out, &line] () {
+	auto copyLine = [&in, &out, &line] () -> size_t {
 		in.getline(line, std::numeric_limits<std::streamsize>::max());
-		out.write(line, in.gcount()-1); // the -1 represent the new-line characther
+		size_t readCount = in.gcount()-1;
+		out.write(line, readCount); // the -1 represent the new-line characther
 		out << std::endl;
+		return readCount;
 	};
 
 	size_t lineNo = 1;
@@ -68,32 +71,47 @@ void rewriterFile(Rewriter::CodeModificationList::const_iterator& modIt, const R
 		out << std::endl;
 	};
 
-	auto skipLines = [ &in, &lineNo ] (size_t end) {
-		in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-		while(lineNo++ <= end) {
+	// skip lines until line end, while end-1 lines are ignored, the last line
+	// is actually read in order to handle insertion in the center of a line
+	auto skipLines = [ &in, &lineNo, &line ] (size_t end) -> size_t {
+		// in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		while(lineNo++ < end)
 			in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-		}
+
+		in.getline(line, std::numeric_limits<std::streamsize>::max());
+		return in.gcount()-1;
 	};
 
 	while(modIt != end && modIt->getFileName() == currFile) {
+		size_t columns=0;
 		while(lineNo < modIt->getStartLoc().getLine()) {
 			// copy input file lines to output file
-			copyLine();
+			columns = copyLine();
 			lineNo++;
 		}
+		// copy until column
+		if(columns)
+			out.write(line, modIt->getStartLoc().getColumn()-1);
+
 		// todo: copy until the column
 		// do the modification
 		switch(modIt->getType()) {
 		case Rewriter::CodeModification::REMOVE:
-			skipLines( modIt->getEndLoc().getLine() );
+			columns = skipLines( modIt->getEndLoc().getLine() );
 			break;
 		case Rewriter::CodeModification::INSERT:
-			insertCode( modIt->getCode().c_str() );
+			insertCode( modIt->getCode() );
 			break;
 		case Rewriter::CodeModification::REPLACE:
-			insertCode(modIt->getCode().c_str());
-			skipLines(modIt->getEndLoc().getLine());
+			insertCode( modIt->getCode() );
+			columns = skipLines( modIt->getEndLoc().getLine() );
 			break;
+		}
+
+		// copy from column to the end of the line
+		if(columns) {
+			size_t endLoc = std::min(modIt->getEndLoc().getColumn() + 1, columns);
+			insertCode( std::string(&line[endLoc], columns-endLoc) );
 		}
 		++modIt; // get the next modification
 	}
