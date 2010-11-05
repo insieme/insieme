@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#define CLASS 'A'
+#define CLASS 'S'
 /*
    This file is generated automatically by the setparams utility.
    It sets the number of processors and the class of the NPB
