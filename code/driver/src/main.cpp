@@ -142,9 +142,12 @@ int main(int argc, char** argv) {
 			insieme::utils::Timer timer("Xml.load");
 			core::SharedNodeManager manager = std::make_shared<core::NodeManager>();
 			NodePtr&& xmlNode= insieme::xml::xmlRead(*manager, CommandLineOptions::LoadXML);
-			assert(xmlNode != program);
-			assert(*xmlNode == *program);
-			assert(equalsWithAnnotations(xmlNode, program));
+			// used for debuging XML, removed once in production
+			if(program) {
+				assert(xmlNode != program);
+				assert(*xmlNode == *program);
+				assert(equalsWithAnnotations(xmlNode, program));
+			}
 			program = core::dynamic_pointer_cast<const Program>(xmlNode);
 			assert(program && "Loaded XML doesn't represent a valid program");
 			timer.stop();
