@@ -38,32 +38,34 @@
 #include <memory>
 #include <algorithm>
 
-#include "expressions.h"
-#include "types.h"
-#include "expressions.h"
-#include "statements.h"
-#include "backend_convert.h"
-#include "rewrite.h"
-#include "opencl_convert.h"
-#include "opencl_checker.h"
-#include "naming.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/types.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/ast_statistic.h"
+#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
-#include "ast_statistic.h"
+#include "insieme/simple_backend/backend_convert.h"
+#include "insieme/simple_backend/rewrite.h"
 
-#include "checks/typechecks.h"
-#include "printer/pretty_printer.h"
+#include "insieme/opencl_backend/opencl_convert.h"
+#include "insieme/opencl_backend/opencl_checker.h"
 
-#include "container_utils.h"
-#include "string_utils.h"
-#include "cmd_line_utils.h"
+#include "insieme/c_info/naming.h"
 
-#include "clang_compiler.h"
-#include "logging.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/string_utils.h"
+#include "insieme/utils/cmd_line_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/timer.h"
 
-#include "xml_utils.h"
-#include "timer.h"
+#include "insieme/frontend/clang_compiler.h"
 
-#include "dot_printer.h"
+#include "insieme/driver/dot_printer.h"
+
+#include "insieme/xml/xml_utils.h"
+
 #include <fstream>
 
 using namespace std;

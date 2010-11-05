@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "enum.h"
+#include "insieme/utils/enum.h"
 
 std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax) {
     std::vector<std::string> res;

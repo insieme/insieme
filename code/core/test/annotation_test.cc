@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "annotation.h"
-#include "types.h"
+#include "insieme/core/annotation.h"
+#include "insieme/core/types.h"
 
 #include "dummy_annotations.cc"
 

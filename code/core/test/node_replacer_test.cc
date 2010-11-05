@@ -36,10 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "ast_builder.h"
-#include "transform/node_replacer.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/transform/node_replacer.h"
 
-#include "include/dummy_annotations.cc"
+#include "dummy_annotations.cc"
 
 namespace insieme {
 namespace core {

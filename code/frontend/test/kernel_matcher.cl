@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "../include/ocl/ocl_device.h"
+#include "../include/insieme/frontend/ocl/ocl_device.h"
 
 __kernel __attribute__((reqd_work_group_size(1,2,3))) void kfct(__global float * a, __constant int* c)
 {

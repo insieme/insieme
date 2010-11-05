@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "dot_printer.h"
+#include "insieme/driver/dot_printer.h"
 
 using namespace insieme;
 using namespace driver;

@@ -39,14 +39,14 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "program.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/functional_utils.h"
 
-#include "container_utils.h"
-#include "set_utils.h"
-#include "functional_utils.h"
-#include "types.h"
-#include "expressions.h"
-#include "ast_builder.h"
+#include "insieme/core/program.h"
+#include "insieme/core/types.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/ast_builder.h"
 
 using namespace std;
 using namespace insieme::core;

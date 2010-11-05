@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "logging.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace utils {

@@ -38,10 +38,10 @@
 
 //#include "program.h"
 
-#include "clang_compiler.h"
-#include "pragma_handler.h"
-//#include "utils/source_locations.h"
-#include "clang_config.h"
+#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/pragma_handler.h"
+//#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/clang_config.h"
 #include "clang/AST/ASTContext.h"
 
 //#include <iostream>

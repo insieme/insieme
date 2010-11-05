@@ -39,9 +39,10 @@
 #include <stdexcept>
 #include <vector>
 
-#include "types.h"
-#include "container_utils.h"
-#include "functional_utils.h"
+#include "insieme/core/types.h"
+
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
 
 #include "ast_node_test.cc"
 

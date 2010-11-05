@@ -36,10 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "ast_node.h"
-#include "annotation.h"
-#include "container_utils.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/annotation.h"
 
+#include "insieme/utils/container_utils.h"
 
 #include "dummy_annotations.cc"
 

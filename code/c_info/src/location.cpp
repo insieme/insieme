@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "location.h"
+#include "insieme/c_info/location.h"
 
 #include <sstream>
 

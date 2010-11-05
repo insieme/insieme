@@ -36,11 +36,12 @@
 
 #include <gtest/gtest.h>
 
-#include "statements.h"
-#include "expressions.h"
-#include "ast_builder.h"
-#include "lang_basic.h"
-#include "set_utils.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/lang_basic.h"
+
+#include "insieme/utils/set_utils.h"
 
 #include "ast_node_test.cc"
 

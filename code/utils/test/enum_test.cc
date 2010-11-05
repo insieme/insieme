@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include <iostream>
-#include "enum.h"
+#include "insieme/utils/enum.h"
 
 using std::string;
 using std::vector;

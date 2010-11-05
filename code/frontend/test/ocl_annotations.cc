@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "ocl/ocl_annotations.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
 
 namespace insieme {
 namespace frontend {

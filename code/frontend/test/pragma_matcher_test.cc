@@ -36,14 +36,14 @@
 
 #include <gtest/gtest.h>
 
-#include "program.h"
+#include "insieme/core/program.h"
 
-#include "clang_compiler.h"
-#include "pragma_handler.h"
-#include "utils/source_locations.h"
-#include "clang_config.h"
+#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/clang_config.h"
 
-#include "omp/omp_pragma.h"
+#include "insieme/frontend/omp/omp_pragma.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"

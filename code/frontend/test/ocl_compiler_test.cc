@@ -36,14 +36,15 @@
 
 #include <gtest/gtest.h>
 
-#include "program.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_visitor.h"
 
-#include "clang_compiler.h"
-#include "ast_visitor.h"
-#include "clang_config.h"
-#include "naming.h"
+#include "insieme/c_info/naming.h"
 
-#include <logging.h>
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/clang_compiler.h"
+
+#include "insieme/utils/logging.h"
 
 #include <iostream>
 #include <fstream>

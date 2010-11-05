@@ -39,7 +39,7 @@
 #include <map>
 #include <boost/functional/hash.hpp>
 
-#include "map_utils.h"
+#include "insieme/utils/map_utils.h"
 
 using namespace insieme::utils::map;
 

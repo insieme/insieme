@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "lang_basic.h"
+#include "insieme/core/lang_basic.h"
 
 
 using namespace insieme::core;

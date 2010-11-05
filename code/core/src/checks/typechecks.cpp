@@ -34,30 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "checks/typechecks.h"
+#include "insieme/core/checks/typechecks.h"
 
-#include "type_utils.h"
-#include "lang_basic.h"
+#include "insieme/core/type_utils.h"
+#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace core {
 namespace checks {
-
-
-
-CheckPtr getFullCheck() {
-	// TODO: extend list of checks
-	return makeVisitOnce(
-			combine(toVector<CheckPtr>(
-					make_check<CallExprTypeCheck>(),
-					make_check<DeclarationStmtTypeCheck>(),
-					make_check<WhileConditionTypeCheck>(),
-					make_check<IfConditionTypeCheck>(),
-					make_check<SwitchExpressionTypeCheck>(),
-					make_check<BuildInLiteralCheck>()
-			)
-	));
-}
 
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)

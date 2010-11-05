@@ -42,8 +42,8 @@
 
 #include <iostream>
 
-#include "container_utils.h"
-#include "functional_utils.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
 
 using std::pair;
 using std::string;

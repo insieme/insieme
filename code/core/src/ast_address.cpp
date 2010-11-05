@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "ast_address.h"
+#include "insieme/core/ast_address.h"
 
 
 namespace insieme {

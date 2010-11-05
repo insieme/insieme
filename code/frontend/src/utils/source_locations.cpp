@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "utils/source_locations.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS

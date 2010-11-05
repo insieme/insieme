@@ -34,10 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "string_utils.h"
+#include "insieme/utils/string_utils.h"
 
 #include <algorithm>
-
 #include <stdarg.h>
 
 string format(const char* formatString, ...) {

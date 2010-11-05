@@ -35,13 +35,15 @@
  */
 
 #include <gtest/gtest.h>
-#include "clang_config.h"
 
-#include "program.h"
-#include "clang_compiler.h"
-#include "conversion.h"
-#include "logging.h"
-#include "insieme_pragma.h"
+#include "insieme/core/program.h"
+
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/insieme_pragma.h"
+
+#include "insieme/utils/logging.h"
 
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
