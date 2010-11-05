@@ -59,6 +59,9 @@ int main(int argc, char** argv) {
 	double setup_time, elapsed_time;
 	start_t = clock();
 
+#pragma insieme mark
+	int a[100000000];
+
 	// init matrix
 	float u[N][N], tmp[N][N], f[N][N], res[N][N];
 	memset(u, 0, N*N);    // 	initialize it with zeros
@@ -121,6 +124,5 @@ int main(int argc, char** argv) {
 
 	end_t = clock();
 	elapsed_time = (double)(end_t-start_t)/CLOCKS_PER_SEC;
-
 	printf("%d, %0.2f, %0.2f, %0.2f\n", N, setup_time + elapsed_time, setup_time, elapsed_time);
 }

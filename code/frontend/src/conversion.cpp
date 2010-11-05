@@ -447,7 +447,9 @@ public:
 			// collects the type of each argument of the expression
 			vector<core::ExpressionPtr> args;
 			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
-				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg) ); }
+				[ &args, &builder, this ] (Expr* currArg) {
+					args.push_back( tryDeref(builder, this->Visit(currArg)) );
+				}
 			);
 
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
@@ -2211,6 +2213,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
     if( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
 		// todo
 	}
+
     //----------------  INTIALIZE VECTORS ---------------------------------
 //    const Type* elemTy = NULL;
 //    size_t arraySize = 0;
@@ -2223,17 +2226,18 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
 //        elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
 //		arraySize = vecTy->getNumElements();
 //    }
-    // vector initialization
+
+    // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
     }
-    // array initialization
-//    if( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
-//    	core::ExpressionPtr&& initVal = defaultInitVal(elemTy, convertType(elemTy) );
-//    	return builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
-//    }
-
+    // handle arrays initialization
+    if( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
+    	// FIXME
+    	// initialization for arrays is missing, returning NULL!
+    	return core::lang::CONST_NULL_PTR_PTR;
+    }
     assert(false && "Default initialization type not defined");
 }
 

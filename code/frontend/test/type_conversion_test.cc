@@ -395,6 +395,10 @@ TEST(TypeConversion, HandleArrayType) {
 
 }
 
+struct VariableResetHack {
+	static void reset() { Variable::counter = 0; }
+};
+
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
@@ -405,17 +409,20 @@ TEST(TypeConversion, FileTest) {
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
 
-	ConversionFactory convFactory( shared, comp, prog.getClangIndexer(), prog.getClangProgram(), pl );
-
 	std::for_each(pl.begin(), pl.end(),
-		[ &convFactory ](const PragmaPtr curr) {
+		[ &prog, &shared, &comp, &pl ](const PragmaPtr curr) {
+			VariableResetHack::reset();
+			ConversionFactory convFactory( shared, comp, prog.getClangIndexer(), prog.getClangProgram(), pl );
+
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
 			if(tp->isStatement())
 				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
 			else {
-				const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() );
-				assert(td && "Decl is not of type typedecl");
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
+					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
+					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+				}
 			}
 	});
 }

@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
 			// do the actual clang to IR conversion
 			insieme::utils::Timer convertTimer("Frontend.convert ");
-			insieme::core::ProgramPtr program = p.convert();
+			program = p.convert();
 			convertTimer.stop();
 			LOG(INFO) << convertTimer;
 
@@ -118,20 +118,6 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "Height of tree: " << stats.getHeight();
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
-			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
-				// a pretty print of the AST
-				LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
-				if(!CommandLineOptions::DumpIR.empty()) {
-					// write into the file
-					std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
-					fout << insieme::core::printer::PrettyPrint(program);
-				} else
-					LOG(INFO) << insieme::core::printer::PrettyPrint(program);
-				LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-				LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
-				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-			}
-
 			// Creates dot graph of the generated IR
 			if(!CommandLineOptions::ShowIR.empty()) {
 				insieme::utils::Timer timer("Show.graph");
@@ -150,18 +136,33 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			}
-
 		}
 		if(!CommandLineOptions::LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
+			core::SharedNodeManager manager = std::make_shared<core::NodeManager>();
 			NodePtr&& xmlNode= insieme::xml::xmlRead(*manager, CommandLineOptions::LoadXML);
-			// assert(*xmlNode == *program);
-			// assert(equalsWithAnnotations(xmlNode, program));
+			assert(xmlNode != program);
+			assert(*xmlNode == *program);
+			assert(equalsWithAnnotations(xmlNode, program));
 			program = core::dynamic_pointer_cast<const Program>(xmlNode);
 			assert(program && "Loaded XML doesn't represent a valid program");
 			timer.stop();
 			LOG(INFO) << timer;
+			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+		}
+
+		if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
+			// a pretty print of the AST
+			LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
+			if(!CommandLineOptions::DumpIR.empty()) {
+				// write into the file
+				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
+				fout << insieme::core::printer::PrettyPrint(program);
+			} else
+				LOG(INFO) << insieme::core::printer::PrettyPrint(program);
+			LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
+			LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 
