@@ -27,9 +27,9 @@ Dir["**/*.h"].each { |header|
 
 signatures = signatures.sort_by { |s| s[0] }
 
-File.open("include/core/ast_builder.inl", "w+") { |inlFile|
+File.open("include/insieme/core/ast_builder.inl", "w+") { |inlFile|
 File.open("src/ast_builder_impl.inl", "w+") { |inlFileImpl|
-File.open("include/core/ast_builder_decls.inl", "w+") { |inlDeclFile|
+File.open("include/insieme/core/ast_builder_decls.inl", "w+") { |inlDeclFile|
 	signatures.each { |sig|
 		typeName = sig[0][0..-4]
 		params = sig[2]
