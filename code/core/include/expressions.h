@@ -440,7 +440,7 @@ public:
 class JobExpr : public Expression {
 public:
 	typedef std::vector<DeclarationStmtPtr> LocalDecls;
-	typedef std::pair<ExpressionPtr, LambdaExprPtr> GuardedStmt;
+	typedef std::pair<LambdaExprPtr, LambdaExprPtr> GuardedStmt;
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
 private:

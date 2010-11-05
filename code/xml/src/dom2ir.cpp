@@ -613,15 +613,15 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		vector<XmlElement> stmts = elem.getFirstChildByName("guardedStatements")->getChildrenByName("guardedStatement");
 		JobExpr::GuardedStmts stmtVec;
 		for(auto iter = stmts.begin(); iter != stmts.end(); ++iter) {
-			XmlElementPtr type = iter->getFirstChildByName("expressionPtr");
-			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
-			buildAnnotations(*type, expr, true);
+			XmlElementPtr type = iter->getFirstChildByName("lambdaExprPtr");
+			LambdaExprPtr guard = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second);
+			buildAnnotations(*type, guard, true);
 
 			type = iter->getFirstChildByName("lambdaExprPtr");
 			LambdaExprPtr stmt = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second); //FIXME
 			buildAnnotations(*type, stmt, true);
 
-			stmtVec.push_back(make_pair(expr, stmt));
+			stmtVec.push_back(make_pair(guard, stmt));
 		}
 
 		XmlElementPtr type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("lambdaExprPtr"); //FIXME
