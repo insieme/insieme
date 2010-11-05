@@ -375,9 +375,18 @@ namespace {
 		});
 
 		PRINT(VectorExpr, {
-				out << "[" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) {
+				std::vector<ExpressionPtr> elements = node->getExpressions();
+
+				const int limit = 5;
+				bool cut = false;
+				if (elements.size() > limit) {
+					elements = std::vector<ExpressionPtr>(elements.begin(), elements.begin()+limit);
+					cut = true;
+				}
+
+				out << "[" << ::join(", ", elements, [&](std::ostream&, const ExpressionPtr& cur) {
 					this->visit(cur);
-				}) << "]";
+				}) << ((cut)?", ...":"") << "]";
 		});
 
 		PRINT(RecLambdaExpr, {
