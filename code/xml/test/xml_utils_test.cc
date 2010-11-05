@@ -39,6 +39,7 @@
 #include "lang_basic.h"
 #include "ast_builder.h"
 #include <xercesc/util/XercesDefs.hpp>
+#include "printer/pretty_printer.h"
 
 using namespace std;
 using namespace insieme::core;
@@ -1139,51 +1140,24 @@ TEST(XmlTest, VariableTest) {
 }
 
 TEST(XmlTest, JobExprTest) {
-    ASTBuilder builder;
-	NodeManager& manager = *builder.getNodeManager();
-	
-	JobExpr::GuardedStmts guarded;
-	
-    LambdaExpr::ParamList guardArgs;
+    NodeManager manager;
+
+	LambdaExpr::ParamList guardArgs;
     guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
     guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
-    StatementPtr guardBody = builder.compoundStmt(builder.returnStmt(CONST_BOOL_FALSE_PTR));
-
-
+	StatementPtr guardBody = CompoundStmt::get(manager, ReturnStmt::get(manager, CONST_BOOL_FALSE_PTR));
 	LambdaExprPtr guard = LambdaExpr::get(manager, TYPE_GUARD_OP_PTR, guardArgs, guardBody);
 
-    LambdaExpr::CaptureList capList;
-
-    DeclarationStmtPtr decl1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 65), Literal::get(manager, "7", lang::TYPE_INT_4_PTR));
-
-    DeclarationStmtPtr decl2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 75), Literal::get(manager, "8", lang::TYPE_INT_4_PTR));
-
-    capList.push_back(decl1);
-    capList.push_back(decl2);
-
     LambdaExpr::ParamList list;
+	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
 
-
-    StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-
-    LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
-
-    LambdaExpr::CaptureList capList2;
-
-    DeclarationStmtPtr decl3 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 88), Literal::get(manager, "3", lang::TYPE_INT_4_PTR));
-
-    DeclarationStmtPtr decl4 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 89), Literal::get(manager, "4", lang::TYPE_INT_4_PTR));
-
-    capList.push_back(decl3);
-    capList.push_back(decl4);
+	JobExpr::GuardedStmts guarded;
+	guarded.push_back(make_pair(guard, stat1));
 
     LambdaExpr::ParamList list2;
-
-    StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-
-    LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
-
-	guarded.push_back(make_pair(guard,stat1));
+	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
 	
 	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	LiteralPtr literalA = Literal::get(manager, lang::TYPE_INT_4_PTR, "4");
@@ -1192,13 +1166,11 @@ TEST(XmlTest, JobExprTest) {
 	DummyAnnotationPtr dummy_decn(new DummyAnnotation("decl n"));
 	decl.addAnnotation(dummy_dece);
 	decl->addAnnotation(dummy_decn);
-	
 	JobExpr::LocalDecls decls;
-	
 	decls.push_back(decl);
 	
 	JobExprPtr job = JobExpr::get(manager, default1, guarded, decls);
-	
+
 	NodePtr root = job;
 	
 	XmlUtil xml;
@@ -1212,9 +1184,9 @@ TEST(XmlTest, JobExprTest) {
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
 
-	//EXPECT_EQ(*root, *root2); FIXME
-	//EXPECT_NE(root, root2);
-	//EXPECT_TRUE(equalsWithAnnotations(root, root2));
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
 TEST(XmlTest, LambdaExprTest) {
