@@ -46,6 +46,10 @@ namespace simple_backend {
 	
 using namespace core;
 
+std::ostream& printFunctionParamter(std::ostream& out, const VariablePtr& param, ConversionContext& cc) {
+	return out << cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param);
+}
+
 
 CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 	auto codeIt = functionMap.find(lambda);
@@ -66,8 +70,8 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 	// write the function header
 	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
 	// handle arguments
-	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
-		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
+	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const VariablePtr& param) {
+		printFunctionParamter(os, param, this->cc);
 	});
 	cs << ")";
 	if(!isCompoundBody) cs << " {" << CodeStream::indR << "\n";
@@ -418,6 +422,10 @@ string TypeManager::visitGenericType(const GenericTypePtr& ptr) {
 
 string TypeManager::visitRefType(const RefTypePtr& ptr) {
 	auto elemType = ptr->getElementType();
+	// special handling for void* type
+	if (*ptr == lang::TYPE_REF_ALPHA_VAL) {
+		return "void*";
+	}
 	if((declVisit && visitStarting) || elemType->getNodeType() == NT_VectorType ) {
 		visitStarting = false;
 		return visit(elemType);
@@ -453,9 +461,9 @@ const ProgramPtr& ConvertedCode::getProgram() const {
 }
 
 
-string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unnamed"*/ ) {
+string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 
-	// thest whether a name has already been picked
+	// test whether a name has already been picked
 	auto it = nameMap.find(ptr);
 	if(it != nameMap.end()) return it->second;
 
@@ -479,7 +487,10 @@ string NameGenerator::getName( const NodePtr& ptr, const char* fragment /*= "unn
 
 	// generate a new name string
 	std::stringstream name;
-	name << string("__insieme_") << fragment << "_";
+	name << string("__insieme_");
+	if (!fragment.empty()) {
+		name << fragment << "_";
+	}
 
 	switch(ptr->getNodeCategory()) {
 	case NC_Support:
@@ -506,7 +517,7 @@ string NameGenerator::getVarName(const VariablePtr& var) {
 	if(auto annotation = var->getAnnotation(c_info::CNameAnnotation::KEY)) {
 		return annotation->getName();
 	} else {
-		return string("unnamed_var_") + toString(var->getId());
+		return string("var_") + toString(var->getId());
 	}
 }
 

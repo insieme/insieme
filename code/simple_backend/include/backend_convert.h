@@ -74,7 +74,7 @@ public:
 
 	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
 
-	string getName(const NodePtr& ptr, const char* fragment = "unnamed"); 
+	string getName(const NodePtr& ptr, const string fragment = "");
 
 	string getVarName(const VariablePtr& var);
 };
