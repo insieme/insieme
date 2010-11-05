@@ -167,11 +167,10 @@ typedef  int  INT_TYPE;
 /********************/
 /* Some global info */
 /********************/
-INT_TYPE *key_buff_ptr_global;         /* used by full_verify to get */
-                                       /* copies of rank info        */
+// INT_TYPE *key_buff_ptr_global;         /* used by full_verify to get */
+                                          /* copies of rank info        */
+//int      passed_verification;
 
-int      passed_verification;
-                                 
 
 /************************************/
 /* These are the three main arrays. */
@@ -226,7 +225,7 @@ INT_TYPE test_index_array[TEST_ARRAY_SIZE],
 /***********************/
 double	randlc( double *X, double *A );
 
-void full_verify( void );
+void full_verify( INT_TYPE *key_buff_ptr_global, int *passed_verification );
 
 /*
  *    FUNCTION RANDLC (X, A)
@@ -361,7 +360,7 @@ void	create_seq( double seed, double a )
 /*****************************************************************/
 
 
-void full_verify()
+void full_verify(INT_TYPE *key_buff_ptr_global, int *passed_verification)
 {
     INT_TYPE    i, j;
     INT_TYPE    k;
@@ -388,7 +387,7 @@ void full_verify()
                 j );
     }
     else
-        passed_verification++;
+        (*passed_verification)++;
            
 
 }
@@ -400,7 +399,7 @@ void full_verify()
 /*************             R  A  N  K             ****************/
 /*****************************************************************/
 
-void rank( int iteration )
+void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verification )
 {
 
     INT_TYPE    i, j, k;
@@ -482,7 +481,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                            (*passed_verification)++;
                     }
                     else
                     {
@@ -493,7 +492,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
                     }
                     break;
                 case 'W':
@@ -507,7 +506,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
                     }
                     else
                     {
@@ -518,7 +517,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
                     }
                     break;
                 case 'A':
@@ -532,7 +531,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
         	    }
                     else
                     {
@@ -544,7 +543,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
                     }
                     break;
                 case 'B':
@@ -557,7 +556,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
         	    }
                     else
                     {
@@ -568,7 +567,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
                     }
                     break;
                 case 'C':
@@ -581,7 +580,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
         	    }
                     else
                     {
@@ -592,7 +591,7 @@ void rank( int iteration )
                                    iteration, i );
                         }
                         else
-                            passed_verification++;
+                        	 (*passed_verification)++;
                     }
                     break;
             }        
@@ -606,7 +605,7 @@ void rank( int iteration )
     since they cannot be made register by compiler                        */
 
     if( iteration == MAX_ITERATIONS ) 
-        key_buff_ptr_global = key_buff1;
+        *key_buff_ptr_global = key_buff1;
 
   } /* end master */
 }      
@@ -621,11 +620,13 @@ main( argc, argv )
     char **argv;
 {
 
-    int             i, iteration, itemp;
+    int         i, iteration, itemp;
     int		    nthreads = 1;
-    double          timecounter, maxtime;
+    double      timecounter, maxtime;
 
-
+    // old global vars
+    INT_TYPE *key_buff_ptr_global = NULL;
+    int passed_verification = 0;
 
 /*  Initialize the verification arrays if a valid class */
     for( i=0; i<TEST_ARRAY_SIZE; i++ )
@@ -672,7 +673,7 @@ main( argc, argv )
 /*  Do one interation for free (i.e., untimed) to guarantee initialization of  
     all data and code pages and respective tables */
 #pragma omp parallel    
-    rank( 1 );  
+    rank( 1, &key_buff_ptr_global, &passed_verification );
 
 /*  Start verification counter */
     passed_verification = 0;
@@ -691,7 +692,7 @@ main( argc, argv )
 #pragma omp master	
         if( CLASS != 'S' ) printf( "        %d\n", iteration );
 	
-        rank( iteration );
+        rank( iteration, &key_buff_ptr_global, &passed_verification );
 	
 #if defined(_OPENMP)	
 #pragma omp master
@@ -706,7 +707,7 @@ main( argc, argv )
 
 /*  This tests that keys are in sequence: sorting of last ranked key seq
     occurs here, but is an untimed operation                             */
-    full_verify();
+    full_verify(key_buff_ptr_global, &passed_verification);
 
 
 

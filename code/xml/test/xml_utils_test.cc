@@ -39,6 +39,7 @@
 #include "lang_basic.h"
 #include "ast_builder.h"
 #include <xercesc/util/XercesDefs.hpp>
+#include "printer/pretty_printer.h"
 
 using namespace std;
 using namespace insieme::core;
@@ -972,8 +973,8 @@ TEST(XmlTest, VectorExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump2.xml");
-	xml.convertXmlToDom("dump2.xml", true);
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	
@@ -1138,52 +1139,37 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-TEST(XmlTest, JobExprTest) {
-	NodeManager manager;
-	
-	JobExpr::GuardedStmts guarded;
-	
-	LiteralPtr expr1 = Literal::get(manager, lang::TYPE_INT_4_PTR, "2");
-	DummyAnnotationPtr dummy_ee(new DummyAnnotation("expr1 e"));
-	DummyAnnotationPtr dummy_en(new DummyAnnotation("expr1 n"));
-	expr1.addAnnotation(dummy_ee);
-	expr1->addAnnotation(dummy_en);
+/*TEST(XmlTest, JobExprTest) {
+    NodeManager manager;
 
-    LambdaExpr::CaptureList capList;
-
-    DeclarationStmtPtr decl1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 65), Literal::get(manager, "7", lang::TYPE_INT_4_PTR));
-
-    DeclarationStmtPtr decl2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 75), Literal::get(manager, "8", lang::TYPE_INT_4_PTR));
-
-    capList.push_back(decl1);
-    capList.push_back(decl2);
+	LambdaExpr::ParamList guardArgs;
+    guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
+    guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
+	StatementPtr guardBody = CompoundStmt::get(manager, ReturnStmt::get(manager, CONST_BOOL_FALSE_PTR));
+	LambdaExprPtr guard = LambdaExpr::get(manager, TYPE_GUARD_OP_PTR, guardArgs, guardBody);
+	DummyAnnotationPtr dummy_ge(new DummyAnnotation("guard e"));
+	DummyAnnotationPtr dummy_gn(new DummyAnnotation("guard n"));
+	guard.addAnnotation(dummy_ge);
+	guard->addAnnotation(dummy_gn);
 
     LambdaExpr::ParamList list;
-    list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
-    list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
+	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat1 e"));
+	//DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
+	stat1.addAnnotation(dummy_se);
+	//stat1->addAnnotation(dummy_sn);
 
-    StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-    LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
-
-
-    LambdaExpr::CaptureList capList2;
-
-    DeclarationStmtPtr decl3 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 88), Literal::get(manager, "3", lang::TYPE_INT_4_PTR));
-
-    DeclarationStmtPtr decl4 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 89), Literal::get(manager, "4", lang::TYPE_INT_4_PTR));
-
-    capList.push_back(decl3);
-    capList.push_back(decl4);
+	JobExpr::GuardedStmts guarded;
+	guarded.push_back(make_pair(guard, stat1));
 
     LambdaExpr::ParamList list2;
-    list2.push_back(Variable::get(manager, TYPE_BOOL_PTR, 3));
-    list2.push_back(Variable::get(manager, TYPE_BOOL_PTR, 4));
-
-    StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-
-    LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list2, body2);
-
-	guarded.push_back(make_pair(expr1,stat1));
+	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
+	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
+	//DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
+	default1.addAnnotation(dummy_de);
+	//default1->addAnnotation(dummy_dn);
 	
 	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	LiteralPtr literalA = Literal::get(manager, lang::TYPE_INT_4_PTR, "4");
@@ -1192,13 +1178,15 @@ TEST(XmlTest, JobExprTest) {
 	DummyAnnotationPtr dummy_decn(new DummyAnnotation("decl n"));
 	decl.addAnnotation(dummy_dece);
 	decl->addAnnotation(dummy_decn);
-	
 	JobExpr::LocalDecls decls;
-	
 	decls.push_back(decl);
 	
 	JobExprPtr job = JobExpr::get(manager, default1, guarded, decls);
-	
+	DummyAnnotationPtr dummy_je(new DummyAnnotation("job e"));
+	DummyAnnotationPtr dummy_jn(new DummyAnnotation("job n"));
+	job.addAnnotation(dummy_je);
+	job->addAnnotation(dummy_jn);
+
 	NodePtr root = job;
 	
 	XmlUtil xml;
@@ -1212,10 +1200,13 @@ TEST(XmlTest, JobExprTest) {
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
 	
+	xml.convertIrToDom(root2);
+	xml.convertDomToXml("dump3.xml");
+
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}
+}*/
 
 TEST(XmlTest, LambdaExprTest) {
 	NodeManager manager;

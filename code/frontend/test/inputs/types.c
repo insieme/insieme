@@ -39,27 +39,28 @@ void basic_type_test() {
 	#pragma test "ref<int<4>> v1 = ref.var(1)"
 	int a = 1;
 
-	#pragma test "ref<int<8>> v2 = ref.var(0)"
+	#pragma test "ref<int<8>> v1 = ref.var(0)"
 	long b;
 
-	#pragma test "ref<int<2>> v3 = ref.var(cast<int<2>>(0xFFFF))"
+	#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(0xFFFF))"
 	short c = 0xFFFF;
 
+	#pragma test "ref<char> v1 = ref.var(cast<char>('a'))"
 	char d = 'a';
 
-	#pragma test "ref<array<ref<'a>,1>> v4 = ref.var(null)"
+//	#pragma test "ref<array<ref<'a>,1>> v4 = ref.var(null)"
 	void* e;
 
-	#pragma test "ref<real<4>> v5 = ref.var(0.00f)"
+	#pragma test "ref<real<4>> v1 = ref.var(0.00f)"
 	float f = 0.00f;
 
-	#pragma test "ref<real<8>> v6 = ref.var(0.0)"
+	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
 	double g;
 	
-	#pragma test "ref<vector<ref<real<4>>,3>> v7 = ref.var({0.0,0.0,0.0})"
+	#pragma test "ref<vector<ref<real<4>>,3>> v1 = ref.var({ref.var(0.0),ref.var(0.0),ref.var(0.0)})"
 	float v[3];
 
-    #pragma test "ref<vector<ref<vector<ref<int<4>>,2>>,3>> v8 = ref.var({{0,0},{0,0},{0,0}})"
+    #pragma test "ref<vector<ref<vector<ref<int<4>>,2>>,3>> v1 = ref.var({ref.var({ref.var(0),ref.var(0)}),ref.var({ref.var(0),ref.var(0)}),ref.var({ref.var(0),ref.var(0)})})"
 	int vv[3][2];
 }
 
@@ -71,6 +72,12 @@ struct Person {
 	// cppcheck-suppress unusedStructMember
 	int age;
 };
+
+#pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
+struct Person p;
+
+// #pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
+struct Person p = {"Simone", 28};
 
 // Self recursive struct
 #pragma test "rec 'PersonList.{'PersonList=struct<name:array<ref<char>,1>,age:int<4>,next:array<ref<'PersonList>,1>>}"

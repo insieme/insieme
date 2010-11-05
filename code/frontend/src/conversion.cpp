@@ -152,7 +152,7 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 	if( elements.empty() )
 		return args;
 
-	if(*elements.back() == *core::lang::TYPE_VAR_LIST_PTR) {
+	if(*elements.back() == core::lang::TYPE_VAR_LIST_VAL) {
 		vector<core::ExpressionPtr> ret;
 		assert(args.size() >= elements.size()-1 && "Function called with fewer arguments than necessary");
 		// last type is a var_list, we have to do the packing of arguments
@@ -161,14 +161,20 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
 
 		vector<core::ExpressionPtr> toPack;
-		std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+		if(args.size() > elements.size()-1) {
+			std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+		}
 
-		ret.push_back( builder.callExpr(core::lang::TYPE_VAR_LIST_PTR, core::lang::OP_VAR_LIST_PACK_PTR, toPack) ); //fixme
+		// arguments has to be packed into a tuple expression, and then inserted into a pack expression
+		ret.push_back(
+			builder.callExpr(core::lang::TYPE_VAR_LIST_PTR, core::lang::OP_VAR_LIST_PACK_PTR, toVector<core::ExpressionPtr>(builder.tupleExpr(toPack)))
+		);
 		return ret;
 	}
 	return args;
 }
 
+// FIXME: this has to be rewritten once lang/core is in a final state
 std::string getOperationType(const core::TypePtr& type) {
 	using namespace core::lang;
 	DVLOG(2) << type;
@@ -444,7 +450,9 @@ public:
 			// collects the type of each argument of the expression
 			vector<core::ExpressionPtr> args;
 			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
-				[ &args, this ] (Expr* currArg) { args.push_back( this->Visit(currArg) ); }
+				[ &args, &builder, this ] (Expr* currArg) {
+					args.push_back( tryDeref(builder, this->Visit(currArg)) );
+				}
 			);
 
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
@@ -509,6 +517,13 @@ public:
 	core::ExpressionPtr VisitCXXOperatorCallExprr(clang::CXXOperatorCallExpr* callExpr) {
 		//todo: CXX extensions
 		assert(false && "CXXOperatorCallExpr not yet handled");
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							BINARY OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membexpr)  {
+		assert(false && "MemberExpr not yet handled");
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1510,6 +1525,7 @@ public:
 	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
 	FORWARD_VISITOR_CALL(CallExpr)
 	FORWARD_VISITOR_CALL(ParenExpr)
+	FORWARD_VISITOR_CALL(MemberExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });
@@ -2158,54 +2174,74 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 //						CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-core::ExpressionPtr ConversionFactory::defaultInitVal(const clang::Type* ty, const core::TypePtr type ) {
-    if ( ty->isIntegerType() || ty->isUnsignedIntegerType() ) {
+core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type ) {
+	if( *type == core::lang::TYPE_ALPHA_VAL ) {
+		return core::lang::CONST_NULL_PTR_PTR;
+	}
+	// handle integers initialization
+    if ( core::lang::isIntegerType(*type) ) {
         // initialize integer value
         return builder.literal("0", type);
     }
-    if( ty->isFloatingType() || ty->isRealType() || ty->isRealFloatingType() ) {
+    // handle reals initialization
+    if( core::lang::isRealType(*type) ) {
         // in case of floating types we initialize with a zero value
         return builder.literal("0.0", type);
     }
-    if ( ty->isAnyPointerType() || ty->isRValueReferenceType() || ty->isLValueReferenceType() ) {
+    // handle refs initialization
+    if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
         // initialize pointer/reference types with the null value
-        return core::lang::CONST_NULL_PTR_PTR;
+    	return builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( defaultInitVal(refTy->getElementType()) ) );
     }
-    if ( ty->isCharType() || ty->isAnyCharacterType() ) {
+    // handle strings initialization
+    if ( *type == core::lang::TYPE_STRING_VAL ) {
         return builder.literal("", type);
     }
-    if ( ty->isBooleanType() ) {
+    // handle booleans initialization
+    if ( *type == core::lang::TYPE_BOOL_VAL ) {
         // boolean values are initialized to false
         return builder.literal("false", core::lang::TYPE_BOOL_PTR);
     }
+    // Handle structs initialization
+    if( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
+    	core::StructExpr::Members members;
+    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
+    	std::for_each(entries.begin(), entries.end(),
+    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
+    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
+    		}
+    	);
+    	return builder.structExpr(structTy, members);
+    }
+    if( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
+		// todo
+	}
 
     //----------------  INTIALIZE VECTORS ---------------------------------
-    const Type* elemTy = NULL;
-    size_t arraySize = 0;
-    if ( ty->isExtVectorType() ) {
-    	const TypedefType* typedefType = dyn_cast<const TypedefType>(ty);
-        assert(typedefType && "ExtVectorType has unexpected class");
-        const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
-        assert(vecTy && "ExtVectorType has unexpected class");
+//    const Type* elemTy = NULL;
+//    size_t arraySize = 0;
+//    if ( ty->isExtVectorType() ) {
+//    	const TypedefType* typedefType = dyn_cast<const TypedefType>(ty);
+//        assert(typedefType && "ExtVectorType has unexpected class");
+//        const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+//        assert(vecTy && "ExtVectorType has unexpected class");
+//
+//        elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
+//		arraySize = vecTy->getNumElements();
+//    }
 
-        elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
-		arraySize = vecTy->getNumElements();
+    // handle vectors initialization
+    if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
+		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
+		return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
     }
-    if ( ty->isConstantArrayType() ) {
-    	const ConstantArrayType* arrTy = dyn_cast<const ConstantArrayType>(ty);
-		assert(arrTy && "ConstantArrayType has unexpected class");
-
-		elemTy = arrTy->getElementType()->getUnqualifiedDesugaredType();
-		arraySize = *arrTy->getSize().getRawData();
+    // handle arrays initialization
+    if( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
+    	// FIXME
+    	// initialization for arrays is missing, returning NULL!
+    	return core::lang::CONST_NULL_PTR_PTR;
     }
-    if( ty->isExtVectorType() || ty->isConstantArrayType() ) {
-    	assert(elemTy);
-    	core::ExpressionPtr&& initVal = defaultInitVal(elemTy, convertType(elemTy) );
-    	return builder.vectorExpr( std::vector<core::ExpressionPtr>(arraySize, initVal) );
-    }
-
     assert(false && "Default initialization type not defined");
-    return core::lang::CONST_NULL_PTR_PTR;
 }
 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
@@ -2233,13 +2269,10 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// initialization value
 	core::ExpressionPtr initExpr;
 	if( varDecl->getInit() ) {
-		initExpr = convertExpr( varDecl->getInit() );
+		initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(convertExpr( varDecl->getInit() )) );
 	} else {
-		initExpr = defaultInitVal( GET_TYPE_PTR(varDecl), type);
+		initExpr = defaultInitVal( type );
 	}
-
-	// REF.VAR
-	initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(initExpr) );
 
 	// lookup for the variable in the map
 	core::VariablePtr var = lookUpVariable(varDecl);

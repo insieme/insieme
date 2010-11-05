@@ -537,7 +537,7 @@ public:
 		std::for_each(stmtsVec.begin(), stmtsVec.end(),
 			[ this, &guardedStatements ](const JobExpr::GuardedStmt& curr) {
 				XmlElement guardedStatement("guardedStatement", this->doc);
-				this->append(guardedStatement, curr.first, "expressionPtr");
+				this->append(guardedStatement, curr.first, "lambdaExprPtr");
 				this->append(guardedStatement, curr.second, "lambdaExprPtr");
 				guardedStatements << guardedStatement;
 			}
