@@ -71,29 +71,29 @@ public:
  ** Should be used to annotate *pointers* to recursive types, mapping each type variable
  ** identifier to the corresponding C name.
  ** */
-class CRecNameAnnotation : public core::Annotation {
-public:
-	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> IdentMap;
-
-private:
-	IdentMap identMap;
-
-public:
-	static const core::StringKey<CRecNameAnnotation> KEY;
-
-	CRecNameAnnotation() : core::Annotation() { }
-
-	IdentMap& getIdentMap() { return identMap; }
-
-	void addIdent(const core::Identifier& recVarName, const core::Identifier& cName);
-	const core::Identifier& getIdent(const core::Identifier& recVarName);
-	const std::string& getName(const core::Identifier& recVarName);
-	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
-
-	const std::string toString() const { return "TBD"; }
-
-	const core::AnnotationKey* getKey() const { return &KEY; }
-};
+//class CRecNameAnnotation : public core::Annotation {
+//public:
+//	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> IdentMap;
+//
+//private:
+//	IdentMap identMap;
+//
+//public:
+//	static const core::StringKey<CRecNameAnnotation> KEY;
+//
+//	CRecNameAnnotation() : core::Annotation() { }
+//
+//	IdentMap& getIdentMap() { return identMap; }
+//
+//	void addIdent(const core::Identifier& recVarName, const core::Identifier& cName);
+//	const core::Identifier& getIdent(const core::Identifier& recVarName);
+//	const std::string& getName(const core::Identifier& recVarName);
+//	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
+//
+//	const std::string toString() const { return "TBD"; }
+//
+//	const core::AnnotationKey* getKey() const { return &KEY; }
+//};
 
 class COpAnnotation : public core::Annotation {
 

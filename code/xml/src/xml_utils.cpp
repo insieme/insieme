@@ -348,10 +348,10 @@ void xmlWrite(const NodePtr& node, const string fileName) {
 	xml.convertDomToXml(fileName);
 };
 
-void xmlRead(NodeManager& manager, const string fileName) {
+NodePtr xmlRead(NodeManager& manager, const string fileName) {
 	XmlUtil xml;
 	xml.convertXmlToDom(fileName, true);
-	xml.convertDomToIr(manager);
+	return xml.convertDomToIr(manager);
 };
 
 void xmlValidate(const string fileName) {

@@ -152,7 +152,7 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 	if( elements.empty() )
 		return args;
 
-	if(*elements.back() == *core::lang::TYPE_VAR_LIST_PTR) {
+	if(*elements.back() == core::lang::TYPE_VAR_LIST_VAL) {
 		vector<core::ExpressionPtr> ret;
 		assert(args.size() >= elements.size()-1 && "Function called with fewer arguments than necessary");
 		// last type is a var_list, we have to do the packing of arguments
@@ -161,7 +161,9 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
 
 		vector<core::ExpressionPtr> toPack;
-		std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+		if(args.size() > elements.size()-1) {
+			std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+		}
 
 		ret.push_back( builder.callExpr(core::lang::TYPE_VAR_LIST_PTR, core::lang::OP_VAR_LIST_PACK_PTR, toPack) ); //fixme
 		return ret;

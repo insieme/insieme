@@ -45,7 +45,7 @@ TEST(Naming, Basic) {
 
 	insieme::core::Annotatable obj;
 
-	const CRecNameAnnotation annotation;
+//	const CRecNameAnnotation annotation;
 }
 
 }

@@ -42,21 +42,21 @@ namespace insieme {
 namespace c_info {
 
 const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
-const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
+//const core::StringKey<CRecNameAnnotation> CRecNameAnnotation::KEY("CRecNameAnnotationKey");
 
 const core::StringKey<COpAnnotation> COpAnnotation::KEY("COpAnnotation");
 
-void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
-	identMap.insert(std::make_pair(recVarName, cName));
-}
+//void CRecNameAnnotation::addIdent(const core::Identifier& recVarName, const core::Identifier& cName ) {
+//	identMap.insert(std::make_pair(recVarName, cName));
+//}
 
-const core::Identifier& CRecNameAnnotation::getIdent(const core::Identifier& recVarName) {
-	return identMap[recVarName];
-}
+//const core::Identifier& CRecNameAnnotation::getIdent(const core::Identifier& recVarName) {
+//	return identMap[recVarName];
+//}
 
-const std::string& CRecNameAnnotation::getName(const core::Identifier& recVarName) {
-	return identMap[recVarName].getName();
-}
+//const std::string& CRecNameAnnotation::getName(const core::Identifier& recVarName) {
+//	return identMap[recVarName].getName();
+//}
 
 }
 }
