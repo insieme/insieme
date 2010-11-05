@@ -201,7 +201,7 @@ void evil(void* anything) { }
 
 void vector_stmt_test() {
 
-//	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({0,0,0,0,0})"
+	#pragma test "ref<vector<ref<int<4>>,5>> v1 = ref.var({ref.var(0),ref.var(0),ref.var(0),ref.var(0),ref.var(0)})"
 	int a[5];
 
 	#pragma test "subscript_single(ref.deref(v1), 0)"
