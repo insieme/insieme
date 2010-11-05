@@ -122,6 +122,37 @@ public:
 };
 
 
+class VariableManager {
+
+public:
+
+	enum MemoryLocation {
+		NONE, 	/* < in case the variable is not referencing a memory cell */
+		STACK, 	/* < the variable references a memory cell on the stack */
+		HEAP 	/* < the variable references a memory cell on the heap */
+	};
+
+	struct VariableInfo {
+		MemoryLocation location;
+	};
+
+private:
+
+	typedef std::unordered_map<VariablePtr, VariableInfo, hash_target<VariablePtr>, equal_target<VariablePtr>> VariableInfoMap;
+
+	VariableInfoMap variableMap;
+
+public:
+
+	VariableManager() : variableMap() {};
+
+	const VariableInfo& getInfo(const VariablePtr& variable) const;
+	void addInfo(const VariablePtr& variable, const VariableInfo& info);
+	void removeInfo(const VariablePtr& variable);
+	bool hasInfoFor(const VariablePtr& variable) const;
+
+};
+
 /** A map from Entry points to Code sections returned by ConversionContext::convert.
  ** Can be printed to any output stream
  ** */
@@ -142,6 +173,7 @@ class ConversionContext {
 	TypeManager typeMan;
 	FunctionManager funcMan;
 	NodeManager nodeManager;
+	VariableManager varManager;
 
 public:
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
@@ -157,6 +189,7 @@ public:
 	ConvertedCode convert(const core::ProgramPtr& prog);
 
 	NodeManager& getNodeManager() { return nodeManager; }
+	VariableManager& getVariableManager() { return varManager; }
 };
 
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
@@ -164,6 +197,7 @@ public:
 class ConvertVisitor : public ASTVisitor<> {
 	ConversionContext& cc;
 	NameGenerator& nameGen;
+	VariableManager& varManager;
 	CodePtr defCodePtr;
 	CodeStream& cStr;
 	
@@ -177,9 +211,9 @@ class ConvertVisitor : public ASTVisitor<> {
 
 public:
 	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
-		defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()) { };
+		varManager(cc.getVariableManager()), defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()) { };
 	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()), 
-		defCodePtr(cptr), cStr(defCodePtr->getCodeStream()) { };
+		varManager(cc.getVariableManager()), defCodePtr(cptr), cStr(defCodePtr->getCodeStream()) { };
 
 	CodePtr getCode() { return defCodePtr; }
 

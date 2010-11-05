@@ -47,6 +47,15 @@ namespace simple_backend {
 using namespace core;
 
 std::ostream& printFunctionParamter(std::ostream& out, const VariablePtr& param, ConversionContext& cc) {
+
+	// register ref-based variable within the variable manager
+	if (param->getType()->getNodeType() == NT_RefType) {
+		VariableManager::VariableInfo info;
+		info.location = VariableManager::HEAP;
+		cc.getVariableManager().addInfo(param, info);
+	}
+
+	// create output ...
 	TypePtr type = param->getType();
 	if (RefTypePtr ref = dynamic_pointer_cast<const RefType>(type)) {
 		TypePtr element = ref->getElementType();
@@ -230,41 +239,55 @@ void ConvertVisitor::visitRecLambdaExpr(const RecLambdaExprPtr& ptr) {
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
 }
 
+namespace {
+
+	/**
+	 * Determines whether using the given expression as a LHS expression within an assignment or within a
+	 * RHS read requires a de-referencing within C.
+	 */
+	bool requiresDeref(const ExpressionPtr& target, ConversionContext& cc) {
+		switch (target->getNodeType()) {
+			case NT_Variable:
+				// check location of memory allocation for variable (only HEAP needs to be dereferenced)
+				return (cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(target)).location == VariableManager::HEAP);
+			case NT_CallExpr:
+				// for only a small number of functions (build ins) returning a ref does not mean it is a pointer
+				return !((*(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) == lang::OP_SUBSCRIPT_VAL) ||
+						  (*(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) == lang::OP_SUBSCRIPT_SINGLE_VAL));
+			default:
+				return true;
+		}
+	}
+}
+
 void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	//DLOG(INFO) << "CALLEXPR - " << ptr->getFunctionExpr() << ". prev cStr: \n" << cStr.getString();
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
 	auto funExp = ptr->getFunctionExpr();
-	// generic built in C operator handling
-	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) { 
-		string op = cOpAnn->getOperator();
-		cStr << "(";
-		visit(args.front());
-		cStr << " " << op << " ";
-		visit(args.back());
-		cStr << ")";
-		return;
-	}
+
 	// special built in function handling -- TODO make more generic
 	if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
 		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
 		auto funName = literalFun->getValue();
 		//LOG(INFO) << "+++++++ val: " << funName << "\n";
-		if(funName == "ref.deref") {
-			// TODO decide whether no-op or *
-
-			// Hack for ref<vector<....>>
-			TypePtr type = args.front()->getType();
-			if (type->getNodeType() == NT_RefType) { // < actually guaranteed //
-				RefTypePtr refType = static_pointer_cast<const RefType>(type);
-				if (refType->getElementType()->getNodeType() == NT_VectorType) {
-					cStr << "(*";
-					visit(args.back());
-					cStr << ")";
-					return;
-				}
-			}
-
+		// TODO: do not check against name - use full literal!
+		if(funName == "ref.assign") {
+			// print assignment
+			if (requiresDeref(args.front(), cc)) cStr << "*";
 			visit(args.front());
+			cStr << "=";
+			visit(args.back());
+			return;
+		}
+		if(funName == "ref.deref") {
+
+			// test whether a deref is required
+			bool deref = requiresDeref(args.front(), cc);
+
+			// add operation
+			if (deref) cStr << "(*";
+			visit(args.front());
+			if (deref) cStr << ")";
 			return;
 		} if(funName == "ref.var") {
 			// TODO handle case where not RHS of local var decl
@@ -293,6 +316,18 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			return;
 		}
 	}
+
+	// generic built in C operator handling
+	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) {
+		string op = cOpAnn->getOperator();
+		cStr << "(";
+		visit(args.front());
+		cStr << " " << op << " ";
+		visit(args.back());
+		cStr << ")";
+		return;
+	}
+
 	// non built-in handling (generate function body if necessary)
 	visit(funExp);
 
@@ -308,6 +343,33 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	auto var = ptr->getVariable();
+
+	// investigate initialization to determine whether variable is a pointer / skalar
+	VariableManager::VariableInfo info;
+	info.location = VariableManager::NONE;
+	if (var->getType()->getNodeType() == NT_RefType) {
+
+		ExpressionPtr initialization = ptr->getInitialization();
+		switch (initialization->getNodeType()) {
+		case NT_Variable:
+			info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
+			break;
+		case NT_CallExpr: {
+			// distinguish between var and new
+			CallExprPtr call = static_pointer_cast<const CallExpr>(initialization);
+			ExpressionPtr function = call->getFunctionExpr();
+			if (function->getNodeType() == NT_Literal) {
+				// mark as a stack variable only if created using var.new => otherwise always a pointer (conservative)
+				info.location = (*function == lang::OP_REF_VAR_VAL)?VariableManager::STACK:VariableManager::HEAP;
+			}
+			break;
+		}
+		default: ;// nothing
+		}
+	}
+	varManager.addInfo(var, info);
+
+
 	// handle fixed size vectors of simple types (C arrays)
 	vector<unsigned> vecLengths;
 	auto innerType = var->getType();
@@ -323,6 +385,7 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			innerType = innerRefType->getElementType();
 		}
 	}
+
 	if(!vecLengths.empty()) { // TODO check that innerType is "simple" enough to be part of C array
 		//LOG(INFO) << "+++++++ innerType " << innerType << "\n";
 		cStr << cc.getTypeMan().getTypeName(innerType, true) << " " << nameGen.getVarName(var);
@@ -330,8 +393,11 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		// TODO initialization
 		return;
 	}
+
 	// standard handling
-	cStr << cc.getTypeMan().getTypeName(var->getType(), true) << " " << nameGen.getVarName(var) << " = ";
+	cStr << cc.getTypeMan().getTypeName(var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var) << " = ";
+
+	// generate initializer expression
 	visit(ptr->getInitialization());
 }
 
@@ -513,6 +579,33 @@ string TypeManager::visitVectorType(const VectorTypePtr& ptr) {
 	visitStarting = false;
 	return visit(ptr->getElementType()) + "[" + toString(ptr->getSize()) + "]";
 }
+
+// -------------------------------- Variable Manager -----------------------------------------
+
+const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
+	auto pos = variableMap.find(variable);
+	assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
+	return (*pos).second;
+}
+
+void VariableManager::addInfo(const VariablePtr& variable, const VariableManager::VariableInfo& info) {
+	auto res = variableMap.insert(std::make_pair(variable, info));
+	if (res.second) {
+		return;
+	}
+	variableMap.erase(res.first);
+	res = variableMap.insert(std::make_pair(variable,info));
+	assert(res.second && "Replacement failed!");
+}
+
+void VariableManager::removeInfo(const VariablePtr& variable) {
+	variableMap.erase(variable);
+}
+
+bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
+	return variableMap.find(variable) != variableMap.end();
+}
+
 
 
 const ProgramPtr& ConvertedCode::getProgram() const {
