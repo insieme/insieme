@@ -59,9 +59,13 @@ namespace {
 	const TYPE ## Ptr TYPE_ ## NAME = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL); \
 	const TYPE ## Ptr TYPE_ ## NAME ## _PTR = TYPE ## Ptr(&TYPE_ ## NAME ## _VAL);
 
+
+// some most essential types ...
 ADD_TYPE(TypeVariable, ALPHA, (TypeVariable("a")));
 ADD_TYPE(TupleType, SINGLE_ALPHA_TUPLE, (TupleType(TYPE_ALPHA_PTR)));
 ADD_TYPE(TupleType, ALPHA_PAIR, (TupleType(TYPE_ALPHA_PTR, TYPE_ALPHA_PTR)));
+
+ADD_TYPE(TupleType, EMPTY_TUPLE, (TupleType()));
 
 // -------------------------------- Unit Type -------------------------------
 
@@ -404,6 +408,16 @@ ADD_TYPE(TupleType, SINGLE_ARRAY_GEN, (TupleType(TYPE_ARRAY_GEN_PTR)));
 ADD_TYPE(FunctionType, OP_ARRAY_LENGTH, (FunctionType(TYPE_SINGLE_ARRAY_GEN_PTR, TYPE_INT_GEN_PTR)));
 ADD_OP(LENGTH, TYPE_OP_ARRAY_LENGTH, "length");
 
+// --- Vector ---
+
+ADD_TYPE(VectorType, VECTOR_GEN, (VectorType(TYPE_ALPHA_PTR, IntTypeParam::getVariableIntParam('a'))));
+ADD_TYPE(FunctionType, OP_VECTOR_INIT_UNIFORM, (FunctionType(TYPE_SINGLE_ALPHA_TUPLE_PTR, TYPE_VECTOR_GEN_PTR)))
+
+ADD_OP(VECTOR_INIT_UNIFORM, TYPE_OP_VECTOR_INIT_UNIFORM, "vector.initUniform");
+
+ADD_TYPE(FunctionType, OP_VECTOR_INIT_UNDEFINED, (FunctionType(TYPE_EMPTY_TUPLE_PTR, TYPE_VECTOR_GEN_PTR)))
+ADD_OP(VECTOR_INIT_UNDEFINED, TYPE_OP_VECTOR_INIT_UNDEFINED, "vector.initUndefined");
+
 // --- Channels ---
 
 ADD_TYPE(ChannelType, CHANNEL_GEN, (ChannelType(TYPE_ALPHA_PTR, IntTypeParam::getVariableIntParam('n'))));
@@ -440,7 +454,6 @@ ADD_TYPE(FunctionType, OP_MERGE, (FunctionType(TYPE_SINGLE_THREAD_GROUP_PTR, TYP
 
 ADD_OP(MERGE, TYPE_OP_MERGE_PTR ,"merge");
 
-ADD_TYPE(TupleType, EMPTY_TUPLE, (TupleType()));
 ADD_TYPE(FunctionType, OP_MERGE_ALL, (FunctionType(TYPE_EMPTY_TUPLE, TYPE_UNIT_PTR)));
 ADD_OP(MERGEALL, TYPE_OP_MERGE_ALL_PTR ,"mergeAll");
 

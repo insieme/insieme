@@ -47,6 +47,29 @@ namespace simple_backend {
 using namespace core;
 
 std::ostream& printFunctionParamter(std::ostream& out, const VariablePtr& param, ConversionContext& cc) {
+	TypePtr type = param->getType();
+	if (RefTypePtr ref = dynamic_pointer_cast<const RefType>(type)) {
+		TypePtr element = ref->getElementType();
+		if (element->getNodeType() == NT_VectorType) {
+
+			// special handling for references to vectors ...
+			// -- result has to look like float(* var)[5][5]
+
+			// assemble parameter entry ...
+			string res = "";
+			TypePtr cur = element;
+			while (cur->getNodeType() == NT_VectorType) {
+				VectorTypePtr curVec = static_pointer_cast<const VectorType>(cur);
+				res = res + "[" + toString(curVec->getSize()) + "]";
+				cur = curVec->getElementType();
+				if (cur->getNodeType() == NT_RefType) {
+					cur = static_pointer_cast<const RefType>(cur)->getElementType();
+				}
+			}
+			return out << cc.getTypeMan().getTypeName(cur) << "(* " << cc.getNameGen().getVarName(param) << ")" << res;
+		}
+	}
+
 	return out << cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param);
 }
 
@@ -228,6 +251,19 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		//LOG(INFO) << "+++++++ val: " << funName << "\n";
 		if(funName == "ref.deref") {
 			// TODO decide whether no-op or *
+
+			// Hack for ref<vector<....>>
+			TypePtr type = args.front()->getType();
+			if (type->getNodeType() == NT_RefType) { // < actually guaranteed //
+				RefTypePtr refType = static_pointer_cast<const RefType>(type);
+				if (refType->getElementType()->getNodeType() == NT_VectorType) {
+					cStr << "(*";
+					visit(args.back());
+					cStr << ")";
+					return;
+				}
+			}
+
 			visit(args.front());
 			return;
 		} if(funName == "ref.var") {
@@ -328,6 +364,20 @@ void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
 	}
 	cStr << ";";
 }
+
+void ConvertVisitor::visitSwitchStmt(const SwitchStmtPtr& ptr) {
+		cStr << "switch(";
+		visit(ptr->getSwitchExpr());
+		cStr << ") {\n";
+		for_each(ptr->getCases(), [&](const SwitchStmt::Case& curCase) { // GCC sucks
+			this->cStr << "case ";
+			this->visit(curCase.first);
+			this->cStr << ":" << CodeStream::indR << "\n";
+			this->visit(curCase.second);
+			this->cStr << "; break;" << CodeStream::indL << "\n";
+		});
+		cStr << "}";
+	}
 
 void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 	if(ptr->getStatements().size() > 0) {

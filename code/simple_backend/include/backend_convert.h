@@ -230,18 +230,7 @@ public:
 
 	void visitReturnStmt(const ReturnStmtPtr& ptr);
 
-	void visitSwitchStmt(const SwitchStmtPtr& ptr) {
-		cStr << "switch(";
-		visit(ptr->getSwitchExpr());
-		cStr << ") {\n";
-		for_each(ptr->getCases(), [&](const SwitchStmt::Case& curCase) { // GCC sucks
-			this->visit(curCase.first);
-			this->cStr << ":" << CodeStream::indR << "\n";
-			this->visit(curCase.second);
-			this->cStr << "break;" << CodeStream::indL << "\n";
-		});
-		cStr << "}";
-	}
+	void visitSwitchStmt(const SwitchStmtPtr& ptr);
 
 	void visitWhileStmt(const WhileStmtPtr& ptr) {
 		cStr << "while(";
