@@ -1687,7 +1687,12 @@ public:
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 
-		core::TypePtr&& retTy = builder.arrayType(builder.refType(elemTy));
+		// we need to check if the element type for this not a vector (or array) type
+		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+			elemTy = convFact.builder.refType(elemTy);
+		}
+
+		core::TypePtr&& retTy = builder.arrayType( elemTy );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -1715,7 +1720,12 @@ public:
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 
-		core::TypePtr retTy = builder.arrayType( builder.refType(elemTy) );
+		// we need to check if the element type for this not a vector (or array) type
+		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+			elemTy = convFact.builder.refType(elemTy);
+		}
+
+		core::TypePtr retTy = builder.arrayType( elemTy );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
