@@ -165,7 +165,10 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 			std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
 		}
 
-		ret.push_back( builder.callExpr(core::lang::TYPE_VAR_LIST_PTR, core::lang::OP_VAR_LIST_PACK_PTR, toPack) ); //fixme
+		// arguments has to be packed into a tuple expression, and then inserted into a pack expression
+		ret.push_back(
+			builder.callExpr(core::lang::TYPE_VAR_LIST_PTR, core::lang::OP_VAR_LIST_PACK_PTR, toVector<core::ExpressionPtr>(builder.tupleExpr(toPack)))
+		);
 		return ret;
 	}
 	return args;

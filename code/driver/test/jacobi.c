@@ -59,9 +59,6 @@ int main(int argc, char** argv) {
 	double setup_time, elapsed_time;
 	start_t = clock();
 
-#pragma insieme mark
-	int a[100000000];
-
 	// init matrix
 	float u[N][N], tmp[N][N], f[N][N], res[N][N];
 	memset(u, 0, N*N);    // 	initialize it with zeros
