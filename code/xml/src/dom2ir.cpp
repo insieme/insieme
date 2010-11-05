@@ -613,20 +613,19 @@ void buildNode(NodeManager& manager, const XmlElement& elem, elemMapType& elemMa
 		vector<XmlElement> stmts = elem.getFirstChildByName("guardedStatements")->getChildrenByName("guardedStatement");
 		JobExpr::GuardedStmts stmtVec;
 		for(auto iter = stmts.begin(); iter != stmts.end(); ++iter) {
-			XmlElementPtr type = iter->getFirstChildByName("expressionPtr");
-			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(elemMap[type->getAttr("ref")].second);
-			buildAnnotations(*type, expr, true);
+			vector<XmlElement> types = iter->getChildrenByName("lambdaExprPtr");
+			LambdaExprPtr guard = dynamic_pointer_cast<const LambdaExpr>(elemMap[types[0].getAttr("ref")].second);
+			buildAnnotations(types[0], guard, true);
 
-			type = iter->getFirstChildByName("lambdaExprPtr");
-			LambdaExprPtr stmt = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second); //FIXME
-			buildAnnotations(*type, stmt, true);
+			LambdaExprPtr stmt = dynamic_pointer_cast<const LambdaExpr>(elemMap[types[1].getAttr("ref")].second);
+			buildAnnotations(types[1], stmt, true);
 
-			stmtVec.push_back(make_pair(expr, stmt));
+			stmtVec.push_back(make_pair(guard, stmt));
 		}
 
-		XmlElementPtr type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("lambdaExprPtr"); //FIXME
+		XmlElementPtr type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("lambdaExprPtr");
 
-		LambdaExprPtr default1 = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second); //FIXME
+		LambdaExprPtr default1 = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second);
 		buildAnnotations(*type, default1, true);
 
 		JobExprPtr job = JobExpr::get(manager, default1, stmtVec, declVec);

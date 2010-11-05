@@ -169,6 +169,8 @@ DEF_TYPE(Literal, Operator);
 		extern const OperatorPtr OP_ ## Name; \
 		extern const OperatorPtr OP_ ## Name ## _PTR; \
 
+ADD_TYPE(FunctionType, NO_ARGS_OP);
+
 ADD_TYPE(FunctionType, UNARY_BOOL_OP);
 ADD_TYPE(FunctionType, BINARY_BOOL_OP);
 
@@ -186,6 +188,8 @@ ADD_OP(INT_SUB);
 ADD_OP(INT_MUL);
 ADD_OP(INT_DIV);
 ADD_OP(INT_MOD);
+
+ADD_TYPE(FunctionType, GUARD_OP);
 
 ADD_TYPE(FunctionType, BINARY_UINT_OP);
 

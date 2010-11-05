@@ -70,7 +70,7 @@ public:
 	typedef std::vector<Member> Members;
 
 	typedef std::vector<DeclarationStmtPtr> LocalDecls;
-	typedef std::pair<ExpressionPtr, LambdaExprPtr> GuardedStmt;
+	typedef std::pair<LambdaExprPtr, LambdaExprPtr> GuardedStmt;
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
 	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;

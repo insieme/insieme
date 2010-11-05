@@ -252,6 +252,10 @@ ADD_CONST(NULL_PTR, Literal(TYPE_REF_GEN, "null"));
 		const OperatorPtr OP_ ## Name = OperatorPtr(&OP_ ## Name ## _VAL); \
 		namespace { auto dummy_op_ ## Name = buildInLiterals.insert(std::make_pair(Symbol, OP_ ## Name ## _PTR)); } \
 
+ADD_TYPE(TupleType, EMPTY, TupleType());
+
+// Unit function without input parameters
+ADD_TYPE(FunctionType, NO_ARGS_OP, (FunctionType(TYPE_EMPTY_PTR, TYPE_UNIT_PTR)));
 
 ADD_TYPE(TupleType, BOOL_SINGLE, TupleType(TYPE_BOOL_PTR));
 ADD_TYPE(TupleType, BOOL_PAIR, TupleType(TYPE_BOOL_PTR,TYPE_BOOL_PTR));
@@ -280,6 +284,9 @@ ADD_TYPE(TupleType, UINT_SINGLE, TupleType(TYPE_UINT_GEN_PTR));
 ADD_TYPE(TupleType, UINT_PAIR, TupleType(TYPE_UINT_GEN_PTR,TYPE_UINT_GEN_PTR));
 
 ADD_TYPE(FunctionType, BINARY_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UINT_GEN_PTR)));
+
+// function type of job guards: (uint, uint) -> bool
+ADD_TYPE(FunctionType, GUARD_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UNIT_PTR)));
 
 ADD_OP(UINT_ADD, TYPE_BINARY_UINT_OP_PTR, "uint.add");
 ADD_OP(UINT_SUB, TYPE_BINARY_UINT_OP_PTR, "uint.sub");
