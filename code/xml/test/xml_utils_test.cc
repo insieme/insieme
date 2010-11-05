@@ -1143,24 +1143,51 @@ TEST(XmlTest, JobExprTest) {
 	
 	JobExpr::GuardedStmts guarded;
 	
-	LiteralPtr default1 = Literal::get(manager, lang::TYPE_INT_4_PTR, "1");
-	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
-	DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
-	default1.addAnnotation(dummy_de);
-	default1->addAnnotation(dummy_dn);
-	
 	LiteralPtr expr1 = Literal::get(manager, lang::TYPE_INT_4_PTR, "2");
 	DummyAnnotationPtr dummy_ee(new DummyAnnotation("expr1 e"));
 	DummyAnnotationPtr dummy_en(new DummyAnnotation("expr1 n"));
 	expr1.addAnnotation(dummy_ee);
 	expr1->addAnnotation(dummy_en);
-	
-	LiteralPtr stat1 = Literal::get(manager, lang::TYPE_INT_4_PTR, "3");
-	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat e"));
-	DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat n"));
-	stat1.addAnnotation(dummy_se);
-	stat1->addAnnotation(dummy_sn);
-	
+
+    LambdaExpr::CaptureList capList;
+
+    DeclarationStmtPtr decl1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 65), Literal::get(manager, "7", lang::TYPE_INT_4_PTR));
+
+    DeclarationStmtPtr decl2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 75), Literal::get(manager, "8", lang::TYPE_INT_4_PTR));
+
+    capList.push_back(decl1);
+    capList.push_back(decl2);
+
+    LambdaExpr::ParamList list;
+    list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
+    list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
+
+
+    StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+
+    //TODO remove
+        ASTBuilder builder;
+        FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.getUnitType());
+
+    LambdaExprPtr stat1 = LambdaExpr::get(manager, funType, list, body);
+
+    LambdaExpr::CaptureList capList2;
+
+    DeclarationStmtPtr decl3 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 88), Literal::get(manager, "3", lang::TYPE_INT_4_PTR));
+
+    DeclarationStmtPtr decl4 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 89), Literal::get(manager, "4", lang::TYPE_INT_4_PTR));
+
+    capList.push_back(decl3);
+    capList.push_back(decl4);
+
+    LambdaExpr::ParamList list2;
+    list2.push_back(Variable::get(manager, TYPE_BOOL_PTR, 3));
+    list2.push_back(Variable::get(manager, TYPE_BOOL_PTR, 4));
+
+    StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+
+    LambdaExprPtr default1 = LambdaExpr::get(manager, funType, list2, body2);
+
 	guarded.push_back(make_pair(expr1,stat1));
 	
 	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
@@ -1182,8 +1209,8 @@ TEST(XmlTest, JobExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
+	xml.convertDomToXml("dump2.xml");
+	xml.convertXmlToDom("dump2.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	

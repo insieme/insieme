@@ -80,7 +80,7 @@ class ConversionFactory {
 	std::auto_ptr<ClangExprConverter> exprConv;
 	std::auto_ptr<ClangStmtConverter> stmtConv;
 
-	core::ExpressionPtr defaultInitVal(const clang::Type* ty, const core::TypePtr type);
+	core::ExpressionPtr defaultInitVal(const core::TypePtr& type);
 	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
 	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
