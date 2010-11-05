@@ -212,10 +212,10 @@ void vector_stmt_test() {
 
 	int b[2][2];
 
-	#pragma test "subscript_single(ref.deref(subscript_single(ref.deref(v1), 0)), 0)"
+	#pragma test "subscript_single(subscript_single(ref.deref(v1), 0), 0)"
 	b[0][0];
 
-	#pragma test "ref.assign(subscript_single(ref.deref(subscript_single(ref.deref(v1), 1)), 1), 0)"
+	#pragma test "ref.assign(subscript_single(subscript_single(ref.deref(v1), 1), 1), 0)"
 	b[1][1] = 0;
 
 	// #pragma test "fun(array<ref<'a>,1> v2){ {} }(v1)"
