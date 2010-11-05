@@ -242,6 +242,15 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			return;
 		} else if(funName == "pack") {
 			//DLOG(INFO) << cStr.getString();
+			// if the arguments are a tuple expression, use the expressions within the tuple ...
+			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
+				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
+					// print elements of the tuple directly ...
+					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
+					return;
+				}
+			}
+
 			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			//DLOG(INFO) << cStr.getString();
 			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
@@ -525,11 +534,13 @@ string NameGenerator::getVarName(const VariablePtr& var) {
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
+	out << "// --- Generated Inspire Code ---\n";
+	out << "#define bool int\n";
+	out << "#define true 1\n";
+	out << "#define false 0\n";
+
 	for_each(code.getProgram()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
-		out << "// --- Generated Inspire Code ---\n";
-		out << "#define bool int\n";
-		out << "#define true 1\n";
-		out << "#define false 0\n";
+		out << "// --- Entry Point ---\n";
 		out << (*code.find(ep)).second;
 	});
 	return out;
