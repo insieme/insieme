@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "core/ast_statistic.h"
-#include "core/ast_visitor.h"
+#include "insieme/core/ast_statistic.h"
+#include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace core {

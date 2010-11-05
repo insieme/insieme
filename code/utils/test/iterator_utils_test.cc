@@ -40,7 +40,7 @@
 
 #include <gtest/gtest.h>
 
-#include "utils/iterator_utils.h"
+#include "insieme/utils/iterator_utils.h"
 
 using namespace std;
 

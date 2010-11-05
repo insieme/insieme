@@ -36,9 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "core/program.h"
-#include "core/ast_visitor.h"
-#include "core/lang_basic.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/lang_basic.h"
 
 using namespace insieme::core;
 

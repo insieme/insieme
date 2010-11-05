@@ -40,10 +40,10 @@
 #include <ostream>
 #include <boost/functional/hash.hpp>
 
-#include "utils/hash_utils.h"
-#include "utils/instance_manager.h"
+#include "insieme/utils/hash_utils.h"
+#include "insieme/utils/instance_manager.h"
 
-#include "core/annotated_ptr.h"
+#include "insieme/core/annotated_ptr.h"
 
 using std::string;
 

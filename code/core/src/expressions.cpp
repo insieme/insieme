@@ -34,15 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "core/expressions.h"
+#include "insieme/core/expressions.h"
 
-#include "utils/container_utils.h"
-#include "utils/functional_utils.h"
-#include "utils/string_utils.h"
-#include "utils/map_utils.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/string_utils.h"
+#include "insieme/utils/map_utils.h"
 
-#include "core/statements.h"
-#include "core/lang_basic.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/lang_basic.h"
 
 using namespace insieme::core;
 

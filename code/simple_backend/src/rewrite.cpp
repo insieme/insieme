@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "simple_backend/rewrite.h"
-#include "utils/logging.h"
+#include "insieme/simple_backend/rewrite.h"
+#include "insieme/utils/logging.h"
 
 #include <algorithm>
 #include <fstream>
 #include <limits>
 
-#include "simple_backend/backend_convert.h"
+#include "insieme/simple_backend/backend_convert.h"
 
 namespace {
 

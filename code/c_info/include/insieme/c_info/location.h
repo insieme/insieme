@@ -39,7 +39,7 @@
 #include <string>
 #include <boost/operators.hpp>
 
-#include "core/annotation.h"
+#include "insieme/core/annotation.h"
 
 namespace insieme {
 namespace c_info {

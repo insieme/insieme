@@ -41,8 +41,8 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "utils/instance_manager.h"
-#include "utils/instance_ptr.h"
+#include "insieme/utils/instance_manager.h"
+#include "insieme/utils/instance_ptr.h"
 
 using std::string;
 using std::cout;

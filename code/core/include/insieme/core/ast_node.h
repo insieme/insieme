@@ -38,12 +38,12 @@
 
 #include <cassert>
 
-#include "utils/hash_utils.h"
-#include "utils/instance_manager.h"
-#include "utils/string_utils.h"
+#include "insieme/utils/hash_utils.h"
+#include "insieme/utils/instance_manager.h"
+#include "insieme/utils/string_utils.h"
 
-#include "core/annotated_ptr.h"
-#include "core/int_type_param.h"
+#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/int_type_param.h"
 
 namespace insieme {
 namespace core {

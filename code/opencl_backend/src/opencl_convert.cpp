@@ -34,13 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "opencl_backend/opencl_convert.h"
+#include "insieme/opencl_backend/opencl_convert.h"
 
 //#include <glog/logging.h>
-#include "utils/logging.h"
+#include "insieme/utils/logging.h"
 
-#include "core/annotated_ptr.h"
-#include "core/types.h"
+#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/types.h"
 
 namespace insieme {
 namespace opencl_backend {

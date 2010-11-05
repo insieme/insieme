@@ -36,9 +36,9 @@
 
 #pragma once
 
-#include "core/annotation.h"
-#include "core/expressions.h"
-#include "utils/string_utils.h"
+#include "insieme/core/annotation.h"
+#include "insieme/core/expressions.h"
+#include "insieme/utils/string_utils.h"
 
 // #include "boost/optional.hpp"
 

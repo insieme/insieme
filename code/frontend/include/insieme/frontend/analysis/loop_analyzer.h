@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "core/expressions.h"
+#include "insieme/core/expressions.h"
 #include <exception>
 #include <stdexcept>
 

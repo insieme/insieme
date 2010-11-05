@@ -42,14 +42,14 @@
 
 //#include <boost/unordered_set.hpp>
 
-#include "utils/functional_utils.h"
-#include "utils/set_utils.h"
-#include "utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/container_utils.h"
 
-#include "core/ast_node.h"
-#include "core/expressions.h"
-#include "core/statements.h"
-#include "core/types.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/types.h"
 
 namespace insieme {
 namespace core {

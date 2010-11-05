@@ -34,22 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include "frontend/clang_compiler.h"
-#include "frontend/conversion.h"
-#include "frontend/insieme_sema.h"
-#include "frontend/pragma_handler.h"
+#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/insieme_sema.h"
+#include "insieme/frontend/pragma_handler.h"
 
-#include "utils/cmd_line_utils.h"
+#include "insieme/utils/cmd_line_utils.h"
 
-#include "frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/ocl/ocl_compiler.h"
 // #include "programs.h"
 
-#include "frontend/insieme_pragma.h"
-#include "frontend/omp/omp_pragma.h"
-#include "frontend/clang_config.h"
+#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/clang_config.h"
 
-#include "utils/timer.h"
-#include "utils/logging.h"
+#include "insieme/utils/timer.h"
+#include "insieme/utils/logging.h"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"

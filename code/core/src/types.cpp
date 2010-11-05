@@ -41,10 +41,10 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
-#include "utils/container_utils.h"
-#include "utils/map_utils.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/map_utils.h"
 
-#include "core/types.h"
+#include "insieme/core/types.h"
 
 using namespace insieme::core;
 

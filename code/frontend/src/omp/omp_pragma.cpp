@@ -34,15 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "frontend/omp/omp_pragma.h"
-#include "frontend/omp/omp_annotation.h"
+#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 
-#include "frontend/pragma_handler.h"
-#include "frontend/pragma_matcher.h"
+#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/pragma_matcher.h"
 
-#include "frontend/conversion.h"
+#include "insieme/frontend/conversion.h"
 
-#include "utils/logging.h"
+#include "insieme/utils/logging.h"
 
 #include <clang/Lex/Pragma.h>
 #include <clang/AST/Stmt.h>

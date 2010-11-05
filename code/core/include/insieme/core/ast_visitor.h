@@ -41,14 +41,14 @@
 #include <unordered_set>
 #include <queue>
 
-#include "utils/functional_utils.h"
+#include "insieme/utils/functional_utils.h"
 
-#include "core/ast_address.h"
-#include "core/ast_node.h"
-#include "core/expressions.h"
-#include "core/program.h"
-#include "core/statements.h"
-#include "core/types.h"
+#include "insieme/core/ast_address.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/program.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/types.h"
 
 // Once more, gcc sucks
 #if defined WIN32

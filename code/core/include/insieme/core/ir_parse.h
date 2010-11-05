@@ -41,7 +41,7 @@
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 
-#include "core/types.h"
+#include "insieme/core/types.h"
 
 namespace insieme {
 namespace core {

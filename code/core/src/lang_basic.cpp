@@ -37,9 +37,9 @@
 #include <cassert>
 #include <unordered_set>
 
-#include "core/lang_basic.h"
+#include "insieme/core/lang_basic.h"
 
-#include "utils/container_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {

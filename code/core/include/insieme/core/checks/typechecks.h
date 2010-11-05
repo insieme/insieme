@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "core/ast_check.h"
+#include "insieme/core/ast_check.h"
 
 
 namespace insieme {

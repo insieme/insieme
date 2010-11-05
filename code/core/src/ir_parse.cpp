@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "core/ir_parse.h"
+#include "insieme/core/ir_parse.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>

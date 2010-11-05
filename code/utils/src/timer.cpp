@@ -34,12 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "utils/timer.h"
+#include "insieme/utils/timer.h"
 
 #include <sstream>
 #include <cassert>
 
-#include "utils/numeric_cast.h"
+#include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
 namespace utils {

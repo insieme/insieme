@@ -42,7 +42,7 @@
 #include <boost/optional/optional.hpp>
 #include <boost/unordered_map.hpp>
 
-#include "core/types.h"
+#include "insieme/core/types.h"
 
 
 namespace insieme {

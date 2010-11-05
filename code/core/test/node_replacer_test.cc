@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "core/ast_builder.h"
-#include "core/transform/node_replacer.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "dummy_annotations.cc"
 

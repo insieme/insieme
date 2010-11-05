@@ -34,10 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "core/transform/node_replacer.h"
+#include "insieme/core/transform/node_replacer.h"
 
-#include "core/ast_builder.h"
-#include "core/ast_address.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/ast_address.h"
 
 namespace {
 

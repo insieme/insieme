@@ -40,15 +40,15 @@
 
 #include <gtest/gtest.h>
 
-#include "simple_backend/backend_convert.h"
+#include "insieme/simple_backend/backend_convert.h"
 
-#include "core/program.h"
-#include "core/ast_builder.h"
-#include "core/lang_basic.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/lang_basic.h"
 
-#include "utils/set_utils.h"
+#include "insieme/utils/set_utils.h"
 
-#include "c_info/naming.h"
+#include "insieme/c_info/naming.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;

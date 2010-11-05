@@ -34,10 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "frontend/analysis/loop_analyzer.h"
+#include "insieme/frontend/analysis/loop_analyzer.h"
 
-#include "frontend/conversion.h"
-#include "core/lang_basic.h"
+#include "insieme/frontend/conversion.h"
+#include "insieme/core/lang_basic.h"
 
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS

@@ -36,12 +36,12 @@
 
 #include <gtest/gtest.h>
 
-#include "core/program.h"
-#include "core/ast_visitor.h"
-#include "core/ast_builder.h"
-#include "core/lang_basic.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/lang_basic.h"
 
-#include "core/transform/node_replacer.h"
+#include "insieme/core/transform/node_replacer.h"
 
 using namespace insieme::core;
 using namespace insieme::core::transform;

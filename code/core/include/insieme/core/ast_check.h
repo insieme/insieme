@@ -40,10 +40,10 @@
 
 #include <boost/optional/optional.hpp>
 
-#include "utils/enum.h"
+#include "insieme/utils/enum.h"
 
-#include "core/ast_address.h"
-#include "core/ast_visitor.h"
+#include "insieme/core/ast_address.h"
+#include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace core {

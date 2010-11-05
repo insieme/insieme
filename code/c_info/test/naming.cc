@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "c_info/naming.h"
+#include "insieme/c_info/naming.h"
 
 namespace insieme {
 namespace c_info {

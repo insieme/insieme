@@ -40,7 +40,7 @@
 #include <vector>
 #include <limits>
 
-#include "utils/string_utils.h"
+#include "insieme/utils/string_utils.h"
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 

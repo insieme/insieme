@@ -36,9 +36,9 @@
 
 #pragma once
 
-#include "frontend/clang_compiler.h"
-#include "frontend/pragma_matcher.h"
-#include "frontend/insieme_sema.h"
+#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/pragma_matcher.h"
+#include "insieme/frontend/insieme_sema.h"
 
 #include <memory>
 #include <sstream>

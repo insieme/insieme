@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "core/expressions.h"
-#include "core/ast_node.h"
-#include "c_info/naming.h"
-#include "frontend/ocl/ocl_compiler.h"
-#include "frontend/ocl/ocl_annotations.h"
-#include "frontend/utils/types_lenght.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/c_info/naming.h"
+#include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/utils/types_lenght.h"
 
-#include "core/lang_basic.h"
+#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace frontend {

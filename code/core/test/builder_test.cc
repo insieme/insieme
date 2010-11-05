@@ -38,8 +38,8 @@
 
 #include <gtest/gtest.h>
 
-#include "core/ast_builder.h"
-#include "core/lang_basic.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/lang_basic.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;

@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "frontend/pragma_handler.h"
+#include "insieme/frontend/pragma_handler.h"
 
 namespace clang {
 class Preprocessor;

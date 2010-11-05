@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "core/int_type_param.h"
+#include "insieme/core/int_type_param.h"
 
-#include "utils/container_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {

@@ -39,13 +39,13 @@
 #include <cassert>
 #include <memory>
 
-#include "core/annotated_ptr.h"
-#include "core/ast_node.h"
-#include "core/identifier.h"
-#include "core/statements.h"
-#include "core/types.h"
+#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/identifier.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/types.h"
 
-#include "utils/numeric_cast.h"
+#include "insieme/utils/numeric_cast.h"
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // 						HACK

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "frontend/insieme_pragma.h"
+#include "insieme/frontend/insieme_pragma.h"
 
 namespace insieme {
 namespace frontend {

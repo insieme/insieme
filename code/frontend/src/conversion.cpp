@@ -34,38 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include "frontend/conversion.h"
+#include "insieme/frontend/conversion.h"
 
 #include <sstream>
 #include <memory>
 #include <functional>
 
-#include "frontend/utils/types_lenght.h"
-#include "frontend/utils/source_locations.h"
-#include "frontend/utils/dep_graph.h"
+#include "insieme/frontend/utils/types_lenght.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/dep_graph.h"
 
-#include "frontend/analysis/loop_analyzer.h"
-#include "frontend/analysis/expr_analysis.h"
+#include "insieme/frontend/analysis/loop_analyzer.h"
+#include "insieme/frontend/analysis/expr_analysis.h"
 
-#include "utils/container_utils.h"
-#include "utils/numeric_cast.h"
-#include "utils/container_utils.h"
-#include "utils/logging.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
 
-#include "core/program.h"
-#include "core/ast_node.h"
-#include "core/ast_visitor.h"
-#include "core/types.h"
-#include "core/statements.h"
-#include "core/lang_basic.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/types.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/lang_basic.h"
 
-#include "c_info/naming.h"
-#include "c_info/location.h"
+#include "insieme/c_info/naming.h"
+#include "insieme/c_info/location.h"
 
-#include "frontend/omp/omp_pragma.h"
-#include "frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
 
-#include "core/transform/node_replacer.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "clang/Basic/FileManager.h"
 

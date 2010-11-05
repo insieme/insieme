@@ -38,7 +38,7 @@
 
 #include <iostream>
 
-#include "utils/numeric_cast.h"
+#include "insieme/utils/numeric_cast.h"
 
 using namespace std;
 using namespace insieme::utils;

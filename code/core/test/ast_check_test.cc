@@ -36,10 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "core/ast_builder.h"
-#include "core/ast_check.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/ast_check.h"
 
-#include "utils/container_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {

@@ -39,11 +39,11 @@
 #include <vector>
 #include <string>
 
-#include "core/program.h"
-#include "core/statements.h"
-#include "core/expressions.h"
-#include "core/types.h"
-#include "core/lang_basic.h"
+#include "insieme/core/program.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/types.h"
+#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace core {

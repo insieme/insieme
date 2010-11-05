@@ -40,20 +40,20 @@
 #include <assert.h>
 #include <unordered_map>
 
-#include "core/ast_node.h"
-#include "core/ast_visitor.h"
-#include "core/statements.h"
-#include "core/program.h"
-#include "core/types.h"
-#include "core/lang_basic.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/program.h"
+#include "insieme/core/types.h"
+#include "insieme/core/lang_basic.h"
 
-#include "c_info/naming.h"
+#include "insieme/c_info/naming.h"
 
-#include "utils/container_utils.h"
-#include "utils/hash_utils.h"
-#include "utils/functional_utils.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/hash_utils.h"
+#include "insieme/utils/functional_utils.h"
 
-#include "simple_backend/code_management.h"
+#include "insieme/simple_backend/code_management.h"
 
 namespace insieme {
 namespace opencl_backend {

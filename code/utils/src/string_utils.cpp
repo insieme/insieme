@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "utils/string_utils.h"
+#include "insieme/utils/string_utils.h"
 
 #include <algorithm>
 #include <stdarg.h>

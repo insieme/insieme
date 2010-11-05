@@ -42,9 +42,9 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "utils/hash_utils.h"
+#include "insieme/utils/hash_utils.h"
 
-#include "core/ast_node.h"
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace core {

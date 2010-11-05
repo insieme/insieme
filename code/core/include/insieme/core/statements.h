@@ -44,13 +44,13 @@
 #include <vector>
 #include <utility>
 
-#include "utils/container_utils.h"
-#include "utils/instance_manager.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/instance_manager.h"
 
-#include "core/ast_node.h"
-#include "core/annotated_ptr.h"
-#include "core/types.h"
-#include "core/identifier.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/types.h"
+#include "insieme/core/identifier.h"
 
 using std::string;
 using std::vector;

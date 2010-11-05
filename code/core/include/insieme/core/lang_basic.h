@@ -36,10 +36,10 @@
 
 #pragma once
 
-#include "core/ast_node.h"
-#include "core/types.h"
-#include "core/expressions.h"
-#include "core/statements.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/types.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/statements.h"
 
 namespace insieme {
 namespace core {

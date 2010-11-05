@@ -39,8 +39,8 @@
 
 #include <gtest/gtest.h>
 
-#include "utils/instance_ptr.h"
-#include "utils/string_utils.h"
+#include "insieme/utils/instance_ptr.h"
+#include "insieme/utils/string_utils.h"
 
 using std::string;
 using std::cout;

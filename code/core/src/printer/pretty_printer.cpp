@@ -34,17 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include "core/printer/pretty_printer.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include <cassert>
 #include <memory>
 
 #include <boost/unordered_map.hpp>
 
-#include "utils/string_utils.h"
+#include "insieme/utils/string_utils.h"
 
-#include "core/ast_visitor.h"
-#include "core/lang_basic.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace core {

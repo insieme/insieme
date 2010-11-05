@@ -36,9 +36,9 @@
 
 #pragma once
 
-#include "c_info/location.h"
+#include "insieme/c_info/location.h"
 
-#include "core/program.h"
+#include "insieme/core/program.h"
 
 namespace insieme {
 namespace backend {

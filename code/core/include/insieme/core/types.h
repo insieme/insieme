@@ -48,13 +48,13 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "utils/container_utils.h"
-#include "utils/instance_manager.h"
-#include "utils/string_utils.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/instance_manager.h"
+#include "insieme/utils/string_utils.h"
 
-#include "core/ast_node.h"
-#include "core/annotated_ptr.h"
-#include "core/identifier.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/identifier.h"
 
 using std::string;
 using std::vector;

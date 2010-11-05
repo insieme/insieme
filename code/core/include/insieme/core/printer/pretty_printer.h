@@ -38,7 +38,7 @@
 
 #include <iostream>
 
-#include "core/ast_node.h"
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace core {

@@ -45,12 +45,12 @@
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/util/XMLUni.hpp>
 
-#include "utils/logging.h"
+#include "insieme/utils/logging.h"
 
-#include "core/ast_builder.h"
+#include "insieme/core/ast_builder.h"
 
-#include "xml/xml_utils.h"
-#include "xml/xsd_config.h"
+#include "insieme/xml/xml_utils.h"
+#include "insieme/xml/xsd_config.h"
 
 using namespace insieme::core;
 using namespace insieme::utils;

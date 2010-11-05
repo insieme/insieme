@@ -36,11 +36,11 @@
 
 #pragma once
 
-#include "core/ast_visitor.h"
-#include "core/ast_check.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ast_check.h"
 
-#include "utils/numeric_cast.h"
-#include "utils/string_utils.h"
+#include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/string_utils.h"
 
 #include <ostream>
 #include <sstream>

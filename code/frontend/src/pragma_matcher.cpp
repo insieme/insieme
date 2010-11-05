@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "frontend/pragma_matcher.h"
-#include "frontend/utils/source_locations.h"
+#include "insieme/frontend/pragma_matcher.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
@@ -46,7 +46,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 //#include <glog/logging.h>
-#include "utils/logging.h"
+#include "insieme/utils/logging.h"
 #include <boost/algorithm/string/join.hpp>
 
 

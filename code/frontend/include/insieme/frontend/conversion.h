@@ -36,10 +36,10 @@
 
 #pragma once
 
-#include "core/program.h"
-#include "core/ast_builder.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_builder.h"
 
-#include "frontend/pragma_handler.h"
+#include "insieme/frontend/pragma_handler.h"
 
 // Forward declarations
 namespace clang {

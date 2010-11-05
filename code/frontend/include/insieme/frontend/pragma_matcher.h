@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "frontend/clang_compiler.h"
+#include "insieme/frontend/clang_compiler.h"
 
 #include <memory>
 #include <algorithm>

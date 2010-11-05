@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "core/ast_visitor.h"
+#include "insieme/core/ast_visitor.h"
 
 namespace xercesc_3_1 {
 class DOMElement;

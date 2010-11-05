@@ -53,12 +53,12 @@
 // ----------------------- - Peter
 
 
-#include "core/identifier.h"
-#include "core/types.h"
-#include "core/ir_parse.h"
-#include "core/ast_builder.h"
+#include "insieme/core/identifier.h"
+#include "insieme/core/types.h"
+#include "insieme/core/ir_parse.h"
+#include "insieme/core/ast_builder.h"
 
-#include "utils/string_utils.h"
+#include "insieme/utils/string_utils.h"
 
 using namespace insieme::core;
 using namespace insieme::core::parse;

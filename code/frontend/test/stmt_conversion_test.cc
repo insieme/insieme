@@ -36,20 +36,20 @@
 
 #include <gtest/gtest.h>
 
-#include "utils/logging.h"
+#include "insieme/utils/logging.h"
 
-#include "frontend/clang_compiler.h"
-#include "frontend/conversion.h"
-#include "frontend/clang_config.h"
-#include "frontend/insieme_pragma.h"
+#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/insieme_pragma.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/Index/Indexer.h"
 #include "clang/Index/Program.h"
 
-#include "core/program.h"
-#include "core/ast_check.h"
-#include "core/checks/typechecks.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_check.h"
+#include "insieme/core/checks/typechecks.h"
 
 
 

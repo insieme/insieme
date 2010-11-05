@@ -40,9 +40,9 @@
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 
-#include "utils/hash_utils.h"
-#include "utils/functional_utils.h"
-#include "utils/string_utils.h"
+#include "insieme/utils/hash_utils.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/string_utils.h"
 
 
 namespace insieme {

@@ -39,9 +39,9 @@
 #include <string>
 #include <boost/functional/hash.hpp>
 
-#include "core/identifier.h"
+#include "insieme/core/identifier.h"
 
-#include "utils/container_utils.h"
+#include "insieme/utils/container_utils.h"
 
 using namespace insieme::core;
 

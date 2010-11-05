@@ -40,10 +40,10 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "core/annotation.h"
+#include "insieme/core/annotation.h"
 
-#include "utils/instance_ptr.h"
-#include "utils/type_traits_utils.h"
+#include "insieme/utils/instance_ptr.h"
+#include "insieme/utils/type_traits_utils.h"
 
 
 namespace insieme {

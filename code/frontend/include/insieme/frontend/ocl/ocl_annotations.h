@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "core/annotation.h"
+#include "insieme/core/annotation.h"
 
 #define DEFINE_TYPE(Type) \
     class Type; \

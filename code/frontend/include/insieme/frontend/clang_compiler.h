@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "core/program.h"
+#include "insieme/core/program.h"
 
 #include <memory>
 #include <string>

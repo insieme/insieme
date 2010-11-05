@@ -39,8 +39,8 @@
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 
-#include "core/annotation.h"
-#include "core/identifier.h"
+#include "insieme/core/annotation.h"
+#include "insieme/core/identifier.h"
 
 namespace insieme {
 namespace c_info {
