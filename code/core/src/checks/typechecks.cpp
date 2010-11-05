@@ -43,22 +43,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-
-
-CheckPtr getFullCheck() {
-	// TODO: extend list of checks
-	return makeVisitOnce(
-			combine(toVector<CheckPtr>(
-					make_check<CallExprTypeCheck>(),
-					make_check<DeclarationStmtTypeCheck>(),
-					make_check<WhileConditionTypeCheck>(),
-					make_check<IfConditionTypeCheck>(),
-					make_check<SwitchExpressionTypeCheck>(),
-					make_check<BuildInLiteralCheck>()
-			)
-	));
-}
-
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 

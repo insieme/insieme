@@ -43,7 +43,7 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/statements.h"
 #include "insieme/core/ast_statistic.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/simple_backend/backend_convert.h"

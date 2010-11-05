@@ -34,55 +34,30 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
 #include "insieme/core/checks/ir_checks.h"
+
+#include "insieme/core/checks/typechecks.h"
 
 
 namespace insieme {
 namespace core {
 namespace checks {
 
-enum {
-	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = EC_GROUP_TYPE + 1,
-	EC_TYPE_INVALID_ARGUMENT_TYPE,
-	EC_TYPE_INVALID_RETURN_TYPE,
 
-	EC_TYPE_INVALID_INITIALIZATION_EXPR,
-
-	EC_TYPE_INVALID_CONDITION_EXPR,
-	EC_TYPE_INVALID_SWITCH_EXPR,
-
-	EC_TYPE_INVALID_TYPE_OF_LITERAL
-};
-
-/**
- * A small macro to simplify the definition of AST checks.
- *
- * @param Name the name of the new check (without the tailing Check)
- * @param NodeType the type the check should be applied on
- */
-#define SIMPLE_CHECK(Name, NodeType) \
-	class Name ## Check : public ASTCheck { \
-		public: \
-		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
+	CheckPtr getFullCheck() {
+		// assemble the IR check list
+		return makeVisitOnce(
+				combine(toVector<CheckPtr>(
+						make_check<CallExprTypeCheck>(),
+						make_check<DeclarationStmtTypeCheck>(),
+						make_check<WhileConditionTypeCheck>(),
+						make_check<IfConditionTypeCheck>(),
+						make_check<SwitchExpressionTypeCheck>(),
+						make_check<BuildInLiteralCheck>()
+				)
+		));
 	}
-
-SIMPLE_CHECK(CallExprType, CallExpr);
-SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
-SIMPLE_CHECK(IfConditionType, IfStmt);
-SIMPLE_CHECK(WhileConditionType, WhileStmt);
-SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
-
-SIMPLE_CHECK(BuildInLiteral, Literal);
-
-
-// TODO:
-//	- check that only concrete types are used for variables
-
-#undef SIMPLE_CHECK
 
 } // end namespace check
 } // end namespace core
 } // end namespace insieme
-

@@ -36,28 +36,18 @@
 
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h"
-
+#include "insieme/core/checks/ir_checks.h";
 
 namespace insieme {
 namespace core {
 namespace checks {
 
 enum {
-	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = EC_GROUP_TYPE + 1,
-	EC_TYPE_INVALID_ARGUMENT_TYPE,
-	EC_TYPE_INVALID_RETURN_TYPE,
-
-	EC_TYPE_INVALID_INITIALIZATION_EXPR,
-
-	EC_TYPE_INVALID_CONDITION_EXPR,
-	EC_TYPE_INVALID_SWITCH_EXPR,
-
-	EC_TYPE_INVALID_TYPE_OF_LITERAL
+	EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE = EC_GROUP_IMPERATIVE + 1
 };
 
 /**
- * A small macro to simplify the definition of AST checks.
+ * A small macro to simplify the definition of checks.
  *
  * @param Name the name of the new check (without the tailing Check)
  * @param NodeType the type the check should be applied on
@@ -68,17 +58,12 @@ enum {
 		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
 
-SIMPLE_CHECK(CallExprType, CallExpr);
-SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
-SIMPLE_CHECK(IfConditionType, IfStmt);
-SIMPLE_CHECK(WhileConditionType, WhileStmt);
-SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
-
-SIMPLE_CHECK(BuildInLiteral, Literal);
+SIMPLE_CHECK(UndeclaredVariable, Node);
 
 
-// TODO:
-//	- check that only concrete types are used for variables
+// TODO: add another test verifying that every variable is only defined once
+
+
 
 #undef SIMPLE_CHECK
 
