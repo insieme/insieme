@@ -1139,7 +1139,7 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-TEST(XmlTest, JobExprTest) {
+/*TEST(XmlTest, JobExprTest) {
     NodeManager manager;
 
 	LambdaExpr::ParamList guardArgs;
@@ -1147,10 +1147,18 @@ TEST(XmlTest, JobExprTest) {
     guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
 	StatementPtr guardBody = CompoundStmt::get(manager, ReturnStmt::get(manager, CONST_BOOL_FALSE_PTR));
 	LambdaExprPtr guard = LambdaExpr::get(manager, TYPE_GUARD_OP_PTR, guardArgs, guardBody);
+	DummyAnnotationPtr dummy_ge(new DummyAnnotation("guard e"));
+	DummyAnnotationPtr dummy_gn(new DummyAnnotation("guard n"));
+	guard.addAnnotation(dummy_ge);
+	guard->addAnnotation(dummy_gn);
 
     LambdaExpr::ParamList list;
 	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
 	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
+	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat1 e"));
+	//DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
+	stat1.addAnnotation(dummy_se);
+	//stat1->addAnnotation(dummy_sn);
 
 	JobExpr::GuardedStmts guarded;
 	guarded.push_back(make_pair(guard, stat1));
@@ -1158,6 +1166,10 @@ TEST(XmlTest, JobExprTest) {
     LambdaExpr::ParamList list2;
 	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
 	LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
+	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
+	//DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
+	default1.addAnnotation(dummy_de);
+	//default1->addAnnotation(dummy_dn);
 	
 	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	LiteralPtr literalA = Literal::get(manager, lang::TYPE_INT_4_PTR, "4");
@@ -1170,24 +1182,31 @@ TEST(XmlTest, JobExprTest) {
 	decls.push_back(decl);
 	
 	JobExprPtr job = JobExpr::get(manager, default1, guarded, decls);
+	DummyAnnotationPtr dummy_je(new DummyAnnotation("job e"));
+	DummyAnnotationPtr dummy_jn(new DummyAnnotation("job n"));
+	job.addAnnotation(dummy_je);
+	job->addAnnotation(dummy_jn);
 
 	NodePtr root = job;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
+	xml.convertDomToXml("dump2.xml");
+	xml.convertXmlToDom("dump2.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	xml.convertIrToDom(root2);
+	xml.convertDomToXml("dump3.xml");
 
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}
+}*/
 
 TEST(XmlTest, LambdaExprTest) {
 	NodeManager manager;
