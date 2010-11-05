@@ -76,7 +76,7 @@ struct Person {
 #pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
 struct Person p;
 
-#pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
+// #pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
 struct Person p = {"Simone", 28};
 
 // Self recursive struct
