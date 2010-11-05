@@ -100,7 +100,7 @@ public:
 	
 	XmlElement& operator<<(const std::shared_ptr<XmlElement>& childNode);
 	
-	const vector<XmlElement> operator[](const std::string&) const;
+	vector<XmlElement> operator[](const std::string&) const;
 	
 	XmlElement& operator<<(const Attribute& attr);
 
@@ -112,11 +112,11 @@ public:
 	
 	std::string getName() const;
 	
-	const vector<XmlElement> getChildren() const;
+	vector<XmlElement> getChildren() const;
 	
-	const vector<XmlElement> getChildrenByName(const string& name) const;
+	vector<XmlElement> getChildrenByName(const string& name) const;
 	
-	const std::shared_ptr<XmlElement> getFirstChildByName(const string& name) const;
+	std::shared_ptr<XmlElement> getFirstChildByName(const string& name) const;
 };
 
 typedef std::shared_ptr<XmlElement> XmlElementPtr;

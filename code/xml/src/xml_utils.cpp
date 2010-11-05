@@ -185,9 +185,9 @@ string XmlElement::getName() const {
 	return name;
 }
 
-const vector<XmlElement> XmlElement::getChildrenByName(const string& name) const {
+vector<XmlElement> XmlElement::getChildrenByName(const string& name) const {
 	vector<XmlElement> vec2;
-	vector<XmlElement> vec = XmlElement::getChildren();
+	vector<XmlElement>&& vec = XmlElement::getChildren();
 	for (auto iter = vec.begin(); iter != vec.end(); ++iter ){
 		if ((*iter).getName() == name){
 			vec2.push_back(*iter);
@@ -196,8 +196,8 @@ const vector<XmlElement> XmlElement::getChildrenByName(const string& name) const
 	return vec2;
 }
 
-const XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
-	vector<XmlElement> vec = XmlElement::getChildren();
+XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
+	vector<XmlElement>&& vec = XmlElement::getChildren();
 	for (auto iter = vec.begin(); iter != vec.end(); ++iter ){
 		if ((*iter).getName() == name){
 			return make_shared<XmlElement>(*iter);
@@ -206,12 +206,13 @@ const XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
 	return shared_ptr<XmlElement>();
 }
 
-const vector<XmlElement> XmlElement::getChildren() const {
+vector<XmlElement> XmlElement::getChildren() const {
 	vector<XmlElement> vec;
-	DOMElement* first = base->getFirstElementChild();
-	while(first) {
-		vec.push_back(XmlElement(first, doc));
-		first = first->getNextElementSibling();
+	DOMElement* curr = base->getFirstElementChild();
+	while(curr) {
+		if(!(curr->getNodeType() == DOMNode::TEXT_NODE || curr->getNodeType() == DOMNode::COMMENT_NODE)) //skip text nodes and comments
+			vec.push_back(XmlElement(curr, doc));
+		curr = curr->getNextElementSibling();
 	}
 	return vec;
 }

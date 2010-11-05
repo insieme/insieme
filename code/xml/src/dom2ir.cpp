@@ -58,488 +58,487 @@ using namespace std;
 XERCES_CPP_NAMESPACE_USE
 
 namespace { // begin namespace
-typedef map<string, pair <const XmlElement*, NodePtr>> ElemMapType;
 
-void buildAnnotations(const XmlElementPtr, const NodePtr, const bool);
-void buildNode(NodeManager&, const XmlElement&, ElemMapType&);
-void checkRef(NodeManager&, const XmlElement&, ElemMapType&);
+typedef map<unsigned long, pair <const XmlElement*, NodePtr>> ElemMapType;
 
-void buildAnnotations(const XmlElement& type, const NodePtr baseType, const bool value){
-	XmlElementPtr annotations = type.getFirstChildByName("annotations");
-	if (annotations){
+typedef vector<XmlElement> XmlElementList;
+
+class NodeBuilder {
+	NodeManager& mgr;
+	ElemMapType elemMap;
+
+	void checkRef(const XmlElement& elem) {
+		std::string&& id = elem.getAttr("ref");
+		if (!id.empty()) {
+			buildNode(*(elemMap[numeric_cast<unsigned long>(id)].first));
+		}
+		XmlElementList&& children = elem.getChildren();
+		std::for_each(children.begin(), children.end(), [this](const XmlElement& curr) { this->checkRef(curr); });
+	}
+
+	template <class T>
+	void updateMap(const XmlElement& elem, const T& node){
+		string&& id = elem.getAttr("id");
+		assert(!id.empty());
+		elemMap[numeric_cast<unsigned long>(id)].second = node;
+	}
+
+	template <class T>
+	void buildAnnotations(const XmlElement& type, const T& baseType){
+		XmlElementPtr annotations = type.getFirstChildByName("annotations");
+
+		if(!annotations) return;
+
 		XmlConverter& xmlConverter = XmlConverter::get();
-		vector<XmlElement> ann = annotations->getChildrenByName("annotation");
-		for(vector<XmlElement>::const_iterator iter = ann.begin(); iter != ann.end(); ++iter) {
-			if (value)
-				baseType.addAnnotation(xmlConverter.domToIrAnnotation(*iter));
-			else
-				baseType->addAnnotation(xmlConverter.domToIrAnnotation(*iter));
+		XmlElementList&& ann = annotations->getChildrenByName("annotation");
+		for(auto iter = ann.begin(), end = ann.end(); iter != end; ++iter) {
+			baseType.addAnnotation(xmlConverter.domToIrAnnotation(*iter));
 		}
 	}
-}
 
-template <class T>
-void updateMap(const XmlElement& elem, ElemMapType& elemMap, const T& node){
-	// string id = elem.getAttr("id");
-	elemMap[elem.getAttr("id")].second = node;
-	// pair<const XmlElement*, NodePtr>&& oldPair = ;
-	// elemMap[id] = make_pair(oldPair.first, node);
-}
+	template <class T>
+	AnnotatedPtr<const T> createNode(const XmlElement& elem) {
+		string&& ref = elem.getAttr("ref");
+		assert(!ref.empty());
+		ElemMapType::const_iterator fit = elemMap.find(numeric_cast<long>(ref));
+		assert(fit != elemMap.end() && "Odd thing happened, element not in the map!");
+		AnnotatedPtr<const T>&& pointer = dynamic_pointer_cast<const T>(fit->second.second);
+		assert(pointer && "Element not of the expected type.");
+		buildAnnotations(elem, pointer);
+		return pointer;
+	}
 
-template <class T>
-AnnotatedPtr<const T> createNode(const XmlElement& elem, const ElemMapType& elemMap) {
-	ElemMapType::const_iterator fit = elemMap.find(elem.getAttr("ref"));
-	assert(fit != elemMap.end() && "Odd thing happened, element not in the map!");
-	AnnotatedPtr<const T>&& pointer = dynamic_pointer_cast<const T>(fit->second.second);
-	assert(pointer && "Element not of the expected type.");
-	buildAnnotations(elem, pointer, true);
-	return pointer;
-}
+	template <class T>
+	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first, const string& second){
+		return createNode<T>(*elem.getFirstChildByName(first)->getFirstChildByName(second));
+	}
 
-template <class T>
-AnnotatedPtr<const T> createNode(const XmlElement& elem, const ElemMapType& elemMap, const string& first, const string& second){
-	return createNode<T>(*elem.getFirstChildByName(first)->getFirstChildByName(second), elemMap);
-}
+	template <class T>
+	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first){
+		return createNode<T>(*elem.getFirstChildByName(first));
+	}
 
-template <class T>
-AnnotatedPtr<const T> createNode(const XmlElement& elem, const ElemMapType& elemMap, const string& first){
-	return createNode<T>(*elem.getFirstChildByName(first), elemMap);
-}
+	template <class NodeTy, class ... Args>
+	AnnotatedPtr<const NodeTy> createIrNode(const XmlElement& elem, Args ... args) {
+		AnnotatedPtr<const NodeTy> irNode = NodeTy::get(mgr, args...);
+		buildAnnotations(elem, *irNode);
+		string&& id = elem.getAttr("id");
+		assert(!id.empty());
+		elemMap[numeric_cast<unsigned long>(id)].second = irNode;
+		return irNode;
+	}
 
-void buildNode(NodeManager& manager, const XmlElement& elem, ElemMapType& elemMap) {
-	checkRef(manager, elem, elemMap);
+public:
+	NodeBuilder(NodeManager& mgr): mgr(mgr) { }
 
-	// different types of nodes
-	const string& nodeName = elem.getName();
-
-	if (nodeName == "genType") {
+	NodePtr handle_genType(const XmlElement& elem) {
 		TypePtr baseType;
-		const XmlElementPtr& base = elem.getFirstChildByName("baseType");
+		XmlElementPtr&& base = elem.getFirstChildByName("baseType");
 		if (base) {
-			const XmlElementPtr& type = base->getFirstChildByName("typePtr");
-			baseType = dynamic_pointer_cast<const Type>(elemMap[type->getAttr("ref")].second);
-			buildAnnotations(*type, baseType, true);
+			XmlElementPtr&& type = base->getFirstChildByName("typePtr");
+			string&& ref = type->getAttr("ref");
+			assert(!ref.empty());
+			baseType = dynamic_pointer_cast<const Type>(elemMap[numeric_cast<unsigned long>(ref)].second);
+			buildAnnotations(*type, baseType);
 		}
 
 		vector<TypePtr> typeParams;
-		const XmlElementPtr& param = elem.getFirstChildByName("typeParams");
+		XmlElementPtr&& param = elem.getFirstChildByName("typeParams");
 		if (param){
-			const vector<XmlElement>& types = param->getChildrenByName("typePtr");
+			XmlElementList&& types = param->getChildrenByName("typePtr");
 			for(auto iter = types.begin(); iter != types.end(); ++iter) {
-				typeParams.push_back( createNode<Type>(*iter, elemMap) );
+				typeParams.push_back( createNode<Type>(*iter) );
 			}
 		}
 
 		vector<IntTypeParam> intTypeParams;
-		const XmlElementPtr& intParam = elem.getFirstChildByName("intTypeParams");
+		XmlElementPtr&& intParam = elem.getFirstChildByName("intTypeParams");
 		if (intParam){
 			const vector<XmlElement>& intPar = intParam->getChildrenByName("intTypeParam");
 			for(vector<XmlElement>::const_iterator iter = intPar.begin(); iter != intPar.end(); ++iter) {
 				if (iter->getChildrenByName("variable").size() != 0){
-					intTypeParams.push_back(IntTypeParam::getVariableIntParam((iter->getFirstChildByName("variable"))->getAttr("value")[0]));
+					intTypeParams.push_back(
+						IntTypeParam::getVariableIntParam((iter->getFirstChildByName("variable"))->getAttr("value")[0])
+					);
 				}
 				else if (iter->getChildrenByName("concrete").size() != 0){
-					intTypeParams.push_back(IntTypeParam::getConcreteIntParam(numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value"))));
+					intTypeParams.push_back(
+							IntTypeParam::getConcreteIntParam(numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value")))
+					);
 				}
 				else {
 					intTypeParams.push_back(IntTypeParam::getInfiniteIntParam());
 				}
 			}
 		}
-		
-		const string& name = elem.getAttr("familyName");
-		if (name == "vector"){
-			VectorTypePtr&& vec = VectorType::get(manager, typeParams[0], intTypeParams[0]);
-			buildAnnotations(elem, vec, false);
-			updateMap(elem, elemMap, vec);
-		}
-		else if (name == "array"){
-			ArrayTypePtr&& arr = ArrayType::get(manager, typeParams[0], intTypeParams[0]);
-			buildAnnotations(elem, arr, false);
-			updateMap(elem, elemMap, arr);
-		}
-		else if (name == "channel"){
-			ChannelTypePtr&& chan = ChannelType::get(manager, typeParams[0], intTypeParams[0]);
-			buildAnnotations(elem, chan, false);
-			updateMap(elem, elemMap, chan);
-		}
-		else if (name == "ref"){
-			RefTypePtr&& ref = RefType::get(manager, typeParams[0]);
-			buildAnnotations(elem, ref, false);
-			updateMap(elem, elemMap, ref);
-		}
-		else {
-			GenericTypePtr&& gen = GenericType::get(manager, name, typeParams, intTypeParams, baseType);
-			buildAnnotations(elem, gen, false);
-			updateMap(elem, elemMap, gen);
-		}
+		string&& name = elem.getAttr("familyName");
+		if (name == "vector")  	return createIrNode<VectorType>(elem, typeParams[0], intTypeParams[0]);
+		if (name == "array")   	return createIrNode<ArrayType>(elem, typeParams[0], intTypeParams[0]);
+		if (name == "channel") 	return createIrNode<ChannelType>(elem, typeParams[0], intTypeParams[0]);
+		if (name == "ref")		return createIrNode<RefType>(elem, typeParams[0]);
+		return createIrNode<GenericType>(elem, name, typeParams, intTypeParams, baseType);
 	}
 
-	else if (nodeName == "functionType") {
-		TupleTypePtr&& argType = createNode<TupleType>(elem, elemMap, "argumentType","tupleTypePtr");
-		TypePtr&& retType = createNode<Type>(elem, elemMap, "returnType","typePtr");
-		
-		FunctionTypePtr&& fun = FunctionType::get(manager, argType, retType);
-		buildAnnotations(elem, fun, false);
-		updateMap(elem, elemMap, fun);
+	NodePtr handle_functionType(const XmlElement& elem) {
+		TupleTypePtr&& argType = createNode<TupleType>(elem, "argumentType","tupleTypePtr");
+		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
+		return createIrNode<FunctionType>(elem, argType, retType);
 	}
 
-	else if (nodeName == "unionType" || nodeName == "structType") {
-		const vector<XmlElement>& entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
+private:
+	NamedCompositeType::Entries visit_namedCompositeType(const XmlElement& elem) {
 		vector<NamedCompositeType::Entry> entryVec;
+		vector<XmlElement>&& entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
 		for(auto iter = entries.begin(); iter != entries.end(); ++iter) {
-			Identifier ident = iter->getFirstChildByName("id")->getText();
-			TypePtr el = createNode<Type>(*iter, elemMap, "typePtr");
-			entryVec.push_back(NamedCompositeType::Entry(ident, el));
+			Identifier&& ident = iter->getFirstChildByName("id")->getText();
+			TypePtr&& el = createNode<Type>(*iter, "typePtr");
+			entryVec.push_back( NamedCompositeType::Entry(ident, el) );
 		}
-		if (nodeName == "structType") {
-			StructTypePtr structT = StructType::get(manager, entryVec);
-			buildAnnotations(elem, structT, false);
-			updateMap(elem, elemMap, structT);
-		}
-		else {
-			UnionTypePtr unionT = UnionType::get(manager, entryVec);
-			buildAnnotations(elem, unionT, false);
-			updateMap(elem, elemMap, unionT);
-		}
+		return entryVec;
+	}
+public:
+	NodePtr handle_unionType(const XmlElement& elem) {
+		return createIrNode<UnionType>(elem, visit_namedCompositeType(elem));
 	}
 
-	else if (nodeName == "tupleType") {
-		vector<XmlElement> types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("elementType");
-		vector<TypePtr> elementList;
+	NodePtr handle_structType(const XmlElement& elem) {
+		return createIrNode<StructType>(elem, visit_namedCompositeType(elem));
+	}
+
+	NodePtr handle_tupleType(const XmlElement& elem) {
+		XmlElementList&& types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("elementType");
+		TupleType::ElementTypeList elementList;
 		for(auto iter = types.begin(); iter != types.end(); ++iter) {
-			TypePtr el = createNode<Type>(*iter, elemMap, "typePtr");
-			elementList.push_back(el);
+			elementList.push_back(createNode<Type>(*iter, "typePtr"));
 		}
-
-		TupleTypePtr tuple = TupleType::get(manager, elementList);
-		buildAnnotations(elem, tuple, false);
-		updateMap(elem, elemMap, tuple);
+		return createIrNode<TupleType>(elem, elementList);
 	}
 
-	else if (nodeName == "typeVariable") {
-		TypeVariablePtr var = TypeVariable::get(manager, elem.getAttr("name"));
-		buildAnnotations(elem, var, false);
-		updateMap(elem, elemMap, var);
+	NodePtr handle_typeVariable(const XmlElement& elem) {
+		return createIrNode<TypeVariable>(elem, elem.getAttr("name"));
 	}
 
-	else if (nodeName == "recType") {
-		RecTypeDefinitionPtr definition = createNode<RecTypeDefinition>(elem, elemMap, "definition","recTypeDefinitionPtr");
-		TypeVariablePtr var = createNode<TypeVariable>(elem, elemMap, "typeVariable","typeVariablePtr");
-
-		RecTypePtr recType = RecType::get(manager, var, definition);
-		buildAnnotations(elem, recType, false);
-		updateMap(elem, elemMap, recType);
+	NodePtr handle_recType(const XmlElement& elem) {
+		RecTypeDefinitionPtr&& definition = createNode<RecTypeDefinition>(elem, "definition","recTypeDefinitionPtr");
+		TypeVariablePtr&& var = createNode<TypeVariable>(elem, "typeVariable","typeVariablePtr");
+		return createIrNode<RecType>(elem, var, definition);
 	}
 
-	else if (nodeName == "recTypeDefinition") {
-		vector<XmlElement> defs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
+	NodePtr handle_recTypeDefinition(const XmlElement& elem) {
+		XmlElementList&& defs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
 		RecTypeDefinition::RecTypeDefs defVec;
 		for(auto iter = defs.begin(); iter != defs.end(); ++iter) {
-			TypeVariablePtr var = createNode<TypeVariable>(*iter, elemMap, "typeVariablePtr");
-			TypePtr ty = createNode<Type>(*iter, elemMap, "typePtr");
+			TypeVariablePtr&& var = createNode<TypeVariable>(*iter, "typeVariablePtr");
+			TypePtr&& ty = createNode<Type>(*iter, "typePtr");
 			defVec.insert(std::make_pair(var, ty));
 		}
-		
-		RecTypeDefinitionPtr rec = RecTypeDefinition::get(manager, defVec);
-		buildAnnotations(elem, rec, false);
-		updateMap(elem, elemMap, rec);
+		return createIrNode<RecTypeDefinition>(elem, defVec);
 	}
 
-	else if (nodeName == "literal") {
-		TypePtr typeT = createNode<Type>(elem, elemMap, "type", "typePtr");
-		
-		LiteralPtr lit = Literal::get(manager, typeT, elem.getAttr("value"));
-		buildAnnotations(elem, lit, false);
-		updateMap(elem, elemMap, lit);
+	NodePtr handle_literal(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		return createIrNode<Literal>(elem, typeT, elem.getAttr("value"));
 	}
 
-	else if (nodeName == "returnStmt") {
-		ExpressionPtr expression = createNode<Expression>(elem, elemMap, "returnExpression", "expressionPtr");
-		
-		ReturnStmtPtr ret = ReturnStmt::get(manager, expression);
-		buildAnnotations(elem, ret, false);
-		updateMap(elem, elemMap, ret);
+	NodePtr handle_returnStmt(const XmlElement& elem) {
+		ExpressionPtr&& expression = createNode<Expression>(elem, "returnExpression", "expressionPtr");
+		return createIrNode<ReturnStmt>(elem, expression);
 	}
 
-	else if (nodeName == "forStmt") {
-		DeclarationStmtPtr decl = createNode<DeclarationStmt>(elem, elemMap, "declaration", "declarationStmtPtr");
-		StatementPtr body = createNode<Statement>(elem, elemMap, "body", "statementPtr");
-		ExpressionPtr end = createNode<Expression>(elem, elemMap, "end", "expressionPtr");
-		ExpressionPtr step = createNode<Expression>(elem, elemMap, "step", "expressionPtr");
-		
-		ForStmtPtr fstmt = ForStmt::get(manager, decl, body, end, step);
-		buildAnnotations(elem, fstmt, false);
-		updateMap(elem, elemMap, fstmt);
+	NodePtr handle_forStmt(const XmlElement& elem) {
+		DeclarationStmtPtr&& decl = createNode<DeclarationStmt>(elem, "declaration", "declarationStmtPtr");
+		StatementPtr&& body = createNode<Statement>(elem, "body", "statementPtr");
+		ExpressionPtr&& end = createNode<Expression>(elem, "end", "expressionPtr");
+		ExpressionPtr&& step = createNode<Expression>(elem, "step", "expressionPtr");
+		return createIrNode<ForStmt>(elem, decl, body, end, step);
 	}
 
-	else if (nodeName == "ifStmt") {
-		ExpressionPtr expr = createNode<Expression>(elem, elemMap, "condition", "expressionPtr");
-		StatementPtr thenStmt = createNode<Statement>(elem, elemMap, "thenBody", "statementPtr");
-		StatementPtr elseStmt = createNode<Statement>(elem, elemMap, "elseBody", "statementPtr");
-
-		IfStmtPtr stmt = IfStmt::get(manager, expr, thenStmt, elseStmt);
-		buildAnnotations(elem, stmt, false);
-		updateMap(elem, elemMap, stmt);
+	NodePtr handle_ifStmt(const XmlElement& elem) {
+		ExpressionPtr&& expr = createNode<Expression>(elem, "condition", "expressionPtr");
+		StatementPtr&& thenStmt = createNode<Statement>(elem, "thenBody", "statementPtr");
+		StatementPtr&& elseStmt = createNode<Statement>(elem, "elseBody", "statementPtr");
+		return createIrNode<IfStmt>(elem, expr, thenStmt, elseStmt);
 	}
 
-	else if (nodeName == "switchStmt") {
-		ExpressionPtr expr = createNode<Expression>(elem, elemMap, "expression", "expressionPtr");
+	NodePtr handle_switchStmt(const XmlElement& elem) {
+		ExpressionPtr&& expr = createNode<Expression>(elem, "expression", "expressionPtr");
 
-		vector<XmlElement> cases = elem.getFirstChildByName("cases")->getChildrenByName("case");
+		XmlElementList&& cases = elem.getFirstChildByName("cases")->getChildrenByName("case");
 		vector<SwitchStmt::Case> caseVector;
 		for(auto iter = cases.begin(); iter != cases.end(); ++iter) {
-			ExpressionPtr expr = createNode<Expression>(*iter, elemMap, "expressionPtr");
-			StatementPtr stat = createNode<Statement>(*iter, elemMap, "statementPtr");
-			caseVector.push_back(std::make_pair(expr, stat));
+			ExpressionPtr&& expr = createNode<Expression>(*iter, "expressionPtr");
+			StatementPtr&& stat = createNode<Statement>(*iter, "statementPtr");
+			caseVector.push_back( std::make_pair(expr, stat) );
 		}
-		StatementPtr defaultCase = createNode<Statement>(elem, elemMap, "defaultCase", "statementPtr");
-		
-		SwitchStmtPtr stmt = SwitchStmt::get(manager, expr, caseVector, defaultCase);
-		buildAnnotations(elem, stmt, false);
-		updateMap(elem, elemMap, stmt);
+		StatementPtr&& defaultCase = createNode<Statement>(elem, "defaultCase", "statementPtr");
+
+		return createIrNode<SwitchStmt>(elem, expr, caseVector, defaultCase);
 	}
 
-	else if (nodeName == "whileStmt") {
-		ExpressionPtr cond = createNode<Expression>(elem, elemMap, "condition", "expressionPtr");
-		StatementPtr body = createNode<Statement>(elem, elemMap, "body", "statementPtr");
-
-		WhileStmtPtr stmt = WhileStmt::get(manager, cond, body);
-		buildAnnotations(elem, stmt, false);
-		updateMap(elem, elemMap, stmt);
+	NodePtr handle_whileStmt(const XmlElement& elem) {
+		ExpressionPtr&& cond = createNode<Expression>(elem, "condition", "expressionPtr");
+		StatementPtr&& body = createNode<Statement>(elem, "body", "statementPtr");
+		return createIrNode<WhileStmt>(elem, cond, body);
 	}
 
-	else if (nodeName == "breakStmt") {
-		BreakStmtPtr stmt = BreakStmt::get(manager);
-		buildAnnotations(elem, stmt, false);
-		updateMap(elem, elemMap, stmt);
+	NodePtr handle_breakStmt(const XmlElement& elem) {
+		return createIrNode<BreakStmt>(elem);
 	}
 
-	else if (nodeName == "continueStmt") {
-		ContinueStmtPtr stmt = ContinueStmt::get(manager);
-		buildAnnotations(elem, stmt, false);
-		updateMap(elem, elemMap, stmt);
+	NodePtr handle_continueStmt(const XmlElement& elem) {
+		return createIrNode<ContinueStmt>(elem);
 	}
 
-	else if (nodeName == "compoundStmt") {
-		vector<XmlElement> stats = elem.getFirstChildByName("statements")->getChildrenByName("statement");
+	NodePtr handle_compoundStmt(const XmlElement& elem) {
+		XmlElementList&& stats = elem.getFirstChildByName("statements")->getChildrenByName("statement");
 		vector<StatementPtr> stmtVec;
-		for(auto iter = stats.begin(); iter != stats.end(); ++iter) {
-			stmtVec.push_back(createNode<Statement>(*iter, elemMap, "statementPtr"));
+		for(auto iter = stats.begin(), end = stats.end(); iter != end; ++iter) {
+			stmtVec.push_back(createNode<Statement>(*iter, "statementPtr"));
 		}
-
-		CompoundStmtPtr comp = CompoundStmt::get(manager, stmtVec);
-		buildAnnotations(elem, comp, false);
-		updateMap(elem, elemMap, comp);
+		return createIrNode<CompoundStmt>(elem, stmtVec);
 	}
 
-	else if (nodeName == "declarationStmt") {
-		VariablePtr var = createNode<Variable>(elem, elemMap, "variable", "variablePtr");		
-		ExpressionPtr expr = createNode<Expression>(elem, elemMap, "expression", "expressionPtr");
-
-		DeclarationStmtPtr dstmt = DeclarationStmt::get(manager, var, expr);
-		buildAnnotations(elem, dstmt, false);
-		updateMap(elem, elemMap, dstmt);
+	NodePtr handle_declarationStmt(const XmlElement& elem) {
+		VariablePtr&& var = createNode<Variable>(elem, "variable", "variablePtr");
+		ExpressionPtr&& expr = createNode<Expression>(elem, "expression", "expressionPtr");
+		return createIrNode<DeclarationStmt>(elem, var, expr);
 	}
 
-	else if (nodeName == "structExpr") {
-		StructTypePtr typeT = createNode<StructType>(elem, elemMap, "type", "typePtr");
-		
-		vector<XmlElement> membs = elem.getFirstChildByName("members")->getChildrenByName("member");
+	NodePtr handle_structExpr(const XmlElement& elem) {
+		StructTypePtr&& typeT = createNode<StructType>(elem, "type", "typePtr");
+
+		XmlElementList&& membs = elem.getFirstChildByName("members")->getChildrenByName("member");
 		StructExpr::Members membVec;
-		for(auto iter = membs.begin(); iter != membs.end(); ++iter) {
-			Identifier ident(iter->getFirstChildByName("id")->getText());
-			ExpressionPtr expr = createNode<Expression>(*iter, elemMap, "expressionPtr");
-			membVec.push_back(StructExpr::Member(ident, expr));
+		for(auto iter = membs.begin(), end = membs.end(); iter != end; ++iter) {
+			Identifier&& ident = iter->getFirstChildByName("id")->getText();
+			ExpressionPtr&& expr = createNode<Expression>(*iter, "expressionPtr");
+			membVec.push_back( StructExpr::Member(ident, expr) );
 		}
-
-		StructExprPtr structT = StructExpr::get(manager, typeT, membVec);
-		buildAnnotations(elem, structT, false);
-		updateMap(elem, elemMap, structT);
-	}
-	
-	else if(nodeName == "unionExpr"){
-		UnionTypePtr typeT = createNode<UnionType>(elem, elemMap, "type", "typePtr");		
-		Identifier ident(elem.getFirstChildByName("member")->getFirstChildByName("id")->getText());
-		ExpressionPtr expr = createNode<Expression>(elem, elemMap, "member", "expressionPtr");
-
-		UnionExprPtr unionT = UnionExpr::get(manager, typeT, ident, expr);
-		buildAnnotations(elem, unionT, false);
-		updateMap(elem, elemMap, unionT);	
+		return createIrNode<StructExpr>(elem, typeT, membVec);
 	}
 
-	else if (nodeName == "vectorExpr") {
-		VectorTypePtr typeT = createNode<VectorType>(elem, elemMap, "type", "typePtr");
-		
-		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+	NodePtr handle_unionExpr(const XmlElement& elem) {
+		UnionTypePtr&& typeT = createNode<UnionType>(elem, "type", "typePtr");
+		Identifier&& ident = elem.getFirstChildByName("member")->getFirstChildByName("id")->getText();
+		ExpressionPtr&& expr = createNode<Expression>(elem, "member", "expressionPtr");
+
+		return createIrNode<UnionExpr>(elem, typeT, ident, expr);
+	}
+
+	NodePtr handle_vectorExpr(const XmlElement& elem) {
+		VectorTypePtr&& typeT = createNode<VectorType>(elem, "type", "typePtr");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		vector<ExpressionPtr> exprVec;
-		for(auto iter = exprs.begin(); iter != exprs.end(); ++iter) {
-			ExpressionPtr expr = createNode<Expression>(*iter, elemMap,"expressionPtr");
-			exprVec.push_back(expr);
-		}
 
-		VectorExprPtr vecT = VectorExpr::get(manager, typeT, exprVec);
-		buildAnnotations(elem, vecT, false);
-		updateMap(elem, elemMap, vecT);
+		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
+			exprVec.push_back(createNode<Expression>(*iter, "expressionPtr"));
+		}
+		return createIrNode<VectorExpr>(elem, typeT, exprVec);
 	}
 
-	else if (nodeName == "tupleExpr") {
-		TupleTypePtr typeT = createNode<TupleType>(elem, elemMap, "type", "typePtr");
-		
-		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+	NodePtr handle_tupleExpr(const XmlElement& elem) {
+		TupleTypePtr&& typeT = createNode<TupleType>(elem, "type", "typePtr");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+
 		vector<ExpressionPtr> exprVec;
-		for(auto iter = exprs.begin(); iter != exprs.end(); ++iter) {
-			ExpressionPtr expr = createNode<Expression>(*iter, elemMap,"expressionPtr");
-			exprVec.push_back(expr);
+		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
+			exprVec.push_back( createNode<Expression>(*iter, "expressionPtr") );
 		}
-
-		TupleExprPtr tuple = TupleExpr::get(manager, typeT, exprVec);
-		buildAnnotations(elem, tuple, false);
-		updateMap(elem, elemMap, tuple);
+		return createIrNode<TupleExpr>(elem, typeT, exprVec);
 	}
 
-	else if (nodeName == "castExpr") {
-		TypePtr typeT = createNode<Type>(elem, elemMap, "type", "typePtr");
-		ExpressionPtr expr = createNode<Expression>(elem, elemMap, "subExpression", "expressionPtr");
-
-		CastExprPtr cast = CastExpr::get(manager, typeT, expr);
-		buildAnnotations(elem, cast, false);
-		updateMap(elem, elemMap, cast);
+	NodePtr handle_castExpr(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
+		return createIrNode<CastExpr>(elem, typeT, expr);
 	}
 
-	else if (nodeName == "callExpr") {
-		TypePtr typeT = createNode<Type>(elem, elemMap, "type", "typePtr");
-		ExpressionPtr expr = createNode<Expression>(elem, elemMap, "function", "expressionPtr");
+	NodePtr handle_callExpr(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		ExpressionPtr&& expr = createNode<Expression>(elem, "function", "expressionPtr");
+		XmlElementList&& args = elem.getFirstChildByName("arguments")->getChildrenByName("argument");
 
-		vector<XmlElement> args = elem.getFirstChildByName("arguments")->getChildrenByName("argument");
 		vector<ExpressionPtr> argVec;
-		for(auto iter = args.begin(); iter != args.end(); ++iter) {
-			ExpressionPtr expr = createNode<Expression>(*iter, elemMap,"expressionPtr");
-			argVec.push_back(expr);
+		for(auto iter = args.begin(), end = args.end(); iter != end; ++iter) {
+			argVec.push_back( createNode<Expression>(*iter,"expressionPtr") );
 		}
-
-		CallExprPtr call = CallExpr::get(manager, typeT, expr, argVec);
-		buildAnnotations(elem, call, false);
-		updateMap(elem, elemMap, call);
+		return createIrNode<CallExpr>(elem, typeT, expr, argVec);
 	}
 
-	else if (nodeName == "variable") {
-		TypePtr typeT = createNode<Type>(elem, elemMap, "type", "typePtr");
-
-		VariablePtr var = Variable::get(manager, typeT, numeric_cast<int>(elem.getAttr("identifier")));
-		buildAnnotations(elem, var, false);
-		updateMap(elem, elemMap, var);
+	NodePtr handle_variable(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		return createIrNode<Variable>(elem, typeT, numeric_cast<int>(elem.getAttr("identifier")));
 	}
 
-	else if (nodeName == "jobExpr") {
-		vector<XmlElement> decls = elem.getFirstChildByName("declarations")->getChildrenByName("declaration");
+	NodePtr handle_jobExpr(const XmlElement& elem) {
+		XmlElementList&& decls = elem.getFirstChildByName("declarations")->getChildrenByName("declaration");
 		vector<DeclarationStmtPtr> declVec;
-		for(auto iter = decls.begin(); iter != decls.end(); ++iter) {
-			DeclarationStmtPtr decl = createNode<DeclarationStmt>(*iter, elemMap,"declarationStmtPtr");
-			declVec.push_back(decl);
+		for(auto iter = decls.begin(), end = decls.end(); iter != end; ++iter) {
+			declVec.push_back( createNode<DeclarationStmt>(*iter, "declarationStmtPtr") );
 		}
-		vector<XmlElement> stmts = elem.getFirstChildByName("guardedStatements")->getChildrenByName("guardedStatement");
+		XmlElementList&& stmts = elem.getFirstChildByName("guardedStatements")->getChildrenByName("guardedStatement");
 		JobExpr::GuardedStmts stmtVec;
-		for(auto iter = stmts.begin(); iter != stmts.end(); ++iter) {
-			vector<XmlElement> types = iter->getChildrenByName("lambdaExprPtr"); // Attention !!
-			
-			LambdaExprPtr guard = dynamic_pointer_cast<const LambdaExpr>(elemMap[types[0].getAttr("ref")].second);
-			buildAnnotations(types[0], guard, true);
+		for(auto iter = stmts.begin(), end = stmts.end(); iter != end; ++iter) {
+			XmlElementList&& types = iter->getChildrenByName("lambdaExprPtr"); // Attention !!
 
-			LambdaExprPtr stmt = dynamic_pointer_cast<const LambdaExpr>(elemMap[types[1].getAttr("ref")].second);
-			buildAnnotations(types[1], stmt, true);
+			string&& ref = types[0].getAttr("ref");
+			assert(!ref.empty());
 
-			stmtVec.push_back(make_pair(guard, stmt));
+			auto fit = elemMap.find(numeric_cast<unsigned long>(ref));
+			assert(fit != elemMap.end() && "Element not in the map");
+			LambdaExprPtr&& guard = dynamic_pointer_cast<const LambdaExpr>(fit->second.second);
+			assert(guard);
+			buildAnnotations(types[0], guard);
+
+			ref = types[1].getAttr("ref");
+			assert(!ref.empty());
+			fit = elemMap.find(numeric_cast<unsigned long>(ref));
+			assert(fit != elemMap.end() && "Element not in the map");
+
+			LambdaExprPtr&& stmt = dynamic_pointer_cast<const LambdaExpr>(fit->second.second);
+			assert(stmt);
+			buildAnnotations(types[1], stmt);
+
+			stmtVec.push_back( make_pair(guard, stmt) );
 		}
 
-		XmlElementPtr type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("lambdaExprPtr");
+		XmlElementPtr&& type = elem.getFirstChildByName("defaultStatement")->getFirstChildByName("lambdaExprPtr");
+		string&& ref = type->getAttr("ref");
+		assert(!ref.empty());
+		auto fit = elemMap.find(numeric_cast<unsigned long>(ref));
+		assert(fit != elemMap.end() && "Element not in the map");
+		LambdaExprPtr default1 = dynamic_pointer_cast<const LambdaExpr>(fit->second.second);
+		assert(default1);
+		buildAnnotations(*type, default1);
 
-		LambdaExprPtr default1 = dynamic_pointer_cast<const LambdaExpr>(elemMap[type->getAttr("ref")].second);
-		buildAnnotations(*type, default1, true);
-
-		JobExprPtr job = JobExpr::get(manager, default1, stmtVec, declVec);
-		buildAnnotations(elem, job, false);
-		updateMap(elem, elemMap, job);
+		return createIrNode<JobExpr>(elem, default1, stmtVec, declVec);
 	}
 
-	else if (nodeName == "lambdaExpr") {
-		TypePtr typeT = createNode<Type>(elem, elemMap, "type", "typePtr");
+	NodePtr handle_lambdaExpr(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		vector<XmlElement>&& decls = elem.getFirstChildByName("captureList")->getChildrenByName("declarationStmtPtr");
 
-		vector<XmlElement> decls = elem.getFirstChildByName("captureList")->getChildrenByName("declarationStmtPtr");
 		vector<DeclarationStmtPtr> declVec;
-		for(auto iter = decls.begin(); iter != decls.end(); ++iter) {
-			DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(elemMap[iter->getAttr("ref")].second);
-			buildAnnotations(*iter, decl, true);
+		for(auto iter = decls.begin(), end = decls.end(); iter != end; ++iter) {
+			string&& ref = iter->getAttr("ref");
+			assert(!ref.empty());
+			auto fit = elemMap.find(numeric_cast<unsigned long>(ref));
+			assert(fit != elemMap.end() && "Element not in the map");
+			DeclarationStmtPtr&& decl = dynamic_pointer_cast<const DeclarationStmt>(fit->second.second);
+			assert(decl);
+			buildAnnotations(*iter, decl);
 			declVec.push_back(decl);
 		}
-
-		vector<XmlElement> params = elem.getFirstChildByName("params")->getChildrenByName("param");
+		vector<XmlElement>&& params = elem.getFirstChildByName("params")->getChildrenByName("param");
 		vector<VariablePtr> parVec;
-		for(auto iter = params.begin(); iter != params.end(); ++iter) {
-			VariablePtr par = createNode<Variable>(*iter, elemMap,"variablePtr");
-			parVec.push_back(par);
+		for(auto iter = params.begin(), end = params.end(); iter != end; ++iter) {
+			parVec.push_back( createNode<Variable>(*iter, "variablePtr") );
 		}
-		StatementPtr body = createNode<Statement>(elem, elemMap, "body", "statementPtr");
+		StatementPtr&& body = createNode<Statement>(elem, "body", "statementPtr");
 
-		LambdaExprPtr lExpr = LambdaExpr::get(manager, typeT, declVec, parVec, body);
-		buildAnnotations(elem, lExpr, false);
-		updateMap(elem, elemMap, lExpr);
+		return createIrNode<LambdaExpr>(elem, typeT, declVec, parVec, body);
 	}
 
-	else if (nodeName == "program") {
-		vector<XmlElement> exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+	NodePtr handle_program(const XmlElement& elem) {
+		vector<XmlElement>&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
 		Program::EntryPointSet exprVec;
-		for(auto iter = exprs.begin(); iter != exprs.end(); ++iter) {
-			ExpressionPtr expr = createNode<Expression>(*iter, elemMap,"expressionPtr");
-			exprVec.insert(expr);
+		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
+			exprVec.insert( createNode<Expression>(*iter, "expressionPtr") );
 		}
-		ProgramPtr program = Program::create(manager);
-		
-		program = Program::addEntryPoints(manager, program, exprVec);
-		buildAnnotations(elem, program, false);
-		updateMap(elem, elemMap, program);
+		ProgramPtr program = Program::create(mgr);
+		program = Program::addEntryPoints(mgr, program, exprVec);
+
+		buildAnnotations(elem, *program);
+		updateMap(elem, program);
+		return program;
 	}
 
-	else if (nodeName == "recLambdaDefinition") {
-		vector<XmlElement> funs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
+	NodePtr handle_recLambdaDefinition(const XmlElement& elem) {
+		vector<XmlElement>&& funs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
 		RecLambdaDefinition::RecFunDefs funVec;
-		for(auto iter = funs.begin(); iter != funs.end(); ++iter) {
-			VariablePtr var = createNode<Variable>(*iter, elemMap,"variablePtr");
-			LambdaExprPtr lExpr = createNode<LambdaExpr>(*iter, elemMap,"lambdaExprPtr");
-			funVec.insert(std::make_pair(var, lExpr));
+		for(auto iter = funs.begin(), end = funs.end(); iter != end; ++iter) {
+			VariablePtr&& var = createNode<Variable>(*iter, "variablePtr");
+			LambdaExprPtr&& lExpr = createNode<LambdaExpr>(*iter, "lambdaExprPtr");
+			funVec.insert( std::make_pair(var, lExpr) );
 		}
-
-		RecLambdaDefinitionPtr definition = RecLambdaDefinition::get(manager, funVec);
-		buildAnnotations(elem, definition, false);
-		updateMap(elem, elemMap, definition);
+		return createIrNode<RecLambdaDefinition>(elem, funVec);
 	}
 
-	else if (nodeName == "recLambdaExpr") {
-		VariablePtr var = createNode<Variable>(elem, elemMap, "variable", "variablePtr");
-		RecLambdaDefinitionPtr def = createNode<RecLambdaDefinition>(elem, elemMap, "definition", "recLambdaDefinitionPtr");
-
-		RecLambdaExprPtr recExpr = RecLambdaExpr::get(manager, var, def);
-		buildAnnotations(elem, recExpr, false);
-		updateMap(elem, elemMap, recExpr);
+	NodePtr handle_recLambdaExpr(const XmlElement& elem) {
+		VariablePtr&& var = createNode<Variable>(elem, "variable", "variablePtr");
+		RecLambdaDefinitionPtr&& def = createNode<RecLambdaDefinition>(elem, "definition", "recLambdaDefinitionPtr");
+		return createIrNode<RecLambdaExpr>(elem, var, def);
 	}
 
-	else if (nodeName == "rootNode") {
-		XmlElementPtr type = elem.getFirstChildByName("nodePtr");
-		buildAnnotations(*type, elemMap[type->getAttr("ref")].second, true);
-	}
-}
+	NodePtr handle_rootNode(const XmlElement& elem) {
+		XmlElementPtr&& type = elem.getFirstChildByName("nodePtr");
+		string&& ref = type->getAttr("ref");
+		assert(!ref.empty());
+		auto fit = elemMap.find(numeric_cast<unsigned long>(ref));
+		assert(fit != elemMap.end() && "Element not in the map");
+		buildAnnotations(*type, fit->second.second);
 
-void checkRef(NodeManager& manager, const XmlElement& elem, ElemMapType& elemMap) {
-	string id = elem.getAttr("ref");
-	if (id.size() != 0){
-		buildNode(manager, *(elemMap[id].first), elemMap);
+		return fit->second.second;
 	}
 
-	vector<XmlElement> children = elem.getChildren();
-	for(vector<XmlElement>::const_iterator iter = children.begin(); iter != children.end(); ++iter) {
-		checkRef(manager, *iter, elemMap);
+	#define DISPATCH(TYPE) if(nodeName == #TYPE) { return handle_ ## TYPE(elem); }
+
+	NodePtr buildNode(const XmlElement& elem) {
+
+		checkRef(elem);
+
+		// different types of nodes
+		string&& nodeName = elem.getName();
+		DISPATCH(genType)
+		DISPATCH(functionType)
+		DISPATCH(unionType)
+		DISPATCH(structType)
+		DISPATCH(tupleType)
+		DISPATCH(typeVariable)
+		DISPATCH(recType)
+		DISPATCH(recTypeDefinition)
+		DISPATCH(literal)
+		DISPATCH(returnStmt)
+		DISPATCH(forStmt)
+		DISPATCH(ifStmt)
+		DISPATCH(switchStmt)
+		DISPATCH(whileStmt)
+		DISPATCH(breakStmt)
+		DISPATCH(continueStmt)
+		DISPATCH(compoundStmt)
+		DISPATCH(declarationStmt)
+		DISPATCH(structExpr)
+		DISPATCH(unionExpr)
+		DISPATCH(vectorExpr)
+		DISPATCH(tupleExpr)
+		DISPATCH(castExpr)
+		DISPATCH(callExpr)
+		DISPATCH(variable)
+		DISPATCH(jobExpr)
+		DISPATCH(lambdaExpr)
+		DISPATCH(program)
+		DISPATCH(recLambdaDefinition)
+		DISPATCH(recLambdaExpr)
+		DISPATCH(rootNode)
+		assert(false);
 	}
-}
+
+	NodePtr buildAST(const XmlElement& inspire) {
+		XmlElementList&& elemVec = inspire.getChildren();
+		std::cout << elemVec.size() << std::endl;
+		for(XmlElementList::const_iterator iter = elemVec.begin(), end = elemVec.end(); iter != end; ++iter) {
+			string&& id = iter->getAttr("id");
+			if(!id.empty())
+				elemMap[numeric_cast<unsigned long>(id)] = make_pair(&(*iter), NodePtr());
+		}
+		XmlElementPtr root = inspire.getFirstChildByName("rootNode");
+		assert ( root && "RootNode is not present in DOM" );
+
+		return buildNode(*root);
+
+		// return elemMap[numeric_cast<long>((*root->getFirstChildByName("nodePtr")).getAttr("ref"))].second;
+	}
+};
 
 } // end namespace
 
@@ -552,27 +551,16 @@ shared_ptr<Annotation> XmlConverter::domToIrAnnotation (const XmlElement& el) co
 	if(fit != DomToIrConvertMap.end()) {
 		return (fit->second)(el);
 	}
-	DLOG(WARNING) << "Annotation \"" << type << "\" is not registred for Xml_Read!";
+	DLOG(WARNING) << "Annotation \"" << type << "\" is not registered for Xml_Read!";
 	return shared_ptr<Annotation>();
 }
 
 NodePtr XmlUtil::convertDomToIr(NodeManager& manager){
-	ElemMapType elemMap;
 
 	XmlElement inspire(doc->getDocumentElement(), doc);
+	NodeBuilder nb(manager);
+	return nb.buildAST(inspire);
 
-	vector<XmlElement> elemVec = inspire.getChildren();
-	for(vector<XmlElement>::const_iterator iter = elemVec.begin(); iter != elemVec.end(); ++iter) {
-		elemMap[iter->getAttr("id")] = make_pair(&(*iter), NodePtr());
-	}
-
-	XmlElementPtr root = inspire.getFirstChildByName("rootNode");
-
-	assert ( root && "RootNode is not present in DOM");
-
-	buildNode(manager, *root, elemMap);
-
-	return elemMap[(*root->getFirstChildByName("nodePtr")).getAttr("ref")].second;
 }
 
 } // end xml namespace
