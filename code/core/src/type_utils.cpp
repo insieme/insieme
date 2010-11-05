@@ -36,8 +36,9 @@
 
 #include <cassert>
 
-#include "type_utils.h"
-#include "map_utils.h"
+#include "core/type_utils.h"
+
+#include "utils/map_utils.h"
 
 namespace insieme {
 namespace core {

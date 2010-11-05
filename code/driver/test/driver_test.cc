@@ -36,14 +36,14 @@
 
 #include <gtest/gtest.h>
 
-#include "program.h"
+#include "core/program.h"
 
-#include "clang_compiler.h"
-#include "driver_config.h"
-#include "backend_convert.h"
+#include "frontend/clang_compiler.h"
+#include "driver/driver_config.h"
+#include "simple_backend/backend_convert.h"
 
 //#include <glog/logging.h>
-#include "logging.h"
+#include "utils/logging.h"
 
 #include <iostream>
 #include <fstream>

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "identifier.h"
+#include "core/identifier.h"
 
 using namespace insieme::core;
 

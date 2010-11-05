@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "ast_node.h"
-#include "container_utils.h"
+#include "core/ast_node.h"
 
+#include "utils/container_utils.h"
 
 // ---------------------------------------------- Utility Functions ------------------------------------
 

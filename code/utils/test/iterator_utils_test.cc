@@ -39,7 +39,8 @@
 #include <algorithm>
 
 #include <gtest/gtest.h>
-#include "iterator_utils.h"
+
+#include "utils/iterator_utils.h"
 
 using namespace std;
 

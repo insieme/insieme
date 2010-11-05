@@ -34,12 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "code_management.h"
+#include "simple_backend/code_management.h"
 
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/adjacency_list.hpp>
 
-#include "container_utils.h"
+#include "utils/container_utils.h"
 
 namespace insieme {
 namespace simple_backend {

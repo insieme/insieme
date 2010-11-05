@@ -41,7 +41,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "set_utils.h"
+#include "utils/set_utils.h"
 
 //using boost::unordered_set;
 using namespace insieme::utils::set;

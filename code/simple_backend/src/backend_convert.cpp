@@ -34,12 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "backend_convert.h"
+#include "simple_backend/backend_convert.h"
 
 #include <glog/logging.h>
 
-#include "annotated_ptr.h"
-#include "types.h"
+#include "core/annotated_ptr.h"
+#include "core/types.h"
 
 namespace insieme {
 namespace simple_backend {

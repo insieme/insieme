@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "ast_builder.h"
+#include "core/ast_builder.h"
 
-#include "annotated_ptr.h"
-#include "program.h"
-#include "statements.h"
-#include "expressions.h"
-#include "types.h"
-#include "type_utils.h"
+#include "core/annotated_ptr.h"
+#include "core/program.h"
+#include "core/statements.h"
+#include "core/expressions.h"
+#include "core/types.h"
+#include "core/type_utils.h"
 
 namespace insieme {
 namespace core {

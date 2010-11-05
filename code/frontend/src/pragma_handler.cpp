@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "pragma_handler.h"
+#include "frontend/pragma_handler.h"
 
 #include "clang/AST/Stmt.h"
 #include <llvm/Support/raw_ostream.h>

@@ -35,11 +35,13 @@
  */
 
 #include <gtest/gtest.h>
-#include "xml_utils.h"
-#include "lang_basic.h"
-#include "ast_builder.h"
 #include <xercesc/util/XercesDefs.hpp>
-#include "printer/pretty_printer.h"
+
+#include "core/lang_basic.h"
+#include "core/ast_builder.h"
+#include "core/printer/pretty_printer.h"
+
+#include "xml/xml_utils.h"
 
 using namespace std;
 using namespace insieme::core;

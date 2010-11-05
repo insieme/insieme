@@ -37,7 +37,8 @@
 #include <gtest/gtest.h>
 
 #include <iostream>
-#include "numeric_cast.h"
+
+#include "utils/numeric_cast.h"
 
 using namespace std;
 using namespace insieme::utils;

@@ -34,36 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include "conversion.h"
+#include "frontend/conversion.h"
 
 #include <sstream>
 #include <memory>
 #include <functional>
 
-#include "utils/types_lenght.h"
-#include "utils/source_locations.h"
-#include "utils/dep_graph.h"
+#include "frontend/utils/types_lenght.h"
+#include "frontend/utils/source_locations.h"
+#include "frontend/utils/dep_graph.h"
 
-#include "analysis/loop_analyzer.h"
-#include "analysis/expr_analysis.h"
+#include "frontend/analysis/loop_analyzer.h"
+#include "frontend/analysis/expr_analysis.h"
 
-#include "program.h"
-#include "ast_node.h"
-#include "types.h"
-#include "statements.h"
-#include "container_utils.h"
-#include "lang_basic.h"
-#include "numeric_cast.h"
-#include "naming.h"
-#include "ast_visitor.h"
-#include "container_utils.h"
-#include "logging.h"
-#include "location.h"
+#include "utils/container_utils.h"
+#include "utils/numeric_cast.h"
+#include "utils/container_utils.h"
+#include "utils/logging.h"
 
-#include "omp/omp_pragma.h"
-#include "ocl/ocl_annotations.h"
+#include "core/program.h"
+#include "core/ast_node.h"
+#include "core/ast_visitor.h"
+#include "core/types.h"
+#include "core/statements.h"
+#include "core/lang_basic.h"
 
-#include "transform/node_replacer.h"
+#include "c_info/naming.h"
+#include "c_info/location.h"
+
+#include "frontend/omp/omp_pragma.h"
+#include "frontend/ocl/ocl_annotations.h"
+
+#include "core/transform/node_replacer.h"
 
 #include "clang/Basic/FileManager.h"
 

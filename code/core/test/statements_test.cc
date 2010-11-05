@@ -37,11 +37,13 @@
 #include <sstream>
 
 #include <gtest/gtest.h>
-#include "statements.h"
-#include "expressions.h"
-#include "string_utils.h"
-#include "ast_builder.h"
-#include "lang_basic.h"
+
+#include "utils/string_utils.h"
+
+#include "core/statements.h"
+#include "core/expressions.h"
+#include "core/ast_builder.h"
+#include "core/lang_basic.h"
 
 #include "ast_node_test.cc"
 

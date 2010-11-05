@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "ast_address.h"
-#include "ast_builder.h"
+#include "core/ast_address.h"
+#include "core/ast_builder.h"
 
 namespace insieme {
 namespace core {

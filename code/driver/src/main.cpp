@@ -38,32 +38,34 @@
 #include <memory>
 #include <algorithm>
 
-#include "expressions.h"
-#include "types.h"
-#include "expressions.h"
-#include "statements.h"
-#include "backend_convert.h"
-#include "rewrite.h"
-#include "opencl_convert.h"
-#include "opencl_checker.h"
-#include "naming.h"
+#include "core/expressions.h"
+#include "core/types.h"
+#include "core/expressions.h"
+#include "core/statements.h"
+#include "core/ast_statistic.h"
+#include "core/checks/typechecks.h"
+#include "core/printer/pretty_printer.h"
 
-#include "ast_statistic.h"
+#include "simple_backend/backend_convert.h"
+#include "simple_backend/rewrite.h"
 
-#include "checks/typechecks.h"
-#include "printer/pretty_printer.h"
+#include "opencl_backend/opencl_convert.h"
+#include "opencl_backend/opencl_checker.h"
 
-#include "container_utils.h"
-#include "string_utils.h"
-#include "cmd_line_utils.h"
+#include "c_info/naming.h"
 
-#include "clang_compiler.h"
-#include "logging.h"
+#include "utils/container_utils.h"
+#include "utils/string_utils.h"
+#include "utils/cmd_line_utils.h"
+#include "utils/logging.h"
+#include "utils/timer.h"
 
-#include "xml_utils.h"
-#include "timer.h"
+#include "frontend/clang_compiler.h"
 
-#include "dot_printer.h"
+#include "driver/dot_printer.h"
+
+#include "xml/xml_utils.h"
+
 #include <fstream>
 
 using namespace std;

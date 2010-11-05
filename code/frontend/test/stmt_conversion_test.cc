@@ -36,19 +36,22 @@
 
 #include <gtest/gtest.h>
 
-#include <logging.h>
-#include "program.h"
-#include "clang_compiler.h"
-#include "conversion.h"
-#include "clang_config.h"
-#include "insieme_pragma.h"
+#include "utils/logging.h"
+
+#include "frontend/clang_compiler.h"
+#include "frontend/conversion.h"
+#include "frontend/clang_config.h"
+#include "frontend/insieme_pragma.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/Index/Indexer.h"
 #include "clang/Index/Program.h"
 
-#include "ast_check.h"
-#include "checks/typechecks.h"
+#include "core/program.h"
+#include "core/ast_check.h"
+#include "core/checks/typechecks.h"
+
+
 
 using namespace insieme::core;
 using namespace insieme::frontend;

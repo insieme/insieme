@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "naming.h"
+#include "c_info/naming.h"
 
-#include "identifier.h"
+#include "core/identifier.h"
 
 namespace insieme {
 namespace c_info {

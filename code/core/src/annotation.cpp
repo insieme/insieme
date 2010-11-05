@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "annotation.h"
-#include "map_utils.h"
+#include "core/annotation.h"
+#include "utils/map_utils.h"
 
 namespace insieme {
 namespace core {

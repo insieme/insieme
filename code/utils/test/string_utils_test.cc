@@ -35,7 +35,8 @@
  */
 
 #include <gtest/gtest.h>
-#include "string_utils.h"
+
+#include "utils/string_utils.h"
 
 
 TEST(StringUtilsTest, Format) {

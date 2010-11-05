@@ -36,8 +36,9 @@
 
 #include <algorithm>
 
-#include "ast_check.h"
-#include "container_utils.h"
+#include "utils/container_utils.h"
+
+#include "core/ast_check.h"
 
 namespace insieme {
 namespace core {

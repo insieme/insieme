@@ -36,7 +36,7 @@
 
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
-#include "utils/dep_graph.h"
+#include "frontend/utils/dep_graph.h"
 
 namespace insieme {
 namespace frontend {

@@ -34,10 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "checks/typechecks.h"
+#include "core/checks/typechecks.h"
 
-#include "type_utils.h"
-#include "lang_basic.h"
+#include "core/type_utils.h"
+#include "core/lang_basic.h"
 
 namespace insieme {
 namespace core {

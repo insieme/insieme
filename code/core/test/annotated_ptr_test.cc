@@ -38,8 +38,8 @@
 
 #include <gtest/gtest.h>
 
-#include "annotated_ptr.h"
-#include "ast_builder.h"
+#include "core/annotated_ptr.h"
+#include "core/ast_builder.h"
 
 #include "dummy_annotations.cc"
 

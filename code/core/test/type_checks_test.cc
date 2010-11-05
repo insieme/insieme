@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "ast_builder.h"
-#include "checks/typechecks.h"
+#include "core/ast_builder.h"
+#include "core/checks/typechecks.h"
 
 namespace insieme {
 namespace core {

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "ocl/ocl_annotations.h"
+#include "frontend/ocl/ocl_annotations.h"
 
 namespace insieme {
 namespace frontend {

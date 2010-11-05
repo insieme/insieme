@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "omp/omp_annotation.h"
+#include "frontend/omp/omp_annotation.h"
 
-#include "xml_utils.h"
+#include "xml/xml_utils.h"
 #include <memory>
 
 namespace insieme {

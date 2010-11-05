@@ -38,12 +38,13 @@
 
 #include <iostream>
 
-#include "program.h"
-#include "container_utils.h"
-#include "set_utils.h"
-#include "types.h"
-#include "ast_builder.h"
-#include "lang_basic.h"
+#include "utils/container_utils.h"
+#include "utils/set_utils.h"
+
+#include "core/program.h"
+#include "core/types.h"
+#include "core/ast_builder.h"
+#include "core/lang_basic.h"
 
 using namespace std;
 using namespace insieme::core;
