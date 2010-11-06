@@ -152,20 +152,9 @@ namespace {
 
 	};
 
-
-	OptionalMessageList checkLambda(const LambdaExprAddress& cur) {
-		// assemble set of defined variables
-		VariableSet declared;
-		for_each(cur->getCaptureList(), [&declared](const DeclarationStmtPtr& cur) {
-			declared.insert(cur->getVariable());
-		});
-
-		auto paramList = cur->getParams();
-		declared.insert(paramList.begin(), paramList.end());
-
+	OptionalMessageList conductCheck(VarDeclarationCheck& check, const NodeAddress& root) {
 		// run check
-		VarDeclarationCheck check(declared);
-		check.visit(cur);
+		check.visit(root);
 
 		// use results
 		OptionalMessageList res;
@@ -187,9 +176,42 @@ namespace {
 		return res;
 	}
 
-	OptionalMessageList checkJob(const JobExprAddress& cur) {
+	OptionalMessageList checkLambda(const LambdaExprAddress& cur) {
+		// assemble set of defined variables
+		VariableSet declared;
+		for_each(cur->getCaptureList(), [&declared](const DeclarationStmtPtr& cur) {
+			declared.insert(cur->getVariable());
+		});
+
+		auto paramList = cur->getParams();
+		declared.insert(paramList.begin(), paramList.end());
+
+		// run check on body ...
+		VarDeclarationCheck check(declared);
+		return conductCheck(check, cur.getAddressOfChild(cur->getChildList().size()-1));
 
 	}
+
+	OptionalMessageList checkJob(const JobExprAddress& cur) {
+		// assemble set of defined variables
+//		VariableSet declared;
+//		for_each(cur->getLocalDecls(), [&declared](const DeclarationStmtPtr& cur) {
+//			declared.insert(cur->getVariable());
+//		});
+//
+//		// run check
+//		VarDeclarationCheck check(declared);
+//		return conductCheck(check);
+
+		// TODO: fix the scope - rules of jobs ...
+		//  - the local shared list - init expressions are part of the outer scope
+		//  - private capture list of functions are intermediate scope
+		//  - functions forming the bodies have their own scope
+
+		return OptionalMessageList();
+	}
+
+
 }
 
 

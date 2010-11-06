@@ -52,12 +52,13 @@ using namespace std;
 using namespace insieme::core;
 using namespace insieme::utils::set;
 
-std::size_t hash(const Program::EntryPointSet& entryPoints) {
-	return insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
+std::size_t hash(bool main, const Program::EntryPointSet& entryPoints) {
+	std::size_t hash = insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
+	return (main)?~hash:hash<<1;
 }
 
 Program* Program::createCopyUsing(NodeMapping& mapper) const {
-	return new Program(mapper.map(0, entryPoints));
+	return new Program(mapper.map(0, entryPoints), main);
 }
 
 /**
@@ -69,31 +70,39 @@ Node::OptionChildList Program::getChildNodes() const {
 	return res;
 }
 
-Program::Program(const EntryPointSet& entryPoints) :
-	Node(NT_Program, NC_Program, ::hash(entryPoints)), entryPoints(entryPoints) { };
+Program::Program(const EntryPointSet& entryPoints, bool main) :
+	Node(NT_Program, NC_Program, ::hash(main, entryPoints)), main(main), entryPoints(entryPoints) {
+
+	assert((!main || entryPoints.size() == 1) && "Cannot mark program as a main program exposing less or more than one entry points!");
+};
 
 Program::Program() :
-	Node(NT_Program, NC_Program, ::hash(EntryPointSet())) {};
+	Node(NT_Program, NC_Program, ::hash(false, EntryPointSet())), main(false) { };
 
-ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints) {
-	return manager.get(Program(entryPoints));
+ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints, bool main) {
+	return manager.get(Program(entryPoints, main));
 }
 
-ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint, bool main) {
 	return addEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint));
 }
 
-ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints) {
-	return manager.get(Program(merge(program->getEntryPoints(), isolate(entryPoints))));
+ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints, bool main) {
+	return manager.get(Program(merge(program->getEntryPoints(), isolate(entryPoints)), main));
 }
 
-ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
-	return remEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint));
+ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint, bool main) {
+	return remEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint), main);
 }
 
-ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints) {
-	return manager.get(Program(difference(program->getEntryPoints(), entryPoints)));
+ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints, bool main) {
+	return manager.get(Program(difference(program->getEntryPoints(), entryPoints), main));
 }
+
+ProgramPtr Program::setMainFlag(NodeManager& manager, const ProgramPtr& program, bool main) {
+	return manager.get(Program(program->getEntryPoints(), main));
+}
+
 
 bool Program::equals(const Node& other) const {
 	// precondition: other must be a type
@@ -103,7 +112,7 @@ bool Program::equals(const Node& other) const {
 	const Program& ref = static_cast<const Program&>(other);
 
 	// compare definitions and entry points
-	return insieme::utils::set::equal(entryPoints, ref.entryPoints);
+	return main==ref.main && insieme::utils::set::equal(entryPoints, ref.entryPoints);
 }
 
 bool compareEntryPoints(const ExpressionPtr& exprA, const ExpressionPtr& exprB) {
@@ -118,7 +127,7 @@ std::ostream& Program::printTo(std::ostream& out) const {
 
 	typedef std::vector<ExpressionPtr> EntryPointList;
 
-	out << "PROGRAM { \n";
+	out << ((main)?"MAIN-":"") << "PROGRAM { \n";
 
 	// print entry points
 	EntryPointList entryList;

@@ -378,7 +378,7 @@ namespace {
 		PRINT(VectorExpr, {
 				std::vector<ExpressionPtr> elements = node->getExpressions();
 
-				const int limit = 5;
+				const std::size_t limit = 5;
 				bool cut = false;
 				if (elements.size() > limit) {
 					elements = std::vector<ExpressionPtr>(elements.begin(), elements.begin()+limit);

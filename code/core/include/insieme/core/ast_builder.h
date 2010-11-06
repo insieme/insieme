@@ -81,7 +81,7 @@ public:
 		return sharedManager;
 	}
 
-	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet());
+	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet(), bool main = false);
 
 
 	// ---------------------------- Create Derived Types ----------------------------

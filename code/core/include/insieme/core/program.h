@@ -80,6 +80,13 @@ public:
 private:
 
 	/**
+	 * A flag indicating whether the given entry point should be the main function
+	 * of the represented program. This flag may only be set to true in case there
+	 * is a single entry point representing a function.
+	 */
+	const bool main;
+
+	/**
 	 * This set contains the list of expressions to be exported to the context
 	 * program. Hence, the code which can be reached starting from those points
 	 * has to be considered. In case elements of this list represent functions,
@@ -96,8 +103,10 @@ private:
 	 * Creates a new AST based on the given data.
 	 *
 	 * @param entryPoints the list of entry points the program is consisting of.
+	 * @param main a flag allowing to indicate that the given entry point represents the main
+	 * function of a program and should be synthesized accordingly by the backend
 	 */
-	Program(const EntryPointSet& entryPoints);
+	Program(const EntryPointSet& entryPoints, bool main);
 
 	/**
 	 * Implements the copy method defined by the Base Node class.
@@ -121,10 +130,11 @@ public:
 	 *
 	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param entryPoints the list of entry points to be included within the resulting program.
+	 * @param main a flag to be used to mark the resulting program as a main program.
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr create(NodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet());
+	static ProgramPtr create(NodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet(), bool main=false);
 
 	/**
 	 * Creates a new program node within the given manager which is equivalent to the given program plus the
@@ -133,10 +143,11 @@ public:
 	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param program the program to be extended by an additional entry point
 	 * @param point the additional entry point to be added
+	 * @param main a flag to be used to mark the resulting program as a main program.
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
+	static ProgramPtr addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point, bool main=false);
 
 	/**
 	 * Creates a new program node within the given manager which is equivalent to the given program plus the
@@ -145,10 +156,11 @@ public:
 	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param program the program to be extended by additional entry points
 	 * @param points the additional entry points to be added
+	 * @param main a flag to be used to mark the resulting program as a main program.
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
+	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points, bool main=false);
 
 	/**
 	 * Creates a new program node within the given manager which is equivalent to the given program except the
@@ -157,10 +169,11 @@ public:
 	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param program the program to be reduced by an entry point
 	 * @param point the entry point to be removed
+	 * @param main a flag to be used to mark the resulting program as a main program.
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
+	static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point, bool main=false);
 
 	/**
 	 * Creates a new program node within the given manager which is equivalent to the given program except the
@@ -169,10 +182,33 @@ public:
 	 * @param manager the manager used to create the new node and to maintain all referenced nodes
 	 * @param program the program to be reduced by some entry points
 	 * @param points the entry points to be removed
+	 * @param main a flag to be used to mark the resulting program as a main program.
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points);
+	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points, bool main=false);
+
+	/**
+	 * Creates a copy of the given program using the given main flag. The flag may only be true in case there is only
+	 * a single entry point within the given program.
+	 *
+	 * @param manager the manager to be used to create the new node and to maintain all references
+	 * @param program the program to be copied
+	 * @param main the value to be used for the main flag
+	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+	 * 						will be bound to the given manager.
+	 */
+	static ProgramPtr setMainFlag(NodeManager& manager, const ProgramPtr& program, bool main);
+
+	/**
+	 * Tests whether this program represents a main program - hence there is only one entry point
+	 * marked as main, or an arbitrary program exposing an arbitrary number of entry points.
+	 *
+	 * @return true if this is a main-program, false otherwise
+	 */
+	const bool isMain() const {
+		return main;
+	}
 
 	/**
 	 * Obtains the set of entry points associated to this program node.

@@ -46,6 +46,8 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/lang_basic.h"
 
+#include "ast_node_test.cc"
+
 using namespace std;
 using namespace insieme::core;
 using namespace insieme::core::lang;
@@ -73,11 +75,18 @@ TEST(Program, HelloWorld) {
 
 	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
 	
-	ProgramPtr pro = build.createProgram(
-		toSet<Program::EntryPointSet>(build.literal(voidNullaryFunctionType, "main"))
-	);
+	LiteralPtr main = build.literal(voidNullaryFunctionType, "main");
+	ProgramPtr pro = build.createProgram(toSet<Program::EntryPointSet>(main));
+	ProgramPtr pro2 = build.createProgram(toSet<Program::EntryPointSet>(main), true);
+
+	EXPECT_NE(pro, pro2);
+	EXPECT_NE(*pro, *pro2);
+	EXPECT_NE(pro->hash(), pro2->hash());
 
 	cout << pro;
+
+	basicNodeTests(pro, toVector<NodePtr>(main));
+	basicNodeTests(pro2, toVector<NodePtr>(main));
 }
 
 TEST(Program, ProgramData) {

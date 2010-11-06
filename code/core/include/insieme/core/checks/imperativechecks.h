@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h";
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
 namespace core {
