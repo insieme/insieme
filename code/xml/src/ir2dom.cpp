@@ -634,20 +634,6 @@ public:
 	}
 };
 
-// FIXME!
-// ------------------------------------ XStr ----------------------------
-#define toUnicode(str) XStr(str).unicodeForm()
-
-class XStr {
-	::XMLCh* fUnicodeForm;
-public:
-	XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
-
-	~XStr() { XMLString::release(&fUnicodeForm); }
-
-	const ::XMLCh* unicodeForm() { return fUnicodeForm; }
-};
-
 }
 
 namespace insieme {

@@ -60,19 +60,6 @@ using namespace std;
 XERCES_CPP_NAMESPACE_USE
 
 namespace {
-// FIXME!
-// ------------------------------------ XStr ----------------------------
-#define toUnicode(str) XStr(str).unicodeForm()
-
-class XStr {
-	::XMLCh* fUnicodeForm;
-public:
-	XStr(const string& toTranscode) { fUnicodeForm = XMLString::transcode(toTranscode.c_str()); }
-
-	~XStr() { XMLString::release(&fUnicodeForm); }
-
-	const ::XMLCh* unicodeForm() { return fUnicodeForm; }
-};
 
 class error_handler: public DOMErrorHandler {
 	bool failed_;
@@ -105,12 +92,19 @@ public:
 namespace insieme {
 namespace xml {
 
-// const ::XMLCh* toUnicode(const std::string& str) { return XStr(str).unicodeForm(); }
+// ------------------------------------ XStr ----------------------------
+
+XStr::XStr(const string& toTranscode): fUnicodeForm(XMLString::transcode(toTranscode.c_str())) { }
+
+XStr::~XStr() { XMLString::release(&fUnicodeForm); }
+
+const uint16_t* XStr::unicodeForm() { return fUnicodeForm; }
+
 
 // ------------------------------------ XmlElement ----------------------------
 
 XmlElement::XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
-XmlElement::XmlElement(string name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
+XmlElement::XmlElement(const string& name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
 XmlElement::XmlElement(DOMElement* elem, DOMDocument* doc) : doc(doc), base(elem) { }
 
 DOMElement* XmlElement::getBase() const {
@@ -135,7 +129,6 @@ XmlElement& XmlElement::operator<<(const XmlElementPtr& childNode) {
 }
 
 
-// XmlElement& XmlElement::setAttr(const string& id, const string& value) {
 XmlElement& XmlElement::operator<<(const XmlElement::Attribute& attr) {
 	base->setAttribute(toUnicode(attr.first), toUnicode(attr.second));
 	return *this;
@@ -243,7 +236,7 @@ XmlUtil::~XmlUtil() {
 	XMLPlatformUtils::Terminate();
 }
 
-void XmlUtil::convertXmlToDom(const string fileName, const bool validate) {
+void XmlUtil::convertXmlToDom(const string& fileName, const bool validate) {
 	((DOMImplementationLS*)impl)->createLSSerializer();
 	parser = ((DOMImplementationLS*)impl)->createLSParser (DOMImplementationLS::MODE_SYNCHRONOUS, 0);
 	
@@ -299,7 +292,7 @@ void XmlUtil::convertXmlToDom(const string fileName, const bool validate) {
 	}
 }
 
-void XmlUtil::convertDomToXml(const string outputFile) {
+void XmlUtil::convertDomToXml(const string& outputFile) {
 	DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
 	assert(implLS);
 	DOMLSSerializer*	theSerializer = implLS->createLSSerializer();

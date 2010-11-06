@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
 
 			insieme::opencl_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
-			// TODO write to output file 
+			// TODO write to output file
 			std::cout << converted;
 		} else {
 			insieme::utils::Timer timer("Simple.Backend");

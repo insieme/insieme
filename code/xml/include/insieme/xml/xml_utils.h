@@ -48,9 +48,17 @@ using namespace insieme::core;
 namespace insieme {
 namespace xml {
 
-using namespace xercesc_3_1;
+class XStr {
+	uint16_t* fUnicodeForm;
+public:
+	XStr(const string& toTranscode);
+	~XStr();
+	const uint16_t* unicodeForm();
+};
 
-// const uint16_t* toUnicode(const std::string& str);
+#define toUnicode(str) insieme::xml::XStr(str).unicodeForm()
+
+using namespace xercesc_3_1;
 
 // ------------------------------------ XmlUtil ----------------------------
 class XmlUtil {
@@ -63,32 +71,32 @@ public:
 	XmlUtil();
 public:
 
-	~XmlUtil();
-
-	void convertXmlToDom(const string fileName, const bool validate);
-	void convertDomToXml(const string fileName);
+	void convertXmlToDom(const string& fileName, const bool validate);
+	void convertDomToXml(const string& fileName);
 
 	NodePtr convertDomToIr(NodeManager& manager);
 	void convertIrToDom(const NodePtr& node);
 
 	string convertDomToString();
 
-	static void write(const NodePtr& node, const string fileName) {
+	static void write(const NodePtr& node, const string& fileName) {
 		XmlUtil xml;
 		xml.convertIrToDom(node);
 		xml.convertDomToXml(fileName);
 	}
 
-	static NodePtr read(NodeManager& manager, const string fileName) {
+	static NodePtr read(NodeManager& manager, const string& fileName) {
 		XmlUtil xml;
 		xml.convertXmlToDom(fileName, true);
 		return xml.convertDomToIr(manager);
 	}
 
-	static void validate(const string fileName) {
+	static void validate(const string& fileName) {
 		XmlUtil xml;
 		xml.convertXmlToDom(fileName, true);
 	}
+
+	~XmlUtil();
 };
 
 // ------------------------------------ XmlElement ----------------------------
@@ -106,7 +114,7 @@ public:
 	typedef std::pair<std::string, std::string> Attribute;
 
 	XmlElement(DOMElement* elem);
-	XmlElement(std::string name, DOMDocument* doc);
+	XmlElement(const std::string& name, DOMDocument* doc);
 	XmlElement(DOMElement* base, DOMDocument* doc);
 	
 	DOMElement* getBase() const;
