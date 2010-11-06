@@ -460,11 +460,16 @@ public:
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 			vector<core::ExpressionPtr>&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
-			clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, const_cast<clang::idx::Program&>(convFact.clangProg));
-			const FunctionDecl* definition = convFact.indexer.getDefinitionFor(funcEntity).first;
-
+			const FunctionDecl* definition = NULL;
+			// this will find function definitions if they are declared in  the same translation unit (also defined as static)
+			if( !funcDecl->hasBody(definition) ) {
+				// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
+				// use the clang indexer to lookup the definition for this function declarations
+				clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, const_cast<clang::idx::Program&>(convFact.clangProg));
+				definition = convFact.indexer.getDefinitionFor(funcEntity).first;
+			}
 			if(!definition) {
-				// in the case the function is extern, a literal is build
+				// No definition has been found in any of the translation units, we mark this function as extern!
 				core::ExpressionPtr irNode =
 						convFact.builder.callExpr(	funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
 				// handle eventual pragmas attached to the Clang node
@@ -2199,8 +2204,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
         // initialize integer value
         return builder.literal("0", type);
     }
+    if ( *type == core::lang::TYPE_CHAR_VAL ) {
+		// initialize integer value
+		return builder.literal("0", type);
+	}
     // handle reals initialization
-    if( core::lang::isRealType(*type) ) {
+    if ( core::lang::isRealType(*type) ) {
         // in case of floating types we initialize with a zero value
         return builder.literal("0.0", type);
     }
@@ -2219,7 +2228,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
         return builder.literal("false", core::lang::TYPE_BOOL_PTR);
     }
     // Handle structs initialization
-    if( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
+    if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
     	core::StructExpr::Members members;
     	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
     	std::for_each(entries.begin(), entries.end(),
@@ -2229,7 +2238,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
     	);
     	return builder.structExpr(structTy, members);
     }
-    if( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
+    if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
 		// todo
 	}
 
@@ -2252,7 +2261,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
 		return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
     }
     // handle arrays initialization
-    if( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
+    if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
     	// FIXME
     	// initialization for arrays is missing, returning NULL!
     	return core::lang::CONST_NULL_PTR_PTR;
