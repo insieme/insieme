@@ -89,8 +89,6 @@ class XmlVisitor : public ASTVisitor<void> {
 public:
 	XmlVisitor(DOMDocument* udoc): doc(udoc), rootElem(doc->getDocumentElement()) { }
 
-	~XmlVisitor() { }
-
 	void visitAnnotations(const AnnotationMap& map, XmlElement& node){
 		if (map.empty())
 			return;
@@ -188,7 +186,9 @@ public:
 		std::for_each(entriesVec.begin(), entriesVec.end(),
 			[this, &entries](const NamedCompositeType::Entry& curr) {
 				XmlElement entry("entry", this->doc);
-				entry << XmlElement("id", this->doc).setText((curr.first).getName());
+				XmlElement id("id", this->doc);
+				id.setText((curr.first).getName());
+				entry << id;
 
 				this->append(entry, curr.second, "typePtr");
 				entries << entry;

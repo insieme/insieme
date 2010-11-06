@@ -60,24 +60,42 @@ public:
 	DOMElement* rootElem;
 	DOMLSParser* parser;
 
-public:
 	XmlUtil();
+public:
 
 	~XmlUtil();
 
 	void convertXmlToDom(const string fileName, const bool validate);
-
 	void convertDomToXml(const string fileName);
 
 	NodePtr convertDomToIr(NodeManager& manager);
-
 	void convertIrToDom(const NodePtr& node);
 
 	string convertDomToString();
 
+	static void write(const NodePtr& node, const string fileName) {
+		XmlUtil xml;
+		xml.convertIrToDom(node);
+		xml.convertDomToXml(fileName);
+	}
+
+	static NodePtr read(NodeManager& manager, const string fileName) {
+		XmlUtil xml;
+		xml.convertXmlToDom(fileName, true);
+		return xml.convertDomToIr(manager);
+	}
+
+	static void validate(const string fileName) {
+		XmlUtil xml;
+		xml.convertXmlToDom(fileName, true);
+	}
 };
 
 // ------------------------------------ XmlElement ----------------------------
+
+class XmlElement;
+typedef std::shared_ptr<XmlElement> XmlElementPtr;
+typedef vector<XmlElement> XmlElementList;
 
 class XmlElement {
 
@@ -85,7 +103,6 @@ class XmlElement {
 	DOMElement* base;
 	
 public:
-
 	typedef std::pair<std::string, std::string> Attribute;
 
 	XmlElement(DOMElement* elem);
@@ -93,33 +110,25 @@ public:
 	XmlElement(DOMElement* base, DOMDocument* doc);
 	
 	DOMElement* getBase() const;
-	
 	DOMDocument* getDoc() const;
 	
 	const XmlElement& operator<<(const XmlElement& childNode);
-	
-	XmlElement& operator<<(const std::shared_ptr<XmlElement>& childNode);
-	
-	vector<XmlElement> operator[](const std::string&) const;
-	
+	XmlElement& operator<<(const XmlElementPtr& childNode);
 	XmlElement& operator<<(const Attribute& attr);
+	
+	XmlElementList operator[](const std::string&) const;
 
-	XmlElement& setText(const std::string& text);
-	
-	std::string getAttr(const std::string& id) const;
-	
+	void setText(const std::string& text);
 	std::string getText() const;
 	
+	std::string getAttr(const std::string& id) const;
+
 	std::string getName() const;
 	
-	vector<XmlElement> getChildren() const;
-	
-	vector<XmlElement> getChildrenByName(const string& name) const;
-	
-	std::shared_ptr<XmlElement> getFirstChildByName(const string& name) const;
+	XmlElementList getChildren() const;
+	XmlElementList getChildrenByName(const string& name) const;
+	XmlElementPtr getFirstChildByName(const string& name) const;
 };
-
-typedef std::shared_ptr<XmlElement> XmlElementPtr;
 
 // ------------------------------------ XmlConverter ----------------------------
 
@@ -129,7 +138,7 @@ public:
 	typedef std::function<XmlElementPtr (const Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
 	typedef map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
 
-	typedef std::function<std::shared_ptr<Annotation> (const XmlElement&)> DomToIrConvertType;
+	typedef std::function<AnnotationPtr (const XmlElement&)> DomToIrConvertType;
 	typedef map<const std::string, DomToIrConvertType> DomToIrConvertMapType;
 
 	static XmlConverter& get();
@@ -164,14 +173,6 @@ AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const 
 			std::bind(insieme::xml::convertToXML<CLASS_NAME>, KEY, TO_XML, std::placeholders::_1, std::placeholders::_2), \
 			std::bind(insieme::xml::convertFromXML<CLASS_NAME>, FROM_XML, std::placeholders::_1) );
 
-
-// -------------------------Xml Write - Read - Validate----------------------
-
-void xmlWrite(const NodePtr& root, const std::string fileName = std::string());
-
-NodePtr xmlRead(NodeManager& manager, const std::string fileName);
-
-void xmlValidate(const std::string fileName);
 
 } // end namespace xml
 } // end namespace insieme

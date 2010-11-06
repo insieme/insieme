@@ -141,7 +141,7 @@ XmlElement& XmlElement::operator<<(const XmlElement::Attribute& attr) {
 	return *this;
 }
 
-XmlElement& XmlElement::setText(const string& text) {
+void XmlElement::setText(const string& text) {
 	assert(doc != NULL && "Attempt to create text on a root node");
 	DOMNode* first = base->getFirstChild();
 	bool found = false;
@@ -156,7 +156,6 @@ XmlElement& XmlElement::setText(const string& text) {
 		DOMText* textNode = doc->createTextNode(toUnicode(text));
 		base->appendChild(textNode);
 	}
-	return *this;
 }
 
 string XmlElement::getAttr(const string& id) const { // return the empty string if there is not attribute
@@ -187,33 +186,32 @@ string XmlElement::getName() const {
 	return name;
 }
 
-vector<XmlElement> XmlElement::getChildrenByName(const string& name) const {
-	vector<XmlElement> vec2;
-	vector<XmlElement>&& vec = XmlElement::getChildren();
-	for (auto iter = vec.begin(); iter != vec.end(); ++iter ){
-		if ((*iter).getName() == name){
-			vec2.push_back(*iter);
+XmlElementList XmlElement::getChildrenByName(const string& name) const {
+	XmlElementList ret;
+	XmlElementList&& vec = XmlElement::getChildren();
+	for (auto iter = vec.begin(); iter != vec.end(); ++iter )
+		if (iter->getName() == name) {
+			ret.push_back(*iter);
 		}
-	}
-	return vec2;
+	return ret;
 }
 
 XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
-	vector<XmlElement>&& vec = XmlElement::getChildren();
-	for (auto iter = vec.begin(); iter != vec.end(); ++iter ){
-		if ((*iter).getName() == name){
+	XmlElementList&& vec = XmlElement::getChildren();
+	for (auto iter = vec.begin(), end = vec.end(); iter != end; ++iter ){
+		if (iter->getName() == name){
 			return make_shared<XmlElement>(*iter);
 		}
 	}
-	return shared_ptr<XmlElement>();
+	return XmlElementPtr();
 }
 
-vector<XmlElement> XmlElement::getChildren() const {
-	vector<XmlElement> vec;
+XmlElementList XmlElement::getChildren() const {
+	XmlElementList vec;
 	DOMElement* curr = base->getFirstElementChild();
 	while(curr) {
 		if(!(curr->getNodeType() == DOMNode::TEXT_NODE || curr->getNodeType() == DOMNode::COMMENT_NODE)) //skip text nodes and comments
-			vec.push_back(XmlElement(curr, doc));
+			vec.push_back( XmlElement(curr, doc) );
 		curr = curr->getNextElementSibling();
 	}
 	return vec;
@@ -235,8 +233,8 @@ void* XmlConverter::registerAnnotation(const string& name, const XmlConverter::I
 // ------------------------------------ XmlUtil ----------------------------
 
 XmlUtil::XmlUtil(): doc(NULL), rootElem(NULL), parser(NULL) {
-		XMLPlatformUtils::Initialize();
-		impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
+	XMLPlatformUtils::Initialize();
+	impl = DOMImplementationRegistry::getDOMImplementation(toUnicode("Core"));
 }
 
 XmlUtil::~XmlUtil() {
@@ -327,40 +325,21 @@ void XmlUtil::convertDomToXml(const string outputFile) {
 }
 
 string XmlUtil::convertDomToString() {
-	if (doc){
-		DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
-		DOMLSSerializer*	theSerializer = implLS->createLSSerializer();
-		string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
-		theSerializer->release();
-		
-		string stringDump = "";
-		for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it) {
-	    	if (!isspace (*it))
-	      		stringDump += *it;
-		}
-		return stringDump;
+	if(!doc)
+		throw "DOM is empty"; // FIXME add an exception type for this
+
+	DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
+	DOMLSSerializer*	theSerializer = implLS->createLSSerializer();
+	string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
+	theSerializer->release();
+
+	string stringDump = "";
+	for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it) {
+		if (!isspace (*it))
+			stringDump += *it;
 	}
-	throw "DOM is empty"; // FIXME add an exception type for this
+	return stringDump;
 }
-
-// -------------------------Xml Write - Read - Validate----------------------
-
-void xmlWrite(const NodePtr& node, const string fileName) {
-	XmlUtil xml;
-	xml.convertIrToDom(node);
-	xml.convertDomToXml(fileName);
-};
-
-NodePtr xmlRead(NodeManager& manager, const string fileName) {
-	XmlUtil xml;
-	xml.convertXmlToDom(fileName, true);
-	return xml.convertDomToIr(manager);
-};
-
-void xmlValidate(const string fileName) {
-	XmlUtil xml;
-	xml.convertXmlToDom(fileName, true);
-};
 
 } // end xml namespace
 } // end insieme namespace

@@ -72,6 +72,7 @@ using namespace std;
 using namespace google;
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
+namespace xml = insieme::xml;
 
 int main(int argc, char** argv) {
 
@@ -133,7 +134,7 @@ int main(int argc, char** argv) {
 			if(!CommandLineOptions::DumpXML.empty()) {
 				LOG(INFO) << "================================== XML DUMP =====================================";
 				insieme::utils::Timer timer("Xml.dump");
-				insieme::xml::xmlWrite(program, CommandLineOptions::DumpXML);
+				xml::XmlUtil::write(program, CommandLineOptions::DumpXML);
 				timer.stop();
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
@@ -143,7 +144,7 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
 			core::SharedNodeManager manager = std::make_shared<core::NodeManager>();
-			NodePtr&& xmlNode= insieme::xml::xmlRead(*manager, CommandLineOptions::LoadXML);
+			NodePtr&& xmlNode= xml::XmlUtil::read(*manager, CommandLineOptions::LoadXML);
 			// used for debuging XML, removed once in production
 			if(program) {
 				assert(xmlNode != program);
