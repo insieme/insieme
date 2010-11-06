@@ -143,7 +143,6 @@ int main(int argc, char** argv) {
 		if(!CommandLineOptions::LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
-			core::SharedNodeManager manager = std::make_shared<core::NodeManager>();
 			NodePtr&& xmlNode= xml::XmlUtil::read(*manager, CommandLineOptions::LoadXML);
 			// used for debuging XML, removed once in production
 			if(program) {
