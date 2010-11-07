@@ -40,6 +40,7 @@
 #include "insieme/xml/xsd_config.h"
 
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/ast_visitor.h"
 
 #include "insieme/utils/logging.h"
 
@@ -80,7 +81,7 @@ class XmlVisitor : public ASTVisitor<void> {
 public:
 	XmlVisitor(DOMDocument* udoc): doc(udoc), rootElem(doc->getDocumentElement()) { }
 
-	void visitAnnotations(const AnnotationMap& map, XmlElement& node){
+	void visitAnnotations(const AnnotationMap& map, XmlElement& node) {
 		if (map.empty())
 			return;
 
@@ -142,7 +143,7 @@ public:
 		visitAnnotations(cur->getAnnotations(), genType);
 	}
 
-	void visitFunctionType(const FunctionTypePtr& cur){
+	void visitFunctionType(const FunctionTypePtr& cur) {
 		XmlElement functionType("functionType", doc);
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -630,7 +631,7 @@ public:
 namespace insieme {
 namespace xml {
 
-void XmlUtil::convertIrToDom(const NodePtr& node){
+void XmlUtil::convertIrToDom(const NodePtr& node) {
 	if (doc) {
 		doc->release();
 		doc = NULL;
@@ -644,7 +645,7 @@ void XmlUtil::convertIrToDom(const NodePtr& node){
 	rootNode << nodePtr;
 
 	AnnotationMap map = node.getAnnotations();
-	if (!map.empty()){
+	if (!map.empty()) {
 		XmlElement annotations("annotations", doc);
 		nodePtr << annotations;
 

@@ -34,16 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ast_visitor.h"
+#include <insieme/core/ast_node.h>
+#include <insieme/core/annotation.h>
+
+#include <map>
 
 namespace xercesc_3_1 {
 class DOMElement;
 class DOMImplementation;
 class DOMDocument;
 class DOMLSParser;
-}
-
-using namespace insieme::core;
+} // end xercesc_3_1 namespace
 
 namespace insieme {
 namespace xml {
@@ -51,47 +52,45 @@ namespace xml {
 class XStr {
 	uint16_t* fUnicodeForm;
 public:
-	XStr(const string& toTranscode);
+	XStr(const std::string&);
 	~XStr();
 	const uint16_t* unicodeForm();
 };
 
 #define toUnicode(str) insieme::xml::XStr(str).unicodeForm()
 
-using namespace xercesc_3_1;
-
 // ------------------------------------ XmlUtil ----------------------------
 class XmlUtil {
 public:
-	DOMImplementation* impl;
-	DOMDocument* doc;
-	DOMElement* rootElem;
-	DOMLSParser* parser;
+	xercesc_3_1::DOMImplementation* impl;
+	xercesc_3_1::DOMDocument* doc;
+	xercesc_3_1::DOMElement* rootElem;
+	xercesc_3_1::DOMLSParser* parser;
 
 	XmlUtil();
 public:
 
-	void convertXmlToDom(const string& fileName, const bool validate);
-	void convertDomToXml(const string& fileName);
+	void convertXmlToDom(const std::string& fileName, const bool validate);
+	void convertDomToXml(const std::string& fileName);
 
-	NodePtr convertDomToIr(NodeManager& manager);
-	void convertIrToDom(const NodePtr& node);
+	insieme::core::NodePtr convertDomToIr(insieme::core::NodeManager& manager);
+	void convertIrToDom(const insieme::core::NodePtr& node);
 
 	string convertDomToString();
 
-	static void write(const NodePtr& node, const string& fileName) {
+	static void write(const insieme::core::NodePtr& node, const std::string& fileName) {
 		XmlUtil xml;
 		xml.convertIrToDom(node);
 		xml.convertDomToXml(fileName);
 	}
 
-	static NodePtr read(NodeManager& manager, const string& fileName) {
+	static insieme::core::NodePtr read(insieme::core::NodeManager& manager, const std::string& fileName) {
 		XmlUtil xml;
 		xml.convertXmlToDom(fileName, true);
 		return xml.convertDomToIr(manager);
 	}
 
-	static void validate(const string& fileName) {
+	static void validate(const std::string& fileName) {
 		XmlUtil xml;
 		xml.convertXmlToDom(fileName, true);
 	}
@@ -106,19 +105,17 @@ typedef std::shared_ptr<XmlElement> XmlElementPtr;
 typedef vector<XmlElement> XmlElementList;
 
 class XmlElement {
-
-	DOMDocument* doc;
-	DOMElement* base;
-	
+	xercesc_3_1::DOMDocument* doc;
+	xercesc_3_1::DOMElement* base;
 public:
 	typedef std::pair<std::string, std::string> Attribute;
 
-	XmlElement(DOMElement* elem);
-	XmlElement(const std::string& name, DOMDocument* doc);
-	XmlElement(DOMElement* base, DOMDocument* doc);
+	XmlElement(xercesc_3_1::DOMElement* elem);
+	XmlElement(const std::string& name, xercesc_3_1::DOMDocument* doc);
+	XmlElement(xercesc_3_1::DOMElement* base, xercesc_3_1::DOMDocument* doc);
 	
-	DOMElement* getBase() const;
-	DOMDocument* getDoc() const;
+	xercesc_3_1::DOMElement* getBase() const;
+	xercesc_3_1::DOMDocument* getDoc() const;
 	
 	const XmlElement& operator<<(const XmlElement& childNode);
 	XmlElement& operator<<(const XmlElementPtr& childNode);
@@ -143,16 +140,16 @@ public:
 class XmlConverter: public boost::noncopyable {
 	XmlConverter() { }
 public:
-	typedef std::function<XmlElementPtr (const Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
-	typedef map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
+	typedef std::function<XmlElementPtr (const insieme::core::Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
+	typedef std::map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
 
-	typedef std::function<AnnotationPtr (const XmlElement&)> DomToIrConvertType;
-	typedef map<const std::string, DomToIrConvertType> DomToIrConvertMapType;
+	typedef std::function<insieme::core::AnnotationPtr (const XmlElement&)> DomToIrConvertType;
+	typedef std::map<const std::string, DomToIrConvertType> DomToIrConvertMapType;
 
 	static XmlConverter& get();
 	
-	AnnotationPtr domToIrAnnotation (const XmlElement& el) const;
-	XmlElementPtr irToDomAnnotation (const Annotation& ann, xercesc_3_1::DOMDocument* doc) const;
+	insieme::core::AnnotationPtr domToIrAnnotation (const XmlElement& el) const;
+	XmlElementPtr irToDomAnnotation (const insieme::core::Annotation& ann, xercesc_3_1::DOMDocument* doc) const;
 	
 	void* registerAnnotation(const std::string& name, const IrToDomConvertType& toXml, const DomToIrConvertType& fromXml);
 private:
@@ -162,8 +159,7 @@ private:
 
 template <class AnnotationTy>
 XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement& (const AnnotationTy&, XmlElement&)> toXml,
-		const Annotation& ann, xercesc_3_1::DOMDocument* doc)
-{
+		const insieme::core::Annotation& ann, xercesc_3_1::DOMDocument* doc) {
 	insieme::xml::XmlElementPtr node( new XmlElement("annotation", doc) );
 	*node << XmlElement::Attribute("type", mapName);
 	toXml(dynamic_cast<const AnnotationTy&>(ann), *node);
@@ -171,11 +167,11 @@ XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement&
 }
 
 template <class AnnotationTy>
-AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
+insieme::core::AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
 	return fromXml(node);
 }
 
-#define XML_CONVERTER(CLASS_NAME, KEY, TO_XML, FROM_XML)	\
+#define XML_REGISTER_ANNOTATION(CLASS_NAME, KEY, TO_XML, FROM_XML)	\
 	void* hack ## CLASS_NAME ## hack = \
 		insieme::xml::XmlConverter::get().registerAnnotation(KEY, \
 			std::bind(insieme::xml::convertToXML<CLASS_NAME>, KEY, TO_XML, std::placeholders::_1, std::placeholders::_2), \

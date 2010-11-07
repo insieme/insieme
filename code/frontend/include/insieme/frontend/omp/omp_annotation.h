@@ -99,12 +99,12 @@ private:
 class Annotation {
 public:
 	virtual std::ostream& dump(std::ostream& out) const { return out; }
-	virtual void toXml(insieme::xml::XmlElement& elem) = 0;
+//	virtual void toXml(insieme::xml::XmlElement& elem) = 0;
 };
 
 class Barrier: public Annotation {
 public:
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "barrier"; }
 };
 
@@ -209,7 +209,7 @@ private:
  */
 class Master: public Annotation {
 public:
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "master"; }
 };
 
@@ -344,7 +344,7 @@ public:
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "parallel(";
@@ -375,7 +375,7 @@ public:
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "for(";
@@ -412,7 +412,8 @@ public:
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
+
 	std::ostream& dump(std::ostream& out) const {
 		out << "parallel for(";
 		CommonClause::dump(out);
@@ -468,7 +469,7 @@ public:
 			CommonClause(privateClause, firstPrivateClause),
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "sections(";
@@ -496,7 +497,7 @@ public:
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "parallel sections(";
@@ -512,7 +513,7 @@ public:
  */
 class Section: public Annotation {
 public:
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "section"; }
 };
 
@@ -535,7 +536,7 @@ public:
 
 	bool hasNoWait() const { return noWait; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "single(";
@@ -565,7 +566,7 @@ public:
 
 	bool hasUntied() const { return untied; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "task(";
@@ -582,7 +583,7 @@ public:
  */
 class TaskWait: public Annotation {
 public:
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const { return out << "task wait"; }
 };
@@ -592,7 +593,7 @@ public:
  */
 class Atomic: public Annotation {
 public:
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const { return out << "atomic"; }
 };
@@ -609,7 +610,7 @@ public:
 	bool hasName() const { return static_cast<bool>(name); }
 	const core::Variable& getName() const { assert(hasName()); return *name; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "critical";
@@ -624,7 +625,7 @@ public:
  */
 class Ordered: public Annotation {
 public:
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "ordered"; }
 };
 
@@ -639,7 +640,7 @@ public:
 	bool hasVarList() const { return static_cast<bool>(varList); }
 	const VarList& getVarList() const { assert(hasVarList()); return *varList; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "flush";
@@ -660,7 +661,7 @@ public:
 	bool hasThreadPrivate() const { return static_cast<bool>(threadPrivateClause); }
 	const VarList& getThreadPrivate() const { assert(hasThreadPrivate()); return *threadPrivateClause; }
 
-	void toXml(insieme::xml::XmlElement& elem);
+//	void toXml(insieme::xml::XmlElement& elem);
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "threadprivate(";

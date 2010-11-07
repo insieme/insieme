@@ -89,7 +89,7 @@ class NodeBuilder {
 	}
 
 	template <class T>
-	void updateMap(const XmlElement& elem, const T& node){
+	void updateMap(const XmlElement& elem, const T& node) {
 		string&& id = elem.getAttr("id");
 		assert(!id.empty());
 		auto fit = elemMap.find(numeric_cast<unsigned long>(id));
@@ -107,12 +107,12 @@ class NodeBuilder {
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first, const string& second){
+	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first, const string& second) {
 		return createNode<T>(*elem.getFirstChildByName(first)->getFirstChildByName(second));
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first){
+	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first) {
 		return createNode<T>(*elem.getFirstChildByName(first));
 	}
 
@@ -486,7 +486,7 @@ AnnotationPtr XmlConverter::domToIrAnnotation(const XmlElement& el) const {
 	return AnnotationPtr();
 }
 
-NodePtr XmlUtil::convertDomToIr(NodeManager& manager){
+NodePtr XmlUtil::convertDomToIr(NodeManager& manager) {
 
 	XmlElement inspire(doc->getDocumentElement(), doc);
 	NodeBuilder nb(manager);

@@ -46,6 +46,8 @@
 #include "insieme/xml/xml_utils.h"
 #include "insieme/xml/xsd_config.h"
 
+#include <sstream>
+
 using namespace insieme::core;
 using namespace insieme::utils;
 using namespace insieme::xml;
@@ -59,22 +61,26 @@ class error_handler: public DOMErrorHandler {
 	bool failed_;
 
 public:
-	error_handler () : failed_ (false) {}
+	error_handler () : failed_ (false) { }
 
 	bool failed () const { return failed_; }
 
-	virtual bool handleError (const xercesc::DOMError& e){
+	virtual bool handleError (const xercesc::DOMError& e) {
 		bool warn (e.getSeverity() == DOMError::DOM_SEVERITY_WARNING);
 		if (!warn) failed_ = true;
 	
 		DOMLocator* loc (e.getLocation ());
 	
-		char* uri (XMLString::transcode (loc->getURI ()));
-		char* msg (XMLString::transcode (e.getMessage ()));
+		char* uri (XMLString::transcode(loc->getURI ()));
+		char* msg (XMLString::transcode(e.getMessage ()));
 	
-		cerr << uri << ":" 
-			<< loc->getLineNumber () << ":" << loc->getColumnNumber () << " "
-			<< (warn ? "warning: " : "error: ") << msg << endl;
+		stringstream ss;
+		ss << uri << ":" << loc->getLineNumber () << ":" << loc->getColumnNumber () << " " << msg;
+		if(warn)
+			LOG(WARNING) << ss.str();
+		else
+			LOG(ERROR) << ss.str();
+
 
 		XMLString::release (&uri);
 		XMLString::release (&msg);
@@ -132,14 +138,14 @@ void XmlElement::setText(const string& text) {
 	assert(doc != NULL && "Attempt to create text on a root node");
 	DOMNode* first = base->getFirstChild();
 	bool found = false;
-	while(first && !found){
+	while(first && !found) {
 		if (first->getNodeType() == 3) {
 			first->setTextContent(toUnicode(text));
 			found = true;
 		}
 		first = first->getPreviousSibling();
 	}
-	if (!found){
+	if (!found) {
 		DOMText* textNode = doc->createTextNode(toUnicode(text));
 		base->appendChild(textNode);
 	}
@@ -154,7 +160,7 @@ string XmlElement::getAttr(const string& id) const { // return the empty string 
 
 string XmlElement::getText() const { // return the empty string if there is no text
 	DOMNode* first = base->getFirstChild();
-	while(first){
+	while(first) {
 		if (first->getNodeType() == 3) {
 			char* ctext (XMLString::transcode(first->getNodeValue()));
 			string text(ctext);
@@ -163,7 +169,7 @@ string XmlElement::getText() const { // return the empty string if there is no t
 		}
 		first = first->getPreviousSibling();
 	}
-	return "";
+	return string();
 }
 
 string XmlElement::getName() const {
@@ -185,8 +191,8 @@ XmlElementList XmlElement::getChildrenByName(const string& name) const {
 
 XmlElementPtr XmlElement::getFirstChildByName(const string& name) const {
 	XmlElementList&& vec = XmlElement::getChildren();
-	for (auto iter = vec.begin(), end = vec.end(); iter != end; ++iter ){
-		if (iter->getName() == name){
+	for (auto iter = vec.begin(), end = vec.end(); iter != end; ++iter ) {
+		if (iter->getName() == name) {
 			return make_shared<XmlElement>(*iter);
 		}
 	}
@@ -297,7 +303,7 @@ void XmlUtil::convertDomToXml(const string& outputFile) {
 		serializerConfig->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
 		
 	XMLFormatTarget* myFormTarget = NULL;
-	if (!outputFile.empty()){
+	if (!outputFile.empty()) {
 		myFormTarget = new LocalFileFormatTarget(outputFile.c_str());
 	} else {
 		myFormTarget = new StdOutFormatTarget();
@@ -320,7 +326,7 @@ string XmlUtil::convertDomToString() {
 	string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
 	theSerializer->release();
 
-	string stringDump = "";
+	string stringDump;
 	for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it) {
 		if (!isspace (*it))
 			stringDump += *it;
