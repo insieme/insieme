@@ -43,7 +43,8 @@ namespace core {
 namespace checks {
 
 enum {
-	EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE = EC_GROUP_IMPERATIVE + 1
+	EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE = EC_GROUP_IMPERATIVE + 1,
+	EC_IMPERATIVE_ILLEGAL_VARIABLE_REUSE
 };
 
 /**
@@ -58,7 +59,17 @@ enum {
 		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
 
+/**
+ * This check verifies that variables are only used within their scope.
+ */
 SIMPLE_CHECK(UndeclaredVariable, Node);
+
+/**
+ * This check verifies whether the same variable is used within more than one situation.
+ * Unlike other checks, this check is intrinsically recursive and does not need to be wrapped
+ * into a recursive check.
+ */
+SIMPLE_CHECK(DeclaredOnce, Node);
 
 
 // TODO: add another test verifying that every variable is only defined once

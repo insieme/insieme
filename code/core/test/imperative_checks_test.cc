@@ -67,7 +67,10 @@ TEST(UndeclaredVariableCheck, Basic) {
 	EXPECT_TRUE(check(ok, typeCheck).empty());
 	ASSERT_FALSE(check(err, typeCheck).empty());
 
-	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
+	NodeAddress errorAdr(err);
+	errorAdr = errorAdr.getAddressOfChild(1);
+	errorAdr = errorAdr.getAddressOfChild(1);
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
 }
 
 

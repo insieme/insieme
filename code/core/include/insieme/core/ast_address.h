@@ -145,7 +145,7 @@ public:
 	 * A constructor creating an address for the given root node.
 	 */
 	template<typename B>
-	Address(const AnnotatedPtr<B>& root, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
+	explicit Address(const AnnotatedPtr<B>& root, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
 		: utils::HashableImmutableData<Address<T>>(hashPath(toPath(root))),
 		  path(std::make_shared<Path>(toPath(root))) {}
 

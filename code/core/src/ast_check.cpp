@@ -230,7 +230,7 @@ void add(OptionalMessageList& target, const Message& msg) {
 
 MessageList check(const NodePtr& node, const CheckPtr& check) {
 	// collect messages ..
-	auto res = check->visit(node);
+	auto res = check->visit(NodeAddress(node));
 	if (res) {
 		// => list is not empty ... return list
 		return *res;

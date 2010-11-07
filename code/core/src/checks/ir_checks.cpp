@@ -57,7 +57,14 @@ namespace checks {
 		checks.push_back(make_check<UndeclaredVariableCheck>());
 
 		// assemble the IR check list
-		return makeVisitOnce(combine(checks));
+		CheckPtr recursive = makeVisitOnce(combine(checks));
+
+		return combine(
+				toVector<CheckPtr>(
+					recursive,
+					make_check<DeclaredOnceCheck>()
+				)
+		);
 	}
 
 } // end namespace check

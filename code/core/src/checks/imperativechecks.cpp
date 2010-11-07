@@ -37,6 +37,7 @@
 #include "insieme/core/checks/imperativechecks.h"
 
 #include <boost/unordered_set.hpp>
+#include <boost/unordered_map.hpp>
 
 #include "insieme/utils/container_utils.h"
 
@@ -91,7 +92,7 @@ namespace {
 		 */
 		void visitDeclarationStmt(const DeclarationStmtAddress& cur) {
 			// first => recursive check of initialization expression.
-			visit(cur->getInitialization());
+			visit(cur.getAddressOfChild(1));
 
 			// second: add newly declared variable to set of declared variables
 			declaredVariables.insert(cur->getVariable());
@@ -159,7 +160,8 @@ namespace {
 			for (int i=0, e=cur->getChildList().size(); i<e; i++) {
 				NodeAddress child = cur.getAddressOfChild(i);
 				if (child->getNodeType() == NT_DeclarationStmt) {
-					visit(static_address_cast<const DeclarationStmt>(child)->getInitialization());
+					// check initialization expression ...
+					visit(cur.getAddressOfChild(1));
 				}
 			}
 
@@ -219,23 +221,25 @@ namespace {
 		return checkLambda(cur, declared);
 	}
 
-	OptionalMessageList checkRecLambdaDefinition(const RecLambdaDefinitionAddress& cur) {
+	OptionalMessageList checkRecLambdaDefinition(const RecLambdaDefinitionAddress& definition) {
 		// get set of recursive functions ...
 		VariableSet recFunctions;
-		for_each(cur->getDefinitions(), [&recFunctions](const std::pair<const VariablePtr&, const LambdaExprPtr>& cur) {
+		for_each(definition->getDefinitions(), [&recFunctions](const std::pair<const VariablePtr&, const LambdaExprPtr>& cur) {
 			recFunctions.insert(cur.first);
 		});
 
 		// test each definition ...
 		OptionalMessageList res;
-		for_each(cur->getDefinitions(), [&](const std::pair<const VariablePtr&, const LambdaExprPtr>& cur) {
+		int i=0;
+		for_each(definition->getDefinitions(), [&](const std::pair<const VariablePtr&, const LambdaExprPtr>& cur) {
 			VariableSet predefined;
 
 			// add all recursive functions ...
 			predefined.insert(recFunctions.begin(), recFunctions.end());
 
 			// conduct check
-			addAll(res, checkLambda(cur.second, predefined));
+			addAll(res, checkLambda(static_address_cast<const LambdaExpr>(definition.getAddressOfChild(i+1)), predefined));
+			i+=2; // TODO: improve access to child nodes ...
 		});
 
 		// that's it!
@@ -282,6 +286,107 @@ OptionalMessageList UndeclaredVariableCheck::visitNode(const NodeAddress& addres
 	default:
 		return res;
 	}
+}
+
+
+// ------------------------------ Declared Once Check -----------------------
+
+namespace {
+
+	class SingleDeclarationCheck : public ASTCheck {
+
+		/**
+		 * The type used to link variables to the node containing their declaration.
+		 */
+		typedef boost::unordered_map<VariablePtr, const NodePtr, hash_target<VariablePtr>, equal_target<VariablePtr>> DeclarationMap;
+
+		/**
+		 * The map linking variables to their declaration.
+		 */
+		DeclarationMap declarations;
+
+	public:
+
+		/**
+		 * Visits a declaration - if the same variable has already been
+		 * declared somewhere else, an error will be added to the message list.
+		 */
+		OptionalMessageList visitDeclarationStmt(const DeclarationStmtAddress& cur) {
+			OptionalMessageList res;
+
+			// just test declard variable
+			testVariable(res, cur->getVariable(), cur, (cur.getDepth()>1)?cur.getParentNode():cur.getAddressedNode());
+
+			return res;
+		}
+
+		OptionalMessageList visitLambdaExpr(const LambdaExprAddress& cur) {
+			OptionalMessageList res;
+
+			// test all captured variables ...
+			for_each(cur->getCaptureList(), [&](const DeclarationStmtPtr& decl) {
+				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
+			});
+
+			// ... and parameters
+			for_each(cur->getParams(), [&](const VariablePtr& param) {
+				testVariable(res, param, cur, cur.getAddressedNode());
+			});
+
+			return res;
+		}
+
+		OptionalMessageList visitRecLambdaDefinition(const RecLambdaDefinitionAddress& cur) {
+			OptionalMessageList res;
+
+			// test variables used as recursive functions ...
+			for_each(cur->getDefinitions(), [&](const std::pair<VariablePtr, LambdaExprPtr> definition) {
+				testVariable(res, definition.first, cur, cur.getAddressedNode());
+			});
+
+			return res;
+		}
+
+		OptionalMessageList visitJobExpr(const JobExprAddress& cur) {
+			OptionalMessageList res;
+
+			// test local declarations
+			for_each(cur->getLocalDecls(), [&](const DeclarationStmtPtr& decl) {
+				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
+			});
+
+			return res;
+		}
+
+
+	private:
+
+		void testVariable(OptionalMessageList& res, const VariablePtr& var, const NodeAddress& current, const NodePtr& context) {
+			// try register variable ...
+			if (declarations.insert(std::make_pair(var, context)).second) {
+				// not yet registered, everything is fine.
+				return;
+			}
+
+			// register failed => already declared
+			add(res, Message(current,
+					EC_IMPERATIVE_ILLEGAL_VARIABLE_REUSE,
+					format("Illegal re-use of variable %s of type %s",
+							toString(*(var)).c_str(),
+							toString(*(var->getType())).c_str()),
+					Message::WARNING));
+		}
+
+	};
+
+
+}
+
+
+OptionalMessageList DeclaredOnceCheck::visitNode(const NodeAddress& address) {
+	// use private instance of single declaration check
+	CheckPtr check = makeVisitOnce(make_check<SingleDeclarationCheck>());
+	return check->visit(address);
 }
 
 
