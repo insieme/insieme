@@ -34,23 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include <xercesc/util/XercesDefs.hpp>
 #include <xercesc/dom/DOM.hpp>
-#include <xercesc/util/XMLString.hpp>
-#include <xercesc/util/PlatformUtils.hpp>
-#include <xercesc/util/OutOfMemoryException.hpp>
-#include <xercesc/framework/StdOutFormatTarget.hpp>
-#include <xercesc/framework/LocalFileFormatTarget.hpp>
-#include <xercesc/parsers/XercesDOMParser.hpp>
-#include <xercesc/sax/HandlerBase.hpp>
-#include <xercesc/util/XMLUni.hpp>
-
-#include "insieme/utils/logging.h"
-
-#include "insieme/core/ast_builder.h"
 
 #include "insieme/xml/xml_utils.h"
 #include "insieme/xml/xsd_config.h"
+
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/annotation.h"
+
+#include "insieme/utils/logging.h"
 
 using namespace insieme::core;
 using namespace insieme::utils;
@@ -60,6 +52,17 @@ using namespace std;
 XERCES_CPP_NAMESPACE_USE
 
 namespace { // begin namespace
+
+void buildAnnotations(const XmlElement& type, const Annotatable& baseType){
+	XmlElementPtr annotations = type.getFirstChildByName("annotations");
+	if(!annotations) return;
+
+	XmlConverter& xmlConverter = XmlConverter::get();
+	XmlElementList&& ann = annotations->getChildrenByName("annotation");
+	for(auto iter = ann.begin(), end = ann.end(); iter != end; ++iter) {
+		baseType.addAnnotation(xmlConverter.domToIrAnnotation(*iter));
+	}
+}
 
 class NodeBuilder {
 	NodeManager& mgr;
@@ -93,18 +96,6 @@ class NodeBuilder {
 		assert(fit != elemMap.end());
 		assert(fit->second.first == &elem && "The XmlElement associated to this node has changed!");
 		fit->second.second = node;
-	}
-
-	template <class T>
-	void buildAnnotations(const XmlElement& type, const T& baseType){
-		XmlElementPtr annotations = type.getFirstChildByName("annotations");
-		if(!annotations) return;
-
-		XmlConverter& xmlConverter = XmlConverter::get();
-		XmlElementList&& ann = annotations->getChildrenByName("annotation");
-		for(auto iter = ann.begin(), end = ann.end(); iter != end; ++iter) {
-			baseType.addAnnotation(xmlConverter.domToIrAnnotation(*iter));
-		}
 	}
 
 	template <class T>
@@ -147,7 +138,7 @@ public:
 		XmlElementPtr&& param = elem.getFirstChildByName("typeParams");
 		if (param){
 			XmlElementList&& types = param->getChildrenByName("typePtr");
-			for(auto iter = types.begin(); iter != types.end(); ++iter) {
+			for(auto iter = types.begin(), end = types.end(); iter != end; ++iter) {
 				typeParams.push_back( createNode<Type>(*iter) );
 			}
 		}
