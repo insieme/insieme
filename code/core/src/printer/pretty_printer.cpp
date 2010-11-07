@@ -471,6 +471,8 @@ namespace {
 				this->increaseIndent();
 				this->visit(cur);
 				this->decreaseIndent();
+				this->newLine();
+				this->newLine();
 			});
 		});
 

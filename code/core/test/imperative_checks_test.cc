@@ -34,32 +34,44 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/ir_checks.h"
+#include <gtest/gtest.h>
 
+#include "insieme/core/ast_builder.h"
 #include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/checks/typechecks.h"
-
 
 namespace insieme {
 namespace core {
 namespace checks {
 
+bool containsMSG(const MessageList& list, const Message& msg) {
+	return contains(list, msg);
+}
 
-	CheckPtr getFullCheck() {
+TEST(UndeclaredVariableCheck, Basic) {
+	ASTBuilder builder;
 
-		std::vector<CheckPtr> checks;
-		checks.push_back(make_check<CallExprTypeCheck>());
-		checks.push_back(make_check<DeclarationStmtTypeCheck>());
-		checks.push_back(make_check<WhileConditionTypeCheck>());
-		checks.push_back(make_check<IfConditionTypeCheck>());
-		checks.push_back(make_check<SwitchExpressionTypeCheck>());
-		checks.push_back(make_check<BuildInLiteralCheck>());
-		checks.push_back(make_check<UndeclaredVariableCheck>());
+	// OK ... create a function literal
+	TypePtr type = builder.genericType("int");
+	VariablePtr varA = builder.variable(type);
+	VariablePtr varB = builder.variable(type);
 
-		// assemble the IR check list
-		return makeVisitOnce(combine(checks));
-	}
+	ExpressionPtr init = builder.literal(type, "4");
 
-} // end namespace check
+	FunctionTypePtr funType = builder.functionType(builder.tupleType(), type);
+
+	NodePtr ok = builder.lambdaExpr(funType, toVector<DeclarationStmtPtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, init));
+	NodePtr err = builder.lambdaExpr(funType, toVector<DeclarationStmtPtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
+
+
+	CheckPtr typeCheck = make_check<UndeclaredVariableCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
+}
+
+
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
+
