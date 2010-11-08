@@ -181,6 +181,10 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	EXPECT_NE(&nodeInA->getAnnotations(), &nodeInB->getAnnotations());
 	EXPECT_NE(&node->getAnnotations(), &nodeInB->getAnnotations());
 
+	// remove all annotations
+	node->remAnnotation(DummyAnnotation::DummyKey);
+	node->remAnnotation(DummyAnnotation2::DummyKey);
+
 	// check children isolation
 	NP allPtr[] = { node, nodeInA, nodeInB };
 	for (int i=0; i<3; i++) {

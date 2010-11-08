@@ -208,6 +208,10 @@ AST_TERMINAL(RecLambdaExpr, Expression)
 AST_TERMINAL(StructExpr, Expression)
 AST_TERMINAL(UnionExpr, Expression)
 
+AST_TERMINAL(MemberAccessExpr, Expression)
+AST_TERMINAL(TupleProjectionExpr, Expression)
+
+
 
 //
 // --- Program ---

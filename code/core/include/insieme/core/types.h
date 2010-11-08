@@ -693,6 +693,12 @@ public:
 		return entries;
 	}
 
+	/**
+	 * Retrieves the type of a member of this struct or a null pointer if there is no
+	 * such entry.
+	 */
+	const TypePtr getTypeOfMember(const Identifier& member) const;
+
 private:
 
 	/**

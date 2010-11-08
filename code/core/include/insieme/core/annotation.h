@@ -218,7 +218,10 @@ public:
 	 * @param key a pointer to the key addressing the element to be removed.
 	 */
 	void remAnnotation(const AnnotationKey* key) const {
-		map->erase(map->find(key));
+		auto pos = map->find(key);
+		if (pos != map->end()) {
+			map->erase(pos);
+		}
 	}
 
 	/**
