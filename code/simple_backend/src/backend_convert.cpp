@@ -274,6 +274,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		if(funName == "ref.assign") {
 			// print assignment
 			if (requiresDeref(args.front(), cc)) cStr << "*";
+			cStr << "*";
 			visit(args.front());
 			cStr << "=";
 			visit(args.back());
@@ -286,6 +287,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 			// add operation
 			if (deref) cStr << "(*";
+			cStr << "*";
 			visit(args.front());
 			if (deref) cStr << ")";
 			return;
@@ -305,12 +307,12 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
 				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
 					// print elements of the tuple directly ...
-					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
+					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->processArgument(ep); });
 					return;
 				}
 			}
 
-			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->processArgument(ep); });
 			//DLOG(INFO) << cStr.getString();
 			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
 			return;
@@ -321,9 +323,9 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) {
 		string op = cOpAnn->getOperator();
 		cStr << "(";
-		visit(args.front());
+		processArgument(args.front());
 		cStr << " " << op << " ";
-		visit(args.back());
+		processArgument(args.back());
 		cStr << ")";
 		return;
 	}
@@ -337,8 +339,19 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	}
 
 	cStr << "(";
-	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->processArgument(ep); });
 	cStr << ")";
+}
+
+void ConvertVisitor::processArgument(const ExpressionPtr& argument) {
+
+	if (argument->getNodeType() == NT_Variable) {
+		// special variable handling
+
+	}
+
+	// default: just print the corresponding expression
+	visit(argument);
 }
 
 void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
@@ -463,7 +476,12 @@ void ConvertVisitor::visitCastExpr(const CastExprPtr& ptr) {
 	cStr << "))";
 }
 
-
+void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
+	if (ptr->getType()->getNodeType() == NT_RefType) {
+		cStr << "&";
+	}
+	cStr << nameGen.getVarName(ptr);
+}
 
 string TypeManager::getTypeName(const core::TypePtr type, bool inDecl /* = false */) {
 	visitStarting = true;

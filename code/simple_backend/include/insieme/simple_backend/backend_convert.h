@@ -337,9 +337,9 @@ public:
 		cStr << ")";
 	}
 
-	void visitVariable(const VariablePtr& ptr) {
-		cStr << nameGen.getVarName(ptr);
-	}
+	void visitVariable(const VariablePtr& ptr);
+
+	void processArgument(const ExpressionPtr& argument);
 };
 
 } // namespace simple_backend
