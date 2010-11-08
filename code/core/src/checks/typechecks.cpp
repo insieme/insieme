@@ -202,6 +202,38 @@ OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	return res;
 }
 
+OptionalMessageList RefCastCheck::visitCastExpr(const CastExprAddress& address) {
+
+	OptionalMessageList res;
+
+	// check whether it is a build-in literal
+	TypePtr src = address->getSubExpression()->getType();
+	TypePtr trg = address->getType();
+	NodeType srcType = src->getNodeType();
+	NodeType resType = trg->getNodeType();
+
+	if (srcType == NT_RefType && resType != NT_RefType) {
+		add(res, Message(address,
+				EC_TYPE_REF_TO_NON_REF_CAST,
+				format("Casting reference type %s to non-reference type %s",
+						toString(*src).c_str(),
+						toString(*trg).c_str()),
+				Message::ERROR));
+	}
+
+	if (srcType != NT_RefType && resType == NT_RefType) {
+		add(res, Message(address,
+				EC_TYPE_NON_REF_TO_REF_CAST,
+				format("Casting non-reference type %s to reference type %s",
+						toString(*src).c_str(),
+						toString(*trg).c_str()),
+				Message::ERROR));
+	}
+
+	return res;
+}
+
+
 #undef CAST
 
 } // end namespace check

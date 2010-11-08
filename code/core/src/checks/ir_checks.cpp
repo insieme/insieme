@@ -54,6 +54,8 @@ namespace checks {
 		checks.push_back(make_check<IfConditionTypeCheck>());
 		checks.push_back(make_check<SwitchExpressionTypeCheck>());
 		checks.push_back(make_check<BuildInLiteralCheck>());
+		checks.push_back(make_check<RefCastCheck>());
+
 		checks.push_back(make_check<UndeclaredVariableCheck>());
 
 		// assemble the IR check list

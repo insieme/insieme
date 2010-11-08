@@ -241,6 +241,27 @@ TEST(BuildInLiterals, Basic) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_TYPE_OF_LITERAL, "", Message::WARNING));
 }
 
+TEST(CastExpr, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+
+	TypePtr type = builder.genericType("int");
+	TypePtr ref = builder.refType(type);
+
+	CastExprPtr ok = builder.castExpr(type, builder.literal(type, "1"));
+	CastExprPtr err1 = builder.castExpr(ref, builder.literal(type, "1"));
+	CastExprPtr err2 = builder.castExpr(type, builder.literal(ref, "1"));
+
+	CheckPtr typeCheck = make_check<RefCastCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err1, typeCheck).empty());
+	ASSERT_FALSE(check(err2, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_NON_REF_TO_REF_CAST, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_REF_TO_NON_REF_CAST, "", Message::ERROR));
+}
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
