@@ -212,21 +212,25 @@ core::ExpressionPtr tryDeref(const core::ASTBuilder& builder, const core::Expres
 
 // creates a function call from a list of expressions,
 // usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
-core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vector<core::StatementPtr>& body, core::TypePtr retTy) {
+core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vector<core::StatementPtr>& body, core::TypePtr retTy, bool useCapture=false) {
 
 	core::CompoundStmtPtr&& bodyStmt = builder.compoundStmt( body );
 	// keeps the list variables used in the body
 	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
 
-	core::TupleType::ElementTypeList elemTy;
 	core::LambdaExpr::ParamList params;
+	core::TupleType::ElementTypeList paramTypes;
+	core::LambdaExpr::CaptureList capture;
 	std::for_each(args.begin(), args.end(),
-		[ &params, &elemTy, &builder, &bodyStmt] (const core::ExpressionPtr& curr) {
+		[ &capture, &params, &paramTypes, &builder, &bodyStmt, useCapture] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
-			core::VariablePtr parmVar = builder.variable( bodyVar->getType() );
-			params.push_back( parmVar );
-			elemTy.push_back( parmVar->getType() );
-
+			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
+			if(useCapture)
+				capture.push_back( builder.declarationStmt(parmVar, bodyVar) );
+			else {
+				params.push_back( parmVar );
+				paramTypes.push_back( parmVar->getType() );
+			}
 			// we have to replace the variable of the body with the newly created parmVar
 			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceNode(builder, bodyStmt, bodyVar, parmVar, true) );
 			assert(bodyStmt);
@@ -234,10 +238,17 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 	);
 
 	// build the type of the function
-	core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
+	core::FunctionTypePtr&& funcTy = builder.functionType( builder.tupleType( useCapture ?  core::TupleType::ElementTypeList() : paramTypes ), retTy);
 
 	// build the expression body
-	core::LambdaExprPtr retExpr = builder.lambdaExpr( funcTy, params, bodyStmt );
+	core::LambdaExprPtr retExpr;
+	if(useCapture)
+		retExpr = builder.lambdaExpr( funcTy, capture, core::LambdaExpr::ParamList(), bodyStmt );
+	else
+		retExpr = builder.lambdaExpr( funcTy, params, bodyStmt );
+
+	if(useCapture)
+		return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>() );
 	return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>(args.begin(), args.end()) );
 }
 
@@ -846,6 +857,8 @@ public:
 			// the return type of the condition is not a boolean, we add a cast expression
 			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 		}
+
+		// builder.callExpr(retTy, core::lang::OP_ITE_PTR, )
 		core::StatementPtr&& ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
 		core::ExpressionPtr&& retExpr = createCallExpr( convFact.builder, toVector( ifStmt ),  retTy);
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -1475,7 +1488,7 @@ public:
 
 	// as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error in the case
 	// the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the visitor is not called on his subnodes
-	StmtWrapper VisitSwitchCase(SwitchCase* caseStmt) { assert(false && "Visitor is visiting a 'case' stmt (cannot compute)"); }
+	StmtWrapper VisitSwitchCase(SwitchCase* caseStmt) { assert(false && "Visitor is visiting a 'case' stmt"); }
 
 	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) { return StmtWrapper( convFact.builder.breakStmt() ); }
 	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) { return StmtWrapper( convFact.builder.continueStmt() ); }
@@ -2452,6 +2465,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 	if( components.empty() ) {
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
+		// Adding the lambda function to the list of converted functions
+		ctx->lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
 		return retLambdaExpr;
 	}
 

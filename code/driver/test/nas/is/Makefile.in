@@ -39,7 +39,7 @@ INSIEME_SRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
 
 CFLAGS=--std=c99
 
-is:	is.insieme.o $(INSIEME_SRC_DIR)/test/nas/common/wtime.o
+is:	is.insieme.o $(INSIEME_SRC_DIR)/test/nas/common/wtime.o $(INSIEME_SRC_DIR)/test/nas/common/c_timers.c
 
 is.insieme.o: is.insieme.c
 
