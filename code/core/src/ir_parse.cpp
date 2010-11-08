@@ -75,6 +75,8 @@ IRParser::IRParser(NodeManager& nodeMan) {
 
 	// RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 
+	// terminals, no skip parser
+
 	identifier = 
 		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = ph::bind(&makeId, qi::_1, qi::_2) ];
 	
@@ -84,6 +86,8 @@ IRParser::IRParser(NodeManager& nodeMan) {
 	intTypeParamLabel = 
 		( qi::char_('#') >> qi::char_ )								[ qi::_val = ph::bind(&IntTypeParam::getVariableIntParam, qi::_2) ];
 
+	// nonterminals, skip parser
+
 	typeVariable =
 		typeRule													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
@@ -91,12 +95,12 @@ IRParser::IRParser(NodeManager& nodeMan) {
 	intTypeParam =
 		qi::uint_													[ qi::_val = ph::bind(&IntTypeParam::getConcreteIntParam, qi::_1) ]
 		| qi::lit("#inf")											[ qi::_val = ph::bind(&IntTypeParam::getInfiniteIntParam) ]
-		| intTypeParamLabel;
+		| intTypeParamLabel											[ qi::_val = qi::_1 ];
 
 	arrayType =
 		( qi::lit("array<") >> typeRule								[ qi::_a = qi::_1 ]
-		>> ( ',' >> intTypeParam									[ qi::_b = qi::_1 ] 
-		) >> '>' )													[ qi::_val = ph::bind(&ArrayType::get, nManRef, qi::_a, qi::_b) ];
+		>> ',' >> intTypeParam										[ qi::_b = qi::_1 ] 
+		>> '>' )													[ qi::_val = ph::bind(&ArrayType::get, nManRef, qi::_a, qi::_b) ];
 
 	vectorType =
 		( qi::lit("vector<") >> typeRule 
