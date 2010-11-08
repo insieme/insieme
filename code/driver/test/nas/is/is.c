@@ -66,6 +66,8 @@
   
 --------------------------------------------------------------------*/
 
+#include "npb-C.h"
+
 #include "npbparams.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -172,10 +174,10 @@ typedef  int  INT_TYPE;
 //int      passed_verification;
 
 
-#ifdef USE_BUCKETS
-INT_TYPE bucket_size[NUM_BUCKETS],                    
-         bucket_ptrs[NUM_BUCKETS];
-#endif
+//#ifdef USE_BUCKETS
+//INT_TYPE bucket_size[NUM_BUCKETS],
+//         bucket_ptrs[NUM_BUCKETS];
+//#endif
 
 
 /***********************/
@@ -356,7 +358,6 @@ void full_verify(INT_TYPE *key_buff_ptr_global, int *passed_verification, INT_TY
 /*****************************************************************/
 /*************             R  A  N  K             ****************/
 /*****************************************************************/
-
 void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verification,
 		INT_TYPE* test_index_array, INT_TYPE* test_rank_array, INT_TYPE* key_array, INT_TYPE* key_buff1, INT_TYPE* key_buff2,
 		INT_TYPE* partial_verify_vals)
@@ -684,7 +685,6 @@ main( argc, argv )
 
 
 /*  This is the main iteration */
-    
 #pragma omp parallel private(iteration)    
     for( iteration=1; iteration<=MAX_ITERATIONS; iteration++ )
     {

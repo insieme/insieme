@@ -584,6 +584,8 @@ string TypeManager::visitVectorType(const VectorTypePtr& ptr) {
 
 const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
 	auto pos = variableMap.find(variable);
+	if(pos == variableMap.end())
+		DLOG(INFO) << "v" << variable->getId();
 	assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
 	return (*pos).second;
 }

@@ -63,7 +63,7 @@ typedef struct { double real; double imag; } dcomplex;
                      c.imag = a.real * b.imag + a.imag * b.real)
 #define crmul(c,a,b) (c.real = a.real * b, c.imag = a.imag * b)
 
-extern double randlc(double *, double);
+extern double randlc(double *, double*);
 extern void vranlc(int, double *, double, double *);
 extern void timer_clear(int);
 extern void timer_start(int);
