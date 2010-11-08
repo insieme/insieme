@@ -173,6 +173,18 @@ void switch_stmt_test() {
 		a++;
 	}
 
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); break; break; break; switch(v2) [ case 2: {ref<int<4>> v5 = ref.var(0); fun(ref<int<4>> v7){ {int<4> v6 = ref.deref(v7); ref.assign(v7, int.add(ref.deref(v7), cast<int<4>>(1))); return v6;} }(v5);} | case 1: ref.assign(v1, int.add(ref.deref(v1), 1)) | default: fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.sub(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v1) ];}"
+	switch(a) {
+	case 1:
+		a+=1;
+		break;
+	case 2:
+		{  int c; c++; }
+		break;
+	default:
+		a--;
+		break;
+	}
 }
 
 
