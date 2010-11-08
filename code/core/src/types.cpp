@@ -472,6 +472,17 @@ Node::OptionChildList NamedCompositeType::getChildNodes() const {
 	return res;
 }
 
+const TypePtr NamedCompositeType::getTypeOfMember(const Identifier& member) const {
+	// search for member with the given name ...
+	for (auto it = entries.begin(); it != entries.end(); it++) {
+		const Entry& cur = *it;
+		if (cur.first == member) {
+			return cur.second;
+		}
+	}
+	return TypePtr();
+}
+
 
 // ------------------------------------ Struct Type ---------------------------
 

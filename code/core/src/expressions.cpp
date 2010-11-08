@@ -50,7 +50,7 @@ enum {
 	HASHVAL_LITERAL = 100 /* offset from statements */,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
 	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_REC_LAMBDA_DEFINITION,
-	HASHVAL_REC_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE
+	HASHVAL_REC_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE, HASHVAL_MEMBER_ACCESS, HASHVAL_TUPLE_PROJECTION
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -756,4 +756,105 @@ RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VariablePtr& var
 
 std::ostream& RecLambdaExpr::printTo(std::ostream& out) const {
 	return out << "rec " << *variable << "." << *definition;
+}
+
+
+// ------------------------ Member Access Expression ------------------------
+
+namespace {
+
+	TypePtr getMemberType(const ExpressionPtr& subExpression, const Identifier& member) {
+		TypePtr type = subExpression->getType();
+		assert(type->getNodeType() == NT_StructType && "Accessing member of non-struct type!");
+		StructTypePtr structType = static_pointer_cast<const StructType>(type);
+		TypePtr res = structType->getTypeOfMember(member);
+		assert(res && "Accessing non-existing member!");
+		return res;
+	}
+
+	std::size_t hashMemberAccess(const ExpressionPtr& subExpression, const Identifier& member) {
+		std::size_t res = HASHVAL_MEMBER_ACCESS;
+		boost::hash_combine(res, subExpression);
+		boost::hash_combine(res, member);
+		return res;
+	}
+}
+
+MemberAccessExpr::MemberAccessExpr( const ExpressionPtr& subExpression, const Identifier& member)
+	: Expression(NT_MemberAccessExpr, getMemberType(subExpression, member), hashMemberAccess(subExpression, member)),
+	  subExpression(isolate(subExpression)), member(member) {}
+
+MemberAccessExpr* MemberAccessExpr::createCopyUsing(NodeMapping& mapper) const {
+	return new MemberAccessExpr(mapper.map(0, subExpression), member);
+}
+
+
+bool MemberAccessExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const MemberAccessExpr& rhs = static_cast<const MemberAccessExpr&>(expr);
+	return (*rhs.subExpression == *subExpression && rhs.member == member);
+}
+
+Node::OptionChildList MemberAccessExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(subExpression);
+	return res;
+}
+
+std::ostream& MemberAccessExpr::printTo(std::ostream& out) const {
+	return out << "(" << *subExpression << "." << member << ")";
+}
+
+MemberAccessExprPtr MemberAccessExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const Identifier& member) {
+	return manager.get(MemberAccessExpr(subExpression, member));
+}
+
+// ------------------------ Tuple Projection Expression ------------------------
+
+namespace {
+
+	TypePtr getElementType(const ExpressionPtr& subExpression, const unsigned index) {
+		TypePtr type = subExpression->getType();
+		assert(type->getNodeType() == NT_TupleType && "Projection applied to non-tuple type!");
+		TupleTypePtr tupleType = static_pointer_cast<const TupleType>(type);
+		auto res = tupleType->getElementTypes();
+		assert(res.size() > index && "Index out of bound!");
+		return res[index];
+	}
+
+	std::size_t hashTupleProjection(const ExpressionPtr& subExpression, const unsigned index) {
+		std::size_t res = HASHVAL_TUPLE_PROJECTION;
+		boost::hash_combine(res, subExpression);
+		boost::hash_combine(res, index);
+		return res;
+	}
+}
+
+TupleProjectionExpr::TupleProjectionExpr( const ExpressionPtr& subExpression, const unsigned index)
+	: Expression(NT_TupleProjectionExpr, getElementType(subExpression, index), hashTupleProjection(subExpression, index)),
+	  subExpression(isolate(subExpression)), index(index) {}
+
+TupleProjectionExpr* TupleProjectionExpr::createCopyUsing(NodeMapping& mapper) const {
+	return new TupleProjectionExpr(mapper.map(0, subExpression), index);
+}
+
+
+bool TupleProjectionExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const TupleProjectionExpr& rhs = static_cast<const TupleProjectionExpr&>(expr);
+	return (*rhs.subExpression == *subExpression && rhs.index == index);
+}
+
+Node::OptionChildList TupleProjectionExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(subExpression);
+	return res;
+}
+
+std::ostream& TupleProjectionExpr::printTo(std::ostream& out) const {
+	return out << "(" << *subExpression << "[" << index << "])";
+}
+
+TupleProjectionExprPtr TupleProjectionExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index) {
+	return manager.get(TupleProjectionExpr(subExpression, index));
 }

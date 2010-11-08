@@ -513,6 +513,48 @@ public:
 	static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpression);
 };
 
+
+class MemberAccessExpr : public Expression {
+	const ExpressionPtr subExpression;
+	const Identifier member;
+
+	MemberAccessExpr(const ExpressionPtr& subExpression, const Identifier& member);
+	virtual MemberAccessExpr* createCopyUsing(NodeMapping& mapper) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
+
+public:
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const ExpressionPtr& getSubExpression() const { return subExpression; }
+
+	static MemberAccessExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const Identifier& member);
+};
+
+
+class TupleProjectionExpr : public Expression {
+	const ExpressionPtr subExpression;
+	const unsigned index;
+
+	TupleProjectionExpr( const ExpressionPtr& subExpression, const unsigned index);
+	virtual TupleProjectionExpr* createCopyUsing(NodeMapping& mapper) const;
+
+protected:
+	bool equalsExpr(const Expression& expr) const;
+
+	virtual OptionChildList getChildNodes() const;
+
+public:
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	const ExpressionPtr& getSubExpression() const { return subExpression; }
+
+	static TupleProjectionExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index);
+};
+
 } // end namespace core
 } // end namespace insieme
 

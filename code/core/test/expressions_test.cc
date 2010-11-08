@@ -253,6 +253,72 @@ TEST(ExpressionsTest, RecursiveLambda) {
 }
 
 
+TEST(ExpressionsTest, MemberAccessExpr) {
+	NodeManager manager;
+
+	StructExpr::Members members;
+
+	TypePtr typeA = GenericType::get(manager, "typeA");
+	TypePtr typeB = GenericType::get(manager, "typeB");
+	members.push_back(StructExpr::Member("a", Literal::get(manager, typeA, "1")));
+	members.push_back(StructExpr::Member("b", Literal::get(manager, typeB, "2")));
+	StructExprPtr data = StructExpr::get(manager, members);
+
+	MemberAccessExprPtr access = MemberAccessExpr::get(manager, data, "a");
+	EXPECT_EQ(*typeA, *access->getType());
+
+	MemberAccessExprPtr access2 = MemberAccessExpr::get(manager, data, "b");
+	EXPECT_EQ(*typeB, *access2->getType());
+
+	MemberAccessExprPtr access3 = MemberAccessExpr::get(manager, data, "a");
+	EXPECT_EQ(*typeA, *access3->getType());
+
+	EXPECT_NE(access, access2);
+	EXPECT_NE(access2, access3);
+	EXPECT_EQ(access, access3);
+
+	EXPECT_EQ ("(struct{a=1, b=2}.a)", toString(*access));
+	EXPECT_EQ ("(struct{a=1, b=2}.b)", toString(*access2));
+
+	// check hash codes, children and cloning
+	basicExprTests(access, typeA, toVector<NodePtr>(data));
+	basicExprTests(access2, typeB, toVector<NodePtr>(data));
+	basicExprTests(access3, typeA, toVector<NodePtr>(data));
+}
+
+TEST(ExpressionsTest, TupleProjectionExpr) {
+	NodeManager manager;
+
+	TypePtr typeA = GenericType::get(manager, "typeA");
+	TypePtr typeB = GenericType::get(manager, "typeB");
+
+	std::vector<ExpressionPtr> expressions;
+	expressions.push_back(Literal::get(manager, typeA, "1"));
+	expressions.push_back(Literal::get(manager, typeB, "2"));
+
+	TupleExprPtr tuple = TupleExpr::get(manager, expressions);
+
+	TupleProjectionExprPtr access = TupleProjectionExpr::get(manager, tuple, 0);
+	EXPECT_EQ(*typeA, *access->getType());
+
+	TupleProjectionExprPtr access2 = TupleProjectionExpr::get(manager, tuple, 1);
+	EXPECT_EQ(*typeB, *access2->getType());
+
+	TupleProjectionExprPtr access3 = TupleProjectionExpr::get(manager, tuple, 0);
+	EXPECT_EQ(*typeA, *access3->getType());
+
+	EXPECT_NE(access, access2);
+	EXPECT_NE(access2, access3);
+	EXPECT_EQ(access, access3);
+
+	EXPECT_EQ ("(tuple(1,2)[0])", toString(*access));
+	EXPECT_EQ ("(tuple(1,2)[1])", toString(*access2));
+
+	// check hash codes, children and cloning
+	basicExprTests(access, typeA, toVector<NodePtr>(tuple));
+	basicExprTests(access2, typeB, toVector<NodePtr>(tuple));
+}
+
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children) {
 
@@ -266,6 +332,9 @@ void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& c
 
 	// check type
 	EXPECT_EQ ( *type, *expression->getType() );
+
+	// type has to be first child - NOTE: not true for recursive lambdas, member access and tuple projection
+//	EXPECT_EQ(*type, *(expression->getChildList()[0]));
 
 	// ------------ Type Token based tests -------------
 
