@@ -42,17 +42,6 @@
 
 #define BOOST_SPIRIT_DEBUG
 
-// ----------------------- SPIRIT QI/PHOENIX survival hints
-// What to do if
-// - error: invalid initialization ... --> check whether ph::ref is used to pass references
-//									   --> check if you're using the right placeholders (char_ counts as auto attrib, literals and plain characters do NOT)
-// - error: template substitution failure --> check potential ambiguities, try supplying default parameters explicitly
-// - error: some operator can not be applied (eg =) --> attribute type may be different from expected
-// - error: invalid use of void expression --> trying to do a ph::ref of a reference? Placeholders are already references!
-// - other: use phoenix::bind and phoenix::construct instead of plain calls
-// ----------------------- - Peter
-
-
 #include "insieme/core/identifier.h"
 #include "insieme/core/types.h"
 #include "insieme/core/ir_parse.h"
@@ -64,8 +53,44 @@ using namespace insieme::core;
 using namespace insieme::core::parse;
 
 
+TEST(IRParser, TypeTests) {
 
-TEST(IRParser, RuleTest) {
+	string testStr("testGenType");
+	SharedNodeManager nm = std::make_shared<NodeManager>();
+	IRParser parser(*nm);
+	ASTBuilder builder(nm);
+	
+	auto intType = builder.genericType("int", vector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
+	EXPECT_EQ(intType, parser.parseType("int<#a>"));
+	EXPECT_EQ(intType, parser.parseType("(|int<#a>|)"));
+
+	auto intPairType = builder.tupleType(toVector<TypePtr>(intType, intType));
+	EXPECT_EQ(intPairType, parser.parseType("(int<#a>, int<#a>)"));
+
+	auto funType = builder.functionType(intPairType, intType);
+	EXPECT_EQ(funType, parser.parseType("(int<#a>, int<#a>) -> int<#a>"));
+
+	auto arrayType = builder.arrayType(intType);
+	EXPECT_EQ(arrayType, parser.parseType("array<int<#a>, 1>"));
+
+	auto vectorType = builder.vectorType(intType, IntTypeParam::getConcreteIntParam(10));
+	EXPECT_EQ(vectorType, parser.parseType("vector<int<#a>, 10>"));
+
+	auto refType = builder.refType(intType);
+	EXPECT_EQ(refType, parser.parseType("ref<int<#a>>"));
+
+	auto multiParamType = builder.genericType("multi", toVector<TypePtr>(builder.typeVariable("tvar") ,intType, intPairType), 
+		toVector(IntTypeParam::getConcreteIntParam(2), IntTypeParam::getInfiniteIntParam(), IntTypeParam::getVariableIntParam('v')));
+	EXPECT_EQ(multiParamType, parser.parseType("multi<'tvar,int<#a>,(int<#a>,int<#a>),2,#inf,#v>"));
+
+	EXPECT_THROW(parser.parseType("fail1<#1,'alpha>"), ParseException);
+	EXPECT_THROW(parser.parseType("(fail2"), ParseException);
+	EXPECT_THROW(parser.parseType("fail3)"), ParseException);
+	EXPECT_THROW(parser.parseType("int -> bool"), ParseException);
+
+}
+
+TEST(IRParser, InteractiveTest) {
 
 	string testStr("testGenType");
 	if(getenv("IR_PARSE_STR")) testStr = string(getenv("IR_PARSE_STR"));
