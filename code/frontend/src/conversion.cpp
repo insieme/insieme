@@ -435,6 +435,10 @@ public:
 			dynamic_pointer_cast<const core::VectorType>(nonRefExpr->getType()) )
 			return subExpr;
 
+		// In the case the target type of the cast is not a reftype we deref the subexpression
+		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+			subExpr = tryDeref(convFact.builder, subExpr);
+		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -447,6 +451,10 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
+		// In the case the target type of the cast is not a reftype we deref the subexpression
+		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+			subExpr = tryDeref(convFact.builder, subExpr);
+		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
