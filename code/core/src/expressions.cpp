@@ -454,7 +454,21 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
     assert(static_pointer_cast<const FunctionType>(defaultStmt->getType())->getReturnType()->getName() == "unit" &&
             "Return value of default statement must be void.");
 
-    //TODO check guarded statements
+    // TODO test
+    std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [](const JobExpr::GuardedStmt& s){
+        //Check guards
+        assert(*static_pointer_cast<const FunctionType>(s.first->getType())->getArgumentType() == TupleType(
+                lang::TYPE_UINT_GEN, lang::TYPE_UINT_GEN) && "Guard must have two integer arguments");
+        assert(static_pointer_cast<const FunctionType>(s.first->getType())->getReturnType()->getName() == "bool" &&
+                "Return value of guard must be bool.");
+
+        //Check guarded statements
+        assert(*static_pointer_cast<const FunctionType>(s.second->getType())->getArgumentType() == TupleType() &&
+                "Guarded statement is not allowed to have any arguments");
+        assert(static_pointer_cast<const FunctionType>(s.second->getType())->getReturnType()->getName() == "unit" &&
+                "Return value of guarded statement must be void.");
+    });
+
 }
 
 

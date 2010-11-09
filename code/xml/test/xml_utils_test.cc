@@ -1156,7 +1156,7 @@ TEST(XmlTest, JobExprTest) {
 
     LambdaExpr::ParamList list;
 	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
+	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
 	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat1 e"));
 	DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
 	stat1.addAnnotation(dummy_se);
