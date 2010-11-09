@@ -420,8 +420,11 @@ public:
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
 			exprVec.insert( createNode<Expression>(*iter, "expressionPtr") );
 		}
+		
+		bool main = (elem.getAttr("main") == "1") ? true : false;
+		
 		ProgramPtr&& program = Program::create(mgr);
-		program = Program::addEntryPoints(mgr, program, exprVec);
+		program = Program::addEntryPoints(mgr, program, exprVec, main);
 
 		buildAnnotations(elem, *program);
 		updateMap(elem, program);

@@ -263,6 +263,7 @@
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
+		<xs:attribute name="main" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_recLambdaDefinition">

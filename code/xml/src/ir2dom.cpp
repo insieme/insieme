@@ -575,8 +575,11 @@ public:
 
 	void visitProgram(const ProgramPtr& cur) {
 		XmlElement program("program", doc);
-		rootElem << (program << XmlElement::Attribute("id", GET_ID(cur)));
-
+		program << XmlElement::Attribute("id", GET_ID(cur))
+				<< XmlElement::Attribute("main", toString(cur->isMain()));
+		
+		rootElem << program;
+		
 		XmlElement expressions("expressions", doc);
 		appendList(expressions,
 			std::vector<ExpressionPtr>(cur->getEntryPoints().begin(), cur->getEntryPoints().end()) , // FIXME: this copy can be avoided
@@ -624,6 +627,25 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
 	}
+	
+	/*void MemberAccessExpr(const MemberAccessExprPtr& cur) {
+		XmlElement memberAccessExpr("memberAccessExpr", doc);
+		rootElem << (memberAccessExpr << XmlElement::Attribute("id", GET_ID(cur)));
+
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "typePtr");
+		memberAccessExpr << type;
+
+		XmlElement subExpression("subExpression",doc);
+		append(subExpression, cur->getSubExpression(), "expressionPtr");
+		memberAccessExpr << subExpression;
+		
+		XmlElement subExpression("subExpression",doc);
+		append(subExpression, cur->getMemberName(), "expressionPtr");
+		memberAccessExpr << subExpression;
+
+		visitAnnotations(cur->getAnnotations(), memberAccessExpr);
+	}*/
 };
 
 }
