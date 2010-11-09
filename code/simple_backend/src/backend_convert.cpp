@@ -270,16 +270,6 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
 		auto funName = literalFun->getValue();
 		//LOG(INFO) << "+++++++ val: " << funName << "\n";
-		// TODO: do not check against name - use full literal!
-		if(funName == "ref.assign") {
-			// print assignment
-			if (requiresDeref(args.front(), cc)) cStr << "*";
-			cStr << "*";
-			visit(args.front());
-			cStr << "=";
-			visit(args.back());
-			return;
-		}
 		if(funName == "ref.deref") {
 
 			// test whether a deref is required
@@ -287,19 +277,14 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 			// add operation
 			if (deref) cStr << "(*";
-			cStr << "*";
+			if (ptr->getNodeType() == NT_Variable) cStr << "*";
 			visit(args.front());
 			if (deref) cStr << ")";
+
 			return;
 		} if(funName == "ref.var") {
 			// TODO handle case where not RHS of local var decl
 			visit(args.front());
-			return;
-		} else if(funName == "subscript_single") {
-			visit(args.front());
-			cStr << "[";
-			visit(args.back());
-			cStr << "]";
 			return;
 		} else if(funName == "pack") {
 			//DLOG(INFO) << cStr.getString();

@@ -411,17 +411,23 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
  * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
  * 				   post order will be enforced.
  */
-template<typename Node, typename Visitor>
-inline void visitAll(Node& root, Visitor visitor, bool preorder = true) {
-	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
+//template<typename Node, typename Visitor>
+//inline void visitAll(Node& root, Visitor visitor, bool preorder = true) {
+//	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
+//	recVisitor.visit(root);
+//}
+
+template<typename Node, typename Result, template<class Target> class Ptr>
+inline void visitAll(Node& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
+	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
 
-//template<typename Node, typename Result, template<class Target> class Ptr>
-//inline void visitAll(Node& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
-//	RecursiveASTVisitor<decltype(visitor), Ptr> recVisitor(visitor, preorder);
-//	recVisitor.visit(root);
-//}
+template<typename Node, typename Result, template<class Target> class Ptr>
+inline void visitAll(Node& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
+	recVisitor.visit(root);
+}
 
 /**
  * The given lambda is recursively applied to all nodes reachable starting from the
