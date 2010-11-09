@@ -153,6 +153,23 @@ public:
 
 };
 
+class CountingAddressVisitor : public ASTVisitor<int, Address> {
+public:
+
+	int counter;
+
+	CountingAddressVisitor() : counter(0) {};
+
+	int visitNode(const NodeAddress& address) {
+		return ++counter;
+	};
+
+	void reset() {
+		counter = 0;
+	}
+
+};
+
 
 TEST(ASTVisitor, RecursiveVisitorTest) {
 
@@ -207,6 +224,20 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	visitor.reset();
 	recVisitor.visit(ifStmt);
 	EXPECT_EQ ( 6, visitor.counter );
+
+
+	// ------ test for addresses ----
+	CountingAddressVisitor adrVisitor;
+	RecursiveASTVisitor<CountingAddressVisitor, Address> recAdrVisitor(adrVisitor);
+
+	adrVisitor.reset();
+	adrVisitor.visit(NodeAddress(ifStmt));
+	EXPECT_EQ ( 1, adrVisitor.counter );
+
+	adrVisitor.reset();
+	recAdrVisitor.visit(NodeAddress(ifStmt));
+	EXPECT_EQ ( 6, adrVisitor.counter );
+
 
 }
 

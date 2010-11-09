@@ -57,6 +57,8 @@ enum {
 
 	EC_TYPE_REF_TO_NON_REF_CAST,
 	EC_TYPE_NON_REF_TO_REF_CAST,
+
+	EC_TYPE_ILLEGAL_CAST,
 };
 
 /**
@@ -80,6 +82,8 @@ SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
 SIMPLE_CHECK(BuildInLiteral, Literal);
 
 SIMPLE_CHECK(RefCast, CastExpr);
+
+SIMPLE_CHECK(Cast, CastExpr);
 
 
 // TODO:

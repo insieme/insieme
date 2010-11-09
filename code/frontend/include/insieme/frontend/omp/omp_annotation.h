@@ -155,6 +155,7 @@ public:
 	enum Kind { STATIC, DYNAMIC, GUIDED, AUTO, RUNTIME };
 
 	Schedule(const Kind& kind, const core::ExpressionPtr& chunkExpr): kind(kind), chunkExpr(chunkExpr) { }
+
 	const Kind& getKind() const { return kind; }
 	bool hasChunkSizeExpr() const { return static_cast<bool>(chunkExpr); }
 	const core::Expression& getChunkSizeExpr() const { assert(hasChunkSizeExpr()); return *chunkExpr; }
@@ -181,6 +182,10 @@ private:
 	core::ExpressionPtr chunkExpr;
 };
 
+/**
+ * Represents the OpenMP Default clause that may appears in for and parallelfor.
+ * default( shared | none )
+ */
 class Default {
 public:
 	enum Kind { SHARED, NONE };
@@ -213,6 +218,9 @@ public:
 	std::ostream& dump(std::ostream& out) const { return out << "master"; }
 };
 
+/**
+ * Represent clauses which are
+ */
 class ForClause {
 	VarListPtr			lastPrivateClause;
 	SchedulePtr			scheduleClause;
