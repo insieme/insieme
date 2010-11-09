@@ -36,62 +36,32 @@
 
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ast_address.h"
 
+#include "insieme/utils/logging.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
+namespace frontend {
+namespace omp {
 
-enum {
-	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = EC_GROUP_TYPE + 1,
-	EC_TYPE_INVALID_ARGUMENT_TYPE,
-	EC_TYPE_INVALID_RETURN_TYPE,
-
-	EC_TYPE_INVALID_INITIALIZATION_EXPR,
-
-	EC_TYPE_INVALID_CONDITION_EXPR,
-	EC_TYPE_INVALID_SWITCH_EXPR,
-
-	EC_TYPE_INVALID_TYPE_OF_LITERAL,
-
-	EC_TYPE_REF_TO_NON_REF_CAST,
-	EC_TYPE_NON_REF_TO_REF_CAST,
-
-	EC_TYPE_ILLEGAL_CAST,
+class SemaVisitor : public core::ASTVisitor<void, core::Address> {
+	void visitStatement(const core::StatementAddress& stmt) {
+		LOG(INFO) << "visiting: \n" << *stmt;
+		if(BaseAnnotationPtr anno = stmt.getAddressedNode().getAnnotation(BaseAnnotation::KEY)) {
+			LOG(INFO) << "omp annotation on: \n" << *stmt;
+		}
+	}
 };
 
-/**
- * A small macro to simplify the definition of AST checks.
- *
- * @param Name the name of the new check (without the tailing Check)
- * @param NodeType the type the check should be applied on
- */
-#define SIMPLE_CHECK(Name, NodeType) \
-	class Name ## Check : public ASTCheck { \
-		public: \
-		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
-	}
-
-SIMPLE_CHECK(CallExprType, CallExpr);
-SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
-SIMPLE_CHECK(IfConditionType, IfStmt);
-SIMPLE_CHECK(WhileConditionType, WhileStmt);
-SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
-
-SIMPLE_CHECK(BuildInLiteral, Literal);
-
-SIMPLE_CHECK(RefCast, CastExpr);
-
-SIMPLE_CHECK(Cast, CastExpr);
+core::ProgramPtr applySema(const core::ProgramPtr& prog) {
+	core::visitAll(core::ProgramAddress(prog), SemaVisitor());
+	return prog; // TODO
+}
 
 
-// TODO:
-//	- check that only concrete types are used for variables
-
-#undef SIMPLE_CHECK
-
-} // end namespace check
-} // end namespace core
-} // end namespace insieme
-
+} // namespace omp
+} // namespace frontend
+} // namespace insieme

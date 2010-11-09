@@ -418,6 +418,18 @@ namespace {
 				decreaseIndent(); this->newLine(); out << "}";
 		});
 
+		PRINT(MemberAccessExpr, {
+				// prints the access to a member variable
+				this->visit(node->getSubExpression());
+				out << "." << node->getMemberName();
+		});
+
+		PRINT(TupleProjectionExpr, {
+				// prints the access to a member variable
+				this->visit(node->getSubExpression());
+				out << "#" << node->getIndex();
+		});
+
 	//	AST_TERMINAL(StructExpr, NamedCompositeExpr)
 	//	AST_TERMINAL(UnionExpr, NamedCompositeExpr)
 

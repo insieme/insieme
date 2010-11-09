@@ -61,6 +61,7 @@
 #include "insieme/utils/timer.h"
 
 #include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/omp/omp_sema.h"
 
 #include "insieme/driver/dot_printer.h"
 
@@ -110,6 +111,15 @@ int main(int argc, char** argv) {
 			});
 			timer.stop();
 			LOG(INFO) << timer;
+			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+			// run OMP frontend
+			LOG(INFO) << "============================= OMP conversion ====================================";
+			insieme::utils::Timer ompTimer("OMP");
+			fe::omp::SemaVisitor ompSemaVisitor;
+			fe::omp::applySema(program);
+			ompTimer.stop();
+			LOG(INFO) << ompTimer;
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 			// IR statistiscs

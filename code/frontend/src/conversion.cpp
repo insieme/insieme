@@ -435,6 +435,10 @@ public:
 			dynamic_pointer_cast<const core::VectorType>(nonRefExpr->getType()) )
 			return subExpr;
 
+		// In the case the target type of the cast is not a reftype we deref the subexpression
+		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+			subExpr = tryDeref(convFact.builder, subExpr);
+		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -447,6 +451,10 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
+		// In the case the target type of the cast is not a reftype we deref the subexpression
+		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+			subExpr = tryDeref(convFact.builder, subExpr);
+		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -1296,8 +1304,8 @@ public:
 			const Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
 
-			condExpr = convFact.convertExpr( cond );
-			if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
+			condExpr = tryDeref(builder, convFact.convertExpr( cond ));
+			if(*condExpr->getType() != core::lang::TYPE_BOOL_VAL) {
 				// add a cast expression to bool
 				condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 			}
@@ -1422,57 +1430,97 @@ public:
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
-		// Handle the cases of the SwitchStmt
-		if( Stmt* body = switchStmt->getBody() ) {
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// this Switch stamtement has a body, i.e.:
-			//
-			// 		switch(e) {
-			// 	 		{ body }
-			// 	 		case x:...
-			// 		}
-			//
-			// As the IR doens't allow a body to be represented inside the switch stmt
-			// we bring this code outside after the declaration of the eventual conditional
-			// variable.
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			if(CompoundStmt* compStmt = dyn_cast<CompoundStmt>(body)) {
-				std::for_each(compStmt->body_begin(), compStmt->body_end(),
-					[ &retStmt, this ] (Stmt* curr) {
-						if(!isa<SwitchCase>(curr)) {
-							StmtWrapper&& visitedStmt = this->Visit(curr);
-							std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
-						}
-					}
-				);
-			}
-		}
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// this Switch stamtement has a body, i.e.:
+		//
+		// 		switch(e) {
+		// 	 		{ body }
+		// 	 		case x:...
+		// 		}
+		//
+		// As the IR doens't allow a body to be represented inside the switch stmt
+		// we bring this code outside after the declaration of the eventual conditional
+		// variable.
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		vector<core::SwitchStmt::Case> cases;
-		// initialize the default case with an empty compoundstmt
-
+		// marks the beginning of a case expression
+		core::ExpressionPtr currCaseExpr;
+		// collected statements that will be part of the next case statement
+		vector<core::StatementPtr> caseStmts;
+		bool caseStart = false;
+		bool breakEncountred = false;
+		bool isDefault = false;
 		core::StatementPtr&& defStmt = builder.compoundStmt();
-		// the cases can be handled now
-		const SwitchCase* switchCaseStmt = switchStmt->getSwitchCaseList();
-		while(switchCaseStmt) {
-			if( const CaseStmt* caseStmt = dyn_cast<const CaseStmt>(switchCaseStmt) ) {
+
+		CompoundStmt* compStmt = dyn_cast<CompoundStmt>(switchStmt->getBody());
+		assert(compStmt && "Switch statements doesn't contain a compound stmt");
+		for(auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
+			Stmt* curr = *it;
+			// statements which are before the first case.
+			if(!caseStart && !isa<SwitchCase>(curr)) {
+				StmtWrapper&& visitedStmt = this->Visit(curr);
+				// append these statements before the switch statement
+				std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
+				continue;
+			}
+			// we encounter a case statement
+			caseStart=true;
+			if( const CaseStmt* caseStmt = dyn_cast<const CaseStmt>(curr) ) {
+				currCaseExpr = this->convFact.convertExpr( caseStmt->getLHS() );
+				assert(currCaseExpr && "Case statement has empty expression");
+
 				core::StatementPtr subStmt;
 				if( const Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
-					subStmt = convFact.convertExpr( rhs );
+					subStmt = this->convFact.convertExpr( rhs );
 				} else if( const Stmt* sub = caseStmt->getSubStmt() ) {
-					subStmt = tryAggregateStmts( builder, Visit( const_cast<Stmt*>(sub) ) );
+					subStmt = tryAggregateStmts( this->convFact.builder, this->Visit( const_cast<Stmt*>(sub) ) );
+					// if the substatement is a BreakStmt we have to replace it with a noOp and remember to reset the caseStmts
+					if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
+						subStmt = core::lang::STMT_NO_OP_PTR;
+						breakEncountred = true;
+					}
 				}
-				cases.push_back( std::make_pair(convFact.convertExpr( caseStmt->getLHS() ), subStmt) );
-			} else {
-				// default case
-				const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(switchCaseStmt);
-				assert(defCase && "Case is not the 'default:'.");
-				defStmt = tryAggregateStmts( builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
+				// add the statements defined by this case to the list of
+				// statements which has to executed by this case
+				caseStmts.push_back(subStmt);
+			} else if(const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(curr)) {
+				isDefault = true;
+				core::StatementPtr&& subStmt = tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
+				if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
+					subStmt = core::lang::STMT_NO_OP_PTR;
+					breakEncountred = true;
+				}
+				caseStmts.push_back(subStmt);
 			}
-			// next case
-			switchCaseStmt = switchCaseStmt->getNextSwitchCase();
+			// if the current statement is a break, or we encountred a break in the current case
+			// we create a new case and add to the list of cases for this switch statement
+			if(breakEncountred || isa<const BreakStmt>(curr)) {
+				if(!isDefault) {
+					assert(currCaseExpr);
+					cases.push_back( std::make_pair(currCaseExpr, tryAggregateStmts( this->convFact.builder, caseStmts )) );
+				} else {
+					defStmt = tryAggregateStmts( this->convFact.builder, caseStmts );
+				}
+				// clear the list of statements collected until now
+				caseStmts.clear();
+				breakEncountred = false;
+			} else if(!isa<SwitchCase>(curr)) {
+				StmtWrapper&& visitedStmt = Visit( const_cast<Stmt*>(curr));
+				std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(caseStmts));
+			}
+		}
+		// we still have some statement pending
+		if(!caseStmts.empty()) {
+			if(!isDefault) {
+				assert(currCaseExpr);
+				cases.push_back( std::make_pair(currCaseExpr, tryAggregateStmts( this->convFact.builder, caseStmts )) );
+			} else {
+				defStmt = tryAggregateStmts( this->convFact.builder, caseStmts );
+			}
 		}
 
+		// initialize the default case with an empty compoundstmt
 		core::StatementPtr&& irNode = builder.switchStmt(condExpr, cases, defStmt);
 
 		// handle eventual OpenMP pragmas attached to the Clang node

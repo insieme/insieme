@@ -99,7 +99,7 @@ void if_stmt_test() {
 
 	int cond = 0;
 
-	#pragma test "if(cast<bool>(v1)) {ref.assign(v1, int.add(ref.deref(v1), 1));} else {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
+	#pragma test "if(cast<bool>(ref.deref(v1))) {ref.assign(v1, int.add(ref.deref(v1), 1));} else {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
 	if(cond) {
 		cond += 1;
 	} else {
@@ -151,21 +151,21 @@ void switch_stmt_test() {
 
 	int a=0;
 
-	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 1: break | default: {} ];}"
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 1: {} | default: {} ];}"
 	switch(a) {
 	case 1:
 		break;
 	}
 
 	// EVIL CODE
-	#pragma test "{int<a> v2 = cast<int<a>>(int.add(ref.deref(v1), 8)); ref.assign(v1, int.add(ref.deref(v1), 1)); switch(v2) [ case 1: break | default: {} ];}"
+	#pragma test "{int<a> v2 = cast<int<a>>(int.add(ref.deref(v1), 8)); ref.assign(v1, int.add(ref.deref(v1), 1)); switch(v2) [ case 1: {} | default: {} ];}"
 	switch(a+8) {
 	a += 1;
 	case 1:
 		break;
 	}
 
-	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 0: break | default: fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v1) ];}"
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 0: {} | default: fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v1) ];}"
 	switch(a) {
 	case 0:
 		break;
@@ -173,7 +173,7 @@ void switch_stmt_test() {
 		a++;
 	}
 
-	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); break; break; break; switch(v2) [ case 2: {ref<int<4>> v5 = ref.var(0); fun(ref<int<4>> v7){ {int<4> v6 = ref.deref(v7); ref.assign(v7, int.add(ref.deref(v7), cast<int<4>>(1))); return v6;} }(v5);} | case 1: ref.assign(v1, int.add(ref.deref(v1), 1)) | default: fun(ref<int<4>> v4){ {int<4> v3 = ref.deref(v4); ref.assign(v4, int.sub(ref.deref(v4), cast<int<4>>(1))); return v3;} }(v1) ];}"
+	#pragma test "{int<a> v2 = cast<int<a>>(ref.deref(v1)); switch(v2) [ case 1: ref.assign(v1, int.add(ref.deref(v1), 1)) | case 2: {ref<int<4>> v3 = ref.var(0); fun(ref<int<4>> v5){ {int<4> v4 = ref.deref(v5); ref.assign(v5, int.add(ref.deref(v5), cast<int<4>>(1))); return v4;} }(v3);} | default: fun(ref<int<4>> v7){ {int<4> v6 = ref.deref(v7); ref.assign(v7, int.sub(ref.deref(v7), cast<int<4>>(1))); return v6;} }(v1) ];}"
 	switch(a) {
 	case 1:
 		a+=1;
@@ -185,6 +185,7 @@ void switch_stmt_test() {
 		a--;
 		break;
 	}
+
 }
 
 
