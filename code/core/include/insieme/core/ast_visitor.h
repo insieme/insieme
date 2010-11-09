@@ -197,6 +197,11 @@ class RecursiveASTVisitor : public ASTVisitor<void, Ptr> {
 	 */
 	bool preorder;
 
+	/**
+	 * The child factory to be used.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
 public:
 
 	/**
@@ -217,9 +222,9 @@ public:
 
 		// recursively visit all sub-nodes
 		const Node::ChildList& children = node->getChildList();
-		std::for_each(children.begin(), children.end(), [&](const Ptr<const Node>& cur) {
-			this->visit(cur);
-		});
+		for(std::size_t i=0; i<children.size(); i++) {
+			this->visit(childFactory(node, i));
+		}
 
 		// visit current (in case of a post-order)
 		if (!preorder) {
@@ -406,11 +411,17 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
  * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
  * 				   post order will be enforced.
  */
-template<typename NodePtr, typename Visitor>
-inline void visitAll(NodePtr& root, Visitor visitor, bool preorder = true) {
+template<typename Node, typename Visitor>
+inline void visitAll(Node& root, Visitor visitor, bool preorder = true) {
 	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
+
+//template<typename Node, typename Result, template<class Target> class Ptr>
+//inline void visitAll(Node& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+//	RecursiveASTVisitor<decltype(visitor), Ptr> recVisitor(visitor, preorder);
+//	recVisitor.visit(root);
+//}
 
 /**
  * The given lambda is recursively applied to all nodes reachable starting from the

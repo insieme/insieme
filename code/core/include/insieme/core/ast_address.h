@@ -62,8 +62,6 @@ template<typename T> class Address;
 	#include "ast_nodes.def"
 #undef NODE
 
-// forward declaration
-struct StaticAddressCast;
 
 // TODO: encapsulate path in an actual object
 
@@ -107,6 +105,10 @@ std::size_t hashPath(const Path& path);
  */
 Path toPath(const NodePtr& node);
 
+// forward declaration
+struct StaticAddressCast;
+struct AddressChildFactory;
+
 /**
  * This immutable value class can be used to address nodes within the AST. Since nodes within the AST are shared,
  * the same node may be reused at multiple locations within the AST. Hence, a simple pointer would be insufficient for
@@ -124,6 +126,7 @@ public:
 	 * Defines a functor representing a static cast operator for this type.
 	 */
 	typedef StaticAddressCast StaticCast;
+	typedef AddressChildFactory ChildFactory;
 
 	/**
 	 * Defines the type of the node this address is pointing to.
@@ -434,6 +437,13 @@ struct StaticAddressCast {
 	template<typename Target, typename Source>
 	const Address<const Target>& operator()(const Address<const Source>& value) const {
 		return static_address_cast<const Target>(value);
+	}
+};
+
+struct AddressChildFactory {
+	template<typename Source>
+	const NodeAddress operator()(const Address<Source>& value, std::size_t childIndex) const {
+		return value.getAddressOfChild(childIndex);
 	}
 };
 

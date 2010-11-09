@@ -51,12 +51,14 @@ namespace core {
 
 // Forward declaration of cast functor.
 struct StaticAnnotatedPtrCast;
+struct AnnotatedPtrChildFactory;
 
 template<typename T>
 class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
 public:
 
 	typedef StaticAnnotatedPtrCast StaticCast;
+	typedef AnnotatedPtrChildFactory ChildFactory;
 
 	AnnotatedPtr() : InstancePtr<T>(NULL) {}
 
@@ -99,6 +101,14 @@ struct StaticAnnotatedPtrCast {
 	template<typename Target, typename Source>
 	const AnnotatedPtr<Target>& operator()(const AnnotatedPtr<Source>& value) const {
 		return static_pointer_cast<Target>(value);
+	}
+};
+
+class Node;
+struct AnnotatedPtrChildFactory {
+	template<typename Source>
+	const AnnotatedPtr<const Node> operator()(const AnnotatedPtr<Source>& value, std::size_t childIndex) const {
+		return value->getChildList()[childIndex];
 	}
 };
 
