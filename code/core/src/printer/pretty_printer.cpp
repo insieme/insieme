@@ -640,10 +640,6 @@ namespace std {
  * @return a reference to the output stream
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrint& print) {
-
-	out << std::endl;
-	out << "// -------------- Pretty Print Inspire --------------" << std::endl;
-
 	// use inspire printer to print the code ...
 	insieme::core::printer::InspirePrinter printer(out, print);
 	printer.visit(print.root);

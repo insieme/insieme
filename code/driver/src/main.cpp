@@ -169,6 +169,7 @@ int main(int argc, char** argv) {
 			if(!CommandLineOptions::DumpIR.empty()) {
 				// write into the file
 				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
+				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
 				fout << insieme::core::printer::PrettyPrint(program);
 			} else
 				LOG(INFO) << insieme::core::printer::PrettyPrint(program);

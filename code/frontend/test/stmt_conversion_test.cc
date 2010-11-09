@@ -45,6 +45,7 @@
 #include "insieme/core/program.h"
 #include "insieme/core/ast_check.h"
 #include "insieme/core/checks/typechecks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
 
@@ -90,7 +91,17 @@ TEST(StmtConversion, FileTest) {
 
 			if(tp->isStatement()) {
 				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
-				EXPECT_EQ(tp->getExpected(), '\"' + stmt->toString() + '\"' );
+				std::ostringstream ss;
+				ss << insieme::core::printer::PrettyPrint(stmt, false, false, false);
+
+				std::vector<char> res;
+				std::string prettyPrint = ss.str();
+				for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
+					if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' ')))
+						res.push_back(*it);
+
+				EXPECT_EQ(tp->getExpected(), '\"' + std::string(res.begin(), res.end()) + '\"' );
+				// std::cout << ss.str();
 				// do type checking
 				MessageList&& msgList = check( stmt, checks::getFullCheck() );
 				EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
