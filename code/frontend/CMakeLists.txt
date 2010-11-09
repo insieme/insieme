@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 2.6)
 
 # collect source files
 file(GLOB insieme_frontend_srcs 	src/*.cpp src/analysis/*.cpp src/omp/*.cpp src/ocl/*.cpp src/utils/*.cpp)
-file(GLOB insieme_frontend_incs	include/*.h include/omp/*.h include/ocl/*.h include/utils/*.h)
+file(GLOB insieme_frontend_incs	include/*.h include/insieme/frontend/*.h include/insieme/frontend/omp/*.h include/insieme/frontend/ocl/*.h include/utils/*.h)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/clang_config.h)
 
@@ -22,7 +22,6 @@ include_directories(
 	${insieme_core_include_dir}
 	${insieme_c_info_include_dir}
 	${insieme_xml_include_dir} )
-
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )

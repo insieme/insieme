@@ -79,7 +79,7 @@ TEST(IRParser, TypeTests) {
 	auto refType = builder.refType(intType);
 	EXPECT_EQ(refType, parser.parseType("ref<int<#a>>"));
 
-	auto multiParamType = builder.genericType("multi", toVector<TypePtr>(builder.typeVariable("tvar") ,intType, intPairType), 
+	auto multiParamType = builder.genericType("multi", toVector<TypePtr>(builder.typeVariable("tvar"), intType, intPairType), 
 		toVector(IntTypeParam::getConcreteIntParam(2), IntTypeParam::getInfiniteIntParam(), IntTypeParam::getVariableIntParam('v')));
 	EXPECT_EQ(multiParamType, parser.parseType("multi<'tvar,int<#a>,(int<#a>,int<#a>),2,#inf,#v>"));
 
