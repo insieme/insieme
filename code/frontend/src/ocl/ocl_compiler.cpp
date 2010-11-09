@@ -289,28 +289,6 @@ public:
         return element;
     }
 
-/*    const core::NodePtr mapElement(unsigned, const core::FunctionType& funcType) {
-       std::cout << "found parameters\n";
-        core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
-        core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
-        params.push_back(globalRange);
-        core::VariablePtr localRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
-        params.push_back(localRange);
-
-        // update the type of the function
-        core::FunctionTypePtr newFuncType;
-        core::TypePtr retTy = funcType->getReturnType();
-
-        //check return type
-        assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
-
-        core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
-        args.push_back(globalRange->getType());
-        args.push_back(localRange->getType());
-
-        return builder.functionType(builder.tupleType(args), retTy)
-        return funcType;
-    }*/
 
     // gets vectors of variables and appends the variables found in the function body to them
     void getMemspaces(std::vector<core::VariablePtr>& constantV, std::vector<core::VariablePtr>& globalV,
@@ -347,16 +325,17 @@ class OclMapper : public core::NodeMapping {
 private:
     // creates new declaration for all variables in the input vector and stores them in the output vector
     // The elements of the input vector are used as initialization values for the new variables
-    void createDeclarations(std::vector<core::StatementPtr>& inVec, std::vector<core::DeclarationStmtPtr>& outVec) {
-
-        for(std::vector<core::StatementPtr>::iterator I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(*I))
-                outVec.push_back(builder.declarationStmt(builder.variable(var->getType()), var));
-            else if(core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(*I))
-                outVec.push_back(builder.declarationStmt(builder.variable(decl->getVariable()->getType()), decl->getVariable()));
+    void createDeclarations(std::vector<core::VariablePtr>& inVec, core::LambdaExpr::CaptureList& outVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            outVec.push_back(builder.declarationStmt(builder.variable((*I)->getType()), (*I)));
         }
     }
 
+    void createDeclarations(std::vector<core::DeclarationStmtPtr>& inVec, core::LambdaExpr::CaptureList& outVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
+        }
+    }
 
 public:
 
@@ -434,18 +413,22 @@ public:
                             }
                             case ocl::AddressSpaceAnnotation::LOCAL: {
                                 localVars.push_back(var);
+                                //TODO think about what to do with local variable arguments
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::PRIVATE: {
                                 privateVars.push_back(var);
-                                //TODO think about what to do with local variable arguments
                                 break;
                             }
                             default:
-                                assert(false && "Unexpected OpenCL address space attribute for local variable");
+                                assert(false && "Unexpected OpenCL address space attribute for kernel function argument");
                             }
                         }
                     }
+                }
+                else {
+                    // arguments without address space modifiers are private per default
+                    privateVars.push_back(var);
                 }
             }
 
@@ -478,7 +461,7 @@ public:
             //Maybe prettier in another mapper
             const core::StatementPtr& oldBody = func->getBody();
 
-            //TODO add three parallel statements for the localRange
+            //TODO add parallel statements for the localRange
             if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(*builder.getNodeManager(), kernelMapper))){
                 // parallel function's type, equal for all
                 core::TupleType::ElementTypeList parArgs;
@@ -497,7 +480,9 @@ public:
                 core::FunctionTypePtr parFuncType= builder.functionType(builder.tupleType(parArgs), core::lang::TYPE_UINT_INF_PTR);
 
                 // local parallelism
-/*                core::JobExprPtr localZjob = builder.jobExpr(newBody);
+/*                core::LambdaExpr::ParamList list;
+                core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, list, newBody);
+                core::JobExprPtr localZjob = builder.jobExpr(localParFct);
                 std::vector<core::ExpressionPtr> expr;
                 //construct vector of arguments
                 expr.push_back(builder.literal("1", core::lang::TYPE_UINT_INF_PTR));
@@ -519,11 +504,13 @@ public:
 
 //TODO add pfor
                 captured.clear();
-                std::cout << "declared capture list\n";
+
+                // capture private parameters
+                createDeclarations(privateVars, captured);
 
 
-                core::LambdaExprPtr dummy = builder.lambdaExpr(funType, captured, funParams, newBody);
-                core::JobExprPtr localJob = builder.jobExpr(dummy);
+                core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, captured, funParams, newBody);
+                core::JobExprPtr localJob = builder.jobExpr(localParFct);
                 std::vector<core::ExpressionPtr> expr;
                 //construct vector of arguments
                 expr.push_back(builder.literal("1", core::lang::TYPE_UINT_INF_PTR));
