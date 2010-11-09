@@ -418,13 +418,13 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
 //}
 
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitAll(Node& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
+inline void visitAll(const Node& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
 	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitAll(Node& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+inline void visitAll(const Node& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
 	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
