@@ -38,8 +38,8 @@
 
 #include "insieme/core/program.h"
 
+#include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/clang_compiler.h"
 #include "insieme/frontend/conversion.h"
 #include "insieme/frontend/insieme_pragma.h"
 
@@ -47,6 +47,7 @@
 
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+
 #include "clang/Index/Indexer.h"
 #include "clang/Index/Program.h"
 

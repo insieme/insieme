@@ -34,35 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/utils/logging.h"
-
-#include "insieme/frontend/clang_compiler.h"
-#include "insieme/frontend/conversion.h"
-#include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/insieme_pragma.h"
-
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 #include "clang/AST/Decl.h"
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// DON'T MOVE THIS!
+
+#include <gtest/gtest.h>
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_check.h"
 #include "insieme/core/checks/typechecks.h"
 
+#include "insieme/utils/logging.h"
 
+#include "insieme/frontend/program.h"
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/insieme_pragma.h"
+
+#include "clang/Index/Indexer.h"
+#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::frontend;
 using namespace insieme::frontend::conversion;
+using namespace clang;
 
 struct VariableResetHack {
 	static void reset() { Variable::counter = 0; }
 };
 
 TEST(StmtConversion, FileTest) {
-	using namespace clang;
 
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
 	CommandLineOptions::Verbosity = 0;
@@ -73,7 +76,6 @@ TEST(StmtConversion, FileTest) {
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
-
 
 	std::for_each(pl.begin(), pl.end(),
 		[ & ](const PragmaPtr curr) {

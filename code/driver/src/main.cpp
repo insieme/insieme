@@ -38,10 +38,6 @@
 #include <memory>
 #include <algorithm>
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/types.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/statements.h"
 #include "insieme/core/ast_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -60,7 +56,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 
-#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
 
 #include "insieme/driver/dot_printer.h"
@@ -115,11 +111,11 @@ int main(int argc, char** argv) {
 
 			// run OMP frontend
 			LOG(INFO) << "============================= OMP conversion ====================================";
-			insieme::utils::Timer ompTimer("OMP");
-			fe::omp::SemaVisitor ompSemaVisitor;
-			fe::omp::applySema(program);
-			ompTimer.stop();
-			LOG(INFO) << ompTimer;
+//			insieme::utils::Timer ompTimer("OMP");
+//			fe::omp::SemaVisitor ompSemaVisitor;
+//			fe::omp::applySema(program);
+//			ompTimer.stop();
+//			LOG(INFO) << ompTimer;
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 			// IR statistiscs

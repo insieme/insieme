@@ -41,8 +41,8 @@
 
 #include "insieme/c_info/naming.h"
 
+#include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/clang_compiler.h"
 
 #include "insieme/utils/logging.h"
 

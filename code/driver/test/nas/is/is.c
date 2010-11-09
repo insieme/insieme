@@ -690,7 +690,7 @@ main( argc, argv )
     {
 #pragma omp master	
         if( CLASS != 'S' ) printf( "        %d\n", iteration );
-	
+
         rank( iteration, &key_buff_ptr_global, &passed_verification, test_index_array, test_rank_array, key_array, key_buff1, key_buff2, partial_verify_vals );
 	
 #if defined(_OPENMP)	
@@ -706,6 +706,7 @@ main( argc, argv )
 
 /*  This tests that keys are in sequence: sorting of last ranked key seq
     occurs here, but is an untimed operation                             */
+
     full_verify(key_buff_ptr_global, &passed_verification, key_array, key_buff2);
 
 

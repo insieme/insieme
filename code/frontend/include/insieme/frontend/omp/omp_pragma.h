@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/frontend/pragma_handler.h"
+#include "insieme/core/ast_node.h"
+
 #include <memory>
 
 namespace insieme {
@@ -72,7 +74,7 @@ public:
  */
 void registerPragmaHandlers(clang::Preprocessor& pp);
 
-void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
+void attachOmpAnnotation(const insieme::core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
 
 } // End omp namespace
 } // End frontend namespace

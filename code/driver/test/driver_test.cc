@@ -38,7 +38,7 @@
 
 #include "insieme/core/program.h"
 
-#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/program.h"
 #include "insieme/driver/driver_config.h"
 #include "insieme/simple_backend/backend_convert.h"
 

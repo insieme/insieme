@@ -36,9 +36,9 @@
 
 #include <gtest/gtest.h>
 
-//#include "program.h"
+#include "insieme/core/program.h"
 
-#include "insieme/frontend/clang_compiler.h"
+#include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma_handler.h"
 //#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
