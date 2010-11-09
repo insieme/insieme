@@ -530,6 +530,8 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getSubExpression() const { return subExpression; }
+	
+	const Identifier& getMemberName() const { return member; }
 
 	static MemberAccessExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const Identifier& member);
 };
@@ -551,6 +553,8 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getSubExpression() const { return subExpression; }
+	
+	const unsigned getIndex() const { return index; }
 
 	static TupleProjectionExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index);
 };
