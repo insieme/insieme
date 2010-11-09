@@ -193,6 +193,90 @@ public:
 	VariableManager& getVariableManager() { return varManager; }
 };
 
+// a forward declaration of the convert visitor
+class ConvertVisitor;
+
+namespace detail {
+
+	/**
+	 * This class allows the conversion visitor to use special formats when printing the call of a specific function.
+	 * For instance, this formatter allows to write the add operation + in infix notation.
+	 */
+	class Formatter {
+	public:
+
+		/**
+		 * Performs the actual code formating. This method is pure abstract and
+		 * has to be implemented within sub-classes.
+		 *
+		 * @param visitor the visitor and its context using this formatter
+		 * @param call the call expression to be handled
+		 */
+		virtual void format(ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) =0;
+
+	};
+
+	/**
+	 * Since formatter instances are polymorthic, they need to be handled via pointer or
+	 * references. Further, the memory management needs to be considered. Therefore, formatter
+	 * should be passed using this pointer type, which is based on a shared pointer.
+	 */
+	typedef std::shared_ptr<Formatter> FormatterPtr;
+
+	/**
+	 * The Lambda Formatter is a concrete generic implementation of the Formatter class. It uses
+	 * a lambda expression passed in during the construction to format the actual output.
+	 */
+	template<typename Lambda>
+	class LambdaFormatter : public Formatter {
+
+		/**
+		 * The lambda used to perform the formatting.
+		 */
+		Lambda lambda;
+
+	public:
+
+		/**
+		 * Creates a new instance of this type printing the given literal using the
+		 * given lambda during the formating.
+		 *
+		 * @param literal the literal to be handled by this formatter
+		 * @param lambda the lambda performing the actual formatting
+		 */
+		LambdaFormatter(Lambda lambda) : lambda(lambda) {}
+
+		/**
+		 * Conducts the actual formatting of the given call expression.
+		 *
+		 * @param visitor the visitor and its context using this formatter
+		 * @param call the call expression to be handled
+		 */
+		virtual void format(ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) {
+			lambda(visitor, cStr, call);
+		}
+	};
+
+	/**
+	 * A utility function to create LiteralFormatter instances without the need of
+	 * specifying generic types. Those types will be inferred automatically.
+	 *
+	 * @param literal the literal to be handled by the requested formatter
+	 * @return a new formatter handling the call expressions using the given lambda
+	 */
+	template<typename Lambda>
+	FormatterPtr make_formatter(Lambda lambda) {
+		return std::make_shared<LambdaFormatter<Lambda>>(lambda);
+	}
+
+	// define a type for handling formatter
+	typedef std::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
+
+	// a forward declaration for a method assembling formater tables
+	FormatTable initFormatTable();
+
+}
+
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
  ** */
 class ConvertVisitor : public ASTVisitor<> {
@@ -202,6 +286,11 @@ class ConvertVisitor : public ASTVisitor<> {
 	CodePtr defCodePtr;
 	CodeStream& cStr;
 	
+	/**
+	 * The table handling operator specific formatting rules.
+	 */
+	detail::FormatTable formats;
+
 	template<typename Functor>
 	void runWithCodeStream(CodeStream& cs, Functor f) {
 		CodeStream& oldCodeStream = cStr;
@@ -212,9 +301,11 @@ class ConvertVisitor : public ASTVisitor<> {
 
 public:
 	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
-		varManager(cc.getVariableManager()), defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()) { };
+		varManager(cc.getVariableManager()), defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()),
+		formats(detail::initFormatTable()) { };
 	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()), 
-		varManager(cc.getVariableManager()), defCodePtr(cptr), cStr(defCodePtr->getCodeStream()) { };
+		varManager(cc.getVariableManager()), defCodePtr(cptr), cStr(defCodePtr->getCodeStream()),
+		formats(detail::initFormatTable()) { };
 
 	CodePtr getCode() { return defCodePtr; }
 
@@ -339,7 +430,6 @@ public:
 
 	void visitVariable(const VariablePtr& ptr);
 
-	void processArgument(const ExpressionPtr& argument);
 };
 
 } // namespace simple_backend

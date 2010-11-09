@@ -307,25 +307,33 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
 				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
 					// print elements of the tuple directly ...
-					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->processArgument(ep); });
+					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
 					return;
 				}
 			}
 
-			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->processArgument(ep); });
+			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			//DLOG(INFO) << cStr.getString();
 			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
 			return;
 		}
+
+		// try generic build-in C operator handling
+		auto pos = formats.find(literalFun);
+		if (pos != formats.end()) {
+			pos->second->format(*this, cStr, ptr);
+			return;
+		}
 	}
 
+	// TODO: gradually remove this -> literal handling should be sufficient
 	// generic built in C operator handling
 	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) {
 		string op = cOpAnn->getOperator();
 		cStr << "(";
-		processArgument(args.front());
+		visit(args.front());
 		cStr << " " << op << " ";
-		processArgument(args.back());
+		visit(args.back());
 		cStr << ")";
 		return;
 	}
@@ -339,19 +347,8 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	}
 
 	cStr << "(";
-	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->processArgument(ep); });
+	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 	cStr << ")";
-}
-
-void ConvertVisitor::processArgument(const ExpressionPtr& argument) {
-
-	if (argument->getNodeType() == NT_Variable) {
-		// special variable handling
-
-	}
-
-	// default: just print the corresponding expression
-	visit(argument);
 }
 
 void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
@@ -691,6 +688,113 @@ string NameGenerator::getVarName(const VariablePtr& var) {
 	} else {
 		return string("var_") + toString(var->getId());
 	}
+}
+
+
+namespace detail {
+
+	namespace {
+
+		/**
+		 * A utility function to obtain the n-th argument within the given call expression.
+		 *
+		 * @param call the expression from which the argument should be extracted
+		 * @param n the index of the requested argument
+		 * @return the requested argument or a NULL pointer in case there is no such argument
+		 */
+		NodePtr getArgument(const CallExprPtr& call, unsigned n) {
+			auto arguments = call->getArguments();
+			if (n < arguments.size()) {
+				return arguments[n];
+			}
+			return NodePtr();
+		}
+
+		/**
+		 * A utility function visiting the n-th argument of a call expression.
+		 *
+		 * @param visitor the visitor to be used for the actual visiting
+		 * @param call the expression from which the argument should be extracted
+		 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
+		 */
+		void visitArgument(ConvertVisitor& visitor, const CallExprPtr& call, unsigned n) {
+			NodePtr argument = getArgument(call, n);
+			if (argument) {
+				visitor.visit(argument);
+			}
+		}
+
+	}
+
+
+	FormatTable initFormatTable() {
+
+		FormatTable res;
+
+		#define OUT(Literal) cStr << Literal
+		#define ARG(N) getArgument(call, N)
+		#define VISIT_ARG(N) visitArgument(visitor, call, N)
+		#define ADD_FORMATTER(Literal, FORMAT) \
+					res.insert(std::make_pair(Literal, make_formatter([](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
+
+
+		ADD_FORMATTER(lang::OP_REF_ASSIGN_PTR, { VISIT_ARG(0); OUT(" = "); VISIT_ARG(1); });
+
+		// TODO: integrate those as well ...
+//		ADD_FORMATTER(lang::OP_REF_VAR_PTR, { OUT(" var("); VISIT_ARG(0); OUT(")"); });
+//		ADD_FORMATTER(lang::OP_REF_NEW_PTR, { OUT(" new("); VISIT_ARG(0); OUT(")"); });
+//		ADD_FORMATTER(lang::OP_REF_DELETE_PTR, { OUT(" del("); VISIT_ARG(0); OUT(")"); });
+
+		//ADD_FORMATTER(lang::OP_SUBSCRIPT_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(lang::OP_SUBSCRIPT_SINGLE_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+
+		ADD_FORMATTER(lang::OP_REAL_ADD_PTR, { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_REAL_SUB_PTR, { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_REAL_MUL_PTR, { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_REAL_DIV_PTR, { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+
+		ADD_FORMATTER(lang::OP_UINT_ADD_PTR, { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_SUB_PTR, { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_MUL_PTR, { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_DIV_PTR, { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_MOD_PTR, { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+
+		ADD_FORMATTER(lang::OP_INT_ADD_PTR, { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_SUB_PTR, { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_MUL_PTR, { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_DIV_PTR, { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_MOD_PTR, { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+
+		ADD_FORMATTER(lang::OP_BOOL_AND_PTR, { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_BOOL_OR_PTR, { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_BOOL_EQ_PTR, { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_BOOL_NOT_PTR, { OUT("!"); VISIT_ARG(0); });
+
+		ADD_FORMATTER(lang::OP_UINT_EQ_PTR, { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_GE_PTR, { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_GT_PTR, { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_LT_PTR, { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_UINT_LE_PTR, { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+
+		ADD_FORMATTER(lang::OP_INT_EQ_PTR, { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_GE_PTR, { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_GT_PTR, { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_LT_PTR, { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_INT_LE_PTR, { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+
+		ADD_FORMATTER(lang::OP_ITE_PTR, { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(1); OUT("))"); });
+
+		#undef ADD_FORMATTER
+		#undef OUT
+		#undef ARG
+		#undef VISIT_ARG
+
+
+		return res;
+
+
+	}
+
 }
 
 }
