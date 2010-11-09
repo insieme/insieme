@@ -99,7 +99,7 @@ void if_stmt_test() {
 
 	int cond = 0;
 
-	#pragma test "if(cast<bool>(v1)) {ref.assign(v1, int.add(ref.deref(v1), 1));} else {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
+	#pragma test "if(cast<bool>(ref.deref(v1))) {ref.assign(v1, int.add(ref.deref(v1), 1));} else {ref.assign(v1, int.sub(ref.deref(v1), 1));}"
 	if(cond) {
 		cond += 1;
 	} else {

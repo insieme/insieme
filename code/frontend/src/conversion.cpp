@@ -1296,8 +1296,8 @@ public:
 			const Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
 
-			condExpr = convFact.convertExpr( cond );
-			if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
+			condExpr = tryDeref(builder, convFact.convertExpr( cond ));
+			if(*condExpr->getType() != core::lang::TYPE_BOOL_VAL) {
 				// add a cast expression to bool
 				condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 			}
