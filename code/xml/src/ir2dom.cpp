@@ -628,7 +628,7 @@ public:
 		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
 	}
 	
-	/*void MemberAccessExpr(const MemberAccessExprPtr& cur) {
+	void visitMemberAccessExpr(const MemberAccessExprPtr& cur) {
 		XmlElement memberAccessExpr("memberAccessExpr", doc);
 		rootElem << (memberAccessExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -640,12 +640,31 @@ public:
 		append(subExpression, cur->getSubExpression(), "expressionPtr");
 		memberAccessExpr << subExpression;
 		
-		XmlElement subExpression("subExpression",doc);
-		append(subExpression, cur->getMemberName(), "expressionPtr");
-		memberAccessExpr << subExpression;
+		XmlElement memberName("memberName",doc);
+		memberName.setText(cur->getMemberName().getName());
+		memberAccessExpr << memberName;
 
 		visitAnnotations(cur->getAnnotations(), memberAccessExpr);
-	}*/
+	}
+	
+	void visitTupleProjectionExpr(const TupleProjectionExprPtr& cur) {
+		XmlElement tupleProjectionExpr("tupleProjectionExpr", doc);
+		rootElem << (tupleProjectionExpr << XmlElement::Attribute("id", GET_ID(cur)));
+
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "typePtr");
+		tupleProjectionExpr << type;
+
+		XmlElement subExpression("subExpression",doc);
+		append(subExpression, cur->getSubExpression(), "expressionPtr");
+		tupleProjectionExpr << subExpression;
+		
+		XmlElement index("index",doc);
+		index.setText(toString(cur->getIndex()));
+		tupleProjectionExpr << index;
+
+		visitAnnotations(cur->getAnnotations(), tupleProjectionExpr);
+	}
 };
 
 }

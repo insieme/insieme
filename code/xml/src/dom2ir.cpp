@@ -412,6 +412,18 @@ public:
 		RecLambdaDefinitionPtr&& def = createNode<RecLambdaDefinition>(elem, "definition", "recLambdaDefinitionPtr");
 		return createIrNode<RecLambdaExpr>(elem, var, def);
 	}
+	
+	NodePtr handle_memberAccessExpr(const XmlElement& elem) {
+		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
+		Identifier&& ident = elem.getFirstChildByName("memberName")->getText();
+		return createIrNode<MemberAccessExpr>(elem, expr, ident);
+	}
+	
+	NodePtr handle_tupleProjectionExpr(const XmlElement& elem) {
+		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
+		const unsigned index = numeric_cast<unsigned>(elem.getFirstChildByName("index")->getText());
+		return createIrNode<TupleProjectionExpr>(elem, expr, index);
+	}
 
 	NodePtr handle_program(const XmlElement& elem) {
 		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
@@ -455,7 +467,7 @@ public:
 		DISPATCH(continueStmt)		DISPATCH(compoundStmt)		DISPATCH(declarationStmt)	DISPATCH(structExpr)			DISPATCH(unionExpr)
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(recLambdaDefinition)	DISPATCH(recLambdaExpr)
-		DISPATCH(rootNode)
+		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(tupleProjectionExpr)
 		assert(false && "XML node not handled!");
 	}
 

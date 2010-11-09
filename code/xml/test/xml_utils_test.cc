@@ -1141,7 +1141,7 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-/*TEST(XmlTest, JobExprTest) {
+TEST(XmlTest, JobExprTest) {
     NodeManager manager;
 
 	LambdaExpr::ParamList guardArgs;
@@ -1156,11 +1156,11 @@ TEST(XmlTest, VariableTest) {
 
     LambdaExpr::ParamList list;
 	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
+	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
 	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat1 e"));
-	//DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
 	stat1.addAnnotation(dummy_se);
-	//stat1->addAnnotation(dummy_sn);
+	stat1->addAnnotation(dummy_sn);
 
 	JobExpr::GuardedStmts guarded;
 	guarded.push_back(make_pair(guard, stat1));
@@ -1169,9 +1169,9 @@ TEST(XmlTest, VariableTest) {
 	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
 	LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
 	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
-	//DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
+	DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
 	default1.addAnnotation(dummy_de);
-	//default1->addAnnotation(dummy_dn);
+	default1->addAnnotation(dummy_dn);
 	
 	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
 	LiteralPtr literalA = Literal::get(manager, lang::TYPE_INT_4_PTR, "4");
@@ -1194,21 +1194,18 @@ TEST(XmlTest, VariableTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump2.xml");
-	xml.convertXmlToDom("dump2.xml", true);
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
-	
-	xml.convertIrToDom(root2);
-	xml.convertDomToXml("dump3.xml");
 
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
+}
 
 TEST(XmlTest, LambdaExprTest) {
 	NodeManager manager;
@@ -1289,8 +1286,8 @@ TEST(XmlTest, ProgramTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump2.xml");
-	xml.convertXmlToDom("dump2.xml", true);
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	
@@ -1364,3 +1361,76 @@ TEST(XmlTest, RecLambdaExprTest) {
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
+
+TEST(XmlTest, MemberAccessExprTest) {
+	NodeManager manager;
+
+	Identifier ident1("a");
+	
+	vector<StructExpr::Member> vecA;
+	
+	LiteralPtr literal1 = Literal::get(manager, lang::TYPE_INT_4_PTR, "222");
+	DummyAnnotationPtr dummy_l1e(new DummyAnnotation("literal1 e"));
+	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("literal1 n"));
+	literal1.addAnnotation(dummy_l1e);
+	literal1->addAnnotation(dummy_l1n);
+	
+	vecA.push_back(StructExpr::Member(ident1, literal1));
+
+	StructExprPtr structA = StructExpr::get(manager, vecA);
+	
+	MemberAccessExprPtr expr = MemberAccessExpr::get(manager, structA, ident1);
+	
+	NodePtr root = expr;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
+
+TEST(XmlTest, TupleProjectionExprTest) {
+	NodeManager manager;
+	
+	vector<ExpressionPtr> vecA;
+	
+	LiteralPtr literal1 = Literal::get(manager, lang::TYPE_INT_4_PTR, "2");
+	DummyAnnotationPtr dummy_l1e(new DummyAnnotation("literal1 e"));
+	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("literal1 n"));
+	literal1.addAnnotation(dummy_l1e);
+	literal1->addAnnotation(dummy_l1n);
+	
+	vecA.push_back(literal1);
+
+	TupleExprPtr tuple = TupleExpr::get(manager, vecA);
+	
+	TupleProjectionExprPtr expr = TupleProjectionExpr::get(manager, tuple, 0);
+	
+	NodePtr root = expr;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
+

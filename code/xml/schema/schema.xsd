@@ -325,6 +325,26 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_memberAccessExpr">
+	<xs:all>
+		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
+		<xs:element name="subExpression" type="T_ExpressionPtr" minOccurs="1"/>
+		<xs:element name="memberName" type="xs:string" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_tupleProjectionExpr">
+	<xs:all>
+		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
+		<xs:element name="subExpression" type="T_ExpressionPtr" minOccurs="1"/>
+		<xs:element name="index" type="xs:integer" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_vectorExpr">
 	<xs:all>
 		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
@@ -539,6 +559,9 @@
 		
 		<xs:element name="structType" type="T_namedCompositeType"/>
 		<xs:element name="unionType" type="T_namedCompositeType"/>
+		
+		<xs:element name="memberAccessExpr" type="T_memberAccessExpr"/>
+		<xs:element name="tupleProjectionExpr" type="T_tupleProjectionExpr"/>
 	</xs:choice>
 </xs:group>
 
