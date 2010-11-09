@@ -141,3 +141,10 @@ const std::string BaseAnnotation::toString() const {
 } // End omp namespace
 } // End frontend namespace
 } // End insieme namespace
+
+namespace std {
+	ostream& operator<<(ostream& os, const insieme::frontend::omp::Annotation& ann) {
+		ann.dump(os);
+		return os;
+	}
+}

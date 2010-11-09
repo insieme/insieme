@@ -57,6 +57,7 @@ class XmlElement;
 namespace frontend {
 namespace omp {
 
+DEFINE_TYPE(BaseAnnotation);
 DEFINE_TYPE(Annotation);
 DEFINE_TYPE(Reduction);
 DEFINE_TYPE(Schedule);
@@ -91,7 +92,6 @@ public:
 private:
 	AnnotationList annotationList;
 };
-
 
 /**
  * This is the root class for OpenMP annotations, be aware that this is not an IR Annotation (see OmpBaseAnnotation).
@@ -674,3 +674,7 @@ public:
 } // End omp namespace
 } // End frontend namespace
 } // End insieme namespace
+
+namespace std {
+	ostream& operator<<(ostream& os, const insieme::frontend::omp::Annotation& ann);
+}
