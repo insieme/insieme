@@ -202,6 +202,20 @@ OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	return res;
 }
 
+namespace {
+
+	unsigned getNumRefs(const TypePtr& type) {
+		unsigned count = 0;
+		TypePtr cur = type;
+		while (cur->getNodeType() == NT_RefType) {
+			count++;
+			cur = static_pointer_cast<const RefType>(cur)->getElementType();
+		}
+		return count;
+	}
+
+}
+
 OptionalMessageList RefCastCheck::visitCastExpr(const CastExprAddress& address) {
 
 	OptionalMessageList res;
@@ -209,10 +223,10 @@ OptionalMessageList RefCastCheck::visitCastExpr(const CastExprAddress& address) 
 	// check whether it is a build-in literal
 	TypePtr src = address->getSubExpression()->getType();
 	TypePtr trg = address->getType();
-	NodeType srcType = src->getNodeType();
-	NodeType resType = trg->getNodeType();
+	unsigned srcCount = getNumRefs(src);
+	unsigned trgCount = getNumRefs(trg);
 
-	if (srcType == NT_RefType && resType != NT_RefType) {
+	if (srcCount > trgCount) {
 		add(res, Message(address,
 				EC_TYPE_REF_TO_NON_REF_CAST,
 				format("Casting reference type %s to non-reference type %s",
@@ -221,7 +235,7 @@ OptionalMessageList RefCastCheck::visitCastExpr(const CastExprAddress& address) 
 				Message::ERROR));
 	}
 
-	if (srcType != NT_RefType && resType == NT_RefType) {
+	if (srcCount < trgCount) {
 		add(res, Message(address,
 				EC_TYPE_NON_REF_TO_REF_CAST,
 				format("Casting non-reference type %s to reference type %s",
@@ -229,6 +243,56 @@ OptionalMessageList RefCastCheck::visitCastExpr(const CastExprAddress& address) 
 						toString(*trg).c_str()),
 				Message::ERROR));
 	}
+
+	return res;
+}
+
+
+OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
+
+	OptionalMessageList res;
+
+	TypePtr source = address->getSubExpression()->getType();
+	TypePtr target = address->getType();
+	TypePtr src = source;
+	TypePtr trg = target;
+
+	while (src->getNodeType() == trg->getNodeType()) {
+		switch(src->getNodeType()) {
+		case NT_ArrayType:
+		case NT_ChannelType:
+		case NT_RefType:
+		case NT_VectorExpr:
+			src = static_pointer_cast<const Type>(src->getChildList()[0]);
+			trg = static_pointer_cast<const Type>(trg->getChildList()[0]);
+			break;
+		case NT_TupleType:
+		case NT_FunctionType:
+		case NT_RecType:
+			if (*src != *trg) {
+				add(res, Message(address,
+						EC_TYPE_ILLEGAL_CAST,
+						format("Casting between incompatible types %s and %s",
+								toString(*source).c_str(),
+								toString(*target).c_str()),
+						Message::ERROR));
+				return res;
+			}
+		case NT_GenericType:
+			// this cast is allowed (for now)
+			return res;
+		default:
+			break;
+		}
+	}
+
+	// types are not of same kind => illegal cast
+	add(res, Message(address,
+		EC_TYPE_ILLEGAL_CAST,
+		format("Casting between incompatible types %s and %s",
+				toString(*source).c_str(),
+				toString(*target).c_str()),
+		Message::ERROR));
 
 	return res;
 }
