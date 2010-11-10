@@ -866,7 +866,7 @@ public:
 		// add ref.deref if needed
 		condExpr = tryDeref(convFact.builder, condExpr);
 
-		if(*condExpr->getType() != *core::lang::TYPE_BOOL_PTR) {
+		if(*condExpr->getType() != core::lang::TYPE_BOOL_VAL) {
 			// the return type of the condition is not a boolean, we add a cast expression
 			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 		}
@@ -964,7 +964,7 @@ public:
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitInitListExpr(clang::InitListExpr* initList) {
         START_LOG_EXPR_CONVERSION(initList);
-        std::vector<core::ExpressionPtr> elements;
+        ExpressionList elements;
 
         // get all values of the init expression
         for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
@@ -972,7 +972,7 @@ public:
         }
 
         // create vector initializator
-        core::ExpressionPtr retExpr = convFact.builder.vectorExpr(elements);
+        core::ExpressionPtr&& retExpr = convFact.builder.vectorExpr(elements);
 
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
@@ -1050,7 +1050,7 @@ public:
 		START_LOG_STMT_CONVERSION(retStmt);
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
 
-		core::StatementPtr ret = convFact.builder.returnStmt( convFact.convertExpr( retStmt->getRetValue() ) );
+		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.convertExpr( retStmt->getRetValue() ) );
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(ret, retStmt, convFact);
 
@@ -2630,14 +2630,14 @@ core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* d
 
 			core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
 			if(definition->isMain())
-				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
+				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
 		}
 		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
 			// This is a variable declared outside any function meaning it has to be treated as global
-			core::DeclarationStmtPtr&& declStmt = mFact.convertVarDecl( varDecl );
-			mFact.ctx->globalVarMap.insert(
-				std::make_pair(declStmt->getVariable(), std::make_pair(core::Identifier(varDecl->getNameAsString()), declStmt->getInitialization()))
-			);
+//			core::DeclarationStmtPtr&& declStmt = mFact.convertVarDecl( varDecl );
+//			mFact.ctx->globalVarMap.insert(
+//				std::make_pair(declStmt->getVariable(), std::make_pair(core::Identifier(varDecl->getNameAsString()), declStmt->getInitialization()))
+//			);
 		}
 	}
 
