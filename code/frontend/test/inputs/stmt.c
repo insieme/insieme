@@ -95,7 +95,7 @@ void unary_op_test() {
 //	#pragma test "a" TODO
 	-a;
 
-	//#pragma test "decl ref<array<ref<int<4>>,1>> v2 = ( var(v1))"
+	// #pragma test "decl ref<array<ref<int<4>>,1>> v2 = ( var(v1))"
 	int* b = &a;
 
 	//#pragma test "(( *v1)[0])"
@@ -305,28 +305,33 @@ void rec_function_call_test() {
 	f(10);
 }
 
-void evil(void* anything) { }
+void evil(int** anything) { }
 
 void vector_stmt_test() {
 
 	//#pragma test "decl ref<vector<ref<int<4>>,5>> v1 = ( var(vector.initUniform(( var(0)))))" // FIXME
 	int a[5];
 
-	#pragma test "(( *v1)[0])"
+	#pragma test \
+	"(( *v1)[0])"
 	a[0];
 
-	#pragma test "((( *v1)[0]) := 1)"
+	#pragma test \
+	"((( *v1)[0]) := 1)"
 	a[0] = 1;
 
 	int b[2][2];
 
-	#pragma test "((( *v1)[0])[0])"
+	#pragma test \
+	"((( *v1)[0])[0])"
 	b[0][0];
 
-	#pragma test "(((( *v1)[1])[1]) := 0)"
+	#pragma test \
+	"(((( *v1)[1])[1]) := 0)"
 	b[1][1] = 0;
 
-	// #pragma test "fun(array<ref<'a>,1> v2){ {} }(v1)"
+	#pragma test \
+	"fun(array<ref<array<ref<int<4>>,1>>,1> v2) { }(( *v1))"
 	evil(b);
 }
 

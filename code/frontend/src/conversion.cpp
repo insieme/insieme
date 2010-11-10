@@ -2391,7 +2391,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 			std::make_pair(var, std::make_pair(core::Identifier(definition->getNameAsString()), initExpr))
 		);
 		DVLOG(1) << "Variable decl is static, inserted into the global map";
-		return core::DeclarationStmtPtr();
+//		return core::DeclarationStmtPtr();
 	}
 
 	core::DeclarationStmtPtr&& retStmt = builder.declarationStmt( var, initExpr );
@@ -2632,13 +2632,14 @@ core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* d
 			if(definition->isMain())
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
 		}
-		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-			// This is a variable declared outside any function meaning it has to be treated as global
+		// we only add the variables which are actually needed!
+//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+//			// This is a variable declared outside any function meaning it has to be treated as global
 //			core::DeclarationStmtPtr&& declStmt = mFact.convertVarDecl( varDecl );
 //			mFact.ctx->globalVarMap.insert(
 //				std::make_pair(declStmt->getVariable(), std::make_pair(core::Identifier(varDecl->getNameAsString()), declStmt->getInitialization()))
 //			);
-		}
+//		}
 	}
 
 	return mProgram;
