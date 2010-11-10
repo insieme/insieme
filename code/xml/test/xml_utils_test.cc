@@ -1156,7 +1156,7 @@ TEST(XmlTest, JobExprTest) {
 
     LambdaExpr::ParamList list;
 	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
+	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
 	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat1 e"));
 	DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
 	stat1.addAnnotation(dummy_se);
@@ -1166,7 +1166,7 @@ TEST(XmlTest, JobExprTest) {
 	guarded.push_back(make_pair(guard, stat1));
 
     LambdaExpr::ParamList list2;
-	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_FALSE_PTR);
 	LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
 	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
 	DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));

@@ -43,6 +43,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
 
 #include "insieme/utils/logging.h"
 
@@ -63,48 +64,68 @@ public:
 //        core::AnnotationMap map = func.getAnnotations();
  //       std::cout << "Size: " << map.size() << std::endl;
 
-        // kernel function has at least 4 child nodes (type, 2 args, body)
-        //TODO make me pretty
-        if(func->getChildList().size() >= 4) {
 
-
+        //check globalRange and localRange arguments
         if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-            core::FunctionType ft = *funcType;
-            core::TypePtr retTy = ft.getReturnType();
-
-            //check return type
-            EXPECT_EQ("unit", retTy->getName());
-
-            //check globalRange and localRange arguments
             core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
-            EXPECT_LE(static_cast<unsigned>(2), args.size());
-            core::TypePtr globalRange = args.at(args.size()-2);
-            EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
-            core::TypePtr localRange = args.back();
-            EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
 
-        } else {
-            assert(funcType && "Function has unexpected type");
-        }
+            // kernel function has at least 2 arguments (localRange, globalRange)
+            // TODO change to ocl annotation check
+//std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY) << std::endl;
+            if(args.size() >= 2) {
+
+                core::FunctionType ft = *funcType;
+                core::TypePtr retTy = ft.getReturnType();
+
+                //check return type
+                EXPECT_EQ("unit", retTy->getName());
+
+                core::TypePtr globalRange = args.at(args.size()-2);
+                EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
+                core::TypePtr localRange = args.back();
+                EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
 
 //std::cout << "Nchilds: " << func->getChildList().size() << std::endl;
 
-        core::NodePtr node = func->getChildList()[0];
-        std::cout << "this is lambdaaaa" << node->toString() << "\n";
+                core::NodePtr node = func->getChildList()[0];
+                std::cout << "this is lambdaaaa" << node->toString() << "\n";
 
-        if(core::CompoundStmtPtr body = core::dynamic_pointer_cast<const core::CompoundStmt>(func->getChildList().back())){
-            core::StatementPtr parFunc = body->getStatements().at(0);
-            if(core::CallExprPtr parallelFunctionCall = dynamic_pointer_cast<const core::CallExpr>(parFunc))
-                std::cout << "Found call for parallel  in function body\n";// Noop
-            else
-                EXPECT_TRUE(parallelFunctionCall);
+                if(core::CompoundStmtPtr body = core::dynamic_pointer_cast<const core::CompoundStmt>(func->getChildList().back())){
+
+                    // std::find_it returns this type:
+                    //__gnu_cxx::__normal_iterator<const insieme::core::AnnotatedPtr<const insieme::core::Statement>*, std::vector<insieme::core::AnnotatedPtr<const insieme::core::Statement> > >
+                    auto parallelFunctionCall = std::find_if(body->getStatements().begin(), body->getStatements().end(),
+                            [] (core::StatementPtr bodyStatement) {
+                        if(dynamic_pointer_cast<const core::CallExpr>(bodyStatement))
+                            return true;
+                        else
+                            return false;
+                    });
+
+
+                    EXPECT_EQ(core::NodeType::NT_CallExpr, (*parallelFunctionCall)->getNodeType());
+                }
+            }
+        }else {
+            assert(funcType && "Function has unexpected type");
         }
-    }}
+    }
 
     void visitJobExpr(const core::JobExprPtr& job) {
-        std::cout << "get a job!\n";
+        std::cout << ": get a job!\n";
 
         core::JobExpr j = *job;
+
+        core::JobExpr::ChildList childs = j.getChildList();
+
+        //at least the local and global range has to be captured
+        EXPECT_LE(3, childs.size());
+
+        for(auto I = childs.begin(), E= childs.end(); I != E; ++I) {
+            std::cout << "job's child: ";
+            (*I)->printTo(std::cout);
+            std::cout << std::endl;
+        }
     }
 };
 
@@ -116,7 +137,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     // Set severity level
     SetStderrLogging(5);
-//    CommandLineOptions::Verbosity = 2;
+    CommandLineOptions::Verbosity = 2;
 
     core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
     core::ProgramPtr program = core::Program::create(*sharedManager);

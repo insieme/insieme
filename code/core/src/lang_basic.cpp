@@ -290,7 +290,7 @@ ADD_TYPE(TupleType, UINT_PAIR, TupleType(TYPE_UINT_GEN_PTR,TYPE_UINT_GEN_PTR));
 ADD_TYPE(FunctionType, BINARY_UINT_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UINT_GEN_PTR)));
 
 // function type of job guards: (uint, uint) -> bool
-ADD_TYPE(FunctionType, GUARD_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_UNIT_PTR)));
+ADD_TYPE(FunctionType, GUARD_OP, (FunctionType(TYPE_UINT_PAIR_PTR, TYPE_BOOL_PTR)));
 
 ADD_OP(UINT_ADD, TYPE_BINARY_UINT_OP_PTR, "uint.add");
 ADD_OP(UINT_SUB, TYPE_BINARY_UINT_OP_PTR, "uint.sub");

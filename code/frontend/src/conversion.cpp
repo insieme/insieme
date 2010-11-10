@@ -90,6 +90,9 @@ namespace fe = insieme::frontend;
 
 namespace {
 
+typedef vector<core::StatementPtr> StatementList;
+typedef vector<core::ExpressionPtr> ExpressionList;
+
 //TODO put it into a class
 void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& clangComp, const clang::Decl* decl) {
 
@@ -111,9 +114,9 @@ void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& cl
 // Utility class used as a return type for the StmtVisitor. It can store a list of statement
 // as conversion of a single C stmt can result in multiple IR statements.
 
-struct StmtWrapper: public std::vector<core::StatementPtr>{
-	StmtWrapper(): std::vector<core::StatementPtr>() { }
-	StmtWrapper(const core::StatementPtr& stmt):  std::vector<core::StatementPtr>() { push_back(stmt); }
+struct StmtWrapper: public StatementList{
+	StmtWrapper(): StatementList() { }
+	StmtWrapper(const core::StatementPtr& stmt): StatementList() { push_back(stmt); }
 
 	core::StatementPtr getSingleStmt() const {
 		assert(size() == 1 && "More than 1 statement present");
@@ -135,7 +138,7 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 }
 
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vector<core::StatementPtr>& stmtVect) {
+core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const StatementList& stmtVect) {
 	if( stmtVect.size() == 1 )
 		return stmtVect.front();
 	return builder.compoundStmt(stmtVect);
@@ -143,7 +146,7 @@ core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const vect
 
 // in case the the last argument of the function is a var_arg, we try pack the exceeding arguments with the pack
 // operation provided by the IR.
-vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const vector<core::ExpressionPtr>& args) {
+vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args) {
 
 	// check if the function type ends with a VAR_LIST type
 	core::TupleTypePtr&& argTy = core::dynamic_pointer_cast<const core::TupleType>(funcTy->getArgumentType());
@@ -155,14 +158,14 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 		return args;
 
 	if(*elements.back() == core::lang::TYPE_VAR_LIST_VAL) {
-		vector<core::ExpressionPtr> ret;
+		ExpressionList ret;
 		assert(args.size() >= elements.size()-1 && "Function called with fewer arguments than necessary");
 		// last type is a var_list, we have to do the packing of arguments
 
 		// we copy the first N-1 arguments, the remaining will be unpacked
 		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
 
-		vector<core::ExpressionPtr> toPack;
+		ExpressionList toPack;
 		if(args.size() > elements.size()-1) {
 			std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
 		}
@@ -203,6 +206,7 @@ std::string getOperationType(const core::TypePtr& type) {
 	// assert(false && "Type not supported");
 }
 
+// In the case the expression is of ref type, a deref operations is added, otherwise the expression is returned unchanged
 core::ExpressionPtr tryDeref(const core::ASTBuilder& builder, const core::ExpressionPtr& expr) {
 	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
 		return builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(expr) );
@@ -212,7 +216,7 @@ core::ExpressionPtr tryDeref(const core::ASTBuilder& builder, const core::Expres
 
 // creates a function call from a list of expressions,
 // usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
-core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vector<core::StatementPtr>& body, core::TypePtr retTy, bool useCapture=false) {
+core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const StatementList& body, core::TypePtr retTy, bool useCapture=false) {
 
 	core::CompoundStmtPtr&& bodyStmt = builder.compoundStmt( body );
 	// keeps the list variables used in the body
@@ -248,8 +252,8 @@ core::CallExprPtr createCallExpr(const core::ASTBuilder& builder, const std::vec
 		retExpr = builder.lambdaExpr( funcTy, params, bodyStmt );
 
 	if(useCapture)
-		return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>() );
-	return builder.callExpr( retTy, retExpr, std::vector<core::ExpressionPtr>(args.begin(), args.end()) );
+		return builder.callExpr( retTy, retExpr, ExpressionList() );
+	return builder.callExpr( retTy, retExpr, ExpressionList(args.begin(), args.end()) );
 }
 
 // Covert clang source location into a c_info::SourceLocation object to be inserted in an CLocAnnotation
@@ -296,11 +300,6 @@ struct ConversionFactory::ConversionContext {
 	// Map for resolved lambda functions
 	typedef std::map<const FunctionDecl*, core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
-
-	// this map keeps naming map between the functiondecl and the variable
-	// introduced to represent it in the recursive definition
-	// typedef std::map<const FunctionDecl*, core::VariablePtr> VarMap;
-	// VarMap  varMap;
 
 	// CallGraph for functions, used to resolved eventual recursive functions
 	utils::DependencyGraph<const FunctionDecl*> funcDepGraph;
@@ -475,7 +474,7 @@ public:
 			const core::ASTBuilder& builder = convFact.builder;
 
 			// collects the type of each argument of the expression
-			vector<core::ExpressionPtr> args;
+			ExpressionList args;
 			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
 				[ &args, &builder, this ] (Expr* currArg) {
 					args.push_back( tryDeref(builder, this->Visit(currArg)) );
@@ -483,7 +482,7 @@ public:
 			);
 
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
-			vector<core::ExpressionPtr>&& packedArgs = tryPack(convFact.builder, funcTy, args);
+			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
 			const FunctionDecl* definition = NULL;
 			// this will find function definitions if they are declared in  the same translation unit (also defined as static)
@@ -517,7 +516,7 @@ public:
 			if(!ctx.isResolvingRecFuncBody) {
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if(fit != ctx.lambdaExprCache.end()) {
-					core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
+					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
 					// handle eventual pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
 					return irNode;
@@ -574,11 +573,11 @@ public:
 			return createCallExpr(builder, toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)), rhs->getType());
 		}
 
-		core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
+		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 		// create Pair type
-		core::TupleTypePtr tupleTy = builder.tupleType(toVector( exprTy, exprTy ) );
-		std::string opType = getOperationType(exprTy);
+		core::TupleTypePtr&& tupleTy = builder.tupleType(toVector( exprTy, exprTy ) );
+		std::string&& opType = getOperationType(exprTy);
 
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
@@ -717,7 +716,7 @@ public:
 		if(!isAssignment)
 			opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
-		core::ExpressionPtr retExpr = convFact.builder.callExpr( exprTy, opFunc, toVector(lhs, rhs) );
+		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, toVector(lhs, rhs) );
 
 		// add the operator name in order to help the convertion process in the backend
 		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
@@ -810,7 +809,7 @@ public:
 			if(core::dynamic_pointer_cast<const core::VectorType>(subExpr->getType()) ||
 				core::dynamic_pointer_cast<const core::ArrayType>(subExpr->getType())) {
 
-				core::SingleElementTypePtr subTy = core::dynamic_pointer_cast<const core::SingleElementType>(subExpr->getType());
+				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(subExpr->getType());
 				assert(subTy);
 				subExpr = builder.callExpr( subTy->getElementType(), core::lang::OP_SUBSCRIPT_SINGLE_PTR,
 						toVector<core::ExpressionPtr>(subExpr, builder.literal("0", core::lang::TYPE_INT_4_PTR)) );
@@ -1477,6 +1476,13 @@ public:
 			}
 			// we encounter a case statement
 			caseStart=true;
+			if(isa<const SwitchCase>(curr) && !caseStmts.empty()) {
+				// a new case statement started with no break operation,
+				// we have to create an entry for the previous case
+				assert(currCaseExpr);
+				cases.push_back( std::make_pair(currCaseExpr, tryAggregateStmts( this->convFact.builder, caseStmts )) );
+			}
+
 			if( const CaseStmt* caseStmt = dyn_cast<const CaseStmt>(curr) ) {
 				currCaseExpr = this->convFact.convertExpr( caseStmt->getLHS() );
 				assert(currCaseExpr && "Case statement has empty expression");
@@ -2332,7 +2338,8 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
+		return builder.callExpr(vecTy, core::lang::OP_VECTOR_INIT_UNIFORM_PTR, toVector(initVal));
+		// return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
     }
     // handle arrays initialization
     if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
