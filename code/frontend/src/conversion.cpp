@@ -2274,7 +2274,7 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 //						CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type ) {
+core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) {
 	if( *type == core::lang::TYPE_ALPHA_VAL ) {
 		return core::lang::CONST_NULL_PTR_PTR;
 	}

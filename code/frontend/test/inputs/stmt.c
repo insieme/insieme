@@ -320,6 +320,8 @@ void vector_stmt_test() {
 	"((( *v1)[0]) := 1)"
 	a[0] = 1;
 
+	//#pragma test \
+	"decl ref<vector<vector<ref<int<4>>,2>,2>> v1 = ( var(vector.initUniform(vector.initUniform(( var(0))))))"
 	int b[2][2];
 
 	#pragma test \
@@ -330,7 +332,7 @@ void vector_stmt_test() {
 	"(((( *v1)[1])[1]) := 0)"
 	b[1][1] = 0;
 
-	#pragma test \
+	//#pragma test \
 	"fun(array<ref<array<ref<int<4>>,1>>,1> v2) { }(( *v1))"
 	evil(b);
 }
