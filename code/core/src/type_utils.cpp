@@ -36,9 +36,14 @@
 
 #include <cassert>
 
-#include "insieme/core/type_utils.h"
+#include <unordered_map>
 
+#include "insieme/core/type_utils.h"
+#include "insieme/core/ast_visitor.h"
+
+#include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
+
 
 namespace insieme {
 namespace core {
@@ -203,6 +208,33 @@ bool occurs(const NodePtr& x, const NodePtr& term) {
 	});
 }
 
+namespace {
+
+	inline void preprocessTypes(NodeManager& manager, TypePtr& typeA, TypePtr& typeB) {
+
+		// check node types
+		NodeType a = typeA->getNodeType();
+		NodeType b = typeB->getNodeType();
+
+		if (a==b) {
+			return;
+		}
+
+
+		// if only one is a vector, replace the vector with an array ...
+		if (a == NT_ArrayType && b == NT_VectorType) {
+			preprocessTypes(manager, typeB, typeA);
+			return;
+		}
+		if (a == NT_VectorType && b == NT_ArrayType) {
+			TypePtr elementType = static_pointer_cast<const VectorType>(typeA)->getElementType();
+			typeB = ArrayType::get(manager, elementType, IntTypeParam::getConcreteIntParam(1));
+			return;
+		}
+	}
+
+}
+
 boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list) {
 	typedef std::pair<TypePtr, TypePtr> Pair;
 	typedef std::list<Pair> List;
@@ -216,8 +248,11 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 		Pair cur = list.front();
 		list.pop_front();
 
-		const TypePtr& a = cur.first;
-		const TypePtr& b = cur.second;
+		TypePtr a = cur.first;
+		TypePtr b = cur.second;
+
+		// preprocess types (e.g. vector - array relation)
+		preprocessTypes(manager, a, b);
 
 		const NodeType typeOfA = a->getNodeType();
 		const NodeType typeOfB = b->getNodeType();
@@ -354,6 +389,131 @@ bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB) {
 	NodeManager tmp; // requires only temporary manager
 	return typeA==typeB || unify(tmp, typeA, typeB);
 }
+
+
+namespace {
+	using std::pair;
+
+	// ------------- Utilities to support the replacement of type variables with fresh variables ------------------------
+
+	pair<vector<TypeVariablePtr>, vector<IntTypeParam>> getVariables(const TypePtr& typeA) {
+
+		pair<vector<TypeVariablePtr>, vector<IntTypeParam>> res;
+
+		visitAllNodesOnce(typeA, [&res](const NodePtr& node){
+			switch(node->getNodeType()) {
+			case NT_TypeVariable:
+				// collect type variables
+				res.first.push_back(static_pointer_cast<const TypeVariable>(node));
+				break;
+			case NT_GenericType: {
+					// collect int-type param variables
+					GenericTypePtr genType = static_pointer_cast<const GenericType>(node);
+					for_each(genType->getIntTypeParameter(), [&res](const IntTypeParam& cur) {
+						if (cur.getType() == IntTypeParam::VARIABLE) {
+							res.second.push_back(cur);
+						}
+					});
+					break;
+				}
+			default:
+				// nothing to do for the rest
+				break;
+			}
+		});
+
+		return res;
+	}
+
+	class TypeVariableReplacer : public NodeMapping {
+
+		unsigned varCounter;
+
+		unsigned paramCounter;
+
+		NodeManager& manager;
+
+		std::unordered_map<TypeVariablePtr, TypeVariablePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> varMap;
+
+		std::unordered_map<IntTypeParam, IntTypeParam, boost::hash<IntTypeParam>> paramMap;
+
+	public:
+
+		TypeVariableReplacer(NodeManager& manager) : manager(manager) { }
+
+		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+			// only handle type variables
+			if (ptr->getNodeType() != NT_TypeVariable) {
+				return ptr;
+			}
+
+			// cast type variable
+			TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
+
+			// search for parameter ...
+			auto pos = varMap.find(cur);
+			if (pos != varMap.end()) {
+				// found => return result
+				return pos->second;
+			}
+
+			// create new variable substitution
+			varMap.insert(std::make_pair(cur, TypeVariable::get(manager, "FV" + toString(++varCounter))));
+			return mapElement(0, cur);
+		}
+
+		virtual IntTypeParam mapParam(const IntTypeParam& param) {
+			// search for parameter ...
+			auto pos = paramMap.find(param);
+			if (pos != paramMap.end()) {
+				// found => return result
+				return pos->second;
+			}
+
+			// create new variable substitution
+			paramMap.insert(std::make_pair(param, IntTypeParam::getVariableIntParam('a' + paramCounter)));
+			paramCounter++;
+			return mapParam(param);
+		}
+
+		void startNewType() {
+			varMap.clear();
+			paramMap.clear();
+		}
+
+	};
+
+}
+
+
+std::pair<TypePtr, TypePtr> makeTypeVariablesUnique(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB) {
+	std::vector<TypePtr>&& list = makeTypeVariablesUnique(manager, toVector(typeA, typeB));
+	return std::make_pair(list[0],list[1]);
+}
+
+std::vector<TypePtr> makeTypeVariablesUnique(NodeManager& manager, const vector<TypePtr>& types) {
+	// check whether a check is actually necessary ..
+	if (types.size() < 2) {
+		// => no collisions possible - done!
+		return types;
+	}
+
+	// replace type variables and variable int-type parameter
+
+	// The replacer is handling the actual replacement by mapping variables to new values within types
+	TypeVariableReplacer replacer(manager);
+
+	// apply transformation
+	std::vector<TypePtr> res;
+	transform(types, std::back_inserter(res), [&](const TypePtr& type)->TypePtr {
+		replacer.startNewType();
+		return static_pointer_cast<const Type>(type->substitute(manager, replacer));
+	});
+	return res;
+}
+
+
+
 
 } // end namespace core
 } // end namespace insieme

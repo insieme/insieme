@@ -236,6 +236,24 @@ public:
 
 };
 
+/**
+ * Integrates the hash code computation for int type parameter into the boost hash code framework.
+ *
+ * @param param the parameter for which a hash code should be obtained.
+ * @return the hash code of the given instance
+ */
+inline std::size_t hash_value(const IntTypeParam& param) {
+	switch(param.getType()) {
+	case IntTypeParam::VARIABLE:
+		return boost::hash_value(param.getSymbol());
+	case IntTypeParam::CONCRETE:
+		return ~boost::hash_value(param.getSymbol());
+	case IntTypeParam::INFINITE:
+		return std::numeric_limits<std::size_t>::max();
+	}
+	return 0;
+}
+
 } // end namespace core
 } // end namespace insieme
 
