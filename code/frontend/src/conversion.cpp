@@ -327,6 +327,12 @@ struct ConversionFactory::ConversionContext {
 
 	bool isResolvingFunctionType;
 
+	// Gloabal and static variables
+	// map which stores, for each static or global variable, the identifier which will be used
+	// as identification within the global data structure and the initialization value
+	typedef std::map<core::VariablePtr, std::pair<core::Identifier, core::ExpressionPtr>> GlobalVarMap;
+	GlobalVarMap globalVarMap;
+
 	ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 };
 
@@ -1016,18 +1022,24 @@ public:
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
 			core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
 
-			// handle eventual OpenMP pragmas attached to the Clang node
-			frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-			return StmtWrapper(retStmt );
+			if(retStmt) {
+				// handle eventual OpenMP pragmas attached to the Clang node
+				frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
+				return StmtWrapper(retStmt );
+			}
+			return StmtWrapper();
 		}
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-				retList.push_back( convFact.convertVarDecl(varDecl) );
+				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 				// handle eventual OpenMP pragmas attached to the Clang node
-				frontend::omp::attachOmpAnnotation(retList.back(), declStmt, convFact);
+				if(retStmt) {
+					frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
+					retList.push_back( retStmt );
+				}
 			}
 		return retList;
 	}
@@ -2301,6 +2313,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
     }
     if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
 		// todo
+    	assert(unionTy); // silent compiler warning
 	}
 
     //----------------  INTIALIZE VECTORS ---------------------------------
@@ -2324,6 +2337,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type 
     // handle arrays initialization
     if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
     	// FIXME
+    	assert(vecTy); // silent compiler warning
     	// initialization for arrays is missing, returning NULL!
     	return core::lang::CONST_NULL_PTR_PTR;
     }
@@ -2341,7 +2355,8 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		varDecl->dump();
 	}
 
-	clang::QualType clangType = varDecl->getType();
+	const VarDecl* definition = varDecl->getDefinition();
+	clang::QualType clangType = definition->getType();
 	if(!clangType.isCanonical())
 		clangType = clangType->getCanonicalTypeInternal();
 
@@ -2349,23 +2364,32 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// it is not declared as const, successive dataflow analysis could be used to restrict the access
 	// to this variable
 	core::TypePtr&& type = convertType( clangType.getTypePtr() );
-	if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(varDecl))
+	if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(definition))
 		type = builder.refType( type );
 
 	// initialization value
 	core::ExpressionPtr initExpr;
-	if( varDecl->getInit() ) {
-		initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(convertExpr( varDecl->getInit() )) );
+	if( definition->getInit() ) {
+		initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(convertExpr( definition->getInit() )) );
 	} else {
 		initExpr = defaultInitVal( type );
 	}
 
 	// lookup for the variable in the map
-	core::VariablePtr var = lookUpVariable(varDecl);
-	core::DeclarationStmtPtr&& retStmt = builder.declarationStmt( var, initExpr );
+	core::VariablePtr&& var = lookUpVariable(definition);
 
+	if(definition->getStorageClass() == StorageClass::SC_Static) {
+		// this is a static variable declaration
+		ctx->globalVarMap.insert(
+			std::make_pair(var, std::make_pair(core::Identifier(definition->getNameAsString()), initExpr))
+		);
+		DVLOG(1) << "Variable decl is static, inserted into the global map";
+		return core::DeclarationStmtPtr();
+	}
+
+	core::DeclarationStmtPtr&& retStmt = builder.declarationStmt( var, initExpr );
 	// logging
-	DVLOG(1) << "Converted into IR stmt: "; \
+	DVLOG(1) << "Converted into IR stmt: ";
 	DVLOG(1) << "\t" << *retStmt;
 
 	return retStmt;
@@ -2601,9 +2625,13 @@ core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* d
 			if(definition->isMain())
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr);
 		}
-//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-//			mFact.convertVarDecl( varDecl );
-//		}
+		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
+			// This is a variable declared outside any function meaning it has to be treated as global
+			core::DeclarationStmtPtr&& declStmt = mFact.convertVarDecl( varDecl );
+			mFact.ctx->globalVarMap.insert(
+				std::make_pair(declStmt->getVariable(), std::make_pair(core::Identifier(varDecl->getNameAsString()), declStmt->getInitialization()))
+			);
+		}
 	}
 
 	return mProgram;

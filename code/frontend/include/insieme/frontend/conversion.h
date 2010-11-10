@@ -56,6 +56,8 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+class ASTConverter;
+
 // ------------------------------------ ConversionFactory ---------------------------
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
@@ -84,6 +86,7 @@ class ConversionFactory {
 	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
 	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
+	friend class ASTConverter;
 public:
 	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, clang::idx::Indexer& indexer, clang::idx::Program& clangProg,
 			const PragmaList& pragmaList = PragmaList());

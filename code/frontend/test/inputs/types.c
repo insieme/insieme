@@ -57,10 +57,10 @@ void basic_type_test() {
 	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
 	double g;
 	
-	#pragma test "ref<vector<ref<real<4>>,3>> v1 = ref.var({ref.var(0.0),ref.var(0.0),ref.var(0.0)})"
+	#pragma test "ref<vector<ref<real<4>>,3>> v1 = ref.var(vector.initUniform(ref.var(0.0)))"
 	float v[3];
 
-    #pragma test "ref<vector<vector<ref<int<4>>,2>,3>> v1 = ref.var({{ref.var(0),ref.var(0)},{ref.var(0),ref.var(0)},{ref.var(0),ref.var(0)}})"
+    #pragma test "ref<vector<vector<ref<int<4>>,2>,3>> v1 = ref.var(vector.initUniform(vector.initUniform(ref.var(0))))"
 	int vv[3][2];
 }
 

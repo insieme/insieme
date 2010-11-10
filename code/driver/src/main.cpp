@@ -37,6 +37,8 @@
 #include <iostream>
 #include <memory>
 #include <algorithm>
+#include <fstream>
+
 
 #include "insieme/core/ast_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
@@ -63,10 +65,7 @@
 
 #include "insieme/xml/xml_utils.h"
 
-#include <fstream>
-
 using namespace std;
-using namespace google;
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace xml = insieme::xml;
