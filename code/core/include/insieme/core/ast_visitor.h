@@ -220,7 +220,7 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
  * of the visited nodes may be combined using a generic result combinator.
  */
 template<
-	typename SubVisitor = void,
+	typename SubVisitorResultType,
 	template<class Target> class Ptr = AnnotatedPtr
 >
 class RecursiveASTVisitor : public ASTVisitor<void, Ptr> {
@@ -228,7 +228,7 @@ class RecursiveASTVisitor : public ASTVisitor<void, Ptr> {
 	/**
 	 * The sub-visitor visiting all nodes recursively.
 	 */
-	SubVisitor& subVisitor;
+	ASTVisitor<SubVisitorResultType, Ptr>& subVisitor;
 
 	/**
 	 * The order in which nodes are processed.
@@ -245,7 +245,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	RecursiveASTVisitor(SubVisitor& subVisitor, bool preorder = true) : subVisitor(subVisitor), preorder(preorder) {};
+	RecursiveASTVisitor(ASTVisitor<SubVisitorResultType, Ptr>& subVisitor, bool preorder = true)
+		: subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
 	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
@@ -272,21 +273,25 @@ public:
 };
 
 /**
- * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
- * will recursively iterated depth first, pre-order through every visited node. Thereby,
- * within every node, the sub-visitor's visit method will be invoked. Further, the results
- * of the visited nodes may be combined using a generic result combinator.
+ * A special variant of a recursive visitor which can be stopped during its recursive
+ * processing of an IR graph. To interrupt the recursive visitor, the handed in sub-visitor
+ * may simply return false. The result of the interrupted visitor is false if not interrupted,
+ * true otherwise.
  */
 template<
-	typename SubVisitor = void,
 	template<class Target> class Ptr = AnnotatedPtr
 >
-class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr> {
+class RecursiveInterruptableASTVisitor : public ASTVisitor<bool, Ptr> {
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
 	 */
-	SubVisitor& subVisitor;
+	ASTVisitor<bool, Ptr>& subVisitor;
+
+	/**
+	 * The order in which nodes are processed.
+	 */
+	bool preorder;
 
 	/**
 	 * The child factory to be used to create pointer to child nodes.
@@ -298,7 +303,75 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	BreadthFirstASTVisitor(SubVisitor& subVisitor) : subVisitor(subVisitor) {};
+	RecursiveInterruptableASTVisitor(ASTVisitor<bool, Ptr>& subVisitor, bool preorder = true)
+		: subVisitor(subVisitor), preorder(preorder) {};
+
+	/**
+	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * subtree rooted at this node.
+	 */
+	bool visitNode(const Ptr<const Node>& node) {
+
+		// init interruption state
+		bool interrupted = false;
+
+		// create and run the actual visitor visiting the node using a lambda
+		auto innerVisitor = makeLambdaVisitor<Ptr>([&interrupted, this](const Ptr<const Node>& cur) {
+			// visit current (in case of a pre-order)
+			if (this->preorder) {
+				interrupted = interrupted || !this->subVisitor.visit(cur);
+			}
+
+			// recursively visit all sub-nodes
+			const Node::ChildList& children = cur->getChildList();
+			for(std::size_t i=0; i<children.size(); i++) {
+				interrupted = interrupted || this->visit(this->childFactory(cur, i));
+			}
+
+			// visit current (in case of a post-order)
+			if (!this->preorder) {
+				interrupted = interrupted || !this->subVisitor.visit(cur);
+			}
+		});
+
+		// trigger inner visitor
+		innerVisitor.visit(node);
+
+		// return result
+		return interrupted;
+	}
+};
+
+
+
+/**
+ * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
+ * will recursively iterated depth first, pre-order through every visited node. Thereby,
+ * within every node, the sub-visitor's visit method will be invoked. Further, the results
+ * of the visited nodes may be combined using a generic result combinator.
+ */
+template<
+	typename SubVisitorResultType,
+	template<class Target> class Ptr = AnnotatedPtr
+>
+class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr> {
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	ASTVisitor<SubVisitorResultType, Ptr>& subVisitor;
+
+	/**
+	 * The child factory to be used to create pointer to child nodes.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	BreadthFirstASTVisitor(ASTVisitor<SubVisitorResultType, Ptr>& subVisitor) : subVisitor(subVisitor) {};
 
 	/**
 	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
@@ -336,21 +409,20 @@ public:
 	}
 };
 
-
 /**
  * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
  * the
  */
 template<
-	typename SubVisitor = void,
+	typename SubVisitorResultType,
 	template<class Target> class Ptr = AnnotatedPtr
 >
-class VisitOnceASTVisitor : public ASTVisitor<void> {
+class VisitOnceASTVisitor : public ASTVisitor<void, Ptr> {
 
 	/**
 	 * The sub-visitor visiting all nodes recursively.
 	 */
-	SubVisitor& subVisitor;
+	ASTVisitor<SubVisitorResultType, Ptr>& subVisitor;
 
 	/**
 	 * The order in which nodes are processed.
@@ -367,7 +439,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	VisitOnceASTVisitor(SubVisitor& subVisitor, bool preorder = true) : subVisitor(subVisitor), preorder(preorder) {};
+	VisitOnceASTVisitor(ASTVisitor<SubVisitorResultType, Ptr>& subVisitor, bool preorder = true) : subVisitor(subVisitor), preorder(preorder) {};
 
 
 	/**
@@ -410,6 +482,145 @@ public:
 };
 
 /**
+ * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
+ * the
+ */
+template<
+	template<class Target> class Ptr = AnnotatedPtr
+>
+class VisitOnceInterruptableASTVisitor : public ASTVisitor<bool, Ptr> {
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	ASTVisitor<bool, Ptr>& subVisitor;
+
+	/**
+	 * The order in which nodes are processed.
+	 */
+	bool preorder;
+
+	/**
+	 * The child factory to be used to create pointer to child nodes.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	VisitOnceInterruptableASTVisitor(ASTVisitor<bool, Ptr>& subVisitor, bool preorder = true)
+		: subVisitor(subVisitor), preorder(preorder) {};
+
+
+	/**
+	 * The entry point for the visiting process.
+	 */
+	virtual bool visit(const Ptr<const Node>& node) {
+
+		// init interrupt flag
+		bool interrupted = false;
+
+		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		ASTVisitor<void, Ptr>* visitor;
+		auto lambdaVisitor = makeLambdaVisitor<Ptr>([&interrupted, &all, &visitor, this](const Ptr<const Node>& node) {
+
+			// quick shortcut
+			if (interrupted) {
+				return;
+			}
+
+			// add current node to set ..
+			bool isNew = all.insert(node).second;
+			if (!isNew) {
+				return;
+			}
+
+			if (this->preorder) {
+				// visit current node
+				interrupted = interrupted || !this->subVisitor.visit(node);
+			}
+
+			// visit all child nodes recursively
+			const Node::ChildList& children = node->getChildList();
+			for(std::size_t i = 0; i<children.size(); i++) {
+				visitor->visit(this->childFactory(node, i));
+			}
+
+			if (!this->preorder) {
+				// visit current node
+				interrupted = interrupted || !this->subVisitor.visit(node);
+			}
+		});
+
+		// update pointer ..
+		visitor = &lambdaVisitor;
+
+		// trigger the visit (only once)
+		visitor->visit(node);
+
+		return interrupted;
+	}
+};
+
+/**
+ * A factory method creating recursive visitors based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @param preorder allows to chose between pre- or postorder depth first visiting
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<typename Result, template<class Target> class Ptr>
+RecursiveASTVisitor<Result, Ptr> makeRecursiveVisitor(ASTVisitor<Result,Ptr>& visitor, bool preorder=true) {
+	return RecursiveASTVisitor<Result, Ptr>(visitor, preorder);
+}
+
+/**
+ * A factory method creating visit once visitor based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<template<class Target> class Ptr>
+RecursiveInterruptableASTVisitor<Ptr> makeRecursiveInterruptableVisitor(ASTVisitor<bool,Ptr>& visitor, bool preorder=true) {
+	return RecursiveInterruptableASTVisitor<Ptr>(visitor, preorder);
+}
+
+/**
+ * A factory method creating breadth first visitor visitors based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<typename Result, template<class Target> class Ptr>
+BreadthFirstASTVisitor<Result, Ptr> makeBreadthFirstVisitor(ASTVisitor<Result,Ptr>& visitor) {
+	return BreadthFirstASTVisitor<Result, Ptr>(visitor);
+}
+
+/**
+ * A factory method creating visit once visitor based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<typename Result, template<class Target> class Ptr>
+VisitOnceASTVisitor<Result, Ptr> makeVisitOnceVisitor(ASTVisitor<Result,Ptr>& visitor, bool preorder=true) {
+	return VisitOnceASTVisitor<Result, Ptr>(visitor, preorder);
+}
+
+/**
+ * A factory method creating visit once visitor based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<template<class Target> class Ptr>
+VisitOnceInterruptableASTVisitor<Ptr> makeVisitOnceInterruptableVisitor(ASTVisitor<bool,Ptr>& visitor, bool preorder=true) {
+	return VisitOnceInterruptableASTVisitor<Ptr>(visitor, preorder);
+}
+
+/**
  * The given visitor is recursively applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * multiple times.
@@ -421,15 +632,33 @@ public:
  */
 template<typename Node, typename Result, template<class Target> class Ptr>
 inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
-	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
-	recVisitor.visit(root);
+	makeRecursiveVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, typename Result, template<class Target> class Ptr>
 inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
-	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
-	recVisitor.visit(root);
+	makeRecursiveVisitor(visitor, preorder).visit(root);
+}
+
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If the given visitor returns false, the visiting will be interrupted.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
+ * 				   post order will be enforced.
+ */
+template<typename Node, template<class Target> class Ptr>
+inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor, bool preorder = true) {
+	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
+}
+
+// same as above, however it is accepting visitors by reference
+template<typename Node, template<class Target> class Ptr>
+inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor, bool preorder = true) {
+	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 /**
@@ -453,20 +682,21 @@ inline void visitAllNodes(const Ptr<Node>& root, Lambda lambda, bool preorder = 
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * only once.
  *
+ * NOTE: if used based on Addresses, only the first address referencing a shared node
+ * 		 is visited.
+ *
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
 template<typename Node, typename Result, template<class Target> class Ptr>
 inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
-	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
-	recVisitor.visit(root);
+	makeVisitOnceVisitor(visitor, preorder).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr>
 inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
-	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
-	recVisitor.visit(root);
+	makeVisitOnceVisitor(visitor, preorder).visit(root);
 }
 
 
@@ -474,6 +704,9 @@ inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor
  * The given lambda is recursively applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * only once.
+ *
+ * NOTE: if used based on Addresses, only the first address referencing a shared node
+ * 		 is visited.
  *
  * @param root the root not to start the visiting from
  * @param lambda the lambda to be applied to all the nodes
@@ -487,6 +720,29 @@ inline void visitAllNodesOnce(const Ptr<Node>& root, Lambda lambda, bool preorde
 
 /**
  * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If the given visitor returns false, the visiting will be interrupted.
+ *
+ * NOTE: if used based on Addresses, only the first address referencing a shared node
+ * 		 is visited.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
+ * 				   post order will be enforced.
+ */
+template<typename Node, template<class Target> class Ptr>
+inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor, bool preorder = true) {
+	return makeVisitOnceInterruptableVisitor(visitor, preorder).visit(root);
+}
+
+// same as above, however it is accepting visitors by reference
+template<typename Node, template<class Target> class Ptr>
+inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor, bool preorder = true) {
+	return makeVisitOnceInterruptableVisitor(visitor, preorder).visit(root);
+}
+
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * multiple times.
  *
@@ -495,14 +751,12 @@ inline void visitAllNodesOnce(const Ptr<Node>& root, Lambda lambda, bool preorde
  */
 template<typename Node, typename Result, template<class Target> class Ptr>
 inline void visitAllBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor) {
-	BreadthFirstASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor);
-	recVisitor.visit(root);
+	makeBreadthFirstVisitor(visitor).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr>
 inline void visitAllBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor) {
-	BreadthFirstASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor);
-	recVisitor.visit(root);
+	makeBreadthFirstVisitor(visitor).visit(root);
 }
 
 /**

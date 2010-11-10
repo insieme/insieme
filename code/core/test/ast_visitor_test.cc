@@ -177,7 +177,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	NodeManager manager;
 	CountingVisitor visitor;
-	RecursiveASTVisitor<CountingVisitor> recVisitor(visitor);
+	auto recVisitor = makeRecursiveVisitor(visitor);
 
 	ProgramPtr program = Program::create(manager);
 
@@ -228,7 +228,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	// ------ test for addresses ----
 	CountingAddressVisitor adrVisitor;
-	RecursiveASTVisitor<CountingAddressVisitor, Address> recAdrVisitor(adrVisitor);
+	auto recAdrVisitor = makeRecursiveVisitor(adrVisitor);
 
 	adrVisitor.reset();
 	adrVisitor.visit(NodeAddress(ifStmt));
@@ -240,7 +240,6 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 
 }
-
 
 TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 
@@ -268,7 +267,7 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 		res.push_back(cur);
 	});
 
-	BreadthFirstASTVisitor<decltype(collector)> breadthVisitor(collector);
+	auto breadthVisitor = makeBreadthFirstVisitor(collector);
 
 	breadthVisitor.visit(typeA);
 	vector<NodePtr> expected;
@@ -316,19 +315,19 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 
 	// visit all recursively
 	res.clear();
-	RecursiveASTVisitor<decltype(collector)> recursive(collector);
+	auto recursive = makeRecursiveVisitor(collector);
 	recursive.visit(type);
 
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
 	// visit all, only once
 	res.clear();
-	VisitOnceASTVisitor<decltype(collector)> prefix(collector);
+	auto prefix = makeVisitOnceVisitor(collector);
 	prefix.visit(type);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	VisitOnceASTVisitor<decltype(collector)> postfix(collector, false);
+	auto postfix = makeVisitOnceVisitor(collector, false);
 	postfix.visit(type);
 
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
@@ -397,4 +396,109 @@ TEST(ASTVisitor, UtilitiesTest) {
 	visitAllNodesOnce(type, fun, false);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
+}
+
+template<template<class Target> class Ptr>
+class InterruptingVisitor : public ASTVisitor<bool,Ptr> {
+public:
+
+	int counter;
+	int limit;
+
+	InterruptingVisitor(int limit) : counter(0), limit(limit) {};
+
+	bool visitNode(const Ptr<const Node>& node) {
+		return ++counter < limit;
+	};
+
+	void reset() {
+		counter = 0;
+	}
+
+};
+
+TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
+
+	// TODO: run recursive visitor test
+
+	NodeManager manager;
+	InterruptingVisitor<AnnotatedPtr> limit3(3);
+	InterruptingVisitor<AnnotatedPtr> limit10(10);
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	limit3.reset();
+	EXPECT_TRUE(visitAllInterruptable(ifStmt, limit3));
+	EXPECT_EQ ( 3, limit3.counter );
+
+	limit10.reset();
+	EXPECT_FALSE(visitAllInterruptable(ifStmt, limit10));
+	EXPECT_EQ ( 6, limit10.counter );
+
+	// ------ test for addresses ----
+	InterruptingVisitor<Address> limitA3(3);
+	InterruptingVisitor<Address> limitA10(10);
+
+	limitA3.reset();
+	EXPECT_TRUE(visitAllInterruptable(NodeAddress(ifStmt), limitA3));
+	EXPECT_EQ ( 3, limitA3.counter );
+
+	limitA10.reset();
+	visitAllInterruptable(ifStmt, limit10);
+	EXPECT_FALSE(visitAllInterruptable(NodeAddress(ifStmt), limitA10));
+	EXPECT_EQ ( 6, limitA10.counter );
+}
+
+
+TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
+
+	// TODO: run recursive visitor test
+
+	NodeManager manager;
+	InterruptingVisitor<AnnotatedPtr> limit3(3);
+	InterruptingVisitor<AnnotatedPtr> limit10(10);
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	limit3.reset();
+	EXPECT_TRUE(visitAllOnceInterruptable(ifStmt, limit3));
+	EXPECT_EQ ( 3, limit3.counter );
+
+	limit10.reset();
+	EXPECT_FALSE(visitAllOnceInterruptable(ifStmt, limit10));
+	EXPECT_EQ ( 5, limit10.counter );
+
+	// check number of nodes when visiting all nodes
+	limit10.reset();
+	visitAllOnce(ifStmt, limit10);
+	EXPECT_EQ( 5, limit10.counter);
+
+	// ------ test for addresses ----
+	InterruptingVisitor<Address> limitA3(3);
+	InterruptingVisitor<Address> limitA10(10);
+
+	limitA3.reset();
+	EXPECT_TRUE(visitAllOnceInterruptable(NodeAddress(ifStmt), limitA3));
+	EXPECT_EQ ( 3, limitA3.counter );
+
+	limitA10.reset();
+	EXPECT_FALSE(visitAllOnceInterruptable(NodeAddress(ifStmt), limitA10));
+	EXPECT_EQ ( 5, limitA10.counter );
+
+	// check number of nodes when visiting all nodes
+	limitA10.reset();
+	visitAllOnce(NodeAddress(ifStmt), limitA10);
+	EXPECT_EQ( 5, limitA10.counter);
 }
