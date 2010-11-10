@@ -277,7 +277,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 			// add operation
 			if (deref) cStr << "(*";
-			if (ptr->getNodeType() == NT_Variable) cStr << "*";
+			if (ptr->getArguments()[0]->getNodeType() == NT_Variable) cStr << "*";
 			visit(args.front());
 			if (deref) cStr << ")";
 
@@ -723,7 +723,14 @@ namespace detail {
 					res.insert(std::make_pair(Literal, make_formatter([](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
 
 
-		ADD_FORMATTER(lang::OP_REF_ASSIGN_PTR, { VISIT_ARG(0); OUT(" = "); VISIT_ARG(1); });
+		ADD_FORMATTER(lang::OP_REF_ASSIGN_PTR, {
+				NodeManager& manager = visitor.getConversionContext().getNodeManager();
+				ExpressionPtr target = static_pointer_cast<const Expression>(ARG(0));
+				TypePtr valueType = static_pointer_cast<const RefType>(target->getType())->getElementType();
+				visitor.visit(CallExpr::get(manager, valueType, lang::OP_REF_DEREF, toVector<ExpressionPtr>(target)));
+				OUT(" = ");
+				VISIT_ARG(1);
+		});
 
 		// TODO: integrate those as well ...
 //		ADD_FORMATTER(lang::OP_REF_VAR_PTR, { OUT(" var("); VISIT_ARG(0); OUT(")"); });

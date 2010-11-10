@@ -102,7 +102,12 @@ public:
 	TypePtr getType() const { return type; }
 };
 
-
+/**
+ * Literal:
+ *   - any constant value, e.g. an integer, character or string
+ *   - any external functions, the literal has to be of a function type
+ *   - any external variable, the literal has to be of a ref-type
+ */
 class Literal : public Expression {
 
 	const string value;

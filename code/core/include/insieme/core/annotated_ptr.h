@@ -104,10 +104,16 @@ struct StaticAnnotatedPtrCast {
 	}
 };
 
+
+// forward declaration of the node type
 class Node;
+
+/**
+ * A static functor object extracting child node pointer from given pointer.
+ */
 struct AnnotatedPtrChildFactory {
 	template<typename Source>
-	const AnnotatedPtr<const Node> operator()(const AnnotatedPtr<Source>& value, std::size_t childIndex) const {
+	inline const AnnotatedPtr<const Node> operator()(const AnnotatedPtr<Source>& value, std::size_t childIndex) const {
 		return value->getChildList()[childIndex];
 	}
 };
