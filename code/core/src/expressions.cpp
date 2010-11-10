@@ -454,7 +454,6 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
     assert(static_pointer_cast<const FunctionType>(defaultStmt->getType())->getReturnType()->getName() == "unit" &&
             "Return value of default statement must be void.");
 
-    // TODO test
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [](const JobExpr::GuardedStmt& s){
         //Check guards
         assert(*static_pointer_cast<const FunctionType>(s.first->getType())->getArgumentType() == TupleType(
@@ -503,10 +502,11 @@ bool JobExpr::equalsExpr(const Expression& expr) const {
 }
 
 std::ostream& JobExpr::printTo(std::ostream& out) const {
-	// TODO
-	//out << "job {" << join(", ", localDecls) << "} ("
-	//	<< join(", ", guardedStmts, [](const GuardedStmt& s) { return format("(%s, %s)", toString(*s.first).c_str(), toString(*s.second).c_str()); } )
-	//	<< ", " << defaultStmt << ")";
+	out << "job [" << join(", ", localDecls, print<deref<DeclarationStmtPtr>>()) << "] ("
+		<< join(", ", guardedStmts, [](std::ostream& out, const GuardedStmt& s) {
+	        out << format("(%s, %s)", s.first->toString().c_str(), s.second->toString().c_str());
+	    } )
+		<< ", " << *defaultStmt << ")";
 	return out;
 }
 
