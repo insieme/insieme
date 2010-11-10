@@ -220,5 +220,3 @@ namespace detail {
 template <typename Lambda>
 struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
 
-
-

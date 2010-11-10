@@ -309,6 +309,8 @@ public:
 
 	CodePtr getCode() { return defCodePtr; }
 
+	ConversionContext& getConversionContext() { return cc; }
+
 	void visitNode(const NodePtr& node) {
 		cStr << "<?>" << toString(*node) << "</?>";
 	}

@@ -195,7 +195,6 @@ TEST(TypeUtils, Unification) {
 		EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termB)));
 		EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
 	}
-
 }
 
 bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {

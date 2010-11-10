@@ -440,9 +440,12 @@ struct StaticAddressCast {
 	}
 };
 
+/**
+ * A static functor object creating child address based on a given address.
+ */
 struct AddressChildFactory {
 	template<typename Source>
-	const NodeAddress operator()(const Address<Source>& value, std::size_t childIndex) const {
+	inline const NodeAddress operator()(const Address<Source>& value, std::size_t childIndex) const {
 		return value.getAddressOfChild(childIndex);
 	}
 };

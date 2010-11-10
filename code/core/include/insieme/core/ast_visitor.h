@@ -174,6 +174,44 @@ public:
 	}
 };
 
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * lambda function.
+ *
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @return the resulting visitor.
+ */
+template<
+	template<class Target> class Ptr,
+	typename Lambda
+>
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr> makeLambdaVisitor(Lambda lambda) {
+	return LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr>(lambda);
+};
+
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * lambda function.
+ *
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @return the resulting visitor.
+ */
+template<typename Lambda>
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, AnnotatedPtr> makeLambdaPtrVisitor(Lambda lambda) {
+	return makeLambdaVisitor<AnnotatedPtr, Lambda>(lambda);
+};
+
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * lambda function via a address.
+ *
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @return the resulting visitor.
+ */
+template<typename Lambda>
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Address> makeLambdaAddressVisitor(Lambda lambda) {
+	return makeLambdaVisitor<Address, Lambda>(lambda);
+};
 
 /**
  * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
@@ -198,7 +236,7 @@ class RecursiveASTVisitor : public ASTVisitor<void, Ptr> {
 	bool preorder;
 
 	/**
-	 * The child factory to be used.
+	 * The child factory to be used to create pointer to child nodes.
 	 */
 	typename Ptr<const Node>::ChildFactory childFactory;
 
@@ -250,6 +288,11 @@ class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr> {
 	 */
 	SubVisitor& subVisitor;
 
+	/**
+	 * The child factory to be used to create pointer to child nodes.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
 public:
 
 	/**
@@ -266,20 +309,20 @@ public:
 		std::queue<Ptr<const Node>> queue;
 
 		ASTVisitor<void>* visitor;
-		auto lambdaVisitor = makeLambdaVisitor([&queue, &visitor, this](const Ptr<const Node>& node) {
+		auto lambdaVisitor = makeLambdaVisitor<Ptr>([&queue, &visitor, this](const Ptr<const Node>& node) {
 
 			// visit the current node
 			this->subVisitor.visit(node);
 
 			// add children of current node to the queue
 			auto children = node->getChildList();
-			for(auto it = children.begin(); it != children.end(); ++it) {
-				queue.push(*it);
+			for(std::size_t i = 0; i<children.size(); i++) {
+				queue.push(this->childFactory(node, i));
 			}
 
 			// proceed with next node in the queue
 			if (!queue.empty()) {
-				NodePtr next = queue.front();
+				Ptr<const Node> next = queue.front();
 				queue.pop();
 				visitor->visit(next);
 			}
@@ -314,6 +357,11 @@ class VisitOnceASTVisitor : public ASTVisitor<void> {
 	 */
 	bool preorder;
 
+	/**
+	 * The child factory to be used to create pointer to child nodes.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
 public:
 
 	/**
@@ -329,7 +377,7 @@ public:
 
 		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
 		ASTVisitor<void, Ptr>* visitor;
-		auto lambdaVisitor = makeLambdaVisitor([&all, &visitor, this](const Ptr<const Node>& node) {
+		auto lambdaVisitor = makeLambdaVisitor<Ptr>([&all, &visitor, this](const Ptr<const Node>& node) {
 			// add current node to set ..
 			bool isNew = all.insert(node).second;
 			if (!isNew) {
@@ -343,9 +391,9 @@ public:
 
 			// visit all child nodes recursively
 			const Node::ChildList& children = node->getChildList();
-			std::for_each(children.begin(), children.end(), [&](const NodePtr& cur) {
-				visitor->visit(cur);
-			});
+			for(std::size_t i = 0; i<children.size(); i++) {
+				visitor->visit(this->childFactory(node, i));
+			}
 
 			if (!this->preorder) {
 				// visit current node
@@ -361,46 +409,6 @@ public:
 	}
 };
 
-
-/**
- * Creates a visitor where each node is passed as an argument to the given
- * lambda function.
- *
- * @param lambda the lambda function to which all visited nodes shell be passed.
- * @return the resulting visitor.
- */
-template<
-	template<class Target> class Ptr,
-	typename Lambda
->
-inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr> makeLambdaVisitor(Lambda lambda) {
-	return LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr>(lambda);
-};
-
-/**
- * Creates a visitor where each node is passed as an argument to the given
- * lambda function.
- *
- * @param lambda the lambda function to which all visited nodes shell be passed.
- * @return the resulting visitor.
- */
-template<typename Lambda>
-inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, AnnotatedPtr> makeLambdaVisitor(Lambda lambda) {
-	return LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, AnnotatedPtr>(lambda);
-};
-
-/**
- * Creates a visitor where each node is passed as an argument to the given
- * lambda function via a address.
- *
- * @param lambda the lambda function to which all visited nodes shell be passed.
- * @return the resulting visitor.
- */
-template<typename Lambda>
-inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Address> makeLambdaAddressVisitor(Lambda lambda) {
-	return makeLambdaVisitor<Address, Lambda>(lambda);
-};
-
 /**
  * The given visitor is recursively applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
@@ -411,20 +419,15 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
  * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
  * 				   post order will be enforced.
  */
-//template<typename Node, typename Visitor>
-//inline void visitAll(Node& root, Visitor visitor, bool preorder = true) {
-//	RecursiveASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
-//	recVisitor.visit(root);
-//}
-
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitAll(const Node& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
+inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
 	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
 
+// same as above, however it is accepting visitors by reference
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitAll(const Node& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
 	RecursiveASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
@@ -439,9 +442,9 @@ inline void visitAll(const Node& root, ASTVisitor<Result, Ptr>& visitor, bool pr
  * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
  * 				   post order will be enforced.
  */
-template<typename NodePtr, typename Lambda>
-inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
-	auto visitor = makeLambdaVisitor(lambda);
+template<template<class Target> class Ptr, typename Node, typename Lambda>
+inline void visitAllNodes(const Ptr<Node>& root, Lambda lambda, bool preorder = true) {
+	auto visitor = makeLambdaVisitor<Ptr>(lambda);
 	visitAll(root, visitor, preorder);
 }
 
@@ -454,11 +457,18 @@ inline void visitAllNodes(NodePtr& root, Lambda lambda, bool preorder = true) {
  * @param visitor the visitor to be visiting all the nodes
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
-template<typename NodePtr, typename Visitor>
-inline void visitAllOnce(NodePtr& root, Visitor visitor, bool preorder = true) {
+template<typename Node, typename Result, template<class Target> class Ptr>
+inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
 	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
 	recVisitor.visit(root);
 }
+
+template<typename Node, typename Result, template<class Target> class Ptr>
+inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+	VisitOnceASTVisitor<decltype(visitor)> recVisitor(visitor, preorder);
+	recVisitor.visit(root);
+}
+
 
 /**
  * The given lambda is recursively applied to all nodes reachable starting from the
@@ -469,9 +479,9 @@ inline void visitAllOnce(NodePtr& root, Visitor visitor, bool preorder = true) {
  * @param lambda the lambda to be applied to all the nodes
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
-template<typename NodePtr, typename Lambda>
-inline void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true) {
-	auto visitor = makeLambdaVisitor(lambda);
+template<typename Node, typename Lambda, template<class Target> class Ptr>
+inline void visitAllNodesOnce(const Ptr<Node>& root, Lambda lambda, bool preorder = true) {
+	auto visitor = makeLambdaVisitor<Ptr>(lambda);
 	visitAllOnce(root, visitor, preorder);
 }
 
@@ -483,9 +493,15 @@ inline void visitAllNodesOnce(NodePtr& root, Lambda lambda, bool preorder = true
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
  */
-template<typename NodePtr, typename Visitor>
-inline void visitAllBreadthFirst(NodePtr& root, Visitor& visitor) {
-	BreadthFirstASTVisitor<decltype(visitor)> recVisitor(visitor);
+template<typename Node, typename Result, template<class Target> class Ptr>
+inline void visitAllBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor) {
+	BreadthFirstASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor);
+	recVisitor.visit(root);
+}
+
+template<typename Node, typename Result, template<class Target> class Ptr>
+inline void visitAllBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor) {
+	BreadthFirstASTVisitor<ASTVisitor<Result, Ptr>&, Ptr> recVisitor(visitor);
 	recVisitor.visit(root);
 }
 
@@ -497,9 +513,9 @@ inline void visitAllBreadthFirst(NodePtr& root, Visitor& visitor) {
  * @param root the root not to start the visiting from
  * @param lambda the lambda to be applied to all the nodes
  */
-template<typename NodePtr, typename Lambda>
-inline void visitAllNodesBreadthFirst(NodePtr& root, Lambda lambda) {
-	auto visitor = makeLambdaVisitor(lambda);
+template<typename Node, typename Lambda, template<class Target> class Ptr>
+inline void visitAllNodesBreadthFirst(const Ptr<Node>& root, Lambda lambda) {
+	auto visitor = makeLambdaVisitor<Ptr>(lambda);
 	visitAllBreadthFirst(root, visitor);
 }
 
