@@ -211,13 +211,13 @@ public:
                         switch(asa->getAddressSpace()) {
                         case ocl::AddressSpaceAnnotation::LOCAL: {
                             localVars.push_back(decl);
+                            //TODO remove declaration from source code
+                            std::cout << "Nchilds: " << decl->getChildList().size() << std::endl;
+                            return core::lang::STMT_NO_OP_PTR;
                             break;
                         }
                         case ocl::AddressSpaceAnnotation::PRIVATE: {
                             privateVars.push_back(decl->getVariable());
-                            //TODO remove declaration from source code
-                            std::cout << "Nchilds: " << decl->getChildList().size() << std::endl;
-                            return core::lang::STMT_NO_OP_PTR;
                             break;
                         }
                         case ocl::AddressSpaceAnnotation::CONSTANT: {
@@ -310,8 +310,13 @@ public:
         append(privateV, privateVars);
     }
 
+    // returns vector containing the private variables
+    std::vector<core::VariablePtr>& getPrivateVars() {
+        return privateVars;
+    }
+
     // returns vector containing the local variable declarations
-    std::vector<core::DeclarationStmtPtr> getLocalDeclarations() {
+    std::vector<core::DeclarationStmtPtr>& getLocalDeclarations() {
         return localVars;
     }
 
@@ -322,6 +327,49 @@ public:
         privateVars.clear();
     }
 };
+
+class VariableMapping : public std::vector<std::pair<core::VariablePtr, core::VariablePtr >> {
+public:
+    // add variables to the mapping
+    void add(std::vector<core::VariablePtr>& Vars) {
+        for_each(Vars.begin(), Vars.end(), [&] (core::VariablePtr v) {
+            this->push_back(std::make_pair(v,v));
+        });
+    }
+    void add(std::vector<core::DeclarationStmtPtr>& Vars) {
+        for_each(Vars.begin(), Vars.end(), [&] (core::DeclarationStmtPtr v) {
+            this->push_back(std::make_pair(v->getVariable(),v->getVariable()));
+        });
+    }
+
+    // look for the mapping of a specific root
+    const core::VariablePtr& map(const core::VariablePtr& root) {
+        for(auto I = this->begin(), E = this->end(); I != E; ++I) {
+           if((*I).first == root) {
+               return (*I).second;
+           }
+        }
+        return root;
+    }
+
+    // Adjust mapping
+    bool remap(const core::VariablePtr& oldTarget, const core::VariablePtr& newTarget) {
+std::cout << "start\n";
+        for(auto I = this->begin(), E = this->end(); I != E; ++I) {
+            std::cout << "middle\n";
+           if((*I).second == oldTarget) {
+               std::cout << "if " << newTarget->getId() << std::endl;
+               (*I).second = newTarget;
+        std::cout << "end\n";
+               return true;
+           }
+        }
+        return false;
+    }
+
+};
+
+//typedef std::vector<std::pair<core::VariablePtr, core::VariablePtr >> VariableMapping;
 
 class OclMapper : public core::NodeMapping {
     KernelMapper kernelMapper;
@@ -348,18 +396,48 @@ private:
         }
     }
 
+
+
     // creates new declaration for all variables in the input vector and stores them in the output vector
     // The elements of the input vector are used as initialization values for the new variables
-    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec) {
+    // The last parameter contains a mapping of each variable to its original one (before chatching). This
+    // will be automatically updated
+    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, VariableMapping vm) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getType()), (*I)));
+            // update variable mapping
+            vm.remap((*I), outVec.back()->getVariable());
         }
     }
 
-    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
+    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, VariableMapping vm) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
+            // update variable mapping
+            vm.remap((*I)->getVariable(), outVec.back()->getVariable());
         }
+    }
+
+    // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
+    void getInitialVariables(VariableMapping& variableMapping) {
+        // constant arguments
+        variableMapping.add(constantVars);
+
+        // global arguments
+        variableMapping.add(globalVars);
+
+        // local arguments
+        variableMapping.add(localVars);
+
+        // local in-body variables
+        variableMapping.add(kernelMapper.getLocalDeclarations());
+
+        // private arguments
+        variableMapping.add(privateVars);
+
+        // private in-body variables
+        // not needed, is it?
+
     }
 
 public:
@@ -535,23 +613,29 @@ public:
                 core::LambdaExpr::CaptureList localJobCaptures;
                 core::LambdaExpr::CaptureList localFunCaptures;
 
+                // Variable mapping: first will be mapped to second
+                VariableMapping variableMapping;
+                getInitialVariables(variableMapping);
+std::cout << "Ready to map: " << variableMapping.size() << std::endl;
+
 //TODO handle global range
 
-                // global variables form parameters
-                createDeclarations(localJobCaptures, globalVars);
-                // constant variables form parameters
-                createDeclarations(localJobCaptures, constantVars);
                 // local variables form inside the function body
                 localJobCaptures = kernelMapper.getLocalDeclarations();
+                // global variables form parameters
+                createDeclarations(localJobCaptures, globalVars, variableMapping);
+std::cout << "bet you don't see me\n";
+                // constant variables form parameters
+                createDeclarations(localJobCaptures, constantVars, variableMapping);
                 // local variables form parameters
-                createDeclarations(localJobCaptures, localVars);
+                createDeclarations(localJobCaptures, localVars, variableMapping);
                 // capture local and global ranges
-                createDeclarations(localJobCaptures, ranges);
+                createDeclarations(localJobCaptures, ranges, variableMapping);
 
                 // catch shared variables
-                createDeclarations(localFunCaptures, localJobCaptures);
+                createDeclarations(localFunCaptures, localJobCaptures, variableMapping);
                 // add private variables from arguments
-                createDeclarations(localFunCaptures, privateVars);
+                createDeclarations(localFunCaptures, privateVars, variableMapping);
 
 
 
