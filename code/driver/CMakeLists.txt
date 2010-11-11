@@ -12,8 +12,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/driver_config.h.in ${CMAKE_CURR
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/nas/is/Makefile.in ${CMAKE_CURRENT_SOURCE_DIR}/test/nas/is/Makefile)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB insieme_driver_srcs 	src/*.cpp )
-file(GLOB insieme_driver_incs 	include/*.h )
+file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
+file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )

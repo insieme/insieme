@@ -6,8 +6,8 @@ project(insieme_simple_backend CXX)
 include(../environment.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB insieme_simple_backend_srcs 	src/*.cpp )
-file(GLOB insieme_simple_backend_incs 	include/*.h )
+file(GLOB_RECURSE insieme_simple_backend_srcs 	src/*.cpp )
+file(GLOB_RECURSE insieme_simple_backend_incs 	include/*.h )
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )

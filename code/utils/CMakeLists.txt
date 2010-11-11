@@ -9,8 +9,8 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # collect source files 
-file(GLOB insieme_utils_srcs 	src/*.cpp )
-file(GLOB insieme_utils_incs	include/*.h )
+file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )
+file(GLOB_RECURSE insieme_utils_incs	include/*.h )
 
 # add include directory
 include_directories(include)
