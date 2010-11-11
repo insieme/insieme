@@ -58,6 +58,7 @@ class ASTBuilder {
 
 public:
 	ASTBuilder(const SharedNodeManager& manager = SharedNodeManager(new NodeManager())) : sharedManager(manager), manager(*sharedManager) { }
+	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
 	typedef vector<DeclarationStmtPtr> CaptureList;
 	typedef vector<VariablePtr> ParamList;
@@ -94,6 +95,31 @@ public:
 
 
 #include "ast_builder.inl"
+
+	// ---------------------------- Convenience -------------------------------------
+
+	// Call Expressions
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const {
+		return callExpr(core::lang::TYPE_UNIT, functionExpr, arguments);
+	}
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+		return callExpr(resultType, functionExpr, toVector(arg1));
+	}
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+		return callExpr(resultType, functionExpr, toVector(arg1, arg2));
+	}
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+		return callExpr(resultType, functionExpr, toVector(arg1, arg2, arg3));
+	}
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+		return callExpr(core::lang::TYPE_UNIT, functionExpr, toVector(arg1));
+	}
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+		return callExpr(core::lang::TYPE_UNIT, functionExpr, toVector(arg1, arg2));
+	}
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+		return callExpr(core::lang::TYPE_UNIT, functionExpr, toVector(arg1, arg2, arg3));
+	}
 
 };
 

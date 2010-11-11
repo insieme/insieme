@@ -47,18 +47,30 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
-class SemaVisitor : public core::ASTVisitor<void, core::Address> {
-	void visitStatement(const core::StatementAddress& stmt) {
-		LOG(INFO) << "visiting: \n" << *stmt;
-		if(BaseAnnotationPtr anno = stmt.getAddressedNode().getAnnotation(BaseAnnotation::KEY)) {
-			LOG(INFO) << "omp annotation on: \n" << *stmt;
-		}
-	}
+class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
+
+	core::NodeManager& nodeMan;
+	core::ASTBuilder build;
+
+	core::ProgramPtr replacement;
+
+	bool visitStatement(const core::StatementAddress& stmt);
+
+	void handleParallel(const core::StatementAddress& stmt, const Parallel& par);
+
+public:
+	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }
+
+	core::ProgramPtr getReplacement() { return replacement; }
 };
 
-core::ProgramPtr applySema(const core::ProgramPtr& prog) {
-	core::visitAll(core::ProgramAddress(prog), SemaVisitor());
-	return prog; // TODO
+
+/** Applies OMP semantics to given code fragment.
+ ** */
+const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
+	SemaVisitor v(resultStorage);
+	core::visitAllInterruptable(core::ProgramAddress(prog), v);
+	return v.getReplacement();
 }
 
 
