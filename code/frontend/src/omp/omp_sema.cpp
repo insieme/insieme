@@ -45,6 +45,10 @@ namespace omp {
 using namespace core;
 namespace cl = lang;
 
+bool SemaVisitor::visitNode(const core::NodeAddress& node) {
+	return true; // default behaviour: continue visiting
+}
+
 bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
 	if(BaseAnnotationPtr anno = stmt.getAddressedNode().getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp annotation(s) on: \n" << *stmt;
@@ -60,11 +64,13 @@ bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
 }
 
 void SemaVisitor::handleParallel(const core::StatementAddress& stmt, const Parallel& par) {
-	auto parLambda = build.lambdaExpr(build.functionType(build.tupleType(), cl::TYPE_UNIT) , LambdaExpr::ParamList(), stmt.getAddressedNode());
+	auto parLambda = build.lambdaExpr(stmt.getAddressedNode());
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), core::JobExpr::LocalDecls());
-	auto parallelCall = build.callExpr(cl::TYPE_JOB, cl::OP_PARALLEL, jobExp);
+	auto parallelCall = build.callExpr(cl::OP_PARALLEL, build.uintVal(8), build.uintVal(8), jobExp);
 	auto mergeCall = build.callExpr(cl::OP_MERGE, parallelCall);
-	replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, stmt, mergeCall, true));
+	//LOG(INFO) << "mergeCall:\n" << mergeCall;
+	ProgramPtr retProgPtr = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, stmt, mergeCall, true));
+	replacement = retProgPtr;
 }
 
 } // namespace omp

@@ -74,6 +74,13 @@ lang::RealTypePtr ASTBuilder::realType(unsigned short size) const {
 
 // ---------------------------- Convenience -------------------------------------
 
+LiteralPtr ASTBuilder::intVal(long val, unsigned short size) const {
+	return literal(toString(val), intType(size));
+}
+LiteralPtr ASTBuilder::uintVal(long val, unsigned short size) const {
+	return literal(toString(val), uintType(size));
+}
+
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
 	TypePtr retType = core::lang::TYPE_UNIT;
 	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {
