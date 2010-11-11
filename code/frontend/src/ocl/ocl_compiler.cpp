@@ -149,7 +149,7 @@ class KernelMapper : public core::NodeMapping {
 
     // Vectors to store local variables
     //TODO remove these two, should be empty anyway?
-    std::vector<core::VariablePtr> constantVars;
+    std::vector<core::VariablePtr> constantArgs;
     std::vector<core::VariablePtr> globalVars;
 
     std::vector<core::DeclarationStmtPtr> localVars;
@@ -212,7 +212,6 @@ public:
                         case ocl::AddressSpaceAnnotation::LOCAL: {
                             localVars.push_back(decl);
                             //TODO remove declaration from source code
-                            std::cout << "Nchilds: " << decl->getChildList().size() << std::endl;
                             return core::lang::STMT_NO_OP_PTR;
                             break;
                         }
@@ -272,7 +271,7 @@ public:
     void getMemspaces(std::vector<core::VariablePtr>& constantV, std::vector<core::VariablePtr>& globalV,
             std::vector<core::VariablePtr>& localV, std::vector<core::VariablePtr>& privateV){
         append(globalV, globalVars);
-        append(constantV, constantVars);
+        append(constantV, constantArgs);
         append(localV, localVars);
         append(privateV, privateVars);
     }
@@ -289,7 +288,7 @@ public:
 
     void resetMemspaces() {
         globalVars.clear();
-        constantVars.clear();
+        constantArgs.clear();
         localVars.clear();
         privateVars.clear();
     }
@@ -341,10 +340,10 @@ class OclMapper : public core::NodeMapping {
 //    const core::Substitution::Mapping& mapping;
 
     // vectors to store Arguments
-    std::vector<core::VariablePtr> constantVars;
-    std::vector<core::VariablePtr> globalVars;
-    std::vector<core::VariablePtr> localVars;
-    std::vector<core::VariablePtr> privateVars;
+    std::vector<core::VariablePtr> constantArgs;
+    std::vector<core::VariablePtr> globalArgs;
+    std::vector<core::VariablePtr> localArgs;
+    std::vector<core::VariablePtr> privateArgs;
 
     // loop bounds
     core::VariablePtr localRange;
@@ -354,10 +353,27 @@ class OclMapper : public core::NodeMapping {
     core::VariablePtr globalId;
 
 private:
-    void appendToVector(core::LambdaExpr::CaptureList& outVec, core::LambdaExpr::CaptureList& inVec) {
+    template <typename T>
+    void appendToVector(std::vector<T>& outVec, std::vector<T>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(*I);
         }
+    }
+
+    // function to calculate the product of all elements in a vector
+    core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
+        assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
+        --n;
+        if(n == 0) {
+            return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
+                    vec, builder.literal("0", core::lang::TYPE_UINT_4_PTR )));
+        }
+
+
+        return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR,
+            toVector<core::ExpressionPtr>( vecProduct(vec, n),
+                    builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
+                            vec, builder.literal(toString(n), core::lang::TYPE_UINT_4_PTR ))) ));
     }
 
 
@@ -366,7 +382,7 @@ private:
     // The elements of the input vector are used as initialization values for the new variables
     // The last parameter contains a mapping of each variable to its original one (before chatching). This
     // will be automatically updated
-    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, VariableMapping vm) {
+    void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, VariableMapping vm) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getType()), (*I)));
             // update variable mapping
@@ -374,7 +390,16 @@ private:
         }
     }
 
-    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, VariableMapping vm) {
+    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            const core::VariablePtr initVal = builder.variable((*I)->getType());
+            outVec.push_back(builder.declarationStmt((*I), initVal));
+            // update inVec with new variables
+            (*I) = initVal;
+        }
+    }
+
+    void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, VariableMapping vm) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
             // update variable mapping
@@ -382,22 +407,33 @@ private:
         }
     }
 
+
+    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            const core::VariablePtr& initVal = builder.variable((*I)->getVariable()->getType());
+
+            outVec.push_back(builder.declarationStmt((*I)->getVariable(), initVal));
+            // update inVec with new variables, but the old initialization values
+            (*I) = builder.declarationStmt(initVal, (*I)->getInitialization());
+        }
+    }
+
     // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
     void getInitialVariables(VariableMapping& variableMapping) {
         // constant arguments
-        variableMapping.add(constantVars);
+        variableMapping.add(constantArgs);
 
         // global arguments
-        variableMapping.add(globalVars);
+        variableMapping.add(globalArgs);
 
         // local arguments
-        variableMapping.add(localVars);
+        variableMapping.add(localArgs);
 
         // local in-body variables
         variableMapping.add(kernelMapper.getLocalDeclarations());
 
         // private arguments
-        variableMapping.add(privateVars);
+        variableMapping.add(privateArgs);
 
         // private in-body variables
         // not needed, is it?
@@ -473,20 +509,20 @@ public:
                         if(ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)) {
                             switch(asa->getAddressSpace()) {
                             case ocl::AddressSpaceAnnotation::GLOBAL: {
-                                globalVars.push_back(var);
+                                globalArgs.push_back(var);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::CONSTANT: {
-                                constantVars.push_back(var);
+                                constantArgs.push_back(var);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::LOCAL: {
-                                localVars.push_back(var);
+                                localArgs.push_back(var);
                                 //TODO think about what to do with local variable arguments
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::PRIVATE: {
-                                privateVars.push_back(var);
+                                privateArgs.push_back(var);
                                 break;
                             }
                             default:
@@ -497,7 +533,7 @@ public:
                 }
                 else {
                     // arguments without address space modifiers are private per default
-                    privateVars.push_back(var);
+                    privateArgs.push_back(var);
                 }
             }
 
@@ -507,8 +543,8 @@ public:
             params.push_back(globalRange);
             core::VariablePtr localRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
             params.push_back(localRange);*/
-            params.push_back(globalRange);
-            params.push_back(localRange);
+//            params.push_back(globalRange);
+//            params.push_back(localRange);
 
             // update the type of the function
             core::FunctionTypePtr newFuncType;
@@ -536,8 +572,8 @@ public:
             if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(*builder.getNodeManager(), kernelMapper))){
                 // parallel function's type, equal for all
                 core::TupleType::ElementTypeList parArgs;
-                parArgs.push_back(core::lang::TYPE_UINT_INF_PTR);
-                parArgs.push_back(core::lang::TYPE_UINT_INF_PTR);
+                parArgs.push_back(core::lang::TYPE_UINT_4_PTR);
+                parArgs.push_back(core::lang::TYPE_UINT_4_PTR);
                 parArgs.push_back(core::lang::TYPE_JOB_PTR);
 
                 // type of functions inside jobs
@@ -547,7 +583,7 @@ public:
 
 
                 core::FunctionTypePtr parFuncType= builder.functionType(builder.tupleType(parArgs),
-                        core::lang::TYPE_UINT_INF_PTR);
+                        core::lang::TYPE_UINT_4_PTR);
 
                 // local parallelism
 /*                core::LambdaExpr::ParamList list;
@@ -555,9 +591,9 @@ public:
                 core::JobExprPtr localZjob = builder.jobExpr(localParFct);
                 std::vector<core::ExpressionPtr> expr;
                 //construct vector of arguments
-                expr.push_back(builder.literal("1", core::lang::TYPE_UINT_INF_PTR));
-                const core::ExpressionPtr& idx = builder.literal("2", core::lang::TYPE_UINT_INF_PTR);
-                expr.push_back(builder.callExpr(core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, idx )));
+                expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
+                const core::ExpressionPtr& idx = builder.literal("2", core::lang::TYPE_UINT_4_PTR);
+                expr.push_back(builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, idx )));
                 expr.push_back(localZjob);
 
                 core::CallExprPtr localZpar = builder.callExpr(parFuncType, core::lang::OP_PARALLEL_PTR, expr);
@@ -572,36 +608,32 @@ public:
                 std::vector<vector<core::DeclarationStmtPtr> > localCatching;
 
 
-                core::LambdaExpr::CaptureList tmp;
-                // vectors of captured variables
-                core::LambdaExpr::CaptureList localJobCaptures;
-                core::LambdaExpr::CaptureList localFunCaptures;
 
                 // Variable mapping: first will be mapped to second
-                VariableMapping variableMapping;
+ /*               VariableMapping variableMapping;
                 getInitialVariables(variableMapping);
 std::cout << "Ready to map: " << variableMapping.size() << std::endl;
-
+*/
 //TODO handle global range
 
                 // local variables form inside the function body
+/*
                 localJobCaptures = kernelMapper.getLocalDeclarations();
                 // global variables form parameters
-                createDeclarations(localJobCaptures, globalVars, variableMapping);
-std::cout << "bet you don't see me\n";
+                createDeclarations(localJobCaptures, globalArgs, variableMapping);
                 // constant variables form parameters
-                createDeclarations(localJobCaptures, constantVars, variableMapping);
+                createDeclarations(localJobCaptures, constantArgs, variableMapping);
                 // local variables form parameters
-                createDeclarations(localJobCaptures, localVars, variableMapping);
+                createDeclarations(localJobCaptures, localArgs, variableMapping);
                 // capture local and global ranges
                 createDeclarations(localJobCaptures, ranges, variableMapping);
 
                 // catch shared variables
                 createDeclarations(localFunCaptures, localJobCaptures, variableMapping);
                 // add private variables from arguments
-                createDeclarations(localFunCaptures, privateVars, variableMapping);
+//                createDeclarations(localFunCaptures, privateArgs, variableMapping);
 
-
+*/
 
 
 
@@ -611,72 +643,97 @@ std::cout << "bet you don't see me\n";
 //                , noGuardedStatementsNeeded, kernelMapper.getLocalDeclarations()
 //TODO add pfor
 
+                // capture all arguments
+                core::LambdaExpr::CaptureList localFunCaptures;
+                createDeclarations(localFunCaptures, constantArgs);
+                createDeclarations(localFunCaptures, globalArgs);
+                createDeclarations(localFunCaptures, localArgs);
+                createDeclarations(localFunCaptures, privateArgs);
+                // in-body local variables
+                std::vector<core::DeclarationStmtPtr> localVars = kernelMapper.getLocalDeclarations();
+                createDeclarations(localFunCaptures, localVars);
+                // catch loop boundaries
+                createDeclarations(localFunCaptures, ranges);
 
                 core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, localFunCaptures, funParams, newBody);
 
+                // catch all arguments which are shared in local range
+                core::LambdaExpr::CaptureList localJobCaptures;
+                createDeclarations(localJobCaptures, constantArgs);
+                createDeclarations(localJobCaptures, globalArgs);
+                createDeclarations(localJobCaptures, localArgs);
+                // in-body local variables
+                appendToVector(localJobCaptures, localVars);
+                // catch loop boundaries
+                createDeclarations(localJobCaptures, ranges);
+                // TODO catch global variables
 
                 core::JobExprPtr localJob = builder.jobExpr(localParFct, noGuardedStatementsNeeded, localJobCaptures);
 
-
                 std::vector<core::ExpressionPtr> expr;
-                //construct vector of arguments
-                expr.push_back(builder.literal("1", core::lang::TYPE_UINT_INF_PTR));
+                //construct vector of arguments for local parallel
+                expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
                 //TODO change arguments to vectors
-//                const core::ExpressionPtr& idx = builder.literal(toString(0), core::lang::TYPE_UINT_INF_PTR);
+//                const core::ExpressionPtr& idx = builder.literal(toString(0), core::lang::TYPE_UINT_4_PTR);
 
                 // calculate localRange[0] * localRange[1] * localRange[2] to use as maximum number of threads
-                std::vector<core::ExpressionPtr> max;
-                max.push_back(builder.callExpr(core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
-                        localRange, builder.literal("0", core::lang::TYPE_UINT_INF_PTR ))));
-                max.push_back(builder.callExpr(core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
-                        localRange, builder.literal("1", core::lang::TYPE_UINT_INF_PTR ))));
-
-                core::ExpressionPtr localRangeProduct = builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR,
-                        toVector<core::ExpressionPtr>(builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR, max),
-                                builder.callExpr(core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
-                                        localRange, builder.literal("2", core::lang::TYPE_UINT_INF_PTR ))) ));
+                core::ExpressionPtr localRangeProduct = vecProduct(localRange, 3);
 
                 expr.push_back(localRangeProduct);
-/*                core::StatementPtr local0m1 = builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR,
-                        toVector(core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, idx )),
-                        core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, idx))
-*/
-
-/*                expr.push_back(builder.callExpr(
-                        builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR,
-                        toVector<core::StatementPtr>(builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR,
-                        toVector(core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, builder.literal("0", core::lang::TYPE_UINT_INF_PTR )),
-                        core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, builder.literal("1", core::lang::TYPE_UINT_INF_PTR )))),
-                        core::lang::TYPE_UINT_INF_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, builder.literal("2", core::lang::TYPE_UINT_INF_PTR )))));
-*/
 
                 expr.push_back(localJob);
 
                 core::CallExprPtr localPar = builder.callExpr(core::lang::TYPE_THREAD_GROUP_PTR, core::lang::OP_PARALLEL_PTR, expr);
 
+                // capture all arguments
+                core::LambdaExpr::CaptureList globalFunCaptures;
+                createDeclarations(globalFunCaptures, constantArgs);
+                createDeclarations(globalFunCaptures, globalArgs);
+                createDeclarations(globalFunCaptures, localArgs);
+                createDeclarations(globalFunCaptures, privateArgs);
+                // catch loop boundaries
+                createDeclarations(globalFunCaptures, ranges);
+                // TODO catch global variables
+
+                core::LambdaExprPtr globalParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, globalFunCaptures, funParams, localPar);
+
+                // catch all arguments which are shared in global range
+                core::LambdaExpr::CaptureList globalJobCaptures;
+                createDeclarations(globalJobCaptures, constantArgs);
+                createDeclarations(globalJobCaptures, globalArgs);
+                // catch loop boundaries
+                createDeclarations(globalJobCaptures, ranges);
+                // TODO catch global variables
+
+                core::JobExprPtr globalJob = builder.jobExpr(globalParFct, noGuardedStatementsNeeded, globalJobCaptures);
+
+                expr.clear();
+                //construct vector of arguments for local parallel
+                expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
+
+                // calculate globalRange[0] * globalRange[1] * globalRange[2] to use as maximum number of threads
+                core::ExpressionPtr globalRangeProduct = vecProduct(globalRange, 3);
+                expr.push_back(globalRangeProduct);
+
+                expr.push_back(globalJob);
+
+                core::CallExprPtr globalPar = builder.callExpr(core::lang::TYPE_THREAD_GROUP_PTR, core::lang::OP_PARALLEL_PTR, expr);
+
+//                core::StatementPtr parBody = builder.compoundStmt(globalPar);
+
+                // construct updated param list
+                core::LambdaExpr::ParamList newParams;
+                appendToVector(newParams, constantArgs);
+                appendToVector(newParams, globalArgs);
+                appendToVector(newParams, localArgs);
+                appendToVector(newParams, privateArgs);
+                appendToVector(newParams, ranges);
 
 
-/*                core::ExpressionPtr localZpar = builder.callExpr(dynamic_pointer_cast<const core::FunctionType>
-                    (fakePar->getType())->getReturnType(), fakePar, expr);
-*/
-
-                // local Y parallelism
-/*                core::JobExprPtr localYjob = builder.jobExpr(localZpar);
-                std::vector<core::ExpressionPtr> expr;
-                expr.push_back(localYjob);
-
-                core::ExpressionPtr localYpar = builder.callExpr(dynamic_pointer_cast<const core::FunctionType>
-                    (fakePar->getType())->getReturnType(), fakePar, expr);
-
-*/
-
-
-                core::StatementPtr parBody = builder.compoundStmt(localPar);
-
-                core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params, parBody);
+                core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, globalPar);
 
                 // get address spaces of variables in body
-                kernelMapper.getMemspaces(globalVars, constantVars, localVars, privateVars);
+                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
                 // TODO check why it does not work
@@ -711,10 +768,10 @@ std::cout << "bet you don't see me\n";
     //TODO remove, for debugging only
     void showKernelMapper() {
 
-        std::cout << "Constant vars: " << constantVars.size() << std::endl;
-        std::cout << "Global vars: " << globalVars.size() << std::endl;
-        std::cout << "Local vars: " << localVars.size() << std::endl;
-        std::cout << "Private vars: " << privateVars.size() << std::endl;
+        std::cout << "Constant vars: " << constantArgs.size() << std::endl;
+        std::cout << "Global vars: " << globalArgs.size() << std::endl;
+        std::cout << "Local vars: " << localArgs.size() << std::endl;
+        std::cout << "Private vars: " << privateArgs.size() << std::endl;
     }
 };
 
