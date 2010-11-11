@@ -293,7 +293,7 @@ public:
         privateVars.clear();
     }
 };
-
+/*
 class VariableMapping : public std::vector<std::pair<core::VariablePtr, core::VariablePtr >> {
 public:
     // add variables to the mapping
@@ -332,7 +332,7 @@ public:
 
 };
 
-//typedef std::vector<std::pair<core::VariablePtr, core::VariablePtr >> VariableMapping;
+*/
 
 class OclMapper : public core::NodeMapping {
     KernelMapper kernelMapper;
@@ -382,14 +382,14 @@ private:
     // The elements of the input vector are used as initialization values for the new variables
     // The last parameter contains a mapping of each variable to its original one (before chatching). This
     // will be automatically updated
-    void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, VariableMapping vm) {
+    /*void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, VariableMapping vm) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getType()), (*I)));
             // update variable mapping
 //            vm.remap((*I), outVec.back()->getVariable());
         }
-    }
-
+    }*/
+    
     void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             const core::VariablePtr initVal = builder.variable((*I)->getType());
@@ -398,7 +398,7 @@ private:
             (*I) = initVal;
         }
     }
-
+    /*
     void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, VariableMapping vm) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
@@ -406,8 +406,8 @@ private:
 //            vm.remap((*I)->getVariable(), outVec.back()->getVariable());
         }
     }
-
-
+    
+    */
     void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             const core::VariablePtr& initVal = builder.variable((*I)->getVariable()->getType());
@@ -417,7 +417,7 @@ private:
             (*I) = builder.declarationStmt(initVal, (*I)->getInitialization());
         }
     }
-
+    
     // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
     void getInitialVariables(VariableMapping& variableMapping) {
         // constant arguments
