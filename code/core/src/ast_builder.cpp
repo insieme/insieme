@@ -52,24 +52,81 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointSet& entryPoints, 
 
 // ------------------------------- Build Basic Types -------------------------
 
-lang::UnitTypePtr ASTBuilder::getUnitType() const {
+lang::UnitTypePtr ASTBuilder::unitType() const {
 	return manager.get(lang::TYPE_UNIT);
 }
 
-lang::BoolTypePtr ASTBuilder::getBoolType() const {
+lang::BoolTypePtr ASTBuilder::boolType() const {
 	return manager.get(lang::TYPE_BOOL);
 }
 
-lang::IntTypePtr  ASTBuilder::getIntType (unsigned short size) const {
-	return manager.get(lang::getIntType(size));
+lang::IntTypePtr  ASTBuilder::intType (unsigned short size) const {
+	return manager.get(lang::intType(size));
 }
 
-lang::UIntTypePtr ASTBuilder::getUIntType(unsigned short size) const {
-	return manager.get(lang::getUIntType(size));
+lang::UIntTypePtr ASTBuilder::uintType(unsigned short size) const {
+	return manager.get(lang::uintType(size));
 }
 
-lang::RealTypePtr ASTBuilder::getRealType(unsigned short size) const {
-	return manager.get(lang::getRealType(size));
+lang::RealTypePtr ASTBuilder::realType(unsigned short size) const {
+	return manager.get(lang::realType(size));
+}
+
+// ---------------------------- Convenience -------------------------------------
+
+LiteralPtr ASTBuilder::intVal(long val, unsigned short size) const {
+	return literal(toString(val), intType(size));
+}
+LiteralPtr ASTBuilder::uintVal(long val, unsigned short size) const {
+	return literal(toString(val), uintType(size));
+}
+
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
+	TypePtr retType = core::lang::TYPE_UNIT;
+	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {
+		retType = funType->getReturnType();
+	}
+	return callExpr(retType, functionExpr, arguments);
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+	return callExpr(resultType, functionExpr, toVector(arg1));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+	return callExpr(resultType, functionExpr, toVector(arg1, arg2));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+	return callExpr(resultType, functionExpr, toVector(arg1, arg2, arg3));
+}
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+	return callExpr(functionExpr, toVector(arg1));
+}
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+	return callExpr(functionExpr, toVector(arg1, arg2));
+}
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
+}
+
+LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
+	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), core::lang::TYPE_UNIT), params, body);
+}
+LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
+	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), core::lang::TYPE_UNIT), captures, params, body);
+}
+LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
+	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), returnType), params, body);
+}
+LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
+	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), returnType), captures, params, body);
+}
+
+// ---------------------------- Utilities ---------------------------------------
+
+ASTBuilder::ElementTypeList ASTBuilder::extractParamTypes(const ParamList& params) {
+	ElementTypeList paramTypes;
+	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes), 
+		[](const VariablePtr& p) { return p->getType(); });
+	return paramTypes;
 }
 
 #include "ast_builder_impl.inl"
