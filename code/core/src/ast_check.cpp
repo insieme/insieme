@@ -229,6 +229,12 @@ void add(OptionalMessageList& target, const Message& msg) {
 }
 
 MessageList check(const NodePtr& node, const CheckPtr& check) {
+
+	// check node for null
+	if (!node) {
+		return toVector(Message(NodeAddress(node), -1, "Checking Null node!", Message::WARNING));
+	}
+
 	// collect messages ..
 	auto res = check->visit(NodeAddress(node));
 	if (res) {

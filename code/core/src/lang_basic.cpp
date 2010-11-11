@@ -97,7 +97,7 @@ bool isIntegerType(const Type& type) {
 }
 
 IntegerType getIntegerType(unsigned short size, bool _signed) {
-	return (_signed)?getIntType(size):getUIntType(size);
+	return (_signed)?intType(size):uintType(size);
 }
 
 int getNumBytes(const GenericType& type) {
@@ -110,7 +110,7 @@ int getNumBytes(const GenericType& type) {
 }
 
 
-IntType getIntType(unsigned short size) {
+IntType intType(unsigned short size) {
 	return GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(size)));
 }
 
@@ -135,16 +135,16 @@ bool isIntType(const Type& type) {
 }
 
 ADD_TYPE(IntType, INT_GEN, getGenIntType('a'));
-ADD_TYPE(IntType, INT_1, getIntType(1));
-ADD_TYPE(IntType, INT_2, getIntType(2));
-ADD_TYPE(IntType, INT_4, getIntType(4));
-ADD_TYPE(IntType, INT_8, getIntType(8));
+ADD_TYPE(IntType, INT_1, intType(1));
+ADD_TYPE(IntType, INT_2, intType(2));
+ADD_TYPE(IntType, INT_4, intType(4));
+ADD_TYPE(IntType, INT_8, intType(8));
 ADD_TYPE(IntType, INT_INF, (GenericType(TYPE_NAME_INT, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
 
 const Identifier TYPE_NAME_UINT("uint");
 
-UIntType getUIntType(unsigned short size) {
+UIntType uintType(unsigned short size) {
 	return GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(size)));
 }
 
@@ -169,10 +169,10 @@ bool isUIntType(const Type& type) {
 }
 
 ADD_TYPE(UIntType, UINT_GEN, getGenUIntType('a'));
-ADD_TYPE(UIntType, UINT_1, getUIntType(1));
-ADD_TYPE(UIntType, UINT_2, getUIntType(2));
-ADD_TYPE(UIntType, UINT_4, getUIntType(4));
-ADD_TYPE(UIntType, UINT_8, getUIntType(8));
+ADD_TYPE(UIntType, UINT_1, uintType(1));
+ADD_TYPE(UIntType, UINT_2, uintType(2));
+ADD_TYPE(UIntType, UINT_4, uintType(4));
+ADD_TYPE(UIntType, UINT_8, uintType(8));
 ADD_TYPE(UIntType, UINT_INF, (GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
 
@@ -180,7 +180,7 @@ ADD_TYPE(UIntType, UINT_INF, (GenericType(TYPE_NAME_UINT, toVector<TypePtr>(), t
 
 const Identifier TYPE_NAME_REAL("real");
 
-RealType getRealType(unsigned short size) {
+RealType realType(unsigned short size) {
 	return GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(size)));
 }
 
@@ -205,10 +205,10 @@ bool isRealType(const Type& type) {
 }
 
 ADD_TYPE(RealType, REAL_GEN, getGenRealType('a'));
-ADD_TYPE(RealType, REAL_1, getRealType(1));
-ADD_TYPE(RealType, REAL_2, getRealType(2));
-ADD_TYPE(RealType, REAL_4, getRealType(4));
-ADD_TYPE(RealType, REAL_8, getRealType(8));
+ADD_TYPE(RealType, REAL_1, realType(1));
+ADD_TYPE(RealType, REAL_2, realType(2));
+ADD_TYPE(RealType, REAL_4, realType(4));
+ADD_TYPE(RealType, REAL_8, realType(8));
 ADD_TYPE(RealType, REAL_INF, (GenericType(TYPE_NAME_REAL, toVector<TypePtr>(), toVector(IntTypeParam::INF))));
 
 // -------------------------------- Vector Types ------------------------------

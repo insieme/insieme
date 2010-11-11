@@ -59,7 +59,7 @@ using namespace insieme::simple_backend;
 ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(TYPE_CHAR_PTR), TYPE_VAR_LIST_PTR));
-	TypePtr unitType = build.getUnitType();
+	TypePtr unitType = build.unitType();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.literal("printf", printfType);

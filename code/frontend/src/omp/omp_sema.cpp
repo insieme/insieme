@@ -34,45 +34,38 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/omp/omp_sema.h"
 
-#include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
-
-#include "insieme/utils/logging.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace frontend {
 namespace omp {
 
-class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
+using namespace core;
+namespace cl = lang;
 
-	core::NodeManager& nodeMan;
-	core::ASTBuilder build;
-
-	core::ProgramPtr replacement;
-
-	bool visitStatement(const core::StatementAddress& stmt);
-
-	void handleParallel(const core::StatementAddress& stmt, const Parallel& par);
-
-public:
-	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }
-
-	core::ProgramPtr getReplacement() { return replacement; }
-};
-
-
-/** Applies OMP semantics to given code fragment.
- ** */
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
-	SemaVisitor v(resultStorage);
-	core::visitAllInterruptable(core::ProgramAddress(prog), v);
-	return v.getReplacement();
+bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
+	if(BaseAnnotationPtr anno = stmt.getAddressedNode().getAnnotation(BaseAnnotation::KEY)) {
+		LOG(INFO) << "omp annotation(s) on: \n" << *stmt;
+		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn){
+			LOG(INFO) << "annotation: " << *subAnn;
+			if(auto par = std::dynamic_pointer_cast<Parallel>(subAnn)) {
+				handleParallel(stmt, *par);
+			}
+		});
+		return false;
+	}
+	return true;
 }
 
+void SemaVisitor::handleParallel(const core::StatementAddress& stmt, const Parallel& par) {
+	auto parLambda = build.lambdaExpr(build.functionType(build.tupleType(), cl::TYPE_UNIT) , LambdaExpr::ParamList(), stmt.getAddressedNode());
+	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), core::JobExpr::LocalDecls());
+	auto parallelCall = build.callExpr(cl::TYPE_JOB, cl::OP_PARALLEL, jobExp);
+	auto mergeCall = build.callExpr(cl::OP_MERGE, parallelCall);
+	replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, stmt, mergeCall, true));
+}
 
 } // namespace omp
 } // namespace frontend

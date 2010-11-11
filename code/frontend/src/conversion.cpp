@@ -1661,9 +1661,9 @@ public:
 
 		switch(buldInTy->getKind()) {
 		case BuiltinType::Void:
-			return builder.getUnitType();
+			return builder.unitType();
 		case BuiltinType::Bool:
-			return builder.getBoolType();
+			return builder.boolType();
 
 		// char types
 		case BuiltinType::Char_U:
@@ -1681,33 +1681,33 @@ public:
 
 		// integer types
 		case BuiltinType::UShort:
-			return builder.getUIntType( SHORT_LENGTH );
+			return builder.uintType( SHORT_LENGTH );
 		case BuiltinType::Short:
-			return builder.getIntType( SHORT_LENGTH );
+			return builder.intType( SHORT_LENGTH );
 		case BuiltinType::UInt:
-			return builder.getUIntType( INT_LENGTH );
+			return builder.uintType( INT_LENGTH );
 		case BuiltinType::Int:
-			return builder.getIntType( INT_LENGTH );
+			return builder.intType( INT_LENGTH );
 		case BuiltinType::UInt128:
-			return builder.getUIntType( 16 );
+			return builder.uintType( 16 );
 		case BuiltinType::Int128:
-			return builder.getIntType( 16 );
+			return builder.intType( 16 );
 		case BuiltinType::ULong:
-			return builder.getUIntType( LONG_LENGTH );
+			return builder.uintType( LONG_LENGTH );
 		case BuiltinType::ULongLong:
-			return builder.getUIntType( LONG_LONG_LENGTH );
+			return builder.uintType( LONG_LONG_LENGTH );
 		case BuiltinType::Long:
-			return builder.getIntType( LONG_LENGTH );
+			return builder.intType( LONG_LENGTH );
 		case BuiltinType::LongLong:
-			return builder.getIntType( LONG_LONG_LENGTH );
+			return builder.intType( LONG_LONG_LENGTH );
 
 		// real types
 		case BuiltinType::Float:
-			return builder.getRealType( FLOAT_LENGTH );
+			return builder.realType( FLOAT_LENGTH );
 		case BuiltinType::Double:
-			return builder.getRealType( DOUBLE_LENGTH );
+			return builder.realType( DOUBLE_LENGTH );
 		case BuiltinType::LongDouble:
-			return builder.getRealType( LONG_DOUBLE_LENGTH );
+			return builder.realType( LONG_DOUBLE_LENGTH );
 
 		// not supported types
 		case BuiltinType::NullPtr:
@@ -1927,7 +1927,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTypeOfType(TypeOfType* typeOfType) {
 		START_LOG_TYPE_CONVERSION(typeOfType);
-		core::TypePtr retTy = convFact.builder.getUnitType();
+		core::TypePtr retTy = convFact.builder.unitType();
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
