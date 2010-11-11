@@ -105,6 +105,10 @@ int main(int argc, char** argv) {
 				std::sort(errors.begin(), errors.end());
 				for_each(errors, [](const Message& cur) {
 					LOG(INFO) << cur << std::endl;
+					NodeAddress address = cur.getAddress();
+					NodePtr context = address.getParentNode(min((unsigned)1, address.getDepth()-1));
+					LOG(INFO) << "\t Context: " <<
+							insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3);
 				});
 				timer.stop();
 				LOG(INFO) << timer;
@@ -174,11 +178,11 @@ int main(int argc, char** argv) {
 				// write into the file
 				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
-				fout << insieme::core::printer::PrettyPrint(program);
+				fout << insieme::core::printer::PrettyPrinter(program);
 			} else
-				LOG(INFO) << insieme::core::printer::PrettyPrint(program);
+				LOG(INFO) << insieme::core::printer::PrettyPrinter(program);
 			LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-			LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
+			LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 

@@ -426,6 +426,17 @@ void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
 	cStr << ";";
 }
 
+void ConvertVisitor::visitIfStmt(const IfStmtPtr& ptr) {
+	cStr << "if(";
+	visit(ptr->getCondition());
+	cStr << ") ";
+	visit(ptr->getThenBody());
+	if (*(ptr->getElseBody()) != (*lang::STMT_NO_OP_PTR)) {
+		cStr << " else ";
+		visit(ptr->getElseBody());
+	}
+}
+
 void ConvertVisitor::visitSwitchStmt(const SwitchStmtPtr& ptr) {
 		cStr << "switch(";
 		visit(ptr->getSwitchExpr());
@@ -449,6 +460,8 @@ void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 			if(cur != ptr->getChildList().back()) cStr << "\n";
 		});
 		cStr << CodeStream::indL << "\n}";
+	} else {
+		cStr << "{}";
 	}
 }
 

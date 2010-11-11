@@ -50,6 +50,34 @@ namespace insieme {
 namespace core {
 namespace printer {
 
+
+// set up default formats for pretty printer
+const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS;
+const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
+
+/**
+ * Tests whether a certain option is set or not.
+ *
+ * @return true if the option is set, false otherwise
+ */
+bool PrettyPrinter::hasOption(Option option) const {
+	// check corresponding bit field
+	return flags & option;
+}
+
+/**
+ * Updates a format option for the pretty printer.
+ *
+ * @param option the option to be updated
+ * @param status the state this option should be set to
+ */
+void PrettyPrinter::setOption(Option option, bool status) {
+	// update flag by setting / resetting the corresponding bit
+	flags = (status)?(flags | option):( flags & ~option);
+}
+
+
 namespace {
 
 	// a forward declaration of the actual printer
@@ -178,7 +206,13 @@ namespace {
 		 * The pretty print handled by this printer. It is stored since it contains
 		 * various formating options.
 		 */
-		const PrettyPrint& print;
+		const PrettyPrinter& print;
+
+		/**
+		 * A counter for the current recursive depth of the print. The depth is checked when entering
+		 * a visitXY method. In case it is exceeded, the recursion is terminated.
+		 */
+		unsigned depth;
 
 	public:
 
@@ -194,15 +228,23 @@ namespace {
 		 * @param out the stream to be printed to
 		 * @param print the setup of the pretty print
 		 */
-		InspirePrinter(std::ostream& out, const PrettyPrint& print)
-				: formatTable(initFormatTable(print.hideDeref)), indent(0), print(print), out(out) { };
-
+		InspirePrinter(std::ostream& out, const PrettyPrinter& print)
+				: formatTable(initFormatTable(print.hasOption(PrettyPrinter::PRINT_DEREFS))),
+				  indent(0), print(print), depth(0), out(out) { };
 
 		/**
 		 * A macro simplifying the definition for print routine of some node type.
 		 */
 		#define PRINT(NodeType, Print) \
-			void visit ## NodeType (const NodeType ## Ptr& node) Print
+			void visit ## NodeType (const NodeType ## Ptr& node) { \
+				if (depth > print.maxDepth) { \
+					out << " ... "; \
+					return;\
+				}\
+				depth++; \
+				Print \
+				depth--; \
+				} \
 
 
 		PRINT(Type, {
@@ -328,15 +370,19 @@ namespace {
 		});
 
 		PRINT(CallExpr, {
+
+				// obtain flag indicating format
+				bool printBrackets = print.hasOption(PrettyPrinter::PRINT_BRACKETS);
+
 				// test whether for the current call a special format has been registerd
 				auto function = node->getFunctionExpr();
 				if (function->getNodeType() == NT_Literal) {
 					auto pos = formatTable.find(static_pointer_cast<const Literal>(function)->getValue());
 					if (pos != formatTable.end()) {
 						FormatterPtr formatter = (*pos).second;
-						if (!print.hideBrackets) out << "(";
+						if (printBrackets) out << "(";
 						formatter->format(*this, node);
-						if (!print.hideBrackets) out << ")";
+						if (printBrackets) out << ")";
 						return;
 					}
 				}
@@ -360,12 +406,12 @@ namespace {
 		});
 
 		PRINT(CastExpr, {
-				if (print.hideCasts) {
-					this->visit(node->getSubExpression());
-				} else {
+				if (print.hasOption(PrettyPrinter::PRINT_CASTS)) {
 					out << "CAST<" << *node->getType() << ">(";
 					this->visit(node->getSubExpression());
 					out << ")";
+				} else {
+					this->visit(node->getSubExpression());
 				}
 		});
 
@@ -500,6 +546,12 @@ namespace {
 		 * Creates a new line.
 		 */
 		void newLine() const {
+			// check single-line flag
+			if (print.hasOption(PrettyPrinter::PRINT_SINGLE_LINE)) {
+				return;
+			}
+
+			// print a new line
 			out << std::endl;
 			for (unsigned i=0; i<indent; i++) {
 				out << "    ";;
@@ -557,7 +609,7 @@ namespace {
 	 * Creates a format table defining the formatting of various build in functions.
 	 * @param hideDeref if set to true, derefs will be invisible. Otherwise the uniary * operator will be used.
 	 */
-	FormatTable initFormatTable(bool hideDeref) {
+	FormatTable initFormatTable(bool printDeref) {
 		FormatTable res;
 
 		#define OUT(Literal) printer.out << Literal
@@ -566,10 +618,10 @@ namespace {
 		#define ADD_FORMATTER(Literal, FORMAT) \
 					res.insert(std::make_pair(Literal->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
 
-		if (hideDeref) {
-			ADD_FORMATTER(lang::OP_REF_DEREF_PTR, { PRINT_ARG(0); });
-		} else {
+		if (printDeref) {
 			ADD_FORMATTER(lang::OP_REF_DEREF_PTR, { OUT(" *"); PRINT_ARG(0); });
+		} else {
+			ADD_FORMATTER(lang::OP_REF_DEREF_PTR, { PRINT_ARG(0); });
 		}
 
 		ADD_FORMATTER(lang::OP_REF_ASSIGN_PTR, { PRINT_ARG(0); OUT(" := "); PRINT_ARG(1); });
@@ -639,7 +691,7 @@ namespace std {
  * @param print the element to be printed
  * @return a reference to the output stream
  */
-std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrint& print) {
+std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrinter& print) {
 	// use inspire printer to print the code ...
 	insieme::core::printer::InspirePrinter printer(out, print);
 	printer.visit(print.root);

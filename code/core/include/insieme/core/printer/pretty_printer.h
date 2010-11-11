@@ -48,7 +48,34 @@ namespace printer {
  * A struct representing a pretty print of a AST subtree. Instances may be streamed
  * into an output stream to obtain a readable version of an AST.
  */
-struct PrettyPrint {
+struct PrettyPrinter {
+
+	/**
+	 * A list of options to adjust the print.
+	 */
+	enum Option {
+
+		PRINT_DEREFS 			= 1<<0,
+		PRINT_CASTS  			= 1<<1,
+		PRINT_BRACKETS  		= 1<<2,
+		PRINT_SINGLE_LINE		= 1<<3,
+
+	};
+
+	/**
+	 * An default setup resulting in a readable print out.
+	 */
+	static const unsigned OPTIONS_DEFAULT;
+
+	/**
+	 * An option to be used for a maximum of details.
+	 */
+	static const unsigned OPTIONS_DETAIL;
+
+	/**
+	 * An option to be used for a single-line print.
+	 */
+	static const unsigned OPTIONS_SINGLE_LINE;
 
 	/**
 	 * The root node of the sub-try to be printed
@@ -56,31 +83,40 @@ struct PrettyPrint {
 	const NodePtr& root;
 
 	/**
-	 * A flag to indicate whether ref.deref operations should be visible or not.
+	 * The flags set for customizing the formating
 	 */
-	const bool hideDeref;
+	unsigned flags;
 
 	/**
-	 * A flag to indicate whether cast operations should be visible or not.
+	 * The maximum number of levels to be printed
 	 */
-	const bool hideCasts;
-
-	/**
-	 * A flag to indicate whether brackets fixing operater precidence should be ommited or
-	 * not.
-	 */
-	const bool hideBrackets;
+	unsigned maxDepth;
 
 	/**
 	 * Creates a new pretty print instance.
 	 *
 	 * @param root the root node of the AST to be printed
-	 * @param hideDeref if set to true, no deref operations will be printed
-	 * @param hideCasts if set to true, no casts will be printed
-	 * @param hideBrackets if set to true, no brackets to fix the order of operations within a expression will be printed
+	 * @param flags options allowing users to customize the output
+	 * @param maxDepth the maximum recursive steps the pretty printer is descending into the given AST
 	 */
-	PrettyPrint(const NodePtr& root, bool hideDeref = true, bool hideCasts = true, bool hideBrackets = true)
-		: root(root), hideDeref(hideDeref), hideCasts(hideCasts), hideBrackets(hideBrackets) {}
+	PrettyPrinter(const NodePtr& root, unsigned flags = OPTIONS_DEFAULT, unsigned maxDepth = std::numeric_limits<unsigned>::max())
+			: root(root), flags(flags), maxDepth(maxDepth) {}
+
+	/**
+	 * Tests whether a certain option is set or not.
+	 *
+	 * @return true if the option is set, false otherwise
+	 */
+	bool hasOption(Option option) const;
+
+	/**
+	 * Updates a format option for the pretty printer.
+	 *
+	 * @param option the option to be updated
+	 * @param status the state this option should be set to
+	 */
+	void setOption(Option option, bool status = true);
+
 };
 
 } // end of namespace printer
@@ -92,6 +128,6 @@ namespace std {
 	/**
 	 * Allows pretty prints to be directly printed into output streams.
 	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrint& print);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrinter& print);
 
 }

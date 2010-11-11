@@ -92,7 +92,7 @@ TEST(StmtConversion, FileTest) {
 			if(tp->isStatement()) {
 				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
 				std::ostringstream ss;
-				ss << insieme::core::printer::PrettyPrint(stmt, false, false, false);
+				ss << insieme::core::printer::PrettyPrinter(stmt, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 				std::vector<char> res;
 				std::string prettyPrint = ss.str();
