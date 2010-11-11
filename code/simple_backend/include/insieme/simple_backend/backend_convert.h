@@ -347,14 +347,7 @@ public:
 		visit(ptr->getBody());
 	}
 
-	void visitIfStmt(const IfStmtPtr& ptr) {
-		cStr << "if(";
-		visit(ptr->getCondition());
-		cStr << ") ";
-		visit(ptr->getThenBody());
-		cStr << " else ";
-		visit(ptr->getElseBody());
-	}
+	void visitIfStmt(const IfStmtPtr& ptr);
 
 	void visitReturnStmt(const ReturnStmtPtr& ptr);
 
