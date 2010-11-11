@@ -53,8 +53,8 @@ namespace printer {
 
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
-const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS & PrettyPrinter::PRINT_CASTS & PrettyPrinter::PRINT_DEREFS;
-const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::PRINT_SINGLE_LINE;
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS;
+const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
  * Tests whether a certain option is set or not.

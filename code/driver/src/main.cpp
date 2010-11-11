@@ -105,6 +105,10 @@ int main(int argc, char** argv) {
 				std::sort(errors.begin(), errors.end());
 				for_each(errors, [](const Message& cur) {
 					LOG(INFO) << cur << std::endl;
+					NodeAddress address = cur.getAddress();
+					NodePtr context = address.getParentNode(min((unsigned)1, address.getDepth()-1));
+					LOG(INFO) << "\t Context: " <<
+							insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3);
 				});
 				timer.stop();
 				LOG(INFO) << timer;
