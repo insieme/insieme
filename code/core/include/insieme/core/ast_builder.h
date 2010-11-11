@@ -89,16 +89,19 @@ public:
 
 	lang::UnitTypePtr unitType() const;
 	lang::BoolTypePtr boolType() const;
-	lang::IntTypePtr  intType(unsigned short size) const;
-	lang::UIntTypePtr uintType(unsigned short size) const;
-	lang::RealTypePtr realType(unsigned short size) const;
+	lang::IntTypePtr  intType(unsigned short size = 4) const;
+	lang::UIntTypePtr uintType(unsigned short size = 4) const;
+	lang::RealTypePtr realType(unsigned short size = 4) const;
 
 
 #include "ast_builder.inl"
 
 	// ---------------------------- Convenience -------------------------------------
 	
-public:
+	// Values
+	LiteralPtr intVal(long val, unsigned short size = 4) const;
+	LiteralPtr uintVal(long val, unsigned short size = 4) const;
+
 	// Call Expressions
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
@@ -111,7 +114,7 @@ public:
 
 	// Lambda Expressions
 	LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParamList& params = ParamList()) const;
-	LambdaExprPtr lambdaExpr(const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
+	LambdaExprPtr lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params = ParamList()) const;
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params = ParamList()) const;
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
 

@@ -54,6 +54,8 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 
 	core::ProgramPtr replacement;
 
+	bool visitNode(const core::NodeAddress& node);
+
 	bool visitStatement(const core::StatementAddress& stmt);
 
 	void handleParallel(const core::StatementAddress& stmt, const Parallel& par);
