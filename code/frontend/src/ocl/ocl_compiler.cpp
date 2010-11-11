@@ -264,39 +264,6 @@ public:
    //             assert(body && "KenrnelMapper corrupted function body.");
 //        }
 
-        if(false){
-/*            core::LambdaExpr::ParamList params = func->getParams();
-
-            // add vector<uint<4>,3> globalRange and localRange to parameters
-
-            core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
-            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
-            params.push_back(globalRange);
-            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
-            params.push_back(localRange);
-
-            // update the type of the function
-            core::FunctionTypePtr newFuncType;
-            if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-                core::TypePtr retTy = funcType->getReturnType();
-
-                //check return type
-                assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
-
-                core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
-                args.push_back(globalRange->getType());
-                args.push_back(localRange->getType());
-
-                newFuncType = builder.functionType(builder.tupleType(args), retTy);
-            } else {
-                assert(funcType && "Function has unexpected type");
-            }*/
-        }
-
-//          newFuncType = func->substitute(*builder.getNodeManager(), kernelMapper);
-//          core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
-
-
         return element;
     }
 
@@ -354,13 +321,10 @@ public:
 
     // Adjust mapping
     bool remap(const core::VariablePtr& oldTarget, const core::VariablePtr& newTarget) {
-std::cout << "start\n";
         for(auto I = this->begin(), E = this->end(); I != E; ++I) {
-            std::cout << "middle\n";
            if((*I).second == oldTarget) {
                std::cout << "if " << newTarget->getId() << std::endl;
                (*I).second = newTarget;
-        std::cout << "end\n";
                return true;
            }
         }
@@ -406,7 +370,7 @@ private:
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getType()), (*I)));
             // update variable mapping
-            vm.remap((*I), outVec.back()->getVariable());
+//            vm.remap((*I), outVec.back()->getVariable());
         }
     }
 
@@ -414,7 +378,7 @@ private:
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
             // update variable mapping
-            vm.remap((*I)->getVariable(), outVec.back()->getVariable());
+//            vm.remap((*I)->getVariable(), outVec.back()->getVariable());
         }
     }
 
