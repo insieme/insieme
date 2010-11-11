@@ -149,7 +149,7 @@ class KernelMapper : public core::NodeMapping {
 
     // Vectors to store local variables
     //TODO remove these two, should be empty anyway?
-    std::vector<core::VariablePtr> constantVars;
+    std::vector<core::VariablePtr> constantArgs;
     std::vector<core::VariablePtr> globalVars;
 
     std::vector<core::DeclarationStmtPtr> localVars;
@@ -271,7 +271,7 @@ public:
     void getMemspaces(std::vector<core::VariablePtr>& constantV, std::vector<core::VariablePtr>& globalV,
             std::vector<core::VariablePtr>& localV, std::vector<core::VariablePtr>& privateV){
         append(globalV, globalVars);
-        append(constantV, constantVars);
+        append(constantV, constantArgs);
         append(localV, localVars);
         append(privateV, privateVars);
     }
@@ -288,7 +288,7 @@ public:
 
     void resetMemspaces() {
         globalVars.clear();
-        constantVars.clear();
+        constantArgs.clear();
         localVars.clear();
         privateVars.clear();
     }
@@ -340,10 +340,10 @@ class OclMapper : public core::NodeMapping {
 //    const core::Substitution::Mapping& mapping;
 
     // vectors to store Arguments
-    std::vector<core::VariablePtr> constantVars;
-    std::vector<core::VariablePtr> globalVars;
-    std::vector<core::VariablePtr> localVars;
-    std::vector<core::VariablePtr> privateVars;
+    std::vector<core::VariablePtr> constantArgs;
+    std::vector<core::VariablePtr> globalArgs;
+    std::vector<core::VariablePtr> localArgs;
+    std::vector<core::VariablePtr> privateArgs;
 
     // loop bounds
     core::VariablePtr localRange;
@@ -392,7 +392,7 @@ private:
 
     void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            core::VariablePtr initVal = builder.variable((*I)->getType());
+            const core::VariablePtr initVal = builder.variable((*I)->getType());
             outVec.push_back(builder.declarationStmt((*I), initVal));
             // update inVec with new variables
             (*I) = initVal;
@@ -408,30 +408,32 @@ private:
     }
 
 
-    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, VariableMapping vm) {
+    void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
-            // update variable mapping
-//            vm.remap((*I)->getVariable(), outVec.back()->getVariable());
+            const core::VariablePtr& initVal = builder.variable((*I)->getVariable()->getType());
+
+            outVec.push_back(builder.declarationStmt((*I)->getVariable(), initVal));
+            // update inVec with new variables, but the old initialization values
+            (*I) = builder.declarationStmt(initVal, (*I)->getInitialization());
         }
     }
 
     // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
     void getInitialVariables(VariableMapping& variableMapping) {
         // constant arguments
-        variableMapping.add(constantVars);
+        variableMapping.add(constantArgs);
 
         // global arguments
-        variableMapping.add(globalVars);
+        variableMapping.add(globalArgs);
 
         // local arguments
-        variableMapping.add(localVars);
+        variableMapping.add(localArgs);
 
         // local in-body variables
         variableMapping.add(kernelMapper.getLocalDeclarations());
 
         // private arguments
-        variableMapping.add(privateVars);
+        variableMapping.add(privateArgs);
 
         // private in-body variables
         // not needed, is it?
@@ -507,20 +509,20 @@ public:
                         if(ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)) {
                             switch(asa->getAddressSpace()) {
                             case ocl::AddressSpaceAnnotation::GLOBAL: {
-                                globalVars.push_back(var);
+                                globalArgs.push_back(var);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::CONSTANT: {
-                                constantVars.push_back(var);
+                                constantArgs.push_back(var);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::LOCAL: {
-                                localVars.push_back(var);
+                                localArgs.push_back(var);
                                 //TODO think about what to do with local variable arguments
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::PRIVATE: {
-                                privateVars.push_back(var);
+                                privateArgs.push_back(var);
                                 break;
                             }
                             default:
@@ -531,7 +533,7 @@ public:
                 }
                 else {
                     // arguments without address space modifiers are private per default
-                    privateVars.push_back(var);
+                    privateArgs.push_back(var);
                 }
             }
 
@@ -618,18 +620,18 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
 /*
                 localJobCaptures = kernelMapper.getLocalDeclarations();
                 // global variables form parameters
-                createDeclarations(localJobCaptures, globalVars, variableMapping);
+                createDeclarations(localJobCaptures, globalArgs, variableMapping);
                 // constant variables form parameters
-                createDeclarations(localJobCaptures, constantVars, variableMapping);
+                createDeclarations(localJobCaptures, constantArgs, variableMapping);
                 // local variables form parameters
-                createDeclarations(localJobCaptures, localVars, variableMapping);
+                createDeclarations(localJobCaptures, localArgs, variableMapping);
                 // capture local and global ranges
                 createDeclarations(localJobCaptures, ranges, variableMapping);
 
                 // catch shared variables
                 createDeclarations(localFunCaptures, localJobCaptures, variableMapping);
                 // add private variables from arguments
-//                createDeclarations(localFunCaptures, privateVars, variableMapping);
+//                createDeclarations(localFunCaptures, privateArgs, variableMapping);
 
 */
 
@@ -643,21 +645,25 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
 
                 // capture all arguments
                 core::LambdaExpr::CaptureList localFunCaptures;
-                createDeclarations(localFunCaptures, constantVars);
-                createDeclarations(localFunCaptures, globalVars);
+                createDeclarations(localFunCaptures, constantArgs);
+                createDeclarations(localFunCaptures, globalArgs);
+                createDeclarations(localFunCaptures, localArgs);
+                createDeclarations(localFunCaptures, privateArgs);
+                // in-body local variables
+                std::vector<core::DeclarationStmtPtr> localVars = kernelMapper.getLocalDeclarations();
                 createDeclarations(localFunCaptures, localVars);
-                createDeclarations(localFunCaptures, privateVars);
                 // catch loop boundaries
                 createDeclarations(localFunCaptures, ranges);
-                // TODO add in-body private and global variables
 
                 core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, localFunCaptures, funParams, newBody);
 
                 // catch all arguments which are shared in local range
                 core::LambdaExpr::CaptureList localJobCaptures;
-                createDeclarations(localJobCaptures, constantVars);
-                createDeclarations(localJobCaptures, globalVars);
-                createDeclarations(localJobCaptures, localVars);
+                createDeclarations(localJobCaptures, constantArgs);
+                createDeclarations(localJobCaptures, globalArgs);
+                createDeclarations(localJobCaptures, localArgs);
+                // in-body local variables
+                appendToVector(localJobCaptures, localVars);
                 // catch loop boundaries
                 createDeclarations(localJobCaptures, ranges);
                 // TODO catch global variables
@@ -681,10 +687,10 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
 
                 // capture all arguments
                 core::LambdaExpr::CaptureList globalFunCaptures;
-                createDeclarations(globalFunCaptures, constantVars);
-                createDeclarations(globalFunCaptures, globalVars);
-                createDeclarations(globalFunCaptures, localVars);
-                createDeclarations(globalFunCaptures, privateVars);
+                createDeclarations(globalFunCaptures, constantArgs);
+                createDeclarations(globalFunCaptures, globalArgs);
+                createDeclarations(globalFunCaptures, localArgs);
+                createDeclarations(globalFunCaptures, privateArgs);
                 // catch loop boundaries
                 createDeclarations(globalFunCaptures, ranges);
                 // TODO catch global variables
@@ -693,8 +699,8 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
 
                 // catch all arguments which are shared in global range
                 core::LambdaExpr::CaptureList globalJobCaptures;
-                createDeclarations(globalJobCaptures, constantVars);
-                createDeclarations(globalJobCaptures, globalVars);
+                createDeclarations(globalJobCaptures, constantArgs);
+                createDeclarations(globalJobCaptures, globalArgs);
                 // catch loop boundaries
                 createDeclarations(globalJobCaptures, ranges);
                 // TODO catch global variables
@@ -717,17 +723,17 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
 
                 // construct updated param list
                 core::LambdaExpr::ParamList newParams;
-                appendToVector(newParams, constantVars);
-                appendToVector(newParams, globalVars);
-                appendToVector(newParams, localVars);
-                appendToVector(newParams, privateVars);
+                appendToVector(newParams, constantArgs);
+                appendToVector(newParams, globalArgs);
+                appendToVector(newParams, localArgs);
+                appendToVector(newParams, privateArgs);
                 appendToVector(newParams, ranges);
 
 
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, globalPar);
 
                 // get address spaces of variables in body
-                kernelMapper.getMemspaces(globalVars, constantVars, localVars, privateVars);
+                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
                 // TODO check why it does not work
@@ -762,10 +768,10 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
     //TODO remove, for debugging only
     void showKernelMapper() {
 
-        std::cout << "Constant vars: " << constantVars.size() << std::endl;
-        std::cout << "Global vars: " << globalVars.size() << std::endl;
-        std::cout << "Local vars: " << localVars.size() << std::endl;
-        std::cout << "Private vars: " << privateVars.size() << std::endl;
+        std::cout << "Constant vars: " << constantArgs.size() << std::endl;
+        std::cout << "Global vars: " << globalArgs.size() << std::endl;
+        std::cout << "Local vars: " << localArgs.size() << std::endl;
+        std::cout << "Private vars: " << privateArgs.size() << std::endl;
     }
 };
 
