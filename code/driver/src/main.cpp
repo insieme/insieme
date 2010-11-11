@@ -97,25 +97,30 @@ int main(int argc, char** argv) {
 			LOG(INFO) << convertTimer;
 
 			// perform checks
-			LOG(INFO) << "=========================== IR Semantic Checks ==================================";
-			insieme::utils::Timer timer("Checks");
-			MessageList&& errors = check(program, insieme::core::checks::getFullCheck());
-			std::sort(errors.begin(), errors.end());
-			for_each(errors, [](const Message& cur) {
-				LOG(INFO) << cur << std::endl;
-			});
-			timer.stop();
-			LOG(INFO) << timer;
-			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			MessageList errors;
+			auto checker = [&]() {
+				LOG(INFO) << "=========================== IR Semantic Checks ==================================";
+				insieme::utils::Timer timer("Checks");
+				errors = check(program, insieme::core::checks::getFullCheck());
+				std::sort(errors.begin(), errors.end());
+				for_each(errors, [](const Message& cur) {
+					LOG(INFO) << cur << std::endl;
+				});
+				timer.stop();
+				LOG(INFO) << timer;
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			};
+			checker();
 
 			// run OMP frontend
 			LOG(INFO) << "============================= OMP conversion ====================================";
-//			insieme::utils::Timer ompTimer("OMP");
-//			fe::omp::SemaVisitor ompSemaVisitor;
-//			fe::omp::applySema(program);
-//			ompTimer.stop();
-//			LOG(INFO) << ompTimer;
+			insieme::utils::Timer ompTimer("OMP");
+			program = fe::omp::applySema(program, *manager);
+			ompTimer.stop();
+			LOG(INFO) << ompTimer;
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			// check again
+			checker();
 
 			// IR statistiscs
 			ASTStatistic&& stats = ASTStatistic::evaluate(program);

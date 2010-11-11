@@ -101,7 +101,7 @@ TEST(ASTVisitor, DispatcherTest) {
 	EXPECT_EQ ( 1, visitor.countGenericTypes );
 	EXPECT_EQ ( 0, visitor.countRefTypes );
 
-	lang::IntTypePtr intType = manager.get(lang::getIntType(12));
+	lang::IntTypePtr intType = manager.get(lang::intType(12));
 	visitor.visit(intType);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );

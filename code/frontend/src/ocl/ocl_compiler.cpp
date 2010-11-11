@@ -442,10 +442,10 @@ public:
 
     OclMapper(core::ASTBuilder& astBuilder)
         : kernelMapper(astBuilder, globalRange, localRange, globalId, localId), builder(astBuilder),
-          localRange(builder.variable(builder.vectorType(astBuilder.getUIntType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          globalRange(builder.variable(builder.vectorType(astBuilder.getUIntType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          localId(builder.variable(builder.vectorType(astBuilder.getUIntType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          globalId(builder.variable(builder.vectorType(astBuilder.getUIntType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))){ };
+          localRange(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          globalRange(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          localId(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          globalId(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))){ };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
         // quick check - stop recursion at variables
@@ -537,9 +537,9 @@ public:
 
             // add vector<uint<4>,3> globalRange and localRange to parameters
 /*            core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
-            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
             params.push_back(globalRange);
-            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.getUIntType( INT_LENGTH ), vecSize));
+            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
             params.push_back(localRange);*/
 //            params.push_back(globalRange);
 //            params.push_back(localRange);
@@ -575,7 +575,7 @@ public:
                 parArgs.push_back(core::lang::TYPE_JOB_PTR);
 
                 // type of functions inside jobs
-                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.getUnitType());
+                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
 
                 core::LambdaExpr::ParamList funParams;
 

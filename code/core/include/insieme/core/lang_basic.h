@@ -88,7 +88,7 @@ int getNumBytes(const IntegerType& type);
 
 DEF_TYPE(GenericType, IntType);
 
-IntType getIntType(unsigned short size);
+IntType intType(unsigned short size);
 IntType getGenIntType(char symbol);
 bool isIntType(const Type& type);
 
@@ -102,7 +102,7 @@ ADD_TYPE(IntType, INT_INF);
 
 DEF_TYPE(GenericType, UIntType);
 
-UIntType getUIntType(unsigned short size);
+UIntType uintType(unsigned short size);
 UIntType getGenUIntType(char symbol);
 bool isUIntType(const Type& type);
 
@@ -117,7 +117,7 @@ ADD_TYPE(UIntType, UINT_INF);
 
 DEF_TYPE(GenericType, RealType);
 
-RealType getRealType(unsigned short size);
+RealType realType(unsigned short size);
 RealType getGenRealType(char symbol);
 bool isRealType(const Type& type);
 
