@@ -174,11 +174,11 @@ int main(int argc, char** argv) {
 				// write into the file
 				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
-				fout << insieme::core::printer::PrettyPrint(program);
+				fout << insieme::core::printer::PrettyPrinter(program);
 			} else
-				LOG(INFO) << insieme::core::printer::PrettyPrint(program);
+				LOG(INFO) << insieme::core::printer::PrettyPrinter(program);
 			LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-			LOG(INFO) << insieme::core::printer::PrettyPrint(program, false, false, false);
+			LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 
