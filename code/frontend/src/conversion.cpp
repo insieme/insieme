@@ -1026,9 +1026,12 @@ public:
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
 			core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
-			// handle eventual OpenMP pragmas attached to the Clang node
-			frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-			return StmtWrapper(retStmt );
+			if(retStmt) {
+				// handle eventual OpenMP pragmas attached to the Clang node
+				frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
+				return StmtWrapper(retStmt );
+			}
+			return StmtWrapper();
 		}
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
@@ -1036,9 +1039,11 @@ public:
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
-				// handle eventual OpenMP pragmas attached to the Clang node
-				frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-				retList.push_back( retStmt );
+				if(retStmt) {
+					// handle eventual OpenMP pragmas attached to the Clang node
+					frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
+					retList.push_back( retStmt );
+				}
 			}
 		return retList;
 	}
@@ -2256,6 +2261,15 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 		// add a ref in the case of variable which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
+
+	// check whether this is variable is defined as local or static
+	// DLOG(INFO) << varDecl->getNameAsString() << " " << varDecl->hasGlobalStorage() << " " << varDecl->hasLocalStorage();
+	if(varDecl->hasGlobalStorage()) {
+		assert(ctx->currGlobalVar);
+		// access the global data structure
+		return builder.memberAccessExpr(tryDeref(builder, ctx->currGlobalVar), core::Identifier(varDecl->getNameAsString()));
+	}
+
 	// variable is not in the map, create a new var and add it
 	core::VariablePtr&& var = builder.variable(type);
 	// add the var in the map
@@ -2269,13 +2283,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	if(attr)
 		var->addAnnotation(attr);
 
-	// check whether this is variable is defined as local or static
-	// DLOG(INFO) << varDecl->getNameAsString() << " " << varDecl->hasGlobalStorage() << " " << varDecl->hasLocalStorage();
-	if(varDecl->hasGlobalStorage()) {
-		assert(ctx->currGlobalVar);
-		// access the global data structure
-		// .insert( std::make_pair(var, std::make_pair(core::Identifier(varDecl->getNameAsString()), core::ExpressionPtr())) );
-	}
 	return var;
 }
 
@@ -2545,19 +2552,17 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		}
 	);
 
-	if(funcDecl->isMain()) {
-		ctx->currGlobalVar = ctx->globalVar;
-	}
-
 	// before redolving the body we have to set the currGlobalVar accordingly depending if
 	// this function will use the global struct or not
 	core::LambdaExpr::CaptureList captureList;
 	core::VariablePtr parentGlobalVar = ctx->currGlobalVar;
-	if(ctx->globalFuncMap.find(funcDecl) != ctx->globalFuncMap.end()) {
+	if(funcDecl->isMain()) {
+		ctx->currGlobalVar = ctx->globalVar;
+	} else if(ctx->globalFuncMap.find(funcDecl) != ctx->globalFuncMap.end()) {
 		assert(parentGlobalVar && "Global data structure not forwarded until current function.");
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		core::VariablePtr&& var = builder.variable( builder.refType(ctx->globalStructType) );
-		captureList.push_back( builder.declarationStmt(var, ctx->currGlobalVar) );
+		captureList.push_back( builder.declarationStmt(var, parentGlobalVar) );
 		ctx->currGlobalVar = var;
 	}
 
@@ -2575,7 +2580,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		assert(ctx->globalVar && ctx->globalStructExpr);
 
 		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx->globalVar, ctx->globalStructExpr) );
+		stmts.push_back( builder.declarationStmt(ctx->globalVar,
+				builder.callExpr( builder.refType(ctx->globalStructType), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( ctx->globalStructExpr ) )) );
 		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
 		body = builder.compoundStmt(stmts);
 	}
@@ -2583,7 +2589,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// reset old global var
 	ctx->currGlobalVar = parentGlobalVar;
 
-	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), params, body);
+	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), captureList, params, body);
 
 	if( components.empty() ) {
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
@@ -2679,7 +2685,7 @@ core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* d
 				auto global = globColl.createGlobalStruct(mFact);
 				mFact.ctx->globalStructType = global.first;
 				mFact.ctx->globalStructExpr = global.second;
-				mFact.ctx->globalVar = mFact.builder.variable(global.first);
+				mFact.ctx->globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
 				core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
 			}

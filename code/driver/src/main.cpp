@@ -114,10 +114,10 @@ int main(int argc, char** argv) {
 
 			// run OMP frontend
 			LOG(INFO) << "============================= OMP conversion ====================================";
-			insieme::utils::Timer ompTimer("OMP");
-			program = fe::omp::applySema(program, *manager);
-			ompTimer.stop();
-			LOG(INFO) << ompTimer;
+//			insieme::utils::Timer ompTimer("OMP");
+//			program = fe::omp::applySema(program, *manager);
+//			ompTimer.stop();
+//			LOG(INFO) << ompTimer;
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			// check again
 			checker();
