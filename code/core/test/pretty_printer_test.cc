@@ -47,7 +47,7 @@ TEST(PrettyPrinter, Basic) {
 	// check setup
 	EXPECT_EQ(0, PrettyPrinter::OPTIONS_DEFAULT);
 	EXPECT_EQ(PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS, PrettyPrinter::OPTIONS_DETAIL);
-	EXPECT_EQ(PrettyPrinter::PRINT_SINGLE_LINE, PrettyPrinter::OPTIONS_SINGLE_LINE);
+	EXPECT_EQ(PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE, PrettyPrinter::OPTIONS_SINGLE_LINE);
 
 	NodePtr ptr;
 
@@ -64,12 +64,12 @@ TEST(PrettyPrinter, Basic) {
 	EXPECT_FALSE(printerB.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	PrettyPrinter printerC(ptr, PrettyPrinter::OPTIONS_SINGLE_LINE);
-	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
-	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_BRACKETS));
+	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
+	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_CASTS));
+	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_BRACKETS));
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
-
+	printerC.setOption(PrettyPrinter::PRINT_DEREFS, false);
 	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
 	printerC.setOption(PrettyPrinter::PRINT_DEREFS);
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
