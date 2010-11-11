@@ -82,8 +82,7 @@ class ConversionFactory {
 	std::auto_ptr<ClangExprConverter> exprConv;
 	std::auto_ptr<ClangStmtConverter> stmtConv;
 
-	core::ExpressionPtr defaultInitVal(const core::TypePtr& type);
-	core::VariablePtr lookUpVariable(const clang::VarDecl* varDecl);
+	core::ExpressionPtr lookUpVariable(const clang::VarDecl* varDecl);
 	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
 	friend class ASTConverter;
@@ -102,6 +101,7 @@ public:
 
 	core::ExpressionPtr 	 convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
+	core::ExpressionPtr	 	 defaultInitVal(const core::TypePtr& type) const;
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
 };

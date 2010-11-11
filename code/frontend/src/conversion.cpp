@@ -46,6 +46,7 @@
 
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
+#include "insieme/frontend/analysis/global_variables.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -329,8 +330,13 @@ struct ConversionFactory::ConversionContext {
 	// Gloabal and static variables
 	// map which stores, for each static or global variable, the identifier which will be used
 	// as identification within the global data structure and the initialization value
-	typedef std::map<core::VariablePtr, std::pair<core::Identifier, core::ExpressionPtr>> GlobalVarMap;
-	GlobalVarMap globalVarMap;
+	core::VariablePtr   globalVar;
+
+	analysis::GlobalVarCollector::UseGlobalFuncMap globalFuncMap;
+	core::VariablePtr	currGlobalVar;
+
+	core::StructTypePtr globalStructType;
+	core::StructExprPtr	globalStructExpr;
 
 	ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 };
@@ -960,7 +966,7 @@ public:
 	}
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //                       VECTOR INITALIZATION EXPRESSION
+    //                  VECTOR/STRUCT INITALIZATION EXPRESSION
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitInitListExpr(clang::InitListExpr* initList) {
         START_LOG_EXPR_CONVERSION(initList);
@@ -1020,7 +1026,6 @@ public:
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
 			core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
-
 			if(retStmt) {
 				// handle eventual OpenMP pragmas attached to the Clang node
 				frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
@@ -1034,8 +1039,8 @@ public:
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
-				// handle eventual OpenMP pragmas attached to the Clang node
 				if(retStmt) {
+					// handle eventual OpenMP pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
 					retList.push_back( retStmt );
 				}
@@ -1108,7 +1113,8 @@ public:
 
 			StmtWrapper&& initExpr = Visit( initStmt );
 			// induction variable for this loop
-			core::VariablePtr&& inductionVar = convFact.lookUpVariable(loopAnalysis.getInductionVar());
+			core::VariablePtr&& inductionVar = core::dynamic_pointer_cast<const core::Variable>(convFact.lookUpVariable(loopAnalysis.getInductionVar()));
+			assert(inductionVar);
 
 			if( !initExpr.isSingleStmt() ) {
 				assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
@@ -2243,7 +2249,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
-core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
+core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
 	ConversionContext::VarDeclMap::const_iterator fit = ctx->varDeclMap.find(varDecl);
 	if(fit != ctx->varDeclMap.end())
 		// variable found in the map, return it
@@ -2255,6 +2261,15 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 		// add a ref in the case of variable which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
+
+	// check whether this is variable is defined as local or static
+	// DLOG(INFO) << varDecl->getNameAsString() << " " << varDecl->hasGlobalStorage() << " " << varDecl->hasLocalStorage();
+	if(varDecl->hasGlobalStorage()) {
+		assert(ctx->currGlobalVar);
+		// access the global data structure
+		return builder.memberAccessExpr(tryDeref(builder, ctx->currGlobalVar), core::Identifier(varDecl->getNameAsString()));
+	}
+
 	// variable is not in the map, create a new var and add it
 	core::VariablePtr&& var = builder.variable(type);
 	// add the var in the map
@@ -2267,6 +2282,7 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 	core::AnnotationPtr&& attr = convertAttribute(varDecl);
 	if(attr)
 		var->addAnnotation(attr);
+
 	return var;
 }
 
@@ -2274,7 +2290,7 @@ core::VariablePtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDec
 //						CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) {
+core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
 	if( *type == core::lang::TYPE_ALPHA_VAL ) {
 		return core::lang::CONST_NULL_PTR_PTR;
 	}
@@ -2362,39 +2378,42 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		varDecl->dump();
 	}
 
-	const VarDecl* definition = varDecl->getDefinition();
-	clang::QualType clangType = definition->getType();
-	if(!clangType.isCanonical())
-		clangType = clangType->getCanonicalTypeInternal();
+	core::DeclarationStmtPtr retStmt;
 
-	// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
-	// it is not declared as const, successive dataflow analysis could be used to restrict the access
-	// to this variable
-	core::TypePtr&& type = convertType( clangType.getTypePtr() );
-	if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(definition))
-		type = builder.refType( type );
+	if(const VarDecl* definition = varDecl->getDefinition()) {
+		clang::QualType clangType = definition->getType();
+		if(!clangType.isCanonical())
+			clangType = clangType->getCanonicalTypeInternal();
 
-	// initialization value
-	core::ExpressionPtr initExpr;
-	if( definition->getInit() ) {
-		initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(convertExpr( definition->getInit() )) );
+		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
+		// it is not declared as const, successive dataflow analysis could be used to restrict the access
+		// to this variable
+		core::TypePtr&& type = convertType( clangType.getTypePtr() );
+		if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(definition))
+			type = builder.refType( type );
+
+		// initialization value
+		core::ExpressionPtr initExpr;
+		if( definition->getInit() ) {
+			initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(convertExpr( definition->getInit() )) );
+		} else {
+			initExpr = defaultInitVal( type );
+		}
+
+		if(definition->hasGlobalStorage()) {
+			// once we encounter static variables we do remove the declaration
+			return core::DeclarationStmtPtr();
+		}
+
+		// lookup for the variable in the map
+		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
+		assert(var);
+		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
-		initExpr = defaultInitVal( type );
+		// this variable is extern
+		assert(varDecl->isExternC() && "Variable declaration is not extern");
+
 	}
-
-	// lookup for the variable in the map
-	core::VariablePtr&& var = lookUpVariable(definition);
-
-	if(definition->getStorageClass() == StorageClass::SC_Static) {
-		// this is a static variable declaration
-		ctx->globalVarMap.insert(
-			std::make_pair(var, std::make_pair(core::Identifier(definition->getNameAsString()), initExpr))
-		);
-		DVLOG(1) << "Variable decl is static, inserted into the global map";
-//		return core::DeclarationStmtPtr();
-	}
-
-	core::DeclarationStmtPtr&& retStmt = builder.declarationStmt( var, initExpr );
 	// logging
 	DVLOG(1) << "Converted into IR stmt: ";
 	DVLOG(1) << "\t" << *retStmt;
@@ -2529,9 +2548,23 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	vector<core::VariablePtr> params;
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[ &params, this ] (ParmVarDecl* currParam) {
-			params.push_back( this->lookUpVariable(currParam) );
+			params.push_back( core::dynamic_pointer_cast<const core::Variable>(this->lookUpVariable(currParam)) );
 		}
 	);
+
+	// before redolving the body we have to set the currGlobalVar accordingly depending if
+	// this function will use the global struct or not
+	core::LambdaExpr::CaptureList captureList;
+	core::VariablePtr parentGlobalVar = ctx->currGlobalVar;
+	if(funcDecl->isMain()) {
+		ctx->currGlobalVar = ctx->globalVar;
+	} else if(ctx->globalFuncMap.find(funcDecl) != ctx->globalFuncMap.end()) {
+		assert(parentGlobalVar && "Global data structure not forwarded until current function.");
+		// declare a new variable that will be used to hold a reference to the global data stucture
+		core::VariablePtr&& var = builder.variable( builder.refType(ctx->globalStructType) );
+		captureList.push_back( builder.declarationStmt(var, parentGlobalVar) );
+		ctx->currGlobalVar = var;
+	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert(!ctx->isResolvingRecFuncBody && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
@@ -2540,7 +2573,23 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx->isResolvingRecFuncBody = false;
 
-	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), params, body);
+	// ADD THE GLOBALS
+	if(funcDecl->isMain()) {
+		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
+		assert(compStmt);
+		assert(ctx->globalVar && ctx->globalStructExpr);
+
+		std::vector<core::StatementPtr> stmts;
+		stmts.push_back( builder.declarationStmt(ctx->globalVar,
+				builder.callExpr( builder.refType(ctx->globalStructType), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( ctx->globalStructExpr ) )) );
+		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
+		body = builder.compoundStmt(stmts);
+	}
+
+	// reset old global var
+	ctx->currGlobalVar = parentGlobalVar;
+
+	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), captureList, params, body);
 
 	if( components.empty() ) {
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
@@ -2594,7 +2643,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
 	// ctx->recVarExprMap.clear();
 
-	core::RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+	core::RecLambdaDefinitionPtr&& definition = builder.recLambdaDefinition(definitions);
 	retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
 
 	// Adding the lambda function to the list of converted functions
@@ -2619,8 +2668,10 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx) {
 
+	analysis::GlobalVarCollector globColl(mFact.indexer, mFact.ctx->globalFuncMap);
 	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
+
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
 			// finds a definition of this function if any
 			const FunctionDecl* definition = NULL;
@@ -2628,20 +2679,20 @@ core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* d
 			if(!funcDecl->hasBody(definition))
 				continue;
 
-			core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
-			if(definition->isMain())
+			if(definition->isMain()) {
+				globColl(decl);
+				DLOG(INFO) << globColl;
+				auto global = globColl.createGlobalStruct(mFact);
+				mFact.ctx->globalStructType = global.first;
+				mFact.ctx->globalStructExpr = global.second;
+				mFact.ctx->globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
+				core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
 				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
+			}
 		}
 		// we only add the variables which are actually needed!
-//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) {
-//			// This is a variable declared outside any function meaning it has to be treated as global
-//			core::DeclarationStmtPtr&& declStmt = mFact.convertVarDecl( varDecl );
-//			mFact.ctx->globalVarMap.insert(
-//				std::make_pair(declStmt->getVariable(), std::make_pair(core::Identifier(varDecl->getNameAsString()), declStmt->getInitialization()))
-//			);
-//		}
+//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) { }
 	}
-
 	return mProgram;
 }
 

@@ -66,8 +66,6 @@
   
 --------------------------------------------------------------------*/
 
-#include "npb-C.h"
-
 #include "npbparams.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -169,15 +167,58 @@ typedef  int  INT_TYPE;
 /********************/
 /* Some global info */
 /********************/
-// INT_TYPE *key_buff_ptr_global;         /* used by full_verify to get */
-                                          /* copies of rank info        */
-//int      passed_verification;
+INT_TYPE *key_buff_ptr_global;         /* used by full_verify to get */
+                                       /* copies of rank info        */
+
+int      passed_verification;
+                                 
+
+/************************************/
+/* These are the three main arrays. */
+/* See SIZE_OF_BUFFERS def above    */
+/************************************/
+INT_TYPE key_array[SIZE_OF_BUFFERS],    
+         key_buff1[SIZE_OF_BUFFERS],    
+         key_buff2[SIZE_OF_BUFFERS],
+         partial_verify_vals[TEST_ARRAY_SIZE];
+
+#ifdef USE_BUCKETS
+INT_TYPE bucket_size[NUM_BUCKETS],                    
+         bucket_ptrs[NUM_BUCKETS];
+#endif
 
 
-//#ifdef USE_BUCKETS
-//INT_TYPE bucket_size[NUM_BUCKETS],
-//         bucket_ptrs[NUM_BUCKETS];
-//#endif
+/**********************/
+/* Partial verif info */
+/**********************/
+INT_TYPE test_index_array[TEST_ARRAY_SIZE],
+         test_rank_array[TEST_ARRAY_SIZE],
+
+         S_test_index_array[TEST_ARRAY_SIZE] = 
+                             {48427,17148,23627,62548,4431},
+         S_test_rank_array[TEST_ARRAY_SIZE] = 
+                             {0,18,346,64917,65463},
+
+         W_test_index_array[TEST_ARRAY_SIZE] = 
+                             {357773,934767,875723,898999,404505},
+         W_test_rank_array[TEST_ARRAY_SIZE] = 
+                             {1249,11698,1039987,1043896,1048018},
+
+         A_test_index_array[TEST_ARRAY_SIZE] = 
+                             {2112377,662041,5336171,3642833,4250760},
+         A_test_rank_array[TEST_ARRAY_SIZE] = 
+                             {104,17523,123928,8288932,8388264},
+
+         B_test_index_array[TEST_ARRAY_SIZE] = 
+                             {41869,812306,5102857,18232239,26860214},
+         B_test_rank_array[TEST_ARRAY_SIZE] = 
+                             {33422937,10244,59149,33135281,99}, 
+
+         C_test_index_array[TEST_ARRAY_SIZE] = 
+                             {44172927,72999161,74326391,129606274,21736814},
+         C_test_rank_array[TEST_ARRAY_SIZE] = 
+                             {61147,882988,266290,133997595,133525895};
+
 
 
 /***********************/
@@ -185,7 +226,7 @@ typedef  int  INT_TYPE;
 /***********************/
 double	randlc( double *X, double *A );
 
-void full_verify( INT_TYPE *key_buff_ptr_global, int *passed_verification, INT_TYPE* key_array, INT_TYPE* key_buff2 );
+void full_verify( void );
 
 /*
  *    FUNCTION RANDLC (X, A)
@@ -294,7 +335,7 @@ double *A;
 /*************      C  R  E  A  T  E  _  S  E  Q      ************/
 /*****************************************************************/
 
-void	create_seq( double seed, double a, INT_TYPE* key_array)
+void	create_seq( double seed, double a )
 {
 	double x;
 	int    i, j, k;
@@ -308,7 +349,7 @@ void	create_seq( double seed, double a, INT_TYPE* key_array)
     	    x += randlc(&seed, &a);
 	    x += randlc(&seed, &a);  
 
-           	 key_array[i] = k*x;
+            key_array[i] = k*x;
 	}
 }
 
@@ -320,7 +361,7 @@ void	create_seq( double seed, double a, INT_TYPE* key_array)
 /*****************************************************************/
 
 
-void full_verify(INT_TYPE *key_buff_ptr_global, int *passed_verification, INT_TYPE* key_array, INT_TYPE* key_buff2)
+void full_verify()
 {
     INT_TYPE    i, j;
     INT_TYPE    k;
@@ -347,7 +388,7 @@ void full_verify(INT_TYPE *key_buff_ptr_global, int *passed_verification, INT_TY
                 j );
     }
     else
-        (*passed_verification)++;
+        passed_verification++;
            
 
 }
@@ -358,9 +399,8 @@ void full_verify(INT_TYPE *key_buff_ptr_global, int *passed_verification, INT_TY
 /*****************************************************************/
 /*************             R  A  N  K             ****************/
 /*****************************************************************/
-void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verification,
-		INT_TYPE* test_index_array, INT_TYPE* test_rank_array, INT_TYPE* key_array, INT_TYPE* key_buff1, INT_TYPE* key_buff2,
-		INT_TYPE* partial_verify_vals)
+
+void rank( int iteration )
 {
 
     INT_TYPE    i, j, k;
@@ -442,7 +482,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                            (*passed_verification)++;
+                            passed_verification++;
                     }
                     else
                     {
@@ -453,7 +493,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
                     }
                     break;
                 case 'W':
@@ -467,7 +507,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
                     }
                     else
                     {
@@ -478,7 +518,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
                     }
                     break;
                 case 'A':
@@ -492,7 +532,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
         	    }
                     else
                     {
@@ -504,7 +544,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
                     }
                     break;
                 case 'B':
@@ -517,7 +557,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
         	    }
                     else
                     {
@@ -528,7 +568,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
                     }
                     break;
                 case 'C':
@@ -541,7 +581,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
         	    }
                     else
                     {
@@ -552,7 +592,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
                                    iteration, i );
                         }
                         else
-                        	 (*passed_verification)++;
+                            passed_verification++;
                     }
                     break;
             }        
@@ -566,7 +606,7 @@ void rank( int iteration, INT_TYPE **key_buff_ptr_global, int *passed_verificati
     since they cannot be made register by compiler                        */
 
     if( iteration == MAX_ITERATIONS ) 
-        *key_buff_ptr_global = key_buff1;
+        key_buff_ptr_global = key_buff1;
 
   } /* end master */
 }      
@@ -581,52 +621,11 @@ main( argc, argv )
     char **argv;
 {
 
-    int         i, iteration, itemp;
+    int             i, iteration, itemp;
     int		    nthreads = 1;
-    double      timecounter, maxtime;
+    double          timecounter, maxtime;
 
-    // old global vars
-    INT_TYPE *key_buff_ptr_global = NULL;
-    int passed_verification = 0;
 
-    /************************************/
-    /* These are the three main arrays. */
-    /* See SIZE_OF_BUFFERS def above    */
-    /************************************/
-    INT_TYPE key_array[SIZE_OF_BUFFERS],
-             key_buff1[SIZE_OF_BUFFERS],
-             key_buff2[SIZE_OF_BUFFERS],
-             partial_verify_vals[TEST_ARRAY_SIZE];
-
-    /**********************/
-    /* Partial verif info */
-    /**********************/
-    INT_TYPE test_index_array[TEST_ARRAY_SIZE],
-             test_rank_array[TEST_ARRAY_SIZE],
-    		 S_test_index_array[TEST_ARRAY_SIZE] =
-                        {48427,17148,23627,62548,4431},
-             S_test_rank_array[TEST_ARRAY_SIZE] =
-                        {0,18,346,64917,65463},
-
-             W_test_index_array[TEST_ARRAY_SIZE] =
-                        {357773,934767,875723,898999,404505},
-             W_test_rank_array[TEST_ARRAY_SIZE] =
-                        {1249,11698,1039987,1043896,1048018},
-
-             A_test_index_array[TEST_ARRAY_SIZE] =
-                        {2112377,662041,5336171,3642833,4250760},
-             A_test_rank_array[TEST_ARRAY_SIZE] =
-                        {104,17523,123928,8288932,8388264},
-
-             B_test_index_array[TEST_ARRAY_SIZE] =
-                        {41869,812306,5102857,18232239,26860214},
-             B_test_rank_array[TEST_ARRAY_SIZE] =
-                        {33422937,10244,59149,33135281,99},
-
-             C_test_index_array[TEST_ARRAY_SIZE] =
-                        {44172927,72999161,74326391,129606274,21736814},
-             C_test_rank_array[TEST_ARRAY_SIZE] =
-                        {61147,882988,266290,133997595,133525895};
 
 /*  Initialize the verification arrays if a valid class */
     for( i=0; i<TEST_ARRAY_SIZE; i++ )
@@ -667,13 +666,13 @@ main( argc, argv )
 
 /*  Generate random number sequence and subsequent keys on all procs */
     create_seq( 314159265.00,                    /* Random number gen seed */
-                1220703125.00, key_array );                 /* Random number gen mult */
+                1220703125.00 );                 /* Random number gen mult */
 
 
 /*  Do one interation for free (i.e., untimed) to guarantee initialization of  
     all data and code pages and respective tables */
 #pragma omp parallel    
-    rank( 1, &key_buff_ptr_global, &passed_verification, test_index_array, test_rank_array, key_array, key_buff1, key_buff2, partial_verify_vals );
+    rank( 1 );  
 
 /*  Start verification counter */
     passed_verification = 0;
@@ -685,13 +684,14 @@ main( argc, argv )
 
 
 /*  This is the main iteration */
+    
 #pragma omp parallel private(iteration)    
     for( iteration=1; iteration<=MAX_ITERATIONS; iteration++ )
     {
 #pragma omp master	
         if( CLASS != 'S' ) printf( "        %d\n", iteration );
-
-        rank( iteration, &key_buff_ptr_global, &passed_verification, test_index_array, test_rank_array, key_array, key_buff1, key_buff2, partial_verify_vals );
+	
+        rank( iteration );
 	
 #if defined(_OPENMP)	
 #pragma omp master
@@ -706,8 +706,7 @@ main( argc, argv )
 
 /*  This tests that keys are in sequence: sorting of last ranked key seq
     occurs here, but is an untimed operation                             */
-
-    full_verify(key_buff_ptr_global, &passed_verification, key_array, key_buff2);
+    full_verify();
 
 
 
