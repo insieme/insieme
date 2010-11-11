@@ -87,40 +87,37 @@ public:
 
 	// ---------------------------- Create Derived Types ----------------------------
 
-	lang::UnitTypePtr getUnitType() const;
-	lang::BoolTypePtr getBoolType() const;
-	lang::IntTypePtr  getIntType (unsigned short size) const;
-	lang::UIntTypePtr getUIntType(unsigned short size) const;
-	lang::RealTypePtr getRealType(unsigned short size) const;
+	lang::UnitTypePtr unitType() const;
+	lang::BoolTypePtr boolType() const;
+	lang::IntTypePtr  intType(unsigned short size) const;
+	lang::UIntTypePtr uintType(unsigned short size) const;
+	lang::RealTypePtr realType(unsigned short size) const;
 
 
 #include "ast_builder.inl"
 
 	// ---------------------------- Convenience -------------------------------------
-
+	
+public:
 	// Call Expressions
-	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const {
-		return callExpr(core::lang::TYPE_UNIT, functionExpr, arguments);
-	}
-	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-		return callExpr(resultType, functionExpr, toVector(arg1));
-	}
-	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-		return callExpr(resultType, functionExpr, toVector(arg1, arg2));
-	}
-	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-		return callExpr(resultType, functionExpr, toVector(arg1, arg2, arg3));
-	}
-	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-		return callExpr(core::lang::TYPE_UNIT, functionExpr, toVector(arg1));
-	}
-	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-		return callExpr(core::lang::TYPE_UNIT, functionExpr, toVector(arg1, arg2));
-	}
-	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-		return callExpr(core::lang::TYPE_UNIT, functionExpr, toVector(arg1, arg2, arg3));
-	}
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
+	// For the methods below, the return type is deduced from the functionExpr's function type
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const;
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
 
+	// Lambda Expressions
+	LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParamList& params = ParamList()) const;
+	LambdaExprPtr lambdaExpr(const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
+	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params = ParamList()) const;
+	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
+
+	// Utilities
+private:
+	static ElementTypeList extractParamTypes(const ParamList& params);
 };
 
 } // namespace core
