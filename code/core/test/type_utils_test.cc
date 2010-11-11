@@ -36,8 +36,11 @@
 
 #include <gtest/gtest.h>
 
+#include <boost/functional/hash.hpp>
+
 #include "insieme/core/ast_address.h"
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/ast_visitor.h"
 #include "insieme/core/type_utils.h"
 
 namespace insieme {
@@ -220,6 +223,69 @@ TEST(TypeUtils, IntParamUnification) {
 	EXPECT_EQ(*res.applyTo(manager, typeA3), *res.applyTo(manager, typeAx));
 	EXPECT_EQ(*typeA3, *res.applyTo(manager, typeAx));
 }
+
+typedef std::unordered_set<TypeVariablePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> VariableSet;
+typedef std::unordered_set<IntTypeParam, boost::hash<IntTypeParam>> ParamSet;
+
+VariableSet getTypeVariables(const TypePtr& ptr) {
+	VariableSet res;
+	visitAllNodesOnce(ptr, [&res](const NodePtr& node) {
+		if (node->getNodeType() == NT_TypeVariable) {
+			res.insert(static_pointer_cast<const TypeVariable>(node));
+		}
+	});
+	return res;
+}
+
+ParamSet getParamVariables(const TypePtr& ptr) {
+	ParamSet res;
+	visitAllNodesOnce(ptr, [&res](const NodePtr& node) {
+		if (node->getNodeType() == NT_GenericType) {
+			GenericTypePtr genType = static_pointer_cast<const GenericType>(node);
+			for_each(genType->getIntTypeParameter(), [&res](const IntTypeParam& cur) {
+				if (cur.getType() == IntTypeParam::VARIABLE) {
+					res.insert(cur);
+				}
+			});
+		}
+	});
+	return res;
+}
+
+
+TEST(TypeUtils, FreeTypeVariableAssignment) {
+	ASTBuilder builder;
+	NodeManager& manager = *builder.getNodeManager();
+
+	TypeVariablePtr typeVar = builder.typeVariable("X");
+	IntTypeParam varParam = IntTypeParam::getVariableIntParam('x');
+	TypePtr typeA = builder.genericType("a", toVector<TypePtr>(typeVar), toVector(varParam));
+
+	VariableSet vars;
+	vars.insert(typeVar);
+
+	ParamSet params;
+	params.insert(varParam);
+
+	EXPECT_EQ(vars, getTypeVariables(typeA));
+	EXPECT_EQ(params, getParamVariables(typeA));
+
+	auto res = makeTypeVariablesUnique(manager, typeA, typeA);
+	TypePtr resA = res.first;
+	TypePtr resB = res.second;
+
+	EXPECT_EQ("a<'FV1,a>", toString(*resA));
+	EXPECT_EQ("a<'FV2,b>", toString(*resB));
+
+	EXPECT_NE(vars, getTypeVariables(resA));
+	EXPECT_NE(vars, getTypeVariables(resB));
+	EXPECT_NE(getTypeVariables(resA), getTypeVariables(resB));
+
+	EXPECT_NE(params, getParamVariables(resA));
+	EXPECT_NE(params, getParamVariables(resB));
+	EXPECT_NE(getParamVariables(resA), getParamVariables(resB));
+}
+
 
 } // end namespace core
 } // end namespace insieme

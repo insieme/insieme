@@ -167,6 +167,13 @@ public:
 	bool operator==(const IntTypeParam&) const;
 
 	/**
+	 * Implements the in-equality operator for the IntTypeParam type.
+	 */
+	bool operator!=(const IntTypeParam& other) const {
+		return !(*this == other);
+	}
+
+	/**
 	 * Implements the less-than relation by lexicographical comparison
 	 * of the type / value tuple.
 	 */
