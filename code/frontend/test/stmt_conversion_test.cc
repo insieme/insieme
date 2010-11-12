@@ -69,7 +69,7 @@ struct VariableResetHack {
 TEST(StmtConversion, FileTest) {
 
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
-	CommandLineOptions::Verbosity = 1;
+	CommandLineOptions::Verbosity = 0;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);

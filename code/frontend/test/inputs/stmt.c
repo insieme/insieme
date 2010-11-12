@@ -128,7 +128,7 @@ void member_access_test() {
 	p.weigth;
 
 	struct Person* ptr = &p;
-	// #pragma test "( *(( *v1)[0])).age"
+	//#pragma test "( *(( *v1)[0])).age"
 	ptr->age;
 }
 
