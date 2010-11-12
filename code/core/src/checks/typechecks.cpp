@@ -83,7 +83,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (!mgu) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
-						format("Invalid argument type(s) - expected: %s, actual: %s - %s",
+						format("Invalid argument type(s) - expected: %s, actual: %s - function type: %s",
 								toString(*argumentType).c_str(),
 								toString(*parameterType).c_str(),
 								toString(*functionType).c_str()),
@@ -98,9 +98,10 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (*retType != *resType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
-						format("Invalid return type - expected: %s, actual: %s",
+						format("Invalid return type - expected: %s, actual: %s - function type: %s",
 								toString(*retType).c_str(),
-								toString(*resType).c_str()),
+								toString(*resType).c_str(),
+                                toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}
