@@ -476,8 +476,18 @@ namespace {
 				out << "#" << node->getIndex();
 		});
 
-	//	AST_TERMINAL(StructExpr, NamedCompositeExpr)
-	//	AST_TERMINAL(UnionExpr, NamedCompositeExpr)
+		PRINT(StructExpr, {
+				out << "struct{" << ::join(", ", node->getMembers(), [&](std::ostream& out, const StructExpr::Member& cur) {
+					out << cur.first << ":=";
+					this->visit(cur.second);
+				}) << "}";
+		});
+
+		PRINT(UnionExpr, {
+				out << "union{" << node->getMemberName() << ":=";
+				visit(node->getMember());
+				out << "}";
+		});
 
 		PRINT(RecTypeDefinition, {
 				auto defs = node->getDefinitions();
