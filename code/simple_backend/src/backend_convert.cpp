@@ -463,6 +463,21 @@ void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 	cStr << "." << ptr->getMemberName() << ")";
 }
 
+void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
+	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType()) <<"){";
+	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
+		this->visit(cur.second);
+		cStr << ", ";
+	});
+	cStr << "})";
+}
+
+void ConvertVisitor::visitUnionExpr(const UnionExprPtr& ptr) {
+	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType()) <<"){";
+	visit(ptr->getMember());
+	cStr << "})";
+}
+
 
 // -------------------------------- Variable Manager -----------------------------------------
 
