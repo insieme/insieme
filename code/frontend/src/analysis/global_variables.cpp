@@ -54,8 +54,8 @@ using namespace clang;
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const clang::NamedDecl* func) {
-	return out << func->getNameAsString();
+std::ostream& operator<<(std::ostream& out, const clang::NamedDecl* decl) {
+	return out << decl->getNameAsString();
 }
 
 }
@@ -120,13 +120,19 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 		funcStack.push(definition);
 		(*this)(definition);
 		funcStack.pop();
+
+		// if the called function access the global data structure
+		// also the current function has to be marked (otherwise the
+		// global structure will not correctly forwarded)
+		if(usingGlobals.find(definition) != usingGlobals.end()) {
+			usingGlobals.insert( funcStack.top() );
+		}
 	}
 
 	return true;
 }
 
-// This function syntetize the global structure that will be used to hold
-// the global variables used within the functions of the input program
+// This function syntetize the global structure that will be used to hold the global variables used within the functions of the input program
 std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGlobalStruct(const conversion::ConversionFactory& fact) const {
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
@@ -144,10 +150,8 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		if(it->second.first) {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			if(it->first->getInit()) {
-				core::ExpressionPtr&& initExpr = fact.convertExpr(it->first->getInit());
-				members.push_back(
-					core::StructExpr::Member(ident, fact.getASTBuilder().callExpr( entryType, core::lang::OP_REF_VAR_PTR, toVector( initExpr ) ))
-				);
+				core::ExpressionPtr&& initExpr = fact.convertInitExpr(it->first->getInit(), entryType);
+				members.push_back( core::StructExpr::Member(ident, initExpr) );
 				continue;
 			}
 		}

@@ -34,21 +34,30 @@
  * regarding third party software licenses.
  */
 
-INSIEME_BUILD_DIR=${CMAKE_BINARY_DIR}
-INSIEME_SRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+//typedef int bool;
+#define bool int
 
-CFLAGS=--std=c99
+#define true 1
+#define false 0
 
-is:	is.insieme.o $(INSIEME_SRC_DIR)/test/nas/common/wtime.o $(INSIEME_SRC_DIR)/test/nas/common/c_timers.c
+#include <string.h>
 
-is.insieme.o: is.insieme.c
+typedef struct pStruct {
+	char name[30];
+	unsigned age;
+} Person;
 
-is.insieme.c: $(INSIEME_SRC_DIR)//test/nas/is/is.c
-	$(INSIEME_BUILD_DIR)/code/driver/main -I$(INSIEME_SRC_DIR)/test/nas/is -I$(INSIEME_SRC_DIR)/test/nas/common \
-			 $(INSIEME_SRC_DIR)/test/nas/is/is.c \
-			 $(INSIEME_SRC_DIR)/test/nas/common/c_timers.c \
-			 $(INSIEME_SRC_DIR)/test/nas/common/wtime.c \
-			 $(INSIEME_SRC_DIR)/test/nas/common/c_print_results.c -P --dump-ir=is.inspire --show-ir=is.dot -o is.insieme.c
-	
-clean:
-	rm -f is.insieme.c 
+Person getPerson() {
+	Person res;
+	strcpy(res.name, "John Doe");
+	res.age = 101;
+}
+
+bool isTeenager(Person person) {
+	return person.age >= 10 && person.age < 20;
+}
+
+int main(int argc, char* argv[]) {
+	Person mrX = getPerson();
+	return isTeenager(mrX);
+}

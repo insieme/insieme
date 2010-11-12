@@ -46,6 +46,7 @@ namespace clang {
 class ASTContext;
 class DeclGroupRef;
 class FunctionDecl;
+class InitListExpr;
 namespace idx {
 class Indexer;
 class Program;
@@ -83,6 +84,7 @@ class ConversionFactory {
 	std::auto_ptr<ClangStmtConverter> stmtConv;
 
 	core::ExpressionPtr lookUpVariable(const clang::VarDecl* varDecl);
+	core::ExpressionPtr convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const;
 	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
 	friend class ASTConverter;
@@ -102,6 +104,7 @@ public:
 	core::ExpressionPtr 	 convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 	core::ExpressionPtr	 	 defaultInitVal(const core::TypePtr& type) const;
+	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const ;
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
 };
