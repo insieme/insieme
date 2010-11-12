@@ -558,9 +558,36 @@ public:
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							BINARY OPERATOR
+	//
+	// [C99 6.5.2.3] Structure and Union Members. X->F and X.F.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membexpr)  {
-		assert(false && "MemberExpr not yet handled");
+	core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membExpr)  {
+		START_LOG_EXPR_CONVERSION(membExpr);
+		const core::ASTBuilder& builder = convFact.builder;
+
+		core::ExpressionPtr&& base = tryDeref(builder, Visit(membExpr->getBase()));
+		if(membExpr->isArrow()) {
+			// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
+			base = tryDeref(builder, Visit(membExpr->getBase()));
+			DLOG(INFO) << *base->getType();
+			if(core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ||
+				core::dynamic_pointer_cast<const core::ArrayType>(base->getType())) {
+
+				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType());
+				assert(subTy);
+				base = builder.callExpr( subTy->getElementType(), core::lang::OP_SUBSCRIPT_SINGLE_PTR,
+						toVector<core::ExpressionPtr>(base, builder.literal("0", core::lang::TYPE_INT_4_PTR)) );
+				base = tryDeref(builder, base);
+			}
+			DLOG(INFO) << *base->getType();
+		}
+		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
+
+		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(base, ident);
+		// handle eventual pragmas attached to the Clang node
+		frontend::omp::attachOmpAnnotation(retExpr, membExpr, convFact);
+
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

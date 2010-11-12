@@ -118,6 +118,20 @@ void unary_op_test() {
 	--a;
 }
 
+
+struct Person { int weigth; int age; };
+
+void member_access_test() {
+	struct Person p;
+
+	#pragma test "( *v1).weigth"
+	p.weigth;
+
+	struct Person* ptr = &p;
+	// #pragma test "( *(( *v1)[0])).age"
+	ptr->age;
+}
+
 void if_stmt_test() {
 
 	int cond = 0;
