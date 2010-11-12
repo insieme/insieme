@@ -38,13 +38,15 @@
 
 #pragma insieme mark
 __kernel __attribute__((reqd_work_group_size(1,2,3))) void hallo(__constant double con, __global float* dfb, __local short pa,  int i) {
-     float4 x = {0.0f, 0.1f, 0.2f, 5.3f};
+//     float4 x;// = {0.0f, 0.1f, 0.2f, 5.3f};
     __local float a = 0.0f;
-    __local float4 b = {1.0f, 2.1f, 3.2f, 4.3f};
+    __private short prvt = 3;
+    int p = prvt;
+/*    __local float4 b;// = {1.0f, 2.1f, 3.2f, 4.3f};
 //    int2 c;
-    b = b + x;
+//    b = b + x;
     b.s1 = dfb[0];
-
+*/
 //    int id = get_global_id(0);
 
 
@@ -94,3 +96,4 @@ fun(real<8> v31, array<ref<real<4>>,1> v32, int<2> v27, int<4> v28, vector<uint<
         )
     )
 }*/
+

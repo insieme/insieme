@@ -365,14 +365,14 @@ private:
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
         --n;
         if(n == 0) {
-            return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
+            return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(
                     vec, builder.literal("0", core::lang::TYPE_UINT_4_PTR )));
         }
 
 
-        return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_INT_MUL_PTR,
+        return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_UINT_MUL_PTR,
             toVector<core::ExpressionPtr>( vecProduct(vec, n),
-                    builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>(
+                    builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(
                             vec, builder.literal(toString(n), core::lang::TYPE_UINT_4_PTR ))) ));
     }
 
@@ -465,6 +465,7 @@ public:
 
             bool isKernelFunction = false;
             bool workGroupSizeDefined = false;
+            auto cName = element.getAnnotation(c_info::CNameAnnotation::KEY);
             auto funcAnnotation = element.getAnnotation(ocl::BaseAnnotation::KEY);
             if(funcAnnotation) {
 
@@ -568,7 +569,6 @@ public:
             //Maybe prettier in another mapper
             const core::StatementPtr& oldBody = func->getBody();
 
-            //TODO add parallel statements for the localRange
             if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(*builder.getNodeManager(), kernelMapper))){
                 // parallel function's type, equal for all
                 core::TupleType::ElementTypeList parArgs;
@@ -677,7 +677,7 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
 //                const core::ExpressionPtr& idx = builder.literal(toString(0), core::lang::TYPE_UINT_4_PTR);
 
                 // calculate localRange[0] * localRange[1] * localRange[2] to use as maximum number of threads
-                core::ExpressionPtr localRangeProduct = vecProduct(localRange, 3);
+                core::ExpressionPtr localRangeProduct = vecProduct(ranges.at(1), 3);
 
                 expr.push_back(localRangeProduct);
 
@@ -712,7 +712,7 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
                 expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
 
                 // calculate globalRange[0] * globalRange[1] * globalRange[2] to use as maximum number of threads
-                core::ExpressionPtr globalRangeProduct = vecProduct(globalRange, 3);
+                core::ExpressionPtr globalRangeProduct = vecProduct(ranges.at(1), 3);
                 expr.push_back(globalRangeProduct);
 
                 expr.push_back(globalJob);
@@ -736,8 +736,9 @@ std::cout << "Ready to map: " << variableMapping.size() << std::endl;
                 kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
-                // TODO check why it does not work
                 newFunc.addAnnotation(funcAnnotation);
+                // put cname annotation to the new function
+                newFunc.addAnnotation(cName);
 
                 return newFunc;
             }
