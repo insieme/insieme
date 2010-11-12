@@ -366,14 +366,9 @@ public:
 
 public:
 
-	void visitStructExpr(const StructExprPtr& ptr) {
-		//cStr << "struct ";
-		//internalVisitComposite(ptr);
-	}
+	void visitStructExpr(const StructExprPtr& ptr);
 
-	void visitUnionExpr(const UnionExprPtr& ptr) {
-		//
-	}
+	void visitUnionExpr(const UnionExprPtr& ptr);
 
 	void visitTupleExpr(const TupleExprPtr& ptr) {
 		// TODO check when to use ref()/cref()
