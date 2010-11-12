@@ -55,6 +55,8 @@
 #include "insieme/utils/functional_utils.h"
 
 #include "insieme/simple_backend/code_management.h"
+#include "insieme/simple_backend/type_manager.h"
+#include "insieme/simple_backend/name_generator.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -62,45 +64,9 @@ namespace simple_backend {
 using namespace core;
 
 
-/** Generates unique names for anonymous AST nodes when required.
- ** Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
- ** for the same node in different circumstances. Names will, however, stay the same for unchanged 
- ** programs over multiple runs of the compiler.
- ** */
-class NameGenerator {
-	unsigned long num;
-
-public:
-	NameGenerator() : num(0) { }
-
-	std::unordered_map<NodePtr, string, hash_target<NodePtr>, equal_target<NodePtr>> nameMap; 
-
-	string getName(const NodePtr& ptr, const string fragment = "");
-
-	string getVarName(const VariablePtr& var);
-};
-
 // TODO more sane dependency handling / move forward declaration
 class ConversionContext;
 
-/** Manages C type generation and lookup for IR types.
- ** */
-class TypeManager : public ASTVisitor<string> {
-	ConversionContext& cc;
-	bool visitStarting, declVisit;
-
-public:
-	TypeManager(ConversionContext& conversionContext) : cc(conversionContext) { }
-
-	string getTypeName(const core::TypePtr type, bool inDecl = false);
-	string getTypeDecl(const core::TypePtr type);
-	CodePtr getTypeDefinition(const core::TypePtr type);
-
-	string visitRefType(const RefTypePtr& ptr);
-	string visitGenericType(const GenericTypePtr& ptr);
-	string visitStructType(const StructTypePtr& ptr);
-	string visitVectorType(const VectorTypePtr& ptr);
-};
 
 /** Manages C function generation and lookup for named lambda expressions.
  ** */
@@ -179,7 +145,7 @@ class ConversionContext {
 public:
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
 	// (the base class initializers do not dereference it)
-	ConversionContext() : typeMan(*this), funcMan(*this) { }
+	ConversionContext() : typeMan(nameGen), funcMan(*this) { }
 	
 	//typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
 
@@ -422,6 +388,8 @@ public:
 		}
 		cStr << ")";
 	}
+
+	void visitMemberAccessExpr(const MemberAccessExprPtr& ptr);
 
 	void visitVariable(const VariablePtr& ptr);
 

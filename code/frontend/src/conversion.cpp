@@ -949,7 +949,7 @@ public:
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(base, idx) );
+			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(base, convFact.builder.castExpr(core::lang::TYPE_UINT_4_PTR, idx)) );
 
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -984,7 +984,7 @@ public:
         // if the type of the vector is a refType, we deref it
         base = tryDeref(convFact.builder, base);
 
-        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(convFact.builder.refType(exprTy), core::lang::OP_SUBSCRIPT_PTR, toVector( base, idx ));
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(convFact.builder.refType(exprTy), core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector( base, idx ));
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
     }
@@ -2155,8 +2155,11 @@ public:
 		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> ref<'a>
-		if(*subTy == core::lang::TYPE_UNIT_VAL)
-			subTy = core::lang::TYPE_ALPHA_PTR;
+		if(*subTy == core::lang::TYPE_UNIT_VAL) {
+			subTy = core::lang::TYPE_REF_ALPHA_PTR;
+			END_LOG_TYPE_CONVERSION( subTy );
+			return subTy;
+		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr&& retTy = convFact.builder.arrayType( convFact.builder.refType(subTy) );
 		END_LOG_TYPE_CONVERSION( retTy );
