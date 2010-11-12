@@ -417,7 +417,7 @@ private:
             (*I) = builder.declarationStmt(initVal, (*I)->getInitialization());
         }
     }
-    
+/*
     // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
     void getInitialVariables(VariableMapping& variableMapping) {
         // constant arguments
@@ -439,7 +439,7 @@ private:
         // not needed, is it?
 
     }
-
+*/
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
