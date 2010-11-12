@@ -76,7 +76,6 @@ TEST(StmtConversion, FileTest) {
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
 
 	std::for_each(pl.begin(), pl.end(),
 		[ & ](const PragmaPtr curr) {
@@ -87,7 +86,7 @@ TEST(StmtConversion, FileTest) {
 			clang::idx::Program p;
 			clang::idx::Indexer idx(p);
 
-			ConversionFactory convFactory( shared, comp, prog.getClangIndexer(), prog.getClangProgram(), pl );
+			ConversionFactory convFactory( shared, prog, pl );
 
 			if(tp->isStatement()) {
 				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );

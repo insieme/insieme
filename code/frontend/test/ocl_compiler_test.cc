@@ -119,7 +119,7 @@ public:
         core::JobExpr::ChildList childs = j.getChildList();
 
         //at least the local and global range has to be captured
-        EXPECT_LE(3, childs.size());
+        EXPECT_LE(static_cast<unsigned>(3), childs.size());
 
         for(auto I = childs.begin(), E= childs.end(); I != E; ++I) {
             std::cout << "job's child: ";

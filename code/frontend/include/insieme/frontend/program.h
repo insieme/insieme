@@ -40,6 +40,12 @@
 
 #include "insieme/frontend/compiler.h"
 
+namespace clang {
+namespace idx {
+class TranslationUnit;
+} // end idx namespace
+} // end clang namespace
+
 namespace insieme {
 namespace frontend {
 
@@ -63,7 +69,7 @@ public:
 	const std::string& 	 getFileName() const { return mFileName; }
 };
 
-typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
+typedef TranslationUnit* TranslationUnitPtr;
 
 // ------------------------------------ Program ---------------------------
 /**
@@ -85,9 +91,6 @@ class Program: public boost::noncopyable {
 
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
-
-	clang::idx::Program& getClangProgram();
-	clang::idx::Indexer& getClangIndexer();
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 
@@ -114,6 +117,11 @@ public:
 	 * Returns a list of parsed translation units
 	 */
 	const TranslationUnitSet& getTranslationUnits() const;
+
+	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
+
+	clang::idx::Program& getClangProgram();
+	clang::idx::Indexer& getClangIndexer();
 
 	void dumpCallGraph() const;
 };

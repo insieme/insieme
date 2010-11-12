@@ -65,23 +65,23 @@ class ASTConverter;
  */
 class ConversionFactory {
 
+	// PIMPL pattern
 	class ClangStmtConverter;
 	class ClangTypeConverter;
 	class ClangExprConverter;
+	std::auto_ptr<ClangTypeConverter> typeConv;
+	std::auto_ptr<ClangExprConverter> exprConv;
+	std::auto_ptr<ClangStmtConverter> stmtConv;
 
+	// PIMPL pattern
 	class ConversionContext;
 	std::auto_ptr<ConversionContext> ctx;
 
 	core::SharedNodeManager mgr;
 	const core::ASTBuilder  builder;
-    const ClangCompiler& 	clangComp;
-    clang::idx::Indexer& 	indexer;
-    clang::idx::Program& 	clangProg;
+    Program& 				program;
     PragmaStmtMap 	 		pragmaMap;
-
-	std::auto_ptr<ClangTypeConverter> typeConv;
-	std::auto_ptr<ClangExprConverter> exprConv;
-	std::auto_ptr<ClangStmtConverter> stmtConv;
+    const TranslationUnit*	currTU;
 
 	core::ExpressionPtr lookUpVariable(const clang::VarDecl* varDecl);
 	core::ExpressionPtr convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const;
@@ -89,8 +89,7 @@ class ConversionFactory {
 
 	friend class ASTConverter;
 public:
-	ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, clang::idx::Indexer& indexer, clang::idx::Program& clangProg,
-			const PragmaList& pragmaList = PragmaList());
+	ConversionFactory(core::SharedNodeManager mgr, Program& program, const PragmaList& pList);
 
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
@@ -114,21 +113,22 @@ public:
  *
  */
 class ASTConverter {
-	const ClangCompiler& mComp;
+	Program& mProg;
 	ConversionFactory    mFact;
 	core::ProgramPtr     mProgram;
-	const PragmaList&	 pragmaList;
 
 public:
-	ASTConverter(const ClangCompiler& clangComp, clang::idx::Indexer& indexer, clang::idx::Program& clangProg, const core::ProgramPtr prog,
-		const core::SharedNodeManager& mgr, const PragmaList& pragmaList) :
-			mComp(clangComp), mFact(mgr, clangComp, indexer, clangProg, pragmaList), mProgram(prog), pragmaList(pragmaList) { }
+	ASTConverter(Program& prog, const core::SharedNodeManager& mgr, const PragmaList& pList) :
+		mProg(prog), mFact(mgr, prog, pList), mProgram(prog.getProgram()) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
-	core::ExpressionPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl) { return mFact.convertFunctionDecl(funcDecl); }
-	core::LambdaExprPtr	handleBody(const clang::Stmt* body);
-	core::ProgramPtr 	handleTranslationUnit(const clang::DeclContext* declCtx);
+	core::ExpressionPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, const TranslationUnit& tu) {
+		mFact.currTU = &tu;
+		return mFact.convertFunctionDecl(funcDecl);
+	}
+	core::LambdaExprPtr	handleBody(const clang::Stmt* body, const TranslationUnit& tu);
+	core::ProgramPtr 	handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu);
 };
 
 

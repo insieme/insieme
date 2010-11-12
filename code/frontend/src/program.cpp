@@ -62,6 +62,8 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/ExternalSemaSource.h"
 
+#include "insieme/utils/set_utils.h"
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::frontend;
@@ -142,7 +144,7 @@ namespace insieme {
 namespace frontend {
 
 struct Program::ProgramImpl {
-	TranslationUnitSet tranUnits;
+	TranslationUnitSet tranUnits; // FIXME DELETE MEMORY
 
 	clang::idx::Program  mProg;
 	clang::idx::Indexer  mIdx;
@@ -169,6 +171,10 @@ clang::idx::Indexer& Program::getClangIndexer() { return pimpl->mIdx; }
 
 void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
 
+const TranslationUnit& Program::getTranslationUnit(const clang::idx::TranslationUnit* tu) {
+	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
+}
+
 namespace {
 /**
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
@@ -183,13 +189,12 @@ core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::Shared
 const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
-	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
-
-		const ClangCompiler& comp = (*it)->getCompiler();
+	PragmaList pragmas;
+	for(auto it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
 		const PragmaList& pList = (*it)->getPragmaList();
-		conversion::ASTConverter conv(comp, pimpl->mIdx, pimpl->mProg, mProgram, mMgr, pList);
+		conversion::ASTConverter conv(*this, mMgr, pList);
 
-		for(PragmaList::const_iterator pit = pList.begin(), pend = pList.end(); pit != pend; ++pit)
+		for(PragmaList::const_iterator pit = pragmas.begin(), pend = pragmas.end(); pit != pend; ++pit)
 			if((*pit)->getType() == "insieme::mark") {
 				insiemePragmaFound = true;
 				const Pragma& insiemePragma = **pit;
@@ -199,13 +204,13 @@ const core::ProgramPtr& Program::convert() {
 					const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
 					assert(funcDecl && "Pragma insieme only valid for function declarations.");
 
-					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleFunctionDecl(funcDecl));
+					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleFunctionDecl(funcDecl, **it));
 				} else {
 					// insieme pragma associated to a statement, in this case we convert the body
 					// and create an anonymous lambda expression to enclose it
 					const clang::Stmt* body = insiemePragma.getStatement();
 					assert(body && "Pragma matching failed!");
-					core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body);
+					core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, **it);
 					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
 				}
 			}
@@ -221,10 +226,10 @@ const core::ProgramPtr& Program::convert() {
 		const ClangCompiler& comp = (*it)->getCompiler();
 		const PragmaList& pList = (*it)->getPragmaList();
 
-		conversion::ASTConverter conv(comp, pimpl->mIdx, pimpl->mProg, mProgram, mMgr, pList);
+		conversion::ASTConverter conv(*this, mMgr, pList);
 		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
 
-		conv.handleTranslationUnit(declRef);
+		conv.handleTranslationUnit(declRef, **it);
 		mProgram = conv.getProgram();
 	}
 	mProgram = addParallelism(mProgram, mMgr);

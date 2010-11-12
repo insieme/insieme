@@ -270,7 +270,7 @@ c_info::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocatio
 #define START_LOG_EXPR_CONVERSION(expr) \
 	DVLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
-			 << "-> at location: (" << utils::location(expr->getLocStart(), convFact.clangComp.getSourceManager()) << "): "; \
+			 << "-> at location: (" << utils::location(expr->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		DVLOG(2) << "Dump of clang expression: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
@@ -360,7 +360,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
-				GetStringFromStream( convFact.clangComp.getSourceManager(), intLit->getExprLoc()),
+				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc()),
 				convFact.convertType( GET_TYPE_PTR(intLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -375,7 +375,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			// retrieve the string representation from the source code
 			convFact.builder.literal(
-				GetStringFromStream( convFact.clangComp.getSourceManager(), floatLit->getExprLoc()),
+				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), floatLit->getExprLoc()),
 				convFact.convertType( GET_TYPE_PTR(floatLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -390,7 +390,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
-				GetStringFromStream(convFact.clangComp.getSourceManager(), charLit->getExprLoc()),
+				GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
 					(charLit->isWide() ? convFact.builder.genericType("wchar") : convFact.builder.genericType("char"))
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -404,7 +404,7 @@ public:
 		START_LOG_EXPR_CONVERSION(stringLit);
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
-				GetStringFromStream( convFact.clangComp.getSourceManager(), stringLit->getExprLoc()),
+				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc()),
 				convFact.builder.genericType(core::Identifier("string"))
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
@@ -419,7 +419,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			// retrieve the string representation from the source code
 			convFact.builder.literal(
-				GetStringFromStream(convFact.clangComp.getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR
+				GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), boolLit->getExprLoc()), core::lang::TYPE_BOOL_PTR
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -475,7 +475,7 @@ public:
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr) {
-		// START_LOG_EXPR_CONVERSION(callExpr);
+		START_LOG_EXPR_CONVERSION(callExpr);
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			const core::ASTBuilder& builder = convFact.builder;
 
@@ -490,13 +490,20 @@ public:
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
+			const TranslationUnit* oldTU = convFact.currTU;
+
 			const FunctionDecl* definition = NULL;
 			// this will find function definitions if they are declared in  the same translation unit (also defined as static)
 			if( !funcDecl->hasBody(definition) ) {
 				// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 				// use the clang indexer to lookup the definition for this function declarations
-				clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, const_cast<clang::idx::Program&>(convFact.clangProg));
-				definition = convFact.indexer.getDefinitionFor(funcEntity).first;
+				clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, const_cast<clang::idx::Program&>(convFact.program.getClangProgram()));
+				std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = convFact.program.getClangIndexer().getDefinitionFor(funcEntity);
+				if(ret.first) {
+					definition = ret.first;
+					assert(ret.second);
+					convFact.currTU = &Program::getTranslationUnit(ret.second);
+				}
 			}
 			if(!definition) {
 				// No definition has been found in any of the translation units, we mark this function as extern!
@@ -515,6 +522,7 @@ public:
 				ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
 				if( fit != ctx.recVarExprMap.end() ) {
 					// we are resolving a parent recursive type, so we shouldn't
+					convFact.currTU = oldTU;
 					return builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
 				}
 			}
@@ -522,6 +530,7 @@ public:
 			if(!ctx.isResolvingRecFuncBody) {
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if(fit != ctx.lambdaExprCache.end()) {
+					convFact.currTU = oldTU;
 					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
 					// handle eventual pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
@@ -531,6 +540,7 @@ public:
 
 			assert(definition && "No definition found for function");
 			core::ExpressionPtr&& lambdaExpr = convFact.convertFunctionDecl(definition);
+			convFact.currTU = oldTU;
 
 			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
@@ -1008,13 +1018,14 @@ public:
 
 
 #define START_LOG_STMT_CONVERSION(stmt) \
+	assert(convFact.currTU); \
 	DVLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
-			 << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.clangComp.getSourceManager()) << "): "; \
+			 << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		DVLOG(2) << "Dump of clang statement:\n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		stmt->dump(convFact.clangComp.getSourceManager()); \
+		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
 	}
 
 #define END_LOG_STMT_CONVERSION(stmt) \
@@ -2173,17 +2184,16 @@ private:
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, const ClangCompiler& clang, clang::idx::Indexer& indexer,
-	clang::idx::Program& clangProg, const PragmaList& pragmaList):
-	// cppcheck-suppress exceptNew
-	ctx(new ConversionContext),
-	mgr(mgr),  builder(mgr), clangComp(clang), indexer(indexer), clangProg(clangProg), pragmaMap(pragmaList),
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, Program& prog, const PragmaList& pragmaList):
 	// cppcheck-suppress exceptNew
 	typeConv( new ClangTypeConverter(*this) ),
 	// cppcheck-suppress exceptNew
 	exprConv( new ClangExprConverter(*this) ),
 	// cppcheck-suppress exceptNew
-	stmtConv( new ClangStmtConverter(*this) ) { }
+	stmtConv( new ClangStmtConverter(*this) ),
+	// cppcheck-suppress exceptNew
+	ctx(new ConversionContext),
+	mgr(mgr),  builder(mgr), program(prog), pragmaMap(pragmaList), currTU(NULL) { }
 
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) const {
 	assert(type && "Calling convertType with a NULL pointer");
@@ -2261,7 +2271,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 	}}
 	catch(std::ostringstream *errMsg) {
         //show errors if unexpected patterns were found
-        printErrorMsg(*errMsg, clangComp, varDecl);
+        printErrorMsg(*errMsg, currTU->getCompiler(), varDecl);
 	}
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
@@ -2448,10 +2458,11 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 }
 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
+
 	// logging
 	DVLOG(1) << "\n****************************************************************************************\n"
 			 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
-			 << "-> at location: (" << utils::location(varDecl->getLocation(), clangComp.getSourceManager()) << "): ";
+			 << "-> at location: (" << utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
 	if( VLOG_IS_ON(2) ) { \
 		DVLOG(2) << "Dump of clang VarDecl: \n"
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
@@ -2492,7 +2503,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// logging
 	DVLOG(1) << "Converted into IR stmt: ";
 	DVLOG(1) << "\t" << *retStmt;
-
 	return retStmt;
 }
 
@@ -2542,8 +2552,8 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 	}
 
 	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-		convertClangSrcLoc(clangComp.getSourceManager(), loc.first),
-		convertClangSrcLoc(clangComp.getSourceManager(), loc.second))
+		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
+		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
 	);
 }
 
@@ -2555,6 +2565,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	assert(funcDecl->hasBody() && "Function has no body!");
 	DVLOG(1) << "#----------------------------------------------------------------------------------#";
 	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
+			 << "-> at location: (" << utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager()) << "): " << std::endl
 			 << "\tIsRecSubType: " << ctx->isRecSubFunc << std::endl
 			 << "\tEmpty map: "    << ctx->recVarExprMap.size();
 
@@ -2741,9 +2752,9 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 // ------------------------------------ ClangTypeConverter ---------------------------
 
-core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx) {
-
-	analysis::GlobalVarCollector globColl(mFact.indexer, mFact.ctx->globalFuncMap);
+core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu) {
+	mFact.currTU = &tu;
+	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx->globalFuncMap);
 	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
 		Decl* decl = *it;
 
@@ -2771,7 +2782,8 @@ core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* d
 	return mProgram;
 }
 
-core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body) {
+core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
+	mFact.currTU = &tu;
 	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
 	core::CallExprPtr&& callExpr = createCallExpr(mFact.getASTBuilder(), toVector<core::StatementPtr>(bodyStmt), core::lang::TYPE_UNIT);
 
@@ -2797,12 +2809,12 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body) {
 		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
 		loc.first = fit->second->getStartLocation();
 	}
-	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-		convertClangSrcLoc(mComp.getSourceManager(), loc.first),
-		convertClangSrcLoc(mComp.getSourceManager(), loc.second),
-		false, // this is not a function decl
-		args)
-	);
+//	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+//		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
+//		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second),
+//		false, // this is not a function decl
+//		args)
+//	);
 
 	return lambdaExpr;
 }
