@@ -144,7 +144,7 @@ namespace insieme {
 namespace frontend {
 
 struct Program::ProgramImpl {
-	TranslationUnitSet tranUnits; // FIXME DELETE MEMORY
+	TranslationUnitSet tranUnits;
 
 	clang::idx::Program  mProg;
 	clang::idx::Indexer  mIdx;
@@ -157,11 +157,12 @@ struct Program::ProgramImpl {
 
 Program::Program(const core::SharedNodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(*mgr) ) { }
 
-void Program::addTranslationUnit(const std::string& file_name) {
+TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, mProgram, mMgr);
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
+	return *tuImpl;
 }
 
 const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }

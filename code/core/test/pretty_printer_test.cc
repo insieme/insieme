@@ -45,9 +45,11 @@ using namespace insieme::core::printer;
 TEST(PrettyPrinter, Basic) {
 
 	// check setup
-	EXPECT_EQ(0, PrettyPrinter::OPTIONS_DEFAULT);
-	EXPECT_EQ(PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS, PrettyPrinter::OPTIONS_DETAIL);
-	EXPECT_EQ(PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE, PrettyPrinter::OPTIONS_SINGLE_LINE);
+	EXPECT_EQ(static_cast<unsigned>(0), PrettyPrinter::OPTIONS_DEFAULT);
+	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS),
+			PrettyPrinter::OPTIONS_DETAIL);
+	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE),
+			PrettyPrinter::OPTIONS_SINGLE_LINE);
 
 	NodePtr ptr;
 

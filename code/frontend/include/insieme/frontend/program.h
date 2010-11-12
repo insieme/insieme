@@ -99,7 +99,7 @@ public:
 	/**
 	 * Add a single file to the program
 	 */
-	void addTranslationUnit(const std::string& fileName);
+	TranslationUnit& addTranslationUnit(const std::string& fileName);
 
 	/**
 	 * Add multiple files to the program

@@ -69,7 +69,7 @@ struct VariableResetHack {
 TEST(StmtConversion, FileTest) {
 
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
-	CommandLineOptions::Verbosity = 0;
+	CommandLineOptions::Verbosity = 1;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);
@@ -83,10 +83,8 @@ TEST(StmtConversion, FileTest) {
 			// we reset the counter for variables so we can write independent tests
 			VariableResetHack::reset();
 
-			clang::idx::Program p;
-			clang::idx::Indexer idx(p);
-
 			ConversionFactory convFactory( shared, prog, pl );
+			convFactory.setTranslationUnit(**prog.getTranslationUnits().begin());
 
 			if(tp->isStatement()) {
 				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );

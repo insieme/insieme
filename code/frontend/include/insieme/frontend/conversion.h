@@ -40,6 +40,7 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/utils/dep_graph.h"
 
 // Forward declarations
 namespace clang {
@@ -52,6 +53,14 @@ class Indexer;
 class Program;
 } // End idx namespace
 } // End clang namespace
+
+
+namespace {
+typedef vector<insieme::core::StatementPtr>  StatementList;
+typedef vector<insieme::core::ExpressionPtr> ExpressionList;
+
+#define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
+}
 
 namespace insieme {
 namespace frontend {
@@ -67,15 +76,73 @@ class ConversionFactory {
 
 	// PIMPL pattern
 	class ClangStmtConverter;
-	class ClangTypeConverter;
-	class ClangExprConverter;
-	std::auto_ptr<ClangTypeConverter> typeConv;
-	std::auto_ptr<ClangExprConverter> exprConv;
+	static ClangStmtConverter* makeStmtConverter(ConversionFactory& fact);
 	std::auto_ptr<ClangStmtConverter> stmtConv;
 
-	// PIMPL pattern
-	class ConversionContext;
-	std::auto_ptr<ConversionContext> ctx;
+	class ClangTypeConverter;
+	static ClangTypeConverter* makeTypeConverter(ConversionFactory& fact);
+	std::auto_ptr<ClangTypeConverter> typeConv;
+
+	class ClangExprConverter;
+	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
+	std::auto_ptr<ClangExprConverter> exprConv;
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							ConversionContext
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Keeps all the information gathered during the conversion process.
+	// Maps for variable names, cached resolved function definitions and so on...
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	struct ConversionContext {
+
+		// Maps Clang variable declarations (VarDecls and ParmVarDecls) to an
+		// IR variable.
+		typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
+		VarDeclMap varDeclMap;
+
+		// Map for resolved lambda functions
+		typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
+		LambdaExprMap lambdaExprCache;
+
+		// CallGraph for functions, used to resolved eventual recursive functions
+		insieme::frontend::utils::DependencyGraph<const clang::FunctionDecl*> funcDepGraph;
+
+		// Maps a function with the variable which has been introduced to represent
+		// the function in the recursive definition
+		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
+		RecVarExprMap recVarExprMap;
+
+		bool isRecSubFunc;
+		bool isResolvingRecFuncBody;
+		core::VariablePtr currVar;
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						Recursive Type resolution
+		insieme::frontend::utils::DependencyGraph<const clang::Type*> typeGraph;
+
+		typedef std::map<const clang::Type*, insieme::core::TypeVariablePtr> TypeRecVarMap;
+		TypeRecVarMap recVarMap;
+		bool isRecSubType;
+
+		typedef std::map<const clang::Type*, insieme::core::TypePtr> RecTypeMap;
+		RecTypeMap recTypeCache;
+
+		bool isResolvingFunctionType;
+
+		// Gloabal and static variables
+		// map which stores, for each static or global variable, the identifier which will be used
+		// as identification within the global data structure and the initialization value
+		core::VariablePtr   globalVar;
+
+		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
+		UseGlobalFuncMap	globalFuncMap;
+		core::VariablePtr	currGlobalVar;
+
+		core::StructTypePtr globalStructType;
+		core::StructExprPtr	globalStructExpr;
+
+		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
+	} ctx;
 
 	core::SharedNodeManager mgr;
 	const core::ASTBuilder  builder;
@@ -89,7 +156,7 @@ class ConversionFactory {
 
 	friend class ASTConverter;
 public:
-	ConversionFactory(core::SharedNodeManager mgr, Program& program, const PragmaList& pList);
+	ConversionFactory(core::SharedNodeManager mgr, Program& program, const PragmaList& pList = PragmaList());
 
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
@@ -106,6 +173,12 @@ public:
 	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const ;
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
+
+	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
+	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
+
+	core::CallExprPtr createCallExpr(const StatementList& body, core::TypePtr retTy, bool useCapture=false) const;
+
 };
 
 // ------------------------------------ ASTConverter ---------------------------

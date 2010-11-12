@@ -44,8 +44,8 @@ void InitLogger(const char* progName, google::LogSeverity level, bool enableFail
 	InitGoogleLogging(progName);
 
 	//FIXME: InstallFailureSignalHandler does not link in Visual Studios
-	//if(enableFailureHandler)
-	//	InstallFailureSignalHandler();
+	if(enableFailureHandler)
+		InstallFailureSignalHandler();
 
 	// force logging to stderr
 	LogToStderr();

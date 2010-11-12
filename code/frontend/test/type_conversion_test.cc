@@ -64,150 +64,137 @@ using namespace insieme::frontend::conversion;
 	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); \
 	operator delete (builtin); }
 
-//TEST(TypeConversion, HandleBuildinType) {
-//
-//	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
-//
-//	SharedNodeManager shared = std::make_shared<NodeManager>();
-//	core::ProgramPtr prog = core::Program::create(*shared);
-//	ClangCompiler clangComp;
-//	clang::idx::Program p;
-//	clang::idx::Indexer idx(p);
-//	ConversionFactory convFactory( shared,  );
-//
-//	// VOID
-//	//CHECK_BUILTIN_TYPE(Void, "unit");
-//	// BOOL
-//	CHECK_BUILTIN_TYPE(Bool, "bool");
-//
-//	// UChar
-//	CHECK_BUILTIN_TYPE(UChar, "uchar");
-//	// Char
-//	CHECK_BUILTIN_TYPE(SChar, "char");
-//	// Char16
-//	CHECK_BUILTIN_TYPE(Char16, "char<2>");
-//	// Char32
-//	CHECK_BUILTIN_TYPE(Char32, "char<4>");
-//	// WChar
-//	CHECK_BUILTIN_TYPE(WChar, "wchar");
-//
-//	// UShort
-//	CHECK_BUILTIN_TYPE(UShort, "uint<2>");
-//	// Short
-//	CHECK_BUILTIN_TYPE(Short, "int<2>");
-//	// UInt
-//	CHECK_BUILTIN_TYPE(UInt, "uint<4>");
-//	// INT
-//	CHECK_BUILTIN_TYPE(Int, "int<4>");
-//
-//	// ULong
-//	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
-//	CHECK_BUILTIN_TYPE(ULongLong, "uint<8>");
-//
-//	CHECK_BUILTIN_TYPE(Long, "int<8>");
-//	CHECK_BUILTIN_TYPE(LongLong, "int<8>");
-//
-//	// UInt128
-//	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");
-//
-//	// Float
-//	CHECK_BUILTIN_TYPE(Float, "real<4>");
-//	// Double
-//	CHECK_BUILTIN_TYPE(Double, "real<8>");
-//	// LongDouble
-//	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
-//
-//}
-//
-//TEST(TypeConversion, HandlePointerType) {
-//
-//	using namespace clang;
-//
-//	SharedNodeManager shared = std::make_shared<NodeManager>();
-//	core::ProgramPtr prog = core::Program::create(*shared);
-//	ClangCompiler clang;
-//	clang::idx::Program p;
-//	clang::idx::Indexer idx(p);
-//	ConversionFactory convFactory( shared, clang, idx, p);
-//
-//	BuiltinType intTy(BuiltinType::Int);
-//	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
-//
-//	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
-//	EXPECT_TRUE(insiemeTy);
-//	EXPECT_EQ("array<ref<int<4>>,1>", insiemeTy->toString());
-//
-//}
-//
-//TEST(TypeConversion, HandleReferenceType) {
-//
-//	using namespace clang;
-//
-//	SharedNodeManager shared = std::make_shared<NodeManager>();
-//	core::ProgramPtr prog = core::Program::create(*shared);
-//
-//	ClangCompiler clang;
-//	clang::idx::Program p;
-//	clang::idx::Indexer idx(p);
-//	ConversionFactory convFactory( shared, clang, idx, p );
-//
-//	BuiltinType intTy(BuiltinType::Int);
-//	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
-//
-//	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
-//	EXPECT_TRUE(insiemeTy);
-//	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
-//
-//}
-//
-//TEST(TypeConversion, HandleStructType) {
-//
-//	using namespace clang;
-//
-//	SharedNodeManager shared = std::make_shared<NodeManager>();
-//	core::ProgramPtr prog = core::Program::create(*shared);
-//	clang::idx::Program p;
-//	clang::idx::Indexer idx(p);
-//	ClangCompiler clang;
-//	ConversionFactory convFactory( shared, clang, idx, p );
-//
-//	SourceLocation emptyLoc;
-//
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
-//
-//	// create a struct:
-//	// struct Person {
-//	//	char* name;
-//	//	unsigned short age;
-//	// };
-//	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-//			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
-//
-//	// creates 'char* name' field
-//	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-//			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
-//
-//	// creates 'unsigned short age' field
-//	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-//			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
-//
-//	decl->completeDefinition ();
-//
-//	// Gets the type for the record declaration
-//	QualType type = clang.getASTContext().getTagDeclType(decl);
-//
-//	// convert the type into an IR type
-//	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
-//	EXPECT_TRUE(insiemeTy);
-//	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
-//
-//	operator delete (charTy);
-//	operator delete (ushortTy);
-//}
-//
+TEST(TypeConversion, HandleBuildinType) {
+
+	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	insieme::frontend::Program prog(shared);
+	ConversionFactory convFactory( shared, prog );
+
+	// VOID
+	//CHECK_BUILTIN_TYPE(Void, "unit");
+	// BOOL
+	CHECK_BUILTIN_TYPE(Bool, "bool");
+
+	// UChar
+	CHECK_BUILTIN_TYPE(UChar, "uchar");
+	// Char
+	CHECK_BUILTIN_TYPE(SChar, "char");
+	// Char16
+	CHECK_BUILTIN_TYPE(Char16, "char<2>");
+	// Char32
+	CHECK_BUILTIN_TYPE(Char32, "char<4>");
+	// WChar
+	CHECK_BUILTIN_TYPE(WChar, "wchar");
+
+	// UShort
+	CHECK_BUILTIN_TYPE(UShort, "uint<2>");
+	// Short
+	CHECK_BUILTIN_TYPE(Short, "int<2>");
+	// UInt
+	CHECK_BUILTIN_TYPE(UInt, "uint<4>");
+	// INT
+	CHECK_BUILTIN_TYPE(Int, "int<4>");
+
+	// ULong
+	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
+	CHECK_BUILTIN_TYPE(ULongLong, "uint<8>");
+
+	CHECK_BUILTIN_TYPE(Long, "int<8>");
+	CHECK_BUILTIN_TYPE(LongLong, "int<8>");
+
+	// UInt128
+	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");
+
+	// Float
+	CHECK_BUILTIN_TYPE(Float, "real<4>");
+	// Double
+	CHECK_BUILTIN_TYPE(Double, "real<8>");
+	// LongDouble
+	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+
+}
+
+TEST(TypeConversion, HandlePointerType) {
+	using namespace clang;
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	insieme::frontend::Program prog(shared);
+	ConversionFactory convFactory( shared, prog );
+	ClangCompiler clang;
+
+	BuiltinType intTy(BuiltinType::Int);
+	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
+
+	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("array<ref<int<4>>,1>", insiemeTy->toString());
+
+}
+
+TEST(TypeConversion, HandleReferenceType) {
+	using namespace clang;
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	insieme::frontend::Program prog(shared);
+	ConversionFactory convFactory( shared, prog );
+	ClangCompiler clang;
+
+	BuiltinType intTy(BuiltinType::Int);
+	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
+
+	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
+
+}
+
+TEST(TypeConversion, HandleStructType) {
+	using namespace clang;
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	insieme::frontend::Program prog(shared);
+	ConversionFactory convFactory( shared, prog );
+	ClangCompiler clang;
+
+	SourceLocation emptyLoc;
+
+	// cppcheck-suppress exceptNew
+	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
+	// cppcheck-suppress exceptNew
+	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
+
+	// create a struct:
+	// struct Person {
+	//	char* name;
+	//	unsigned short age;
+	// };
+	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
+
+	// creates 'char* name' field
+	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
+
+	// creates 'unsigned short age' field
+	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
+
+	decl->completeDefinition ();
+
+	// Gets the type for the record declaration
+	QualType type = clang.getASTContext().getTagDeclType(decl);
+
+	// convert the type into an IR type
+	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
+
+	operator delete (charTy);
+	operator delete (ushortTy);
+}
+
 //TEST(TypeConversion, HandleRecursiveStructType) {
 //
 //	SharedNodeManager shared = std::make_shared<NodeManager>();
@@ -415,6 +402,7 @@ TEST(TypeConversion, FileTest) {
 		[ &prog, &shared, &pl ](const PragmaPtr curr) {
 			VariableResetHack::reset();
 			ConversionFactory convFactory( shared, prog, pl );
+			convFactory.setTranslationUnit(**prog.getTranslationUnits().begin());
 
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
 			if(tp->isStatement())
