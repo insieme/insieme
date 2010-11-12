@@ -475,7 +475,7 @@ public:
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr) {
-		START_LOG_EXPR_CONVERSION(callExpr);
+		// START_LOG_EXPR_CONVERSION(callExpr);
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			const core::ASTBuilder& builder = convFact.builder;
 
@@ -969,19 +969,7 @@ public:
     //                  VECTOR/STRUCT INITALIZATION EXPRESSION
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitInitListExpr(clang::InitListExpr* initList) {
-        START_LOG_EXPR_CONVERSION(initList);
-        ExpressionList elements;
-
-        // get all values of the init expression
-        for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-             elements.push_back( convFact.convertExpr( initList->getInit(i)) );
-        }
-
-        // create vector initializator
-        core::ExpressionPtr&& retExpr = convFact.builder.vectorExpr(elements);
-
-        END_LOG_EXPR_CONVERSION(retExpr);
-        return retExpr;
+		assert(false && "Visiting of initializer list is not allowed!");
     }
 };
 
@@ -2367,6 +2355,69 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     assert(false && "Default initialization type not defined");
 }
 
+/**
+ * InitListExpr describes an initializer list, which can be used to initialize objects of different types,
+ * InitListExpr including struct/class/union types, arrays, and vectors. For example:
+ *
+ * struct foo x = { 1, { 2, 3 } };
+ *
+ * In insieme this statement has to tranformed into a StructExpr, or VectorExpr depending on the type of the
+ * LHS expression.
+ */
+core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const {
+	bool isRef = false;
+	core::TypePtr currType = type;
+	if(core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		isRef = true;
+		currType = refType->getElementType();
+	}
+
+	core::ExpressionPtr retExpr;
+	if(core::dynamic_pointer_cast<const core::VectorType>(currType) || core::dynamic_pointer_cast<const core::ArrayType>(currType)) {
+		core::TypePtr elemTy = core::dynamic_pointer_cast<const core::SingleElementType>(currType)->getElementType();
+		ExpressionList elements;
+		// get all values of the init expression
+		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+			const clang::Expr* subExpr = initList->getInit(i);
+			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy);
+			// If the type is a refType we have to add a VAR.REF operation
+			elements.push_back( convExpr );
+		}
+		retExpr = builder.vectorExpr(elements);
+	}
+
+	// in the case the initexpr is used to initialize a struct/class we need to create a structExpr
+	// to initialize the structure
+	if(core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
+		core::StructExpr::Members members;
+		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+			const core::NamedCompositeType::Entry& curr = structTy->getEntries()[i];
+			members.push_back( core::StructExpr::Member(curr.first, convertInitExpr(initList->getInit(i), curr.second)) );
+		}
+		retExpr = builder.structExpr(members);
+	}
+
+	assert(retExpr && "Couldn't convert initialization expression");
+
+	if(isRef)
+		retExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( retExpr ) );
+	// create vector initializator
+	return retExpr;
+}
+
+core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const {
+	if(!expr)
+		return defaultInitVal(type);
+
+	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
+		return convertInitializerList( listExpr, type );
+
+	core::ExpressionPtr&& retExpr = convertExpr( expr );
+	if(core::dynamic_pointer_cast<const core::RefType>(type))
+		retExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( retExpr ) );
+	return retExpr;
+}
+
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 	// logging
 	DVLOG(1) << "\n****************************************************************************************\n"
@@ -2393,12 +2444,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 			type = builder.refType( type );
 
 		// initialization value
-		core::ExpressionPtr initExpr;
-		if( definition->getInit() ) {
-			initExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector(convertExpr( definition->getInit() )) );
-		} else {
-			initExpr = defaultInitVal( type );
-		}
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), type);
 
 		if(definition->hasGlobalStorage()) {
 			// once we encounter static variables we do remove the declaration

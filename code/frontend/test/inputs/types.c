@@ -62,23 +62,31 @@ void basic_type_test() {
 
     #pragma test "ref<vector<vector<ref<int<4>>,2>,3>> v1 = ref.var(vector.initUniform(vector.initUniform(ref.var(0))))"
 	int vv[3][2];
+
+	#pragma test "ref<vector<ref<real<4>>,3>> v1 = ref.var({ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0))})"
+	float vvv[3] = { 0, 0, 0 };
+
+	#pragma test "ref<vector<vector<ref<real<4>>,1>,2>> v1 = ref.var({{ref.var(cast<real<4>>(0))},{ref.var(cast<real<4>>(0))}})"
+	float vvvv[][1] = { {0}, {0} };
 }
 
 // Simple struct
-#pragma test "struct<name:array<ref<char>,1>,age:int<4>>"
+#pragma test "struct<height:int<4>,age:int<4>>"
 struct Person {
 	// cppcheck-suppress unusedStructMember
-	char* name;
+	int height;
 	// cppcheck-suppress unusedStructMember
 	int age;
 };
 
 void test_func() {
-	#pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
+	#pragma test \
+	"ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(struct{height=0, age=0})"
 	struct Person p;
 
-	// #pragma test "ref<struct<name:array<ref<char>,1>,age:int<4>>> v1 = ref.var(struct{name=null, age=0})" // FIXME: members should be ref
-	struct Person p2 = {"Simone", 28};
+	#pragma test \
+	"ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(struct{height=178, age=28})"
+	struct Person p2 = {178, 28};
 }
 
 // Self recursive struct
