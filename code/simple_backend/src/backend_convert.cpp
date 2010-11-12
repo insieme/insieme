@@ -46,7 +46,7 @@ namespace simple_backend {
 	
 using namespace core;
 
-std::ostream& printFunctionParamter(std::ostream& out, const VariablePtr& param, ConversionContext& cc) {
+std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, ConversionContext& cc) {
 
 	// register ref-based variable within the variable manager
 	if (param->getType()->getNodeType() == NT_RefType) {
@@ -55,31 +55,8 @@ std::ostream& printFunctionParamter(std::ostream& out, const VariablePtr& param,
 		cc.getVariableManager().addInfo(param, info);
 	}
 
-	// create output ...
-	TypePtr type = param->getType();
-	if (RefTypePtr ref = dynamic_pointer_cast<const RefType>(type)) {
-		TypePtr element = ref->getElementType();
-		if (element->getNodeType() == NT_VectorType) {
-
-			// special handling for references to vectors ...
-			// -- result has to look like float(* var)[5][5]
-
-			// assemble parameter entry ...
-			string res = "";
-			TypePtr cur = element;
-			while (cur->getNodeType() == NT_VectorType) {
-				VectorTypePtr curVec = static_pointer_cast<const VectorType>(cur);
-				res = res + "[" + toString(curVec->getSize()) + "]";
-				cur = curVec->getElementType();
-				if (cur->getNodeType() == NT_RefType) {
-					cur = static_pointer_cast<const RefType>(cur)->getElementType();
-				}
-			}
-			return out << cc.getTypeMan().getTypeName(cur) << "(* " << cc.getNameGen().getVarName(param) << ")" << res;
-		}
-	}
-
-	return out << cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param);
+	// format parameter using type manager
+	return out << cc.getTypeMan().formatParamter(context, param->getType(), cc.getNameGen().getVarName(param));
 }
 
 
@@ -100,10 +77,10 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
 	CodeStream& cs = cptr->getCodeStream();
 	// write the function header
-	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
+	cs << cc.getTypeMan().getTypeName(cptr, funType->getReturnType()) << " " << ident << "(";
 	// handle arguments
-	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const VariablePtr& param) {
-		printFunctionParamter(os, param, this->cc);
+	cs << join(", ", lambda->getParams(), [&, this](std::ostream& os, const VariablePtr& param) {
+		printFunctionParamter(os, cptr, param, this->cc);
 	});
 	cs << ")";
 	if(!isCompoundBody) cs << " {" << CodeStream::indR << "\n";
@@ -142,11 +119,11 @@ CodePtr FunctionManager::getFunction(const RecLambdaExprPtr& lambda, const CodeP
 		CodePtr cptr(new CodeFragment(string("fundecl_codefragment_") + ident));
 		CodeStream& cs = cptr->getCodeStream();
 		// write the function header
-		cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident << "(";
+		cs << cc.getTypeMan().getTypeName(surrounding, funType->getReturnType()) << " " << ident << "(";
 		// handle arguments
 		auto &cci = cc;
 		cs << join(", ", cur.second->getParams(), [&](std::ostream& os, const VariablePtr& param) -> std::ostream& {
-			return (os << cci.getTypeMan().getTypeName(param->getType()) << " " << cci.getNameGen().getVarName(param));
+			return (os << cci.getTypeMan().getTypeName(cptr, param->getType()) << " " << cci.getNameGen().getVarName(param));
 		});
 		cs << ");\n";
 
@@ -192,11 +169,11 @@ CodePtr FunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
 	const string& name = literal->getValue();
 	CodePtr cptr = std::make_shared<CodeFragment>("fundef_codefragment_" + name);
 	CodeStream& cs = cptr->getCodeStream();
-	cs << cc.getTypeMan().getTypeName(type->getReturnType()) << " " << name << "(";
+	cs << cc.getTypeMan().getTypeName(cptr, type->getReturnType()) << " " << name << "(";
 	auto argType = type->getArgumentType();
 	if(auto tupleArgType = dynamic_pointer_cast<const TupleType>(argType)) {
-		cs << join(", ", tupleArgType->getElementTypes(), [this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
-			return (o << this->cc.getTypeMan().getTypeName(cur));
+		cs << join(", ", tupleArgType->getElementTypes(), [&, this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
+			return (o << this->cc.getTypeMan().getTypeName(cptr, cur));
 		});
 	} // TODO handle other argument types
 	cs << ");\n";
@@ -254,6 +231,8 @@ namespace {
 				// for only a small number of functions (build ins) returning a ref does not mean it is a pointer
 				return !((*(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) == lang::OP_SUBSCRIPT_VAL) ||
 						  (*(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) == lang::OP_SUBSCRIPT_SINGLE_VAL));
+			case NT_MemberAccessExpr:
+				return false;
 			default:
 				return true;
 		}
@@ -383,14 +362,14 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	if(!vecLengths.empty()) { // TODO check that innerType is "simple" enough to be part of C array
 		//LOG(INFO) << "+++++++ innerType " << innerType << "\n";
-		cStr << cc.getTypeMan().getTypeName(innerType, true) << " " << nameGen.getVarName(var);
+		cStr << cc.getTypeMan().getTypeName(defCodePtr, innerType, true) << " " << nameGen.getVarName(var);
 		for_each(vecLengths, [this](unsigned vl) { this->cStr << "[" << vl << "]"; });
 		// TODO initialization
 		return;
 	}
 
 	// standard handling
-	cStr << cc.getTypeMan().getTypeName(var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var) << " = ";
+	cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var) << " = ";
 
 	// generate initializer expression
 	visit(ptr->getInitialization());
@@ -466,7 +445,7 @@ void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 }
 
 void ConvertVisitor::visitCastExpr(const CastExprPtr& ptr) {
-	cStr << "((" << cc.getTypeMan().getTypeName(ptr->getType()) << ")(";
+	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType()) << ")(";
 	visit(ptr->getSubExpression());
 	cStr << "))";
 }
@@ -478,120 +457,12 @@ void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
 	cStr << nameGen.getVarName(ptr);
 }
 
-string TypeManager::getTypeName(const core::TypePtr type, bool inDecl /* = false */) {
-	visitStarting = true;
-	declVisit = inDecl;
-	return visit(type);
-	// TODO handle complex types
+void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
+	cStr << "(";
+	visit(ptr->getSubExpression());
+	cStr << "." << ptr->getMemberName() << ")";
 }
 
-string TypeManager::getTypeDecl(const core::TypePtr type) {
-	//TODO
-	return string();
-}
-
-CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
-	//TODO
-	return CodePtr();
-}
-
-
-string TypeManager::visitGenericType(const GenericTypePtr& ptr) {
-	visitStarting = false;
-	if(lang::isUnitType(*ptr)) {
-		return "void";
-	}
-	if(lang::isIntegerType(*ptr)) {
-		string qualifier = lang::isUIntType(*ptr) ? "unsigned " : "";
-		switch(lang::getNumBytes(*ptr)) {
-			case 1: return qualifier + "char";
-			case 2: return qualifier + "short";
-			case 4: return qualifier + "int";
-			case 8: return qualifier + "long"; // long long ?
-			default: return ptr->getName();
-		}
-	}
-	if(lang::isBoolType(*ptr)) {
-		return "bool";
-	}
-	if(lang::isRealType(*ptr)) {
-		switch(lang::getNumBytes(*ptr)) {
-			case 4: return "float";
-			case 8: return "double";
-			default: return ptr->getName();
-		}
-	}
-	if(*ptr == lang::TYPE_STRING_VAL) {
-		return "string";
-	}
-	if(*ptr == lang::TYPE_CHAR_VAL) {
-		return "char";
-	}
-	if(*ptr == lang::TYPE_VAR_LIST_VAL) {
-		return "...";
-	}
-
-	// handle arrays
-	if (ArrayTypePtr arrayType = dynamic_pointer_cast<const ArrayType>(ptr)) {
-
-		// test whether dimension is final
-		IntTypeParam dim = arrayType->getDimension();
-		if (dim.getType() == IntTypeParam::CONCRETE) {
-			TypePtr elementType = arrayType->getElementType();
-			string res = visit(elementType);
-			int numStars = dim.getValue();
-			if (elementType->getNodeType() == NT_RefType) {
-				numStars -= 1;
-			}
-
-			for (int i=0; i < numStars; i++) {
-				res += "*";
-			}
-
-			// res += " /* " + toString(*arrayType) + " */ ";
-
-			return res;
-		}
-	}
-
-	//assert(0 && "Unhandled generic type.");
-	return string("[[unhandled_simple_type: ") + ptr->getName() + "]]";
-}
-
-string TypeManager::visitRefType(const RefTypePtr& ptr) {
-	auto elemType = ptr->getElementType();
-	// special handling for void* type
-	if (*ptr == lang::TYPE_REF_ALPHA_VAL) {
-		return "void*";
-	}
-	if((declVisit && visitStarting) || elemType->getNodeType() == NT_VectorType ) {
-		visitStarting = false;
-		return visit(elemType);
-	}
-	visitStarting = false;
-	return visit(elemType) + "*";
-}
-
-string TypeManager::visitStructType(const StructTypePtr& ptr) {
-	visitStarting = false;
-	string structName;
-	if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
-		structName = annotation->getName();
-	} else {
-		structName = cc.getNameGen().getName(ptr, "unnamed_struct");
-	}
-	std::ostringstream ret; // TODO use code stream
-	ret << "struct " << structName << " {\n";
-	for_each(ptr->getEntries(), [&ret, this](const NamedCompositeType::Entry& entry) {
-		ret << this->visit(entry.second) << " " << entry.first.getName() << ";";
-	});
-	return ret.str();
-}
-
-string TypeManager::visitVectorType(const VectorTypePtr& ptr) {
-	visitStarting = false;
-	return visit(ptr->getElementType()) + "[" + toString(ptr->getSize()) + "]";
-}
 
 // -------------------------------- Variable Manager -----------------------------------------
 
@@ -628,65 +499,6 @@ const ProgramPtr& ConvertedCode::getProgram() const {
 }
 
 
-string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
-
-	// test whether a name has already been picked
-	auto it = nameMap.find(ptr);
-	if(it != nameMap.end()) return it->second;
-
-	// test whether a name is attached ...
-	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
-		// => take original c name
-		string name = cnameAnn->getName();
-		nameMap.insert(make_pair(ptr, name));
-		return name;
-	}
-
-	// test whether recursive function name is attached
-	if (RecLambdaExprPtr recLambda = dynamic_pointer_cast<const RecLambdaExpr>(ptr)) {
-		if(auto cnameAnn = recLambda->getVariable()->getAnnotation(c_info::CNameAnnotation::KEY)) {
-			// => take original c name
-			string name = cnameAnn->getName();
-			nameMap.insert(make_pair(ptr, name));
-			return name;
-		}
-	}
-
-	// generate a new name string
-	std::stringstream name;
-	name << string("__insieme_");
-	if (!fragment.empty()) {
-		name << fragment << "_";
-	}
-
-	switch(ptr->getNodeCategory()) {
-	case NC_Support:
-		name << "supp"; break;
-	case NC_Type:
-		name << "type"; break;
-	case NC_Expression:
-		switch(ptr->getNodeType()) {
-		case NT_LambdaExpr: name << "fun"; break;
-		case NT_RecLambdaExpr: name << "recFun"; break;
-		default: name << "expr"; break;
-		} ; break;
-	case NC_Statement:
-		name << "stat"; break;
-	case NC_Program:
-		name << "prog"; break;
-	}
-	name << "_" << num++;
-	nameMap.insert(make_pair(ptr, name.str()));
-	return getName(ptr, fragment);
-}
-
-string NameGenerator::getVarName(const VariablePtr& var) {
-	if(auto annotation = var->getAnnotation(c_info::CNameAnnotation::KEY)) {
-		return annotation->getName();
-	} else {
-		return string("var_") + toString(var->getId());
-	}
-}
 
 
 namespace detail {

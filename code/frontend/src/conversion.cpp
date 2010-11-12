@@ -2144,8 +2144,11 @@ public:
 		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> ref<'a>
-		if(*subTy == core::lang::TYPE_UNIT_VAL)
-			subTy = core::lang::TYPE_ALPHA_PTR;
+		if(*subTy == core::lang::TYPE_UNIT_VAL) {
+			subTy = core::lang::TYPE_REF_ALPHA_PTR;
+			END_LOG_TYPE_CONVERSION( subTy );
+			return subTy;
+		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr&& retTy = convFact.builder.arrayType( convFact.builder.refType(subTy) );
 		END_LOG_TYPE_CONVERSION( retTy );
