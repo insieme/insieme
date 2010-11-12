@@ -36,7 +36,7 @@
 
 #include <cassert>
 
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 
 #include "insieme/core/type_utils.h"
 #include "insieme/core/ast_visitor.h"
@@ -433,13 +433,13 @@ namespace {
 
 		NodeManager& manager;
 
-		std::unordered_map<TypeVariablePtr, TypeVariablePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> varMap;
+		boost::unordered_map<TypeVariablePtr, TypeVariablePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> varMap;
 
-		std::unordered_map<IntTypeParam, IntTypeParam, boost::hash<IntTypeParam>> paramMap;
+		boost::unordered_map<IntTypeParam, IntTypeParam, boost::hash<IntTypeParam>> paramMap;
 
 	public:
 
-		TypeVariableReplacer(NodeManager& manager) : manager(manager) { }
+		TypeVariableReplacer(NodeManager& manager) : varCounter((unsigned)0), paramCounter((unsigned)0), manager(manager) { }
 
 		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 			// only handle type variables
