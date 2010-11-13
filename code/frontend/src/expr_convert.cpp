@@ -981,15 +981,15 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 	// ADD THE GLOBALS
 	if(funcDecl->isMain()) {
-		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
-		assert(compStmt);
-		assert(ctx.globalVar && ctx.globalStructExpr);
-
-		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar,
-				builder.callExpr( builder.refType(ctx.globalStructType), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( ctx.globalStructExpr ) )) );
-		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
-		body = builder.compoundStmt(stmts);
+//		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
+//		assert(compStmt);
+//		assert(ctx.globalVar && ctx.globalStructExpr);
+//
+//		std::vector<core::StatementPtr> stmts;
+//		stmts.push_back( builder.declarationStmt(ctx.globalVar,
+//				builder.callExpr( builder.refType(ctx.globalStructType), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( ctx.globalStructExpr ) )) );
+//		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
+//		body = builder.compoundStmt(stmts);
 	}
 
 	// reset old global var

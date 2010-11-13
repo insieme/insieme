@@ -401,23 +401,22 @@ TEST(TypeConversion, FileTest) {
 
 	const fe::PragmaList& pl = tu.getPragmaList();
 
-	std::for_each(pl.begin(), pl.end(),
-		[ &prog, &shared, &tu ](const fe::PragmaPtr curr) {
-			VariableResetHack::reset();
-			ConversionFactory convFactory( shared, prog, tu.getPragmaList() );
-			convFactory.setTranslationUnit(tu);
+	for(auto it = pl.begin(), end = pl.end(); it != end; ++it) {
+		VariableResetHack::reset();
+		ConversionFactory convFactory( shared, prog );
+		convFactory.setTranslationUnit(tu);
 
-			if(const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&*curr)) {
-				if(tp->isStatement())
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
-				else {
-					if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
-						EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-					} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
-						EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
-					}
+		if(const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&**it)) {
+			if(tp->isStatement())
+				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
+			else {
+				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
+					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
+					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
 				}
 			}
-	});
+		}
+	}
 }
 

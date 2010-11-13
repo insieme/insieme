@@ -296,12 +296,12 @@ void while_stmt_test() {
 	while(it != 0) { it-=1; }
 }
 
-#pragma test "rec v1.{v2=fun(int<4> v4){ {return v1(int.add(v4, 1));} }, v1=fun(int<4> v3){ {return v2(int.sub(v3, 1));} }}"
+#pragma test "recFun v1 { v2 = fun(int<4> v4) { return v1((v4+1)); }; v1 = fun(int<4> v3) { return v2((v3-1)); };}"
 int f(int x) {
 	return g(x-1);
 }
 
-#pragma test "rec v1.{v2=fun(int<4> v4){ {return v1(int.sub(v4, 1));} }, v1=fun(int<4> v3){ {return v2(int.add(v3, 1));} }}"
+#pragma test "recFun v1 { v2 = fun(int<4> v4) { return v1((v4-1)); }; v1 = fun(int<4> v3) { return v2((v3+1)); };}"
 int g(int x) {
 	return f(x+1);
 }

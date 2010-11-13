@@ -81,8 +81,10 @@ class ConversionFactory : public boost::noncopyable {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	struct ConversionContext {
 
-		// Maps Clang variable declarations (VarDecls and ParmVarDecls) to an
-		// IR variable.
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						Recursive Function resolution
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
 		typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
 		VarDeclMap varDeclMap;
 
@@ -101,6 +103,7 @@ class ConversionFactory : public boost::noncopyable {
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Type resolution
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		typedef std::map<const clang::Type*, insieme::core::TypeVariablePtr> TypeRecVarMap;
 		TypeRecVarMap recVarMap;
 		bool isRecSubType;
@@ -110,6 +113,9 @@ class ConversionFactory : public boost::noncopyable {
 
 		bool isResolvingFunctionType;
 
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						Global variables utility
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Gloabal and static variables
 		// map which stores, for each static or global variable, the identifier which will be used
 		// as identification within the global data structure and the initialization value
@@ -152,7 +158,7 @@ class ConversionFactory : public boost::noncopyable {
 
 	friend class ASTConverter;
 public:
-	ConversionFactory(core::SharedNodeManager mgr, Program& program, const PragmaList& pList = PragmaList());
+	ConversionFactory(core::SharedNodeManager mgr, Program& program);
 
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::SharedNodeManager getNodeManager() const { return mgr; }
@@ -187,17 +193,13 @@ class ASTConverter {
 	core::ProgramPtr     mProgram;
 
 public:
-	ASTConverter(Program& prog, const core::SharedNodeManager& mgr, const PragmaList& pList) :
-		mProg(prog), mFact(mgr, prog, pList), mProgram(prog.getProgram()) { }
+	ASTConverter(Program& prog, const core::SharedNodeManager& mgr) : mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
-	core::ExpressionPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, const TranslationUnit& tu) {
-		mFact.currTU = &tu;
-		return mFact.convertFunctionDecl(funcDecl);
-	}
+	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain=false);
 	core::LambdaExprPtr	handleBody(const clang::Stmt* body, const TranslationUnit& tu);
-	core::ProgramPtr 	handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu);
+//	core::ProgramPtr 	handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu);
 };
 
 

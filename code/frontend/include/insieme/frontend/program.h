@@ -126,6 +126,29 @@ public:
 
 	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
 
+	class PragmaIterator: public std::iterator<std::input_iterator_tag, std::pair<PragmaPtr, TranslationUnit&>> {
+		TranslationUnitSet::const_iterator tuIt, tuEnd;
+		PragmaList::const_iterator pragmaIt;
+
+		// creates end iter
+		PragmaIterator(const TranslationUnitSet::const_iterator& tend) : tuIt(tend), tuEnd(tend) { }
+		PragmaIterator(const TranslationUnitSet& tu): tuIt(tu.begin()), tuEnd(tu.end()) { inc(true); }
+
+		void inc(bool init);
+
+		friend class Program;
+	public:
+		bool operator!=(const PragmaIterator& iter) const;
+		bool operator==(const PragmaIterator& iter) const { return !(*this != iter); }
+		std::pair<PragmaPtr, TranslationUnit&> operator*() const;
+		PragmaIterator& operator++() { inc(false); return *this; }
+	};
+	/**
+	 * Returns the list of registered pragmas across the translation units
+	 */
+	PragmaIterator pragmas_begin() const;
+	PragmaIterator pragmas_end() const;
+
 	clang::idx::Program& getClangProgram();
 	clang::idx::Indexer& getClangIndexer();
 

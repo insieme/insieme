@@ -100,14 +100,5 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
 
-PragmaStmtMap::PragmaStmtMap(const PragmaList& pList) {
-	for(PragmaList::const_iterator it=pList.begin(), end=pList.end(); it != end; ++it) {
-		if((*it)->isStatement())
-			stmtMap.insert( std::make_pair((*it)->getStatement(), *it) );
-		else
-			declMap.insert( std::make_pair((*it)->getDecl(), *it) );
-	}
-}
-
 } // End frontend namespace
 } // End insieme namespace

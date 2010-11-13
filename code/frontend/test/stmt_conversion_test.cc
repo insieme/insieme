@@ -58,13 +58,36 @@
 #include "clang/Index/Program.h"
 
 using namespace insieme::core;
-using namespace insieme::frontend;
-using namespace insieme::frontend::conversion;
+namespace fe = insieme::frontend;
 using namespace clang;
 
 struct VariableResetHack {
 	static void reset() { Variable::counter = 0; }
 };
+
+void checkSemanticErrors(const NodePtr& node) {
+	MessageList&& msgList = check( node, checks::getFullCheck() );
+	EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
+	std::sort(msgList.begin(), msgList.end());
+	std::for_each(msgList.begin(), msgList.end(), [&node](const Message& cur) {
+		LOG(INFO) << *node;
+		LOG(INFO) << cur << std::endl;
+	});
+}
+
+std::string getPrettyPrinted(const NodePtr& node) {
+	std::ostringstream ss;
+	ss << insieme::core::printer::PrettyPrinter(node, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+	// Remove new lines and leading spaces
+	std::vector<char> res;
+	std::string prettyPrint = ss.str();
+	for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
+		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' ')))
+			res.push_back(*it);
+
+	return std::string(res.begin(), res.end());
+}
 
 TEST(StmtConversion, FileTest) {
 
@@ -72,52 +95,41 @@ TEST(StmtConversion, FileTest) {
 	CommandLineOptions::Verbosity = 0;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
+	fe::Program prog(shared);
+	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
 
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+	const fe::PragmaList& pl = tu.getPragmaList();
 
-	std::for_each(pl.begin(), pl.end(),
-		[ & ](const PragmaPtr curr) {
-			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
-			// we reset the counter for variables so we can write independent tests
-			VariableResetHack::reset();
+	for(auto it = pl.begin(), end = pl.end(); it != end; ++it) {
+		const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&**it);
+		if(!tp) // not a test pragma, skip
+			continue;
+		// we reset the counter for variables so we can write independent tests
+		VariableResetHack::reset();
 
-			ConversionFactory convFactory( shared, prog, pl );
-			convFactory.setTranslationUnit(**prog.getTranslationUnits().begin());
+		fe::conversion::ConversionFactory convFactory( shared, prog );
+		convFactory.setTranslationUnit(tu);
 
-			if(tp->isStatement()) {
-				StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
-				std::ostringstream ss;
-				ss << insieme::core::printer::PrettyPrinter(stmt, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		if(tp->isStatement()) {
+			StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
+			EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
-				std::vector<char> res;
-				std::string prettyPrint = ss.str();
-				for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
-					if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' ')))
-						res.push_back(*it);
+			// do semantics checking
+			checkSemanticErrors(stmt);
 
-				EXPECT_EQ(tp->getExpected(), '\"' + std::string(res.begin(), res.end()) + '\"' );
-				// std::cout << ss.str();
-				// do type checking
-				MessageList&& msgList = check( stmt, checks::getFullCheck() );
-				EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
-				std::sort(msgList.begin(), msgList.end());
-				std::for_each(msgList.begin(), msgList.end(), [&stmt](const Message& cur) {
-					LOG(INFO) << *stmt;
-					LOG(INFO) << cur << std::endl;
-				});
-
-			} else {
-				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp->getDecl())) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-				}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp->getDecl())) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertFunctionDecl( fd )->toString() + '\"' );
-				}
+		} else {
+			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp->getDecl())) {
+				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
+				EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
+				// do semantics checking
+				checkSemanticErrors(type);
+			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp->getDecl())) {
+				ExpressionPtr&& expr = convFactory.convertFunctionDecl(fd);
+				EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
+				// do semantics checking
+				checkSemanticErrors(expr);
 			}
-
-
-	});
-
+		}
+	}
 }
 

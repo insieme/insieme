@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 
 	// init F
 	memset(f, 0, N*N);
-	for (int i=0; i<N; i++){
+	for (int i=0; i<N; i++)
 		for (int j=0; j<N; j++)
 			f[i][j] = init_func(i, j);
 
@@ -78,11 +78,7 @@ int main(int argc, char** argv) {
 	end_t = clock();
 	setup_time =  (double)(end_t-start_t)/CLOCKS_PER_SEC;
 
-#ifdef DDEBUG
-	printf("Setup finished! (setup time: %0.2f)\n", setup_time);
-#endif
 	start_t = clock();
-
 	for(int it=0; it<1000; it++) {
 		// main Jacobi loop
 		#pragma omp parallel for

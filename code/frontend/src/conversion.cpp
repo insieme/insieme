@@ -100,9 +100,23 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(
+			const_cast<FunctionDecl*>(funcDecl), const_cast<clang::idx::Program&>( mProg.getClangProgram() ));
+	std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = mProg.getClangIndexer().getDefinitionFor(funcEntity);
+	assert(ret.first && ret.second);
+
+	mFact.currTU = &mProg.getTranslationUnit(ret.second);
+
+	core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(funcDecl);
+	mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
+
+	return mProgram;
+}
+
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, Program& prog, const PragmaList& pragmaList):
+ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, Program& prog):
 	// cppcheck-suppress exceptNew
 	stmtConv( ConversionFactory::makeStmtConverter(*this) ),
 	// cppcheck-suppress exceptNew
@@ -110,7 +124,7 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, Program& prog,
 	// cppcheck-suppress exceptNew
 	exprConv( ConversionFactory::makeExprConverter(*this) ),
 	// cppcheck-suppress exceptNew
-	mgr(mgr), builder(mgr), program(prog), pragmaMap(pragmaList), currTU(NULL) { }
+	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
@@ -468,35 +482,35 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 
 // ------------------------------------ ClangTypeConverter ---------------------------
 
-core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu) {
-	mFact.currTU = &tu;
-	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
-	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
-		Decl* decl = *it;
-
-		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
-			// finds a definition of this function if any
-			const FunctionDecl* definition = NULL;
-			// if this function is just a declaration, and it has no definition, we just skip it
-			if(!funcDecl->hasBody(definition))
-				continue;
-
-			if(definition->isMain()) {
-				globColl(decl);
-				DLOG(INFO) << globColl;
-				auto global = globColl.createGlobalStruct(mFact);
-				mFact.ctx.globalStructType = global.first;
-				mFact.ctx.globalStructExpr = global.second;
-				mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
-				core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
-				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
-			}
-		}
-		// we only add the variables which are actually needed!
-//		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) { }
-	}
-	return mProgram;
-}
+//core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu) {
+//	mFact.currTU = &tu;
+//	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+//	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
+//		Decl* decl = *it;
+//
+//		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
+//			// finds a definition of this function if any
+//			const FunctionDecl* definition = NULL;
+//			// if this function is just a declaration, and it has no definition, we just skip it
+//			if(!funcDecl->hasBody(definition))
+//				continue;
+//
+//			if(definition->isMain()) {
+//				globColl(decl);
+//				DLOG(INFO) << globColl;
+//				auto global = globColl.createGlobalStruct(mFact);
+//				mFact.ctx.globalStructType = global.first;
+//				mFact.ctx.globalStructExpr = global.second;
+//				mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
+//				core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
+//				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
+//			}
+//		}
+//		// we only add the variables which are actually needed!
+////		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) { }
+//	}
+//	return mProgram;
+//}
 
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;

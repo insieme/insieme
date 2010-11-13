@@ -152,7 +152,15 @@ public:
 	typedef std::multimap<const clang::Stmt*, const PragmaPtr> StmtMap;
 	typedef std::multimap<const clang::Decl*, const PragmaPtr> DeclMap;
 
-	PragmaStmtMap(const PragmaList& pList);
+	template <class IterT>
+	PragmaStmtMap(const IterT& begin, const IterT& end) {
+		std::for_each(begin, end, [ this ](const typename IterT::value_type& pragma){
+			if(pragma.first->isStatement())
+				this->stmtMap.insert( std::make_pair(pragma.first->getStatement(), pragma.first) );
+			else
+				this->declMap.insert( std::make_pair(pragma.first->getDecl(), pragma.first) );
+		});
+	}
 
 	const StmtMap& getStatementMap() const { return stmtMap; }
 	const DeclMap& getDeclarationMap() const { return declMap; }

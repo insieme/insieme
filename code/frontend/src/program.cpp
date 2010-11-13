@@ -53,8 +53,6 @@
 #include "clang/Index/DeclReferenceMap.h"
 #include "clang/Index/SelectorMap.h"
 
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclGroup.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/ParseAST.h"
 
@@ -182,6 +180,41 @@ const TranslationUnit& Program::getTranslationUnit(const clang::idx::Translation
 	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
 }
 
+Program::PragmaIterator Program::pragmas_begin() const {
+	std::cout << "begin" << pimpl->tranUnits.size() << std::endl;
+	return Program::PragmaIterator(pimpl->tranUnits);
+}
+
+Program::PragmaIterator Program::pragmas_end() const {
+	return Program::PragmaIterator(pimpl->tranUnits.end());
+}
+
+bool Program::PragmaIterator::operator!=(const PragmaIterator& iter) const {
+	return (tuIt != iter.tuIt); // FIXME also compare the pragmaIt value
+}
+
+void Program::PragmaIterator::inc(bool init) {
+	while(tuIt != tuEnd) {
+		if(init)	pragmaIt = (*tuIt)->getPragmaList().begin();
+		// advance to the next pragma if there are still pragmas in the
+		// current translation unit
+		if(!init && pragmaIt != (*tuIt)->getPragmaList().end()) { ++pragmaIt; }
+
+		if(pragmaIt != (*tuIt)->getPragmaList().end()) {
+			return;
+		}
+		// advance to the next translation unit
+		++tuIt;
+		if(tuIt != tuEnd)
+			pragmaIt = (*tuIt)->getPragmaList().begin();
+	}
+}
+
+std::pair<PragmaPtr, TranslationUnit&> Program::PragmaIterator::operator*() const {
+	assert(tuIt != tuEnd && pragmaIt != (*tuIt)->getPragmaList().end());
+	return std::pair<PragmaPtr, TranslationUnit&>(*pragmaIt, **tuIt);
+}
+
 namespace {
 /**
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
@@ -196,49 +229,39 @@ core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::Shared
 const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
-	PragmaList pragmas;
-	for(auto it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
-		const PragmaList& pList = (*it)->getPragmaList();
-		conversion::ASTConverter conv(*this, mMgr, pList);
+	conversion::ASTConverter conv(*this, mMgr);
 
-		for(PragmaList::const_iterator pit = pragmas.begin(), pend = pragmas.end(); pit != pend; ++pit)
-			if((*pit)->getType() == "insieme::mark") {
-				insiemePragmaFound = true;
-				const Pragma& insiemePragma = **pit;
+	for(Program::PragmaIterator pit = pragmas_begin(), pend = pragmas_end(); pit != pend; ++pit)
+		if((*pit).first->getType() == "insieme::mark") {
+			insiemePragmaFound = true;
+			const Pragma& insiemePragma = *(*pit).first;
 
-				if(insiemePragma.isDecl()) {
-					// this is a declaration, if it's a function add it to the entry points of the program
-					const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
-					assert(funcDecl && "Pragma insieme only valid for function declarations.");
+			if(insiemePragma.isDecl()) {
+				// this is a declaration, if it's a function add it to the entry points of the program
+				const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
+				assert(funcDecl && "Pragma insieme only valid for function declarations.");
 
-					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, conv.handleFunctionDecl(funcDecl, **it));
-				} else {
-					// insieme pragma associated to a statement, in this case we convert the body
-					// and create an anonymous lambda expression to enclose it
-					const clang::Stmt* body = insiemePragma.getStatement();
-					assert(body && "Pragma matching failed!");
-					core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, **it);
-					mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
-				}
+				mProgram = conv.handleFunctionDecl(funcDecl);
+			} else {
+				// insieme pragma associated to a statement, in this case we convert the body
+				// and create an anonymous lambda expression to enclose it
+				const clang::Stmt* body = insiemePragma.getStatement();
+				assert(body && "Pragma matching failed!");
+				core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, (*pit).second);
+				mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
 			}
-	}
+		}
 
 	if(insiemePragmaFound) {
 	    mProgram = addParallelism(mProgram, mMgr);
 		return mProgram;
 	}
 
-	// For each translation unit we call the IRConverter
-	for(Program::TranslationUnitSet::const_iterator it = pimpl->tranUnits.begin(), end = pimpl->tranUnits.end(); it != end; ++it) {
-		const ClangCompiler& comp = (*it)->getCompiler();
-		const PragmaList& pList = (*it)->getPragmaList();
+	// We start the conversion from the main function and then visit all the
+	// called functions according to the callgraph of the input program.
+	clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
+	mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 
-		conversion::ASTConverter conv(*this, mMgr, pList);
-		clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext( comp.getASTContext().getTranslationUnitDecl() );
-
-		conv.handleTranslationUnit(declRef, **it);
-		mProgram = conv.getProgram();
-	}
 	mProgram = addParallelism(mProgram, mMgr);
 	return mProgram;
 }
