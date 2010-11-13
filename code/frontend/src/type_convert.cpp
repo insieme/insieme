@@ -37,6 +37,7 @@
 #include "insieme/frontend/conversion.h"
 
 #include "insieme/frontend/utils/types_lenght.h"
+#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/utils/numeric_cast.h"
@@ -87,7 +88,7 @@ namespace conversion {
 class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
 	ConversionFactory& convFact;
 
-	insieme::frontend::utils::DependencyGraph<const clang::Type*> typeGraph;
+	utils::DependencyGraph<const clang::Type*> typeGraph;
 public:
 	ClangTypeConverter(ConversionFactory& fact): convFact( fact ) { }
 

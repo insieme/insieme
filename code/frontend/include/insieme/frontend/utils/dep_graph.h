@@ -93,10 +93,7 @@ public:
 
 		typename boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
 		boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph);
-		auto fit = std::find_if(vertCurrIt, vertEndIt,
-				[ type, &node ] (VertexTy v) {
-					return node[v] == type;
-				});
+		auto fit = std::find_if(vertCurrIt, vertEndIt, [ &type, &node ] (const VertexTy& v) { return node[v] == type; });
 		if(fit != vertEndIt)
 			return std::make_pair(true,*fit);
 		return std::make_pair(false,0);

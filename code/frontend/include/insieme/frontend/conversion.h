@@ -40,7 +40,6 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/frontend/pragma_handler.h"
-#include "insieme/frontend/utils/dep_graph.h"
 
 // Forward declarations
 namespace clang {
@@ -90,9 +89,6 @@ class ConversionFactory : public boost::noncopyable {
 		// Map for resolved lambda functions
 		typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
-
-		// CallGraph for functions, used to resolved eventual recursive functions
-		insieme::frontend::utils::DependencyGraph<const clang::FunctionDecl*> funcDepGraph;
 
 		// Maps a function with the variable which has been introduced to represent
 		// the function in the recursive definition
