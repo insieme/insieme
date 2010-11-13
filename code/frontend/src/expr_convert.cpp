@@ -880,7 +880,7 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) cons
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
 	DVLOG(1) << "#----------------------------------------------------------------------------------#";
@@ -962,7 +962,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// this function will use the global struct or not
 	core::LambdaExpr::CaptureList captureList;
 	core::VariablePtr parentGlobalVar = ctx.currGlobalVar;
-	if(funcDecl->isMain()) {
+	if(isEntryPoint) {
 		ctx.currGlobalVar = ctx.globalVar;
 	} else if(ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
 		assert(parentGlobalVar && "Global data structure not forwarded until current function.");
@@ -980,16 +980,16 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	ctx.isResolvingRecFuncBody = false;
 
 	// ADD THE GLOBALS
-	if(funcDecl->isMain()) {
-//		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
-//		assert(compStmt);
-//		assert(ctx.globalVar && ctx.globalStructExpr);
-//
-//		std::vector<core::StatementPtr> stmts;
-//		stmts.push_back( builder.declarationStmt(ctx.globalVar,
-//				builder.callExpr( builder.refType(ctx.globalStructType), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( ctx.globalStructExpr ) )) );
-//		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
-//		body = builder.compoundStmt(stmts);
+	if(isEntryPoint) {
+		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
+		assert(compStmt);
+		assert(ctx.globalVar && ctx.globalStructExpr);
+
+		std::vector<core::StatementPtr> stmts;
+		stmts.push_back( builder.declarationStmt(ctx.globalVar,
+				builder.callExpr( builder.refType(ctx.globalStructType), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( ctx.globalStructExpr ) )) );
+		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
+		body = builder.compoundStmt(stmts);
 	}
 
 	// reset old global var

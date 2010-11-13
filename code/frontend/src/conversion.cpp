@@ -76,14 +76,9 @@ void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& cl
 	SourceManager& manager = clangComp.getSourceManager();
     clang::SourceLocation errLoc = decl->getLocStart();
     errMsg << " at location (" << frontend::utils::Line(errLoc, manager) << ":" <<
-            frontend::utils::Column(errLoc, manager) << ").\n";
+            frontend::utils::Column(errLoc, manager) << ")." << std::endl;
 
-
-    /*Crashes
-    DiagnosticInfo di(&diag);
-    tdc->HandleDiagnostic(Diagnostic::Level::Warning, di);*/
-
-    clang::Preprocessor& pp =  clangComp.getPreprocessor();
+    clang::Preprocessor& pp = clangComp.getPreprocessor();
     pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, errMsg.str()));
 }
 
@@ -108,7 +103,16 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	mFact.currTU = &mProg.getTranslationUnit(ret.second);
 
-	core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(funcDecl);
+	mFact.ctx.globalFuncMap.clear();
+	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	globColl(funcDecl);
+	DLOG(INFO) << globColl;
+	auto global = globColl.createGlobalStruct(mFact);
+	mFact.ctx.globalStructType = global.first;
+	mFact.ctx.globalStructExpr = global.second;
+	mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
+
+	core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(funcDecl, true);
 	mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
 
 	return mProgram;
@@ -125,6 +129,7 @@ ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, Program& prog)
 	exprConv( ConversionFactory::makeExprConverter(*this) ),
 	// cppcheck-suppress exceptNew
 	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
+
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
@@ -479,38 +484,6 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 //		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
 //	);
 }
-
-// ------------------------------------ ClangTypeConverter ---------------------------
-
-//core::ProgramPtr ASTConverter::handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu) {
-//	mFact.currTU = &tu;
-//	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
-//	for(DeclContext::decl_iterator it = declCtx->decls_begin(), end = declCtx->decls_end(); it != end; ++it) {
-//		Decl* decl = *it;
-//
-//		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(decl)) {
-//			// finds a definition of this function if any
-//			const FunctionDecl* definition = NULL;
-//			// if this function is just a declaration, and it has no definition, we just skip it
-//			if(!funcDecl->hasBody(definition))
-//				continue;
-//
-//			if(definition->isMain()) {
-//				globColl(decl);
-//				DLOG(INFO) << globColl;
-//				auto global = globColl.createGlobalStruct(mFact);
-//				mFact.ctx.globalStructType = global.first;
-//				mFact.ctx.globalStructExpr = global.second;
-//				mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
-//				core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(definition);
-//				mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, true /* isMain */);
-//			}
-//		}
-//		// we only add the variables which are actually needed!
-////		else if(VarDecl* varDecl = dyn_cast<VarDecl>(decl)) { }
-//	}
-//	return mProgram;
-//}
 
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
