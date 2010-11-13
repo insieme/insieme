@@ -150,50 +150,50 @@ TEST(TypeConversion, HandleReferenceType) {
 
 }
 
-TEST(TypeConversion, HandleStructType) {
-	using namespace clang;
-
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
-	ConversionFactory convFactory( shared, prog );
-	ClangCompiler clang;
-
-	SourceLocation emptyLoc;
-
-	// cppcheck-suppress exceptNew
-	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
-	// cppcheck-suppress exceptNew
-	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
-
-	// create a struct:
-	// struct Person {
-	//	char* name;
-	//	unsigned short age;
-	// };
-	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
-
-	// creates 'char* name' field
-	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
-
-	// creates 'unsigned short age' field
-	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
-
-	decl->completeDefinition ();
-
-	// Gets the type for the record declaration
-	QualType type = clang.getASTContext().getTagDeclType(decl);
-
-	// convert the type into an IR type
-	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
-	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
-
-	operator delete (charTy);
-	operator delete (ushortTy);
-}
+//TEST(TypeConversion, HandleStructType) {
+//	using namespace clang;
+//
+//	SharedNodeManager shared = std::make_shared<NodeManager>();
+//	insieme::frontend::Program prog(shared);
+//	ConversionFactory convFactory( shared, prog );
+//	ClangCompiler clang;
+//
+//	SourceLocation emptyLoc;
+//
+//	// cppcheck-suppress exceptNew
+//	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
+//	// cppcheck-suppress exceptNew
+//	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
+//
+//	// create a struct:
+//	// struct Person {
+//	//	char* name;
+//	//	unsigned short age;
+//	// };
+//	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+//			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
+//
+//	// creates 'char* name' field
+//	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+//			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
+//
+//	// creates 'unsigned short age' field
+//	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+//			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
+//
+//	decl->completeDefinition ();
+//
+//	// Gets the type for the record declaration
+//	QualType type = clang.getASTContext().getTagDeclType(decl);
+//
+//	// convert the type into an IR type
+//	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
+//	EXPECT_TRUE(insiemeTy);
+//	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
+//
+//	operator delete (charTy);
+//	operator delete (ushortTy);
+//}
 
 //TEST(TypeConversion, HandleRecursiveStructType) {
 //

@@ -47,7 +47,6 @@ is.insieme.c: $(INSIEME_SRC_DIR)//test/nas/is/is.c
 	$(INSIEME_BUILD_DIR)/code/driver/main -I$(INSIEME_SRC_DIR)/test/nas/is -I$(INSIEME_SRC_DIR)/test/nas/common \
 			 $(INSIEME_SRC_DIR)/test/nas/is/is.c \
 			 $(INSIEME_SRC_DIR)/test/nas/common/c_timers.c \
-			 $(INSIEME_SRC_DIR)/test/nas/common/wtime.c \
 			 $(INSIEME_SRC_DIR)/test/nas/common/c_print_results.c -P --dump-ir=is.inspire --show-ir=is.dot -o is.insieme.c
 	
 clean:
