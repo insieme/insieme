@@ -210,9 +210,9 @@ void Program::PragmaIterator::inc(bool init) {
 	}
 }
 
-std::pair<PragmaPtr, TranslationUnit&> Program::PragmaIterator::operator*() const {
+std::pair<PragmaPtr, TranslationUnitPtr> Program::PragmaIterator::operator*() const {
 	assert(tuIt != tuEnd && pragmaIt != (*tuIt)->getPragmaList().end());
-	return std::pair<PragmaPtr, TranslationUnit&>(*pragmaIt, **tuIt);
+	return std::pair<PragmaPtr, TranslationUnitPtr>(*pragmaIt, *tuIt);
 }
 
 namespace {
@@ -247,7 +247,7 @@ const core::ProgramPtr& Program::convert() {
 				// and create an anonymous lambda expression to enclose it
 				const clang::Stmt* body = insiemePragma.getStatement();
 				assert(body && "Pragma matching failed!");
-				core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, (*pit).second);
+				core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, *(*pit).second);
 				mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
 			}
 		}

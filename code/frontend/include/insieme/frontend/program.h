@@ -126,7 +126,7 @@ public:
 
 	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
 
-	class PragmaIterator: public std::iterator<std::input_iterator_tag, std::pair<PragmaPtr, TranslationUnit&>> {
+	class PragmaIterator: public std::iterator<std::input_iterator_tag, std::pair<PragmaPtr, TranslationUnitPtr>> {
 		TranslationUnitSet::const_iterator tuIt, tuEnd;
 		PragmaList::const_iterator pragmaIt;
 
@@ -140,7 +140,7 @@ public:
 	public:
 		bool operator!=(const PragmaIterator& iter) const;
 		bool operator==(const PragmaIterator& iter) const { return !(*this != iter); }
-		std::pair<PragmaPtr, TranslationUnit&> operator*() const;
+		std::pair<PragmaPtr, TranslationUnitPtr> operator*() const;
 		PragmaIterator& operator++() { inc(false); return *this; }
 	};
 	/**
