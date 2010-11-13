@@ -134,6 +134,10 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 
 // This function syntetize the global structure that will be used to hold the global variables used within the functions of the input program
 std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGlobalStruct(const conversion::ConversionFactory& fact) const {
+	// no global variable found, we return an empty tuple
+	if(globals.empty())
+		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
+
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
 	for(auto it = globals.begin(), end = globals.end(); it != end; ++it) {

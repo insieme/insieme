@@ -79,7 +79,7 @@ class ConversionFactory : public boost::noncopyable {
 	// Keeps all the information gathered during the conversion process.
 	// Maps for variable names, cached resolved function definitions and so on...
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	struct ConversionContext {
+	struct ConversionContext :  public boost::noncopyable {
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Function resolution
@@ -188,18 +188,19 @@ public:
  *
  */
 class ASTConverter {
-	Program& mProg;
-	ConversionFactory    mFact;
-	core::ProgramPtr     mProgram;
+	core::SharedNodeManager mgr;
+	Program& 				mProg;
+	ConversionFactory   	mFact;
+	core::ProgramPtr    	mProgram;
 
 public:
-	ASTConverter(Program& prog, const core::SharedNodeManager& mgr) : mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
+	ASTConverter(const core::SharedNodeManager& mgr, Program& prog) : mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
-	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain=false);
+	core::ProgramPtr 	handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain=false);
 	core::LambdaExprPtr	handleBody(const clang::Stmt* body, const TranslationUnit& tu);
-//	core::ProgramPtr 	handleTranslationUnit(const clang::DeclContext* declCtx, const TranslationUnit& tu);
+
 };
 
 

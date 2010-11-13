@@ -181,8 +181,12 @@ const TranslationUnit& Program::getTranslationUnit(const clang::idx::Translation
 }
 
 Program::PragmaIterator Program::pragmas_begin() const {
-	std::cout << "begin" << pimpl->tranUnits.size() << std::endl;
-	return Program::PragmaIterator(pimpl->tranUnits);
+	auto filtering = [](const Pragma&) -> bool { return true; };
+	return Program::PragmaIterator(pimpl->tranUnits, filtering);
+}
+
+Program::PragmaIterator Program::pragmas_begin(const Program::PragmaIterator::FilteringFunc& func) const {
+	return Program::PragmaIterator(pimpl->tranUnits, func);
 }
 
 Program::PragmaIterator Program::pragmas_end() const {
@@ -200,7 +204,7 @@ void Program::PragmaIterator::inc(bool init) {
 		// current translation unit
 		if(!init && pragmaIt != (*tuIt)->getPragmaList().end()) { ++pragmaIt; }
 
-		if(pragmaIt != (*tuIt)->getPragmaList().end()) {
+		if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt)) {
 			return;
 		}
 		// advance to the next translation unit
@@ -229,39 +233,37 @@ core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::Shared
 const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
-	conversion::ASTConverter conv(*this, mMgr);
+	conversion::ASTConverter conv(mMgr, *this);
 
-	for(Program::PragmaIterator pit = pragmas_begin(), pend = pragmas_end(); pit != pend; ++pit)
-		if((*pit).first->getType() == "insieme::mark") {
-			insiemePragmaFound = true;
-			const Pragma& insiemePragma = *(*pit).first;
+	// filters all the pragma across all the compilation units which are of type insieme::mark
+	auto pragmaMarkFilter = [](const Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
 
-			if(insiemePragma.isDecl()) {
-				// this is a declaration, if it's a function add it to the entry points of the program
-				const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
-				assert(funcDecl && "Pragma insieme only valid for function declarations.");
+	for(Program::PragmaIterator pit = pragmas_begin(pragmaMarkFilter), pend = pragmas_end(); pit != pend; ++pit) {
+		insiemePragmaFound = true;
+		const Pragma& insiemePragma = *(*pit).first;
 
-				mProgram = conv.handleFunctionDecl(funcDecl);
-			} else {
-				// insieme pragma associated to a statement, in this case we convert the body
-				// and create an anonymous lambda expression to enclose it
-				const clang::Stmt* body = insiemePragma.getStatement();
-				assert(body && "Pragma matching failed!");
-				core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, *(*pit).second);
-				mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
-			}
+		if(insiemePragma.isDecl()) {
+			// this is a declaration, if it's a function add it to the entry points of the program
+			const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
+			assert(funcDecl && "Pragma insieme only valid for function declarations.");
+
+			mProgram = conv.handleFunctionDecl(funcDecl);
+		} else {
+			// insieme pragma associated to a statement, in this case we convert the body
+			// and create an anonymous lambda expression to enclose it
+			const clang::Stmt* body = insiemePragma.getStatement();
+			assert(body && "Pragma matching failed!");
+			core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, *(*pit).second);
+			mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
 		}
-
-	if(insiemePragmaFound) {
-	    mProgram = addParallelism(mProgram, mMgr);
-		return mProgram;
 	}
 
-	// We start the conversion from the main function and then visit all the
-	// called functions according to the callgraph of the input program.
-	clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
-	mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
-
+	if(!insiemePragmaFound) {
+		// We start the conversion from the main function and then visit all the
+		// called functions according to the callgraph of the input program.
+		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
+		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
+	}
 	mProgram = addParallelism(mProgram, mMgr);
 	return mProgram;
 }

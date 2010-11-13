@@ -79,17 +79,12 @@ clang::Expr* ParserProxy::ParseExpression(clang::Preprocessor& PP) {
 }
 
 void ParserProxy::EnterTokenStream(clang::Preprocessor& PP) {
-	// DEBUG(ClangContext::get().getParser()->Tok.getName());
 	PP.EnterTokenStream(&(CurrentToken()), 1, true, false);
 }
 
 Token& ParserProxy::ConsumeToken() {
 	mParser->ConsumeAnyToken();
 	// Token token = PP.LookAhead(0);
-	// DEBUG(token.getName());
-	// if(token.isLiteral())
-	//	DEBUG( std::string(token.getLiteralData(),
-	//		token.getLiteralData()+token.getLength()) );
 	return CurrentToken();
 }
 
@@ -205,7 +200,6 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
-	// Rewriter = new CodeRewriter(Clang.getSourceManager(), Clang.getLangOpts());
 
 	pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 }
