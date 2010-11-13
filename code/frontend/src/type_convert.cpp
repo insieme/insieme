@@ -49,6 +49,8 @@
 #include "insieme/c_info/naming.h"
 
 #include "clang/AST/TypeVisitor.h"
+#include <clang/AST/Decl.h>
+#include <clang/AST/Expr.h>
 
 using namespace clang;
 using namespace insieme;

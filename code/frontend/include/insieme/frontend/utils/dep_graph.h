@@ -40,8 +40,10 @@
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/strong_components.hpp>
 
-#include <clang/AST/Decl.h>
-#include <clang/AST/StmtVisitor.h>
+namespace clang {
+class FunctionDecl;
+class Type;
+}
 
 namespace insieme {
 namespace frontend {

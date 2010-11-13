@@ -34,9 +34,12 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/utils/dep_graph.h"
+
 #define __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
-#include "insieme/frontend/utils/dep_graph.h"
+#include <clang/AST/Decl.h>
+#include <clang/AST/StmtVisitor.h>
 
 namespace insieme {
 namespace frontend {
