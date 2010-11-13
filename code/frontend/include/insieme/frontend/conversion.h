@@ -105,8 +105,6 @@ class ConversionFactory : public boost::noncopyable {
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Type resolution
-		insieme::frontend::utils::DependencyGraph<const clang::Type*> typeGraph;
-
 		typedef std::map<const clang::Type*, insieme::core::TypeVariablePtr> TypeRecVarMap;
 		TypeRecVarMap recVarMap;
 		bool isRecSubType;

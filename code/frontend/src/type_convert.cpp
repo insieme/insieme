@@ -88,6 +88,7 @@ namespace conversion {
 class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
 	ConversionFactory& convFact;
 
+	insieme::frontend::utils::DependencyGraph<const clang::Type*> typeGraph;
 public:
 	ClangTypeConverter(ConversionFactory& fact): convFact( fact ) { }
 
@@ -426,11 +427,11 @@ public:
 
 				if(!convFact.ctx.isRecSubType) {
 					// add this type to the type graph (if not present)
-					convFact.ctx.typeGraph.addNode(tagDecl->getTypeForDecl());
+					typeGraph.addNode(tagDecl->getTypeForDecl());
 				}
 
 				// retrieve the strongly connected componenets for this type
-				std::set<const Type*>&& components = convFact.ctx.typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
+				std::set<const Type*>&& components = typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
 
 				if( !components.empty() ) {
 					if(VLOG_IS_ON(2)) {
@@ -443,7 +444,7 @@ public:
 								VLOG(2) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
 							}
 						);
-						convFact.ctx.typeGraph.print(std::cerr);
+						typeGraph.print(std::cerr);
 					}
 
 					// we create a TypeVar for each type in the mutual dependence
