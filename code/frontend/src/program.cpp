@@ -107,7 +107,7 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public cla
 	std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
-	TranslationUnitImpl(const std::string& file_name, const ProgramPtr& prog, const SharedNodeManager& mgr):
+	TranslationUnitImpl(const std::string& file_name):
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
@@ -158,10 +158,16 @@ struct Program::ProgramImpl {
 Program::Program(const core::SharedNodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(*mgr) ) { }
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, mProgram, mMgr);
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
+	return *tuImpl;
+}
+
+TranslationUnit& Program::createEmptyTranslationUnit() {
+	TranslationUnit* tuImpl = new TranslationUnit;
+	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 

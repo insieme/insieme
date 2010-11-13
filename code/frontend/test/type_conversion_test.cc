@@ -54,8 +54,9 @@
 using namespace insieme;
 using namespace insieme::core;
 
-using namespace insieme::frontend;
 using namespace insieme::frontend::conversion;
+
+namespace fe = insieme::frontend;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
 	{ clang::Type* builtin = new clang::BuiltinType(clang::BuiltinType::TypeName); \
@@ -120,9 +121,10 @@ TEST(TypeConversion, HandlePointerType) {
 	using namespace clang;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	fe::Program prog(shared);
+	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+	const fe::ClangCompiler& clang = tu.getCompiler();
 	ConversionFactory convFactory( shared, prog );
-	ClangCompiler clang;
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
@@ -138,8 +140,9 @@ TEST(TypeConversion, HandleReferenceType) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);
+	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+	const fe::ClangCompiler& clang = tu.getCompiler();
 	ConversionFactory convFactory( shared, prog );
-	ClangCompiler clang;
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
@@ -150,50 +153,51 @@ TEST(TypeConversion, HandleReferenceType) {
 
 }
 
-//TEST(TypeConversion, HandleStructType) {
-//	using namespace clang;
-//
-//	SharedNodeManager shared = std::make_shared<NodeManager>();
-//	insieme::frontend::Program prog(shared);
-//	ConversionFactory convFactory( shared, prog );
-//	ClangCompiler clang;
-//
-//	SourceLocation emptyLoc;
-//
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
-//
-//	// create a struct:
-//	// struct Person {
-//	//	char* name;
-//	//	unsigned short age;
-//	// };
-//	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-//			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
-//
-//	// creates 'char* name' field
-//	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-//			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
-//
-//	// creates 'unsigned short age' field
-//	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
-//			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
-//
-//	decl->completeDefinition ();
-//
-//	// Gets the type for the record declaration
-//	QualType type = clang.getASTContext().getTagDeclType(decl);
-//
-//	// convert the type into an IR type
-//	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
-//	EXPECT_TRUE(insiemeTy);
-//	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
-//
-//	operator delete (charTy);
-//	operator delete (ushortTy);
-//}
+TEST(TypeConversion, HandleStructType) {
+	using namespace clang;
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	insieme::frontend::Program prog(shared);
+	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+	const fe::ClangCompiler& clang = tu.getCompiler();
+	ConversionFactory convFactory( shared, prog );
+
+	SourceLocation emptyLoc;
+
+	// cppcheck-suppress exceptNew
+	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
+	// cppcheck-suppress exceptNew
+	BuiltinType* ushortTy = new BuiltinType(BuiltinType::UShort);
+
+	// create a struct:
+	// struct Person {
+	//	char* name;
+	//	unsigned short age;
+	// };
+	RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			emptyLoc, clang.getPreprocessor().getIdentifierInfo("Person"));
+
+	// creates 'char* name' field
+	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(QualType(charTy, 0)), 0, 0, false));
+
+	// creates 'unsigned short age' field
+	decl->addDecl(FieldDecl::Create(clang.getASTContext(), decl, emptyLoc,
+			clang.getPreprocessor().getIdentifierInfo("age"), QualType(ushortTy,0), 0, 0, false));
+
+	decl->completeDefinition ();
+
+	// Gets the type for the record declaration
+	QualType type = clang.getASTContext().getTagDeclType(decl);
+
+	// convert the type into an IR type
+	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
+
+	operator delete (charTy);
+	operator delete (ushortTy);
+}
 
 //TEST(TypeConversion, HandleRecursiveStructType) {
 //
@@ -385,35 +389,35 @@ TEST(TypeConversion, HandleReferenceType) {
 //
 //}
 
-struct VariableResetHack {
-	static void reset() { Variable::counter = 0; }
-};
-
-TEST(TypeConversion, FileTest) {
-
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	CommandLineOptions::Verbosity = 1;
-	insieme::frontend::Program prog(shared);
-	insieme::frontend::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
-
-	const PragmaList& pl = tu.getPragmaList();
-
-	std::for_each(pl.begin(), pl.end(),
-		[ &prog, &shared, &tu ](const PragmaPtr curr) {
-			VariableResetHack::reset();
-			ConversionFactory convFactory( shared, prog, tu.getPragmaList() );
-			convFactory.setTranslationUnit(tu);
-
-			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
-			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
-			else {
-				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-				} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
-				}
-			}
-	});
-}
+//struct VariableResetHack {
+//	static void reset() { Variable::counter = 0; }
+//};
+//
+//TEST(TypeConversion, FileTest) {
+//
+//	SharedNodeManager shared = std::make_shared<NodeManager>();
+//	CommandLineOptions::Verbosity = 1;
+//	insieme::frontend::Program prog(shared);
+//	insieme::frontend::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
+//
+//	const PragmaList& pl = tu.getPragmaList();
+//
+//	std::for_each(pl.begin(), pl.end(),
+//		[ &prog, &shared, &tu ](const PragmaPtr curr) {
+//			VariableResetHack::reset();
+//			ConversionFactory convFactory( shared, prog, tu.getPragmaList() );
+//			convFactory.setTranslationUnit(tu);
+//
+//			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
+//			if(tp->isStatement())
+//				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
+//			else {
+//				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
+//					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+//				} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
+//					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+//				}
+//			}
+//	});
+//}
 

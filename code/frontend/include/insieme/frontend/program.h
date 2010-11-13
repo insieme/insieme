@@ -60,6 +60,7 @@ protected:
 	ClangCompiler	mClang;
 	PragmaList 		mPragmaList;
 public:
+	TranslationUnit() { }
 	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
 	/**
 	 * Returns a list of pragmas defined in the translation unit
@@ -69,7 +70,7 @@ public:
 	const std::string& 	 getFileName() const { return mFileName; }
 };
 
-typedef TranslationUnit* TranslationUnitPtr;
+typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
 
 // ------------------------------------ Program ---------------------------
 /**
@@ -100,6 +101,11 @@ public:
 	 * Add a single file to the program
 	 */
 	TranslationUnit& addTranslationUnit(const std::string& fileName);
+
+	/**
+	 * Add a single file to the program
+	 */
+	TranslationUnit& createEmptyTranslationUnit();
 
 	/**
 	 * Add multiple files to the program
