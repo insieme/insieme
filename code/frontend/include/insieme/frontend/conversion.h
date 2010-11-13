@@ -72,7 +72,7 @@ class ASTConverter;
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
-class ConversionFactory {
+class ConversionFactory : public boost::noncopyable {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ConversionContext

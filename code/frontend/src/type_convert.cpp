@@ -85,10 +85,9 @@ namespace conversion {
 //############################################################################
 class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
 	ConversionFactory& convFact;
-	ConversionFactory::ConversionContext& ctx;
 
 public:
-	ClangTypeConverter(ConversionFactory& fact): convFact( fact ), ctx(fact.ctx) { }
+	ClangTypeConverter(ConversionFactory& fact): convFact( fact ) { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
@@ -291,10 +290,10 @@ public:
 		core::TupleType::ElementTypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
-				this->ctx.isResolvingFunctionType = true;
+				this->convFact.ctx.isResolvingFunctionType = true;
 				core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
 				argTypes.push_back( argTy );
-				this->ctx.isResolvingFunctionType = false;
+				this->convFact.ctx.isResolvingFunctionType = false;
 			}
 		);
 
@@ -384,10 +383,10 @@ public:
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTagType(TagType* tagType) {
-		if(!ctx.recVarMap.empty()) {
+		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
-			ConversionContext::TypeRecVarMap::const_iterator fit = ctx.recVarMap.find(tagType);
-			if( fit != ctx.recVarMap.end() ) {
+			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
+			if( fit != convFact.ctx.recVarMap.end() ) {
 				// we are resolving a parent recursive type, so we shouldn't
 				return fit->second;
 			}
@@ -395,9 +394,9 @@ public:
 
 		// check if the type is in the cache of already solved recursive types
 		// this is done only if we are not resolving a recursive sub type
-		if(!ctx.isRecSubType) {
-			ConversionContext::RecTypeMap::const_iterator rit = ctx.recTypeCache.find(tagType);
-			if(rit != ctx.recTypeCache.end())
+		if(!convFact.ctx.isRecSubType) {
+			ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagType);
+			if(rit != convFact.ctx.recTypeCache.end())
 				return rit->second;
 		}
 
@@ -423,13 +422,13 @@ public:
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
 
-				if(!ctx.isRecSubType) {
+				if(!convFact.ctx.isRecSubType) {
 					// add this type to the type graph (if not present)
-					ctx.typeGraph.addNode(tagDecl->getTypeForDecl());
+					convFact.ctx.typeGraph.addNode(tagDecl->getTypeForDecl());
 				}
 
 				// retrieve the strongly connected componenets for this type
-				std::set<const Type*>&& components = ctx.typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
+				std::set<const Type*>&& components = convFact.ctx.typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
 
 				if( !components.empty() ) {
 					if(VLOG_IS_ON(2)) {
@@ -442,20 +441,20 @@ public:
 								VLOG(2) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
 							}
 						);
-						ctx.typeGraph.print(std::cerr);
+						convFact.ctx.typeGraph.print(std::cerr);
 					}
 
 					// we create a TypeVar for each type in the mutual dependence
-					ctx.recVarMap.insert( std::make_pair(tagType, convFact.builder.typeVariable(recDecl->getName())) );
+					convFact.ctx.recVarMap.insert( std::make_pair(tagType, convFact.builder.typeVariable(recDecl->getName())) );
 
 					// when a subtype is resolved we aspect to already have these variables in the map
-					if(!ctx.isRecSubType) {
+					if(!convFact.ctx.isRecSubType) {
 						std::for_each(components.begin(), components.end(),
 							[ this ] (std::set<const Type*>::value_type ty) {
 								const TagType* tagTy = dyn_cast<const TagType>(ty);
 								assert(tagTy && "Type is not of TagType type");
 
-								this->ctx.recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
+								this->convFact.ctx.recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
 							}
 						);
 					}
@@ -481,12 +480,12 @@ public:
 				if( !components.empty() ) {
 					// if we are visiting a nested recursive type it means someone else will take care
 					// of building the rectype node, we just return an intermediate type
-					if(ctx.isRecSubType)
+					if(convFact.ctx.isRecSubType)
 						return retTy;
 
 					// we have to create a recursive type
-					ConversionContext::TypeRecVarMap::const_iterator tit = ctx.recVarMap.find(tagType);
-					assert(tit != ctx.recVarMap.end() && "Recursive type has not TypeVar associated to himself");
+					ConversionContext::TypeRecVarMap::const_iterator tit = convFact.ctx.recVarMap.find(tagType);
+					assert(tit != convFact.ctx.recVarMap.end() && "Recursive type has not TypeVar associated to himself");
 					core::TypeVariablePtr recTypeVar = tit->second;
 
 					core::RecTypeDefinition::RecTypeDefs definitions;
@@ -495,7 +494,7 @@ public:
 					// We start building the recursive type. In order to avoid loop the visitor
 					// we have to change its behaviour and let him returns temporarely types
 					// when a sub recursive type is visited.
-					ctx.isRecSubType = true;
+					convFact.ctx.isRecSubType = true;
 
 					std::for_each(components.begin(), components.end(),
 						[ this, &definitions ] (std::set<const Type*>::value_type ty) {
@@ -504,35 +503,35 @@ public:
 
 							//Visual Studio 2010 fix: full namespace
 							insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit =
-									this->ctx.recVarMap.find(ty);
+									this->convFact.ctx.recVarMap.find(ty);
 
-							assert(tit != this->ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
+							assert(tit != this->convFact.ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
 							// we remove the variable from the list in order to fool the solver,
 							// in this way it will create a descriptor for this type (and he will not return the TypeVar
 							// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 							// flag is true
-							this->ctx.recVarMap.erase(ty);
+							this->convFact.ctx.recVarMap.erase(ty);
 
 							definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty))) );
 							var.addAnnotation( std::make_shared<insieme::c_info::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
 
 							// reinsert the TypeVar in the map in order to solve the other recursive types
-							this->ctx.recVarMap.insert( std::make_pair(tagTy, var) );
+							this->convFact.ctx.recVarMap.insert( std::make_pair(tagTy, var) );
 						}
 					);
 					// we reset the behavior of the solver
-					ctx.isRecSubType = false;
+					convFact.ctx.isRecSubType = false;
 					// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
-					ctx.recVarMap.clear();
+					convFact.ctx.recVarMap.clear();
 
 					core::RecTypeDefinitionPtr&& definition = convFact.builder.recTypeDefinition(definitions);
 					retTy = convFact.builder.recType(recTypeVar, definition);
 
 					// Once we solved this recursive type, we add to a cache of recursive types
 					// so next time we encounter it, we don't need to compute the graph
-					ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
+					convFact.ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
 				}
 
 				// Adding the name of the C struct as annotation

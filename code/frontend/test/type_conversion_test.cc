@@ -394,15 +394,15 @@ TEST(TypeConversion, FileTest) {
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	CommandLineOptions::Verbosity = 1;
 	insieme::frontend::Program prog(shared);
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
+	insieme::frontend::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+	const PragmaList& pl = tu.getPragmaList();
 
 	std::for_each(pl.begin(), pl.end(),
-		[ &prog, &shared, &pl ](const PragmaPtr curr) {
+		[ &prog, &shared, &tu ](const PragmaPtr curr) {
 			VariableResetHack::reset();
-			ConversionFactory convFactory( shared, prog, pl );
-			convFactory.setTranslationUnit(**prog.getTranslationUnits().begin());
+			ConversionFactory convFactory( shared, prog, tu.getPragmaList() );
+			convFactory.setTranslationUnit(tu);
 
 			const TestPragma* tp = static_cast<const TestPragma*>(&*curr);
 			if(tp->isStatement())
