@@ -72,7 +72,6 @@ namespace conversion {
 	if( VLOG_IS_ON(2) ) { \
 		DVLOG(2) << "Dump of clang type: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		type->dump(); \
 	}
 
 #define END_LOG_TYPE_CONVERSION(type) \

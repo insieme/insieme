@@ -68,6 +68,7 @@ namespace fe = insieme::frontend;
 TEST(TypeConversion, HandleBuildinType) {
 
 	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
+	CommandLineOptions::Verbosity = 2;
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
 	insieme::frontend::Program prog(shared);
@@ -161,6 +162,7 @@ TEST(TypeConversion, HandleStructType) {
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
 	ConversionFactory convFactory( shared, prog );
+	convFactory.setTranslationUnit(tu);
 
 	SourceLocation emptyLoc;
 
@@ -199,43 +201,42 @@ TEST(TypeConversion, HandleStructType) {
 	operator delete (ushortTy);
 }
 
-//TEST(TypeConversion, HandleRecursiveStructType) {
-//
-//	SharedNodeManager shared = std::make_shared<NodeManager>();
-//	core::ProgramPtr prog = core::Program::create(*shared);
-//	ClangCompiler clang;
-//	clang::idx::Program p;
-//	clang::idx::Indexer idx(p);
-//	ConversionFactory convFactory( shared, clang, idx, p );
-//
-//	// cppcheck-suppress exceptNew
-//	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
-//	// cppcheck-suppress exceptNew
-//	clang::BuiltinType* longTy = new clang::BuiltinType(clang::BuiltinType::Long);
-//
-//	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
-//			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
-//
-//	clang::QualType declType = clang.getASTContext().getTagDeclType (decl);
-//
-//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-//			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(charTy, 0)), 0, 0, false));
-//
-//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-//			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(longTy,0), 0, 0, false));
-//
-//	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
-//			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
-//	decl->completeDefinition();
-//
-//	TypePtr insiemeTy = convFactory.convertType( declType.getTypePtr() );
-//	EXPECT_TRUE(insiemeTy);
-//	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<array<ref<char>,1>>,age:ref<int<8>>,mate:ref<array<ref<'Person>,1>>>}", insiemeTy->toString());
-//
-//	operator delete (charTy);
-//	operator delete (longTy);
-//}
-//
+TEST(TypeConversion, HandleRecursiveStructType) {
+
+	SharedNodeManager shared = std::make_shared<NodeManager>();
+	insieme::frontend::Program prog(shared);
+	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+	const fe::ClangCompiler& clang = tu.getCompiler();
+	ConversionFactory convFactory( shared, prog );
+
+	// cppcheck-suppress exceptNew
+	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
+	// cppcheck-suppress exceptNew
+	clang::BuiltinType* longTy = new clang::BuiltinType(clang::BuiltinType::Long);
+
+	clang::RecordDecl* decl = clang::RecordDecl::Create(clang.getASTContext(), clang::TTK_Struct, NULL,
+			clang::SourceLocation(), clang.getPreprocessor().getIdentifierInfo("Person"));
+
+	clang::QualType declType = clang.getASTContext().getTagDeclType (decl);
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("name"), clang.getASTContext().getPointerType(clang::QualType(charTy, 0)), 0, 0, false));
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("age"), clang::QualType(longTy,0), 0, 0, false));
+
+	decl->addDecl(clang::FieldDecl::Create(clang.getASTContext(), decl, clang::SourceLocation(),
+			clang.getPreprocessor().getIdentifierInfo("mate"), clang.getASTContext().getPointerType(declType), 0, 0, false));
+	decl->completeDefinition();
+
+	TypePtr insiemeTy = convFactory.convertType( declType.getTypePtr() );
+	EXPECT_TRUE(insiemeTy);
+	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<array<ref<char>,1>>,age:ref<int<8>>,mate:ref<array<ref<'Person>,1>>>}", insiemeTy->toString());
+
+	operator delete (charTy);
+	operator delete (longTy);
+}
+
 //TEST(TypeConversion, HandleMutualRecursiveStructType) {
 //	using namespace clang;
 //
