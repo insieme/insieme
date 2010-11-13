@@ -74,19 +74,6 @@ class ASTConverter;
  */
 class ConversionFactory {
 
-	// PIMPL pattern
-	class ClangStmtConverter;
-	static ClangStmtConverter* makeStmtConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangStmtConverter> stmtConv;
-
-	class ClangTypeConverter;
-	static ClangTypeConverter* makeTypeConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangTypeConverter> typeConv;
-
-	class ClangExprConverter;
-	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangExprConverter> exprConv;
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ConversionContext
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,7 +129,22 @@ class ConversionFactory {
 		core::StructExprPtr	globalStructExpr;
 
 		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
-	} ctx;
+	};
+
+	ConversionContext 		ctx;
+
+	// PIMPL pattern
+	class ClangStmtConverter;
+	static ClangStmtConverter* makeStmtConverter(ConversionFactory& fact);
+	std::auto_ptr<ClangStmtConverter> stmtConv;
+
+	class ClangTypeConverter;
+	static ClangTypeConverter* makeTypeConverter(ConversionFactory& fact);
+	std::auto_ptr<ClangTypeConverter> typeConv;
+
+	class ClangExprConverter;
+	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
+	std::auto_ptr<ClangExprConverter> exprConv;
 
 	core::SharedNodeManager mgr;
 	const core::ASTBuilder  builder;

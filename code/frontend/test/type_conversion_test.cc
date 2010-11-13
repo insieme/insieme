@@ -392,7 +392,7 @@ struct VariableResetHack {
 TEST(TypeConversion, FileTest) {
 
 	SharedNodeManager shared = std::make_shared<NodeManager>();
-	CommandLineOptions::Verbosity = 0;
+	CommandLineOptions::Verbosity = 1;
 	insieme::frontend::Program prog(shared);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
