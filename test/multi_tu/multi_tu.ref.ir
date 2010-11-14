@@ -3,9 +3,9 @@
 //  Entry Point: 
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2) {
         return fun(int<4> v3, int<4> v4) {
-            return fun(int<4> v5) {
-                return v5-1;
-            }(v3+v4)+1000;
+            return (fun(int<4> v5) {
+                return (v5-1);
+            }((v3+v4))+1000);
         }(v1, v1);
     }
 

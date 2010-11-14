@@ -114,7 +114,10 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			};
-			checker();
+
+			if(CommandLineOptions::CheckSema) {
+				checker();
+			}
 
 			// run OMP frontend
 			LOG(INFO) << "============================= OMP conversion ====================================";
@@ -124,7 +127,9 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << ompTimer;
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			// check again
-			checker();
+			if(CommandLineOptions::CheckSema) {
+				checker();
+			}
 
 			// IR statistiscs
 			ASTStatistic&& stats = ASTStatistic::evaluate(program);
@@ -178,12 +183,12 @@ int main(int argc, char** argv) {
 				// write into the file
 				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
-				fout << insieme::core::printer::PrettyPrinter(program);
+				fout << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
 			} else
 				LOG(INFO) << insieme::core::printer::PrettyPrinter(program);
-			LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-			LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
-			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			// LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
+			// LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
+			// LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 
 		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));

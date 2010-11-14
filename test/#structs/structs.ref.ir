@@ -1,0 +1,14 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2) {
+        decl ref<struct<name:ref<vector<ref<char>,30>>,age:ref<uint<4>>>> v4 = ( var(fun() {
+            decl ref<struct<name:ref<vector<ref<char>,30>>,age:ref<uint<4>>>> v3 = ( var(struct{name:=( var(vector.initUniform(( var('))))), age:=( var(0))}));
+            strcpy(( *( *v3).name), CAST<array<ref<char>,1>>("John Doe"));
+            (( *v3).age := CAST<uint<4>>(101));
+        }()));
+        return fun(struct<name:ref<vector<ref<char>,30>>,age:ref<uint<4>>> v5) {
+            return int.land((( *v5.age)>=CAST<uint<4>>(10)), (( *v5.age)<CAST<uint<4>>(20)));
+        }(( *v4));
+    }
+

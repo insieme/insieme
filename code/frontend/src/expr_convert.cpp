@@ -139,6 +139,7 @@ namespace frontend {
 namespace conversion {
 
 #define START_LOG_EXPR_CONVERSION(expr) \
+	assert(convFact.currTU && "Translation unit not correctly set"); \
 	DVLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
 			 << "-> at location: (" << utils::location(expr->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \

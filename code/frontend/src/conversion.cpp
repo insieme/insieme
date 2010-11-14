@@ -106,7 +106,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalFuncMap.clear();
 	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
-	DLOG(INFO) << globColl;
+	DVLOG(1) << globColl;
 	auto global = globColl.createGlobalStruct(mFact);
 	mFact.ctx.globalStructType = global.first;
 	mFact.ctx.globalStructExpr = global.second;
@@ -480,6 +480,7 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 		loc.first = fit->second->getStartLocation();
 	}
 
+	assert(currTU && "Translation unit not correctly set");
 	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
 		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
 		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
