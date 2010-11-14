@@ -207,9 +207,18 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(varDecl);
-	if(fit != ctx.varDeclMap.end())
-		// variable found in the map, return it
+	if(fit != ctx.varDeclMap.end()) {
+		// variable found in the map.
+
+		// before returning it, we have to make sure this variable has not being marked
+		// as needRef, in that case the newly introduced ref need to be returned
+		auto rit = ctx.needRef.find(fit->second);
+		if(rit != ctx.needRef.end())
+			return rit->second;
+
+		// return the variable
 		return fit->second;
+	}
 
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );

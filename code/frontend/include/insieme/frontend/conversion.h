@@ -128,6 +128,9 @@ class ConversionFactory : public boost::noncopyable {
 		core::StructTypePtr globalStructType;
 		core::StructExprPtr	globalStructExpr;
 
+		std::unordered_map<insieme::core::VariablePtr, insieme::core::VariablePtr, hash_target<insieme::core::VariablePtr>,
+			equal_target<insieme::core::VariablePtr>> needRef;
+
 		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
 

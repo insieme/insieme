@@ -513,14 +513,15 @@ public:
 
 		if( !op.empty() ) {
 			// The operator is a compound operator, we substitute the RHS expression with the expanded one
-			core::RefTypePtr&& lhsTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType());
-			assert( lhsTy && "LHS operand must of type ref<a'>." );
+			// core::RefTypePtr&& lhsTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType());
+			// assert( lhsTy && "LHS operand must of type ref<a'>." );
 			core::lang::OperatorPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
 
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
+			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 
-			const core::TypePtr& lhsSubTy = lhsTy->getElementType();
+			const core::TypePtr& lhsSubTy = subExprLHS->getType();
 			rhs = builder.callExpr(lhsSubTy, opFunc,
 				toVector<core::ExpressionPtr>(builder.callExpr( lhsSubTy, core::lang::OP_REF_DEREF_PTR, toVector(lhs) ), rhs) );
 
@@ -582,13 +583,31 @@ public:
 		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
 		case BO_Assign:
+		{
 			baseOp = BO_Assign;
+			// poor C codes assign value to function parameters, this is not allowed here as input parameters
+			// are of non REF type. What we need to do is introduce a declaration for these variables
+			// and use the created variable on the stack instead of the input prameters
+			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(binOp->getLHS());
+			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
+				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(lhs);
+				assert(parmVar);
+				// look up the needRef map to see if we already introduced a declaration for this variable
+				auto fit = ctx.needRef.find(parmVar);
+				if(fit == ctx.needRef.end()) {
+					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
+					DLOG(INFO) << "POPULATIONG MAP";
+				}
+				lhs = fit->second;
+			}
+
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			isAssignment = true;
 			opFunc = convFact.mgr->get(core::lang::OP_REF_ASSIGN_PTR);
 			exprTy = core::lang::TYPE_UNIT_PTR;
 			break;
+		}
 		default:
 			assert(false && "Operator not supported");
 		}
@@ -702,8 +721,24 @@ public:
 			break;
 		// &a
 		case UO_AddrOf:
-			// assert(false && "Conversion of AddressOf operator '&' not supported");
+		{
+			// We need to be carefull paramvars are not dereferenced and the address passed around. If this happens
+			// we have to declare a variable holding the memory location for that value and replace every use of
+			// the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
+			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(unOp->getSubExpr());
+			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
+				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(subExpr);
+				assert(parmVar);
+				// look up the needRef map to see if we already introduced a declaration for this variable
+				auto fit = ctx.needRef.find(parmVar);
+				if(fit == ctx.needRef.end()) {
+					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
+					DLOG(INFO) << "POPULATIONG MAP";
+				}
+				subExpr = fit->second;
+			}
 			break;
+		}
 		// *a
 		case UO_Deref: {
 			subExpr = convFact.tryDeref(subExpr);
@@ -981,6 +1016,38 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	if(!components.empty())
 		ctx.isResolvingRecFuncBody = true;
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
+	// if any of the parameters of this function has been marked as needRef,
+	// we need to add a declaration just before the body of this function
+	vector<core::StatementPtr> decls;
+	std::for_each(params.begin(), params.end(),
+		[ &decls, &body, this ] (core::VariablePtr currParam) {
+			auto fit = this->ctx.needRef.find(currParam);
+			if(fit != this->ctx.needRef.end()) {
+				decls.push_back( this->builder.declarationStmt(fit->second,
+					this->builder.callExpr( fit->second->getType(), core::lang::OP_REF_VAR_PTR, toVector<core::ExpressionPtr>( fit->first )) // ref.var
+				));
+				// replace this parameter in the body
+				// example:
+				// int f(int a) {
+				//    for (...) {
+				//	     x = a; <- if all the occurencies of a will not be replaced the semantics of the code will not be preserved
+				//	     a = i;
+				//    }
+				// }
+				// as the variable can olny appear in the RHS of expression, we have to sobstitute it with
+				// its dereference
+				body = core::dynamic_pointer_cast<const core::Statement>(core::transform::replaceNode(this->builder, body,
+						fit->first, this->tryDeref(fit->second), true));
+				assert(body);
+			}
+		}
+	);
+	// if we introduce new decls we have to introduce them just before the body of the function
+	if(!decls.empty()) {
+		// push the old body
+		decls.push_back(body);
+		body = builder.compoundStmt(decls);
+	}
 	ctx.isResolvingRecFuncBody = false;
 
 	// ADD THE GLOBALS
