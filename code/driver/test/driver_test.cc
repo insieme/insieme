@@ -90,36 +90,36 @@ TEST(DriverTest, HelloWorldTest) {
 	LOG(INFO) << "Wrote source to " << SRC_DIR << "/hello_world.insieme.c" << std::endl;
 }
 
-TEST(DriverTest, MultiTUTest) {
-
-	// insieme::utils::InitLogger("MultiTUTest", INFO, true);
-
-	core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
-	core::ProgramPtr program = core::Program::create(*sharedManager);
-
-	fe::Program prog(sharedManager);
-	prog.addTranslationUnit(std::string(SRC_DIR) + "/multi_tu/b.c");
-	prog.addTranslationUnit(std::string(SRC_DIR) + "/multi_tu/a.c");
-	LOG(INFO) << "Start conversion...";
-	program = prog.convert();
-	LOG(INFO) << "Done.";
-
-	LOG(INFO) << "Printing the IR: " << program;
-	LOG(INFO) << "Converting IR to C...";
-
-	ConversionContext cc;
-	auto converted = cc.convert(program);
-
-	std::ostringstream ss;
-	for_each(program->getEntryPoints(), [&converted, &ss](const ExpressionPtr& ep) {
-		ss << converted[ep] << std::endl;
-	});
-
-	LOG(INFO) << "Printing converted code: " << ss.str();
-
-	std::ofstream out( std::string(SRC_DIR) + "/multi_tu.insieme.c" );
-	out << ss.str();
-	out.close();
-
-	LOG(INFO) << "Wrote source to " << SRC_DIR << "/multi_tu.insieme.c" << std::endl;
-}
+//TEST(DriverTest, MultiTUTest) {
+//
+//	// insieme::utils::InitLogger("MultiTUTest", INFO, true);
+//
+//	core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
+//	core::ProgramPtr program = core::Program::create(*sharedManager);
+//
+//	fe::Program prog(sharedManager);
+//	prog.addTranslationUnit(std::string(SRC_DIR) + "/multi_tu/b.c");
+//	prog.addTranslationUnit(std::string(SRC_DIR) + "/multi_tu/a.c");
+//	LOG(INFO) << "Start conversion...";
+//	program = prog.convert();
+//	LOG(INFO) << "Done.";
+//
+//	LOG(INFO) << "Printing the IR: " << program;
+//	LOG(INFO) << "Converting IR to C...";
+//
+//	ConversionContext cc;
+//	auto converted = cc.convert(program);
+//
+//	std::ostringstream ss;
+//	for_each(program->getEntryPoints(), [&converted, &ss](const ExpressionPtr& ep) {
+//		ss << converted[ep] << std::endl;
+//	});
+//
+//	LOG(INFO) << "Printing converted code: " << ss.str();
+//
+//	std::ofstream out( std::string(SRC_DIR) + "/multi_tu.insieme.c" );
+//	out << ss.str();
+//	out.close();
+//
+//	LOG(INFO) << "Wrote source to " << SRC_DIR << "/multi_tu.insieme.c" << std::endl;
+//}
