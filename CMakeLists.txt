@@ -6,5 +6,7 @@ cmake_minimum_required(VERSION 2.6)
 # enable ctest support for testing
 enable_testing()
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test.py.in ${CMAKE_BINARY_DIR}/test.py)
+
 add_subdirectory(docs)
 add_subdirectory(code)
