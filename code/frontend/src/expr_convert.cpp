@@ -757,7 +757,7 @@ public:
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
 		START_LOG_EXPR_CONVERSION(condOp);
 
-		assert(condOp->getSaveExpr() == NULL && "Conditional operation with 'gcc save' expession not supperted.");
+		assert(!condOp->getSaveExpr() && "Conditional operation with 'gcc save' expession not supperted.");
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
