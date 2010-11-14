@@ -51,8 +51,8 @@ def run_tests():
 	            continue # SKIP
 	        
 	        test_num += 1
-	        print "#----------------------------------------"
-	        print "# {0}: {1}".format(test_num, test_case_name)
+	        sys.stderr.write("#----------------------------------------\n")
+	        sys.stderr.write("# {0}: {1}\n".format(test_num, test_case_name))
 	        
 	        # name of the file contaning the reference IR for the current test
 	        refIr   = test_case_name + '.ref.ir'
@@ -77,19 +77,19 @@ def run_tests():
 	        	failed_test += 1
 	        	continue
 	        
-	        print " * Comparing generated IR... "
+	        sys.stderr.write(" * Comparing generated IR...\n")
 	        if not check_diff(test_case_name, refIr, testIr):
 					os.chdir("../")
 					failed_test += 1
 					continue
-	        print " * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC
+	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
 	          
-	        print " * Comparing generated C output... "
+	        sys.stderr.write(" * Comparing generated C output...\n")
 	        if not check_diff(test_case_name, refC, testC):
 	            os.chdir("../")
 	            failed_test += 1
 	            continue
-	        print " * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC
+	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
 	        
 	        # file containing the output of the reference program
 	        ref_out = "ref.out"
@@ -101,7 +101,7 @@ def run_tests():
 	       					)
 	        os.system("./ref > {0}".format(ref_out))
 	        
-	        print " * Compiling generated C output... "
+	        sys.stderr.write(" * Compiling generated C output...\n")
 	        ret = run_cmd("{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
 	        						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
 	        					)
@@ -109,20 +109,20 @@ def run_tests():
 					os.chdir("../")
 					failed_test += 1
 					continue
-	        print " * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC
+	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
 	        
 	        os.system("./test > {0}".format(test_out))
 	        
-	        print " * Checking generated program output... "
+	        sys.stderr.write(" * Checking generated program output...\n")
 	        if not check_diff(test_case_name, ref_out, test_out):
 	           	os.chdir("../")
 	           	failed_test += 1
 	           	continue
-	        print " * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC
+	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
 	        
 	        map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
 	        
-	        print "@ " + bcolors.OKGREEN + "[SUCCESS]" + bcolors.ENDC
+	        sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]\n" + bcolors.ENDC)
 	        os.chdir("../")
 	
 	# return the number of executed test case and number of failed ones
@@ -131,13 +131,13 @@ def run_tests():
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
 	(executed, failed) = run_tests()
-	print "###############################"
-	print "#          Summary            #"
-	print "#-----------------------------#"
-	print "# Total number of tests: {0:4} #".format(executed)
-	print "# -> SUCCEEDED: {0:13} #".format(executed - failed)
-	print "# -> FAILED:    {0:13} #".format(failed)
-	print "###############################"
+	sys.stderr.write("###############################\n")
+	sys.stderr.write("#          Summary            #\n")
+	sys.stderr.write("#-----------------------------#\n")
+	sys.stderr.write("# Total number of tests: {0:4} #\n".format(executed))
+	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(executed - failed))
+	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(failed))
+	sys.stderr.write("###############################\n")
 	
 	return  os._exit(failed);
 
