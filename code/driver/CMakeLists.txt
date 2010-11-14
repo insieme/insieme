@@ -9,7 +9,6 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/driver_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/driver/driver_config.h)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/nas/is/Makefile.in ${CMAKE_CURRENT_SOURCE_DIR}/test/nas/is/Makefile)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
