@@ -1,0 +1,37 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2) {
+        decl ref<int<4>> v3 =  var(10);
+        printf("x=%d\n", pack((v3)));
+        printf("even(x)=%s\n", pack((fun(ref<int<4>> v12) {
+            if(recFun v4 {
+                v5 = fun(uint<4> v9) {
+                    return fun(((uint<4>)->int<4>) v10, uint<4> v11) {
+                        if(v11==0) 0 else v10(v11-1);
+                    }(v4, v9);
+                };
+                v4 = fun(uint<4> v6) {
+                    return fun(((uint<4>)->int<4>) v7, uint<4> v8) {
+                        if(v8==0) 1 else v7(v8-1);
+                    }(v5, v6);
+                };
+            }(v12)) "true" else "false";
+        }(v3))));
+        printf("odd(x)=%s\n", pack((fun(ref<int<4>> v13) {
+            if(recFun v5 {
+                v5 = fun(uint<4> v9) {
+                    return fun(((uint<4>)->int<4>) v10, uint<4> v11) {
+                        if(v11==0) 0 else v10(v11-1);
+                    }(v4, v9);
+                };
+                v4 = fun(uint<4> v6) {
+                    return fun(((uint<4>)->int<4>) v7, uint<4> v8) {
+                        if(v8==0) 1 else v7(v8-1);
+                    }(v5, v6);
+                };
+            }(v13)) "true" else "false";
+        }(v3))));
+        return 0;
+    }
+

@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
 	start_t = clock();
 	for(int it=0; it<1000; it++) {
 		// main Jacobi loop
+		#pragma insieme mark
 		#pragma omp parallel for
 		for (int i=1; i < N-1; i++) {
 			 for (int j=1; j < N-1; j++)

@@ -110,7 +110,8 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	auto global = globColl.createGlobalStruct(mFact);
 	mFact.ctx.globalStructType = global.first;
 	mFact.ctx.globalStructExpr = global.second;
-	mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
+	if(global.first)
+		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
 
 	core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(funcDecl, true);
 	mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
@@ -256,7 +257,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     if ( *type == core::lang::TYPE_CHAR_VAL ) {
 		// initialize integer value
-		return builder.literal("0", type);
+		return builder.literal("'\0'", type);
 	}
     // handle reals initialization
     if ( core::lang::isRealType(*type) ) {
@@ -479,10 +480,10 @@ void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const c
 		loc.first = fit->second->getStartLocation();
 	}
 
-//	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-//		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
-//		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
-//	);
+	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
+		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
+	);
 }
 
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
@@ -512,12 +513,13 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
 		loc.first = fit->second->getStartLocation();
 	}
-//	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-//		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
-//		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second),
-//		false, // this is not a function decl
-//		args)
-//	);
+
+	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
+		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
+		false, // this is not a function decl
+		args)
+	);
 
 	return lambdaExpr;
 }

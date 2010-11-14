@@ -877,12 +877,15 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) cons
 	return exprConv->Visit( const_cast<Expr*>(expr) );
 }
 
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
+	assert(currTU);
+
 	DVLOG(1) << "#----------------------------------------------------------------------------------#";
 	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
 			 << "-> at location: (" << utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager()) << "): " << std::endl
@@ -958,7 +961,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		}
 	);
 
-	// before redolving the body we have to set the currGlobalVar accordingly depending if
+	// before resolving the body we have to set the currGlobalVar accordingly depending if
 	// this function will use the global struct or not
 	core::LambdaExpr::CaptureList captureList;
 	core::VariablePtr parentGlobalVar = ctx.currGlobalVar;
@@ -980,7 +983,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	ctx.isResolvingRecFuncBody = false;
 
 	// ADD THE GLOBALS
-	if(isEntryPoint) {
+	if(isEntryPoint && ctx.globalVar) {
 		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
 		assert(compStmt);
 		assert(ctx.globalVar && ctx.globalStructExpr);
