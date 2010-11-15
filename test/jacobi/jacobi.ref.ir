@@ -11,8 +11,8 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2) {
         decl ref<vector<vector<ref<real<4>>,650>,650>> v8 = ( var(vector.initUniform(vector.initUniform(( var(0.0))))));
         decl ref<vector<vector<ref<real<4>>,650>,650>> v9 = ( var(vector.initUniform(vector.initUniform(( var(0.0))))));
         decl ref<vector<vector<ref<real<4>>,650>,650>> v10 = ( var(vector.initUniform(vector.initUniform(( var(0.0))))));
-        memset(( *v7), 0, CAST<uint<4>>((650*650)));
-        memset(( *v9), 0, CAST<uint<4>>((650*650)));
+        memset(( *v7), 0, CAST<uint<8>>((650*650)));
+        memset(( *v9), 0, CAST<uint<8>>((650*650)));
         for(decl ref<int<4>> v11 = ( var(0)) .. 650 : 1) 
             for(decl ref<int<4>> v12 = ( var(0)) .. 650 : 1) 
                 (((( *v9)[CAST<uint<4>>(( *v11))])[CAST<uint<4>>(( *v12))]) := CAST<real<4>>(fun(int<4> v13, int<4> v14) {
@@ -34,7 +34,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2) {
                     (((( *v8)[CAST<uint<4>>(( *v21))])[CAST<uint<4>>(( *v20))]) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *((( *v7)[CAST<uint<4>>((( *v21)-1))])[CAST<uint<4>>(( *v20))]))+( *((( *v7)[CAST<uint<4>>(( *v21))])[CAST<uint<4>>((( *v20)+1))])))+( *((( *v7)[CAST<uint<4>>(( *v21))])[CAST<uint<4>>((( *v20)-1))])))+( *((( *v7)[CAST<uint<4>>((( *v21)+1))])[CAST<uint<4>>(( *v20))]))))-(( *v19)*CAST<real<8>>(( *((( *v9)[CAST<uint<4>>(( *v21))])[CAST<uint<4>>(( *v20))]))))))))
                 ;
             };
-            memcpy(( *v7), ( *v8), CAST<uint<4>>((650*650)));
+            memcpy(( *v7), ( *v8), CAST<uint<8>>((650*650)));
             for(decl ref<int<4>> v23 = ( var(1)) .. (650-1) : 1) {
                 for(decl ref<int<4>> v22 = ( var(1)) .. (650-1) : 1) 
                     (((( *v10)[CAST<uint<4>>(( *v23))])[CAST<uint<4>>(( *v22))]) := (((((( *((( *v9)[CAST<uint<4>>(( *v23))])[CAST<uint<4>>(( *v22))]))-(CAST<real<4>>(4)*( *((( *v7)[CAST<uint<4>>(( *v23))])[CAST<uint<4>>(( *v22))]))))+( *((( *v7)[CAST<uint<4>>((( *v23)-1))])[CAST<uint<4>>(( *v22))])))+( *((( *v7)[CAST<uint<4>>((( *v23)+1))])[CAST<uint<4>>(( *v22))])))+( *((( *v7)[CAST<uint<4>>(( *v23))])[CAST<uint<4>>((( *v22)-1))])))+( *((( *v7)[CAST<uint<4>>(( *v23))])[CAST<uint<4>>((( *v22)+1))]))))

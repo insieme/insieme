@@ -152,11 +152,11 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"fun(ref<int<4>> v2) { if(CAST<bool>(( *v2))) (( *v2)+1) else (( *v2)-1);}(v1)" // FIXME (use ITE)
+	"fun(ref<int<4>> v2) { if(CAST<bool>(( *v2))) return (( *v2)+1) else return (( *v2)-1);}(v1)" // FIXME (use ITE)
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"fun(ref<int<4>> v2) { if((( *v2)==0)) (( *v2)+1) else (( *v2)-1);}(v1)" // FIXME (use ITE)
+	"fun(ref<int<4>> v2) { if((( *v2)==0)) return (( *v2)+1) else return (( *v2)-1);}(v1)" // FIXME (use ITE)
 	a == 0 ? a+1 : a-1;
 }
 
