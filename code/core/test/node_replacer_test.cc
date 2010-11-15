@@ -45,7 +45,8 @@ namespace insieme {
 namespace core {
 
 TEST(NodeReplacer, Basic) {
-	ASTBuilder builder;
+	NodeManager manager;
+	ASTBuilder builder(manager);
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -57,17 +58,18 @@ TEST(NodeReplacer, Basic) {
 
 	NodePtr mod;
 
-	mod = transform::replaceNode(builder, typeC, typeA, typeD);
+	mod = transform::replaceAll(manager, typeC, typeA, typeD);
 	EXPECT_EQ("C<D,B,D>", toString(*mod));
 
-	mod = transform::replaceNode(builder, typeC, typeB, typeD);
+	mod = transform::replaceAll(manager, typeC, typeB, typeD);
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 
 }
 
 
 TEST(NodeReplacer, AnnotationPreservation) {
-	ASTBuilder builder;
+	NodeManager manager;
+	ASTBuilder builder(manager);
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -86,21 +88,21 @@ TEST(NodeReplacer, AnnotationPreservation) {
 
 	NodePtr mod;
 
-	mod = transform::replaceNode(builder, typeC, typeA, typeD);
+	mod = transform::replaceAll(manager, typeC, typeA, typeD);
 	EXPECT_EQ("C<D,B,D>", toString(*mod));
 	EXPECT_FALSE(mod.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
 
 	// check preservation of replacement annotations
 	typeD.addAnnotation(std::make_shared<DummyAnnotation>(14));
-	mod = transform::replaceNode(builder, typeC, typeB, typeD);
+	mod = transform::replaceAll(manager, typeC, typeB, typeD);
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 	EXPECT_FALSE(mod.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(mod->getChildList()[1].hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
 
 	// ---- TEST preservation of annotations to modified nodes ----
-	mod = transform::replaceNode(builder, typeC, typeB, typeD, true);
+	mod = transform::replaceAll(manager, typeC, typeB, typeD, true);
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 	EXPECT_TRUE(mod.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(mod->getChildList()[1].hasAnnotation(DummyAnnotation::DummyKey));
@@ -110,11 +112,11 @@ TEST(NodeReplacer, AnnotationPreservation) {
 	EXPECT_EQ("E<C<A,B,A>>", toString(*typeE));
 	EXPECT_TRUE(typeE->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
 
-	mod = transform::replaceNode(builder, typeE, typeA, typeD, true);
+	mod = transform::replaceAll(manager, typeE, typeA, typeD, true);
 	EXPECT_EQ("E<C<D,B,D>>", toString(*mod));
 	EXPECT_TRUE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
 
-	mod = transform::replaceNode(builder, typeE, typeB, typeD, false);
+	mod = transform::replaceAll(manager, typeE, typeB, typeD, false);
 	EXPECT_EQ("E<C<A,D,A>>", toString(*mod));
 	EXPECT_FALSE(mod->getChildList()[0].hasAnnotation(DummyAnnotation::DummyKey));
 }

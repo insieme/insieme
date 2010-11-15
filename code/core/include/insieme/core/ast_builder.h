@@ -53,11 +53,19 @@ using std::string;
 
 class ASTBuilder {
 
-	SharedNodeManager sharedManager;
+	/**
+	 * This manager is only used in case the no manager reference is based
+	 * within the constructor.
+	 */
+	std::shared_ptr<NodeManager> internalManager;
+
+	/**
+	 * The manager used by this builder to create new nodes.
+	 */
 	NodeManager& manager;
 
 public:
-	ASTBuilder(const SharedNodeManager& manager = SharedNodeManager(new NodeManager())) : sharedManager(manager), manager(*sharedManager) { }
+	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager) { }
 	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
 	typedef vector<DeclarationStmtPtr> CaptureList;
@@ -78,8 +86,11 @@ public:
 	typedef std::unordered_map<VariablePtr, LambdaExprPtr, hash_target<VariablePtr>, equal_target<VariablePtr>> RecFunDefs;
 
 
-	SharedNodeManager getNodeManager() const {
-		return sharedManager;
+	/**
+	 * Obtains a reference to the node manager used by this builder.
+	 */
+	NodeManager& getNodeManager() const {
+		return manager;
 	}
 
 	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet(), bool main = false);

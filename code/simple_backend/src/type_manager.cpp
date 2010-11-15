@@ -46,8 +46,6 @@ namespace insieme {
 namespace simple_backend {
 
 
-// TODO: cleanup!
-
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
@@ -124,11 +122,13 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 	// resolve type
 	Entry res;
 	switch(type->getNodeType()) {
+	case NT_FunctionType:
+		res = resolveFunctionType(static_pointer_cast<const FunctionType>(type)); break;
 	case NT_GenericType:
 		res = resolveGenericType(static_pointer_cast<const GenericType>(type)); break;
 	case NT_StructType:
 		res = resolveStructType(static_pointer_cast<const StructType>(type)); break;
-//	case NT_UnionType:
+	case NT_UnionType:
 		res = resolveUnionType(static_pointer_cast<const UnionType>(type)); break;
 	case NT_ArrayType:
 		res = resolveArrayType(static_pointer_cast<const ArrayType>(type)); break;
@@ -190,6 +190,35 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	return toEntry(string("[[unhandled_simple_type: ") + ptr->getName() + "]]");
 }
 
+TypeManager::Entry TypeManager::resolveFunctionType(const FunctionTypePtr& ptr) {
+
+	// get name for function type
+	string name = nameGenerator.getName(ptr, "fun");
+
+	// define the empty lambda struct
+	CodePtr cptr(new CodeFragment(string("lambda_struct_") + name));
+	CodeStream& out = cptr->getCodeStream();
+
+	out << "struct " << name << " { \n";
+	//int (*pt2Function)(float, char, char)
+	out << "    ";
+	out << "const " << getTypeName(cptr, ptr->getReturnType());
+	out << "(*fun)(" << "*(struct " << name << ")";
+	auto arguments = ptr->getArgumentType()->getElementTypes();
+	if (arguments.empty()) {
+		out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << getTypeName(cptr, cur);
+		});
+	}
+	out << ");\n";
+
+	out << "    const size_t size;\n";
+	out << "};\n";
+
+	string typeName = "struct " + name;
+	return TypeManager::Entry(typeName, "*(" + typeName + ")", cptr);
+}
+
 
 TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 
@@ -202,13 +231,6 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	Entry elementDef = resolveType(elemType);
 	return Entry(elementDef.lValueName, elementDef.lValueName + "*", elementDef.definition);
 
-//	if((declVisit && visitStarting) || elemType->getNodeType() == NT_VectorType ) {
-//		visitStarting = false;
-//		return visit(elemType);
-//	}
-//	visitStarting = false;
-//	return visit(elemType) + "*";
-
 }
 
 
@@ -219,9 +241,6 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 
 	string postfix = "[" + toString(ptr->getSize()) + "]";
 	return Entry(subDef.lValueName + postfix, subDef.rValueName + postfix, subDef.definition);
-
-	// OLD:
-	// return visit(ptr->getElementType()) + ;
 }
 
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
@@ -238,19 +257,10 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	TypeManager::Entry subDef = resolveType(elementType);
 	string res = subDef.lValueName;
 
-//	visitStarting = true;
-//	string res = visit(elementType);
-
 	int numStars = dim.getValue();
-//	if (elementType->getNodeType() == NT_RefType) {
-//		numStars -= 1;
-//	}
-
 	for (int i=0; i < numStars; i++) {
 		res += "*";
 	}
-
-	// res += " /* " + toString(*arrayType) + " */ ";
 
 	return toEntry(res);
 }
@@ -261,7 +271,7 @@ TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTyp
 	if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
 		name = annotation->getName();
 	} else {
-		name = nameGenerator.getName(ptr, "unnamed_userdefined_type");
+		name = nameGenerator.getName(ptr, "userdefined_type");
 	}
 
 	// create a new code fragment for the struct definition

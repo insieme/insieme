@@ -54,14 +54,10 @@ namespace core {
 
 // declare address type
 template<typename T> class Address;
+typedef Address<const Node> NodeAddress;
 
-// Add type definitions for node types (just like for node pointer)
-#define NODE(name) \
-		class name; \
-		typedef Address<const name> name ## Address;
-	#include "ast_nodes.def"
-#undef NODE
-
+template<typename T> class AnnotatedPtr;
+typedef AnnotatedPtr<const Node> NodePtr;
 
 // TODO: encapsulate path in an actual object
 

@@ -133,7 +133,7 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const utils::map::PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
@@ -160,14 +160,10 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const utils::map::Poin
 	return res;
 }
 
-NodePtr replaceAll(const SharedNodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
 	PointerMap<NodePtr, NodePtr> map;
 	map.insert(std::make_pair(toReplace, replacement));
-	return replaceAll(*mgr, root, map, preservePtrAnnotationsWhenModified);
-}
-
-NodePtr replaceAll(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
-	return replaceAll(builder.getNodeManager(), root, toReplace, replacement, preservePtrAnnotationsWhenModified);
+	return replaceAll(mgr, root, map, preservePtrAnnotationsWhenModified);
 }
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
