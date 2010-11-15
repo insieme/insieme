@@ -800,7 +800,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
 		START_LOG_EXPR_CONVERSION(condOp);
-
+		const core::ASTBuilder& builder = convFact.builder;
 		assert(!condOp->getSaveExpr() && "Conditional operation with 'gcc save' expession not supperted.");
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
@@ -813,11 +813,11 @@ public:
 
 		if(*condExpr->getType() != core::lang::TYPE_BOOL_VAL) {
 			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
+			condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 		}
 
 		// builder.callExpr(retTy, core::lang::OP_ITE_PTR, )
-		core::StatementPtr&& ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
+		core::StatementPtr&& ifStmt = builder.ifStmt(condExpr, builder.returnStmt(trueExpr), builder.returnStmt(falseExpr));
 		core::ExpressionPtr&& retExpr = convFact.createCallExpr( toVector( ifStmt ),  retTy);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;

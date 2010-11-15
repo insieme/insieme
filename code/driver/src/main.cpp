@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 			if(CommandLineOptions::OMPSema) {
 				LOG(INFO) << "============================= OMP conversion ====================================";
 				insieme::utils::Timer ompTimer("OMP");
-				program = fe::omp::applySema(program, manager);
+				program = fe::omp::applySema(program,  manager);
 				ompTimer.stop();
 				LOG(INFO) << ompTimer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
