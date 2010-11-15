@@ -47,6 +47,7 @@ namespace omp {
 using namespace core;
 namespace cl = lang;
 namespace us = utils::set;
+namespace um = utils::map;
 
 /** Will certainly determine the declaration status of variables inside a block.
  */
@@ -88,16 +89,21 @@ bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
 }
 
 void SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel& par) {
+	auto stmtNode = stmt.getAddressedNode();
+
 	LambdaDeltaVisitor ldv;
-	core::visitAllInterruptable(StatementAddress(stmt.getAddressedNode()), ldv);
-	//LOG(INFO) << "Undeclared: " << ldv.undeclared;
+	core::visitAllInterruptable(StatementAddress(stmtNode), ldv);
+	
 	LambdaExpr::CaptureList captures;
+	um::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(ldv.undeclared, [&](VariablePtr p){
 		auto declStmt = build.declarationStmt(p->getType(), p);
 		captures.push_back(declStmt);
+		replacements[p] = declStmt->getVariable();
 	});
+	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements));
 
-	auto parLambda = build.lambdaExpr(stmt.getAddressedNode(), captures);
+	auto parLambda = build.lambdaExpr(newStmt, captures);
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(cl::OP_PARALLEL, build.uintVal(8), build.uintVal(8), jobExp);
 	auto mergeCall = build.callExpr(cl::OP_MERGE, parallelCall);
