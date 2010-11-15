@@ -338,15 +338,21 @@ public:
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			const core::ASTBuilder& builder = convFact.builder;
 
+			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 			// collects the type of each argument of the expression
 			ExpressionList args;
-			std::for_each(callExpr->arg_begin(), callExpr->arg_end(),
-				[ &args, &builder, this ] (Expr* currArg) {
-					args.push_back( this->convFact.tryDeref(this->Visit(currArg)) );
-				}
-			);
+//			const core::TupleType::ElementTypeList& argTypes = funcTy->getArgumentType()->getElementTypes();
 
-			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
+				Expr* currArg = callExpr->getArg(argId);
+				core::ExpressionPtr&& arg = this->Visit(currArg);
+//				if(!(core::dynamic_pointer_cast<const core::RefType>(arg->getType()) &&
+//						argId < argTypes.size() && core::dynamic_pointer_cast<const core::ArrayType>(argTypes[argId]) &&
+//						*argTypes[argId] != core::lang::TYPE_VAR_LIST_VAL))
+				arg = this->convFact.tryDeref(arg);
+				args.push_back( arg );
+			}
+
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
 			const TranslationUnit* oldTU = convFact.currTU;
@@ -596,7 +602,6 @@ public:
 				auto fit = ctx.needRef.find(parmVar);
 				if(fit == ctx.needRef.end()) {
 					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
-					DLOG(INFO) << "POPULATIONG MAP";
 				}
 				lhs = fit->second;
 			}
@@ -733,10 +738,11 @@ public:
 				auto fit = ctx.needRef.find(parmVar);
 				if(fit == ctx.needRef.end()) {
 					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
-					DLOG(INFO) << "POPULATIONG MAP";
 				}
+				// we make it a vector FIXME
 				subExpr = fit->second;
 			}
+			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>(subExpr) );
 			break;
 		}
 		// *a
@@ -843,7 +849,8 @@ public:
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(base, convFact.builder.castExpr(core::lang::TYPE_UINT_4_PTR, idx)) );
+			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_SINGLE_PTR,
+					toVector<core::ExpressionPtr>(base, convFact.builder.castExpr(core::lang::TYPE_UINT_4_PTR, idx)) );
 
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
