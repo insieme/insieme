@@ -176,7 +176,9 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 				paramTypes.push_back( parmVar->getType() );
 			}
 			// we have to replace the variable of the body with the newly created parmVar
-			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceAll(builder, bodyStmt, bodyVar, parmVar, true) );
+			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
+					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
+			);
 			assert(bodyStmt);
 		}
 	);
@@ -1043,7 +1045,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 				// }
 				// as the variable can olny appear in the RHS of expression, we have to sobstitute it with
 				// its dereference
-				body = core::dynamic_pointer_cast<const core::Statement>(core::transform::replaceAll(this->builder, body,
+				body = core::dynamic_pointer_cast<const core::Statement>(core::transform::replaceAll(this->builder.getNodeManager(), body,
 						fit->first, this->tryDeref(fit->second), true));
 				assert(body);
 			}

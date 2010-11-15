@@ -242,7 +242,7 @@ public:
             std::cout << "VarID: " << v.getId() << " VarType: " << v.getType() << std::endl;
         }
 */
-        if(core::CompoundStmtPtr body = dynamic_pointer_cast<const core::CompoundStmt>(element->substitute(*builder.getNodeManager(), *this))){
+        if(core::CompoundStmtPtr body = dynamic_pointer_cast<const core::CompoundStmt>(element->substitute(builder.getNodeManager(), *this))){
             std::cout << "the body\n";
 /* do this recursively
             const core::Node::ChildList& children = body->getChildList();
@@ -494,7 +494,7 @@ public:
 
             //if function is not a OpenCL kernel function recursively check for child nodes
             if(!isKernelFunction) {
-                return element->substitute(*builder.getNodeManager(), *this);
+                return element->substitute(builder.getNodeManager(), *this);
             }
 
 
@@ -569,7 +569,7 @@ public:
             //Maybe prettier in another mapper
             const core::StatementPtr& oldBody = func->getBody();
 
-            if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(*builder.getNodeManager(), kernelMapper))){
+            if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                 // parallel function's type, equal for all
                 core::TupleType::ElementTypeList parArgs;
                 parArgs.push_back(core::lang::TYPE_UINT_4_PTR);
@@ -757,7 +757,7 @@ public:
             return newFunc;*/
         }
 
-        return element->substitute(*builder.getNodeManager(), *this);
+        return element->substitute(builder.getNodeManager(), *this);
     }
 
     //TODO remove, for debugging only

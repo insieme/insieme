@@ -51,17 +51,13 @@ using namespace insieme::utils::map;
  */
 class NodeReplacer : public NodeMapping {
 	NodeManager& manager;
-	const NodePtr& toReplace;
-	const NodePtr& replacement;
-	const bool targetIsType;
+	const PointerMap<NodePtr, NodePtr>& replacements;
 	const bool preservePtrAnnotationsWhenModified;
 
 public:
 
-	NodeReplacer(NodeManager& manager, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), toReplace(toReplace), replacement(replacement),
-		  targetIsType(toReplace->getNodeCategory() == NC_Type || toReplace->getNodeType() == NT_RecTypeDefinition),
-		  preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
+	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified)
+		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
 
 private:
 
@@ -70,16 +66,18 @@ private:
 	 */
 	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 		// check whether the element has been found
-		if(*(ptr) == *(toReplace)) {
-			return replacement;
+		auto pos = replacements.find(ptr);
+		if(pos != replacements.end()) {
+			return pos->second;
 		}
 
 		// if element to be replaced is a not a type but the current node is,
 		// the recursion can be pruned (since types only have other types as
 		// sub-nodes)
-		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
-			return ptr;
-		}
+		// TODO: re-enable type shortcut
+//		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
+//			return ptr;
+//		}
 
 		// recursive replacement has to be continued
 		NodePtr res = ptr->substitute(manager, *this);
@@ -140,8 +138,12 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 		return NodePtr(NULL);
 	}
 
-	auto mapper = ::NodeReplacer(*mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
-	NodePtr res = root->substitute(*mgr, mapper);
+	if (replacements.empty()) {
+		return root;
+	}
+
+	auto mapper = ::NodeReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
+	NodePtr res = root->substitute(mgr, mapper);
 
 	// check whether something has changed
 	if (res == root) {

@@ -304,7 +304,7 @@ public:
 				init = callExpr->getArguments()[1]; // getting RHS
 
 				declStmt = builder.declarationStmt( newIndVar, builder.callExpr(varTy, core::lang::OP_REF_VAR_PTR, toVector(init)) );
-				core::NodePtr&& ret = core::transform::replaceAll(builder, body.getSingleStmt(), inductionVar, newIndVar, true);
+				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), inductionVar, newIndVar, true);
 
 				// replace the body with the newly modified one
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
