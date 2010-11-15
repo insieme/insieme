@@ -102,6 +102,9 @@ public:
 	LiteralPtr intVal(long val, unsigned short size = 4) const;
 	LiteralPtr uintVal(long val, unsigned short size = 4) const;
 
+	// Referencing
+	CallExprPtr deref(const ExpressionPtr& subExpr) const;
+
 	// Call Expressions
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;

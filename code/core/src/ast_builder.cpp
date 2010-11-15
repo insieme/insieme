@@ -81,6 +81,10 @@ LiteralPtr ASTBuilder::uintVal(long val, unsigned short size) const {
 	return literal(toString(val), uintType(size));
 }
 
+CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
+	return callExpr(lang::OP_REF_DEREF, subExpr);
+}
+
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
 	TypePtr retType = core::lang::TYPE_UNIT;
 	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {
