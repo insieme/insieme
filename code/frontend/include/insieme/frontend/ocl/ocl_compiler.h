@@ -44,6 +44,10 @@ namespace frontend {
 namespace ocl {
 
 namespace {
+#define SUBSCRIPT(vec, idx) builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>( \
+                            vec, builder.literal(toString(idx), core::lang::TYPE_UINT_4_PTR )))
+
+
 struct KernelData {
 public:
     core::ASTBuilder builder;
