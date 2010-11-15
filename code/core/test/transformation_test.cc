@@ -59,7 +59,7 @@ TEST(ASTVisitor, NodeReplacementTest) {
 
 	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
 
-	NodePtr newTree = transform::replaceNode(manager, ifStmt, toReplace, replacement);
+	NodePtr newTree = transform::replaceAll(manager, ifStmt, toReplace, replacement);
 	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
 
 }
