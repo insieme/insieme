@@ -133,7 +133,7 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
@@ -156,8 +156,10 @@ NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root, const Nod
 	return res;
 }
 
-NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
-	return replaceNode(builder.getNodeManager(), root, toReplace, replacement, preservePtrAnnotationsWhenModified);
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+	PointerMap<NodePtr, NodePtr> map;
+	map.insert(std::make_pair(toReplace, replacement));
+	return replaceAll(mgr, root, map, preservePtrAnnotationsWhenModified);
 }
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {

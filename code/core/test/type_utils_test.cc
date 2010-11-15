@@ -48,7 +48,7 @@ namespace core {
 
 TEST(TypeUtils, Substitution) {
 	ASTBuilder builder;
-	NodeManager& manager = *builder.getNodeManager();
+	NodeManager& manager = builder.getNodeManager();
 
 	TypeVariablePtr varA = builder.typeVariable("A");
 	TypeVariablePtr varB = builder.typeVariable("B");
@@ -126,7 +126,7 @@ TEST(TypeUtils, Substitution) {
 
 TEST(TypeUtils, Unification) {
 	ASTBuilder builder;
-	NodeManager& manager = *builder.getNodeManager();
+	NodeManager& manager = builder.getNodeManager();
 
 	TypeVariablePtr varA = builder.typeVariable("A");
 	TypeVariablePtr varB = builder.typeVariable("B");
@@ -210,7 +210,7 @@ bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
 
 TEST(TypeUtils, IntParamUnification) {
 	ASTBuilder builder;
-	NodeManager& manager = *builder.getNodeManager();
+	NodeManager& manager = builder.getNodeManager();
 
 	TypePtr typeAx = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getVariableIntParam('x')));
 	TypePtr typeA3 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(3)));
@@ -255,7 +255,7 @@ ParamSet getParamVariables(const TypePtr& ptr) {
 
 TEST(TypeUtils, FreeTypeVariableAssignment) {
 	ASTBuilder builder;
-	NodeManager& manager = *builder.getNodeManager();
+	NodeManager& manager = builder.getNodeManager();
 
 	TypeVariablePtr typeVar = builder.typeVariable("X");
 	IntTypeParam varParam = IntTypeParam::getVariableIntParam('x');

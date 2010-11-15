@@ -49,8 +49,7 @@ using namespace insieme::core::transform;
 TEST(ASTVisitor, NodeReplacementTest) {
 
 	// copy and clone the type
-	SharedNodeManager manager( new NodeManager() );
-	ASTBuilder builder(manager);
+	ASTBuilder builder;
 
 	GenericTypePtr type = builder.genericType("int");
 
@@ -59,7 +58,7 @@ TEST(ASTVisitor, NodeReplacementTest) {
 
 	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
 
-	NodePtr newTree = transform::replaceAll(manager, ifStmt, toReplace, replacement);
+	NodePtr newTree = transform::replaceAll(builder.getNodeManager(), ifStmt, toReplace, replacement);
 	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
 
 }

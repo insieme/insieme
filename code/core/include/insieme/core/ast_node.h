@@ -72,13 +72,19 @@ enum NodeCategory {
 /* < The node represents a program. */
 };
 
+
+template<typename T> class Address;
+template<typename T> class AnnotatedPtr;
+
 /**
  * Adds forward declarations for all AST node types. Further, for each
  * type a type definition for a corresponding annotated pointer is added.
  */
 #define NODE(NAME) \
 	class NAME; \
-	typedef AnnotatedPtr<const NAME> NAME ## Ptr;
+	typedef AnnotatedPtr<const NAME> NAME ## Ptr; \
+	typedef Address<const NAME> NAME ## Address;
+
 
 // take all nodes from within the definition file
 #include "ast_nodes.def"
@@ -90,8 +96,6 @@ enum NodeCategory {
 class NodeManager: public InstanceManager<Node, AnnotatedPtr> {
 };
 
-// A type definition for a shared node manager
-typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 // forward declaration of the clonePtr operation
 template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
