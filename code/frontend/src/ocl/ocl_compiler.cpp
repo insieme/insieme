@@ -155,17 +155,7 @@ class KernelMapper : public core::NodeMapping {
     std::vector<core::DeclarationStmtPtr> localVars;
     std::vector<core::VariablePtr> privateVars;
 
-    // TODO replace with KernelData
-    // Vector storing ranges (=loop bounds)
-    core::VariablePtr& globalRange;
-    core::VariablePtr& localRange;
-    // Vectors storing thread IDs (=loop variables)
-    core::VariablePtr& globalId;
-    core::VariablePtr& localId;
-    // maybe also useful
-//    core::VariablePtr groupId;
-
-    KernelData kd;
+    KernelData& kd;
 
 private:
 
@@ -186,9 +176,8 @@ private:
 public:
 
 
-    KernelMapper(core::ASTBuilder& astBuilder, core::VariablePtr& globalR, core::VariablePtr& localR,
-                 core::VariablePtr& globalI, core::VariablePtr& localI, KernelData& data)
-    : builder(astBuilder), globalRange(globalR), localRange(localR), globalId(globalI), localId(localI), kd(data) { };
+    KernelMapper(core::ASTBuilder& astBuilder, KernelData& data)
+    : builder(astBuilder), kd(data) { };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
 //std::cout << "\t * found " << element->toString() << std::endl;
@@ -349,12 +338,6 @@ class OclMapper : public core::NodeMapping {
     std::vector<core::VariablePtr> privateArgs;
 
     //TODO replace with kernelData
-    // loop bounds
-    core::VariablePtr localRange;
-    core::VariablePtr globalRange;
-    // loop variables
-    core::VariablePtr localId;
-    core::VariablePtr groupId;
 
     KernelData kd;
 
@@ -371,15 +354,12 @@ private:
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
         --n;
         if(n == 0) {
-            return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(
-                    vec, builder.literal("0", core::lang::TYPE_UINT_4_PTR )));
+            return SUBSCRIPT(vec,0);
         }
 
 
         return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_UINT_MUL_PTR,
-            toVector<core::ExpressionPtr>( vecProduct(vec, n),
-                    builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(
-                            vec, builder.literal(toString(n), core::lang::TYPE_UINT_4_PTR ))) ));
+            toVector<core::ExpressionPtr>( vecProduct(vec, n), SUBSCRIPT(vec, n) ));
     }
 
 
@@ -449,11 +429,7 @@ private:
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
-        : kernelMapper(astBuilder, globalRange, localRange, groupId, localId, kd), builder(astBuilder),
-          localRange(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          globalRange(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          localId(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          groupId(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+        : kernelMapper(astBuilder, kd), builder(astBuilder),
           kd(astBuilder){ };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
@@ -563,8 +539,8 @@ public:
                 assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
 
                 core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
-                args.push_back(globalRange->getType());
-                args.push_back(localRange->getType());
+                args.push_back(kd.globalRange->getType());
+                args.push_back(kd.localRange->getType());
 
                 newFuncType = builder.functionType(builder.tupleType(args), retTy);
             } else {
@@ -608,8 +584,8 @@ public:
 // Top down generation of constructs
 
                 //TODO make me pretty
-                std::vector<core::VariablePtr> ranges = toVector(globalRange, builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), 
-                    core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)))), localRange);
+                std::vector<core::VariablePtr> ranges = toVector(kd.globalRange, builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ),
+                    core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)))), kd.localRange);
 
                 //construct local declarations to be caught by local parallel statements
                 std::vector<vector<core::DeclarationStmtPtr> > localCatching;
@@ -718,10 +694,8 @@ public:
                 for(size_t i = 0; i < 3; ++i) {
                     groupRdeclInit.push_back(
                         builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_UINT_DIV_PTR, toVector<core::ExpressionPtr>(
-                        builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(
-                                ranges.at(0), builder.literal(toString(i), core::lang::TYPE_UINT_4_PTR ))),
-                        builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(
-                                ranges.at(2), builder.literal(toString(i), core::lang::TYPE_UINT_4_PTR ))) )));
+                            SUBSCRIPT(ranges.at(0), i ),
+                            SUBSCRIPT(ranges.at(2), i ) )));
                 }
 
                 //declare group range
