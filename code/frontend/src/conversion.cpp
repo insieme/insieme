@@ -212,9 +212,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 
 		// before returning it, we have to make sure this variable has not being marked
 		// as needRef, in that case the newly introduced ref need to be returned
-		auto rit = ctx.needRef.find(fit->second);
-		if(rit != ctx.needRef.end())
-			return rit->second;
+//		auto rit = ctx.needRef.find(fit->second);
+//		if(rit != ctx.needRef.end())
+//			return rit->second;
 
 		// return the variable
 		return fit->second;

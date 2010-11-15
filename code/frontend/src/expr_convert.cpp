@@ -739,8 +739,10 @@ public:
 				if(fit == ctx.needRef.end()) {
 					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
 				}
+				// we make it a vector FIXME
 				subExpr = fit->second;
 			}
+			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>(subExpr) );
 			break;
 		}
 		// *a
@@ -847,7 +849,8 @@ public:
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(base, convFact.builder.castExpr(core::lang::TYPE_UINT_4_PTR, idx)) );
+			convFact.builder.callExpr( subTy, core::lang::OP_SUBSCRIPT_SINGLE_PTR,
+					toVector<core::ExpressionPtr>(base, convFact.builder.castExpr(core::lang::TYPE_UINT_4_PTR, idx)) );
 
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
