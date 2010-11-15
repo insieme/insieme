@@ -38,12 +38,36 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/set_utils.h"
+
 namespace insieme {
 namespace frontend {
 namespace omp {
 
 using namespace core;
 namespace cl = lang;
+namespace us = utils::set;
+
+/** Will certainly determine the declaration status of variables inside a block.
+ */
+struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
+	us::PointerSet<VariablePtr> declared;
+	us::PointerSet<VariablePtr> undeclared;
+
+	bool visitNode(const NodeAddress& node) { return true; } // default behaviour: continue visiting
+
+	bool visitDeclarationStmt(const DeclarationStmtAddress &decl) {
+		declared.insert(decl->getVariable());
+		return true;
+	}
+
+	bool visitVariable(const VariableAddress& var) {
+		auto vp = var.getAddressedNode();
+		if(declared.find(vp) == declared.end()) undeclared.insert(vp);
+		return true;
+	}
+};
+
 
 bool SemaVisitor::visitNode(const core::NodeAddress& node) {
 	return true; // default behaviour: continue visiting
@@ -63,9 +87,18 @@ bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
 	return true;
 }
 
-void SemaVisitor::handleParallel(const core::StatementAddress& stmt, const Parallel& par) {
-	auto parLambda = build.lambdaExpr(stmt.getAddressedNode());
-	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), core::JobExpr::LocalDecls());
+void SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel& par) {
+	LambdaDeltaVisitor ldv;
+	core::visitAllInterruptable(StatementAddress(stmt.getAddressedNode()), ldv);
+	//LOG(INFO) << "Undeclared: " << ldv.undeclared;
+	LambdaExpr::CaptureList captures;
+	for_each(ldv.undeclared, [&](VariablePtr p){
+		auto declStmt = build.declarationStmt(p->getType(), p);
+		captures.push_back(declStmt);
+	});
+
+	auto parLambda = build.lambdaExpr(stmt.getAddressedNode(), captures);
+	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(cl::OP_PARALLEL, build.uintVal(8), build.uintVal(8), jobExp);
 	auto mergeCall = build.callExpr(cl::OP_MERGE, parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
