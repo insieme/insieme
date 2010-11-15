@@ -94,8 +94,8 @@ TEST(StmtConversion, FileTest) {
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
 	CommandLineOptions::Verbosity = 0;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	fe::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
 
 	const fe::PragmaList& pl = tu.getPragmaList();
@@ -107,7 +107,7 @@ TEST(StmtConversion, FileTest) {
 		// we reset the counter for variables so we can write independent tests
 		VariableResetHack::reset();
 
-		fe::conversion::ConversionFactory convFactory( shared, prog );
+		fe::conversion::ConversionFactory convFactory( manager, prog );
 		convFactory.setTranslationUnit(tu);
 
 		if(tp->isStatement()) {

@@ -58,12 +58,12 @@ using namespace insieme::core;
 
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_parallel.c" );
+	NodeManager manager;
+	insieme::frontend::Program prog(manager);
+	TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_parallel.c" );
 
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
+	const PragmaList& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 2);
@@ -145,8 +145,8 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	insieme::frontend::Program prog(manager);
 	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_for.c" );
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();

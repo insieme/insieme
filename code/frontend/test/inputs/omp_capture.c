@@ -34,31 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+extern void printf(const char*, ...);
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
-
-#include "insieme/core/transform/node_replacer.h"
-
-using namespace insieme::core;
-using namespace insieme::core::transform;
-
-TEST(ASTVisitor, NodeReplacementTest) {
-
-	// copy and clone the type
-	ASTBuilder builder;
-
-	GenericTypePtr type = builder.genericType("int");
-
-	LiteralPtr toReplace = builder.literal(type, "14");
-	LiteralPtr replacement = builder.literal(type, "0");
-
-	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
-
-	NodePtr newTree = transform::replaceAll(builder.getNodeManager(), ifStmt, toReplace, replacement);
-	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
-
+int main() {
+	
+	int a = 666;
+	
+	#pragma omp parallel
+	{
+		int b;
+		printf("hell world #%d/%d\n", a, b);
+	}
 }

@@ -60,11 +60,11 @@ TEST(DriverTest, HelloWorldTest) {
 
 	insieme::utils::InitLogger("DriverTest", INFO, true);
 
-	core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
-	core::ProgramPtr program = core::Program::create(*sharedManager);
+	core::NodeManager manager;
+	core::ProgramPtr program = core::Program::create(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
-	fe::Program prog(sharedManager);
+	fe::Program prog(manager);
 	prog.addTranslationUnit(std::string(SRC_DIR) + "/hello_world.c");
 	program = prog.convert();
 	LOG(INFO) << "Done.";

@@ -38,6 +38,8 @@
 
 #include "insieme/core/ast_visitor.h"
 
+#include "insieme/utils/map_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -58,26 +60,25 @@ namespace transform {
  * 				within the manager, the present node and its version of the annotations will be preserved
  * 				and returned.
  */
-NodePtr replaceNode(const SharedNodeManager& mgr, const NodePtr& root,
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 		const NodePtr& toReplace, const NodePtr& replacement,
 		bool preservePtrAnnotationsWhenModified = false);
 
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
+ * The replacements are provided via a map.
  *
- * @param builder the builder used to construct new nodes, in case new nodes have to be formed
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
- * @param toReplace the node to be replaced during this operation
- * @param replacement the node to be used as a substitution for the toReplace node
+ * @param replacements the map mapping nodes to their replacements
  * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
  * 				get a copy of the annotations of the original node by default, this feature is disabled
  * 				and it should be used with care. In case on of the resulting nodes is already present
  * 				within the manager, the present node and its version of the annotations will be preserved
  * 				and returned.
- * @return the root node of the modified AST tree
  */
-NodePtr replaceNode(const ASTBuilder& builder, const NodePtr& root,
-		const NodePtr& toReplace, const NodePtr& replacement,
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
+		const utils::map::PointerMap<NodePtr, NodePtr>& replacements,
 		bool preservePtrAnnotationsWhenModified = false);
 
 /**

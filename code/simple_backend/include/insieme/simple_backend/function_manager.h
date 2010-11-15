@@ -34,31 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
 
-#include "insieme/core/transform/node_replacer.h"
+#include "insieme/simple_backend/code_management.h"
+#include "insieme/simple_backend/type_manager.h"
+#include "insieme/simple_backend/name_generator.h"
+
+namespace insieme {
+namespace simple_backend {
 
 using namespace insieme::core;
-using namespace insieme::core::transform;
 
-TEST(ASTVisitor, NodeReplacementTest) {
+class ConversionContext;
 
-	// copy and clone the type
-	ASTBuilder builder;
+/** Manages C function generation and lookup for named lambda expressions.
+ ** */
+class FunctionManager {
+	ConversionContext& cc;
 
-	GenericTypePtr type = builder.genericType("int");
+public:
+	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> FunctionMap;
 
-	LiteralPtr toReplace = builder.literal(type, "14");
-	LiteralPtr replacement = builder.literal(type, "0");
+private:
+	FunctionMap functionMap;
 
-	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
+public:
+	FunctionManager(ConversionContext& cc) : cc(cc) { }
 
-	NodePtr newTree = transform::replaceAll(builder.getNodeManager(), ifStmt, toReplace, replacement);
-	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
+	CodePtr getFunction(const core::LambdaExprPtr& lambda);
+	CodePtr getFunction(const core::RecLambdaExprPtr& lambda, const CodePtr& surrounding);
+	CodePtr getFunctionLiteral(const LiteralPtr& literal);
+	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
+};
 
+
+
+}
 }

@@ -55,8 +55,8 @@ namespace core {
  */
 #define CONCRETE(name) NT_ ## name,
 enum NodeType {
-	// the necessary information is obtained from the node-definition file
-	#include "ast_nodes.def"
+// the necessary information is obtained from the node-definition file
+#include "ast_nodes.def"
 };
 #undef CONCRETE
 
@@ -64,12 +64,17 @@ enum NodeType {
  * An enumeration covering the five basic node categories.
  */
 enum NodeCategory {
-	NC_Support,      /* < The node represents a supporting element. */
-	NC_Type, 		/* < The node represents a type. */
-	NC_Expression,  /* < The node represents an expression. */
-	NC_Statement,   /* < The node represents a statement. */
-	NC_Program     /* < The node represents a program. */
+	NC_Support, /* < The node represents a supporting element. */
+	NC_Type, /* < The node represents a type. */
+	NC_Expression, /* < The node represents an expression. */
+	NC_Statement, /* < The node represents a statement. */
+	NC_Program
+/* < The node represents a program. */
 };
+
+
+template<typename T> class Address;
+template<typename T> class AnnotatedPtr;
 
 /**
  * Adds forward declarations for all AST node types. Further, for each
@@ -77,23 +82,23 @@ enum NodeCategory {
  */
 #define NODE(NAME) \
 	class NAME; \
-	typedef AnnotatedPtr<const NAME> NAME ## Ptr;
+	typedef AnnotatedPtr<const NAME> NAME ## Ptr; \
+	typedef Address<const NAME> NAME ## Address;
 
-	// take all nodes from within the definition file
-	#include "ast_nodes.def"
+
+// take all nodes from within the definition file
+#include "ast_nodes.def"
 #undef NODE
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.
  */
-class NodeManager : public InstanceManager<Node, AnnotatedPtr> {};
+class NodeManager: public InstanceManager<Node, AnnotatedPtr> {
+};
 
-// A type definition for a shared node manager
-typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 // forward declaration of the clonePtr operation
 template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
-
 
 /**
  * This class constitutes an interface for utility class required for transforming AST nodes.
@@ -119,7 +124,9 @@ public:
 	/**
 	 * A virtual destructor of the mapping for a proper cleanup.
 	 */
-	virtual ~NodeMapping() {};
+	virtual ~NodeMapping() {
+	}
+	;
 
 	/**
 	 * Requests to map the given integer type parameter to another element.
@@ -138,14 +145,14 @@ public:
 	inline AnnotatedPtr<T> map(unsigned index, const AnnotatedPtr<T>& ptr) {
 		// short-cut for null
 		if (!ptr) {
-			return static_pointer_cast<T>(ptr);
+			return static_pointer_cast<T> (ptr);
 		}
 
 		// map and cast
 		NodePtr res = mapElement(index, ptr);
 		// during development, make cast secure
-		assert(dynamic_pointer_cast<T>(res) && "Invalid conversion");
-		return static_pointer_cast<T>(res);
+		assert(dynamic_pointer_cast<T> (res) && "Invalid conversion");
+		return static_pointer_cast<T> (res);
 	}
 
 	/**
@@ -174,10 +181,13 @@ public:
 };
 
 template<typename Lambda>
-class LambdaNodeMapper : public NodeMapping {
+class LambdaNodeMapper: public NodeMapping {
 	Lambda lambda;
 public:
-	LambdaNodeMapper(Lambda lambda) : lambda(lambda) {};
+	LambdaNodeMapper(Lambda lambda) :
+		lambda(lambda) {
+	}
+	;
 
 	const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
 		return lambda(index, ptr);
@@ -186,9 +196,8 @@ public:
 
 template<typename Lambda>
 LambdaNodeMapper<Lambda> makeLambdaMapper(Lambda lambda) {
-	return LambdaNodeMapper<Lambda>(lambda);
+	return LambdaNodeMapper<Lambda> (lambda);
 }
-
 
 /**
  * This class models an abstract base class for all AST nodes to be used within a program
@@ -196,13 +205,13 @@ LambdaNodeMapper<Lambda> makeLambdaMapper(Lambda lambda) {
  * (including to be hash- and comparable, such that instances can be used within unordered
  * sets).
  */
-class Node : public insieme::utils::HashableImmutableData<Node>,  public Annotatable {
+class Node: public insieme::utils::HashableImmutableData<Node>, public Annotatable {
 
 	/**
 	 * Allow the instance manager to access the private clone method.
 	 */
-	friend class InstanceManager<Node, AnnotatedPtr>;
-	
+	friend class InstanceManager<Node, AnnotatedPtr> ;
+
 public:
 
 	/**
@@ -260,8 +269,8 @@ private:
 
 		// trigger the creation of a clone
 		auto cloner = makeLambdaMapper([&manager](unsigned, const NodePtr& ptr) {
-			return clonePtr(manager, ptr);
-		});
+					return clonePtr(manager, ptr);
+				});
 		Node* res = createCopyUsing(cloner);
 
 		// update manager
@@ -294,8 +303,9 @@ protected:
 	 * @param nodeCategory the category of the node to be created
 	 * @param hashCode the hash code of the new node
 	 */
-	Node(const NodeType nodeType, const NodeCategory nodeCategory, const std::size_t& hashCode)
-		: HashableImmutableData(hashCode), nodeType(nodeType), nodeCategory(nodeCategory), manager(NULL) { }
+	Node(const NodeType nodeType, const NodeCategory nodeCategory, const std::size_t& hashCode) :
+		HashableImmutableData(hashCode), nodeType(nodeType), nodeCategory(nodeCategory), manager(NULL) {
+	}
 
 	/**
 	 * Defines the new operator to be protected. This prevents instances of AST nodes to be
@@ -336,7 +346,9 @@ public:
 	 * The default virtual destructor enforcing the proper destruction of derived
 	 * instances.
 	 */
-	virtual ~Node() {};
+	virtual ~Node() {
+	}
+	;
 
 	/**
 	 * Creates a new version of this node where every referenced to a child node
@@ -408,7 +420,6 @@ public:
 		return nodeCategory;
 	}
 
-
 	/**
 	 * A default implementation of the equals operator comparing the actual
 	 * names of the types.
@@ -434,7 +445,6 @@ public:
 	}
 
 };
-
 
 /**
  * Isolates the given pointer such that it is no longer sharing the same annotation
@@ -468,9 +478,9 @@ const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
  */
 template<typename Container>
 const Container& isolate(const Container& container, typename Container::value_type* = 0) {
-	for_each(container, [](const typename Container::value_type& cur){
-		cur.isolateAnnotations();
-	});
+	for_each(container, [](const typename Container::value_type& cur) {
+				cur.isolateAnnotations();
+			});
 	return container;
 }
 

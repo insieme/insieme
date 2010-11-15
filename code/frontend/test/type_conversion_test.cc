@@ -70,9 +70,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
 	// CommandLineOptions::Verbosity = 1;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
-	ConversionFactory convFactory( shared, prog );
+	NodeManager manager;
+	fe::Program prog(manager);
+	ConversionFactory convFactory( manager, prog );
 
 	// VOID
 	//CHECK_BUILTIN_TYPE(Void, "unit");
@@ -121,11 +121,11 @@ TEST(TypeConversion, HandleBuildinType) {
 TEST(TypeConversion, HandlePointerType) {
 	using namespace clang;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	fe::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
@@ -139,11 +139,11 @@ TEST(TypeConversion, HandlePointerType) {
 TEST(TypeConversion, HandleReferenceType) {
 	using namespace clang;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 
 	BuiltinType intTy(BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
@@ -157,11 +157,11 @@ TEST(TypeConversion, HandleReferenceType) {
 TEST(TypeConversion, HandleStructType) {
 	using namespace clang;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 	convFactory.setTranslationUnit(tu);
 
 	SourceLocation emptyLoc;
@@ -203,11 +203,11 @@ TEST(TypeConversion, HandleStructType) {
 
 TEST(TypeConversion, HandleRecursiveStructType) {
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 
 	// cppcheck-suppress exceptNew
 	clang::BuiltinType* charTy = new clang::BuiltinType(clang::BuiltinType::SChar);
@@ -240,11 +240,11 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 TEST(TypeConversion, HandleMutualRecursiveStructType) {
 	using namespace clang;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 
 	SourceLocation emptyLoc;
 
@@ -312,11 +312,11 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 TEST(TypeConversion, HandleFunctionType) {
 	using namespace clang;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 
 	ASTContext& ctx = clang.getASTContext();
 	// Defines a function with the following prototype:
@@ -356,11 +356,11 @@ TEST(TypeConversion, HandleFunctionType) {
 TEST(TypeConversion, HandleArrayType) {
 	using namespace clang;
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
-	insieme::frontend::Program prog(shared);
+	NodeManager manager;
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( shared, prog );
+	ConversionFactory convFactory( manager, prog );
 
 	ASTContext& ctx = clang.getASTContext();
 
@@ -394,16 +394,16 @@ struct VariableResetHack {
 
 TEST(TypeConversion, FileTest) {
 
-	SharedNodeManager shared = std::make_shared<NodeManager>();
+	NodeManager manager;
 	CommandLineOptions::Verbosity = 1;
-	fe::Program prog(shared);
+	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
 	const fe::PragmaList& pl = tu.getPragmaList();
 
 	for(auto it = pl.begin(), end = pl.end(); it != end; ++it) {
 		VariableResetHack::reset();
-		ConversionFactory convFactory( shared, prog );
+		ConversionFactory convFactory( manager, prog );
 		convFactory.setTranslationUnit(tu);
 
 		if(const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&**it)) {

@@ -8,7 +8,7 @@
 long clock();
 
 // start code fragment :: fundef_codefragment_memset //
-void* memset(void*, int, unsigned long);
+void* memset(void*, int, unsigned int);
 
 // start code fragment :: fundef_codefragment_sin //
 double sin(double);
@@ -22,7 +22,7 @@ double init_func(int x, int y){
 double pow(double, double);
 
 // start code fragment :: fundef_codefragment_memcpy //
-void* memcpy(void*, void*, unsigned long);
+void* memcpy(void*, void*, unsigned int);
 
 // start code fragment :: fundef_codefragment_sqrt //
 double sqrt(double);
@@ -38,8 +38,8 @@ int main(int argc, char** argv){
 	float tmp[650][650];
 	float f[650][650];
 	float res[650][650];
-	memset(u, 0, ((unsigned long)((650 * 650))));
-	memset(f, 0, ((unsigned long)((650 * 650))));
+	memset(u, 0, ((unsigned int)((650 * 650))));
+	memset(f, 0, ((unsigned int)((650 * 650))));
 	for(int i = 0; i < 650; i += 1) for(int j = 0; j < 650; j += 1) f[((unsigned int)(i))][((unsigned int)(j))] = ((float)(init_func(i, j)));
 	double comm_time = ((double)(0));
 	double comp_time = ((double)(0));
@@ -53,7 +53,7 @@ int main(int argc, char** argv){
 		for(int i = 1; i < (650 - 1); i += 1) {
 			for(int j = 1; j < (650 - 1); j += 1) tmp[((unsigned int)(i))][((unsigned int)(j))] = ((float)(((((double)(1)) / ((double)(4))) * (((double)((((u[((unsigned int)((i - 1)))][((unsigned int)(j))] + u[((unsigned int)(i))][((unsigned int)((j + 1)))]) + u[((unsigned int)(i))][((unsigned int)((j - 1)))]) + u[((unsigned int)((i + 1)))][((unsigned int)(j))]))) - (factor * ((double)(f[((unsigned int)(i))][((unsigned int)(j))])))))));
 		};
-		memcpy(u, tmp, ((unsigned long)((650 * 650))));
+		memcpy(u, tmp, ((unsigned int)((650 * 650))));
 		for(int i = 1; i < (650 - 1); i += 1) {
 			for(int j = 1; j < (650 - 1); j += 1) res[((unsigned int)(i))][((unsigned int)(j))] = (((((f[((unsigned int)(i))][((unsigned int)(j))] - (((float)(4)) * u[((unsigned int)(i))][((unsigned int)(j))])) + u[((unsigned int)((i - 1)))][((unsigned int)(j))]) + u[((unsigned int)((i + 1)))][((unsigned int)(j))]) + u[((unsigned int)(i))][((unsigned int)((j - 1)))]) + u[((unsigned int)(i))][((unsigned int)((j + 1)))]);
 		};
