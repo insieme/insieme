@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <vector>
+
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
@@ -42,6 +44,63 @@
 namespace insieme {
 namespace frontend {
 namespace ocl {
+
+namespace {
+// accesses array arr at index idx
+#define SUBSCRIPT(arr, idx) builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>( \
+                            arr, builder.literal(toString(idx), core::lang::TYPE_UINT_4_PTR )))
+
+// generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
+#define CAPTURE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
+                            vec.push_back(builder.declarationStmt((var), initVal)); \
+                            (var) = initVal; /* update inVec with new variables */ }
+
+enum OCL_SCOPE { OCL_GLOBAL, OCL_LOCAL };
+
+struct KernelData {
+public:
+    core::ASTBuilder builder;
+    // loop bounds
+    core::VariablePtr globalRange;
+    core::VariablePtr groupSize;
+    core::VariablePtr localRange;
+    // loop variables
+    core::VariablePtr groupId;
+    core::VariablePtr localId;
+    // thread gropus
+    core::VariablePtr groupTg;
+    core::VariablePtr localTg;
+
+    int test;
+
+    static core::VariablePtr get3DvecVar(core::ASTBuilder builder)
+    {
+        return builder.variable(builder.vectorType(builder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+    }
+
+    //default constructor
+    KernelData(core::ASTBuilder astBuilder) :
+        globalRange(get3DvecVar(astBuilder)), groupSize(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
+        groupId(get3DvecVar(astBuilder)), localId(get3DvecVar(astBuilder)),
+        groupTg(get3DvecVar(astBuilder)), localTg(get3DvecVar(astBuilder)){ };
+
+/* unused at the moment
+    //copy constructor
+    KernelData(KernelData& in) :
+        globalRange(in.globalRange), groupSize(in.groupSize), localRange(in.localRange),
+        groupId(in.groupId), localId(in.localId), groupTg(in.groupTg), localTg(in.localTg), test(2) { };
+*/
+
+    void set(core::VariablePtr& globalR, core::VariablePtr& groupS, core::VariablePtr& localR,
+            core::VariablePtr& groupI, core::VariablePtr& localI, core::VariablePtr& groupThreadGroup, core::VariablePtr& localThreadGroup) {
+                   globalRange = globalR, groupSize = groupS, localRange = localR;
+                   groupId = groupI, localId = localI, groupTg = groupThreadGroup, localTg = localThreadGroup;
+    }
+
+    //returns a vector containing declarations with fresh initializations of all needed ocl-variables
+    void appendCaptures(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
+};
+} // namespace
 
 class Compiler {
 private:
