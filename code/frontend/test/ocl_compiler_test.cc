@@ -38,18 +38,21 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_visitor.h"
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/c_info/naming.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
@@ -137,7 +140,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     // Set severity level
     SetStderrLogging(5);
-    CommandLineOptions::Verbosity = 2;
+//    CommandLineOptions::Verbosity = 2;
 
     core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
     core::ProgramPtr program = core::Program::create(*sharedManager);
@@ -152,5 +155,17 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     OclTestVisitor otv;
     core::visitAll(program, otv);
+
+
+    auto errors = core::check(program, insieme::core::checks::getFullCheck());
+    std::sort(errors.begin(), errors.end());
+    for_each(errors, [](const core::Message& cur) {
+        std::cout << cur << std::endl;
+/*        core::NodeAddress address = cur.getAddress();
+        core::NodePtr context = address.getParentNode(address.getDepth()-1);
+        std::cout << "\t Context: " <<
+                insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+*/
+    });
 
 }
