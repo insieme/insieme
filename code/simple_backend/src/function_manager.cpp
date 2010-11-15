@@ -90,9 +90,12 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 	// extract capture list
 	cs << "// --------- Captured Stuff - Begin -------------\n";
 
+	string name = cc.getNameGen().getName(lambda, "lambda");
+	string structName = "struct " + name + "_closure";
+
 	for_each(lambda->getCaptureList(), [&](const DeclarationStmtPtr& cur) {
 		VariableManager::VariableInfo info;
-		info.location = VariableManager::STACK;
+		info.location = VariableManager::HEAP;
 
 		VariablePtr var = cur->getVariable();
 		cc.getVariableManager().addInfo(var, info);
@@ -100,7 +103,7 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 		// standard handling
 		cs << cc.getTypeMan().getTypeName(cptr, var->getType(), false);
 		string name = cc.getNameGen().getVarName(var);
-		cs << " " << name << " = _capture." << name << ";\n";
+		cs << " " << name << " = ((" << structName << "*)_capture)->" << name << ";\n";
 
 	});
 

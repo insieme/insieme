@@ -104,7 +104,7 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 			// add capture values
 			for_each(ptr->getCaptureList(), [&](const DeclarationStmtPtr& cur) {
 				VariablePtr var = cur->getVariable();
-				out << "    const " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
+				out << "    " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
 			});
 		out << "};\n";
 	}
@@ -113,7 +113,7 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
 
 	// C) allocate a struct
-	cStr << "(&((struct " + nameGen.getName(ptr->getType(), "funType") + "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
+	cStr << "((struct " << nameGen.getName(ptr->getType(), "funType") << "*)&((" << structName << "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
 	if (!ptr->getCaptureList().empty()) {
 		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const DeclarationStmtPtr& cur) {
 			this->visit(cur->getInitialization());
