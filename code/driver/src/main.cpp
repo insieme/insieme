@@ -120,18 +120,20 @@ int main(int argc, char** argv) {
 			}
 
 			// run OMP frontend
-			LOG(INFO) << "============================= OMP conversion ====================================";
-//			insieme::utils::Timer ompTimer("OMP");
-//			program = fe::omp::applySema(program, *manager);
-//			ompTimer.stop();
-//			LOG(INFO) << ompTimer;
-			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-			// check again
-			if(CommandLineOptions::CheckSema) {
-				checker();
+			if(CommandLineOptions::OMPSema) {
+				LOG(INFO) << "============================= OMP conversion ====================================";
+				insieme::utils::Timer ompTimer("OMP");
+				program = fe::omp::applySema(program, *manager);
+				ompTimer.stop();
+				LOG(INFO) << ompTimer;
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+				// check again
+				if(CommandLineOptions::CheckSema) {
+					checker();
+				}
 			}
 
-			// IR statistiscs
+			// IR statistics
 			ASTStatistic&& stats = ASTStatistic::evaluate(program);
 			LOG(INFO) << "============================ IR Statistics ======================================";
 			LOG(INFO) << "Number of Shared Nodes: " << stats.getNumSharedNodes();
