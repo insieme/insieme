@@ -43,6 +43,48 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
+namespace {
+struct KernelData {
+public:
+    core::ASTBuilder builder;
+    // loop bounds
+    core::VariablePtr globalRange;
+    core::VariablePtr groupSize;
+    core::VariablePtr localRange;
+    // loop variables
+    core::VariablePtr groupId;
+    core::VariablePtr localId;
+    // thread gropus
+    core::VariablePtr groupTg;
+    core::VariablePtr localTg;
+
+    int test;
+
+    static core::VariablePtr get3DvecVar(core::ASTBuilder builder)
+    {
+        return builder.variable(builder.vectorType(builder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+    }
+
+    //default constructor
+    KernelData(core::ASTBuilder astBuilder) :
+        globalRange(get3DvecVar(astBuilder)), groupSize(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
+        groupId(get3DvecVar(astBuilder)), localId(get3DvecVar(astBuilder)),
+        groupTg(get3DvecVar(astBuilder)), localTg(get3DvecVar(astBuilder)){ };
+
+    //copy constructor
+    KernelData(KernelData& in) :
+        globalRange(in.globalRange), groupSize(in.groupSize), localRange(in.localRange),
+        groupId(in.groupId), localId(in.localId), groupTg(in.groupTg), localTg(in.localTg) { };
+
+
+    void set(core::VariablePtr& globalR, core::VariablePtr& groupS, core::VariablePtr& localR,
+            core::VariablePtr& groupI, core::VariablePtr& localI, core::VariablePtr& groupThreadGroup, core::VariablePtr& localThreadGroup) {
+                   globalRange = globalR, groupSize = groupS, localRange = localR;
+                   groupId = groupI, localId = localI, groupTg = groupThreadGroup, localTg = localThreadGroup;
+    }
+};
+} // namespace
+
 class Compiler {
 private:
 //    class OclVisitor;

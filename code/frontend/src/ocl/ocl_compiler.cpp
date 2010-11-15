@@ -155,14 +155,17 @@ class KernelMapper : public core::NodeMapping {
     std::vector<core::DeclarationStmtPtr> localVars;
     std::vector<core::VariablePtr> privateVars;
 
+    // TODO replace with KernelData
     // Vector storing ranges (=loop bounds)
     core::VariablePtr& globalRange;
     core::VariablePtr& localRange;
     // Vectors storing thread IDs (=loop variables)
     core::VariablePtr& globalId;
     core::VariablePtr& localId;
-    //TODO maybe also useful
+    // maybe also useful
 //    core::VariablePtr groupId;
+
+    KernelData kd;
 
 private:
 
@@ -184,8 +187,8 @@ public:
 
 
     KernelMapper(core::ASTBuilder& astBuilder, core::VariablePtr& globalR, core::VariablePtr& localR,
-                 core::VariablePtr& globalI, core::VariablePtr& localI)
-    : builder(astBuilder), globalRange(globalR), localRange(localR), globalId(globalI), localId(localI) { };
+                 core::VariablePtr& globalI, core::VariablePtr& localI, KernelData& data)
+    : builder(astBuilder), globalRange(globalR), localRange(localR), globalId(globalI), localId(localI), kd(data) { };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
 //std::cout << "\t * found " << element->toString() << std::endl;
@@ -345,12 +348,15 @@ class OclMapper : public core::NodeMapping {
     std::vector<core::VariablePtr> localArgs;
     std::vector<core::VariablePtr> privateArgs;
 
+    //TODO replace with kernelData
     // loop bounds
     core::VariablePtr localRange;
     core::VariablePtr globalRange;
     // loop variables
     core::VariablePtr localId;
     core::VariablePtr groupId;
+
+    KernelData kd;
 
 private:
     template <typename T>
@@ -443,11 +449,12 @@ private:
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
-        : kernelMapper(astBuilder, globalRange, localRange, groupId, localId), builder(astBuilder),
-          localRange(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          globalRange(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          localId(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
-          groupId(builder.variable(builder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))){ };
+        : kernelMapper(astBuilder, globalRange, localRange, groupId, localId, kd), builder(astBuilder),
+          localRange(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          globalRange(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          localId(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          groupId(astBuilder.variable(astBuilder.vectorType(astBuilder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))),
+          kd(astBuilder){ };
 
     const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
         // quick check - stop recursion at variables
@@ -563,7 +570,6 @@ public:
             } else {
                 assert(funcType && "Function has unexpected type");
             }
-
 
             //TODO handle subnodes.
             //Maybe prettier in another mapper
