@@ -70,24 +70,48 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda) {
 
 	auto funType = dynamic_pointer_cast<const FunctionType>(lambda->getType());
 	auto body = lambda->getBody();
-	bool isCompoundBody = !!dynamic_pointer_cast<const CompoundStmt>(body);
 
 	// generate a new function from the lambda expression
 	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
 	CodeStream& cs = cptr->getCodeStream();
 	// write the function header
-	cs << cc.getTypeMan().getTypeName(cptr, funType->getReturnType()) << " " << ident << "(";
+	cs << cc.getTypeMan().getTypeName(cptr, funType->getReturnType()) << " " << ident << "(void* _capture";
 	// handle arguments
-	cs << join(", ", lambda->getParams(), [&, this](std::ostream& os, const VariablePtr& param) {
-		printFunctionParamter(os, cptr, param, this->cc);
-	});
+	if (!lambda->getParams().empty()) {
+		cs << ", " << join(", ", lambda->getParams(), [&, this](std::ostream& os, const VariablePtr& param) {
+			printFunctionParamter(os, cptr, param, this->cc);
+		});
+	}
 	cs << ")";
-	if(!isCompoundBody) cs << " {" << CodeStream::indR << "\n";
-	// generate the function body
+	cs << " {" << CodeStream::indR << "\n";
+
 	ConvertVisitor visitor(cc, cptr);
+
+	// extract capture list
+	cs << "// --------- Captured Stuff - Begin -------------\n";
+
+	for_each(lambda->getCaptureList(), [&](const DeclarationStmtPtr& cur) {
+		VariableManager::VariableInfo info;
+		info.location = VariableManager::STACK;
+
+		VariablePtr var = cur->getVariable();
+		cc.getVariableManager().addInfo(var, info);
+
+		// standard handling
+		cs << cc.getTypeMan().getTypeName(cptr, var->getType(), false);
+		string name = cc.getNameGen().getVarName(var);
+		cs << " " << name << " = _capture." << name << ";\n";
+
+	});
+
+	cs << "// --------- Captured Stuff -  End  -------------\n";
+
+
+	// generate the function body
 	visitor.visit(lambda->getBody());
-	if(!isCompoundBody) cs << CodeStream::indL << "\n}\n";
+	cs << CodeStream::indL << "\n}\n";
 	cs << "\n";
+
 	// insert into function map and return
 	functionMap.insert(std::make_pair(lambda, cptr));
 	return cptr;

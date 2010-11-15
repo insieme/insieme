@@ -51,7 +51,16 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
 		ConvertVisitor convVisitor(*this);
 		convVisitor.visit(ep);
-		converted.insert(std::make_pair(ep, convVisitor.getCode()));
+		CodePtr ptr = convVisitor.getCode();
+		if (ep->getNodeType() == NT_LambdaExpr || ep->getNodeType()==NT_RecLambdaExpr) {
+			// remove root node content => not required
+			CodePtr tmp = CodePtr(new CodeFragment(string("root-node")));
+			for_each(ptr->getDependencies(), [&tmp](const CodePtr& cur) {
+				tmp->addDependency(cur);
+			});
+			ptr = tmp;
+		}
+		converted.insert(std::make_pair(ep, ptr));
 	});
 	return converted;
 }
@@ -60,10 +69,60 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 
 	// obtain a name for the function ...
-	string cFunName = cc.getNameGen().getName(ptr);
+	//string cFunName = cc.getNameGen().getName(ptr);
 
-	// add a dependency to the function definition
+
+	// get name for function type
+	string name = nameGen.getName(ptr, "lambda");
+	string structName = "struct " + name + "_closure";
+
+	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getType());
+
+	// define the empty lambda struct
+	// A) create struct for lambda closure
+	{
+		CodePtr cptr(new CodeFragment(string("lambda_") + name));
+		CodeStream& out = cptr->getCodeStream();
+		defCodePtr->addDependency(cptr);
+		out << structName << " { \n";
+
+			// add function pointer
+			out << "    ";
+			out << cc.getTypeMan().getTypeName(cptr, funType->getReturnType());
+			out << "(*fun)(" << "void*";
+			auto arguments = funType->getArgumentType()->getElementTypes();
+			if (!arguments.empty()) {
+				out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+					out << cc.getTypeMan().getTypeName(cptr, cur);
+				});
+			}
+			out << ");\n";
+
+			// add struct size
+			out << "    const size_t size;\n";
+
+			// add capture values
+			for_each(ptr->getCaptureList(), [&](const DeclarationStmtPtr& cur) {
+				VariablePtr var = cur->getVariable();
+				out << "    const " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
+			});
+		out << "};\n";
+	}
+
+	// B) create function to be computed using function manager + add dependency
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
+
+	// C) allocate a struct
+	cStr << "(&((struct " + nameGen.getName(ptr->getType(), "funType") + "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
+	if (!ptr->getCaptureList().empty()) {
+		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const DeclarationStmtPtr& cur) {
+			this->visit(cur->getInitialization());
+		});
+	}
+	cStr << "}))";
+
+
+
 }
 
 void ConvertVisitor::visitRecLambdaExpr(const RecLambdaExprPtr& ptr) {
@@ -161,26 +220,45 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		return;
 	}
 
+	// invoke external method ...
 	if (funExp->getNodeType() == NT_Literal) {
-		cStr << cc.getNameGen().getName(funExp);
-	} else {
-
-		// TODO: add special handling if lambda is given (not a variable)
-
-		// cast lambda ...
-		cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, funExp->getType(), false) << ")(";
 		visit(funExp);
-		cStr << "))->fun";
+		cStr << "(";
+		functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+		cStr << ")";
+		return;
 	}
 
-	// add method invocation
-	if (funExp->getNodeType() != NT_Literal) {
+	// TODO: add special handling if lambda is directly given (not a variable)
 
+	// handle variables
+	if (funExp->getNodeType() == NT_Variable) {
+		visit(funExp);
+		cStr << "->fun";
+		cStr << "(";
+		visit(funExp);
+		if (!args.empty()) {
+			cStr << ", ";
+			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+		}
+		cStr << ")";
+		return;
 	}
 
-	cStr << "(";
-	functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+	// make code section depending on lambda type definition (required for caller)
+	cc.getTypeMan().getTypeName(defCodePtr, funExp->getType());
+
+	// use type specific call routine ..
+	cStr << "call_" << nameGen.getName(funExp->getType(), "funType") << "(";
+	visit(funExp);
+	if (!args.empty()) {
+		cStr << ", ";
+		functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+	}
 	cStr << ")";
+
+	//cStr << "<?>Unhandled Call Expression</?>";
+
 }
 
 void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
