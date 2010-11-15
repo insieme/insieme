@@ -144,6 +144,28 @@ public:
 };
 */
 
+
+void KernelData::appendCaptures(core::LambdaExpr::CaptureList& captureList, OCL_SCOPE scope) {
+
+    //TODO add flags
+    if(true)
+        CAPTURE(captureList, globalRange);
+
+    if(true)
+        CAPTURE(captureList, groupSize);
+
+    if(true || scope == OCL_GLOBAL)
+        CAPTURE(captureList, localRange);
+
+    //TODO use thread group identifiers
+    if(false)
+        CAPTURE(captureList, groupTg);
+
+    if(false)
+        CAPTURE(captureList, localTg);
+
+}
+
 class KernelMapper : public core::NodeMapping {
     const core::ASTBuilder& builder;
 
@@ -159,7 +181,6 @@ class KernelMapper : public core::NodeMapping {
 
 private:
 
-    //TODO remove one
     void append(std::vector<core::VariablePtr>& sink, std::vector<core::VariablePtr>& source) {
         for(std::vector<core::VariablePtr>::iterator I = source.begin(), E = source.end(); I != E; I++) {
             sink.push_back(*I);
@@ -378,10 +399,7 @@ private:
     
     void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            const core::VariablePtr initVal = builder.variable((*I)->getType());
-            outVec.push_back(builder.declarationStmt((*I), initVal));
-            // update inVec with new variables
-            (*I) = initVal;
+            CAPTURE(outVec, *I);
         }
     }
     /*
@@ -567,33 +585,9 @@ public:
                 core::FunctionTypePtr parFuncType= builder.functionType(builder.tupleType(parArgs),
                         core::lang::TYPE_UINT_4_PTR);
 
-                // local parallelism
-/*                core::LambdaExpr::ParamList list;
-                core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, list, newBody);
-                core::JobExprPtr localZjob = builder.jobExpr(localParFct);
-                std::vector<core::ExpressionPtr> expr;
-                //construct vector of arguments
-                expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
-                const core::ExpressionPtr& idx = builder.literal("2", core::lang::TYPE_UINT_4_PTR);
-                expr.push_back(builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_PTR, toVector<core::ExpressionPtr>( localRange, idx )));
-                expr.push_back(localZjob);
-
-                core::CallExprPtr localZpar = builder.callExpr(parFuncType, core::lang::OP_PARALLEL_PTR, expr);
-*/
-
 // Top down generation of constructs
 
-                //TODO make me pretty
-                std::vector<core::VariablePtr> ranges = toVector(kd.globalRange, builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ),
-                    core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)))), kd.localRange);
-
-                //construct local declarations to be caught by local parallel statements
-                std::vector<vector<core::DeclarationStmtPtr> > localCatching;
-
-
-
-
-// Bottom up generation/insertion of constructs
+// Bottom up generation/composition of constructs
 
                 core::JobExpr::GuardedStmts noGuardedStatementsNeeded;
 //                , noGuardedStatementsNeeded, kernelMapper.getLocalDeclarations()
@@ -609,7 +603,7 @@ public:
                 std::vector<core::DeclarationStmtPtr> localVars = kernelMapper.getLocalDeclarations();
                 createDeclarations(localFunCaptures, localVars);
                 // catch loop boundaries
-                createDeclarations(localFunCaptures, ranges);
+                kd.appendCaptures(localFunCaptures, OCL_LOCAL);
 
                 //TODO store return values of parallel
                 core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, localFunCaptures, funParams, newBody);
@@ -622,7 +616,7 @@ public:
                 // in-body local variables
                 appendToVector(localJobCaptures, localVars);
                 // catch loop boundaries
-                createDeclarations(localJobCaptures, ranges);
+                kd.appendCaptures(localJobCaptures, OCL_LOCAL);
                 // TODO catch global variables
 
                 core::JobExprPtr localJob = builder.jobExpr(localParFct, noGuardedStatementsNeeded, localJobCaptures);
@@ -634,7 +628,7 @@ public:
 //                const core::ExpressionPtr& idx = builder.literal(toString(0), core::lang::TYPE_UINT_4_PTR);
 
                 // calculate localRange[0] * localRange[1] * localRange[2] to use as maximum number of threads
-                core::ExpressionPtr localRangeProduct = vecProduct(ranges.at(2), 3);
+                core::ExpressionPtr localRangeProduct = vecProduct(kd.localRange, 3);
 
                 expr.push_back(localRangeProduct);
 
@@ -649,7 +643,7 @@ public:
                 createDeclarations(globalFunCaptures, localArgs);
                 createDeclarations(globalFunCaptures, privateArgs);
                 // catch loop boundaries
-                createDeclarations(globalFunCaptures, ranges);
+                kd.appendCaptures(globalFunCaptures, OCL_GLOBAL);
                 // TODO catch global variables
 
                 core::LambdaExprPtr globalParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, globalFunCaptures, funParams, localPar);
@@ -659,7 +653,7 @@ public:
                 createDeclarations(globalJobCaptures, constantArgs);
                 createDeclarations(globalJobCaptures, globalArgs);
                 // catch loop boundaries
-                createDeclarations(globalJobCaptures, ranges);
+                kd.appendCaptures(globalJobCaptures, OCL_GLOBAL);
                 // TODO catch global variables
 
                 core::JobExprPtr globalJob = builder.jobExpr(globalParFct, noGuardedStatementsNeeded, globalJobCaptures);
@@ -669,7 +663,7 @@ public:
                 expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
 
                 // calculate groupRange[0] * groupRange[1] * groupRange[2] to use as maximum number of threads
-                core::ExpressionPtr globalRangeProduct = vecProduct(ranges.at(1), 3);
+                core::ExpressionPtr globalRangeProduct = vecProduct(kd.groupSize, 3);
                 expr.push_back(globalRangeProduct);
 
                 expr.push_back(globalJob);
@@ -684,8 +678,8 @@ public:
                 appendToVector(newParams, globalArgs);
                 appendToVector(newParams, localArgs);
                 appendToVector(newParams, privateArgs);
-                newParams.push_back(ranges.at(0)); // add global range to parameters
-                newParams.push_back(ranges.at(2)); // add local range to parameters
+                newParams.push_back(kd.globalRange); // add global range to parameters
+                newParams.push_back(kd.localRange); // add local range to parameters
 
                 std::vector<core::StatementPtr> newBodyStmts;
 
@@ -694,12 +688,11 @@ public:
                 for(size_t i = 0; i < 3; ++i) {
                     groupRdeclInit.push_back(
                         builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_UINT_DIV_PTR, toVector<core::ExpressionPtr>(
-                            SUBSCRIPT(ranges.at(0), i ),
-                            SUBSCRIPT(ranges.at(2), i ) )));
+                            SUBSCRIPT(kd.globalRange, i ),  SUBSCRIPT(kd.localRange, i ) )));
                 }
 
                 //declare group range
-                core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(ranges.at(1), builder.vectorExpr(groupRdeclInit));
+                core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.groupSize, builder.vectorExpr(groupRdeclInit));
                 newBodyStmts.push_back(groupRdecl);
 
                 newBodyStmts.push_back(globalPar);
