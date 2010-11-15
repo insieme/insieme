@@ -44,6 +44,8 @@ namespace {
 using namespace insieme::core;
 using namespace insieme::core::transform;
 
+using namespace insieme::utils::map;
+
 /**
  * Visitor which replace a specific node of the IR starting from a root node.
  */
