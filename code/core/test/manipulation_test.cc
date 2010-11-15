@@ -107,6 +107,48 @@ TEST(Manipulation, Remove) {
 	stmts.push_back(builder.literal(builder.genericType("X"), "C"));
 	CompoundStmtPtr compound = builder.compoundStmt(stmts);
 
+	StatementPtr stmt = builder.literal(builder.genericType("X"), "X");
+
+	EXPECT_EQ("{A; B; C;}", toString(*compound));
+
+	NodePtr res;
+	CompoundStmtAddress target(compound);
+	res = transform::replace(manager, target, 0, stmt);
+	EXPECT_EQ("{X; B; C;}", toString(*res));
+
+	res = transform::replace(manager, target, 1, stmt);
+	EXPECT_EQ("{A; X; C;}", toString(*res));
+
+	res = transform::replace(manager, target, 2, stmt);
+	EXPECT_EQ("{A; B; X;}", toString(*res));
+
+
+	// check for deeper scope
+	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound));
+	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1));
+	target = static_address_cast<const CompoundStmt>(NodeAddress(outer2).getAddressOfChild(0).getAddressOfChild(0));
+
+	res = transform::replace(manager, target, 0, stmt);
+	EXPECT_EQ("{{{X; B; C;};};}", toString(*res));
+
+	res = transform::replace(manager, target, 1, stmt);
+	EXPECT_EQ("{{{A; X; C;};};}", toString(*res));
+
+	res = transform::replace(manager, target, 2, stmt);
+	EXPECT_EQ("{{{A; B; X;};};}", toString(*res));
+
+}
+
+TEST(Manipulation, Replace) {
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	vector<StatementPtr> stmts;
+	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
+	stmts.push_back(builder.literal(builder.genericType("X"), "B"));
+	stmts.push_back(builder.literal(builder.genericType("X"), "C"));
+	CompoundStmtPtr compound = builder.compoundStmt(stmts);
+
 	EXPECT_EQ("{A; B; C;}", toString(*compound));
 
 	NodePtr res;
@@ -136,7 +178,6 @@ TEST(Manipulation, Remove) {
 	EXPECT_EQ("{{{A; B;};};}", toString(*res));
 
 }
-
 
 TEST(Manipulation, Move) {
 	NodeManager manager;

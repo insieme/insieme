@@ -38,6 +38,9 @@
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_address.h"
+#include "insieme/core/statements.h"
+
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace core {
@@ -91,6 +94,49 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
  * @return the root node of the modified AST tree (according to the root of the address)
  */
 NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, int displacement, bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function replacing a statement within a compound statement block with another statement.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement which should be altered
+ * @param index the index of the statement to be replaced (counting starts with 0)
+ * @param replacement the statement to be inserted as a replacement
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function to apply an arbitrary manipulation to the statements within a compound statement.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement which should be manipulated
+ * @param manipulator the manipulation to be applied as a functor
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+template<typename Manipulator>
+NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Manipulator manipulator, bool preservePtrAnnotationsWhenModified = false) {
+
+	// get and manipulate statement list
+	vector<StatementPtr> list = target->getStatements();
+
+	// apply manipulation
+	manipulator(list);
+
+	// create and apply replacement
+	CompoundStmtPtr replacement = CompoundStmt::get(manager, list);
+	return replaceNode(manager, target, replacement, preservePtrAnnotationsWhenModified);
+}
 
 
 } // end namespace transform

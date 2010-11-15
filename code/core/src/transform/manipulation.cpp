@@ -47,30 +47,30 @@ namespace transform {
 using namespace std;
 
 NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, unsigned index, bool preservePtrAnnotationsWhenModified) {
-
-	// get and manipulate statement list
-	vector<StatementPtr> list = target->getStatements();
-
-	// limit index
-	unsigned pos = min((unsigned)(list.size()), index);
-	list.insert(list.begin() + pos, statement);
-
-	// create and apply replacement
-	CompoundStmtPtr replacement = CompoundStmt::get(manager, list);
-	return replaceNode(manager, target, replacement, preservePtrAnnotationsWhenModified);
+	// use generic manipulation function
+	return manipulate(manager, target, [index, &statement](vector<StatementPtr>& list){
+		// limit index and insert element
+		unsigned pos = min((unsigned)(list.size()), index);
+		list.insert(list.begin() + pos, statement);
+	}, preservePtrAnnotationsWhenModified);
 }
 
 NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, bool preservePtrAnnotationsWhenModified) {
+	// use generic manipulation function
+	return manipulate(manager, target, [index](vector<StatementPtr>& list){
+		// remove element
+		assert( index < list.size() && "Index out of range!");
+		list.erase(list.begin() + index);
+	}, preservePtrAnnotationsWhenModified);
+}
 
-	// get and manipulate statement list
-	vector<StatementPtr> list = target->getStatements();
-	assert( index < list.size() && "Index out of range!");
-	list.erase(list.begin() + index);
-
-	// create and apply replacement
-	CompoundStmtPtr replacement = CompoundStmt::get(manager, list);
-	return replaceNode(manager, target, replacement, preservePtrAnnotationsWhenModified);
-
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, bool preservePtrAnnotationsWhenModified) {
+	// use generic manipulation function
+	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list){
+		// remove element
+		assert( index < list.size() && "Index out of range!");
+		list[index] = replacement;
+	}, preservePtrAnnotationsWhenModified);
 }
 
 NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, int displacement, bool preservePtrAnnotationsWhenModified) {
@@ -80,23 +80,19 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 		return target.getRootNode();
 	}
 
+	// use generic manipulation function
+	return manipulate(manager, target, [index, displacement](vector<StatementPtr>& list){
+		// check index
+		assert( index < list.size() && "Index out of range!");
 
-	// get and manipulate statement list
-	int newPos = index + displacement;
-	vector<StatementPtr> list = target->getStatements();
-	assert( index < list.size() && "Index out of range!");
+		// limit displacement
+		int newPos = index + displacement;
+		newPos = max(min((int)(list.size()-1), newPos), 0);
 
-	// limit displacement
-	newPos = max(min((int)(list.size()-1), newPos), 0);
-
-	StatementPtr element = list[index];
-	list.erase(list.begin() + index);
-	list.insert(list.begin() + newPos, element);
-
-	// create and apply replacement
-	CompoundStmtPtr replacement = CompoundStmt::get(manager, list);
-	return replaceNode(manager, target, replacement, preservePtrAnnotationsWhenModified);
-
+		StatementPtr element = list[index];
+		list.erase(list.begin() + index);
+		list.insert(list.begin() + newPos, element);
+	}, preservePtrAnnotationsWhenModified);
 }
 
 
