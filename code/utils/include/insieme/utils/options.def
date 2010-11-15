@@ -39,6 +39,7 @@ FLAG("help,h", 				"help", 				Help, 				"produce help message")
 FLAG("version,V", 			"version", 				Version, 			"print version string")
 FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 		"pretty print the IR after frontend conversion")
 FLAG("check-sema,S",		"check-sema", 			CheckSema, 			"run semantics check on the generated IR")
+FLAG("omp-sema",			"omp-sema", 			OMPSema, 			"apply OMP semantics in frontend")
 
 //For debug:
 FLAG("opencl,OCL", "opencl", OpenCL, "produces code by OpenCL backend (debug)")

@@ -47,6 +47,7 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
+
 class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 
 	core::NodeManager& nodeMan;
