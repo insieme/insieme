@@ -138,12 +138,11 @@ TEST(OclCompilerTest, HelloCLTest) {
     // Set severity level
     SetStderrLogging(5);
     CommandLineOptions::Verbosity = 2;
-
-    core::SharedNodeManager sharedManager = std::make_shared<core::NodeManager>();
-    core::ProgramPtr program = core::Program::create(*sharedManager);
+    core::NodeManager manager;
+    core::ProgramPtr program = core::Program::create(manager);
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "hello.cl" << "' to IR...";
-    fe::Program prog(sharedManager);
+    fe::Program prog(manager);
     prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
     program = prog.convert();
     LOG(INFO) << "Done.";

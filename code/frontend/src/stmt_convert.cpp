@@ -327,7 +327,7 @@ public:
 				// in the case we replace the loop iterator with a temporary variable,
 				// we have to assign the final value of the iterator to the old variable
 				// so we don't change the semantics of the code
-				const core::lang::OperatorPtr& refAssign = convFact.mgr->get(core::lang::OP_REF_ASSIGN_PTR);
+				const core::lang::OperatorPtr& refAssign = convFact.mgr.get(core::lang::OP_REF_ASSIGN_PTR);
 				refAssign->addAnnotation( std::make_shared<c_info::COpAnnotation>("=") ); // FIXME
 
 				// inductionVar = COND()? ---> FIXME!
@@ -542,9 +542,9 @@ public:
 			condExpr = convFact.tryDeref( convFact.convertExpr( cond ) );
 
 			// we create a variable to store the value of the condition for this switch
-			core::VariablePtr&& condVar = builder.variable(core::lang::TYPE_INT_GEN_PTR);
+			core::VariablePtr&& condVar = builder.variable(core::lang::TYPE_INT_4_PTR);
 			// int condVar = condExpr;
-			core::DeclarationStmtPtr&& declVar = builder.declarationStmt(condVar, builder.castExpr(core::lang::TYPE_INT_GEN_PTR, condExpr));
+			core::DeclarationStmtPtr&& declVar = builder.declarationStmt(condVar, builder.castExpr(core::lang::TYPE_INT_4_PTR, condExpr));
 			retStmt.push_back(declVar);
 
 			condExpr = condVar;

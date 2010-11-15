@@ -80,7 +80,7 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 
 bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* decl) {
 	if(decl->hasGlobalStorage()) {
-		globals.insert( std::make_pair(decl, std::make_pair(false, false)) );
+		globals.insert( std::make_pair(decl, false) );
 
 		const FunctionDecl* enclosingFunc = funcStack.top();
 		assert(enclosingFunc);
@@ -93,13 +93,22 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 	if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
 		if(varDecl->hasGlobalStorage()) {
 
-			// add the variable to the list of global vars (if not already there)
-			if(globals.find(varDecl) == globals.end())
-				globals.insert( std::make_pair(varDecl, std::make_pair(true, false)) );
-
 			const FunctionDecl* enclosingFunc = funcStack.top();
 			assert(enclosingFunc);
 			usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
+
+			// add the variable to the list of global vars (if not already there)
+			if(globals.find(varDecl) == globals.end()) {
+				if(varDecl->isExternC()) {
+					// look for the definition. If we find it it means we have access to the translation unit defining this variable
+					const VarDecl* def = varDecl->getDefinition();
+					if(!def) {
+						globals.insert( std::make_pair(varDecl, true) );
+						return true;
+					}
+				}
+				globals.insert( std::make_pair(varDecl, false) );
+			}
 		}
 	}
 	return true;
@@ -142,7 +151,7 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 	core::StructExpr::Members members;
 	for(auto it = globals.begin(), end = globals.end(); it != end; ++it) {
 		core::TypePtr&& entryType = fact.getASTBuilder().refType( fact.convertType(it->first->getType().getTypePtr()) );
-		if(it->second.second) {
+		if(it->second) {
 			// the variable is defined as exter, so we don't have to allocate memory for it
 			// just refear to the memory location someone else has defined
 			entryType = fact.getASTBuilder().refType( entryType );
@@ -150,17 +159,22 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		core::Identifier ident(it->first->getNameAsString());
 		// add type to the global struct
 		entries.push_back( core::StructType::Entry( ident, entryType ) );
-		// add proper initializer
-		if(it->second.first) {
+		// add initialization
+
+		// we have to initialize the value of this ref with the value of the extern
+		// variable which we assume will be visible from the entry point
+		core::ExpressionPtr initExpr;
+		if(it->second) {
+			initExpr = fact.getASTBuilder().literal(it->first->getNameAsString(), entryType);
+		} else if(it->first->getInit()) {
 			// this means the variable is not declared static inside a function so we have to initialize its value
-			if(it->first->getInit()) {
-				core::ExpressionPtr&& initExpr = fact.convertInitExpr(it->first->getInit(), entryType);
-				members.push_back( core::StructExpr::Member(ident, initExpr) );
-				continue;
-			}
+			initExpr = fact.convertInitExpr(it->first->getInit(), entryType);
+		} else {
+			initExpr = fact.defaultInitVal(entryType);
 		}
+
 		// default initialization
-		members.push_back( core::StructExpr::Member(ident, fact.defaultInitVal(entryType)) );
+		members.push_back( core::StructExpr::Member(ident, initExpr) );
 
 	}
 	core::StructTypePtr&& structTy = fact.getASTBuilder().structType(entries);

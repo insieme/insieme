@@ -153,7 +153,7 @@ struct Program::ProgramImpl {
 	ProgramImpl() : mIdx(mProg), mAnalyzer(mProg, mIdx), mCallGraph(mProg) { }
 };
 
-Program::Program(const core::SharedNodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(*mgr) ) { }
+Program::Program(core::NodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(mgr) ) { }
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
@@ -223,7 +223,7 @@ namespace {
 /**
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
  */
-core::ProgramPtr addParallelism(const core::ProgramPtr& prog, const core::SharedNodeManager& mgr) {
+core::ProgramPtr addParallelism(const core::ProgramPtr& prog, core::NodeManager& mgr) {
     ocl::Compiler oclCompiler(prog, mgr);
     return oclCompiler.lookForOclAnnotations();
 }
@@ -254,7 +254,7 @@ const core::ProgramPtr& Program::convert() {
 			const clang::Stmt* body = insiemePragma.getStatement();
 			assert(body && "Pragma matching failed!");
 			core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, *(*pit).second);
-			mProgram = core::Program::addEntryPoint(*mMgr, mProgram, lambdaExpr);
+			mProgram = core::Program::addEntryPoint(mMgr, mProgram, lambdaExpr);
 		}
 	}
 

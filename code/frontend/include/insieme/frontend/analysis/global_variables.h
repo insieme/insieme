@@ -63,7 +63,7 @@ namespace analysis {
 
 class GlobalVarCollector : public clang::RecursiveASTVisitor<GlobalVarCollector> {
 public:
-	typedef std::map<const clang::VarDecl*, std::pair<bool, bool>> GlobalVarVect;
+	typedef std::map<const clang::VarDecl*, bool> GlobalVarVect;
 	typedef std::set<const clang::FunctionDecl*> VisitedFuncSet;
 
 	typedef std::stack<const clang::FunctionDecl*> FunctionStack;

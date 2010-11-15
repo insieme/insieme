@@ -74,7 +74,7 @@ namespace {
 void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& clangComp, const clang::Decl* decl) {
 
 	SourceManager& manager = clangComp.getSourceManager();
-    clang::SourceLocation errLoc = decl->getLocStart();
+    clang::SourceLocation&& errLoc = decl->getLocStart();
     errMsg << " at location (" << frontend::utils::Line(errLoc, manager) << ":" <<
             frontend::utils::Column(errLoc, manager) << ")." << std::endl;
 
@@ -114,14 +114,14 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
 
 	core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(funcDecl, true);
-	mProgram = core::Program::addEntryPoint(*mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
+	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
 
 	return mProgram;
 }
 
 // ------------------------------------ ConversionFactory ---------------------------
 
-ConversionFactory::ConversionFactory(core::SharedNodeManager mgr, Program& prog):
+ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 	// cppcheck-suppress exceptNew
 	stmtConv( ConversionFactory::makeStmtConverter(*this) ),
 	// cppcheck-suppress exceptNew
@@ -209,14 +209,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(varDecl);
 	if(fit != ctx.varDeclMap.end()) {
 		// variable found in the map.
-
-		// before returning it, we have to make sure this variable has not being marked
-		// as needRef, in that case the newly introduced ref need to be returned
-//		auto rit = ctx.needRef.find(fit->second);
-//		if(rit != ctx.needRef.end())
-//			return rit->second;
-
-		// return the variable
 		return fit->second;
 	}
 
@@ -230,7 +222,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	// check whether this is variable is defined as local or static
 	// DLOG(INFO) << varDecl->getNameAsString() << " " << varDecl->hasGlobalStorage() << " " << varDecl->hasLocalStorage();
 	if(varDecl->hasGlobalStorage()) {
-		assert(ctx.currGlobalVar);
+		assert(ctx.currGlobalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		return builder.memberAccessExpr(tryDeref(ctx.currGlobalVar), core::Identifier(varDecl->getNameAsString()));
 	}

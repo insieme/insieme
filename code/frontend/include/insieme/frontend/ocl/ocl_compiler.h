@@ -53,7 +53,7 @@ private:
 
 
 public:
-    Compiler(const core::ProgramPtr& program, const core::SharedNodeManager& mgr) : mProgram(program), builder(mgr) {}
+    Compiler(const core::ProgramPtr& program, core::NodeManager& mgr) : mProgram(program), builder(mgr) {}
 
     core::ProgramPtr lookForOclAnnotations();
 

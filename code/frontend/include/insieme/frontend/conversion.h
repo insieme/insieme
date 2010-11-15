@@ -88,7 +88,7 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
 		VarDeclMap varDeclMap;
 
-		// Map for resolved lambda functions
+		// Stores the generated IR for function declarations
 		typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
 
@@ -97,8 +97,17 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
 		RecVarExprMap recVarExprMap;
 
+		// When set this variable tells the frontend to resolve eventual recursive function call
+		// using the mu variables which has been previously placed in the recVarExprMap
 		bool isRecSubFunc;
+
+		// It tells the frontend the body of a recursive function is being resolved and
+		// eventual functions which are already been resolved should be not converted again
+		// but read from the map
 		bool isResolvingRecFuncBody;
+
+		// This variable points to the current mu variable representing the start of the
+		// recursion
 		core::VariablePtr currVar;
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -136,35 +145,67 @@ class ConversionFactory : public boost::noncopyable {
 
 	ConversionContext 		ctx;
 
-	// PIMPL pattern
+	/**
+	 * Converts a Clang statements into an IR statements.
+	 */
 	class ClangStmtConverter;
+	// Instantiates the statement converter
 	static ClangStmtConverter* makeStmtConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangStmtConverter> stmtConv;
+	std::auto_ptr<ClangStmtConverter> stmtConv; // PIMPL pattern
 
+	/**
+	 * Converts a Clang types into an IR types.
+	 */
 	class ClangTypeConverter;
+	// Instantiates the type converter
 	static ClangTypeConverter* makeTypeConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangTypeConverter> typeConv;
+	std::auto_ptr<ClangTypeConverter> typeConv; // PIMPL pattern
 
+	/**
+	 * Converts a Clang expression into an IR expression.
+	 */
 	class ClangExprConverter;
+	// Instantiates the expression converter
 	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangExprConverter> exprConv;
+	std::auto_ptr<ClangExprConverter> exprConv; // PIMPL pattern
 
-	core::SharedNodeManager mgr;
+	core::NodeManager& 		mgr;
 	const core::ASTBuilder  builder;
     Program& 				program;
+
+    /**
+     * Maps of statements to pragmas.
+     */
     PragmaStmtMap 	 		pragmaMap;
+
+    /**
+     * A pointer to the translation unit which is currently used to resolve symbols, i.e. literals
+     * Every time a function belonging to a different translation unit is called this pointer
+     * is set to translation unit containing the function definition.
+     */
     const TranslationUnit*	currTU;
 
+    /**
+     * Returns a reference to the IR data structure used to represent a variable of the input C program.
+     *
+     * The function guarantees that the same variable in the input program is always represented in the
+     * IR with the same generated Variable and in the case of access to global variables, a reference
+     * to a member of the global data structure is returned.
+     */
 	core::ExpressionPtr lookUpVariable(const clang::VarDecl* varDecl);
 	core::ExpressionPtr convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const;
+
+	/**
+	 * Attach annotations to a C function of the input program.
+	 */
 	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
 	friend class ASTConverter;
 public:
-	ConversionFactory(core::SharedNodeManager mgr, Program& program);
+	ConversionFactory(core::NodeManager& mgr, Program& program);
 
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
-	core::SharedNodeManager getNodeManager() const { return mgr; }
+	core::NodeManager& 	getNodeManager() const { return mgr; }
 
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 
@@ -191,13 +232,13 @@ public:
  *
  */
 class ASTConverter {
-	core::SharedNodeManager mgr;
-	Program& 				mProg;
-	ConversionFactory   	mFact;
-	core::ProgramPtr    	mProgram;
+	core::NodeManager&	mgr;
+	Program& 			mProg;
+	ConversionFactory   mFact;
+	core::ProgramPtr    mProgram;
 
 public:
-	ASTConverter(const core::SharedNodeManager& mgr, Program& prog) : mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
+	ASTConverter(core::NodeManager& mgr, Program& prog) : mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 

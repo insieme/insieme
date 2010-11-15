@@ -211,7 +211,7 @@ void switch_stmt_test() {
 	int a=0;
 
 	#pragma test \
-	"{ decl int<a> v2 = CAST<int<a>>(( *v1)); switch(v2) { case 1: { } default: { } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 1: { } default: { } };}"
 	switch(a) {
 	case 1:
 		break;
@@ -225,7 +225,7 @@ void switch_stmt_test() {
 
 	// EVIL CODE
 	#pragma test \
-	"{ decl int<a> v2 = CAST<int<a>>((( *v1)+8)); (v1 := (( *v1)+1)); switch(v2) { case 1: { } default: { } };}"
+	"{ decl int<4> v2 = CAST<int<4>>((( *v1)+8)); (v1 := (( *v1)+1)); switch(v2) { case 1: { } default: { } };}"
 	switch(a+8) {
 	a += 1;
 	case 1:
@@ -240,7 +240,7 @@ void switch_stmt_test() {
 
 
 	#pragma test \
-	"{ decl int<a> v2 = CAST<int<a>>(( *v1)); switch(v2) { case 0: { } default: fun(ref<int<4>> v4) { decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }(v1) };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: fun(ref<int<4>> v4) { decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }(v1) };}"
 	switch(a) {
 	case 0:
 		break;
@@ -258,7 +258,7 @@ void switch_stmt_test() {
 	//};
 
 	#pragma test \
-	"{ decl int<a> v2 = CAST<int<a>>(( *v1)); switch(v2) { case 1: (v1 := (( *v1)+1)) case 2: { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); } default: { { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); }; (( *v1)-1); } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 1: (v1 := (( *v1)+1)) case 2: { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); } default: { { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); }; (( *v1)-1); } };}"
 	switch(a) {
 	case 1:
 		a+=1;

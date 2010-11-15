@@ -609,7 +609,7 @@ public:
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			isAssignment = true;
-			opFunc = convFact.mgr->get(core::lang::OP_REF_ASSIGN_PTR);
+			opFunc = convFact.mgr.get(core::lang::OP_REF_ASSIGN_PTR);
 			exprTy = core::lang::TYPE_UNIT_PTR;
 			break;
 		}
