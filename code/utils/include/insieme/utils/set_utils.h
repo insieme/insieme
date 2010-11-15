@@ -47,11 +47,18 @@
 
 #include "string_utils.h"
 #include "container_utils.h"
+#include "functional_utils.h"
 
 
 namespace insieme {
 namespace utils {
 namespace set {
+
+template<class Ptr>
+class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> { };
+
+template<class Ptr>
+class PointerMultiSet : public boost::unordered_multiset<Ptr, hash_target<Ptr>, equal_target<Ptr>> { };
 
 /**
  * Creates a set containing no elements.
