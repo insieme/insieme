@@ -101,12 +101,15 @@ public:
                             [] (core::StatementPtr bodyStatement) {
                         if(dynamic_pointer_cast<const core::CallExpr>(bodyStatement))
                             return true;
-                        else
-                            return false;
+                        else if(core::DeclarationStmtPtr decl =  dynamic_pointer_cast<const core::DeclarationStmt>(bodyStatement)){
+                            if(dynamic_pointer_cast<const core::CallExpr>(decl->getInitialization()))
+                                return true;
+                        }
+                        return false;
                     });
 
-
-                    EXPECT_EQ(core::NodeType::NT_CallExpr, (*parallelFunctionCall)->getNodeType());
+                    if(core::NodeType::NT_DeclarationStmt != (*parallelFunctionCall)->getNodeType()) // check for call expr only if it is not a declexpr
+                        EXPECT_EQ(core::NodeType::NT_CallExpr, (*parallelFunctionCall)->getNodeType());
                 }
             }
         }else {
@@ -123,12 +126,12 @@ public:
 
         //at least the local and global range has to be captured
         EXPECT_LE(static_cast<unsigned>(3), childs.size());
-
+/*
         for(auto I = childs.begin(), E= childs.end(); I != E; ++I) {
             std::cout << "job's child: ";
             (*I)->printTo(std::cout);
             std::cout << std::endl;
-        }
+        }*/
     }
 };
 
