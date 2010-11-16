@@ -80,6 +80,10 @@ LiteralPtr ASTBuilder::intVal(long val, unsigned short size) const {
 LiteralPtr ASTBuilder::uintVal(long val, unsigned short size) const {
 	return literal(toString(val), uintType(size));
 }
+LiteralPtr ASTBuilder::stringVal(const char* str) const {
+	return literal(str, lang::TYPE_STRING);
+}
+
 
 CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
 	return callExpr(lang::OP_REF_DEREF, subExpr);

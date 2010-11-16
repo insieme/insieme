@@ -112,6 +112,7 @@ public:
 	// Values
 	LiteralPtr intVal(long val, unsigned short size = 4) const;
 	LiteralPtr uintVal(long val, unsigned short size = 4) const;
+	LiteralPtr stringVal(const char* str) const;
 
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;

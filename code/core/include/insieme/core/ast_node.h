@@ -45,6 +45,8 @@
 #include "insieme/core/annotated_ptr.h"
 #include "insieme/core/int_type_param.h"
 
+#include "insieme/core/lang/basic.h"
+
 namespace insieme {
 namespace core {
 
@@ -94,6 +96,10 @@ template<typename T> class AnnotatedPtr;
  * Implements a node manager to be used for maintaining AST node instances.
  */
 class NodeManager: public InstanceManager<Node, AnnotatedPtr> {
+public:
+	const lang::BasicGenerator basic;
+
+	NodeManager() : basic(*this) { }
 };
 
 
