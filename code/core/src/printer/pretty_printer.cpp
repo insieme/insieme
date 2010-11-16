@@ -357,16 +357,12 @@ namespace {
 		});
 
 		PRINT(LambdaExpr, {
-				out << "fun";
-				if (!node->getCaptureList().empty()) {
-					out << "[" << ::join(", ", node->getCaptureList(), [&](std::ostream&, const DeclarationStmtPtr& cur) {
-						this->visit(cur);
-					}) << "]";
-				}
-				out << "(" << ::join(", ", node->getParams(), [&](std::ostream& out, const VariablePtr& cur) {
-					out << *cur->getType() << " " << *cur;
-				}) << ") ";
-				this->visit(node->getBody());
+				// TODO : check for recursive or not ...
+
+				out << "recFun ";
+				this->visit(node->getVariable());
+				out << " ";
+				this->visit(node->getDefinition());
 		});
 
 		PRINT(CallExpr, {
@@ -436,13 +432,6 @@ namespace {
 				}) << ((cut)?", ...":"") << "]";
 		});
 
-		PRINT(RecLambdaExpr, {
-				out << "recFun ";
-				this->visit(node->getVariable());
-				out << " ";
-				this->visit(node->getDefinition());
-		});
-
 		PRINT(JobExpr, {
 				// prints the job expression quite similar to a switch expression
 				out << "job";
@@ -510,26 +499,37 @@ namespace {
 				out << "}";
 		});
 
-		PRINT(RecLambdaDefinition, {
-				auto defs = node->getDefinitions();
-				if (defs.empty()) {
-					out << "{ }";
-					return;
-				}
-
-				out << "{"; increaseIndent(); newLine();
-				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaExprPtr>& cur) {
-					out << *cur.first << " = ";
-					this->visit(cur.second);
-					out << ";";
-					if (count++ < defs.size() -1) this->newLine();
-				});
-
-				decreaseIndent();
-				newLine();
-				out << "}";
-		});
+//		PRINT(LambdaDefinition, {
+//				auto defs = node->getDefinitions();
+//				if (defs.empty()) {
+//					out << "{ }";
+//					return;
+//				}
+//
+//				auto paramPrinter = [&](std::ostream& out, const VariablePtr& cur) {
+//					out << *cur->getType() << " " << *cur;
+//				};
+//
+//				out << "{"; increaseIndent(); newLine();
+//				std::size_t count = 0;
+//				for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaDefinition::Lambda>& cur) {
+//					out << *cur.first << " = ";
+//
+//					out << "fun";
+//					if (!cur.second.captureList.empty()) {
+//						out << "[" << ::join(", ", cur.second.captureList, paramPrinter) << "]";
+//					}
+//					out << "(" << ::join(", ", cur.second.paramList, paramPrinter) << ") ";
+//					this->visit(cur.second.body);
+//
+//					out << ";";
+//					if (count++ < defs.size() -1) this->newLine();
+//				});
+//
+//				decreaseIndent();
+//				newLine();
+//				out << "}";
+//		});
 
 
 		PRINT(Program, {

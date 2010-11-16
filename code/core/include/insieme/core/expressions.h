@@ -38,6 +38,7 @@
 
 #include <cassert>
 #include <memory>
+#include <map>
 
 #include "insieme/core/annotated_ptr.h"
 #include "insieme/core/ast_node.h"
@@ -46,6 +47,7 @@
 #include "insieme/core/types.h"
 
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/map_utils.h"
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // 						HACK
@@ -167,65 +169,85 @@ public:
 
 	static VariablePtr get(NodeManager& manager, const TypePtr& type);
 	static VariablePtr get(NodeManager& manager, const TypePtr& type, unsigned int id);
+
+	bool operator<(const Variable& other) const;
 };
 
 
-class LambdaExpr : public Expression {
+class Lambda : public Node {
+
 public:
-	typedef std::vector<DeclarationStmtPtr> CaptureList;
+
+	/**
+	 * Type wrapper for the capture and parameter list.
+	 */
+	typedef vector<VariablePtr> CaptureList;
 	typedef vector<VariablePtr> ParamList;
 
 private:
+
 	const CaptureList captureList;
-	const ParamList params;
+	const ParamList paramList;
 	const StatementPtr body;
 
-	LambdaExpr(const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
-	virtual LambdaExpr* createCopyUsing(NodeMapping& mapper) const;
+	Lambda(const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body);
+	virtual Lambda* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
-	virtual bool equalsExpr(const Expression& expr) const;
+
+	/**
+	 * Compares this instance with the given node. In case it is representing the
+	 * same lambda, the return value will be true. In any other case the test-result
+	 * will be negative.
+	 *
+	 * @return true if equivalent (though possibly not identical), false otherwise
+	 */
+	virtual bool equals(const Node& other) const;
+
+	/**
+	 * Retrieves a list of all directly referenced nodes.
+	 */
 	virtual OptionChildList getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const CaptureList& getCaptureList() const { return captureList; }
-	const ParamList& getParams() const { return params; }
+	const ParamList& getParameterList() const { return paramList; }
 	const StatementPtr& getBody() const { return body; }
 
-	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body);
-	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
+	static LambdaPtr get(NodeManager& manager, const ParamList& params, const StatementPtr& body);
+	static LambdaPtr get(NodeManager& manager, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
+
 };
 
 
-class RecLambdaDefinition : public Node {
+class LambdaDefinition : public Node {
 
 public:
+
 	/**
-	 * The type used to model the body of of this definition.
-	 *
-	 * TODO: think about replacing the function body by a value, not a pointer?
+	 * The internal data structure used for defining the actual functions.
 	 */
-	typedef std::unordered_map<VariablePtr, LambdaExprPtr, hash_target<VariablePtr>, equal_target<VariablePtr>> RecFunDefs;
+	typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr>> Definitions;
 
 private:
 
 	/**
-	 * The definitions forming the body of this recursive lambda definition.
+	 * The definitions forming the body of this (recursive) lambda definition.
 	 */
-	const RecFunDefs definitions;
+	const Definitions definitions;
 
 	/**
 	 * Creates a new instance of this type based on a copy of the handed in definition.
 	 */
-	RecLambdaDefinition(const RecFunDefs& definitions);
+	LambdaDefinition(const Definitions& definitions);
 
 	/**
 	 * Creates a clone / deep copy of this instance referencing instances maintained
 	 * by the given node manager.
 	 */
-	RecLambdaDefinition* createCopyUsing(NodeMapping& mapper) const;
+	LambdaDefinition* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
 
@@ -247,18 +269,18 @@ public:
 
 	/**
 	 * A static factory method to obtain a fresh pointer to a potentially shared instance
-	 * of a recursive lambda definition instance representing the given definitions.
+	 * of a (recursive) lambda definition instance representing the given definitions.
 	 *
 	 * @param manager the manager to be used for obtaining a proper instance
 	 * @param definitions the definitions to be represented by the requested object
 	 * @return a pointer to the requested recursive definition
 	 */
-	static RecLambdaDefinitionPtr get(NodeManager& manager, const RecFunDefs& definitions);
+	static LambdaDefinitionPtr get(NodeManager& manager, const Definitions& definitions);
 
 	/**
 	 * Retrieves the definitions of the recursive functions represented by this instance.
 	 */
-	const RecFunDefs& getDefinitions() const { return definitions; }
+	const Definitions& getDefinitions() const { return definitions; }
 
 	/**
 	 * Obtains a pointer to the function body defining the recursive function represented
@@ -268,7 +290,7 @@ public:
 	 * 				   this recursive function definition.
 	 * @return a copy of the internally maintained pointer to the actual function definition.
 	 */
-	LambdaExprPtr getDefinitionOf(const VariablePtr& variable) const;
+	const LambdaPtr& getDefinitionOf(const VariablePtr& variable) const;
 
 	/**
 	 * Unrolls this definition once for the given variable.
@@ -290,33 +312,38 @@ public:
 };
 
 
-class RecLambdaExpr : public Expression {
+class LambdaExpr : public Expression {
 
 	/**
 	 * The variable used within the recursive definition to describe the
-	 * recursive function to be described by this expression.
+	 * recursive function to be represented by this expression.
 	 */
 	const VariablePtr variable;
 
 	/**
-	 * The definition body of this recursive type. Identical definitions may be
-	 * shared among recursive type definitions.
+	 * The definition body of this lambda expression. Identical definitions may be
+	 * shared among multiple lambda definitions.
 	 */
-	const RecLambdaDefinitionPtr definition;
+	const LambdaDefinitionPtr definition;
 
 	/**
-	 * A constructor for creating a new recursive lambda.
+	 * A reference to the defining lambda (cached for faster access).
+	 */
+	const Lambda& lambda;
+
+	/**
+	 * A constructor for creating a new lambda.
 	 *
 	 * @param variable the variable identifying the recursive function within the definition block
 	 * 				   to be represented by this expression.
 	 * @param definition the recursive definitions to be based on.
 	 */
-	RecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinitionPtr& definition);
+	LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition);
 
 	/**
 	 * Creates a clone of this node.
 	 */
-	virtual RecLambdaExpr* createCopyUsing(NodeMapping& mapper) const;
+	virtual LambdaExpr* createCopyUsing(NodeMapping& mapper) const;
 
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
@@ -343,7 +370,28 @@ public:
 	 * 					   recursive function to be defined by the resulting expression.
 	 * @param definition the definition of the recursive lambda.
 	 */
-	static RecLambdaExprPtr get(NodeManager& manager, const VariablePtr& variable, const RecLambdaDefinitionPtr& definition);
+	static LambdaExprPtr get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition);
+
+	/**
+	 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
+	 *
+	 * @param manager the manager maintaining the resulting node instance
+	 * @param type the type of the resulting lambda expression
+	 * @param params the parameters accepted by the resulting lambda
+	 * @param body the body of the resulting function
+	 */
+	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
+
+	/**
+	 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
+	 *
+	 * @param manager the manager maintaining the resulting node instance
+	 * @param type the type of the resulting lambda expression
+	 * @param captureList the list of capture variables
+	 * @param params the parameters accepted by the resulting lambda
+	 * @param body the body of the resulting function
+	 */
+	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body);
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.
@@ -353,11 +401,113 @@ public:
 	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
 	
+	/**
+	 * Obtains the variable used within the recursive definition for modeling this lambda.
+	 */
 	const VariablePtr& getVariable() const { return variable; }
 	
-	const RecLambdaDefinitionPtr& getDefinition() const { return definition; }
+	/**
+	 * The (potential) recursive definition of this lambda.
+	 */
+	const LambdaDefinitionPtr& getDefinition() const { return definition; }
+
+	/**
+	 * Obtains a reference to the internally maintained capture list of this lambda.
+	 */
+	const Lambda::CaptureList& getCaptureList() const;
+
+	/**
+	 * Obtains a reference to the internally maintained parameter list of this lambda.
+	 */
+	const Lambda::ParamList& getParameterList() const;
+
+	/**
+	 * Obtains a reference to the body of this lambda.
+	 */
+	const StatementPtr& getBody() const;
 };
 
+class CaptureInitExpr : public Expression {
+
+public:
+
+	/**
+	 * A shortcut for the map linking parameters to initialization values.
+	 */
+	typedef std::map<VariablePtr, ExpressionPtr, compare_target<VariablePtr>> Initializations;
+
+private:
+
+	/**
+	 * The lambda which's capture should be initialized.
+	 */
+	const LambdaExprPtr lambda;
+
+	/**
+	 * The actual initialization of the captured variables.
+	 */
+	const Initializations initializations;
+
+	/**
+	 * A constructor for creating a capture initializing expression.
+	 *
+	 * @param variable the variable identifying the recursive function within the definition block
+	 * 				   to be represented by this expression.
+	 * @param initializations the actual initialization expressions.
+	 * @param definition the recursive definitions to be based on.
+	 */
+	CaptureInitExpr(const LambdaExprPtr& lambda, const Initializations& initializations);
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual CaptureInitExpr* createCopyUsing(NodeMapping& mapper) const;
+
+	/**
+	 * Obtains a list of all sub-nodes referenced by this AST node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this expression with the given expression. If they
+	 * are equivalent (though potentially not identical), true will be returned. Otherwise
+	 * the result will be false.
+	 *
+	 * @param expr the expression to be compared to.
+	 * @return true if equivalent, false otherwise
+	 */
+	virtual bool equalsExpr(const Expression& expr) const;
+
+public:
+
+	/**
+	 * A factory method for obtaining a new recursive lambda expression instance.
+	 *
+	 * @param manager the manager which should be maintaining the new instance
+	 * @param lambda the lambda for which the capture list should be initialized
+	 * @þaram initializations the actual parameter initialization
+	 */
+	static CaptureInitExprPtr get(NodeManager& manager, const LambdaExprPtr& lambda, const CaptureInitExpr::Initializations& initializations);
+
+	/**
+	 * Prints a readable representation of this instance to the given output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return a reference to the stream
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	/**
+	 * The lambda which's capture should be initialized.
+	 */
+	const LambdaExprPtr& getLambda() const { return lambda; }
+
+	/**
+	 * The actual initialization of the captured variables.
+	 */
+	const Initializations& getInitializations() const { return initializations; }
+
+};
 
 class TupleExpr : public Expression {
 	const vector<ExpressionPtr> expressions;

@@ -79,6 +79,26 @@ struct equal_target : public std::binary_function<const PointerType&, const Poin
 	}
 };
 
+/**
+ * This utility struct definition defines a predicate comparing two pointers
+ * based on the value they are pointing to (operator <).
+ *
+ * @tparam PointerType the type of pointer to be compared
+ */
+template<typename PointerType>
+struct compare_target : public std::binary_function<const PointerType&, const PointerType&, bool> {
+	/**
+	 * Performs the actual comparison by using the operator< of the generic
+	 * pointer type.
+	 *
+	 * @param x the pointer to the first element to be compared
+	 * @param y the pointer to the second element to be compared
+	 */
+	bool operator()(const PointerType& x, const PointerType& y) const {
+		return *x < *y;
+	}
+};
+
 
 
 /**

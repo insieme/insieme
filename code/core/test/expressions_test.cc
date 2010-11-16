@@ -104,48 +104,6 @@ TEST(ExpressionsTest, Variable) {
 	basicExprTests(var2, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
 }
 
-TEST(ExpressionsTest, LambdaExpr) {
-	NodeManager manager;
-
-	LambdaExpr::ParamList list;
-	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
-	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
-
-	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-	LambdaExprPtr expr = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
-
-	EXPECT_EQ ("fun(bool v1, bool v2){ return true }", toString(*expr));
-
-	// check hash codes, children and cloning
-	basicExprTests(expr, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, list[0], list[1], body));
-
-
-	// check capture list
-	LambdaExpr::CaptureList capture;
-	capture.push_back(DeclarationStmt::get(manager, Variable::get(manager, TYPE_BOOL_PTR, 3), lang::CONST_BOOL_FALSE_PTR));
-	LambdaExprPtr lambdaA = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, capture, list, body);
-
-	EXPECT_EQ ("fun[bool v3 = false](bool v1, bool v2){ return true }", toString(*lambdaA));
-
-
-	capture.push_back(DeclarationStmt::get(manager, Variable::get(manager, TYPE_BOOL_PTR, 4), lang::CONST_BOOL_TRUE_PTR));
-	LambdaExprPtr lambdaB = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, capture, list, body);
-
-	EXPECT_EQ ("fun[bool v3 = false, bool v4 = true](bool v1, bool v2){ return true }", toString(*lambdaB));
-
-	EXPECT_EQ(*expr, *expr);
-	EXPECT_EQ(*lambdaA, *lambdaA);
-	EXPECT_EQ(*lambdaB, *lambdaB);
-
-	EXPECT_NE(*expr, *lambdaA);
-	EXPECT_NE(*expr, *lambdaB);
-	EXPECT_NE(*lambdaA, *lambdaB);
-
-	basicExprTests(lambdaA, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, capture[0], list[0], list[1], body));
-	basicExprTests(lambdaB, TYPE_BINARY_BOOL_OP_PTR, toVector<NodePtr>(TYPE_BINARY_BOOL_OP_PTR, capture[0], capture[1], list[0], list[1], body));
-
-}
-
 TEST(ExpressionsTest, TupleExpr) {
 	NodeManager manager;
 
@@ -187,7 +145,25 @@ TEST(ExpressionsTest, VectorExpr) {
 	basicExprTests(more, second, toVector<NodePtr>(second, CONST_BOOL_TRUE_PTR, CONST_BOOL_FALSE_PTR));
 }
 
-TEST(ExpressionsTest, RecursiveLambda) {
+TEST(ExpressionsTest, Lambda) {
+	NodeManager manager;
+
+	TypePtr type = GenericType::get(manager, "A");
+	StatementPtr body = Literal::get(manager, type, "a");
+	VariablePtr varA = Variable::get(manager, type, 1);
+	VariablePtr varB = Variable::get(manager, type, 2);
+	LambdaPtr empty = Lambda::get(manager, Lambda::CaptureList(), Lambda::ParamList(), body);
+	LambdaPtr more = Lambda::get(manager, toVector(varA), toVector(varB), body);
+
+	EXPECT_EQ ("fun[]() a", toString(*empty));
+	EXPECT_EQ ("fun[A v1](A v2) a", toString(*more));
+
+	// conduct basic node checks
+	basicNodeTests(empty, toVector<NodePtr>(body));
+	basicNodeTests(more, toVector<NodePtr>(varA, varB, body));
+}
+
+TEST(ExpressionsTest, LambdaExpr) {
 	ASTBuilder builder;
 
 	// create a recursive even/odd example
@@ -197,7 +173,7 @@ TEST(ExpressionsTest, RecursiveLambda) {
 	VariablePtr oddVar = builder.variable(functionType, 2);
 
 
-	LambdaExpr::ParamList param;
+	Lambda::ParamList param;
 	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
 
 	LiteralPtr zero = builder.literal(TYPE_UINT_1_PTR, "0");
@@ -212,7 +188,7 @@ TEST(ExpressionsTest, RecursiveLambda) {
 							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, oddVar, toVector<ExpressionPtr>(x))))
 			)
 	);
-	LambdaExprPtr evenLambda = builder.lambdaExpr(functionType, param, evenBody);
+	LambdaPtr evenLambda = builder.lambda(Lambda::CaptureList(), param, evenBody);
 
 	// build odd body ...
 	StatementPtr oddBody = builder.ifStmt(condition,
@@ -222,21 +198,20 @@ TEST(ExpressionsTest, RecursiveLambda) {
 								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evenVar, toVector<ExpressionPtr>(x))))
 				)
 	);
-	LambdaExprPtr oddLambda = builder.lambdaExpr(functionType, param, oddBody);
+	LambdaPtr oddLambda = builder.lambda(Lambda::CaptureList(), param, oddBody);
 
 	// finish definition
-	RecLambdaDefinition::RecFunDefs definitions;
+	LambdaDefinition::Definitions definitions;
 	definitions.insert(std::make_pair(evenVar, evenLambda));
 	definitions.insert(std::make_pair(oddVar, oddLambda));
-	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(definitions);
+	LambdaDefinitionPtr definition = builder.lambdaDefinition(definitions);
 
 	// test definition node
-	typedef std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> Set;
-	EXPECT_TRUE( equal(toSet<Set, NodePtr>(evenVar, evenLambda, oddVar, oddLambda), asSet<Set>(definition->getChildList())) );
+	EXPECT_TRUE( equals(toVector<NodePtr>(evenVar, evenLambda, oddVar, oddLambda), definition->getChildList()) );
 
 	// create recursive lambda nodes
-	RecLambdaExprPtr even = builder.recLambdaExpr(evenVar, definition);
-	RecLambdaExprPtr odd  = builder.recLambdaExpr(oddVar,  definition);
+	LambdaExprPtr even = builder.lambdaExpr(evenVar, definition);
+	LambdaExprPtr odd  = builder.lambdaExpr(oddVar,  definition);
 
 	basicExprTests(even, functionType, toList(toVector<NodePtr>(evenVar, definition)));
 	basicExprTests(odd, functionType, toList(toVector<NodePtr>(oddVar, definition)));
@@ -248,8 +223,44 @@ TEST(ExpressionsTest, RecursiveLambda) {
 
 	EXPECT_NE ( even->hash(), odd->hash());
 
-	EXPECT_TRUE (toString(*even) == "rec v1.{v1=fun(uint<4> v3){ if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)) }, v2=fun(uint<4> v3){ if(uint.eq(v3, 0)) return false else return bool.not(v1(v3)) }}" ||
-			     toString(*even) == "rec v1.{v2=fun(uint<4> v3){ if(uint.eq(v3, 0)) return false else return bool.not(v1(v3)) }, v1=fun(uint<4> v3){ if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)) }}");
+	EXPECT_EQ("rec v1.{v1=fun[](uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun[](uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*even));
+	EXPECT_EQ("rec v2.{v1=fun[](uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun[](uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*odd));
+}
+
+
+TEST(ExpressionsTest, CaptureInitExpr) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TupleTypePtr args = builder.tupleType();
+	TypePtr res = builder.genericType("A");
+	FunctionTypePtr funType = builder.functionType(args, res);
+
+	VariablePtr captureVar = builder.variable(res);
+	LiteralPtr initValue = builder.literal(res, "X");
+
+	LambdaExprPtr lambda = builder.lambdaExpr(funType, Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
+	LambdaExprPtr lambda2 = builder.lambdaExpr(funType, toVector<VariablePtr>(captureVar), Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
+
+	CaptureInitExpr::Initializations inits;
+	inits.insert(std::make_pair(captureVar, initValue));
+
+	CaptureInitExprPtr empty = builder.captureInitExpr(lambda, CaptureInitExpr::Initializations());
+	CaptureInitExprPtr more = builder.captureInitExpr(lambda2, inits);
+
+	EXPECT_EQ(*lambda->getType(), *empty->getType());
+	EXPECT_EQ(*lambda->getType(), *more->getType());
+	EXPECT_EQ(*lambda2->getType(), *more->getType());
+
+	EXPECT_EQ ("([]rec v4.{v4=fun[]() return A})", toString(*empty));
+	EXPECT_EQ ("([v3:=X]rec v5.{v5=fun[A v3]() return A})", toString(*more));
+
+
+	// check hash codes, children and cloning
+	basicExprTests(empty, lambda->getType(), toVector<NodePtr>(lambda));
+	basicExprTests(more, lambda2->getType(), toVector<NodePtr>(lambda2, captureVar, initValue));
+
 }
 
 

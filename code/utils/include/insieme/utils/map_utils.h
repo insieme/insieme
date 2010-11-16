@@ -88,7 +88,7 @@ bool equal(const MapA& mapA, const MapB& mapB, const Comparator& comparator) {
 	// so - the size is equal - check elements ...
 	return all(mapA.begin(), mapA.end(), [&mapB,&comparator](const Element& cur)->bool {
 		auto pos = mapB.find(cur.first);
-		return pos!=mapB.end() && comparator((*pos).second,cur.second);
+		return pos!=mapB.end() && comparator(pos->second,cur.second);
 	});
 }
 
@@ -114,23 +114,37 @@ inline bool equal(const MapA& mapA, const MapB& mapB) {
  * of an empty map is defined to be zero.
  *
  * @param map the map for which a hash value should be computed
+ * @param keyHasher a function deriving a hash value for each key
+ * @param valueHasher a function deriving a hash value for each value
+ * @return a hash value for the given map
+ */
+template<typename Map, typename KeyHasher, typename ValueHasher>
+std::size_t computeHash(const Map& map, KeyHasher keyHasher, ValueHasher valueHasher) {
+	typedef typename Map::value_type Element;
+
+	// compute the hash code for the map
+	std::size_t seed = 0;
+	std::for_each(map.begin(), map.end(), [&seed, &keyHasher, &valueHasher](const Element& cur) {
+		seed += keyHasher(cur.first) ^ valueHasher(cur.second);
+	});
+	return seed;
+}
+
+/**
+ * A utility function to compute a hash value for a map. The hash
+ * value is computed by summing up the hash values of all pairs within the
+ * map. Hence, the order of the elements is not considered. The hash code
+ * of an empty map is defined to be zero.
+ *
+ * @param map the map for which a hash value should be computed
  * @param hasher a function deriving the hash value for each value
  * @return a hash value for the given map
  */
 template<typename Map, typename Hasher>
 std::size_t computeHash(const Map& map, Hasher hasher) {
-	typedef typename Map::value_type Element;
-
-	// obtain the hasher used for key-hashing
+	// forward request
 	typename Map::hasher keyHasher = map.hash_function();
-
-	// compute the hash code for the map
-	std::size_t seed = 0;
-	std::for_each(map.begin(), map.end(), [&seed, &keyHasher, &hasher](const Element& cur) {
-		seed += keyHasher(cur.first) ^ hasher(cur.second);
-	});
-	return seed;
-
+	return computeHash(map, keyHasher, hasher);
 }
 
 /**

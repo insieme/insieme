@@ -196,21 +196,21 @@ AST_NODE(Expression, Statement)
 
 AST_TERMINAL(Variable, Expression)
 
-AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(LambdaExpr, Expression)
+AST_TERMINAL(CaptureInitExpr, Expression)
+
+AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(CallExpr, Expression)
 AST_TERMINAL(CastExpr, Expression)
 AST_TERMINAL(JobExpr, Expression)
 AST_TERMINAL(TupleExpr, Expression)
 AST_TERMINAL(VectorExpr, Expression)
-AST_TERMINAL(RecLambdaExpr, Expression)
 
 AST_TERMINAL(StructExpr, Expression)
 AST_TERMINAL(UnionExpr, Expression)
 
 AST_TERMINAL(MemberAccessExpr, Expression)
 AST_TERMINAL(TupleProjectionExpr, Expression)
-
 
 
 //
@@ -223,8 +223,10 @@ AST_TERMINAL(Program, Node)
 // --- Supporting Nodes ---
 //
 
+AST_TERMINAL(Lambda, Node)
+AST_TERMINAL(LambdaDefinition, Node)
+
 AST_TERMINAL(RecTypeDefinition, Node)
-AST_TERMINAL(RecLambdaDefinition, Node)
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 
