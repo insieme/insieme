@@ -148,23 +148,48 @@ public:
 void KernelData::appendCaptures(core::LambdaExpr::CaptureList& captureList, OCL_SCOPE scope) {
 
     //TODO add flags
-    if(true)
+    if(globalRangeUsed)
         CAPTURE(captureList, globalRange);
 
-    if(true)
-        CAPTURE(captureList, groupSize);
+    if(numGroupsUsed)
+        CAPTURE(captureList, numGroups);
 
-    if(true || scope == OCL_GLOBAL)
+    if(localRangeUsed || scope == OCL_GLOBAL)
         CAPTURE(captureList, localRange);
 
-    //TODO use thread group identifiers
-    if(false)
+    if(groupTgUsed) {
         CAPTURE(captureList, groupTg);
+    }
 
-    if(false)
+    if(localTgUsed && scope == OCL_LOCAL)
         CAPTURE(captureList, localTg);
 
 }
+
+core::CallExprPtr KernelData::accessGlobalRange(core::ExpressionPtr idx) {
+    globalRangeUsed = true;
+    return vecAccess(globalRange, idx);
+}
+
+
+core::CallExprPtr KernelData::accessNumGroups(core::ExpressionPtr idx) {
+    numGroupsUsed = true;
+    return vecAccess(numGroups, idx);
+}
+
+
+core::CallExprPtr KernelData::accessLocalRange(core::ExpressionPtr idx) {
+    localRangeUsed = true;
+    return vecAccess(localRange, idx);
+}
+
+core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
+
+    groupTgUsed = true;
+
+    return builder.callExpr(core::lang::TYPE_UNIT, core::lang::OP_BARRIER_PTR, groupTg);
+}
+
 
 class KernelMapper : public core::NodeMapping {
     const core::ASTBuilder& builder;
@@ -207,10 +232,48 @@ public:
             std::cout << "the function \n";
             return element;
         }
-        if(core::dynamic_pointer_cast<const core::FunctionType>(element)){
- //           std::cout << "the type \n";
-            return element;
+
+
+        if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(element)){
+//            std::cout << "found a call\n";
+            core::ExpressionPtr fun = call->getFunctionExpr();
+            if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
+                const vector<core::ExpressionPtr>& args = call->getArguments();
+                // reading parallel loop boundaries
+                if(literal->getValue() == "get_global_size") {
+                    assert(args.size() == 1 && "Function get_global_id must have exactly 1 argument");
+
+                    return kd.accessGlobalRange(args.at(0));
+                }
+                if(literal->getValue() == "get_num_groups") {
+                    assert(args.size() == 1 && "Function get_num_groups must have exactly 1 argument");
+
+                    return kd.accessNumGroups(args.at(0));
+                }
+                if(literal->getValue() == "get_local_size") {
+                    assert(args.size() == 1 && "Function get_local_id must have exactly 1 argument");
+
+                    return kd.accessLocalRange(args.at(0));
+                }
+
+                // syncronization
+                if(literal->getValue() == "ocl_barrier") {
+                    assert(args.size() == 1 && "Function barrier must have exactly 1 argument");
+
+                    return kd.callBarrier(args.at(0));
+                }
+            }
+        /*
+
+        std::cout << "FUNCTION: " << fun << std::endl;
+            const core::Node::ChildList& elems = call->getChildList();
+            for(size_t i = 0; i < elems.size(); ++i) {
+                std::cout << "child: " << elems.at(i) << std::endl;
+            }
+*/
+            return element->substitute(builder.getNodeManager(), *this);
         }
+
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
 //            std::cout << "a variable declaration " << (element.hasAnnotation(ocl::BaseAnnotation::KEY) ? "with . attributes " : " -  ") <<
 //                    (element->hasAnnotation(ocl::BaseAnnotation::KEY) ? "with -> attributes \n" : " -  \n");
@@ -646,7 +709,15 @@ public:
                 kd.appendCaptures(globalFunCaptures, OCL_GLOBAL);
                 // TODO catch global variables
 
-                core::LambdaExprPtr globalParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, globalFunCaptures, funParams, localPar);
+                //core::DeclarationStmtPtr localThreadGroup = builder.declarationStmt(kd.localTg, localPar); inlined, see next line, created only if needed
+
+                core::StatementPtr tmp;
+                if(kd.localTgUsed)
+                    tmp = builder.declarationStmt(kd.localTg, localPar);
+                else
+                    tmp = localPar;
+
+                core::LambdaExprPtr globalParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, globalFunCaptures, funParams, tmp);
 
                 // catch all arguments which are shared in global range
                 core::LambdaExpr::CaptureList globalJobCaptures;
@@ -663,7 +734,7 @@ public:
                 expr.push_back(builder.literal("1", core::lang::TYPE_UINT_4_PTR));
 
                 // calculate groupRange[0] * groupRange[1] * groupRange[2] to use as maximum number of threads
-                core::ExpressionPtr globalRangeProduct = vecProduct(kd.groupSize, 3);
+                core::ExpressionPtr globalRangeProduct = vecProduct(kd.numGroups, 3);
                 expr.push_back(globalRangeProduct);
 
                 expr.push_back(globalJob);
@@ -692,10 +763,18 @@ public:
                 }
 
                 //declare group range
-                core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.groupSize, builder.vectorExpr(groupRdeclInit));
+                core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups, builder.vectorExpr(groupRdeclInit));
                 newBodyStmts.push_back(groupRdecl);
 
-                newBodyStmts.push_back(globalPar);
+                //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
+
+                if(kd.groupTgUsed)
+                    tmp = builder.declarationStmt(kd.groupTg, globalPar);
+                else
+                    tmp = globalPar;
+
+
+                newBodyStmts.push_back(tmp);
             
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 

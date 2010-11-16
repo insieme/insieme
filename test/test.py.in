@@ -41,6 +41,77 @@ def check_diff(test_case_name, ref, test):
     ret = run_cmd("diff {0} {1}".format(ref, test))
     return not check_for_error(test_case_name, ret)
 
+def run_test(test_case_name, test_num): 
+	  sys.stderr.write("#----------------------------------------\n")
+	  sys.stderr.write("# {0}: {1}\n".format(test_num, test_case_name))
+	  
+	  # name of the file contaning the reference IR for the current test
+	  refIr   = test_case_name + '.ref.ir'
+	  # name of the file containing the generated IR for the case test
+	  testIr  = test_case_name + '.ir'
+	  # name of the file containing the reference C output for the current test
+	  refC    = test_case_name + '.ref.insieme.c'
+	  # name of the file containing the generated C output for the current test
+	  testC   = test_case_name + '.insieme.c'
+	  
+	  inputs = test_case_name + '.c'
+	  if os.path.exists(test_case_name + '/inputs.data'):
+	  		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
+	  		
+	  os.chdir(test_case_name)
+	  # RUN insieme to generate the IR dump and C output
+	  ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP}".format(
+	  						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC}) 
+	  					)
+	  if check_for_error(test_case_name, ret):
+	  	os.chdir("../")
+	  	return 1
+	  
+	  sys.stderr.write(" * Comparing generated IR...\n")
+	  if not check_diff(test_case_name, refIr, testIr):
+			os.chdir("../")
+			return 1
+	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	    
+	  sys.stderr.write(" * Comparing generated C output...\n")
+	  if not check_diff(test_case_name, refC, testC):
+	      os.chdir("../")
+	      return 1
+	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	  
+	  # file containing the output of the reference program
+	  ref_out = "ref.out"
+	  # file containing the output of the test program
+	  test_out = "test.out"
+	  
+	  ret = run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
+	 					)
+	  os.system("./ref > {0}".format(ref_out))
+	  
+	  sys.stderr.write(" * Compiling generated C output...\n")
+	  ret = run_cmd("{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
+	  					)
+	  if check_for_error(test_case_name, ret):
+			os.chdir("../")
+			return 1
+	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	  
+	  os.system("./test > {0}".format(test_out))
+	  
+	  sys.stderr.write(" * Checking generated program output...\n")
+	  if not check_diff(test_case_name, ref_out, test_out):
+	     	os.chdir("../")
+	     	return 1
+	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	  
+	  map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
+	  
+	  sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]\n" + bcolors.ENDC)
+	  os.chdir("../")
+	  return 0
+
 def run_tests():
 	failed_test = 0
 	test_num = 0
@@ -49,88 +120,21 @@ def run_tests():
 	        # test cases whose directory name starts with a '#' are skipped
 	        if test_case_name.startswith("#"):
 	            continue # SKIP
-	        
+	        failed_test += run_test(test_case_name, test_num)
 	        test_num += 1
-	        sys.stderr.write("#----------------------------------------\n")
-	        sys.stderr.write("# {0}: {1}\n".format(test_num, test_case_name))
 	        
-	        # name of the file contaning the reference IR for the current test
-	        refIr   = test_case_name + '.ref.ir'
-	        # name of the file containing the generated IR for the case test
-	        testIr  = test_case_name + '.ir'
-	        # name of the file containing the reference C output for the current test
-	        refC    = test_case_name + '.ref.insieme.c'
-	        # name of the file containing the generated C output for the current test
-	        testC   = test_case_name + '.insieme.c'
-	        
-	        inputs = test_case_name + '.c'
-	        if os.path.exists(test_case_name + '/inputs.data'):
-	        		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
-	        		
-	        os.chdir(test_case_name)
-	        # RUN insieme to generate the IR dump and C output
-	        ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP}".format(
-	        						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC}) 
-	        					)
-	        if check_for_error(test_case_name, ret):
-	        	os.chdir("../")
-	        	failed_test += 1
-	        	continue
-	        
-	        sys.stderr.write(" * Comparing generated IR...\n")
-	        if not check_diff(test_case_name, refIr, testIr):
-					os.chdir("../")
-					failed_test += 1
-					continue
-	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	          
-	        sys.stderr.write(" * Comparing generated C output...\n")
-	        if not check_diff(test_case_name, refC, testC):
-	            os.chdir("../")
-	            failed_test += 1
-	            continue
-	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	        
-	        # file containing the output of the reference program
-	        ref_out = "ref.out"
-	        # file containing the output of the test program
-	        test_out = "test.out"
-	        
-	        ret = run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-	        						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
-	       					)
-	        os.system("./ref > {0}".format(ref_out))
-	        
-	        sys.stderr.write(" * Compiling generated C output...\n")
-	        ret = run_cmd("{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-	        						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
-	        					)
-	        if check_for_error(test_case_name, ret):
-					os.chdir("../")
-					failed_test += 1
-					continue
-	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	        
-	        os.system("./test > {0}".format(test_out))
-	        
-	        sys.stderr.write(" * Checking generated program output...\n")
-	        if not check_diff(test_case_name, ref_out, test_out):
-	           	os.chdir("../")
-	           	failed_test += 1
-	           	continue
-	        sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	        
-	        map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
-	        
-	        sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]\n" + bcolors.ENDC)
-	        os.chdir("../")
-	
 	# return the number of executed test case and number of failed ones
 	return (test_num, failed_test)
 
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
-	(executed, failed) = run_tests()
+	if len(sys.argv) == 2:
+		# run the specified test only
+		executed = 1
+		failed = run_test(sys.argv[1], executed)
+	else:
+		(executed, failed) = run_tests()
+	# print summary
 	sys.stderr.write("###############################\n")
 	sys.stderr.write("#          Summary            #\n")
 	sys.stderr.write("#-----------------------------#\n")

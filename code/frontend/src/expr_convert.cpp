@@ -842,6 +842,8 @@ public:
 		// BASE
 		core::ExpressionPtr&& base = convFact.tryDeref(Visit( baseExpr ) );
 
+		DLOG(INFO) << *base;
+		DLOG(INFO) << *base->getType();
 		// TODO: we need better checking for vector type
 		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&

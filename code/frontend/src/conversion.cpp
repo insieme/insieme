@@ -133,10 +133,11 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
-	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
-		return builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(expr) );
+	core::ExpressionPtr retExpr = expr;
+	while(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
+		retExpr = builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(retExpr) );
 	}
-	return expr;
+	return retExpr;
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (local version)

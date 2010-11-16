@@ -1,0 +1,170 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+// Types --------------------------------------------------------------------------------------------------------------
+
+TYPE(IntGen,  "int<#a>")
+TYPE(UIntGen, "uint<#a>")
+
+TYPE(Int1,   "int<1>")
+TYPE(UInt1,  "uint<1>")
+TYPE(Int2,   "int<2>")
+TYPE(UInt2,  "uint<2>")
+TYPE(Int4,   "int<4>")
+TYPE(UInt4,  "uint<4>")
+TYPE(Int8,   "int<8>")
+TYPE(UInt8,  "uint<8>")
+TYPE(IntInf, "int<#inf>")
+TYPE(UIntInf,"uint<#inf>")
+
+TYPE(RealGen, "real<#a>")
+TYPE(RealInf, "real<#inf>")
+TYPE(Float,   "real<4>")
+TYPE(Double,  "real<8>")
+
+TYPE(Bool, "bool")
+LITERAL(True,  "true",  "bool")
+LITERAL(False, "false", "bool")
+
+TYPE(VarList, "var_list")
+
+// Parallel Types -----------------------------------------------------------------------------------------------------
+
+TYPE(Job, "job")
+TYPE(ThreadGroup, "threadgroup")
+
+// Logical Operations -------------------------------------------------------------------------------------------------
+
+LITERAL(BoolAnd, "bool.and", "(bool,bool) -> bool")
+LITERAL(BoolOr,  "bool.or",  "(bool,bool) -> bool")
+LITERAL(BoolEq,  "bool.eq",  "(bool,bool) -> bool")
+LITERAL(BoolNot, "bool.not", "(bool) -> bool")
+
+// Arithmetic operations ----------------------------------------------------------------------------------------------
+
+LITERAL(IntAdd,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntSub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntMul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntDiv,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntMod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
+
+LITERAL(UIntAdd,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntSub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntMul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntDiv,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntMod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
+
+LITERAL(RealAdd,  "real.add", "(real<#a>,real<#a>) -> real<#a>")
+LITERAL(RealSub,  "real.sub", "(real<#a>,real<#a>) -> real<#a>")
+LITERAL(RealMul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
+LITERAL(RealDiv,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
+
+// Comparison Operations ----------------------------------------------------------------------------------------------
+
+LITERAL(IntEq, "int.eq", "(int<#a>,int<#a>) -> bool")
+LITERAL(IntNe, "int.ne", "(int<#a>,int<#a>) -> bool")
+LITERAL(IntLt, "int.lt", "(int<#a>,int<#a>) -> bool")
+LITERAL(IntGt, "int.gt", "(int<#a>,int<#a>) -> bool")
+LITERAL(IntLe, "int.le", "(int<#a>,int<#a>) -> bool")
+LITERAL(IntGe, "int.ge", "(int<#a>,int<#a>) -> bool")
+
+LITERAL(UIntEq, "uint.eq", "(uint<#a>,uint<#a>) -> bool")
+LITERAL(UIntNe, "uint.ne", "(uint<#a>,uint<#a>) -> bool")
+LITERAL(UIntLt, "uint.lt", "(uint<#a>,uint<#a>) -> bool")
+LITERAL(UIntGt, "uint.gt", "(uint<#a>,uint<#a>) -> bool")
+LITERAL(UIntLe, "uint.le", "(uint<#a>,uint<#a>) -> bool")
+LITERAL(UIntGe, "uint.ge", "(uint<#a>,uint<#a>) -> bool")
+
+LITERAL(RealEq, "real.eq", "(real<#a>,real<#a>) -> bool")
+LITERAL(RealNe, "real.ne", "(real<#a>,real<#a>) -> bool")
+LITERAL(RealLt, "real.lt", "(real<#a>,real<#a>) -> bool")
+LITERAL(RealGt, "real.gt", "(real<#a>,real<#a>) -> bool")
+LITERAL(RealLe, "real.le", "(real<#a>,real<#a>) -> bool")
+LITERAL(RealGe, "real.ge", "(real<#a>,real<#a>) -> bool")
+
+// Bitwise Operations -------------------------------------------------------------------------------------------------
+
+LITERAL(IntNot,    "int.not",    "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntAnd,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntOr,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntXor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntLShift, "int.lshift", "(int<#a>,int<#a>) -> int<#a>")
+LITERAL(IntRShift, "int.rshift", "(int<#a>,int<#a>) -> int<#a>")
+
+LITERAL(UIntNot,    "uint.not",    "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntAnd,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntOr,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntXor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntLShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
+LITERAL(UIntRShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
+
+// References ---------------------------------------------------------------------------------------------------------
+
+LITERAL(RefVar,    "ref.var",    "('a) -> ref<'a>")
+LITERAL(RefNew,    "ref.new",    "('a) -> ref<'a>")
+LITERAL(RefDelete, "ref.delete", "(ref<'a>) -> unit")
+LITERAL(RefAssign, "ref.assign", "(ref<'a>,'a) -> unit")
+LITERAL(RefDeref,  "ref.deref",  "(ref<'a>) -> 'a")
+
+// Arrays -------------------------------------------------------------------------------------------------------------
+
+LITERAL(Array1DSubscript, "array.1dsubscript", "(array<'elem,1>, uint<#a>) -> 'elem")
+LITERAL(ArraySubscript, "array.subscript", "(array<'elem,#a>, vector<uint<#b>,#a>) -> 'elem")
+LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
+
+// Vectors ------------------------------------------------------------------------------------------------------------
+
+LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> uint<#b>")
+LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
+LITERAL(VectorInitUndefined, "vector.initUndefined", "() -> vector<'elem,#a>")						// fugly
+
+// Misc. --------------------------------------------------------------------------------------------------------------
+
+LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
+LITERAL(IfThenElse, "ite", "(bool, () -> 'b, () -> 'b) -> 'b")
+
+// Parallel Constructs ------------------------------------------------------------------------------------------------
+
+LITERAL(Parallel, "parallel", "(uint<#a>, uint<#b>, job) -> threadgroup")
+LITERAL(ParallelDetached, "parallel&", "(uint<#a>, uint<#b>, job) -> unit")
+
+LITERAL(Merge, "merge", "(threadgroup) -> unit")
+LITERAL(MergeAll, "mergeAll", "() -> unit")
+
+LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
+//TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
+// redistribute
+// TODO herbert

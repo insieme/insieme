@@ -104,3 +104,9 @@ TEST(LangBasic, Subscript) {
 //	EXPECT_EQ("", toString(*lang::OP_ITE_PTR->getType()));
 
 }
+
+TEST(LangBasic, New) {
+	NodeManager nm;
+
+	EXPECT_TRUE(nm.basic.isInt4(nm.basic.getInt4()));
+}

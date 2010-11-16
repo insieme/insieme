@@ -8,29 +8,29 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2) {
             if(CAST<bool>(recFun v4 {
                 v5 = fun(uint<4> v9) {
                     return fun(((uint<4>)->int<4>) v10, uint<4> v11) {
-                        if((v11==CAST<uint<4>>(0))) 0 else v10((v11-CAST<uint<4>>(1)));
+                        if((v11==CAST<uint<4>>(0))) return 0 else return v10((v11-CAST<uint<4>>(1)));
                     }(v4, v9);
                 };
                 v4 = fun(uint<4> v6) {
                     return fun(((uint<4>)->int<4>) v7, uint<4> v8) {
-                        if((v8==CAST<uint<4>>(0))) 1 else v7((v8-CAST<uint<4>>(1)));
+                        if((v8==CAST<uint<4>>(0))) return 1 else return v7((v8-CAST<uint<4>>(1)));
                     }(v5, v6);
                 };
-            }(CAST<uint<4>>(( *v12))))) CAST<array<ref<char>,1>>("true") else CAST<array<ref<char>,1>>("false");
+            }(CAST<uint<4>>(( *v12))))) return CAST<array<ref<char>,1>>("true") else return CAST<array<ref<char>,1>>("false");
         }(v3))));
         printf(CAST<array<ref<char>,1>>("odd(x)=%s\n"), pack((fun(ref<int<4>> v13) {
             if(CAST<bool>(recFun v5 {
                 v5 = fun(uint<4> v9) {
                     return fun(((uint<4>)->int<4>) v10, uint<4> v11) {
-                        if((v11==CAST<uint<4>>(0))) 0 else v10((v11-CAST<uint<4>>(1)));
+                        if((v11==CAST<uint<4>>(0))) return 0 else return v10((v11-CAST<uint<4>>(1)));
                     }(v4, v9);
                 };
                 v4 = fun(uint<4> v6) {
                     return fun(((uint<4>)->int<4>) v7, uint<4> v8) {
-                        if((v8==CAST<uint<4>>(0))) 1 else v7((v8-CAST<uint<4>>(1)));
+                        if((v8==CAST<uint<4>>(0))) return 1 else return v7((v8-CAST<uint<4>>(1)));
                     }(v5, v6);
                 };
-            }(CAST<uint<4>>(( *v13))))) CAST<array<ref<char>,1>>("true") else CAST<array<ref<char>,1>>("false");
+            }(CAST<uint<4>>(( *v13))))) return CAST<array<ref<char>,1>>("true") else return CAST<array<ref<char>,1>>("false");
         }(v3))));
         return 0;
     }

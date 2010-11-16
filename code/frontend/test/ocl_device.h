@@ -35,6 +35,15 @@
  */
 
 //OpenCL definitions
+
+//OpenCL constants
+//TODO change to enums
+//enum cl_mem_fence_flags {CLK_LOCAL_MEM_FENCE, CLK_GLOBAL_MEM_FENCE};
+#define CLK_LOCAL_MEM_FENCE 0
+#define CLK_GLOBAL_MEM_FENCE 1
+// avoid naming conflicts with insieme barriers
+#define barrier(mem_fence) ocl_barrier(mem_fence)
+
 /*#define __private __attribute__((address_space(0))) //default value
 #define private __attribute__((address_space(0)))
 #define __local __attribute__((address_space(1)))
@@ -101,5 +110,7 @@ unsigned int get_gourp_id(unsigned int dmindx);
 unsigned int get_num_groups(unsigned int dmindx);
 unsigned int get_local_id(unsigned int dmindx);
 unsigned int get_local_size(unsigned int dmindx);
+
+void barrier(int flags); //TODO change to enum
 
 
