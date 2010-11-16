@@ -119,6 +119,8 @@ private:
 	Entry resolveUnionType(const core::UnionTypePtr& ptr);
 	Entry resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, string prefix);
 
+	Entry resolveFunctionType(const core::FunctionTypePtr& ptr);
+
 	Entry resolveArrayType(const core::ArrayTypePtr& ptr);
 	Entry resolveVectorType(const core::VectorTypePtr& ptr);
 	Entry resolveChannelType(const core::ChannelTypePtr& ptr);

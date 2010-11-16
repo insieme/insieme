@@ -34,31 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+//typedef int bool;
+#define bool int
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
+#define true 1
+#define false 0
 
-#include "insieme/core/transform/node_replacer.h"
+extern int printf(char *, ...);
 
-using namespace insieme::core;
-using namespace insieme::core::transform;
+int count = 0;
 
-TEST(ASTVisitor, NodeReplacementTest) {
+int inc(int step) {
+	count += step;
+	return count;
+}
 
-	// copy and clone the type
-	ASTBuilder builder;
-
-	GenericTypePtr type = builder.genericType("int");
-
-	LiteralPtr toReplace = builder.literal(type, "14");
-	LiteralPtr replacement = builder.literal(type, "0");
-
-	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
-
-	NodePtr newTree = transform::replaceAll(builder.getNodeManager(), ifStmt, toReplace, replacement);
-	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
-
+int main(int argc, char* argv[]) {
+	for (int i=0; i<10; i++) {
+		printf("count=%2d\n", inc(1));
+	}
+	return 0;
 }

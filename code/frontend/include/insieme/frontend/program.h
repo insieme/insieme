@@ -85,7 +85,7 @@ class Program: public boost::noncopyable {
 	ProgramImplPtr pimpl;
 
 	// Reference to the NodeManager used to convert the translation units into IR code
-	const insieme::core::SharedNodeManager& mMgr;
+	insieme::core::NodeManager& mMgr;
 
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
@@ -95,7 +95,7 @@ class Program: public boost::noncopyable {
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 
-	Program(const insieme::core::SharedNodeManager& mgr);
+	Program(insieme::core::NodeManager& mgr);
 
 	/**
 	 * Add a single file to the program

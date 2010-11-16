@@ -176,7 +176,9 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 				paramTypes.push_back( parmVar->getType() );
 			}
 			// we have to replace the variable of the body with the newly created parmVar
-			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>( core::transform::replaceAll(builder, bodyStmt, bodyVar, parmVar, true) );
+			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
+					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
+			);
 			assert(bodyStmt);
 		}
 	);
@@ -609,7 +611,7 @@ public:
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			isAssignment = true;
-			opFunc = convFact.mgr->get(core::lang::OP_REF_ASSIGN_PTR);
+			opFunc = convFact.mgr.get(core::lang::OP_REF_ASSIGN_PTR);
 			exprTy = core::lang::TYPE_UNIT_PTR;
 			break;
 		}
@@ -798,7 +800,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
 		START_LOG_EXPR_CONVERSION(condOp);
-
+		const core::ASTBuilder& builder = convFact.builder;
 		assert(!condOp->getSaveExpr() && "Conditional operation with 'gcc save' expession not supperted.");
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
@@ -811,11 +813,11 @@ public:
 
 		if(*condExpr->getType() != core::lang::TYPE_BOOL_VAL) {
 			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = convFact.builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
+			condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
 		}
 
 		// builder.callExpr(retTy, core::lang::OP_ITE_PTR, )
-		core::StatementPtr&& ifStmt = convFact.builder.ifStmt(condExpr, trueExpr, falseExpr);
+		core::StatementPtr&& ifStmt = builder.ifStmt(condExpr, builder.returnStmt(trueExpr), builder.returnStmt(falseExpr));
 		core::ExpressionPtr&& retExpr = convFact.createCallExpr( toVector( ifStmt ),  retTy);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -840,6 +842,8 @@ public:
 		// BASE
 		core::ExpressionPtr&& base = convFact.tryDeref(Visit( baseExpr ) );
 
+		DLOG(INFO) << *base;
+		DLOG(INFO) << *base->getType();
 		// TODO: we need better checking for vector type
 		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
 				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&
@@ -1043,7 +1047,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 				// }
 				// as the variable can olny appear in the RHS of expression, we have to sobstitute it with
 				// its dereference
-				body = core::dynamic_pointer_cast<const core::Statement>(core::transform::replaceAll(this->builder, body,
+				body = core::dynamic_pointer_cast<const core::Statement>(core::transform::replaceAll(this->builder.getNodeManager(), body,
 						fit->first, this->tryDeref(fit->second), true));
 				assert(body);
 			}

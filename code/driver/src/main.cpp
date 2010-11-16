@@ -77,8 +77,8 @@ int main(int argc, char** argv) {
 
 	LOG(INFO) << "Insieme compiler";
 
-	core::SharedNodeManager manager = std::make_shared<core::NodeManager>();
-	core::ProgramPtr program = core::Program::create(*manager);
+	core::NodeManager manager;
+	core::ProgramPtr program = core::Program::create(manager);
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 			if(CommandLineOptions::OMPSema) {
 				LOG(INFO) << "============================= OMP conversion ====================================";
 				insieme::utils::Timer ompTimer("OMP");
-				program = fe::omp::applySema(program, *manager);
+				program = fe::omp::applySema(program,  manager);
 				ompTimer.stop();
 				LOG(INFO) << ompTimer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 		if(!CommandLineOptions::LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
-			NodePtr&& xmlNode= xml::XmlUtil::read(*manager, CommandLineOptions::LoadXML);
+			NodePtr&& xmlNode= xml::XmlUtil::read(manager, CommandLineOptions::LoadXML);
 			// used for debuging XML, removed once in production
 			if(program) {
 				assert(xmlNode != program);

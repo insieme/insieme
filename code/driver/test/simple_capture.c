@@ -34,37 +34,17 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+//typedef int bool;
+#define bool int
 
-#include "insieme/core/ast_visitor.h"
+#define true 1
+#define false 0
 
-namespace insieme {
-namespace core {
+extern int printf(char *, ...);
 
-namespace transform {
-
-class Transformation {
-public:
-	virtual NodePtr transform(const NodePtr& element) = 0;
-};
-
-
-template<template<class Target> class Ptr = AnnotatedPtr>
-class Transformation : public ASTVisitor<Ptr<const Node>, Ptr> {
-
-public:
-
-	Ptr<const Node> transform(const Ptr<const Node>& element) {
-		return visit(element);
-	}
-
+int main(int argc, char* argv[]) {
+	int x = 10;
+	printf("x=%d\n", x);
+	printf("even(x)=%s\n", (x%2)?"true":"false");
+	return 0;
 }
-
-
-
-} // end namespace transform
-} // end namespace core
-} // end namespace insieme
-
-
-

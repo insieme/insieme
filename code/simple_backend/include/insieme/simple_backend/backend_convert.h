@@ -57,6 +57,7 @@
 #include "insieme/simple_backend/code_management.h"
 #include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/name_generator.h"
+#include "insieme/simple_backend/function_manager.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -66,27 +67,6 @@ using namespace core;
 
 // TODO more sane dependency handling / move forward declaration
 class ConversionContext;
-
-
-/** Manages C function generation and lookup for named lambda expressions.
- ** */
-class FunctionManager {
-	ConversionContext& cc;
-
-public:
-	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> FunctionMap;
-
-private:
-	FunctionMap functionMap;
-
-public:
-	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
-
-	CodePtr getFunction(const core::LambdaExprPtr& lambda);
-	CodePtr getFunction(const core::RecLambdaExprPtr& lambda, const CodePtr& surrounding);
-	CodePtr getFunctionLiteral(const LiteralPtr& literal);
-	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
-};
 
 
 class VariableManager {

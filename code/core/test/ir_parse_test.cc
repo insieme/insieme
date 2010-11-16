@@ -56,9 +56,9 @@ using namespace insieme::core::parse;
 TEST(IRParser, TypeTests) {
 
 	string testStr("testGenType");
-	SharedNodeManager nm = std::make_shared<NodeManager>();
-	IRParser parser(*nm);
-	ASTBuilder builder(nm);
+	NodeManager manager;
+	IRParser parser(manager);
+	ASTBuilder builder(manager);
 	
 	auto intType = builder.genericType("int", vector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
 	EXPECT_EQ(intType, parser.parseType("int<#a>"));

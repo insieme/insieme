@@ -354,7 +354,7 @@ void scanStmt(clang::Stmt* stmt, clang::ASTContext& ctx) {
 
 //Check the size of the variable
 TEST(KernelMatcherTest, CheckBuildinVector) {
-	SharedNodeManager manager = std::make_shared<NodeManager>();
+	NodeManager manager;
 	frontend::Program p(manager);
 
 	p.addTranslationUnit( std::string(SRC_DIR) + "/kernel_matcher.cl" );
@@ -427,7 +427,7 @@ clang::QualType qt = t->getCanonicalTypeInternal();
 
 // Check the given attributes
 TEST(KernelMatcherTest, ReadAttributes) {
-	SharedNodeManager manager = std::make_shared<NodeManager>();
+	NodeManager manager;
 	frontend::Program p(manager);
 
 	p.addTranslationUnit( std::string(SRC_DIR) + "/kernel_matcher.cl" );

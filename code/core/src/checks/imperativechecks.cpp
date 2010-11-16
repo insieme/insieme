@@ -363,7 +363,10 @@ namespace {
 
 		void testVariable(OptionalMessageList& res, const VariablePtr& var, const NodeAddress& current, const NodePtr& context) {
 			// try register variable ...
-			if (declarations.insert(std::make_pair(var, context)).second) {
+			auto info = declarations.insert(std::make_pair(var, context));
+
+			// check whether variable has been declared before at a different place
+			if (info.second || *context == *((info.first)->second)) {
 				// not yet registered, everything is fine.
 				return;
 			}

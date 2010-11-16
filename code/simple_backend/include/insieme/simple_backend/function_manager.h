@@ -36,57 +36,41 @@
 
 #pragma once
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
+
+#include "insieme/simple_backend/code_management.h"
+#include "insieme/simple_backend/type_manager.h"
+#include "insieme/simple_backend/name_generator.h"
 
 namespace insieme {
-namespace core {
+namespace simple_backend {
 
-class ASTBuilder;
+using namespace insieme::core;
 
-namespace transform {
+class ConversionContext;
 
-/**
- * Clones the nodes of the IR.
- * Alone this Visitor is pointless, but combined with other visitors can be used to replace/remove/insert nodes to an existing tree.
- */
-class NodeCloner: public core::ASTVisitor<NodePtr>, public NodeMapping {
-	NodeManager& nodeManager;
+/** Manages C function generation and lookup for named lambda expressions.
+ ** */
+class FunctionManager {
+	ConversionContext& cc;
 
 public:
-	NodeCloner(NodeManager& manager) : nodeManager(nodeManager) { };
+	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> FunctionMap;
 
-	/**
-	 * This method bridges the gap between a visitor and a NodeMapper by
-	 * forwarding requests from the mapper to the visitor method.
-	 *
-	 * @param ptr the pointer to be mapped to another pointer
-	 * @return the resulting pointer
-	 */
-	virtual NodePtr mapElement(const NodePtr& ptr) {
-		return visit(ptr);
-	}
+private:
+	FunctionMap functionMap;
 
-protected:
+public:
+	FunctionManager(ConversionContext& cc) : cc(cc) { }
 
-	/**
-	 * Performs the recursive clone operation on all nodes passed on to this visitor.
-	 */
-	virtual NodePtr visitNode(const NodePtr& ptr) {
-		return ptr->substitute(nodeManager, *this);
-	}
-
-	/**
-	 * Obtains a reference to the associated node manager.
-	 *
-	 * @return a reference to the associated node manager.
-	 */
-	NodeManager& getNodeManager() {
-		return nodeManager;
-	}
-
+	CodePtr getFunction(const core::LambdaExprPtr& lambda);
+	CodePtr getFunction(const core::RecLambdaExprPtr& lambda, const CodePtr& surrounding);
+	CodePtr getFunctionLiteral(const LiteralPtr& literal);
+	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
 };
 
-} // End transform namespace
-} // End core namespace
-} // End insieme namespace
+
+
+}
+}
