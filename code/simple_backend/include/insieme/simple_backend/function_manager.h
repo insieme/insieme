@@ -43,6 +43,8 @@
 #include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/name_generator.h"
 
+#include "insieme/utils/map_utils.h"
+
 namespace insieme {
 namespace simple_backend {
 
@@ -70,6 +72,51 @@ public:
 	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
 };
 
+
+class NewFunctionManager {
+
+	/**
+	 * The name generator used for deriving fresh type names.
+	 */
+	NameGenerator& nameGenerator;
+
+	/**
+	 * The type manager used by the converter using this manager.
+	 */
+	TypeManager& typeManager;
+
+public:
+
+	/**
+	 * The information stored for each lambda expression within the program.
+	 */
+	struct LambdaCode {
+		CodePtr closure;
+		CodePtr function;
+		TypeManager::FunctionTypeEntry* typeInfo;
+
+		LambdaCode() : closure(), function(), typeInfo(NULL) { }
+		LambdaCode(const CodePtr& closure, const CodePtr& function, TypeManager::FunctionTypeEntry* typeInfo)
+			: closure(closure), function(function), typeInfo(typeInfo) { }
+	};
+
+private:
+
+	/**
+	 * A map linking Lambda expressions (recursive or non-recursive) to closure definitions and
+	 * functions.
+	 */
+	utils::map::PointerMap<core::LambdaExprPtr, LambdaCode> functionDefinitions;
+
+public:
+
+	NewFunctionManager(NameGenerator& nameGenerator, TypeManager& typeManager)
+		: nameGenerator(nameGenerator), typeManager(typeManager) { }
+
+
+	//void createLambda(const core::LambdaExprPtr& lambda);
+
+};
 
 
 }

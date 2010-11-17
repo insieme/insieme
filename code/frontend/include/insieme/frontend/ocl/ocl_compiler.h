@@ -48,12 +48,13 @@ namespace ocl {
 namespace {
 // accesses array arr at index idx
 #define SUBSCRIPT(arr, idx) builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>( \
-                            arr, builder.literal(toString(idx), core::lang::TYPE_UINT_4_PTR )))
+                            arr, builder.castExpr(core::lang::TYPE_UINT_4_PTR, builder.literal(toString(idx), core::lang::TYPE_UINT_4_PTR ))))
 
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
 #define CAPTURE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
                             vec.push_back(builder.declarationStmt((var), initVal)); \
                             (var) = initVal; /* update inVec with new variables */ }
+
 
 enum OCL_SCOPE { OCL_GLOBAL, OCL_LOCAL };
 
@@ -61,44 +62,69 @@ struct KernelData {
 public:
     core::ASTBuilder builder;
     // loop bounds
-    core::VariablePtr globalRange;
-    core::VariablePtr groupSize;
-    core::VariablePtr localRange;
+    core::VariablePtr globalRange; bool globalRangeUsed;
+    core::VariablePtr numGroups; bool numGroupsUsed;
+    core::VariablePtr localRange; bool localRangeUsed;
     // loop variables
-    core::VariablePtr groupId;
-    core::VariablePtr localId;
+    core::VariablePtr groupId; bool groupIdUsed;
+    core::VariablePtr localId; bool localIdUsed;
     // thread gropus
-    core::VariablePtr groupTg;
-    core::VariablePtr localTg;
+    core::VariablePtr groupTg; bool groupTgUsed;
+    core::VariablePtr localTg; bool localTgUsed;
 
-    int test;
+    core::CallExprPtr vecAccess(core::VariablePtr vec, core::ExpressionPtr idx) {
+        return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(vec, idx) );
+    }
 
-    static core::VariablePtr get3DvecVar(core::ASTBuilder builder)
-    {
+    static core::VariablePtr get3DvecVar(core::ASTBuilder builder) {
         return builder.variable(builder.vectorType(builder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+    }
+    static core::VariablePtr getThreadGroupVar(core::ASTBuilder builder) {
+        return builder.variable(core::lang::TYPE_THREAD_GROUP_PTR);
     }
 
     //default constructor
     KernelData(core::ASTBuilder astBuilder) :
-        globalRange(get3DvecVar(astBuilder)), groupSize(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
+        globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
         groupId(get3DvecVar(astBuilder)), localId(get3DvecVar(astBuilder)),
-        groupTg(get3DvecVar(astBuilder)), localTg(get3DvecVar(astBuilder)){ };
+        groupTg(getThreadGroupVar(astBuilder)), localTg(getThreadGroupVar(astBuilder)){
+        globalRangeUsed = false;
+        numGroupsUsed = false;
+        localRangeUsed = false;
+        groupIdUsed = false;
+        localIdUsed = false;
+        groupTgUsed = false;
+        localTgUsed = false;
+
+    };
 
 /* unused at the moment
     //copy constructor
     KernelData(KernelData& in) :
-        globalRange(in.globalRange), groupSize(in.groupSize), localRange(in.localRange),
+        globalRange(in.globalRange), numGroups(in.numGroups), localRange(in.localRange),
         groupId(in.groupId), localId(in.localId), groupTg(in.groupTg), localTg(in.localTg), test(2) { };
 */
 
     void set(core::VariablePtr& globalR, core::VariablePtr& groupS, core::VariablePtr& localR,
             core::VariablePtr& groupI, core::VariablePtr& localI, core::VariablePtr& groupThreadGroup, core::VariablePtr& localThreadGroup) {
-                   globalRange = globalR, groupSize = groupS, localRange = localR;
+                   globalRange = globalR, numGroups = groupS, localRange = localR;
                    groupId = groupI, localId = localI, groupTg = groupThreadGroup, localTg = localThreadGroup;
     }
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendCaptures(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
+
+    //returns a call expression accessing the global range at index idx and sets globalRangeUsed flag
+    core::CallExprPtr accessGlobalRange(core::ExpressionPtr idx);
+
+    //returns a call expression accessing the group size at index idx and sets numGroupsUsed flag
+    core::CallExprPtr accessNumGroups(core::ExpressionPtr idx);
+
+    //returns a call expression accessing the local range at index idx and sets localRangeUsed flag
+    core::CallExprPtr accessLocalRange(core::ExpressionPtr idx);
+
+    //returns a call expression to a merge function
+    core::CallExprPtr callBarrier(core::ExpressionPtr memFence);
 };
 } // namespace
 

@@ -87,9 +87,9 @@ template<typename T> class AnnotatedPtr;
 	typedef AnnotatedPtr<const NAME> NAME ## Ptr; \
 	typedef Address<const NAME> NAME ## Address;
 
+	// take all nodes from within the definition file
+	#include "ast_nodes.def"
 
-// take all nodes from within the definition file
-#include "ast_nodes.def"
 #undef NODE
 
 /**

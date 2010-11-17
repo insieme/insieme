@@ -71,9 +71,9 @@ TEST(Program, HelloWorld) {
 
 	ExpressionPtr intLiteral = build.literal(TYPE_INT_GEN_PTR, "4");
 	auto invocation = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral));
-	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), invocation);
+	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), invocation);
 
-	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
+	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
 	
 	LiteralPtr main = build.literal(voidNullaryFunctionType, "main");
 	ProgramPtr pro = build.createProgram(toSet<Program::EntryPointSet>(main));

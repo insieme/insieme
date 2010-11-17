@@ -46,6 +46,7 @@
 #include "insieme/simple_backend/name_generator.h"
 #include "insieme/simple_backend/code_management.h"
 
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -75,12 +76,30 @@ public:
 			: lValueName(lName), rValueName(rName), definition(definition) { }
 	};
 
+	/**
+	 * The information stored regarding each function type.
+	 */
+	struct FunctionTypeEntry {
+		string functorName;
+		string callerName;
+		CodePtr functorAndCaller;
+
+		FunctionTypeEntry() { }
+		FunctionTypeEntry(const string& functorName, const string& callerName, const CodePtr& functorAndCaller)
+			: functorName(functorName), callerName(callerName), functorAndCaller(functorAndCaller) { }
+	};
+
 private:
 
 	/**
 	 * A map linking IR types to type definitions.
 	 */
-	boost::unordered_map<core::TypePtr, Entry, hash_target<core::TypePtr>, equal_target<core::TypePtr>> typeDefinitions;
+	utils::map::PointerMap<core::TypePtr, Entry> typeDefinitions;
+
+	/**
+	 * A map linking a function type to the constructs defined for this type within C.
+	 */
+	utils::map::PointerMap<core::FunctionTypePtr, FunctionTypeEntry> functionTypeDefinitions;
 
 public:
 
@@ -109,6 +128,15 @@ public:
 	 * @param a flag allowing the user to indicate whether the type definition is required for a declaration statement or for not
 	 */
 	string formatParamter(CodePtr& context, const core::TypePtr& type, const string& name, bool decl = false);
+
+	/**
+	 * Obtains information regarding the given function type. The resulting entry contains
+	 * all the code fragments included within the resulting program for the given function type.
+	 *
+	 * @param functionType the function type to be looked for
+	 * @return a collection of information regarding the code generated for the given type
+	 */
+	FunctionTypeEntry getFunctionTypeDetails(const core::FunctionTypePtr& functionType);
 
 private:
 

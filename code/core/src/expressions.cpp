@@ -48,9 +48,9 @@ using namespace insieme::core;
 
 enum {
 	HASHVAL_LITERAL = 100 /* offset from statements */,
-	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_LAMBDAEXPR,
-	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_REC_LAMBDA_DEFINITION,
-	HASHVAL_REC_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE, HASHVAL_MEMBER_ACCESS, HASHVAL_TUPLE_PROJECTION
+	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_CAPTURE_INIT,
+	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_LAMBDA_DEFINITION,
+	HASHVAL_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE, HASHVAL_MEMBER_ACCESS, HASHVAL_TUPLE_PROJECTION
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -132,63 +132,11 @@ VariablePtr Variable::get(NodeManager& manager, const TypePtr& type, unsigned in
 	return manager.get(Variable(type, id));
 }
 
-// ------------------------------------- LambdaExpr ---------------------------------
-
-std::size_t hashLambdaExpr(const TypePtr& type, const LambdaExpr::ParamList& params, const StatementPtr& body) {
-	size_t seed = HASHVAL_LAMBDAEXPR;
-	boost::hash_combine(seed, type->hash());
-	hashPtrRange(seed, params);
-	boost::hash_combine(seed, body->hash());
-	return seed;
-}
-
-LambdaExpr::LambdaExpr(const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body)
-		: Expression(NT_LambdaExpr, type, ::hashLambdaExpr(type, params, body)), captureList(isolate(captureList)), params(isolate(params)), body(isolate(body)) { };
-
-LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new LambdaExpr(
-			mapper.map(0, type),
-			mapper.map(1, captureList),
-			mapper.map(1 + captureList.size(), params),
-			mapper.map(1 + captureList.size() + params.size(), body)
-	);
-}
-
-bool LambdaExpr::equalsExpr(const Expression& expr) const {
-	// conversion is guaranteed by base operator==
-	const LambdaExpr& rhs = static_cast<const LambdaExpr&>(expr);
-	return (*body == *rhs.body)
-			&& ::equals(captureList, rhs.captureList, equal_target<DeclarationStmtPtr>())
-			&& ::equals(params, rhs.params, equal_target<VariablePtr>());
-}
-
-Node::OptionChildList LambdaExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
-	res->push_back(type);
-	std::copy(captureList.begin(), captureList.end(), back_inserter(*res));
-	std::copy(params.begin(), params.end(), back_inserter(*res));
-	res->push_back(body);
-	return res;
-}
-
-std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-	out << "fun";
-	if (!captureList.empty()) {
-		out << "[" << join(", ", captureList, print<deref<DeclarationStmtPtr>>()) << "]";
+bool Variable::operator<(const Variable& other) const {
+	if (id != other.id) {
+		return id < other.id;
 	}
-
-	return out << "("
-		<< join(", ", params, [](std::ostream& out, const VariablePtr& cur)->std::ostream& {
-				return out << (*cur->getType()) << " " << *cur;
-		}) << "){ " << *body << " }";
-}
-
-LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const ParamList& params, const StatementPtr& body) {
-	return get(manager, type, toVector<DeclarationStmtPtr>(), params, body);
-}
-
-LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body) {
-	return manager.get(LambdaExpr(type, captureList, params, body));
+	return ::toString(*getType()) < ::toString(*other.getType());
 }
 
 // ------------------------------------- TupleExpr ---------------------------------
@@ -294,47 +242,43 @@ VectorExprPtr VectorExpr::get(NodeManager& manager, const VectorTypePtr& type, c
 
 // ------------------------------------- NamedCompositeExpr ---------------------------------
 
-const StructExpr::Members& isolateMembers(const StructExpr::Members& members) {
-	for_each(members, [](const StructExpr::Member& cur) {
-		isolate(cur.second);
-	});
-	return members;
-}
+namespace {
 
-bool StructExpr::equalsExpr(const Expression& expr) const {
-	// conversion is guaranteed by base operator==
-	const StructExpr& rhs = static_cast<const StructExpr&>(expr);
-	return ::equals(members, rhs.members, [](const Member& l, const Member& r) {
-		return l.first == r.first && *l.second == *r.second;
-	});
-}
+	const StructExpr::Members& isolateMembers(const StructExpr::Members& members) {
+		for_each(members, [](const StructExpr::Member& cur) {
+			isolate(cur.second);
+		});
+		return members;
+	}
 
-StructExpr::Members copyMembersUsing(NodeMapping& mapper, unsigned offset, const StructExpr::Members& members) {
-	StructExpr::Members res;
-	unsigned index = offset;
-	std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
-			[&mapper, &index](const StructExpr::Member& m) {
-				return StructExpr::Member(m.first, mapper.map(index++, m.second));
-	});
-	return res;
-}
+	StructExpr::Members copyMembersUsing(NodeMapping& mapper, unsigned offset, const StructExpr::Members& members) {
+		StructExpr::Members res;
+		unsigned index = offset;
+		std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
+				[&mapper, &index](const StructExpr::Member& m) {
+					return StructExpr::Member(m.first, mapper.map(index++, m.second));
+		});
+		return res;
+	}
 
-NamedCompositeType::Entries getTypeEntries(const StructExpr::Members& member) {
-	NamedCompositeType::Entries entries;
+	NamedCompositeType::Entries getTypeEntries(const StructExpr::Members& member) {
+		NamedCompositeType::Entries entries;
 
-	// NOTE: transform would be equivalent but causes an internal error in GCC 4.5.1
-//	std::transform(mem.begin(), mem.end(), back_inserter(entries), [](const Member& m)
-//		{ return NamedCompositeType::Entry(m.first, m.second->getType()); } );
+		// NOTE: transform would be equivalent but causes an internal error in GCC 4.5.1
+	//	std::transform(mem.begin(), mem.end(), back_inserter(entries), [](const Member& m)
+	//		{ return NamedCompositeType::Entry(m.first, m.second->getType()); } );
 
-	std::for_each(member.begin(), member.end(), [&entries](const StructExpr::Member& cur) {
-		entries.push_back(NamedCompositeType::Entry(cur.first, cur.second->getType()));
-	});
-	return entries;
-}
+		std::for_each(member.begin(), member.end(), [&entries](const StructExpr::Member& cur) {
+			entries.push_back(NamedCompositeType::Entry(cur.first, cur.second->getType()));
+		});
+		return entries;
+	}
 
-std::size_t hashStructMember(size_t seed, const StructExpr::Members& members) {
-	std::for_each(members.cbegin(), members.cend(), [&](const StructExpr::Member &m) { boost::hash_combine(seed, m); });
-	return seed;
+	std::size_t hashStructMember(size_t seed, const StructExpr::Members& members) {
+		std::for_each(members.cbegin(), members.cend(), [&](const StructExpr::Member &m) { boost::hash_combine(seed, m); });
+		return seed;
+	}
+
 }
 
 // ------------------------------------- StructExpr ---------------------------------
@@ -344,6 +288,14 @@ StructExpr::StructExpr(const StructTypePtr& type, const Members& members)
 
 StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new StructExpr(static_pointer_cast<const StructType>(mapper.map(0, type)), copyMembersUsing(mapper, 1, members));
+}
+
+bool StructExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const StructExpr& rhs = static_cast<const StructExpr&>(expr);
+	return ::equals(members, rhs.members, [](const Member& l, const Member& r) {
+		return l.first == r.first && *l.second == *r.second;
+	});
 }
 
 Node::OptionChildList StructExpr::getChildNodes() const {
@@ -614,162 +566,345 @@ CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const Expre
 	return manager.get(CastExpr(type, subExpr));
 }
 
+// ------------------------------------ Lambda ------------------------------
 
-// ------------------------------------ Recursive Definition ------------------------------
+namespace {
 
+	std::size_t hashLambda(const Lambda::CaptureList& captureList, const Lambda::ParamList& paramList, const StatementPtr& body) {
+		std::size_t hash = HASHVAL_LAMBDA;
+		hashPtrRange(hash, captureList);
+		hashPtrRange(hash, paramList);
+		boost::hash_combine(hash, body->hash());
+		return hash;
+	}
 
-std::size_t hashRecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions) {
-	std::size_t hash = HASHVAL_REC_LAMBDA_DEFINITION;
-	boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
-	return hash;
 }
 
-const RecLambdaDefinition::RecFunDefs& isolateRecFunDef(const RecLambdaDefinition::RecFunDefs& definitions) {
-	for_each(definitions, [](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
-			isolate(cur.first);
-			isolate(cur.second);
-	});
-	return definitions;
+Lambda::Lambda(const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body)
+	: Node(NT_Lambda, NC_Support, hashLambda(captureList, paramList, body)),
+	  captureList(isolate(captureList)), paramList(isolate(paramList)), body(isolate(body)) { };
+
+Lambda* Lambda::createCopyUsing(NodeMapping& mapper) const {
+	return new Lambda(mapper.map(0, captureList), mapper.map(captureList.size(), paramList), mapper.map(captureList.size() + paramList.size(), body));
 }
 
-RecLambdaDefinition::RecFunDefs copyRecFunDefUsing(NodeMapping& mapper, unsigned offset, const RecLambdaDefinition::RecFunDefs& definitions) {
-	RecLambdaDefinition::RecFunDefs res;
-	std::transform(definitions.begin(), definitions.end(), inserter(res, res.end()),
-		[&mapper, &offset](const RecLambdaDefinition::RecFunDefs::value_type& cur)->RecLambdaDefinition::RecFunDefs::value_type {
-			auto res = RecLambdaDefinition::RecFunDefs::value_type(
-					mapper.map(offset, cur.first),
-					mapper.map(offset+1, cur.second)
-			);
-			offset +=2;
-			return res;
-	});
-	return res;
-}
+bool Lambda::equals(const Node& other) const {
+	// check identity
+	if (this == &other) {
+		return true;
+	}
 
-RecLambdaDefinition::RecLambdaDefinition(const RecLambdaDefinition::RecFunDefs& definitions)
-	: Node(NT_RecLambdaDefinition, NC_Support, hashRecLambdaDefinition(definitions)), definitions(isolateRecFunDef(definitions)) { };
-
-RecLambdaDefinitionPtr RecLambdaDefinition::get(NodeManager& manager, const RecLambdaDefinition::RecFunDefs& definitions) {
-	return manager.get(RecLambdaDefinition(definitions));
-}
-
-RecLambdaDefinition* RecLambdaDefinition::createCopyUsing(NodeMapping& mapper) const {
-	return new RecLambdaDefinition(copyRecFunDefUsing(mapper, 0, definitions));
-}
-
-bool RecLambdaDefinition::equals(const Node& other) const {
 	// check type
-	if (typeid(other) != typeid(RecLambdaDefinition)) {
+	if (other.getNodeType() != NT_Lambda) {
 		return false;
 	}
 
-	const RecLambdaDefinition& rhs = static_cast<const RecLambdaDefinition&>(other);
-	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<LambdaExprPtr>());
+	const Lambda& rhs = static_cast<const Lambda&>(other);
+	return 	::equals(captureList, rhs.captureList, equal_target<VariablePtr>()) &&
+			::equals(paramList, rhs.paramList, equal_target<VariablePtr>()) &&
+			*body == *rhs.body;
 }
 
-Node::OptionChildList RecLambdaDefinition::getChildNodes() const {
+Node::OptionChildList Lambda::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	std::for_each(definitions.begin(), definitions.end(), [&res](const RecFunDefs::value_type& cur) {
+	res->insert(res->end(), captureList.begin(), captureList.end());
+	res->insert(res->end(), paramList.begin(), paramList.end());
+	res->push_back(body);
+	return res;
+}
+
+std::ostream& Lambda::printTo(std::ostream& out) const {
+	auto paramPrinter = [](std::ostream& out, const VariablePtr& var) {
+		out << *var->getType() << " " << *var;
+	};
+
+	out << "fun";
+	out << "[" << join(", ", captureList, paramPrinter) << "]";
+	out << "(" << join(", ", paramList, paramPrinter) << ") " << *body;
+
+	return out;
+}
+
+LambdaPtr Lambda::get(NodeManager& manager, const ParamList& params, const StatementPtr& body) {
+	return get(manager, CaptureList(), params, body);
+}
+LambdaPtr Lambda::get(NodeManager& manager, const CaptureList& captureList, const ParamList& params, const StatementPtr& body) {
+	return manager.get(Lambda(captureList, params, body));
+}
+
+
+// ------------------------------------ Lambda Definition ------------------------------
+
+namespace {
+
+	std::size_t hashLambdaDefinition(const LambdaDefinition::Definitions& definitions) {
+		std::size_t hash = HASHVAL_LAMBDA_DEFINITION;
+		boost::hash_combine(hash, insieme::utils::map::computeHash(definitions, hash_target<VariablePtr>(), hash_target<LambdaPtr>()));
+		return hash;
+	}
+
+	const LambdaDefinition::Definitions& isolateDefinitions(const LambdaDefinition::Definitions& definitions) {
+		for_each(definitions, [](const LambdaDefinition::Definitions::value_type& cur) {
+				isolate(cur.first);
+				isolate(cur.second);
+		});
+		return definitions;
+	}
+
+	LambdaDefinition::Definitions copyDefinitionsUsing(NodeMapping& mapper, unsigned offset, const LambdaDefinition::Definitions& definitions) {
+		typedef LambdaDefinition::Definitions::value_type Value;
+
+		LambdaDefinition::Definitions res;
+		std::transform(definitions.begin(), definitions.end(), inserter(res, res.end()),
+			[&mapper, &offset](const Value& cur)->Value {
+				// apply mapping
+				auto res = std::make_pair(
+						mapper.map(offset, cur.first),
+						mapper.map(offset+1, cur.second));
+				offset += 2;
+				return res;
+		});
+		return res;
+	}
+
+}
+
+LambdaDefinition::LambdaDefinition(const LambdaDefinition::Definitions& defs)
+	: Node(NT_LambdaDefinition, NC_Support, hashLambdaDefinition(defs)), definitions(isolateDefinitions(defs)) { };
+
+LambdaDefinitionPtr LambdaDefinition::get(NodeManager& manager, const LambdaDefinition::Definitions& definitions) {
+	return manager.get(LambdaDefinition(definitions));
+}
+
+LambdaDefinition* LambdaDefinition::createCopyUsing(NodeMapping& mapper) const {
+	return new LambdaDefinition(copyDefinitionsUsing(mapper, 0, definitions));
+}
+
+bool LambdaDefinition::equals(const Node& other) const {
+	// check identity
+	if (this == &other) {
+		return true;
+	}
+
+	// check type
+	if (other.getNodeType() != NT_LambdaDefinition) {
+		return false;
+	}
+
+	const LambdaDefinition& rhs = static_cast<const LambdaDefinition&>(other);
+	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<LambdaPtr>());
+}
+
+Node::OptionChildList LambdaDefinition::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	std::for_each(definitions.begin(), definitions.end(), [&res](const Definitions::value_type& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
 	});
 	return res;
 }
 
-std::ostream& RecLambdaDefinition::printTo(std::ostream& out) const {
-	return out << "{" << join(", ", definitions, [](std::ostream& out, const RecFunDefs::value_type& cur) {
+std::ostream& LambdaDefinition::printTo(std::ostream& out) const {
+	auto paramPrinter = [](std::ostream& out, const VariablePtr& var) {
+		out << *var->getType() << " " << *var;
+	};
+
+	return out << "{" << join(", ", definitions, [&paramPrinter](std::ostream& out, const Definitions::value_type& cur) {
 		out << *cur.first << "=" << *cur.second;
 	}) << "}";
 }
 
-LambdaExprPtr RecLambdaDefinition::getDefinitionOf(const VariablePtr& variable) const {
+const LambdaPtr& LambdaDefinition::getDefinitionOf(const VariablePtr& variable) const {
 	auto it = definitions.find(variable);
-	if (it == definitions.end()) {
-		return LambdaExprPtr(NULL);
-	}
-	return (*it).second;
+	assert( it != definitions.end() && "Trying to access undefined Lambda Definition!");
+	return it->second;
 }
+
+//namespace {
+//
+//	class RecLambdaUnroller : public NodeMapping {
+//
+//		NodeManager& manager;
+//		const RecLambdaDefinition& definition;
+//
+//
+//	public:
+//
+//		RecLambdaUnroller(NodeManager& manager, const RecLambdaDefinition& definition)
+//			: manager(manager), definition(definition) { }
+//
+//		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+//			// check whether it is a known variable
+//			if (ptr->getNodeType() == NT_Variable) {
+//				VariablePtr var = static_pointer_cast<const Variable>(ptr);
+//				LambdaExprPtr def = definition.getDefinitionOf(var);
+//				if (def) {
+//					// construct recursive type ...
+//					return RecLambdaExpr::get(manager, var, RecLambdaDefinitionPtr(&definition));
+//				}
+//			}
+//
+//			// replace recurively
+//			return ptr->substitute(manager, *this);
+//		}
+//
+//		NodePtr apply(const NodePtr& node) {
+//			if (!node) {
+//				return node;
+//			}
+//			return node->substitute(manager, *this);
+//		}
+//
+//	};
+//
+//}
+
+LambdaExprPtr LambdaDefinition::unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
+	assert(false && "Not re-implemented after restructuring!");
+	return LambdaExprPtr();
+	//return static_pointer_cast<const LambdaExpr>(RecLambdaUnroller(manager, *this).apply(getDefinitionOf(variable)));
+}
+
+
+// ------------------------------------ Lambda Expr ------------------------------
 
 namespace {
 
-	class RecLambdaUnroller : public NodeMapping {
-
-		NodeManager& manager;
-		const RecLambdaDefinition& definition;
-
-
-	public:
-
-		RecLambdaUnroller(NodeManager& manager, const RecLambdaDefinition& definition)
-			: manager(manager), definition(definition) { }
-
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-			// check whether it is a known variable
-			if (ptr->getNodeType() == NT_Variable) {
-				VariablePtr var = static_pointer_cast<const Variable>(ptr);
-				LambdaExprPtr def = definition.getDefinitionOf(var);
-				if (def) {
-					// construct recursive type ...
-					return RecLambdaExpr::get(manager, var, RecLambdaDefinitionPtr(&definition));
-				}
-			}
-
-			// replace recurively
-			return ptr->substitute(manager, *this);
-		}
-
-		NodePtr apply(const NodePtr& node) {
-			if (!node) {
-				return node;
-			}
-			return node->substitute(manager, *this);
-		}
-
-	};
+	std::size_t hashLambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
+		std::size_t hash = HASHVAL_LAMBDA;
+		boost::hash_combine(hash, variable->hash());
+		boost::hash_combine(hash, definition->hash());
+		return hash;
+	}
 
 }
 
-LambdaExprPtr RecLambdaDefinition::unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
-	return static_pointer_cast<const LambdaExpr>(RecLambdaUnroller(manager, *this).apply(getDefinitionOf(variable)));
+LambdaExpr::LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition)
+	: Expression(NT_LambdaExpr, variable->getType(), ::hashLambdaExpr(variable, definition)),
+	  variable(isolate(variable)), definition(isolate(definition)), lambda(*(definition->getDefinitionOf(variable))) { }
+
+LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
+	return new LambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
 }
 
-
-// ------------------------------------ Recursive Lambda Expr ------------------------------
-
-std::size_t hashRecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinitionPtr& definition) {
-	std::size_t hash = HASHVAL_REC_LAMBDA;
-	boost::hash_combine(hash, variable->hash());
-	boost::hash_combine(hash, definition->hash());
-	return hash;
-}
-
-RecLambdaExpr::RecLambdaExpr(const VariablePtr& variable, const RecLambdaDefinitionPtr& definition)
-	: Expression(NT_RecLambdaExpr, variable->getType(), ::hashRecLambdaExpr(variable, definition)),
-	  variable(isolate(variable)), definition(isolate(definition)) { }
-
-RecLambdaExpr* RecLambdaExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new RecLambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
-}
-
-Node::OptionChildList RecLambdaExpr::getChildNodes() const {
+Node::OptionChildList LambdaExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(variable);
 	res->push_back(definition);
 	return res;
 }
 
-bool RecLambdaExpr::equalsExpr(const Expression& expr) const {
+bool LambdaExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
-	const RecLambdaExpr& rhs = static_cast<const RecLambdaExpr&>(expr);
+	const LambdaExpr& rhs = static_cast<const LambdaExpr&>(expr);
 	return (*rhs.variable == *variable && *rhs.definition == *definition);
 }
 
-RecLambdaExprPtr RecLambdaExpr::get(NodeManager& manager, const VariablePtr& variable, const RecLambdaDefinitionPtr& definition) {
-	return manager.get(RecLambdaExpr(variable, definition));
+LambdaExprPtr LambdaExpr::get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
+	return manager.get(LambdaExpr(variable, definition));
 }
 
-std::ostream& RecLambdaExpr::printTo(std::ostream& out) const {
+LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const Lambda::ParamList& params, const StatementPtr& body) {
+	return get(manager, type, toVector<VariablePtr>(), params, body);
+}
+
+LambdaExprPtr LambdaExpr::get(NodeManager& manager, const TypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body) {
+
+	// build definitions
+	VariablePtr var = Variable::get(manager, type);
+	LambdaDefinition::Definitions defs;
+	defs.insert(std::make_pair(var, Lambda::get(manager, captureList, params, body)));
+
+	return manager.get(LambdaExpr(var, LambdaDefinition::get(manager, defs)));
+}
+
+std::ostream& LambdaExpr::printTo(std::ostream& out) const {
+	// TODO: special handling for non-recursive functions
 	return out << "rec " << *variable << "." << *definition;
+}
+
+const Lambda::CaptureList& LambdaExpr::getCaptureList() const {
+	return lambda.getCaptureList();
+}
+
+const Lambda::ParamList& LambdaExpr::getParameterList() const {
+	return lambda.getParameterList();
+}
+
+const StatementPtr& LambdaExpr::getBody() const {
+	return lambda.getBody();
+}
+
+
+// ------------------------ Capture Initialization Expression ------------------------
+
+namespace {
+
+	std::size_t hashCaptureInitExpr(const LambdaExprPtr& lambda, const CaptureInitExpr::Initializations& initializations) {
+		std::size_t hash = HASHVAL_CAPTURE_INIT;
+		boost::hash_combine(hash, lambda->hash());
+		boost::hash_combine(hash, insieme::utils::map::computeHash(initializations, hash_target<VariablePtr>(), hash_target<ExpressionPtr>()));
+		return hash;
+	}
+
+	const CaptureInitExpr::Initializations& isolateInitializations(const CaptureInitExpr::Initializations& initializatons) {
+		for_each(initializatons, [](const CaptureInitExpr::Initializations::value_type& cur) {
+				isolate(cur.first);
+				isolate(cur.second);
+		});
+		return initializatons;
+	}
+
+	CaptureInitExpr::Initializations copyInitializationsUsing(NodeMapping& mapper, unsigned offset, const CaptureInitExpr::Initializations& initializations) {
+		typedef CaptureInitExpr::Initializations::value_type Value;
+
+		CaptureInitExpr::Initializations res;
+		std::transform(initializations.begin(), initializations.end(), inserter(res, res.end()),
+			[&mapper, &offset](const Value& cur)->Value {
+
+				// apply mapping
+				auto res = std::make_pair(
+						mapper.map(offset, cur.first),
+						mapper.map(offset+1, cur.second));
+				offset += 2;
+				return res;
+		});
+		return res;
+	}
+}
+
+CaptureInitExpr::CaptureInitExpr(const LambdaExprPtr& lambda, const Initializations& initializations)
+	: Expression(NT_CaptureInitExpr, lambda->getType(), ::hashCaptureInitExpr(lambda, initializations)),
+	  lambda(isolate(lambda)), initializations(isolateInitializations(initializations)) { }
+
+CaptureInitExpr* CaptureInitExpr::createCopyUsing(NodeMapping& mapper) const {
+	return new CaptureInitExpr(mapper.map(0, lambda), copyInitializationsUsing(mapper, 1, initializations));
+}
+
+Node::OptionChildList CaptureInitExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(lambda);
+	for_each(initializations, [&res](const std::pair<VariablePtr, ExpressionPtr>& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
+	});
+	return res;
+}
+
+bool CaptureInitExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const CaptureInitExpr& rhs = static_cast<const CaptureInitExpr&>(expr);
+	return (*rhs.lambda == *lambda && utils::map::equal(initializations, rhs.initializations, equal_target<ExpressionPtr>()));
+}
+
+CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const LambdaExprPtr& lambda, const CaptureInitExpr::Initializations& initializations) {
+	return manager.get(CaptureInitExpr(lambda, initializations));
+}
+
+std::ostream& CaptureInitExpr::printTo(std::ostream& out) const {
+	return out << "([" << join(", ", initializations, [](std::ostream& out, const std::pair<VariablePtr, ExpressionPtr>& cur) {
+		out << *(cur.first) << ":=" << *(cur.second);
+	}) << "]" << *lambda << ")";
 }
 
 

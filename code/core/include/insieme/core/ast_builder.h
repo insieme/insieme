@@ -68,8 +68,6 @@ public:
 	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager) { }
 	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
-	typedef vector<DeclarationStmtPtr> CaptureList;
-	typedef vector<VariablePtr> ParamList;
 
 	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
@@ -85,6 +83,10 @@ public:
 	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;
 	typedef std::unordered_map<VariablePtr, LambdaExprPtr, hash_target<VariablePtr>, equal_target<VariablePtr>> RecFunDefs;
 
+	typedef Lambda::CaptureList CaptureList;
+	typedef Lambda::ParamList ParamList;
+
+	typedef LambdaDefinition::Definitions Definitions;
 
 	/**
 	 * Obtains a reference to the node manager used by this builder.

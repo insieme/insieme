@@ -117,19 +117,10 @@ namespace {
 		}
 
 		/**
-		 * Terminates this check for undeclared variables at the borderline
-		 * to an alternative scope.
-		 */
-		void visitLambdaExpr(const LambdaExprAddress& cur) {
-			// only check initialization of capture list
-			handleNewScope(cur);
-		}
-
-		/**
 		 * Terminates this check for undeclared variables at the borderline to an
 		 * alternative scope.
 		 */
-		void visitRecLambdaExpr(const RecLambdaExprAddress& cur) {
+		void visitLambdaExpr(const LambdaExprAddress& cur) {
 			// nothing to do => terminal state
 		}
 
@@ -195,54 +186,40 @@ namespace {
 		return res;
 	}
 
-	OptionalMessageList checkLambda(const LambdaExprAddress& cur, VariableSet& declared) {
-		// extend set of defined variables
-		for_each(cur->getCaptureList(), [&declared](const DeclarationStmtPtr& cur) {
-			declared.insert(cur->getVariable());
-		});
+	OptionalMessageList checkLambdaDefinition(const LambdaDefinitionAddress& lambdaDef) {
 
-		auto paramList = cur->getParams();
-		declared.insert(paramList.begin(), paramList.end());
+		OptionalMessageList res;
 
-		// run check on body ...
-		VarDeclarationCheck check(declared);
-		return conductCheck(check, cur.getAddressOfChild(cur->getChildList().size()-1));
-	}
-
-	OptionalMessageList checkLambda(const LambdaExprAddress& cur) {
-		// do not check the content of a recursive function definition
-		if (cur.getDepth() > 1 && cur.getParentNode()->getNodeType() == NT_RecLambdaDefinition) {
-			OptionalMessageList res;
-			return res;
-		}
-
-		// assemble set of defined variables
-		VariableSet declared;
-		return checkLambda(cur, declared);
-	}
-
-	OptionalMessageList checkRecLambdaDefinition(const RecLambdaDefinitionAddress& definition) {
-		// get set of recursive functions ...
 		VariableSet recFunctions;
-		for_each(definition->getDefinitions(), [&recFunctions](const std::pair<const VariablePtr&, const LambdaExprPtr>& cur) {
+		for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
 			recFunctions.insert(cur.first);
 		});
 
-		// test each definition ...
-		OptionalMessageList res;
-		int i=0;
-		for_each(definition->getDefinitions(), [&](const std::pair<const VariablePtr&, const LambdaExprPtr>& cur) {
-			VariableSet predefined;
+		int offset = 0;
+		for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
 
-			// add all recursive functions ...
-			predefined.insert(recFunctions.begin(), recFunctions.end());
+			// assemble set of defined variables
+			VariableSet declared;
 
-			// conduct check
-			addAll(res, checkLambda(static_address_cast<const LambdaExpr>(definition.getAddressOfChild(i+1)), predefined));
-			i+=2; // TODO: improve access to child nodes ...
+			// add recursive function variables
+			declared.insert(recFunctions.begin(), recFunctions.end());
+
+			// extend set of defined variables => captured variables
+			auto captureList = cur.second->getCaptureList();
+			declared.insert(captureList.begin(), captureList.end());
+
+			// add parameters
+			auto paramList = cur.second->getParameterList();
+			declared.insert(paramList.begin(), paramList.end());
+
+			// run check on body ...
+			VarDeclarationCheck check(declared);
+
+			// trigger check
+			addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
+			offset += 2;
 		});
 
-		// that's it!
 		return res;
 	}
 
@@ -277,12 +254,10 @@ OptionalMessageList UndeclaredVariableCheck::visitNode(const NodeAddress& addres
 	OptionalMessageList res;
 
 	switch(address->getNodeType()) {
-	case NT_LambdaExpr:
-		return checkLambda(static_address_cast<const LambdaExpr>(address));
-	case NT_RecLambdaDefinition:
-		return checkRecLambdaDefinition(static_address_cast<const RecLambdaDefinition>(address));
-	case NT_JobExpr:
-		return checkJob(static_address_cast<const JobExpr>(address));
+	case NT_LambdaDefinition:
+		return checkLambdaDefinition(static_address_cast<const LambdaDefinition>(address));
+//	case NT_JobExpr:
+//		return checkJob(static_address_cast<const JobExpr>(address));
 	default:
 		return res;
 	}
@@ -320,32 +295,32 @@ namespace {
 			return res;
 		}
 
-		OptionalMessageList visitLambdaExpr(const LambdaExprAddress& cur) {
-			OptionalMessageList res;
-
-			// test all captured variables ...
-			for_each(cur->getCaptureList(), [&](const DeclarationStmtPtr& decl) {
-				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
-			});
-
-			// ... and parameters
-			for_each(cur->getParams(), [&](const VariablePtr& param) {
-				testVariable(res, param, cur, cur.getAddressedNode());
-			});
-
-			return res;
-		}
-
-		OptionalMessageList visitRecLambdaDefinition(const RecLambdaDefinitionAddress& cur) {
-			OptionalMessageList res;
-
-			// test variables used as recursive functions ...
-			for_each(cur->getDefinitions(), [&](const std::pair<VariablePtr, LambdaExprPtr> definition) {
-				testVariable(res, definition.first, cur, cur.getAddressedNode());
-			});
-
-			return res;
-		}
+//		OptionalMessageList visitLambdaExpr(const LambdaExprAddress& cur) {
+//			OptionalMessageList res;
+//
+//			// test all captured variables ...
+//			for_each(cur->getCaptureList(), [&](const DeclarationStmtPtr& decl) {
+//				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
+//			});
+//
+//			// ... and parameters
+//			for_each(cur->getParams(), [&](const VariablePtr& param) {
+//				testVariable(res, param, cur, cur.getAddressedNode());
+//			});
+//
+//			return res;
+//		}
+//
+//		OptionalMessageList visitRecLambdaDefinition(const RecLambdaDefinitionAddress& cur) {
+//			OptionalMessageList res;
+//
+//			// test variables used as recursive functions ...
+//			for_each(cur->getDefinitions(), [&](const std::pair<VariablePtr, LambdaExprPtr> definition) {
+//				testVariable(res, definition.first, cur, cur.getAddressedNode());
+//			});
+//
+//			return res;
+//		}
 
 		OptionalMessageList visitJobExpr(const JobExprAddress& cur) {
 			OptionalMessageList res;

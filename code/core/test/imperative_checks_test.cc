@@ -59,16 +59,18 @@ TEST(UndeclaredVariableCheck, Basic) {
 
 	FunctionTypePtr funType = builder.functionType(builder.tupleType(), type);
 
-	NodePtr ok = builder.lambdaExpr(funType, toVector<DeclarationStmtPtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, init));
-	NodePtr err = builder.lambdaExpr(funType, toVector<DeclarationStmtPtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
+	NodePtr ok = builder.lambdaExpr(funType, toVector<VariablePtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, init));
+	NodePtr err = builder.lambdaExpr(funType, toVector<VariablePtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
 
 
-	CheckPtr typeCheck = make_check<UndeclaredVariableCheck>();
+	CheckPtr typeCheck = makeRecursive(make_check<UndeclaredVariableCheck>());
 	EXPECT_TRUE(check(ok, typeCheck).empty());
 	ASSERT_FALSE(check(err, typeCheck).empty());
 
 	NodeAddress errorAdr(err);
 	errorAdr = errorAdr.getAddressOfChild(1);
+	errorAdr = errorAdr.getAddressOfChild(1);
+	errorAdr = errorAdr.getAddressOfChild(0);
 	errorAdr = errorAdr.getAddressOfChild(1);
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
 }

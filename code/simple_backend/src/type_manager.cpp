@@ -83,7 +83,7 @@ string TypeManager::formatParamter(CodePtr& context, const TypePtr& type, const 
 				prefix = prefix + "(*";
 				postfix = ")" + postfix;
 			}
-			return prefix + name + postfix;
+			return prefix + " " + name + postfix;
 		}
 	}
 
@@ -192,64 +192,74 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 
 TypeManager::Entry TypeManager::resolveFunctionType(const FunctionTypePtr& ptr) {
 
+	// lookup function definition
+	FunctionTypeEntry entry = getFunctionTypeDetails(ptr);
+
+	// assemble name and dependency
+	string typeName = entry.functorName + "*";
+	return TypeManager::Entry(typeName, typeName, entry.functorAndCaller);
+}
+
+TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::FunctionTypePtr& functionType) {
+
+	// use cached information
+	auto pos = functionTypeDefinitions.find(functionType);
+	if (pos != functionTypeDefinitions.end()) {
+		return pos->second;
+	}
+
+	// create new entry:
+
 	// get name for function type
-	string name = nameGenerator.getName(ptr, "funType");
+	string name = nameGenerator.getName(functionType, "funType");
+	string functorName = "struct " + name;
+	string callerName = "call_" + name;
 
-	CodePtr functionTypeHandling(new CodeFragment(string("fun_type_utilities_") + name));
-	CodePtr functor(new CodeFragment(string("lambda_struct_") + name));
-	CodePtr caller(new CodeFragment(string("call") + name));
+	CodePtr functorAndCaller(new CodeFragment(string("Definitions for function type: ") + name));
+	CodeStream& out = functorAndCaller->getCodeStream();
 
-	functionTypeHandling->addDependency(functor);
-	functionTypeHandling->addDependency(caller);
-	caller->addDependency(functor);
+	// A) add abstract functor definition
+	out << "// Abstract prototype for lambdas of type " << name << "\n";
+	out << functorName << " { \n";
 
-
-	// define the empty lambda struct
-	{
-		CodeStream& out = functor->getCodeStream();
-
-		out << "struct " << name << " { \n";
-		//int (*pt2Function)(float, char, char)
-		out << "    ";
-		out << getTypeName(functor, ptr->getReturnType());
-		out << "(*fun)(" << "void*";
-		auto arguments = ptr->getArgumentType()->getElementTypes();
-		if (!arguments.empty()) {
-			out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-				out << getTypeName(functor, cur);
-			});
-		}
-		out << ");\n";
-
-		out << "    const size_t size;\n";
-		out << "};\n";
+	// add function pointer 'fun'
+	out << "    " << getTypeName(functorAndCaller, functionType->getReturnType()) << "(*fun)(" << "void*";
+	auto arguments = functionType->getArgumentType()->getElementTypes();
+	if (!arguments.empty()) {
+		out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << getTypeName(functorAndCaller, cur);
+		});
 	}
+	out << ");\n";
+	// add field for size of concrete type
+	out << "    const size_t size;\n";
+	out << "};\n";
 
-	// define call routine
-	{
-		CodeStream& out = caller->getCodeStream();
 
-		out << getTypeName(caller, ptr->getReturnType());
-		out << " call_" + name << "(struct " << name << "* lambda";
-		auto arguments = ptr->getArgumentType()->getElementTypes();
-		int i = 0;
-		if (!arguments.empty()) {
-			out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-				out << formatParamter(caller, cur, format("p%d", ++i));
-			});
-		}
-		out << ") { return lambda->fun(lambda";
-		i = 0;
-		if (!arguments.empty()) {
-			out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-				out << format("p%d", ++i);
-			});
-		}
-		out << "); }\n";
+	// B) define caller routine
+	out << "\n";
+	out << "// Type safe function for invoking lambdas of type " << name << "\n";
+	out << getTypeName(functorAndCaller, functionType->getReturnType());
+	out << callerName << "(struct " << name << "* lambda";
+	int i = 0;
+	if (!arguments.empty()) {
+		out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << formatParamter(functorAndCaller, cur, format("p%d", ++i));
+		});
 	}
+	out << ") { return lambda->fun(lambda";
+	i = 0;
+	if (!arguments.empty()) {
+		out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << format("p%d", ++i);
+		});
+	}
+	out << "); }\n";
 
-	string typeName = "struct " + name + "*";
-	return TypeManager::Entry(typeName, typeName, functionTypeHandling);
+	// create, register and return entry
+	FunctionTypeEntry entry(functorName, callerName, functorAndCaller);
+	functionTypeDefinitions.insert(std::make_pair(functionType, entry));
+	return entry;
 }
 
 

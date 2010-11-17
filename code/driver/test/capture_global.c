@@ -49,9 +49,23 @@ int inc(int step) {
 	return count;
 }
 
+int dec(int step) {
+	count += step;
+	return count;
+}
+
+int reset() {
+	count = 0;
+	return count;
+}
+
 int main(int argc, char* argv[]) {
 	for (int i=0; i<10; i++) {
+		printf("count=%2d\n", inc(2));
 		printf("count=%2d\n", inc(1));
+		if (i==5) {
+			reset();
+		}
 	}
 	return 0;
 }
