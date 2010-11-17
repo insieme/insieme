@@ -46,7 +46,6 @@
 #include "insieme/core/statements.h"
 #include "insieme/core/program.h"
 #include "insieme/core/types.h"
-#include "insieme/core/lang_basic.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -123,9 +122,12 @@ class ConversionContext {
 	VariableManager varManager;
 
 public:
+
+	const lang::BasicGenerator& basic;
+
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
 	// (the base class initializers do not dereference it)
-	ConversionContext() : typeMan(nameGen), funcMan(*this) { }
+	ConversionContext() : typeMan(nameGen), funcMan(*this), basic(nodeManager.basic) { }
 	
 	//typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
 
@@ -219,7 +221,7 @@ namespace detail {
 	typedef std::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
 
 	// a forward declaration for a method assembling formater tables
-	FormatTable initFormatTable();
+	FormatTable initFormatTable(const lang::BasicGenerator&);
 
 }
 
@@ -248,10 +250,10 @@ class ConvertVisitor : public ASTVisitor<> {
 public:
 	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
 		varManager(cc.getVariableManager()), defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()),
-		formats(detail::initFormatTable()) { };
+		formats(detail::initFormatTable(cc.basic)) { };
 	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()), 
 		varManager(cc.getVariableManager()), defCodePtr(cptr), cStr(defCodePtr->getCodeStream()),
-		formats(detail::initFormatTable()) { };
+		formats(detail::initFormatTable(cc.basic)) { };
 
 	CodePtr getCode() { return defCodePtr; }
 
@@ -339,8 +341,6 @@ public:
 	}
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr);
-
-	void visitRecLambdaExpr(const RecLambdaExprPtr& ptr);
 
 	void visitLiteral(const LiteralPtr& ptr);
 
