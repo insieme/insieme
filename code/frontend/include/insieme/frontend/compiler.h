@@ -160,4 +160,3 @@ typedef std::vector<PragmaPtr> 	PragmaList;
 
 } // End frontend namespace
 } // End insieme namespace
-

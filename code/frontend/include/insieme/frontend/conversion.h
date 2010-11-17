@@ -198,7 +198,7 @@ class ConversionFactory : public boost::noncopyable {
 	/**
 	 * Attach annotations to a C function of the input program.
 	 */
-	void attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
+	void attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
 	friend class ASTConverter;
 public:
@@ -213,7 +213,7 @@ public:
 	core::StatementPtr 	convertStmt(const clang::Stmt* stmt) const;
 	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
 
-	core::ExpressionPtr 	 convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
+	core::NodePtr 	 		 convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
 	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 	core::ExpressionPtr	 	 defaultInitVal(const core::TypePtr& type) const;
 	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const ;

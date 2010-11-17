@@ -38,6 +38,8 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/global_variables.h"
+#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -45,14 +47,10 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/lang_basic.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/c_info/naming.h"
 #include "insieme/c_info/location.h"
-
-#include "insieme/frontend/omp/omp_pragma.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
-
-#include "insieme/core/transform/node_replacer.h"
 
 #include "clang/Basic/FileManager.h"
 
@@ -113,7 +111,8 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	if(global.first)
 		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
 
-	core::ExpressionPtr&& lambdaExpr = mFact.convertFunctionDecl(funcDecl, true);
+	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
+	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
 
 	return mProgram;
@@ -188,7 +187,8 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			if(sr == "__constant") {
 				if(isa<const clang::ParmVarDecl>(varDecl)) {
 					DVLOG(2) << "           OpenCL address space __constant";
-					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));					continue;
+					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));
+					continue;
 				}
 				ss << "Address space __constant not allowed for local variable";
 				throw &ss;
@@ -437,7 +437,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	return retStmt;
 }
 
-void ConversionFactory::attachFuncAnnotations(core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
+void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 	// ---------------------- Add annotations to this function ------------------------------
 	//check Attributes of the function definition
 	ocl::BaseAnnotation::AnnotationList kernelAnnotation;

@@ -60,7 +60,7 @@ lang::BoolTypePtr ASTBuilder::boolType() const {
 	return manager.get(lang::TYPE_BOOL);
 }
 
-lang::IntTypePtr  ASTBuilder::intType (unsigned short size) const {
+lang::IntTypePtr ASTBuilder::intType (unsigned short size) const {
 	return manager.get(lang::intType(size));
 }
 
