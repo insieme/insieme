@@ -145,9 +145,8 @@ public:
 */
 
 
-void KernelData::appendCaptures(core::LambdaExpr::CaptureList& captureList, OCL_SCOPE scope) {
+void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope) {
 
-    //TODO add flags
     if(globalRangeUsed)
         CAPTURE(captureList, globalRange);
 
@@ -452,29 +451,13 @@ private:
     // The elements of the input vector are used as initialization values for the new variables
     // The last parameter contains a mapping of each variable to its original one (before chatching). This
     // will be automatically updated
-    /*void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, VariableMapping vm) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back(builder.declarationStmt(builder.variable((*I)->getType()), (*I)));
-            // update variable mapping
-//            vm.remap((*I), outVec.back()->getVariable());
-        }
-    }*/
-    
+/*FIXME
     void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::VariablePtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             CAPTURE(outVec, *I);
         }
     }
-    /*
-    void createDeclarations1(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, VariableMapping vm) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back(builder.declarationStmt(builder.variable((*I)->getVariable()->getType()), (*I)->getVariable()));
-            // update variable mapping
-//            vm.remap((*I)->getVariable(), outVec.back()->getVariable());
-        }
-    }
-    
-    */
+
     void createDeclarations(core::LambdaExpr::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             const core::VariablePtr& initVal = builder.variable((*I)->getVariable()->getType());
@@ -562,10 +545,10 @@ public:
             }
 
 
-            core::LambdaExpr::ParamList params = func->getParams();
+            core::Lambda::ParamList params = func->getParameterList();
 
             // store memory spaces of arguments
-            for(core::LambdaExpr::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
+            for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
                 core::VariablePtr var = *pi;
                 if(var->hasAnnotation(ocl::BaseAnnotation::KEY)) {
                     ocl::BaseAnnotationPtr annot = var->getAnnotation(ocl::BaseAnnotation::KEY);
@@ -642,7 +625,7 @@ public:
                 // type of functions inside jobs
 //                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
 
-                core::LambdaExpr::ParamList funParams;
+                core::Lambda::ParamList funParams;
 
 
                 core::FunctionTypePtr parFuncType= builder.functionType(builder.tupleType(parArgs),
@@ -657,8 +640,8 @@ public:
 //TODO add pfor
 
                 // capture all arguments
-                core::LambdaExpr::CaptureList localFunCaptures;
-                createDeclarations(localFunCaptures, constantArgs);
+                core::Lambda::CaptureList localFunCaptures;
+/*FIXME                createDeclarations(localFunCaptures, constantArgs);
                 createDeclarations(localFunCaptures, globalArgs);
                 createDeclarations(localFunCaptures, localArgs);
                 createDeclarations(localFunCaptures, privateArgs);
@@ -786,7 +769,8 @@ public:
                 // put cname annotation to the new function
                 newFunc.addAnnotation(cName);
 
-                return newFunc;
+                return newFunc;*/
+                return element;
             }
 
 /*            const core::Node::ChildList& children = body->getChildList();

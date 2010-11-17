@@ -51,7 +51,8 @@ namespace {
                             arr, builder.castExpr(core::lang::TYPE_UINT_4_PTR, builder.literal(toString(idx), core::lang::TYPE_UINT_4_PTR ))))
 
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
-#define CAPTURE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
+#define CAPTURE(vec, var) { }
+//FIXME const core::VariablePtr initVal = builder.variable((var)->getType()); \
                             vec.push_back(builder.declarationStmt((var), initVal)); \
                             (var) = initVal; /* update inVec with new variables */ }
 
@@ -112,7 +113,7 @@ public:
     }
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendCaptures(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
+    void appendCaptures(std::vector<core::VariablePtr>& captureList, OCL_SCOPE scope);
 
     //returns a call expression accessing the global range at index idx and sets globalRangeUsed flag
     core::CallExprPtr accessGlobalRange(core::ExpressionPtr idx);
