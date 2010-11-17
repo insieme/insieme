@@ -124,7 +124,8 @@ TEST(StmtConversion, FileTest) {
 				// do semantics checking
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp->getDecl())) {
-				ExpressionPtr&& expr = convFactory.convertFunctionDecl(fd);
+				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
+				assert(expr);
 				EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(expr);
@@ -132,4 +133,3 @@ TEST(StmtConversion, FileTest) {
 		}
 	}
 }
-
