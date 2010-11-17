@@ -35,9 +35,15 @@
  */
 
 // Types --------------------------------------------------------------------------------------------------------------
+TYPE(Unit,   "unit")
 
-TYPE(IntGen,  "int<#a>")
-TYPE(UIntGen, "uint<#a>")
+TYPE(IntGen, "int<#a>")
+TYPE(UIntGen,"uint<#a>")
+
+TYPE(Char,   "char")
+TYPE(UChar,  "uchar")
+TYPE(WChar,  "wchar")
+TYPE(String, "string")
 
 TYPE(Int1,   "int<1>")
 TYPE(UInt1,  "uint<1>")
@@ -47,6 +53,8 @@ TYPE(Int4,   "int<4>")
 TYPE(UInt4,  "uint<4>")
 TYPE(Int8,   "int<8>")
 TYPE(UInt8,  "uint<8>")
+TYPE(Int16,   "int<16>")
+TYPE(UInt16,  "uint<16>")
 TYPE(IntInf, "int<#inf>")
 TYPE(UIntInf,"uint<#inf>")
 
@@ -132,6 +140,8 @@ LITERAL(UIntLShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntRShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 
 // References ---------------------------------------------------------------------------------------------------------
+
+TYPE(RefAlpha, "ref<'a>")
 
 LITERAL(RefVar,    "ref.var",    "('a) -> ref<'a>")
 LITERAL(RefNew,    "ref.new",    "('a) -> ref<'a>")

@@ -372,7 +372,7 @@ void ASTPrinter::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	visitAnnotationList(*builder, NODE_ID(lambdaExpr), lambdaExpr->getAnnotations());
 
 	visitChildList(*builder, toVector(lambdaExpr->getType()), lambdaExpr, "type");
-	visitChildList(*builder, lambdaExpr->getParams(), lambdaExpr, "param");
+	visitChildList(*builder, lambdaExpr->getParameterList(), lambdaExpr, "param");
 	visitChildList(*builder, toVector(lambdaExpr->getBody()), lambdaExpr, "body");
 }
 

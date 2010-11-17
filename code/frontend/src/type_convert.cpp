@@ -45,7 +45,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/types.h"
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -98,57 +98,36 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitBuiltinType(BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
-		const core::ASTBuilder& builder = convFact.builder;
 
 		switch(buldInTy->getKind()) {
-		case BuiltinType::Void:
-			return builder.unitType();
-		case BuiltinType::Bool:
-			return builder.boolType();
+		case BuiltinType::Void:			return convFact.typeGen.getUnit();
+		case BuiltinType::Bool:			return convFact.typeGen.getBool();
 
 		// char types
 		case BuiltinType::Char_U:
-		case BuiltinType::UChar:
-			return builder.genericType("uchar");
+		case BuiltinType::UChar:		return convFact.typeGen.getUChar();
 		case BuiltinType::Char16:
-			return builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE(2));
 		case BuiltinType::Char32:
-			return builder.genericType("char", EMPTY_TYPE_LIST, MAKE_SIZE(4));
 		case BuiltinType::Char_S:
-		case BuiltinType::SChar:
-			return builder.genericType("char");
-		case BuiltinType::WChar:
-			return builder.genericType("wchar");
+		case BuiltinType::SChar:		return convFact.typeGen.getChar();
+		case BuiltinType::WChar:		return convFact.typeGen.getWChar();
 
 		// integer types
-		case BuiltinType::UShort:
-			return builder.uintType( SHORT_LENGTH );
-		case BuiltinType::Short:
-			return builder.intType( SHORT_LENGTH );
-		case BuiltinType::UInt:
-			return builder.uintType( INT_LENGTH );
-		case BuiltinType::Int:
-			return builder.intType( INT_LENGTH );
-		case BuiltinType::UInt128:
-			return builder.uintType( 16 );
-		case BuiltinType::Int128:
-			return builder.intType( 16 );
-		case BuiltinType::ULong:
-			return builder.uintType( LONG_LENGTH );
-		case BuiltinType::ULongLong:
-			return builder.uintType( LONG_LONG_LENGTH );
-		case BuiltinType::Long:
-			return builder.intType( LONG_LENGTH );
-		case BuiltinType::LongLong:
-			return builder.intType( LONG_LONG_LENGTH );
+		case BuiltinType::UShort:		return convFact.typeGen.getUInt2();
+		case BuiltinType::Short:		return convFact.typeGen.getInt2();
+		case BuiltinType::UInt:			return convFact.typeGen.getUInt4();
+		case BuiltinType::Int:			return convFact.typeGen.getInt4();
+		case BuiltinType::UInt128:		return convFact.typeGen.getUInt16();
+		case BuiltinType::Int128:		return convFact.typeGen.getInt16();
+		case BuiltinType::ULong:		return convFact.typeGen.getUInt8();
+		case BuiltinType::ULongLong:	return convFact.typeGen.getUInt8();
+		case BuiltinType::Long:			return convFact.typeGen.getInt8();
+		case BuiltinType::LongLong:		return convFact.typeGen.getInt8();
 
 		// real types
-		case BuiltinType::Float:
-			return builder.realType( FLOAT_LENGTH );
-		case BuiltinType::Double:
-			return builder.realType( DOUBLE_LENGTH );
-		case BuiltinType::LongDouble:
-			return builder.realType( LONG_DOUBLE_LENGTH );
+		case BuiltinType::Float:		return convFact.typeGen.getFloat();
+		case BuiltinType::Double:		return convFact.typeGen.getDouble();
+		case BuiltinType::LongDouble:	// unsopported FIXME
 
 		// not supported types
 		case BuiltinType::NullPtr:
@@ -301,13 +280,13 @@ public:
 			}
 		);
 
-		if( argTypes.size() == 1 && *argTypes.front() == core::lang::TYPE_UNIT_VAL) {
+		if( argTypes.size() == 1 && *argTypes.front() == *convFact.typeGen.getUnit()) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
 
 		if( funcTy->isVariadic() )
-			argTypes.push_back( core::lang::TYPE_VAR_LIST );
+			argTypes.push_back( convFact.typeGen.getVarList() );
 
 		retTy = builder.functionType( builder.tupleType(argTypes), retTy);
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -368,7 +347,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTypeOfType(TypeOfType* typeOfType) {
 		START_LOG_TYPE_CONVERSION(typeOfType);
-		core::TypePtr retTy = convFact.builder.unitType();
+		core::TypePtr retTy = convFact.typeGen.getUnit();
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -565,8 +544,8 @@ public:
 		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> ref<'a>
-		if(*subTy == core::lang::TYPE_UNIT_VAL) {
-			subTy = core::lang::TYPE_REF_ALPHA_PTR;
+		if(*subTy == *convFact.typeGen.getUnit()) {
+			subTy = convFact.typeGen.getRefAlpha();
 			END_LOG_TYPE_CONVERSION( subTy );
 			return subTy;
 		}

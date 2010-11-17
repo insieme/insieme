@@ -70,7 +70,7 @@ TEST(UndeclaredVariableCheck, Basic) {
 	NodeAddress errorAdr(err);
 	errorAdr = errorAdr.getAddressOfChild(1);
 	errorAdr = errorAdr.getAddressOfChild(1);
-	errorAdr = errorAdr.getAddressOfChild(0);
+	errorAdr = errorAdr.getAddressOfChild(1);
 	errorAdr = errorAdr.getAddressOfChild(1);
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
 }

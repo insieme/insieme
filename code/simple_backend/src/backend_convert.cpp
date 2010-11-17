@@ -52,7 +52,7 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 		ConvertVisitor convVisitor(*this);
 		convVisitor.visit(ep);
 		CodePtr ptr = convVisitor.getCode();
-		if (ep->getNodeType() == NT_LambdaExpr || ep->getNodeType()==NT_RecLambdaExpr) {
+		if (ep->getNodeType() == NT_LambdaExpr) {
 			// remove root node content => not required
 			CodePtr tmp = CodePtr(new CodeFragment(string("root-node")));
 			for_each(ptr->getDependencies(), [&tmp](const CodePtr& cur) {
@@ -102,36 +102,24 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 			out << "    const size_t size;\n";
 
 			// add capture values
-			for_each(ptr->getCaptureList(), [&](const DeclarationStmtPtr& cur) {
-				VariablePtr var = cur->getVariable();
+			for_each(ptr->getCaptureList(), [&](const VariablePtr& var) {
 				out << "    " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
 			});
 		out << "};\n";
 	}
 
 	// B) create function to be computed using function manager + add dependency
-	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr));
+	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
 
 	// C) allocate a struct
 	cStr << "((struct " << nameGen.getName(ptr->getType(), "funType") << "*)&((" << structName << "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
 	if (!ptr->getCaptureList().empty()) {
-		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const DeclarationStmtPtr& cur) {
-			this->visit(cur->getInitialization());
+		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const VariablePtr& cur) {
+			//this->visit(cur->getInitialization());
 		});
 	}
 	cStr << "}))";
 
-
-
-}
-
-void ConvertVisitor::visitRecLambdaExpr(const RecLambdaExprPtr& ptr) {
-
-	// get name of lambda Expr ...
-	string cFunName = cc.getNameGen().getName(ptr);
-
-	// add a dependency to the function definition
-	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
 }
 
 namespace {
@@ -147,8 +135,9 @@ namespace {
 				return (cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(target)).location == VariableManager::HEAP);
 			case NT_CallExpr:
 				// for only a small number of functions (build ins) returning a ref does not mean it is a pointer
-				return !((*(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) == lang::OP_SUBSCRIPT_VAL) ||
-						  (*(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) == lang::OP_SUBSCRIPT_SINGLE_VAL));
+
+				return !(cc.getNodeManager().basic.isArraySubscript(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) ||
+						 cc.getNodeManager().basic.isArray1DSubscript(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
 			case NT_MemberAccessExpr:
 				return false;
 			default:
@@ -280,7 +269,7 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			ExpressionPtr function = call->getFunctionExpr();
 			if (function->getNodeType() == NT_Literal) {
 				// mark as a stack variable only if created using var.new => otherwise always a pointer (conservative)
-				info.location = (*function == lang::OP_REF_VAR_VAL)?VariableManager::STACK:VariableManager::HEAP;
+				info.location = cc.getNodeManager().basic.isRefVar(function)?VariableManager::STACK:VariableManager::HEAP;
 			}
 			break;
 		}
@@ -324,7 +313,7 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	auto typePtr = ptr->getType();
 	const string& val = ptr->getValue();
-	if(*typePtr == lang::TYPE_STRING_VAL) {
+	if (cc.getNodeManager().basic.isString(typePtr)) {
 		// TODO change once the decision is made how string literals should be represented int the AST
 		if(val.empty() || val[0] != '"' || val[val.length()-1] != '"') {
 			cStr << "\"" << val << "\"";
@@ -345,9 +334,7 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
 {
 	cStr << "return ";
-	if(*ptr->getReturnExpr()->getType() != lang::TYPE_UNIT_VAL) {
-		visit(ptr->getReturnExpr());
-	}
+	visit(ptr->getReturnExpr());
 	cStr << ";";
 }
 
@@ -356,7 +343,7 @@ void ConvertVisitor::visitIfStmt(const IfStmtPtr& ptr) {
 	visit(ptr->getCondition());
 	cStr << ") ";
 	visit(ptr->getThenBody());
-	if (*(ptr->getElseBody()) != (*lang::STMT_NO_OP_PTR)) {
+	if (cc.basic.isNoOp(ptr->getElseBody())) {
 		cStr << " else ";
 		visit(ptr->getElseBody());
 	}
@@ -498,7 +485,7 @@ namespace detail {
 	}
 
 
-	FormatTable initFormatTable() {
+	FormatTable initFormatTable(const lang::BasicGenerator& basic) {
 
 		FormatTable res;
 
@@ -506,14 +493,14 @@ namespace detail {
 		#define ARG(N) getArgument(call, N)
 		#define VISIT_ARG(N) visitArgument(visitor, call, N)
 		#define ADD_FORMATTER(Literal, FORMAT) \
-					res.insert(std::make_pair(Literal, make_formatter([](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
+					res.insert(std::make_pair(Literal, make_formatter([&basic](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
 
 
-		ADD_FORMATTER(lang::OP_REF_ASSIGN_PTR, {
+		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = visitor.getConversionContext().getNodeManager();
 				ExpressionPtr target = static_pointer_cast<const Expression>(ARG(0));
 				TypePtr valueType = static_pointer_cast<const RefType>(target->getType())->getElementType();
-				visitor.visit(CallExpr::get(manager, valueType, lang::OP_REF_DEREF, toVector<ExpressionPtr>(target)));
+				visitor.visit(CallExpr::get(manager, valueType, basic.getRefDeref(), toVector<ExpressionPtr>(target)));
 				OUT(" = ");
 				VISIT_ARG(1);
 		});
@@ -524,43 +511,43 @@ namespace detail {
 //		ADD_FORMATTER(lang::OP_REF_DELETE_PTR, { OUT(" del("); VISIT_ARG(0); OUT(")"); });
 
 		//ADD_FORMATTER(lang::OP_SUBSCRIPT_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
-		ADD_FORMATTER(lang::OP_SUBSCRIPT_SINGLE_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArray1DSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 
-		ADD_FORMATTER(lang::OP_REAL_ADD_PTR, { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REAL_SUB_PTR, { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REAL_MUL_PTR, { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REAL_DIV_PTR, { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_UINT_ADD_PTR, { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_SUB_PTR, { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_MUL_PTR, { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_DIV_PTR, { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_MOD_PTR, { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_INT_ADD_PTR, { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_SUB_PTR, { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_MUL_PTR, { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_DIV_PTR, { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_MOD_PTR, { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_BOOL_AND_PTR, { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_BOOL_OR_PTR, { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_BOOL_EQ_PTR, { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_BOOL_NOT_PTR, { OUT("!"); VISIT_ARG(0); });
+		ADD_FORMATTER(basic.getBoolAnd(), { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolOr(), { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolNot(), { OUT("!"); VISIT_ARG(0); });
 
-		ADD_FORMATTER(lang::OP_UINT_EQ_PTR, { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_GE_PTR, { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_GT_PTR, { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_LT_PTR, { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_LE_PTR, { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_INT_EQ_PTR, { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_GE_PTR, { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_GT_PTR, { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_LT_PTR, { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_LE_PTR, { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_ITE_PTR, { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(1); OUT("))"); });
+		ADD_FORMATTER(basic.getIfThenElse(), { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(1); OUT("))"); });
 
 		#undef ADD_FORMATTER
 		#undef OUT

@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <memory>
+
 namespace insieme {
 namespace core {
 
@@ -46,33 +48,41 @@ class Type;
 typedef AnnotatedPtr<const Type> TypePtr;
 class Literal;
 typedef AnnotatedPtr<const Literal> LiteralPtr;
-class Expression;
-typedef AnnotatedPtr<const Expression> ExpressionPtr;
+
+class Node;
+typedef AnnotatedPtr<const Node> NodePtr;
+class Statement;
+typedef AnnotatedPtr<const Statement> StatementPtr;
+
 
 namespace lang {
 
-struct BasicGeneratorImpl;
-
 class BasicGenerator {
 	mutable NodeManager& nm;
-	mutable BasicGeneratorImpl* pimpl;
+	struct BasicGeneratorImpl;
+	mutable std::auto_ptr<BasicGeneratorImpl> pimpl;
 
 public:
 	BasicGenerator(NodeManager& nm);
-	~BasicGenerator();
 
 	#define TYPE(_id, _spec) \
 	TypePtr get##_id() const; \
-	bool is##_id(const TypePtr& p) const;
+	bool is##_id(const NodePtr& p) const;
 
 	#define LITERAL(_id, _name, _spec) \
 	LiteralPtr get##_id() const; \
-	bool is##_id(const ExpressionPtr& p) const;
+	bool is##_id(const NodePtr& p) const;
 
 	#include "insieme/core/lang/lang.def"
 
 	#undef TYPE
 	#undef LITERAL
+
+	// ----- extra material ---
+
+	StatementPtr getNoOp() const;
+	bool isNoOp(const NodePtr& p) const;
+
 };
 
 } // namespace lang

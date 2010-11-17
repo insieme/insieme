@@ -41,8 +41,6 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/frontend/utils/types_lenght.h"
 
-#include "insieme/core/lang_basic.h"
-
 namespace insieme {
 namespace frontend {
 namespace ocl {
@@ -758,7 +756,7 @@ public:
 
 
                 newBodyStmts.push_back(tmp);
-            
+
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
                 // get address spaces of variables in body

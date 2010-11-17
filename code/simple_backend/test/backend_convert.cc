@@ -44,7 +44,6 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -58,19 +57,21 @@ using namespace insieme::simple_backend;
 
 ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
-	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(TYPE_CHAR_PTR), TYPE_VAR_LIST_PTR));
-	TypePtr unitType = build.unitType();
+	BasicGenerator typeGen(build.getNodeManager());
+
+	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(typeGen.getChar()), typeGen.getVarList()));
+	TypePtr unitType = typeGen.getUnit();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.literal("printf", printfType);
 
 	TupleTypePtr emptyTupleType = build.tupleType();
-	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+	FunctionTypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	ExpressionPtr stringLiteral = build.literal("Hello World!", TYPE_STRING_PTR);
+	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
 	auto mainBody = build.compoundStmt(invocation);
-	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
 
 	mainLambda.addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
 
