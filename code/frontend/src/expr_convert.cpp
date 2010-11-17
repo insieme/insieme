@@ -162,19 +162,19 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	// keeps the list variables used in the body
 	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
 
-	core::LambdaExpr::ParamList params;
+	core::Lambda::ParamList params;
 	core::TupleType::ElementTypeList paramTypes;
-	core::LambdaExpr::CaptureList capture;
+	core::Lambda::CaptureList capture;
 	std::for_each(args.begin(), args.end(),
 		[ &capture, &params, &paramTypes, &builder, &bodyStmt, useCapture] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
-			if(useCapture)
-				capture.push_back( builder.declarationStmt(parmVar, bodyVar) );
-			else {
-				params.push_back( parmVar );
-				paramTypes.push_back( parmVar->getType() );
-			}
+			//~ if(useCapture)
+				//~ capture.push_back( builder.declarationStmt(parmVar, bodyVar) );
+			//~ else {
+				//~ params.push_back( parmVar );
+				//~ paramTypes.push_back( parmVar->getType() );
+			//~ }
 			// we have to replace the variable of the body with the newly created parmVar
 			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
 					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
@@ -189,7 +189,7 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	// build the expression body
 	core::LambdaExprPtr retExpr;
 	if(useCapture)
-		retExpr = builder.lambdaExpr( funcTy, capture, core::LambdaExpr::ParamList(), bodyStmt );
+		retExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
 	else
 		retExpr = builder.lambdaExpr( funcTy, params, bodyStmt );
 
@@ -406,7 +406,8 @@ public:
 			}
 
 			assert(definition && "No definition found for function");
-			core::ExpressionPtr&& lambdaExpr = convFact.convertFunctionDecl(definition);
+			core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(convFact.convertFunctionDecl(definition));
+			assert(lambdaExpr && "Call expression resulted in a empty lambda expression");
 			convFact.currTU = oldTU;
 
 			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
@@ -928,7 +929,7 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) cons
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
+core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
 	assert(currTU);
@@ -999,8 +1000,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		}
 	}
 
-	core::ExpressionPtr retLambdaExpr;
-
 	vector<core::VariablePtr> params;
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[ &params, this ] (ParmVarDecl* currParam) {
@@ -1010,7 +1009,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 	// before resolving the body we have to set the currGlobalVar accordingly depending if
 	// this function will use the global struct or not
-	core::LambdaExpr::CaptureList captureList;
+	core::Lambda::CaptureList captureList;
 	core::VariablePtr parentGlobalVar = ctx.currGlobalVar;
 	if(isEntryPoint) {
 		ctx.currGlobalVar = ctx.globalVar;
@@ -1018,7 +1017,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		assert(parentGlobalVar && "Global data structure not forwarded until current function.");
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStructType) );
-		captureList.push_back( builder.declarationStmt(var, parentGlobalVar) );
+		// captureList.push_back( builder.declarationStmt(var, parentGlobalVar) );
+		captureList.push_back( var );
 		ctx.currGlobalVar = var;
 	}
 
@@ -1074,23 +1074,24 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		body = builder.compoundStmt(stmts);
 	}
 
+	core::TypePtr&& funcType = convertType( GET_TYPE_PTR(funcDecl) );
 	// reset old global var
 	ctx.currGlobalVar = parentGlobalVar;
 
-	retLambdaExpr = builder.lambdaExpr( convertType( GET_TYPE_PTR(funcDecl) ), captureList, params, body);
-
 	if( components.empty() ) {
+		core::ExpressionPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
 		return retLambdaExpr;
 	}
 
+	core::LambdaPtr&& retLambdaNode = builder.lambda( captureList, params, body );
 	// this is a recurive function call
 	if(ctx.isRecSubFunc) {
 		// if we are visiting a nested recursive type it means someone else will take care
 		// of building the rectype node, we just return an intermediate type
-		return retLambdaExpr;
+		return retLambdaNode;
 	}
 
 	// we have to create a recursive type
@@ -1098,8 +1099,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	assert(tit != ctx.recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
 	core::VariablePtr recVarRef = tit->second;
 
-	core::RecLambdaDefinition::RecFunDefs definitions;
-	definitions.insert( std::make_pair(recVarRef, core::dynamic_pointer_cast<const core::LambdaExpr>(retLambdaExpr)) );
+	core::LambdaDefinition::Definitions definitions;
+	definitions.insert( std::make_pair(recVarRef, retLambdaNode) );
 
 	// We start building the recursive type. In order to avoid loop the visitor
 	// we have to change its behaviour and let him returns temporarely types
@@ -1119,7 +1120,9 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 			// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 			// flag is true
 			this->ctx.recVarExprMap.erase(fd);
-			definitions.insert( std::make_pair(this->ctx.currVar, core::dynamic_pointer_cast<const core::LambdaExpr>(this->convertFunctionDecl(fd)) ) );
+			core::LambdaPtr&& lambda = core::dynamic_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
+			assert(lambda && "Resolution of sub recursive lambda yield a wrong result");
+			definitions.insert( std::make_pair(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
 			this->ctx.recVarExprMap.insert( std::make_pair(fd, this->ctx.currVar) );
@@ -1131,8 +1134,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
 	// ctx->recVarExprMap.clear();
 
-	core::RecLambdaDefinitionPtr&& definition = builder.recLambdaDefinition(definitions);
-	retLambdaExpr = builder.recLambdaExpr(recVarRef, definition);
+	core::LambdaDefinitionPtr&& definition = builder.lambdaDefinition(definitions);
+	core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr(recVarRef, definition);
 
 	// Adding the lambda function to the list of converted functions
 	ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
@@ -1142,17 +1145,16 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		[ this, &definition ] (std::set<const FunctionDecl*>::value_type fd) {
 			auto fit = this->ctx.recVarExprMap.find(fd);
 			assert(fit != this->ctx.recVarExprMap.end());
-			core::ExpressionPtr&& func = builder.recLambdaExpr(fit->second, definition);
+			core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
 			ctx.lambdaExprCache.insert( std::make_pair(fd, func) );
 
 			this->attachFuncAnnotations(func, fd);
 		}
 	);
-	this->attachFuncAnnotations(retLambdaExpr, funcDecl);
+	attachFuncAnnotations(retLambdaExpr, funcDecl);
 	return retLambdaExpr;
 }
 
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
-

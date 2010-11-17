@@ -113,9 +113,10 @@ struct InsiemeSema::InsiemeSemaImpl {
 	InsiemeSemaImpl(PragmaList& pragma_list) :	pragma_list(pragma_list) {	}
 };
 
-InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer, bool CompleteTranslationUnit,
-						 clang::CodeCompleteConsumer* CompletionConsumer) :
-	clang::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)), isInsideFunctionDef(false) { }
+InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer,
+						 bool CompleteTranslationUnit, clang::CodeCompleteConsumer* CompletionConsumer) :
+	clang::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer), pimpl(new InsiemeSemaImpl(pragma_list)),
+				isInsideFunctionDef(false) { }
 	//TODO: Visual Studios 2010 fix - please recheck (clang::Sema::Sema -> clang::Sema and include header)
 
 
@@ -198,7 +199,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 					Stmt** stmts = new Stmt*[CS->size() + 1];
 
 					CompoundStmt* newCS =
-							new (Context) CompoundStmt(Context, stmts, CS->size() + 1, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
+							new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
 
 					std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
 					std::for_each(CS->body_begin(), CS->body_end(), [] (Stmt*& curr) { curr->Retain(); });
