@@ -64,11 +64,11 @@ class ASTBuilder {
 	 */
 	NodeManager& manager;
 
-	lang::BasicGenerator typeGen;
+	const lang::BasicGenerator& typeGen;
 
 public:
-	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager), typeGen(manager) { }
-	ASTBuilder(NodeManager& manager) : manager(manager), typeGen(manager) { }
+	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager), typeGen(manager.basic) { }
+	ASTBuilder(NodeManager& manager) : manager(manager), typeGen(manager.basic) { }
 
 
 	typedef std::pair<Identifier, TypePtr> Entry;

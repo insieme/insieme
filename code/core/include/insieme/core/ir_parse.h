@@ -38,6 +38,8 @@
 
 #include <exception>
 
+#define BOOST_SPIRIT_DEBUG
+
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 
