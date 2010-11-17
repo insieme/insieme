@@ -138,7 +138,6 @@ IRParser::IRParser(NodeManager& nodeMan) {
 
 	typeRule = 
 		functionType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
-		| (qi::lit("(|") >> typeRule >> qi::lit("|)"))				[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| arrayType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| vectorType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| refType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
@@ -147,7 +146,8 @@ IRParser::IRParser(NodeManager& nodeMan) {
 		| typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| structType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| unionType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
-		| genericType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
+		| genericType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+		| (qi::lit("(|") >> typeRule >> qi::lit("|)"))				[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
 
 	//BOOST_SPIRIT_DEBUG_NODE(typeRule);
 	//BOOST_SPIRIT_DEBUG_NODE(typeDefinition);
