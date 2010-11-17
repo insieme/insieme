@@ -390,7 +390,12 @@ public:
 					// we are resolving a parent recursive type, so when one of the recursive functions in the
 					// connected components are called, the introduced mu variable has to be used instead.
 					convFact.currTU = oldTU;
-					return builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
+					core::ExpressionPtr callee;
+					if(!initializations.empty())
+						callee = builder.captureInitExpr(fit->second, initializations);
+					else
+						callee = fit->second;
+					return builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 				}
 			}
 
@@ -398,7 +403,12 @@ public:
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if(fit != ctx.lambdaExprCache.end()) {
 					convFact.currTU = oldTU;
-					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), fit->second, packedArgs);
+					core::ExpressionPtr callee;
+					if(!initializations.empty())
+						callee = builder.captureInitExpr(fit->second, initializations);
+					else
+						callee = fit->second;
+					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 					// handle eventual pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
 					return irNode;
@@ -409,6 +419,10 @@ public:
 			core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(convFact.convertFunctionDecl(definition));
 			assert(lambdaExpr && "Call expression resulted in a empty lambda expression");
 			convFact.currTU = oldTU;
+
+			// initialize the capture list
+			if(!initializations.empty())
+				lambdaExpr = builder.captureInitExpr(lambdaExpr, initializations);
 
 			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
@@ -1016,7 +1030,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// before resolving the body we have to set the currGlobalVar accordingly depending if
 	// this function will use the global struct or not
 	core::Lambda::CaptureList captureList;
-	// core::VariablePtr parentGlobalVar = ctx.currGlobalVar;
+	core::VariablePtr parentGlobalVar = ctx.currGlobalVar;
 	if(isEntryPoint) {
 		ctx.currGlobalVar = ctx.globalVar;
 	} else if(ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {

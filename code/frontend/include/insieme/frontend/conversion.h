@@ -172,9 +172,10 @@ class ConversionFactory : public boost::noncopyable {
 	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
 	std::auto_ptr<ClangExprConverter> exprConv; // PIMPL pattern
 
-	core::NodeManager& 		mgr;
-	const core::ASTBuilder  builder;
-    Program& 				program;
+	core::NodeManager& 			mgr;
+	const core::ASTBuilder  	builder;
+	core::lang::BasicGenerator 	typeGen;
+    Program& 					program;
 
     /**
      * Maps of statements to pragmas.

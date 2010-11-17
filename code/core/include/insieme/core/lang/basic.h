@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <memory>
+
 namespace insieme {
 namespace core {
 
@@ -51,15 +53,13 @@ typedef AnnotatedPtr<const Expression> ExpressionPtr;
 
 namespace lang {
 
-struct BasicGeneratorImpl;
-
 class BasicGenerator {
 	mutable NodeManager& nm;
-	mutable BasicGeneratorImpl* pimpl;
+	struct BasicGeneratorImpl;
+	mutable std::auto_ptr<BasicGeneratorImpl> pimpl;
 
 public:
 	BasicGenerator(NodeManager& nm);
-	~BasicGenerator();
 
 	#define TYPE(_id, _spec) \
 	TypePtr get##_id() const; \
