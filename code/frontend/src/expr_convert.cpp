@@ -156,25 +156,20 @@ namespace conversion {
 
 // creates a function call from a list of expressions,
 // usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
-core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, core::TypePtr retTy, bool useCapture) const {
+core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, core::TypePtr retTy) const {
 
 	core::CompoundStmtPtr&& bodyStmt = builder.compoundStmt( body );
 	// keeps the list variables used in the body
 	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
 
-	core::Lambda::ParamList params;
-	core::TupleType::ElementTypeList paramTypes;
 	core::Lambda::CaptureList capture;
+	core::CaptureInitExpr::Initializations initializations;
 	std::for_each(args.begin(), args.end(),
-		[ &capture, &params, &paramTypes, &builder, &bodyStmt, useCapture] (const core::ExpressionPtr& curr) {
+		[ &capture, &builder, &bodyStmt, &initializations ] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
-			//~ if(useCapture)
-				//~ capture.push_back( builder.declarationStmt(parmVar, bodyVar) );
-			//~ else {
-				//~ params.push_back( parmVar );
-				//~ paramTypes.push_back( parmVar->getType() );
-			//~ }
+			capture.push_back( parmVar );
+			initializations.insert( std::make_pair(parmVar, bodyVar) );
 			// we have to replace the variable of the body with the newly created parmVar
 			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
 					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
@@ -184,18 +179,13 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	);
 
 	// build the type of the function
-	core::FunctionTypePtr&& funcTy = builder.functionType( builder.tupleType( useCapture ?  core::TupleType::ElementTypeList() : paramTypes ), retTy);
+	core::FunctionTypePtr&& funcTy = builder.functionType( builder.tupleType( core::TupleType::ElementTypeList() ), retTy);
 
 	// build the expression body
-	core::LambdaExprPtr retExpr;
-	if(useCapture)
-		retExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
-	else
-		retExpr = builder.lambdaExpr( funcTy, params, bodyStmt );
+	core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
+	core::CaptureInitExprPtr&& retExpr = builder.captureInitExpr(lambdaExpr, initializations);
 
-	if(useCapture)
-		return builder.callExpr( retTy, retExpr, ExpressionList() );
-	return builder.callExpr( retTy, retExpr, ExpressionList(args.begin(), args.end()) );
+	return builder.callExpr( retTy, retExpr, ExpressionList() );
 }
 
 //#############################################################################
@@ -1079,6 +1069,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.currGlobalVar = parentGlobalVar;
 
 	if( components.empty() ) {
+		DLOG(INFO) << "RETURNING FUNC";
 		core::ExpressionPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
 		// Adding the lambda function to the list of converted functions
