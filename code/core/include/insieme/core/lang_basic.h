@@ -36,6 +36,8 @@
 
 #pragma once
 
+#pragma warning "lang_basic.h is deprecated. Use lang/basic.h instead (via NodeManager::basic)"
+
 #include "insieme/core/ast_node.h"
 #include "insieme/core/types.h"
 #include "insieme/core/expressions.h"
