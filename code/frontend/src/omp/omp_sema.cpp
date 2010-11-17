@@ -94,16 +94,17 @@ void SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel& p
 	LambdaDeltaVisitor ldv;
 	core::visitAllInterruptable(StatementAddress(stmtNode), ldv);
 	
-	LambdaExpr::CaptureList captures;
+	Lambda::CaptureList captures;
 	um::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(ldv.undeclared, [&](VariablePtr p){
-		auto declStmt = build.declarationStmt(p->getType(), p);
-		captures.push_back(declStmt);
-		replacements[p] = declStmt->getVariable();
+		//auto declStmt = build.declarationStmt(p->getType(), p);
+		auto var = build.variable(p->getType());
+		captures.push_back(var);
+		replacements[p] = var;
 	});
 	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements));
 
-	auto parLambda = build.lambdaExpr(newStmt, captures);
+	auto parLambda = build.lambdaExpr(newStmt, captures, Lambda::ParamList());
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(cl::OP_PARALLEL, build.uintVal(8), build.uintVal(8), jobExp);
 	auto mergeCall = build.callExpr(cl::OP_MERGE, parallelCall);

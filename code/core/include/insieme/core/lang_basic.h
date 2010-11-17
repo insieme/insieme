@@ -36,7 +36,11 @@
 
 #pragma once
 
+#ifdef WIN32 
 #pragma warning "lang_basic.h is deprecated. Use lang/basic.h instead (via NodeManager::basic)"
+#else
+#warning "lang_basic.h is deprecated. Use lang/basic.h instead (via NodeManager::basic)"
+#endif
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/types.h"
