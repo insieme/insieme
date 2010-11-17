@@ -62,7 +62,7 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 	}
 
 	// test whether recursive function name is attached
-	if (RecLambdaExprPtr recLambda = dynamic_pointer_cast<const RecLambdaExpr>(ptr)) {
+	if (LambdaExprPtr recLambda = dynamic_pointer_cast<const LambdaExpr>(ptr)) {
 		if(auto cnameAnn = recLambda->getVariable()->getAnnotation(c_info::CNameAnnotation::KEY)) {
 			// => take original c name
 			string name = cnameAnn->getName();
@@ -86,7 +86,6 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 	case NC_Expression:
 		switch(ptr->getNodeType()) {
 		case NT_LambdaExpr: name << "fun"; break;
-		case NT_RecLambdaExpr: name << "recFun"; break;
 		default: name << "expr"; break;
 		} ; break;
 	case NC_Statement:

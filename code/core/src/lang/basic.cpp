@@ -58,6 +58,10 @@ struct BasicGeneratorImpl {
 	#undef TYPE
 	#undef LITERAL
 
+	// ----- extra material ---
+
+	StatementPtr ptrNoOp;
+
 	BasicGeneratorImpl(NodeManager& nm) : parser(nm), build(nm) { }
 };
 
@@ -71,20 +75,33 @@ BasicGenerator::~BasicGenerator() {
 TypePtr BasicGenerator::get##_id() const { \
 	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->parser.parseType(_spec); \
 	return pimpl->ptr##_id; }; \
-bool BasicGenerator::is##_id(const TypePtr& p) const { \
+bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
 #define LITERAL(_id, _name, _spec) \
 LiteralPtr BasicGenerator::get##_id() const { \
 	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(_name, pimpl->parser.parseType(_spec)); \
 	return pimpl->ptr##_id; }; \
-bool BasicGenerator::is##_id(const ExpressionPtr& p) const { \
+bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
 #include "insieme/core/lang/lang.def"
 
 #undef TYPE
 #undef LITERAL
+
+// ----- extra material ---
+
+StatementPtr BasicGenerator::getNoOp() const {
+	if (!pimpl->ptrNoOp) {
+		pimpl->ptrNoOp = pimpl->build.compoundStmt();
+	}
+	return pimpl->ptrNoOp;
+}
+
+bool BasicGenerator::isNoOp(const NodePtr& p) const {
+	return *p == *getNoOp();
+}
 
 } // namespace lang
 } // namespace core

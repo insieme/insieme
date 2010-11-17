@@ -58,7 +58,7 @@ class FunctionManager {
 	ConversionContext& cc;
 
 public:
-	typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> FunctionMap;
+	typedef std::unordered_map<LambdaExprPtr, CodePtr, hash_target<LambdaExprPtr>, equal_target<LambdaExprPtr>> FunctionMap;
 
 private:
 	FunctionMap functionMap;
@@ -66,8 +66,8 @@ private:
 public:
 	FunctionManager(ConversionContext& cc) : cc(cc) { }
 
-	CodePtr getFunction(const core::LambdaExprPtr& lambda);
-	CodePtr getFunction(const core::RecLambdaExprPtr& lambda, const CodePtr& surrounding);
+	CodePtr getFunction(const core::LambdaPtr& lambda);
+	CodePtr getFunction(const core::LambdaExprPtr& lambda, const CodePtr& surrounding);
 	CodePtr getFunctionLiteral(const LiteralPtr& literal);
 	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
 };

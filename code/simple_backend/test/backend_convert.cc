@@ -44,7 +44,6 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -65,12 +64,12 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	auto printfDefinition = build.literal("printf", printfType);
 
 	TupleTypePtr emptyTupleType = build.tupleType();
-	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+	FunctionTypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
 	ExpressionPtr stringLiteral = build.literal("Hello World!", TYPE_STRING_PTR);
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
 	auto mainBody = build.compoundStmt(invocation);
-	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, LambdaExpr::ParamList(), mainBody);
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
 
 	mainLambda.addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
 

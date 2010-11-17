@@ -60,6 +60,7 @@ LITERAL(True,  "true",  "bool")
 LITERAL(False, "false", "bool")
 
 TYPE(VarList, "var_list")
+TYPE(String, "string")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------
 

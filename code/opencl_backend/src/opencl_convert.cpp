@@ -63,7 +63,7 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const Identifi
 	// write the function header
 	cs << cc.getTypeMan().getTypeName(funType->getReturnType()) << " " << ident.getName() << "(";
 	// handle arguments
-	cs << join(", ", lambda->getParams(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
+	cs << join(", ", lambda->getParameterList(), [this](std::ostream& os, const VariablePtr& param) -> std::ostream& {
 		return (os << this->cc.getTypeMan().getTypeName(param->getType()) << " " << cc.getNameGen().getVarName(param));
 	});
 	cs << ")";
