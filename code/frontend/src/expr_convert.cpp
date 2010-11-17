@@ -1064,7 +1064,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		body = builder.compoundStmt(stmts);
 	}
 
-	core::TypePtr&& funcType = convertType( GET_TYPE_PTR(funcDecl) );
+	core::TypePtr convertedType = convertType( GET_TYPE_PTR(funcDecl) );
+	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
+	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+
 	// reset old global var
 	ctx.currGlobalVar = parentGlobalVar;
 
@@ -1077,7 +1080,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return retLambdaExpr;
 	}
 
-	core::LambdaPtr&& retLambdaNode = builder.lambda( captureList, params, body );
+	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
 	// this is a recurive function call
 	if(ctx.isRecSubFunc) {
 		// if we are visiting a nested recursive type it means someone else will take care

@@ -190,10 +190,8 @@ template<typename Lambda>
 class LambdaNodeMapper: public NodeMapping {
 	Lambda lambda;
 public:
-	LambdaNodeMapper(Lambda lambda) :
-		lambda(lambda) {
-	}
-	;
+	LambdaNodeMapper(Lambda lambda)
+		: lambda(lambda) { };
 
 	const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
 		return lambda(index, ptr);

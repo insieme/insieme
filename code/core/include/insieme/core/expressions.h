@@ -186,11 +186,12 @@ public:
 
 private:
 
+	const FunctionTypePtr type;
 	const CaptureList captureList;
 	const ParamList paramList;
 	const StatementPtr body;
 
-	Lambda(const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body);
+	Lambda(const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body);
 	virtual Lambda* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -212,12 +213,13 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const FunctionTypePtr& getType() const { return type; }
 	const CaptureList& getCaptureList() const { return captureList; }
 	const ParamList& getParameterList() const { return paramList; }
 	const StatementPtr& getBody() const { return body; }
 
-	static LambdaPtr get(NodeManager& manager, const ParamList& params, const StatementPtr& body);
-	static LambdaPtr get(NodeManager& manager, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
+	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body);
+	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
 
 };
 
@@ -380,7 +382,7 @@ public:
 	 * @param params the parameters accepted by the resulting lambda
 	 * @param body the body of the resulting function
 	 */
-	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
+	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
 
 	/**
 	 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
@@ -391,7 +393,7 @@ public:
 	 * @param params the parameters accepted by the resulting lambda
 	 * @param body the body of the resulting function
 	 */
-	static LambdaExprPtr get(NodeManager& manager, const TypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body);
+	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body);
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.
@@ -441,7 +443,7 @@ private:
 	/**
 	 * The lambda which's capture should be initialized.
 	 */
-	const LambdaExprPtr lambda;
+	const ExpressionPtr lambda;
 
 	/**
 	 * The actual initialization of the captured variables.
@@ -456,7 +458,7 @@ private:
 	 * @param initializations the actual initialization expressions.
 	 * @param definition the recursive definitions to be based on.
 	 */
-	CaptureInitExpr(const LambdaExprPtr& lambda, const Initializations& initializations);
+	CaptureInitExpr(const ExpressionPtr& lambda, const Initializations& initializations);
 
 	/**
 	 * Creates a clone of this node.
@@ -487,7 +489,7 @@ public:
 	 * @param lambda the lambda for which the capture list should be initialized
 	 * @þaram initializations the actual parameter initialization
 	 */
-	static CaptureInitExprPtr get(NodeManager& manager, const LambdaExprPtr& lambda, const CaptureInitExpr::Initializations& initializations);
+	static CaptureInitExprPtr get(NodeManager& manager, const ExpressionPtr& lambda, const CaptureInitExpr::Initializations& initializations);
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.
@@ -500,7 +502,7 @@ public:
 	/**
 	 * The lambda which's capture should be initialized.
 	 */
-	const LambdaExprPtr& getLambda() const { return lambda; }
+	const ExpressionPtr& getLambda() const { return lambda; }
 
 	/**
 	 * The actual initialization of the captured variables.

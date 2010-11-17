@@ -67,7 +67,7 @@ TEST(Program, HelloWorld) {
 	auto printfDefinition = build.literal(printfType, "printf");
 
 	TupleTypePtr emptyTupleType = build.tupleType();
-	TypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+	FunctionTypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
 	ExpressionPtr intLiteral = build.literal(TYPE_INT_GEN_PTR, "4");
 	auto invocation = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral));
