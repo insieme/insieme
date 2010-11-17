@@ -152,15 +152,16 @@ TEST(ExpressionsTest, Lambda) {
 	StatementPtr body = Literal::get(manager, type, "a");
 	VariablePtr varA = Variable::get(manager, type, 1);
 	VariablePtr varB = Variable::get(manager, type, 2);
-	LambdaPtr empty = Lambda::get(manager, Lambda::CaptureList(), Lambda::ParamList(), body);
-	LambdaPtr more = Lambda::get(manager, toVector(varA), toVector(varB), body);
+	FunctionTypePtr funType = FunctionType::get(manager, TupleType::get(manager), type);
+	LambdaPtr empty = Lambda::get(manager, funType, Lambda::CaptureList(), Lambda::ParamList(), body);
+	LambdaPtr more = Lambda::get(manager, funType, toVector(varA), toVector(varB), body);
 
 	EXPECT_EQ ("fun[]() a", toString(*empty));
 	EXPECT_EQ ("fun[A v1](A v2) a", toString(*more));
 
 	// conduct basic node checks
-	basicNodeTests(empty, toVector<NodePtr>(body));
-	basicNodeTests(more, toVector<NodePtr>(varA, varB, body));
+	basicNodeTests(empty, toVector<NodePtr>(funType, body));
+	basicNodeTests(more, toVector<NodePtr>(funType, varA, varB, body));
 }
 
 TEST(ExpressionsTest, LambdaExpr) {
@@ -188,7 +189,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, oddVar, toVector<ExpressionPtr>(x))))
 			)
 	);
-	LambdaPtr evenLambda = builder.lambda(Lambda::CaptureList(), param, evenBody);
+	LambdaPtr evenLambda = builder.lambda(functionType, Lambda::CaptureList(), param, evenBody);
 
 	// build odd body ...
 	StatementPtr oddBody = builder.ifStmt(condition,
@@ -198,7 +199,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evenVar, toVector<ExpressionPtr>(x))))
 				)
 	);
-	LambdaPtr oddLambda = builder.lambda(Lambda::CaptureList(), param, oddBody);
+	LambdaPtr oddLambda = builder.lambda(functionType, Lambda::CaptureList(), param, oddBody);
 
 	// finish definition
 	LambdaDefinition::Definitions definitions;
