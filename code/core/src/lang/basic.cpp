@@ -65,8 +65,12 @@ struct BasicGenerator::BasicGeneratorImpl {
 	BasicGeneratorImpl(NodeManager& nm) : parser(nm), build(nm) { }
 };
 
-BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) {
+BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) { }
+
+BasicGenerator::~BasicGenerator() {
+	delete pimpl;
 }
+
 #define TYPE(_id, _spec) \
 TypePtr BasicGenerator::get##_id() const { \
 	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->parser.parseType(_spec); \
