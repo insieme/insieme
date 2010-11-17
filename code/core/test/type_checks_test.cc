@@ -38,6 +38,7 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/checks/typechecks.h"
+#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace core {
@@ -294,4 +295,3 @@ TEST(CastExpr, Basic) {
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
-
