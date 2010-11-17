@@ -1141,7 +1141,7 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-TEST(XmlTest, JobExprTest) {
+/*TEST(XmlTest, JobExprTest) {
     NodeManager manager;
 
 	LambdaExpr::ParamList guardArgs;
@@ -1205,9 +1205,9 @@ TEST(XmlTest, JobExprTest) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}
+}*/
 
-TEST(XmlTest, LambdaExprTest) {
+/*TEST(XmlTest, LambdaExprTest) {
 	NodeManager manager;
 	
 	LambdaExpr::CaptureList capList;
@@ -1259,7 +1259,7 @@ TEST(XmlTest, LambdaExprTest) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}
+}*/
 
 TEST(XmlTest, ProgramTest) {
 	NodeManager manager;
@@ -1299,7 +1299,7 @@ TEST(XmlTest, ProgramTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-TEST(XmlTest, RecLambdaExprTest) {
+/*TEST(XmlTest, RecLambdaExprTest) {
 	ASTBuilder builder;
 
 	TupleTypePtr argType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_8_PTR));
@@ -1360,7 +1360,7 @@ TEST(XmlTest, RecLambdaExprTest) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}
+}*/
 
 TEST(XmlTest, MemberAccessExprTest) {
 	NodeManager manager;

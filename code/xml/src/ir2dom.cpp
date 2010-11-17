@@ -512,7 +512,7 @@ public:
 		visitAnnotations(cur->getAnnotations(), declarationStmt);
 	}
 
-	void visitJobExpr(const JobExprPtr& cur) {
+	/*void visitJobExpr(const JobExprPtr& cur) {
 		XmlElement jobExpr("jobExpr", doc);
 		rootElem << (jobExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -542,9 +542,9 @@ public:
 		jobExpr << defaultStatement;
 
 		visitAnnotations(cur->getAnnotations(), jobExpr);
-	}
+	}*/
 
-	void visitLambdaExpr(const LambdaExprPtr& cur) {
+	/*void visitLambdaExpr(const LambdaExprPtr& cur) {
 		XmlElement lambdaExpr("lambdaExpr", doc);
 		rootElem << (lambdaExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -571,7 +571,7 @@ public:
 		lambdaExpr << body;
 
 		visitAnnotations(cur->getAnnotations(), lambdaExpr);
-	}
+	}*/
 
 	void visitProgram(const ProgramPtr& cur) {
 		XmlElement program("program", doc);
@@ -589,7 +589,7 @@ public:
 		visitAnnotations(cur->getAnnotations(), program);
 	}
 
-	void visitRecLambdaExpr(const RecLambdaExprPtr& cur) {
+	/*void visitRecLambdaExpr(const RecLambdaExprPtr& cur) {
 		XmlElement recLambdaExpr("recLambdaExpr", doc);
 		rootElem << (recLambdaExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -606,9 +606,9 @@ public:
 		recLambdaExpr << definition;
 
 		visitAnnotations(cur->getAnnotations(), recLambdaExpr);
-	}
+	}*/
 
-	void visitRecLambdaDefinition(const RecLambdaDefinitionPtr& cur) {
+	/*void visitRecLambdaDefinition(const RecLambdaDefinitionPtr& cur) {
 		XmlElement recLambdaDefinition("recLambdaDefinition", doc);
 		rootElem << (recLambdaDefinition << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -626,7 +626,7 @@ public:
 		);
 
 		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
-	}
+	}*/
 	
 	void visitMemberAccessExpr(const MemberAccessExprPtr& cur) {
 		XmlElement memberAccessExpr("memberAccessExpr", doc);

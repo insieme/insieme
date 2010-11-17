@@ -68,7 +68,7 @@ class NodeBuilder {
 	NodeManager& mgr;
 
 	typedef std::pair<const XmlElement*, NodePtr> MapElement;
-	typedef map<unsigned long, MapElement> ElemMapType;
+	typedef std::map<unsigned long, MapElement> ElemMapType;
 
 	ElemMapType elemMap;
 
@@ -361,7 +361,7 @@ public:
 		return createIrNode<Variable>(elem, typeT, numeric_cast<int>(elem.getAttr("identifier")));
 	}
 
-	NodePtr handle_jobExpr(const XmlElement& elem) {
+	/*NodePtr handle_jobExpr(const XmlElement& elem) {
 		XmlElementList&& decls = elem.getFirstChildByName("declarations")->getChildrenByName("declaration");
 		JobExpr::LocalDecls declVec;
 		for(auto iter = decls.begin(), end = decls.end(); iter != end; ++iter) {
@@ -370,15 +370,15 @@ public:
 		XmlElementList&& stmts = elem.getFirstChildByName("guardedStatements")->getChildrenByName("guardedStatement");
 		JobExpr::GuardedStmts stmtVec;
 		for(auto iter = stmts.begin(), end = stmts.end(); iter != end; ++iter) {
-			XmlElementList&& types = iter->getChildrenByName("lambdaExprPtr"); // Attention !!? What?
+			XmlElementList&& types = iter->getChildrenByName("lambdaExprPtr");
 			stmtVec.push_back( std::make_pair(createNode<LambdaExpr>(types[0]), createNode<LambdaExpr>(types[1])) );
 		}
 		LambdaExprPtr&& def = createNode<LambdaExpr>(elem, "defaultStatement", "lambdaExprPtr");
 
 		return createIrNode<JobExpr>(elem, def, stmtVec, declVec);
-	}
+	}*/
 
-	NodePtr handle_lambdaExpr(const XmlElement& elem) {
+	/*NodePtr handle_lambdaExpr(const XmlElement& elem) {
 		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
 		XmlElementList&& decls = elem.getFirstChildByName("captureList")->getChildrenByName("declarationStmtPtr");
 
@@ -394,9 +394,9 @@ public:
 		}
 		StatementPtr&& body = createNode<Statement>(elem, "body", "statementPtr");
 		return createIrNode<LambdaExpr>(elem, typeT, captList, parList, body);
-	}
+	}*/
 
-	NodePtr handle_recLambdaDefinition(const XmlElement& elem) {
+	/*NodePtr handle_recLambdaDefinition(const XmlElement& elem) {
 		XmlElementList&& funs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
 		RecLambdaDefinition::RecFunDefs funVec;
 		for(auto iter = funs.begin(), end = funs.end(); iter != end; ++iter) {
@@ -405,13 +405,13 @@ public:
 			funVec.insert( std::make_pair(var, lExpr) );
 		}
 		return createIrNode<RecLambdaDefinition>(elem, funVec);
-	}
+	}*/
 
-	NodePtr handle_recLambdaExpr(const XmlElement& elem) {
+	/*NodePtr handle_recLambdaExpr(const XmlElement& elem) {
 		VariablePtr&& var = createNode<Variable>(elem, "variable", "variablePtr");
 		RecLambdaDefinitionPtr&& def = createNode<RecLambdaDefinition>(elem, "definition", "recLambdaDefinitionPtr");
 		return createIrNode<RecLambdaExpr>(elem, var, def);
-	}
+	}*/
 	
 	NodePtr handle_memberAccessExpr(const XmlElement& elem) {
 		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
@@ -466,7 +466,7 @@ public:
 		DISPATCH(forStmt)			DISPATCH(ifStmt)			DISPATCH(switchStmt)		DISPATCH(whileStmt)				DISPATCH(breakStmt)
 		DISPATCH(continueStmt)		DISPATCH(compoundStmt)		DISPATCH(declarationStmt)	DISPATCH(structExpr)			DISPATCH(unionExpr)
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
-		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(recLambdaDefinition)	DISPATCH(recLambdaExpr)
+		/*DISPATCH(jobExpr)			DISPATCH(lambdaExpr)*/		DISPATCH(program)			/*DISPATCH(recLambdaDefinition)	DISPATCH(recLambdaExpr)*/
 		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(tupleProjectionExpr)
 		assert(false && "XML node not handled!");
 	}
