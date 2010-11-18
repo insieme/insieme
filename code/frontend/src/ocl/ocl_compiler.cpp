@@ -604,7 +604,7 @@ public:
                 args.push_back(kd.globalRange->getType());
                 args.push_back(kd.localRange->getType());
 
-                newFuncType = builder.functionType( core::TypeList(), args, retTy); // FIXME empty capture list
+                newFuncType = builder.functionType(args, retTy);
             } else {
                 assert(funcType && "Function has unexpected type");
             }
@@ -626,7 +626,7 @@ public:
                 core::Lambda::ParamList funParams;
 
 
-                core::FunctionTypePtr parFuncType= builder.functionType(core::TypeList(), parArgs, core::lang::TYPE_UINT_4_PTR);
+                core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().basic.getUInt4());
 
 // Top down generation of constructs
 

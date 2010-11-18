@@ -214,7 +214,7 @@ TEST(XmlTest, FunctionTypeTest) {
 	type2.addAnnotation(dummy_re);
 	type2->addAnnotation(dummy_rn);
 	
-	FunctionTypePtr funType1 = FunctionType::get(manager, TupleType::get(manager, toVector<TypePtr>(type1, type3)), type2);
+	FunctionTypePtr funType1 = FunctionType::get(manager, TypeList(), toVector<TypePtr>(type1, type3), type2);
 	
 	funType1.addAnnotation(dummy_fe);
 	funType1->addAnnotation(dummy_fn);

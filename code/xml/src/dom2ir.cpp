@@ -172,10 +172,10 @@ public:
 	}
 
 	NodePtr handle_functionType(const XmlElement& elem) {
-		TupleTypePtr&& captureType = createNode<TupleType>(elem, "captureType","tupleTypePtr");
-		TupleTypePtr&& argType = createNode<TupleType>(elem, "argumentType","tupleTypePtr");
-		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
-		return createIrNode<FunctionType>(elem, captureType, argType, retType);
+//		TupleTypePtr&& captureType = createNode<TupleType>(elem, "captureType","tupleTypePtr");
+//		TupleTypePtr&& argType = createNode<TupleType>(elem, "argumentType","tupleTypePtr");
+//		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
+//		return createIrNode<FunctionType>(elem, captureType, argType, retType);
 	}
 
 private:

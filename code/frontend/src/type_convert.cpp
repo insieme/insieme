@@ -303,7 +303,7 @@ public:
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
 		assert(retTy && "Function has no return type!");
 
-		retTy = convFact.builder.functionType( core::TypeList(), core::TypeList(), retTy);
+		retTy = convFact.builder.functionType( core::TypeList(), retTy);
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

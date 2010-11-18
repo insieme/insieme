@@ -196,12 +196,9 @@ CodePtr OldFunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
 	CodePtr cptr = std::make_shared<CodeFragment>("fundef_codefragment_" + name);
 	CodeStream& cs = cptr->getCodeStream();
 	cs << cc.getTypeMan().getTypeName(cptr, type->getReturnType()) << " " << name << "(";
-	auto argType = type->getArgumentType();
-	if(auto tupleArgType = dynamic_pointer_cast<const TupleType>(argType)) {
-		cs << join(", ", tupleArgType->getElementTypes(), [&, this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
-			return (o << this->cc.getTypeMan().getTypeName(cptr, cur));
-		});
-	} // TODO handle other argument types
+	cs << join(", ", type->getArgumentTypes(), [&, this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
+		return (o << this->cc.getTypeMan().getTypeName(cptr, cur));
+	});
 	cs << ");\n";
 	// insert into function map and return
 //	functionMap.insert(std::make_pair(literal, cptr));
@@ -239,7 +236,7 @@ CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
 	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name);
 	CodeStream& cs = protoType->getCodeStream();
 	cs << typeManager.getTypeName(protoType, type->getReturnType()) << " " << name << "(";
-	cs << join(", ", type->getArgumentType()->getElementTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
+	cs << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
 		out << typeManager.getTypeName(protoType, cur);
 	});
 	cs << ");\n";
