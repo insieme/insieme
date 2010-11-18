@@ -177,7 +177,7 @@ std::ostream& TupleExpr::printTo(std::ostream& out) const {
 
 
 TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
-	TupleType::ElementTypeList elemTypes;
+	TypeList elemTypes;
 	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](const ExpressionPtr& e) { return e->getType(); });
 	return get(manager, TupleType::get(manager, elemTypes), expressions);
 }
@@ -401,23 +401,25 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
 	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 
-    assert(*static_pointer_cast<const FunctionType>(defaultStmt->getType())->getArgumentType() == TupleType() &&
-            "Default statement is not allowed to have any arguments");
-    assert(static_pointer_cast<const FunctionType>(defaultStmt->getType())->getReturnType()->getName() == "unit" &&
-            "Return value of default statement must be void.");
+	// TODO: use ordinary type checks for this section ...
+	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
+    assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
+    assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be void.");
 
-    std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [](const JobExpr::GuardedStmt& s){
+    TypeList guardParams = toVector<TypePtr>(lang::TYPE_UINT_GEN_PTR, lang::TYPE_UINT_GEN_PTR);
+
+    std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
-        assert(*static_pointer_cast<const FunctionType>(s.first->getType())->getArgumentType() == TupleType(
-                lang::TYPE_UINT_GEN, lang::TYPE_UINT_GEN) && "Guard must have two integer arguments");
-        assert(static_pointer_cast<const FunctionType>(s.first->getType())->getReturnType()->getName() == "bool" &&
-                "Return value of guard must be bool.");
+    	FunctionTypePtr guardType = static_pointer_cast<const FunctionType>(s.first->getType());
+    	assert(guardType->getCaptureTypes().empty() && "Guard must not have any capture variables.");
+        assert(::equals(guardType->getArgumentTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
+        assert(guardType->getReturnType()->getName() == "bool" && "Return value of guard must be bool.");
 
         //Check guarded statements
-        assert(*static_pointer_cast<const FunctionType>(s.second->getType())->getArgumentType() == TupleType() &&
-                "Guarded statement is not allowed to have any arguments");
-        assert(static_pointer_cast<const FunctionType>(s.second->getType())->getReturnType()->getName() == "unit" &&
-                "Return value of guarded statement must be void.");
+        FunctionTypePtr stmtType = static_pointer_cast<const FunctionType>(s.second->getType());
+        assert(stmtType->getCaptureTypes().empty() && "Guarded statement is not allowed to have any capture variables.");
+        assert(stmtType->getArgumentTypes().empty() && "Guarded statement is not allowed to have any arguments");
+        assert(stmtType->getReturnType()->getName() == "unit" && "Return value of guarded statement must be void.");
     });
 
 }
