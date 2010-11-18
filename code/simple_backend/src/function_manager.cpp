@@ -43,19 +43,23 @@ namespace simple_backend {
 
 namespace {
 
-	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, ConversionContext& cc) {
+	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param,
+			VariableManager& varManager, TypeManager& typeManager, NameGenerator& nameGenerator) {
 
 		// register ref-based variable within the variable manager
 		if (param->getType()->getNodeType() == NT_RefType) {
 			VariableManager::VariableInfo info;
 			info.location = VariableManager::HEAP;
-			cc.getVariableManager().addInfo(param, info);
+			varManager.addInfo(param, info);
 		}
 
 		// format parameter using type manager
-		return out << cc.getTypeMan().formatParamter(context, param->getType(), cc.getNameGen().getVarName(param));
+		return out << typeManager.formatParamter(context, param->getType(), nameGenerator.getVarName(param));
 	}
 
+	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, ConversionContext& cc) {
+		return printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeMan(), cc.getNameGen());
+	}
 }
 
 
@@ -289,9 +293,54 @@ const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lam
 		return pos->second;
 	}
 
+	// get name
+	string name = nameGenerator.getName(lambda);
+	FunctionTypePtr funType = lambda->getType();
+
+	VariableManager varManager;
+
+	// create function code for lambda
+	CodePtr function = std::make_shared<CodeFragment>("Implementation of function: " + name);
+	CodeStream& cs = function->getCodeStream();
+	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
+	cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& out, const VariablePtr& param) {
+		printFunctionParamter(out, function, param, varManager, typeManager, nameGenerator);
+	});
+	cs << ") {" << CodeStream::indR << "\n";
+
+//	ConvertVisitor visitor(cc, cptr);
+//
+//	// extract capture list
+//	cs << "// --------- Captured Stuff - Begin -------------\n";
+//
+//	string name = cc.getNameGen().getName(lambda, "lambda");
+//	string structName = "struct " + name + "_closure";
+
+//	for_each(lambda->getCaptureList(), [&](const VariablePtr& cur) {
+//		VariableManager::VariableInfo info;
+//		info.location = VariableManager::HEAP;
+//
+//		VariablePtr var = cur->getVariable();
+//		cc.getVariableManager().addInfo(var, info);
+//
+//		// standard handling
+//		cs << cc.getTypeMan().getTypeName(cptr, var->getType(), false);
+//		string name = cc.getNameGen().getVarName(var);
+//		cs << " " << name << " = ((" << structName << "*)_capture)->" << name << ";\n";
+
+//	});
+
+//	cs << "// --------- Captured Stuff -  End  -------------\n";
+
+
+//	// generate the function body
+//	visitor.visit(lambda->getBody());
+//	cs << CodeStream::indL << "\n}\n";
+//	cs << "\n";
+
 	// TODO: resolve the lambda
 	LambdaCode code;
-	code.function = std::make_shared<CodeFragment>("Dummy!");
+	code.function = function;
 
 	// register and return reference to inserted element
 	return functionDefinitions.insert(std::make_pair(lambda, code)).first->second;

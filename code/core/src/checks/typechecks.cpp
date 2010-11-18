@@ -186,7 +186,13 @@ OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	OptionalMessageList res;
 
 	// check whether it is a build-in literal
-	LiteralPtr buildIn = lang::getBuildInForValue(address->getValue());
+	const NodeManager* manager = address->getNodeManager();
+	if (!manager) {
+		return res;
+	}
+
+	// obtain literal
+	LiteralPtr buildIn = manager->basic.getLiteral(address->getValue());
 	if (!buildIn) {
 		return res;
 	}

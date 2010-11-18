@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "insieme/core/types.h"
+#include "insieme/core/expressions.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -706,6 +707,17 @@ TEST(TypeTest, RefType) {
 	// check remaining type properties
 	basicTypeTests(refTypeA, true, false, toList(toVector(elementTypeA)));
 	basicTypeTests(refTypeB, false, false, toList(toVector(elementTypeB)));
+}
+
+
+
+TEST(TypeTest, BuiltInCheck) {
+
+	// create type manager and element types
+	NodeManager manager;
+
+	EXPECT_EQ("(('a)->ref<'a>)", toString(*manager.basic.getRefVar()->getType()));
+
 }
 
 
