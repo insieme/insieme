@@ -75,7 +75,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	ConversionFactory convFactory( manager, prog );
 
 	// VOID
-	//CHECK_BUILTIN_TYPE(Void, "unit");
+	CHECK_BUILTIN_TYPE(Void, "unit");
 	// BOOL
 	CHECK_BUILTIN_TYPE(Bool, "bool");
 
@@ -84,9 +84,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Char
 	CHECK_BUILTIN_TYPE(SChar, "char");
 	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "char<2>");
+	CHECK_BUILTIN_TYPE(Char16, "char");
 	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "char<4>");
+	CHECK_BUILTIN_TYPE(Char32, "char");
 	// WChar
 	CHECK_BUILTIN_TYPE(WChar, "wchar");
 
@@ -114,7 +114,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Double
 	CHECK_BUILTIN_TYPE(Double, "real<8>");
 	// LongDouble
-	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+	// CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
 
 }
 
@@ -419,4 +419,3 @@ TEST(TypeConversion, FileTest) {
 		}
 	}
 }
-

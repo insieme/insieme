@@ -64,11 +64,9 @@ class ASTBuilder {
 	 */
 	NodeManager& manager;
 
-	const lang::BasicGenerator& typeGen;
-
 public:
-	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager), typeGen(manager.basic) { }
-	ASTBuilder(NodeManager& manager) : manager(manager), typeGen(manager.basic) { }
+	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager) { }
+	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
 
 	typedef std::pair<Identifier, TypePtr> Entry;
@@ -97,6 +95,13 @@ public:
 	 */
 	NodeManager& getNodeManager() const {
 		return manager;
+	}
+
+	/**
+	 * Obtains a reference to the basic generator within the node manager.
+	 */
+	const lang::BasicGenerator& getBasicGenerator() const {
+		return manager.basic;
 	}
 
 	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet(), bool main = false);

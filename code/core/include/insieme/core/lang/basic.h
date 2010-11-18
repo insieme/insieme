@@ -36,8 +36,6 @@
 
 #pragma once
 
-#include <memory>
-
 namespace insieme {
 namespace core {
 
@@ -60,10 +58,11 @@ namespace lang {
 class BasicGenerator {
 	mutable NodeManager& nm;
 	struct BasicGeneratorImpl;
-	mutable std::auto_ptr<BasicGeneratorImpl> pimpl;
+	mutable BasicGeneratorImpl* pimpl;
 
 public:
 	BasicGenerator(NodeManager& nm);
+	~BasicGenerator();
 
 	#define TYPE(_id, _spec) \
 	TypePtr get##_id() const; \

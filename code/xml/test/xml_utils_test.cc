@@ -1261,6 +1261,53 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }*/
 
+/*TEST(XmlTest, LambdaTest) { // NEW ONE
+	NodeManager manager;
+	
+	GenericTypePtr type1 = GenericType::get(manager, "val");
+	GenericTypePtr type2 = GenericType::get(manager, "int");
+	GenericTypePtr type3 = GenericType::get(manager, "var");
+	
+	FunctionTypePtr funType = FunctionType::get(manager, TupleType::get(manager, toVector<TypePtr>(type1, type3)), type2);
+	
+	Lambda::ParamList paramList;
+	paramList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
+	paramList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));	
+	
+	Lambda::CaptureList captureList;
+	captureList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 3));
+	captureList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 4));
+
+	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
+	body.addAnnotation(dummy_be);
+	body->addAnnotation(dummy_bn);
+	
+	LambdaPtr expr = Lambda::get(manager, funType,captureList, paramList, body);
+	DummyAnnotationPtr dummy_le(new DummyAnnotation("lambda e"));
+	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lambda n"));
+	expr.addAnnotation(dummy_le);
+	expr->addAnnotation(dummy_ln);
+
+	NodePtr root = expr;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}*/
+
 TEST(XmlTest, ProgramTest) {
 	NodeManager manager;
 	
@@ -1433,4 +1480,27 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
+
+/*TEST(XmlTest, CaptureInitExpr) {
+	NodeManager manager;
+
+	CaptureInitExpr expr = CaptureInitExpr::get(manager, lambda, inits);
+	
+	NodePtr root = expr;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}*/
 
