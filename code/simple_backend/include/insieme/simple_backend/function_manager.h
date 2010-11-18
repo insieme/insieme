@@ -54,7 +54,7 @@ class ConversionContext;
 
 /** Manages C function generation and lookup for named lambda expressions.
  ** */
-class FunctionManager {
+class OldFunctionManager {
 	ConversionContext& cc;
 
 public:
@@ -64,7 +64,7 @@ private:
 	FunctionMap functionMap;
 
 public:
-	FunctionManager(ConversionContext& cc) : cc(cc) { }
+	OldFunctionManager(ConversionContext& cc) : cc(cc) { }
 
 	CodePtr getFunction(const core::LambdaPtr& lambda);
 	CodePtr getFunction(const core::LambdaExprPtr& lambda, const CodePtr& surrounding);
@@ -73,7 +73,7 @@ public:
 };
 
 
-class NewFunctionManager {
+class FunctionManager {
 
 	/**
 	 * The name generator used for deriving fresh type names.
@@ -106,16 +106,44 @@ private:
 	 * A map linking Lambda expressions (recursive or non-recursive) to closure definitions and
 	 * functions.
 	 */
-	utils::map::PointerMap<core::LambdaExprPtr, LambdaCode> functionDefinitions;
+	utils::map::PointerMap<core::LambdaPtr, LambdaCode> functionDefinitions;
+
+	/**
+	 * A map l
+	 */
+	utils::map::PointerMap<core::LiteralPtr, CodePtr> externalFunctions;
 
 public:
 
-	NewFunctionManager(NameGenerator& nameGenerator, TypeManager& typeManager)
+	FunctionManager(NameGenerator& nameGenerator, TypeManager& typeManager)
 		: nameGenerator(nameGenerator), typeManager(typeManager) { }
 
 
-	//void createLambda(const core::LambdaExprPtr& lambda);
 
+	/**
+	 * Appends the name of the external function to the given context.
+	 *
+	 * @param context the code fragment the given external function call should be appended to.
+	 * @param external the literal representing the external function.
+	 */
+	void createCallable(const CodePtr& context, const core::LiteralPtr& external);
+
+
+	/**
+	 * Appends the code required for handling the given lambda to the given context.
+	 *
+	 * @param context the code fragment the given lambda (including the variable capturing) should be appended to.
+	 * @param lambda the lambda (including the capture initialization) to be handled
+	 */
+	void createCallable(const CodePtr& context, const core::CaptureInitExprPtr& lambda);
+
+	void createCallable(const CodePtr& context, const core::LambdaExprPtr& lambda);
+
+private:
+
+	const LambdaCode& resolve(const LambdaPtr& lambda);
+
+	CodePtr resolve(const LiteralPtr& literal);
 };
 
 

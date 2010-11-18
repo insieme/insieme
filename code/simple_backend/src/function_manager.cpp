@@ -59,7 +59,7 @@ namespace {
 }
 
 
-CodePtr FunctionManager::getFunction(const LambdaPtr& lambda) {
+CodePtr OldFunctionManager::getFunction(const LambdaPtr& lambda) {
 //	auto codeIt = functionMap.find(lambda);
 //	if(codeIt != functionMap.end()) {
 //		return codeIt->second;
@@ -120,7 +120,7 @@ CodePtr FunctionManager::getFunction(const LambdaPtr& lambda) {
 	return cptr;
 }
 
-CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const CodePtr& surrounding) {
+CodePtr OldFunctionManager::getFunction(const LambdaExprPtr& lambda, const CodePtr& surrounding) {
 
 	// check whether code has already been generated
 	auto codeIt = functionMap.find(lambda);
@@ -182,7 +182,7 @@ CodePtr FunctionManager::getFunction(const LambdaExprPtr& lambda, const CodePtr&
 	return getFunction(lambda, surrounding);
 }
 
-CodePtr FunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
+CodePtr OldFunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
 	// TODO refactor duplication w/ above
 //	auto codeIt = functionMap.find(literal);
 //	if(codeIt != functionMap.end()) {
@@ -208,9 +208,98 @@ CodePtr FunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
 	return cptr;
 }
 
-void FunctionManager::writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr) {
+void OldFunctionManager::writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr) {
 	 // TODO
 }
+
+void FunctionManager::createCallable(const CodePtr& context, const core::LiteralPtr& external) {
+
+	// get prototype definition
+	CodePtr protoType = resolve(external);
+
+	// add dependency
+	context->addDependency(protoType);
+
+	// print function name (which then will be call-able)
+	context->getCodeStream() << external->getValue();
+}
+
+CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
+	// lookup element
+	auto pos = externalFunctions.find(literal);
+	if (pos != externalFunctions.end()) {
+		return pos->second;
+	}
+
+	// extract function type
+	auto type = dynamic_pointer_cast<const FunctionType>(literal->getType());
+	assert(type && "Literal is not a function!");
+
+	const string& name = literal->getValue();
+	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name);
+	CodeStream& cs = protoType->getCodeStream();
+	cs << typeManager.getTypeName(protoType, type->getReturnType()) << " " << name << "(";
+	cs << join(", ", type->getArgumentType()->getElementTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
+		out << typeManager.getTypeName(protoType, cur);
+	});
+	cs << ");\n";
+
+	// insert into function map and return
+	externalFunctions.insert(std::make_pair(literal, protoType));
+	return protoType;
+}
+
+
+void FunctionManager::createCallable(const CodePtr& context, const core::CaptureInitExprPtr& capture) {
+
+//	// extract sub-expression
+//	auto subExpr = capture->getLambda();
+//	assert(subExpr->getNodeType() == NT_LambdaExpr && "Simple backend can't handle capture init expressions");
+//
+//	// convert to lambda expression
+//	LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(subExpr);
+//
+//	// lookup code information
+//	const LambdaCode& code = resolve(lambda);
+//
+//	// use code to generate initialization
+
+
+}
+
+void FunctionManager::createCallable(const CodePtr& context, const core::LambdaExprPtr& lambda) {
+
+	// resolve lambda
+	const LambdaPtr& def = lambda->getLambda();
+	assert(def->getCaptureList().empty() && "This method cannot support lambdas with capture lists!");
+
+	// obtain code for lambda
+	const LambdaCode& code = resolve(def);
+
+	// add dependencies
+	context->addDependency(code.function);
+
+	// add function name
+	context->getCodeStream() << code.function->getName();
+}
+
+
+const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lambda) {
+
+	// lookup definition
+	auto pos = functionDefinitions.find(lambda);
+	if (pos != functionDefinitions.end()) {
+		return pos->second;
+	}
+
+	// TODO: resolve the lambda
+	LambdaCode code;
+	code.function = std::make_shared<CodeFragment>("Dummy!");
+
+	// register and return reference to inserted element
+	return functionDefinitions.insert(std::make_pair(lambda, code)).first->second;
+}
+
 
 } // end namespace simple_backend
 } // end namespace insieme

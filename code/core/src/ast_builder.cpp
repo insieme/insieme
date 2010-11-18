@@ -128,6 +128,7 @@ LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementP
 	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), returnType), captures, params, body);
 }
 
+
 // ---------------------------- Utilities ---------------------------------------
 
 ASTBuilder::ElementTypeList ASTBuilder::extractParamTypes(const ParamList& params) {
