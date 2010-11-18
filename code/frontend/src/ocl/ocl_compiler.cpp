@@ -600,11 +600,11 @@ public:
                 //check return type
                 assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
 
-                core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+                core::TypeList args = funcType->getArgumentTypes();
                 args.push_back(kd.globalRange->getType());
                 args.push_back(kd.localRange->getType());
 
-                newFuncType = builder.functionType(builder.tupleType(args), retTy);
+                newFuncType = builder.functionType( core::TypeList(), args, retTy); // FIXME empty capture list
             } else {
                 assert(funcType && "Function has unexpected type");
             }
@@ -615,7 +615,7 @@ public:
 
             if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                 // parallel function's type, equal for all
-                core::TupleType::ElementTypeList parArgs;
+                core::TypeList parArgs;
                 parArgs.push_back(core::lang::TYPE_UINT_4_PTR);
                 parArgs.push_back(core::lang::TYPE_UINT_4_PTR);
                 parArgs.push_back(core::lang::TYPE_JOB_PTR);
@@ -626,8 +626,7 @@ public:
                 core::Lambda::ParamList funParams;
 
 
-                core::FunctionTypePtr parFuncType= builder.functionType(builder.tupleType(parArgs),
-                        core::lang::TYPE_UINT_4_PTR);
+                core::FunctionTypePtr parFuncType= builder.functionType(core::TypeList(), parArgs, core::lang::TYPE_UINT_4_PTR);
 
 // Top down generation of constructs
 

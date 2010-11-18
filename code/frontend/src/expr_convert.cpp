@@ -75,25 +75,24 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args) {
 
 	// check if the function type ends with a VAR_LIST type
-	core::TupleTypePtr&& argTy = core::dynamic_pointer_cast<const core::TupleType>(funcTy->getArgumentType());
-	assert(argTy && "Function argument is of not type TupleType");
+	const core::TypeList& argsTy = funcTy->getArgumentTypes();
+	// assert(argsTy && "Function argument is of not type TupleType");
 
-	const core::TupleType::ElementTypeList& elements = argTy->getElementTypes();
 	// if the tuple type is empty it means we cannot pack any of the arguments
-	if( elements.empty() )
+	if( argsTy.empty() )
 		return args;
 
-	if(*elements.back() == *builder.getBasicGenerator().getVarList()) {
+	if(*argsTy.back() == *builder.getBasicGenerator().getVarList()) {
 		ExpressionList ret;
-		assert(args.size() >= elements.size()-1 && "Function called with fewer arguments than necessary");
+		assert(args.size() >= argsTy.size()-1 && "Function called with fewer arguments than necessary");
 		// last type is a var_list, we have to do the packing of arguments
 
 		// we copy the first N-1 arguments, the remaining will be unpacked
-		std::copy(args.begin(), args.begin()+elements.size()-1, std::back_inserter(ret));
+		std::copy(args.begin(), args.begin()+argsTy.size()-1, std::back_inserter(ret));
 
 		ExpressionList toPack;
-		if(args.size() > elements.size()-1) {
-			std::copy(args.begin()+elements.size()-1, args.end(), std::back_inserter(toPack));
+		if(args.size() > argsTy.size()-1) {
+			std::copy(args.begin()+argsTy.size()-1, args.end(), std::back_inserter(toPack));
 		}
 
 		// arguments has to be packed into a tuple expression, and then inserted into a pack expression
@@ -179,7 +178,7 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	);
 
 	// build the type of the function
-	core::FunctionTypePtr&& funcTy = builder.functionType( builder.tupleType( core::TupleType::ElementTypeList() ), retTy);
+	core::FunctionTypePtr&& funcTy = builder.functionType( core::TypeList(), retTy);
 
 	// build the expression body
 	core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
@@ -505,7 +504,7 @@ public:
 		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 		// create Pair type
-		core::TupleTypePtr&& tupleTy = builder.tupleType(toVector( exprTy, exprTy ) );
+		core::TypeList&& argsTy = toVector( exprTy, exprTy );
 		std::string&& opType = getOperationType(exprTy);
 
 		// we take care of compound operators first,
@@ -542,7 +541,7 @@ public:
 			// The operator is a compound operator, we substitute the RHS expression with the expanded one
 			// core::RefTypePtr&& lhsTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType());
 			// assert( lhsTy && "LHS operand must of type ref<a'>." );
-			core::LiteralPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
+			core::LiteralPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
 
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
@@ -657,11 +656,11 @@ public:
 
 		if(isLogical) {
 			exprTy = convFact.mgr.basic.getBool();
-			tupleTy = builder.tupleType(toVector(lhs->getType(), rhs->getType())); // FIXME
+			argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
 		}
 
 		if(!isAssignment)
-			opFunc = builder.literal( opType + "." + op, builder.functionType(tupleTy, exprTy));
+			opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
 
 		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, toVector(lhs, rhs) );
 
