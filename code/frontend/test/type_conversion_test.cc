@@ -399,22 +399,22 @@ TEST(TypeConversion, FileTest) {
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
-	const fe::PragmaList& pl = tu.getPragmaList();
+	auto filter = [](const fe::Pragma& curr){ return curr.getType() == "test"; };
 
-	for(auto it = pl.begin(), end = pl.end(); it != end; ++it) {
+	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 		VariableResetHack::reset();
 		ConversionFactory convFactory( manager, prog );
 		convFactory.setTranslationUnit(tu);
 
-		if(const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&**it)) {
-			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
-			else {
-				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-				} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
-				}
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+
+		if(tp.isStatement())
+			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
+		else {
+			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
+				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
+				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
 			}
 		}
 	}

@@ -247,8 +247,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	if( *type == core::lang::TYPE_ALPHA_VAL ) {
-		return core::lang::CONST_NULL_PTR_PTR;
+	if( *type == *mgr.basic.getAlpha() ) {
+		return mgr.basic.getNull();
 	}
 	// handle integers initialization
     if ( core::lang::isIntegerType(*type) ) {
@@ -318,7 +318,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	// FIXME
     	assert(vecTy); // silent compiler warning
     	// initialization for arrays is missing, returning NULL!
-    	return core::lang::CONST_NULL_PTR_PTR;
+    	return mgr.basic.getNull();
     }
     assert(false && "Default initialization type not defined");
 }
