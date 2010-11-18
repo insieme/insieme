@@ -137,6 +137,9 @@ class ConversionFactory : public boost::noncopyable {
 		core::StructTypePtr globalStructType;
 		core::StructExprPtr	globalStructExpr;
 
+		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> FunctionGlobalCapturedMap;
+		FunctionGlobalCapturedMap funcGlobalCaptureMap;
+
 		std::unordered_map<insieme::core::VariablePtr, insieme::core::VariablePtr, hash_target<insieme::core::VariablePtr>,
 			equal_target<insieme::core::VariablePtr>> needRef;
 
@@ -169,9 +172,10 @@ class ConversionFactory : public boost::noncopyable {
 	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
 	std::auto_ptr<ClangExprConverter> exprConv; // PIMPL pattern
 
-	core::NodeManager& 		mgr;
-	const core::ASTBuilder  builder;
-    Program& 				program;
+	core::NodeManager& 			mgr;
+	const core::ASTBuilder  	builder;
+	core::lang::BasicGenerator 	typeGen;
+    Program& 					program;
 
     /**
      * Maps of statements to pragmas.

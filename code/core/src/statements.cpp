@@ -40,8 +40,6 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/iterator_utils.h"
 
-#include "insieme/core/lang_basic.h"
-
 namespace insieme {
 namespace core {
 
@@ -262,7 +260,7 @@ WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
 std::ostream& WhileStmt::printTo(std::ostream& out) const {
 	return out << "while(" << *condition << ") " << *body;
 }
-	
+
 bool WhileStmt::equalsStmt(const Statement& stmt) const {
 	// conversion is guaranteed by base equals
 	const WhileStmt& rhs = static_cast<const WhileStmt&>(stmt);
@@ -298,7 +296,7 @@ std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPt
 
 ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
 	: Statement(NT_ForStmt, hashForStmt(declaration, body, end, step)), declaration(isolate(declaration)), body(isolate(body)), end(isolate(end)), step(isolate(step)) {}
-	
+
 std::ostream& ForStmt::printTo(std::ostream& out) const {
 	return out << "for(" << *declaration << " .. " << *end << " : " << *step << ") " << *body;
 }
@@ -306,7 +304,7 @@ std::ostream& ForStmt::printTo(std::ostream& out) const {
 bool ForStmt::equalsStmt(const Statement& stmt) const {
 	// conversion is guaranteed by base equals
 	const ForStmt& rhs = static_cast<const ForStmt&>(stmt);
-	return (*declaration == *rhs.declaration) && (*body == *rhs.body) 
+	return (*declaration == *rhs.declaration) && (*body == *rhs.body)
 		&& (*end == *rhs.end) && (*step == *rhs.step);
 }
 
@@ -377,7 +375,7 @@ Node::OptionChildList IfStmt::getChildNodes() const {
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
 	// default to empty else block
-	return get(manager, condition, body, lang::STMT_NO_OP_PTR);
+	return get(manager, condition, body, manager.basic.getNoOp());
 }
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
@@ -429,7 +427,7 @@ SwitchStmt* SwitchStmt::createCopyUsing(NodeMapping& mapper) const {
 
 std::ostream& SwitchStmt::printTo(std::ostream& out) const {
 	out << "switch(" << *switchExpr << ") [ ";
-	std::for_each(cases.cbegin(), cases.cend(), [&out](const Case& cur) { 
+	std::for_each(cases.cbegin(), cases.cend(), [&out](const Case& cur) {
 		out << "case " << *(cur.first) << ": " << *(cur.second) << " | ";
 	});
 	out << "default: " << *defaultCase << " ]";
@@ -458,7 +456,7 @@ Node::OptionChildList SwitchStmt::getChildNodes() const {
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases) {
-	return get(manager, switchExpr, cases, lang::STMT_NO_OP_PTR);
+	return get(manager, switchExpr, cases, manager.basic.getNoOp());
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {
@@ -467,4 +465,3 @@ SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchE
 
 } // end namespace core
 } // end namespace insieme
-

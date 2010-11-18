@@ -55,10 +55,9 @@ typedef AnnotatedPtr<const Statement> StatementPtr;
 
 namespace lang {
 
-struct BasicGeneratorImpl;
-
 class BasicGenerator {
 	mutable NodeManager& nm;
+	struct BasicGeneratorImpl;
 	mutable BasicGeneratorImpl* pimpl;
 
 public:

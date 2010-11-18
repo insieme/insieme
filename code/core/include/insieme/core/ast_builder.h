@@ -43,11 +43,11 @@
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/types.h"
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace core {
-	
+
 using std::vector;
 using std::string;
 
@@ -98,25 +98,17 @@ public:
 		return manager;
 	}
 
+	/**
+	 * Obtains a reference to the basic generator within the node manager.
+	 */
+	const lang::BasicGenerator& getBasicGenerator() const {
+		return manager.basic;
+	}
+
 	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet(), bool main = false);
-
-
-	// ---------------------------- Create Derived Types ----------------------------
-
-	lang::UnitTypePtr unitType() const;
-	lang::BoolTypePtr boolType() const;
-	lang::IntTypePtr  intType(unsigned short size = 4) const;
-	lang::UIntTypePtr uintType(unsigned short size = 4) const;
-	lang::RealTypePtr realType(unsigned short size = 4) const;
-
 
 #include "ast_builder.inl"
 
-	// ---------------------------- Convenience -------------------------------------
-	
-	// Values
-	LiteralPtr intVal(long val, unsigned short size = 4) const;
-	LiteralPtr uintVal(long val, unsigned short size = 4) const;
 	LiteralPtr stringVal(const char* str) const;
 
 	// Referencing

@@ -43,12 +43,12 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-struct BasicGeneratorImpl {
+struct BasicGenerator::BasicGeneratorImpl {
 	parse::IRParser parser;
 	ASTBuilder build;
 
 	#define TYPE(_id, _spec) \
-	TypePtr ptr##_id; 
+	TypePtr ptr##_id;
 
 	#define LITERAL(_id, _name, _spec) \
 	LiteralPtr ptr##_id;
@@ -65,8 +65,8 @@ struct BasicGeneratorImpl {
 	BasicGeneratorImpl(NodeManager& nm) : parser(nm), build(nm) { }
 };
 
-BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) {
-}
+BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) { }
+
 BasicGenerator::~BasicGenerator() {
 	delete pimpl;
 }

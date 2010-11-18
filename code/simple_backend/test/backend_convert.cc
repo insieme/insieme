@@ -57,8 +57,10 @@ using namespace insieme::simple_backend;
 
 ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
-	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(TYPE_CHAR_PTR), TYPE_VAR_LIST_PTR));
-	TypePtr unitType = build.unitType();
+	BasicGenerator typeGen(build.getNodeManager());
+
+	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(typeGen.getChar()), typeGen.getVarList()));
+	TypePtr unitType = typeGen.getUnit();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.literal("printf", printfType);
@@ -66,7 +68,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	TupleTypePtr emptyTupleType = build.tupleType();
 	FunctionTypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
 
-	ExpressionPtr stringLiteral = build.literal("Hello World!", TYPE_STRING_PTR);
+	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
 	auto mainBody = build.compoundStmt(invocation);
 	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);

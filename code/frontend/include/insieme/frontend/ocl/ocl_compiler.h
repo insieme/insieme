@@ -41,6 +41,8 @@
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/program.h"
 
+#include "insieme/core/lang_basic.h"
+
 namespace insieme {
 namespace frontend {
 namespace ocl {
@@ -78,7 +80,7 @@ public:
     }
 
     static core::VariablePtr get3DvecVar(core::ASTBuilder builder) {
-        return builder.variable(builder.vectorType(builder.uintType(4), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+        return builder.variable(builder.vectorType(core::lang::TYPE_UINT_4_PTR, core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
     }
     static core::VariablePtr getThreadGroupVar(core::ASTBuilder builder) {
         return builder.variable(core::lang::TYPE_THREAD_GROUP_PTR);

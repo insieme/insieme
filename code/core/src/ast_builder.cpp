@@ -50,47 +50,18 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointSet& entryPoints, 
 	return Program::create(manager, entryPoints, main);
 }
 
-// ------------------------------- Build Basic Types -------------------------
-
-lang::UnitTypePtr ASTBuilder::unitType() const {
-	return manager.get(lang::TYPE_UNIT);
-}
-
-lang::BoolTypePtr ASTBuilder::boolType() const {
-	return manager.get(lang::TYPE_BOOL);
-}
-
-lang::IntTypePtr ASTBuilder::intType (unsigned short size) const {
-	return manager.get(lang::intType(size));
-}
-
-lang::UIntTypePtr ASTBuilder::uintType(unsigned short size) const {
-	return manager.get(lang::uintType(size));
-}
-
-lang::RealTypePtr ASTBuilder::realType(unsigned short size) const {
-	return manager.get(lang::realType(size));
-}
-
 // ---------------------------- Convenience -------------------------------------
 
-LiteralPtr ASTBuilder::intVal(long val, unsigned short size) const {
-	return literal(toString(val), intType(size));
-}
-LiteralPtr ASTBuilder::uintVal(long val, unsigned short size) const {
-	return literal(toString(val), uintType(size));
-}
 LiteralPtr ASTBuilder::stringVal(const char* str) const {
-	return literal(str, lang::TYPE_STRING);
+	return literal(str, manager.basic.getString());
 }
-
 
 CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
-	return callExpr(lang::OP_REF_DEREF, subExpr);
+	return callExpr(manager.basic.getRefDeref(), subExpr);
 }
 
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
-	TypePtr retType = core::lang::TYPE_UNIT;
+	TypePtr&& retType = manager.basic.getUnit();
 	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {
 		retType = funType->getReturnType();
 	}
@@ -116,10 +87,10 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 }
 
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), core::lang::TYPE_UNIT), params, body);
+	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), manager.basic.getUnit()), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), core::lang::TYPE_UNIT), captures, params, body);
+	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), manager.basic.getUnit()), captures, params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
 	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), returnType), params, body);
@@ -133,7 +104,7 @@ LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementP
 
 ASTBuilder::ElementTypeList ASTBuilder::extractParamTypes(const ParamList& params) {
 	ElementTypeList paramTypes;
-	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes), 
+	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes),
 		[](const VariablePtr& p) { return p->getType(); });
 	return paramTypes;
 }
