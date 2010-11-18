@@ -227,7 +227,8 @@ void ASTPrinter::visitFunctionType(const FunctionTypePtr& funcType) {
 
 	visitAnnotationList(*builder, builder->getNodeId(funcType), funcType->getAnnotations());
 	visitChildList(*builder, toVector(funcType->getReturnType()), funcType, "retTy");
-	visitChildList(*builder, toVector(funcType->getArgumentType()), funcType, "argTy");
+	visitChildList(*builder, funcType->getCaptureTypes(), funcType, "capTy");
+	visitChildList(*builder, funcType->getArgumentTypes(), funcType, "argTy");
 }
 
 void ASTPrinter::visitTupleType(const TupleTypePtr& tupleTy) {
