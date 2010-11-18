@@ -98,9 +98,10 @@ void SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel& p
 	for_each(ldv.undeclared, [&](VariablePtr p){
 		//auto declStmt = build.declarationStmt(p->getType(), p);
 		auto var = build.variable(p->getType());
-		captures.push_back(var);
+		captures.push_back(p);
 		replacements[p] = var;
 	});
+
 	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements));
 
 	cl::BasicGenerator typeGen(nodeMan); // FIXME
