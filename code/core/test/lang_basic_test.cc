@@ -42,71 +42,23 @@
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
-TEST(LangBasic, Types) {
-
-	// test some signed integers ...
-	{
-		GenericType types[] = {TYPE_INT_1_VAL, TYPE_INT_2_VAL, TYPE_INT_4_VAL, TYPE_INT_8_VAL};
-		for (int i=0; i<4; i++) {
-			EXPECT_TRUE ( isIntegerType(types[i]) );
-			EXPECT_TRUE ( isIntType(types[i]) );
-			EXPECT_FALSE ( isUIntType(types[i]) );
-			EXPECT_EQ ( 1<<i, getNumBytes(types[i]) );
-		}
-		EXPECT_TRUE ( isIntType(TYPE_INT_GEN_VAL) );
-		EXPECT_TRUE ( isIntType(TYPE_INT_INF_VAL) );
-	}
-
-
-	// test some unsigned integers ...
-	{
-		GenericType types[] = {TYPE_UINT_1_VAL, TYPE_UINT_2_VAL, TYPE_UINT_4_VAL, TYPE_UINT_8_VAL};
-		for (int i=0; i<4; i++) {
-			EXPECT_TRUE ( isIntegerType(types[i]) );
-			EXPECT_FALSE ( isIntType(types[i]) );
-			EXPECT_TRUE ( isUIntType(types[i]) );
-			EXPECT_EQ ( 1<<i, getNumBytes(types[i]) );
-		}
-		EXPECT_TRUE ( isUIntType(TYPE_UINT_GEN_VAL) );
-		EXPECT_TRUE ( isUIntType(TYPE_UINT_INF_VAL) );
-	}
-}
-
-
-TEST(LangBasic, BuildInTest) {
-
-	NodeManager manager;
-
-	// verify the build-in functionality (not for all types)
-	EXPECT_TRUE( lang::isBuildIn(lang::CONST_BOOL_FALSE_PTR->getValue()) );
-	EXPECT_TRUE( lang::isBuildIn(lang::CONST_BOOL_FALSE_PTR) );
-	EXPECT_EQ( lang::CONST_BOOL_FALSE_PTR, lang::getBuildInForValue(lang::CONST_BOOL_FALSE_PTR->getValue()) );
-
-	// same type within other manager
-	LiteralPtr type = manager.get(lang::CONST_BOOL_FALSE_PTR);
-	EXPECT_TRUE( lang::isBuildIn(type) );
-	EXPECT_TRUE( lang::isBuildIn(type->getValue()) );
-
-}
-
-TEST(LangBasic, Subscript) {
-	NodeManager manager;
-
-//	EXPECT_EQ ("", toString(*lang::OP_VAR_LIST_PACK->getType()));
-//	EXPECT_EQ ("", toString(*lang::OP_VAR_LIST_PACK));
-//
-//	EXPECT_EQ ("", toString(*lang::TYPE_CHAR));
-//
-//	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT->getType()));
-//	EXPECT_EQ ("", toString(*lang::OP_SUBSCRIPT));
-//	EXPECT_EQ ("", toString(*lang::OP_LENGTH_VAL.getType()));
-
-//	EXPECT_EQ("", toString(*lang::OP_ITE_PTR->getType()));
-
-}
-
-TEST(LangBasic, New) {
+TEST(LangBasic, Generation) {
 	NodeManager nm;
 
 	EXPECT_TRUE(nm.basic.isInt4(nm.basic.getInt4()));
+}
+
+TEST(LangBasic, BoolChecks) {
+	NodeManager nm;
+
+	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getInt4()));
+	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getIntLShift()));
+	EXPECT_FALSE(nm.basic.isBuiltIn(GenericType::get(nm, "surelyNotBuiltInISincerelyHope__")));
+}
+
+TEST(LangBasic, StringGet) {
+	NodeManager nm;
+
+	EXPECT_EQ(nm.basic.getBarrier(), nm.basic.getLiteral("barrier"));
+	EXPECT_EQ(LiteralPtr(), nm.basic.getLiteral("surelyNotBuiltInISincerelyHope__"));
 }
