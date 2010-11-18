@@ -112,6 +112,7 @@ TEST(StmtConversion, FileTest) {
 
 		if(tp->isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
+			DLOG(INFO) << *stmt;
 			EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking

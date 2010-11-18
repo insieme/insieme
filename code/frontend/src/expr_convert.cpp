@@ -162,12 +162,15 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
 
 	core::Lambda::CaptureList capture;
+	core::TypeList captureListType;
+
 	core::CaptureInitExpr::Values values;
 	std::for_each(args.begin(), args.end(),
-		[ &capture, &builder, &bodyStmt, &values ] (const core::ExpressionPtr& curr) {
+		[ &capture, &captureListType, &builder, &bodyStmt, &values ] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
 			capture.push_back( parmVar );
+			captureListType.push_back( bodyVar->getType() );
 			values.push_back( bodyVar );
 			// we have to replace the variable of the body with the newly created parmVar
 			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
@@ -178,7 +181,7 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	);
 
 	// build the type of the function
-	core::FunctionTypePtr&& funcTy = builder.functionType( core::TypeList(), retTy);
+	core::FunctionTypePtr&& funcTy = builder.functionType( captureListType, core::TypeList(), retTy);
 
 	// build the expression body
 	core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
@@ -549,7 +552,7 @@ public:
 
 			const core::TypePtr& lhsSubTy = subExprLHS->getType();
 			rhs = builder.callExpr(lhsSubTy, opFunc,
-				toVector<core::ExpressionPtr>(builder.callExpr(lhsSubTy, builder.getBasicGenerator().getRefDeref(), lhs), rhs) );
+				toVector<core::ExpressionPtr>(builder.callExpr(lhsSubTy, convFact.mgr.basic.getRefDeref(), lhs), rhs) );
 
 			// add an annotation to the subexpression
 			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
@@ -694,7 +697,7 @@ public:
 				tmpVar = builder.variable(subTy);
 				// ref<a'> __tmp = subexpr
 				stmts.push_back(builder.declarationStmt(tmpVar,
-						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), toVector<core::ExpressionPtr>(subExpr) ) ));
+						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) ));
 			}
 			// subexpr op= 1
 			stmts.push_back(

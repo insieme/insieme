@@ -45,7 +45,6 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/types.h"
-#include "insieme/core/lang/basic.h"
 
 #include "insieme/c_info/naming.h"
 

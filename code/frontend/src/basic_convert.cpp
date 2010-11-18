@@ -131,8 +131,8 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	core::ExpressionPtr retExpr = expr;
-	while(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
-		retExpr = builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(retExpr) );
+	while(core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
+		retExpr = builder.deref( retExpr );
 	}
 	return retExpr;
 }
@@ -267,16 +267,16 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle refs initialization
     if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
         // initialize pointer/reference types with the null value
-    	return builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( defaultInitVal(refTy->getElementType()) ) );
+    	return builder.callExpr( type, mgr.basic.getRefVar(), defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
-    if ( *type == core::lang::TYPE_STRING_VAL ) {
+    if ( *type == *mgr.basic.getString() ) {
         return builder.literal("", type);
     }
     // handle booleans initialization
-    if ( *type == core::lang::TYPE_BOOL_VAL ) {
+    if ( *type == *mgr.basic.getBool() ) {
         // boolean values are initialized to false
-        return builder.literal("false", core::lang::TYPE_BOOL_PTR);
+        return builder.literal("false", mgr.basic.getBool());
     }
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
@@ -310,7 +310,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy, core::lang::OP_VECTOR_INIT_UNIFORM_PTR, toVector(initVal));
+		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal);
 		// return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
     }
     // handle arrays initialization
@@ -368,7 +368,7 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 	assert(retExpr && "Couldn't convert initialization expression");
 
 	if(isRef)
-		retExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( retExpr ) );
+		retExpr = builder.callExpr( type, mgr.basic.getRefVar(), retExpr );
 	// create vector initializator
 	return retExpr;
 }
@@ -382,7 +382,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 	if(core::dynamic_pointer_cast<const core::RefType>(type))
-		retExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( retExpr ) );
+		retExpr = builder.callExpr( type, mgr.basic.getRefVar(), retExpr );
 	return retExpr;
 }
 
@@ -490,7 +490,7 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
 	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-	core::CallExprPtr&& callExpr = mFact.createCallExpr(toVector<core::StatementPtr>(bodyStmt), core::lang::TYPE_UNIT);
+	core::CallExprPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.basic.getUnit() );
 
 	c_info::CLocAnnotation::ArgumentList args;
 	// look for variable names
