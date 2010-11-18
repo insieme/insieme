@@ -1002,16 +1002,17 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					// the overloaded version, we need unique variable for each version of the function
 
 					if(this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end()) {
-						core::VariablePtr&& var = this->builder.variable( this->convertType(GET_TYPE_PTR(fd)) );
+						core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(this->convertType(GET_TYPE_PTR(fd)));
+						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
+							funcType = this->builder.functionType(
+									toVector<core::TypePtr>( this->ctx.globalStruct.first ),
+									funcType->getArgumentTypes(),
+									funcType->getReturnType()
+								);
+						}
+						core::VariablePtr&& var = this->builder.variable( funcType );
 						this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
 
-						// if the function belonging to this recursion needs to access global variables
-						// we create the variable that will be used in the caputre list
-//						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
-//							assert(this->ctx.funcGlobalCaptureMap.find(fd) == this->ctx.funcGlobalCaptureMap.end());
-//							core::VariablePtr&& captVar = this->builder.variable( builder.refType(this->ctx.globalStructType) );
-//							this->ctx.funcGlobalCaptureMap.insert( std::make_pair(fd, captVar) );
-//						}
 						var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
 					}
 				}
@@ -1099,6 +1100,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::TypePtr convertedType = convertType( GET_TYPE_PTR(funcDecl) );
 	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
 	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+
+	// if this function gets the globals in the capture list we have to create a different type
+	if(ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
+		// declare a new variable that will be used to hold a reference to the global data stucture
+		funcType = builder.functionType(toVector<core::TypePtr>(ctx.globalStruct.first), funcType->getArgumentTypes(), funcType->getReturnType());
+	}
 
 	// reset old global var
 	ctx.globalVar = parentGlobalVar;
