@@ -57,11 +57,13 @@ LiteralPtr ASTBuilder::stringVal(const char* str) const {
 }
 
 CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
-	return callExpr(manager.basic.getRefDeref(), subExpr);
+	RefTypePtr&& refTy = dynamic_pointer_cast<const RefType>(subExpr->getType());
+	assert(refTy && "Deref a non ref type.");
+	return callExpr(refTy->getElementType(), manager.basic.getRefDeref(), subExpr);
 }
 
 CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
-	return callExpr(manager.basic.getRefVar(), subExpr);
+	return callExpr(refType(subExpr->getType()), manager.basic.getRefVar(), subExpr);
 }
 
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {

@@ -98,36 +98,34 @@ TEST(StmtConversion, FileTest) {
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
 
-	const fe::PragmaList& pl = tu.getPragmaList();
+	auto filter = [](const fe::Pragma& curr){ return curr.getType() == "test"; };
 
-	for(auto it = pl.begin(), end = pl.end(); it != end; ++it) {
-		const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&**it);
-		if(!tp) // not a test pragma, skip
-			continue;
+	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 		// we reset the counter for variables so we can write independent tests
 		VariableResetHack::reset();
 
 		fe::conversion::ConversionFactory convFactory( manager, prog );
 		convFactory.setTranslationUnit(tu);
 
-		if(tp->isStatement()) {
-			StatementPtr&& stmt = convFactory.convertStmt( tp->getStatement() );
+		if(tp.isStatement()) {
+			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
 			DLOG(INFO) << *stmt;
-			EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
+			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking
 			checkSemanticErrors(stmt);
 
 		} else {
-			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp->getDecl())) {
+			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
 				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
-				EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(type);
-			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp->getDecl())) {
+			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
 				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
 				assert(expr);
-				EXPECT_EQ(tp->getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(expr);
 			}

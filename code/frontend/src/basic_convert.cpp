@@ -126,13 +126,13 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 	// cppcheck-suppress exceptNew
 	exprConv( ConversionFactory::makeExprConverter(*this) ),
 	// cppcheck-suppress exceptNew
-	mgr(mgr), builder(mgr), typeGen(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
+	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
 
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	core::ExpressionPtr retExpr = expr;
-	while(core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
-		retExpr = builder.deref( retExpr );
+	while(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
+		retExpr = builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(retExpr) );
 	}
 	return retExpr;
 }

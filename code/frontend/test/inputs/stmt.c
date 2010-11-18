@@ -34,6 +34,9 @@
  * regarding third party software licenses.
  */
 
+// ignore warnings
+#pragma GCC diagnostic ignored "-Wall"
+
 void decl_stmt_test() {
 	#pragma test \
 	"decl ref<int<4>> v1 = ( var(0))"

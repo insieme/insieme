@@ -329,9 +329,7 @@ public:
 				core::LiteralPtr&& refAssign = convFact.mgr.basic.getRefAssign();
 
 				// inductionVar = COND()? ---> FIXME!
-				retStmt.push_back( builder.callExpr(
-						convFact.mgr.basic.getUnit(), refAssign, toVector<core::ExpressionPtr>( inductionVar, loopAnalysis.getCondExpr() )
-				));
+				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(), refAssign, inductionVar, loopAnalysis.getCondExpr() ));
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {

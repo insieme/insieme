@@ -461,8 +461,7 @@ public:
 		core::ExpressionPtr&& base = convFact.tryDeref(Visit(membExpr->getBase()));
 		if(membExpr->isArrow()) {
 			// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
-			base = convFact.tryDeref(Visit(membExpr->getBase()));
-			DLOG(INFO) << *base->getType();
+			base = convFact.tryDeref( Visit(membExpr->getBase()) );
 			if(core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ||
 				core::dynamic_pointer_cast<const core::ArrayType>(base->getType())) {
 
@@ -473,11 +472,9 @@ public:
 				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType());
 				assert(subTy);
 
-				base = builder.callExpr( subTy->getElementType(), op,
-						toVector<core::ExpressionPtr>(base, builder.literal("0", builder.getBasicGenerator().getInt4())) );
+				base = builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getInt4()) );
 				base = convFact.tryDeref(base);
 			}
-			DLOG(INFO) << *base->getType();
 		}
 		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
 
@@ -549,10 +546,8 @@ public:
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
-
 			const core::TypePtr& lhsSubTy = subExprLHS->getType();
-			rhs = builder.callExpr(lhsSubTy, opFunc,
-				toVector<core::ExpressionPtr>(builder.callExpr(lhsSubTy, convFact.mgr.basic.getRefDeref(), lhs), rhs) );
+			rhs = builder.callExpr(lhsSubTy, opFunc, builder.deref(lhs), rhs);
 
 			// add an annotation to the subexpression
 			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
@@ -665,7 +660,7 @@ public:
 		if(!isAssignment)
 			opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
 
-		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, toVector(lhs, rhs) );
+		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 
 		// add the operator name in order to help the convertion process in the backend
 		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
@@ -702,19 +697,17 @@ public:
 			// subexpr op= 1
 			stmts.push_back(
 				builder.callExpr(
-						convFact.mgr.basic.getUnit(),
+					convFact.mgr.basic.getUnit(),
 					convFact.mgr.basic.getRefAssign(),
-					toVector<core::ExpressionPtr>(
-						subExpr, // ref<a'> a
-						builder.callExpr(
-							subTy,
-							( additive ? convFact.mgr.basic.getIntAdd() : convFact.mgr.basic.getIntSub() ),
-								toVector<core::ExpressionPtr>(
-									builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
-									builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
-								)
-							) // a - 1
-					)
+					subExpr, // ref<a'> a
+					builder.callExpr(
+						subTy,
+						( additive ? convFact.mgr.basic.getIntAdd() : convFact.mgr.basic.getIntSub() ),
+							toVector<core::ExpressionPtr>(
+								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
+								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
+							)
+						) // a - 1
 				)
 			);
 			if(post) {
@@ -782,8 +775,7 @@ public:
 						builder.getBasicGenerator().getVectorSubscript() :
 						builder.getBasicGenerator().getArray1DSubscript();
 
-				subExpr = builder.callExpr( subTy->getElementType(),op,
-						toVector<core::ExpressionPtr>(subExpr, builder.literal("0", convFact.mgr.basic.getInt4())) );
+				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", convFact.mgr.basic.getInt4()) );
 			}
 			break;
 		}
@@ -881,8 +873,7 @@ public:
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, op,
-					toVector<core::ExpressionPtr>(base, convFact.builder.castExpr(convFact.mgr.basic.getInt4(), idx)) );
+			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(convFact.mgr.basic.getInt4(), idx) );
 
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -918,7 +909,7 @@ public:
         base = convFact.tryDeref(base);
 
         core::ExpressionPtr&& retExpr =
-        	convFact.builder.callExpr(convFact.builder.refType(exprTy), convFact.mgr.basic.getVectorSubscript(), toVector( base, idx ));
+        	convFact.builder.callExpr(convFact.builder.refType(exprTy), convFact.mgr.basic.getVectorSubscript(), base, idx);
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
     }
