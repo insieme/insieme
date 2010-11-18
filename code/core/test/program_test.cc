@@ -60,14 +60,12 @@ TEST(Program, HelloWorld) {
 
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
-	TupleTypePtr printfArgType = build.tupleType(toVector(stringType, varArgType));
 	TypePtr unitType = lang::TYPE_UNIT_PTR;
-	TypePtr printfType = build.functionType(printfArgType, unitType);
+	TypePtr printfType = build.functionType(toVector(stringType, varArgType), unitType);
 
 	auto printfDefinition = build.literal(printfType, "printf");
 
-	TupleTypePtr emptyTupleType = build.tupleType();
-	FunctionTypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
 
 	ExpressionPtr intLiteral = build.literal(TYPE_INT_GEN_PTR, "4");
 	auto invocation = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral));

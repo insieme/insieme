@@ -57,7 +57,7 @@ TEST(UndeclaredVariableCheck, Basic) {
 
 	ExpressionPtr init = builder.literal(type, "4");
 
-	FunctionTypePtr funType = builder.functionType(builder.tupleType(), type);
+	FunctionTypePtr funType = builder.functionType(TypeList(), type);
 
 	NodePtr ok = builder.lambdaExpr(funType, toVector<VariablePtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, init));
 	NodePtr err = builder.lambdaExpr(funType, toVector<VariablePtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
