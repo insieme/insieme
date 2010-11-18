@@ -105,11 +105,9 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
 	DVLOG(1) << globColl;
-	auto global = globColl.createGlobalStruct(mFact);
-	mFact.ctx.globalStructType = global.first;
-	mFact.ctx.globalStructExpr = global.second;
-	if(global.first)
-		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
+	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
+	if(mFact.ctx.globalStruct.first)
+		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
@@ -223,9 +221,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	// check whether this is variable is defined as local or static
 	// DLOG(INFO) << varDecl->getNameAsString() << " " << varDecl->hasGlobalStorage() << " " << varDecl->hasLocalStorage();
 	if(varDecl->hasGlobalStorage()) {
-		assert(ctx.currGlobalVar && "Accessing global variable within a function not receiving the global struct");
+		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
-		return builder.memberAccessExpr(tryDeref(ctx.currGlobalVar), core::Identifier(varDecl->getNameAsString()));
+		return builder.memberAccessExpr(tryDeref(ctx.globalVar), core::Identifier(varDecl->getNameAsString()));
 	}
 
 	// variable is not in the map, create a new var and add it
