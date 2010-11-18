@@ -87,23 +87,23 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 }
 
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), manager.basic.getUnit()), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), manager.basic.getUnit()), captures, params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), captures, params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), returnType), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), returnType), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(tupleType(extractParamTypes(params)), returnType), captures, params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), returnType), captures, params, body);
 }
 
 
 // ---------------------------- Utilities ---------------------------------------
 
-ASTBuilder::ElementTypeList ASTBuilder::extractParamTypes(const ParamList& params) {
-	ElementTypeList paramTypes;
+ASTBuilder::TypeList ASTBuilder::extractParamTypes(const ParamList& params) {
+	TypeList paramTypes;
 	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes),
 		[](const VariablePtr& p) { return p->getType(); });
 	return paramTypes;

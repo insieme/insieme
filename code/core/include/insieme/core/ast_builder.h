@@ -69,9 +69,10 @@ public:
 	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
 
+	typedef vector<TypePtr> TypeList;
+
 	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
-	typedef vector<TypePtr> ElementTypeList;
 
 	typedef std::pair<Identifier, ExpressionPtr> Member;
 	typedef std::vector<Member> Members;
@@ -136,7 +137,7 @@ public:
 
 	// Utilities
 private:
-	static ElementTypeList extractParamTypes(const ParamList& params);
+	static TypeList extractParamTypes(const ParamList& params);
 };
 
 } // namespace core

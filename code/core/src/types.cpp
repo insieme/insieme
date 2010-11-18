@@ -88,7 +88,7 @@ TypeVariable* TypeVariable::createCopyUsing(NodeMapping&) const {
  * @param elementTypes	the list of element types
  * @return a string representation of the resulting tuple type
  */
-string TupleType::buildNameString(const ElementTypeList& elementTypes) {
+string TupleType::buildNameString(const TypeList& elementTypes) {
 
 	// create output buffer
 	std::stringstream res;
@@ -123,7 +123,7 @@ TupleType::TupleType(const TypePtr& a)
 TupleType::TupleType(const TypePtr& a, const TypePtr& b)
 	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a,b)), allConcrete(toVector<TypePtr>(a,b))), elementTypes(toVector<TypePtr>(isolate(a),isolate(b))) {}
 
-TupleType::TupleType(const ElementTypeList& elementTypes) :
+TupleType::TupleType(const TypeList& elementTypes) :
 	Type(NT_TupleType, buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(isolate(elementTypes)) {}
 
 
@@ -147,15 +147,44 @@ Node::OptionChildList TupleType::getChildNodes() const {
 
 // ---------------------------------------- Function Type ------------------------------
 
+namespace {
 
-FunctionType::FunctionType(const TupleTypePtr& argumentType, const TypePtr& returnType) :
-	Type(NT_FunctionType, format("(%s->%s)", argumentType->getName().c_str(), returnType->getName().c_str()), true, true),
-	argumentType(isolate(argumentType)), returnType(isolate(returnType)) {
+	string buildFunctionTypeName(const Type::TypeList& captureTypes, const Type::TypeList& argumentTypes, const TypePtr& returnType) {
+		// create output buffer
+		std::stringstream res;
+
+		// add capture list
+		if (!captureTypes.empty()) {
+			res << "[" << join(", ", captureTypes, print<deref<TypePtr>>()) << "]";
+		}
+		// add arguments
+		res << "(" << join(", ", arguementTypes, print<deref<TypePtr>>()) << ")";
+
+		// add result
+		res << "->" << *returnType;
+		return res.str();
+	}
 }
 
-FunctionTypePtr FunctionType::get(NodeManager& manager, const TupleTypePtr& argumentType, const TypePtr& returnType) {
+
+FunctionType::FunctionType(const TypeList& argumentTypes, const TypePtr& returnType) :
+	Type(NT_FunctionType, buildFunctionTypeName(TypeList(), argumentTypes, returnType), true, true),
+	argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) {
+}
+
+FunctionType::FunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) :
+	Type(NT_FunctionType, buildFunctionTypeName(captureTypes, argumentTypes, returnType), true, true),
+	captureTypes(isolate(captureTypes)), argumentType(isolate(argumentType)), returnType(isolate(returnType)) {
+}
+
+FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& argumentTypes, const TypePtr& returnType) {
 	// obtain reference to new element
-	return manager.get(FunctionType(argumentType, returnType));
+	return get(manager, TypeList(), argumentTypes, returnType);
+}
+
+FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) {
+	// obtain reference to new element
+	return manager.get(FunctionType(captureTypes, argumentTypes, returnType));
 }
 
 FunctionType* FunctionType::createCopyUsing(NodeMapping& mapper) const {
