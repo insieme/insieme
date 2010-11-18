@@ -40,7 +40,7 @@
 
 #include "insieme/frontend/analysis/global_variables.h"
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/container_utils.h"

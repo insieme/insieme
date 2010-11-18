@@ -39,7 +39,6 @@
 #include "insieme/core/types.h"
 #include "insieme/core/expressions.h"
 
-#include "clang/AST/DeclVisitor.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
 #include <set>
@@ -61,15 +60,35 @@ class ConversionFactory;
 
 namespace analysis {
 
+/**
+ * Collects variables marked as global (i.e. global and static variables) within the input
+ * program (which may consist of multiple translation units). The process is lazy as only
+ * used variable belonging to the call graph will be gathered.
+ *
+ * It generates a the data structure and appropriate initializer which holds the entire set of
+ * global variables used in the program.
+ */
 class GlobalVarCollector : public clang::RecursiveASTVisitor<GlobalVarCollector> {
 public:
+	// List of found global variables. The boolean value is used to decide whether the
+	// variable has to be initialized or it was defined as external and a reference
+	// to  the existing value has to be generated
 	typedef std::map<const clang::VarDecl*, bool> GlobalVarVect;
+
+	// Set of functions already visited, this avoid the solver to loop in the
+	// case of recursive function calls
 	typedef std::set<const clang::FunctionDecl*> VisitedFuncSet;
 
+	// A call stack of functions created during the visit of the input code.
 	typedef std::stack<const clang::FunctionDecl*> FunctionStack;
+
+	// Set of functions which need access to global variables. This structure will
+	// be used to decide whether the data structure containing the global variables
+	// has to bo forwarded through this function via the capture list
 	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 
 	GlobalVarCollector(clang::idx::Indexer& indexer, UseGlobalFuncMap& globalFuncMap) : indexer(indexer), usingGlobals(globalFuncMap) { }
+
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);
@@ -84,9 +103,9 @@ public:
 	std::pair<core::StructTypePtr, core::StructExprPtr> createGlobalStruct(const conversion::ConversionFactory& fact) const;
 
 private:
-	GlobalVarVect globals;
-	VisitedFuncSet visited;
-	FunctionStack	  funcStack;
+	GlobalVarVect 	globals;
+	VisitedFuncSet 	visited;
+	FunctionStack	funcStack;
 
 	clang::idx::Indexer& indexer;
 	UseGlobalFuncMap& usingGlobals;

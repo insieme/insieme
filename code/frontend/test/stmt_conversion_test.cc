@@ -51,7 +51,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/insieme_pragma.h"
 
 #include "clang/Index/Indexer.h"

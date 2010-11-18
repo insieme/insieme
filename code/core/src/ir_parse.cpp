@@ -138,7 +138,6 @@ IRParser::IRParser(NodeManager& nodeMan) {
 
 	typeRule = 
 		functionType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
-		| (qi::lit("(|") >> typeRule >> qi::lit("|)"))				[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| arrayType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| vectorType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| refType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
@@ -147,16 +146,25 @@ IRParser::IRParser(NodeManager& nodeMan) {
 		| typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| structType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
 		| unionType													[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
-		| genericType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
+		| genericType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
+		| (qi::lit("(|") >> typeRule >> qi::lit("|)"))				[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
 
-	//BOOST_SPIRIT_DEBUG_NODE(typeRule);
-	//BOOST_SPIRIT_DEBUG_NODE(typeDefinition);
-	//BOOST_SPIRIT_DEBUG_NODE(functionType);
-	//BOOST_SPIRIT_DEBUG_NODE(genericType);
-	//BOOST_SPIRIT_DEBUG_NODE(intTypeParam);
-	//BOOST_SPIRIT_DEBUG_NODE(typeVariable);
-	//BOOST_SPIRIT_DEBUG_NODE(typeLabel);
+	// debugging
 	//BOOST_SPIRIT_DEBUG_NODE(identifier);
+	//BOOST_SPIRIT_DEBUG_NODE(typeVarLabel);
+	//BOOST_SPIRIT_DEBUG_NODE(intTypeParamLabel);
+	//BOOST_SPIRIT_DEBUG_NODE(functionType);
+	//BOOST_SPIRIT_DEBUG_NODE(typeVariable);
+	//BOOST_SPIRIT_DEBUG_NODE(intTypeParam);
+	//BOOST_SPIRIT_DEBUG_NODE(refType);
+	//BOOST_SPIRIT_DEBUG_NODE(channelType);
+	//BOOST_SPIRIT_DEBUG_NODE(vectorType);
+	//BOOST_SPIRIT_DEBUG_NODE(arrayType);
+	//BOOST_SPIRIT_DEBUG_NODE(tupleType);
+	//BOOST_SPIRIT_DEBUG_NODE(structType);
+	//BOOST_SPIRIT_DEBUG_NODE(unionType);
+	//BOOST_SPIRIT_DEBUG_NODE(genericType);
+	//BOOST_SPIRIT_DEBUG_NODE(typeRule);
 }
 
 

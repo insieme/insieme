@@ -137,9 +137,6 @@ class ConversionFactory : public boost::noncopyable {
 		core::StructTypePtr globalStructType;
 		core::StructExprPtr	globalStructExpr;
 
-		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> FunctionGlobalCapturedMap;
-		FunctionGlobalCapturedMap funcGlobalCaptureMap;
-
 		std::unordered_map<insieme::core::VariablePtr, insieme::core::VariablePtr, hash_target<insieme::core::VariablePtr>,
 			equal_target<insieme::core::VariablePtr>> needRef;
 

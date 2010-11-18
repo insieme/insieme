@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 
 #include "insieme/frontend/utils/types_lenght.h"
 #include "insieme/frontend/utils/dep_graph.h"
