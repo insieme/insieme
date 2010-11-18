@@ -713,15 +713,14 @@ public:
 		append(lambda, cur->getLambda(), "lambdaExprPtr");
 		captureInitExpr << lambda;
 		
-		XmlElement initializations("initializations", doc);
-		captureInitExpr << initializations;
+		XmlElement xmlValues("values", doc);
+		captureInitExpr << xmlValues;
 
-		const CaptureInitExpr::Initializations& inits = cur->getInitializations();
-		for(CaptureInitExpr::Initializations::const_iterator iter = inits.begin(), end = inits.end(); iter != end; ++iter) {
-			XmlElement initialization("initialization", doc);
-			append(initialization, iter->first, "VariablePtr");
-			append(initialization, iter->second, "ExpressionPtr");
-			initializations << initialization;
+		const CaptureInitExpr::Values& values = cur->getValues();
+		for(CaptureInitExpr::Values::const_iterator iter = values.begin(), end = values.end(); iter != end; ++iter) {
+			XmlElement xmlValue("value", doc);
+			append(xmlValue, *iter, "ExpressionPtr");
+			xmlValues << xmlValue;
 		}
 		
 		visitAnnotations(cur->getAnnotations(), captureInitExpr);
