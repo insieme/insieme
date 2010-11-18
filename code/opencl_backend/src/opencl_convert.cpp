@@ -89,12 +89,12 @@ CodePtr FunctionManager::getFunctionLiteral(const core::FunctionTypePtr& type, c
 	CodePtr cptr = std::make_shared<CodeFragment>(ident.getName());
 	CodeStream& cs = cptr->getCodeStream();
 	cs << cc.getTypeMan().getTypeName(type->getReturnType()) << " " << name << "(";
-	auto argType = type->getArgumentType();
-	if(auto tupleArgType = dynamic_pointer_cast<const TupleType>(argType)) {
-		cs << join(", ", tupleArgType->getElementTypes(), [this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
-			return (o << this->cc.getTypeMan().getTypeName(cur));
-		});
-	} // TODO handle other argument types
+//	auto argType = type->getArgumentType();
+//	if(auto tupleArgType = dynamic_pointer_cast<const TupleType>(argType)) {
+//		cs << join(", ", tupleArgType->getElementTypes(), [this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
+//			return (o << this->cc.getTypeMan().getTypeName(cur));
+//		});
+//	} // TODO handle other argument types
 	cs << ");\n";
 	// insert into function map and return
 	functionMap.insert(std::make_pair(ident, cptr));

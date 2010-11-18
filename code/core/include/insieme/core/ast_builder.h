@@ -114,6 +114,7 @@ public:
 
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
+	CallExprPtr refVar(const ExpressionPtr& subExpr) const;
 
 	// Call Expressions
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;

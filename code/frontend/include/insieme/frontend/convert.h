@@ -167,7 +167,6 @@ class ConversionFactory : public boost::noncopyable {
 
 	core::NodeManager& 			mgr;
 	const core::ASTBuilder  	builder;
-	core::lang::BasicGenerator 	typeGen;
     Program& 					program;
 
     /**

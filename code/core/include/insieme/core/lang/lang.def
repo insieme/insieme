@@ -67,6 +67,10 @@ TYPE(Bool, "bool")
 LITERAL(True,  "true",  "bool")
 LITERAL(False, "false", "bool")
 
+TYPE(Alpha, "'a")
+TYPE(RefAlpha, "ref<'a>")
+
+LITERAL(Null, "null", "ref<'a>")
 TYPE(VarList, "var_list")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------
@@ -140,8 +144,6 @@ LITERAL(UIntLShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntRShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 
 // References ---------------------------------------------------------------------------------------------------------
-
-TYPE(RefAlpha, "ref<'a>")
 
 LITERAL(RefVar,    "ref.var",    "('a) -> ref<'a>")
 LITERAL(RefNew,    "ref.new",    "('a) -> ref<'a>")

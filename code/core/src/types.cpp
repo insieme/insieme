@@ -153,15 +153,16 @@ namespace {
 		// create output buffer
 		std::stringstream res;
 
+		res << "(";
 		// add capture list
 		if (!captureTypes.empty()) {
-			res << "[" << join(", ", captureTypes, print<deref<TypePtr>>()) << "]";
+			res << "[" << join(",", captureTypes, print<deref<TypePtr>>()) << "]";
 		}
 		// add arguments
-		res << "(" << join(", ", argumentTypes, print<deref<TypePtr>>()) << ")";
+		res << "(" << join(",", argumentTypes, print<deref<TypePtr>>()) << ")";
 
 		// add result
-		res << "->" << *returnType;
+		res << "->" << *returnType << ")";
 		return res.str();
 	}
 }

@@ -57,15 +57,15 @@ TEST(CallExprTypeCheck, Basic) {
 	// ... define some types
 	TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
 	EXPECT_EQ("()", toString(*empty));
-	FunctionTypePtr nullary = builder.functionType(empty, type);
+	FunctionTypePtr nullary = builder.functionType(empty->getElementTypes(), type);
 	EXPECT_EQ("(()->int<a>)", toString(*nullary));
 	TupleTypePtr single = builder.tupleType(toVector(type));
 	EXPECT_EQ("(int<a>)", toString(*single));
-	FunctionTypePtr unary = builder.functionType(single, type);
+	FunctionTypePtr unary = builder.functionType(single->getElementTypes(), type);
 	EXPECT_EQ("((int<a>)->int<a>)", toString(*unary));
 	TupleTypePtr pair = builder.tupleType(toVector(type, type));
 	EXPECT_EQ("(int<a>,int<a>)", toString(*pair));
-	FunctionTypePtr binary = builder.functionType(pair, type);
+	FunctionTypePtr binary = builder.functionType(pair->getElementTypes(), type);
 	EXPECT_EQ("((int<a>,int<a>)->int<a>)", toString(*binary));
 
 	// define literals
@@ -272,7 +272,7 @@ TEST(CastExpr, Basic) {
 
 	TypePtr type = builder.genericType("int");
 	TypePtr ref = builder.refType(type);
-	TypePtr fun = builder.functionType(builder.tupleType(toVector(type)), ref);
+	TypePtr fun = builder.functionType(toVector(type), ref);
 
 	CastExprPtr ok = builder.castExpr(type, builder.literal(type, "1"));
 	CastExprPtr err1 = builder.castExpr(fun, builder.literal(type, "1"));

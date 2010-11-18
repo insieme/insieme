@@ -148,8 +148,9 @@ public:
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
 
 		XmlElement argumentType("argumentType", doc);
-		append(argumentType, cur->getArgumentType(), "tupleTypePtr");
-		functionType << argumentType;
+		// TODO: fix this ...
+//		append(argumentType, cur->getArgumentType(), "tupleTypePtr");
+//		functionType << argumentType;
 
 		XmlElement returnType("returnType", doc);
 		append(returnType, cur->getReturnType(), "typePtr");
