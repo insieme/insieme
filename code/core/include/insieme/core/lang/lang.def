@@ -175,6 +175,7 @@ LITERAL(Merge, "merge", "(threadgroup) -> unit")
 LITERAL(MergeAll, "mergeAll", "() -> unit")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
+LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vector<int<#a>,#b>, (vector<int<#a>,#b>)->'a)->unit")
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
 // TODO herbert

@@ -52,7 +52,7 @@ OPTION("definitions,D",	 	"definitions", 			Defs, std::vector<std::string>, 		"A
 OPTION("show-ir,", 			"show-ir", 				ShowIR, std::string, 					"Print a dot representation of the IR")
 OPTION("dump-xml,", 		"dump-xml", 			DumpXML, std::string, 					"Print the xml representation of the IR")
 OPTION("load-xml,", 		"load-xml", 			LoadXML, std::string, 					"Load an xml contanining an IR")
-OPTION("dump-ir,", 			"dump-ir", 				DumpIR, std::string, 					"Print the pretty printed representation of the IR")
+OPTION("dump-ir,i", 		"dump-ir", 				DumpIR, std::string, 					"Print the pretty printed representation of the IR")
 OPTION("out-file,o", 		"out-file", 			Output, std::string, 					"output file")
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)

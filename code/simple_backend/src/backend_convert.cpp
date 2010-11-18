@@ -68,57 +68,61 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 
 void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 
-	// obtain a name for the function ...
-	//string cFunName = cc.getNameGen().getName(ptr);
+	FunctionManager& funManager = cc.getFuncMan();
 
+	funManager.createCallable(defCodePtr, ptr);
 
-	// get name for function type
-	string name = nameGen.getName(ptr, "lambda");
-	string structName = "struct " + name + "_closure";
-
-	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getType());
-
-	// define the empty lambda struct
-	// A) create struct for lambda closure
-	{
-		CodePtr cptr(new CodeFragment(string("lambda_") + name));
-		CodeStream& out = cptr->getCodeStream();
-		defCodePtr->addDependency(cptr);
-		out << structName << " { \n";
-
-			// add function pointer
-			out << "    ";
-			out << cc.getTypeMan().getTypeName(cptr, funType->getReturnType());
-			out << "(*fun)(" << "void*";
-			auto arguments = funType->getArgumentType()->getElementTypes();
-			if (!arguments.empty()) {
-				out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-					out << cc.getTypeMan().getTypeName(cptr, cur);
-				});
-			}
-			out << ");\n";
-
-			// add struct size
-			out << "    const size_t size;\n";
-
-			// add capture values
-			for_each(ptr->getCaptureList(), [&](const VariablePtr& var) {
-				out << "    " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
-			});
-		out << "};\n";
-	}
-
-	// B) create function to be computed using function manager + add dependency
-	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
-
-	// C) allocate a struct
-	cStr << "((struct " << nameGen.getName(ptr->getType(), "funType") << "*)&((" << structName << "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
-	if (!ptr->getCaptureList().empty()) {
-		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const VariablePtr& cur) {
-			//this->visit(cur->getInitialization());
-		});
-	}
-	cStr << "}))";
+//	// obtain a name for the function ...
+//	//string cFunName = cc.getNameGen().getName(ptr);
+//
+//
+//	// get name for function type
+//	string name = nameGen.getName(ptr, "lambda");
+//	string structName = "struct " + name + "_closure";
+//
+//	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getType());
+//
+//	// define the empty lambda struct
+//	// A) create struct for lambda closure
+//	{
+//		CodePtr cptr(new CodeFragment(string("lambda_") + name));
+//		CodeStream& out = cptr->getCodeStream();
+//		defCodePtr->addDependency(cptr);
+//		out << structName << " { \n";
+//
+//			// add function pointer
+//			out << "    ";
+//			out << cc.getTypeMan().getTypeName(cptr, funType->getReturnType());
+//			out << "(*fun)(" << "void*";
+//			auto arguments = funType->getArgumentType()->getElementTypes();
+//			if (!arguments.empty()) {
+//				out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+//					out << cc.getTypeMan().getTypeName(cptr, cur);
+//				});
+//			}
+//			out << ");\n";
+//
+//			// add struct size
+//			out << "    const size_t size;\n";
+//
+//			// add capture values
+//			for_each(ptr->getCaptureList(), [&](const VariablePtr& var) {
+//				out << "    " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
+//			});
+//		out << "};\n";
+//	}
+//
+//	// B) create function to be computed using function manager + add dependency
+//	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
+//
+//	// C) allocate a struct
+//	cStr << "((struct " << nameGen.getName(ptr->getType(), "funType") << "*)&((" << structName << "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
+//	if (!ptr->getCaptureList().empty()) {
+//		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const VariablePtr& cur) {
+//			//this->visit(cur->getInitialization());
+//		});
+//	}
+//	cStr << "}))";
 
 }
 
@@ -311,22 +315,17 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 }
 
 void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
+
 	auto typePtr = ptr->getType();
 	const string& val = ptr->getValue();
-	if (cc.getNodeManager().basic.isString(typePtr)) {
+	if (cc.basic.isString(typePtr)) {
 		// TODO change once the decision is made how string literals should be represented int the AST
 		if(val.empty() || val[0] != '"' || val[val.length()-1] != '"') {
 			cStr << "\"" << val << "\"";
 		} else {
 			cStr << val;
 		}
-	} 
-	else if(auto funType = dynamic_pointer_cast<const FunctionType>(typePtr)) {
-		auto funLiteralDeclCode = cc.getFuncMan().getFunctionLiteral(ptr);
-		defCodePtr->addDependency(funLiteralDeclCode);
-		cStr << val;
-	}
-	else {
+	} else {
 		cStr << val;
 	}
 }

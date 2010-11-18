@@ -240,27 +240,25 @@ TEST(ExpressionsTest, CaptureInitExpr) {
 
 	VariablePtr captureVar = builder.variable(res);
 	LiteralPtr initValue = builder.literal(res, "X");
+	LiteralPtr initValue2 = builder.literal(res, "Y");
 
 	LambdaExprPtr lambda = builder.lambdaExpr(funType, Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
 	LambdaExprPtr lambda2 = builder.lambdaExpr(funType, toVector<VariablePtr>(captureVar), Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
 
-	CaptureInitExpr::Initializations inits;
-	inits.insert(std::make_pair(captureVar, initValue));
-
-	CaptureInitExprPtr empty = builder.captureInitExpr(lambda, CaptureInitExpr::Initializations());
-	CaptureInitExprPtr more = builder.captureInitExpr(lambda2, inits);
+	CaptureInitExprPtr empty = builder.captureInitExpr(lambda, toVector<ExpressionPtr>());
+	CaptureInitExprPtr more = builder.captureInitExpr(lambda2, toVector<ExpressionPtr>(initValue, initValue2));
 
 	EXPECT_EQ(*lambda->getType(), *empty->getType());
 	EXPECT_EQ(*lambda->getType(), *more->getType());
 	EXPECT_EQ(*lambda2->getType(), *more->getType());
 
 	EXPECT_EQ ("([]rec v4.{v4=fun[]() return A})", toString(*empty));
-	EXPECT_EQ ("([v3:=X]rec v5.{v5=fun[A v3]() return A})", toString(*more));
+	EXPECT_EQ ("([X, Y]rec v5.{v5=fun[A v3]() return A})", toString(*more));
 
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, lambda->getType(), toVector<NodePtr>(lambda));
-	basicExprTests(more, lambda2->getType(), toVector<NodePtr>(lambda2, captureVar, initValue));
+	basicExprTests(more, lambda2->getType(), toVector<NodePtr>(lambda2, initValue, initValue2));
 
 }
 

@@ -330,8 +330,10 @@ class LambdaExpr : public Expression {
 
 	/**
 	 * A reference to the defining lambda (cached for faster access).
+	 *
+	 * NOTE: not stored within the XML
 	 */
-	const Lambda& lambda;
+	const LambdaPtr& lambda;
 
 	/**
 	 * A constructor for creating a new lambda.
@@ -414,6 +416,11 @@ public:
 	const LambdaDefinitionPtr& getDefinition() const { return definition; }
 
 	/**
+	 * Obtains a pointer to the defining lambda node.
+	 */
+	const LambdaPtr& getLambda() const { return lambda; }
+
+	/**
 	 * Obtains a reference to the internally maintained capture list of this lambda.
 	 */
 	const Lambda::CaptureList& getCaptureList() const;
@@ -434,9 +441,10 @@ class CaptureInitExpr : public Expression {
 public:
 
 	/**
-	 * A shortcut for the map linking parameters to initialization values.
+	 * A shortcut for the list of expressions used for initializing the capture variables of
+	 * the lambda.
 	 */
-	typedef std::map<VariablePtr, ExpressionPtr, compare_target<VariablePtr>> Initializations;
+	typedef std::vector<ExpressionPtr> Values;
 
 private:
 
@@ -446,19 +454,19 @@ private:
 	const ExpressionPtr lambda;
 
 	/**
-	 * The actual initialization of the captured variables.
+	 * The actual values used for initializing the capture variables.
 	 */
-	const Initializations initializations;
+	const Values values;
 
 	/**
 	 * A constructor for creating a capture initializing expression.
 	 *
 	 * @param variable the variable identifying the recursive function within the definition block
 	 * 				   to be represented by this expression.
-	 * @param initializations the actual initialization expressions.
+	 * @param values the actual initialization expressions.
 	 * @param definition the recursive definitions to be based on.
 	 */
-	CaptureInitExpr(const ExpressionPtr& lambda, const Initializations& initializations);
+	CaptureInitExpr(const ExpressionPtr& lambda, const Values& values);
 
 	/**
 	 * Creates a clone of this node.
@@ -487,9 +495,9 @@ public:
 	 *
 	 * @param manager the manager which should be maintaining the new instance
 	 * @param lambda the lambda for which the capture list should be initialized
-	 * @þaram initializations the actual parameter initialization
+	 * @þaram values the valued to be initialized
 	 */
-	static CaptureInitExprPtr get(NodeManager& manager, const ExpressionPtr& lambda, const CaptureInitExpr::Initializations& initializations);
+	static CaptureInitExprPtr get(NodeManager& manager, const ExpressionPtr& lambda, const Values& values);
 
 	/**
 	 * Prints a readable representation of this instance to the given output stream.
@@ -505,9 +513,9 @@ public:
 	const ExpressionPtr& getLambda() const { return lambda; }
 
 	/**
-	 * The actual initialization of the captured variables.
+	 * The actual values of the captured variables.
 	 */
-	const Initializations& getInitializations() const { return initializations; }
+	const Values& getValues() const { return values; }
 
 };
 
