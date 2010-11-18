@@ -270,7 +270,7 @@ public:
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
 		assert(retTy && "Function has no return type!");
 
-		core::TupleType::ElementTypeList argTypes;
+		core::TypeList argTypes;
 		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 			[ &argTypes, this ] (const QualType& currArgType) {
 				this->convFact.ctx.isResolvingFunctionType = true;
@@ -288,7 +288,7 @@ public:
 		if( funcTy->isVariadic() )
 			argTypes.push_back( convFact.typeGen.getVarList() );
 
-		retTy = builder.functionType( builder.tupleType(argTypes), retTy);
+		retTy = builder.functionType( argTypes, retTy);
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -303,7 +303,7 @@ public:
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
 		assert(retTy && "Function has no return type!");
 
-		retTy = convFact.builder.functionType( convFact.builder.tupleType(), retTy);
+		retTy = convFact.builder.functionType( core::TypeList(), retTy);
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

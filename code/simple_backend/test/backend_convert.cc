@@ -59,14 +59,13 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 	BasicGenerator typeGen(build.getNodeManager());
 
-	TupleTypePtr printfArgType = build.tupleType(toVector<TypePtr>(build.refType(typeGen.getChar()), typeGen.getVarList()));
+	TypeList printfArgType = toVector<TypePtr>(build.refType(typeGen.getChar()), typeGen.getVarList());
 	TypePtr unitType = typeGen.getUnit();
 	TypePtr printfType = build.functionType(printfArgType, unitType);
 
 	auto printfDefinition = build.literal("printf", printfType);
 
-	TupleTypePtr emptyTupleType = build.tupleType();
-	FunctionTypePtr voidNullaryFunctionType = build.functionType(emptyTupleType, unitType);
+	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
 
 	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
