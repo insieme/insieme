@@ -159,7 +159,7 @@ LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
-LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> uint<#b>")
+LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
 LITERAL(VectorInitUndefined, "vector.initUndefined", "() -> vector<'elem,#a>")						// fugly
 

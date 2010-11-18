@@ -775,7 +775,7 @@ public:
 						builder.getBasicGenerator().getVectorSubscript() :
 						builder.getBasicGenerator().getArray1DSubscript();
 
-				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", convFact.mgr.basic.getInt4()) );
+				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", convFact.mgr.basic.getUInt4()) );
 			}
 			break;
 		}
@@ -873,7 +873,7 @@ public:
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(convFact.mgr.basic.getInt4(), idx) );
+			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(convFact.mgr.basic.getUInt4(), idx) );
 
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;

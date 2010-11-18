@@ -330,11 +330,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"vector.subscript(( *v1), CAST<int<4>>(0))"
+	"vector.subscript(( *v1), CAST<uint<4>>(0))"
 	a[0];
 
 	#pragma test \
-	"(vector.subscript(( *v1), CAST<int<4>>(0)) := 1)"
+	"(vector.subscript(( *v1), CAST<uint<4>>(0)) := 1)"
 	a[0] = 1;
 
 	//#pragma test \
@@ -342,11 +342,11 @@ void vector_stmt_test() {
 	int b[2][2];
 
 	#pragma test \
-	"vector.subscript(vector.subscript(( *v1), CAST<int<4>>(0)), CAST<int<4>>(0))"
+	"vector.subscript(vector.subscript(( *v1), CAST<uint<4>>(0)), CAST<uint<4>>(0))"
 	b[0][0];
 
 	#pragma test \
-	"(vector.subscript(vector.subscript(( *v1), CAST<int<4>>(1)), CAST<int<4>>(1)) := 0)"
+	"(vector.subscript(vector.subscript(( *v1), CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
 	b[1][1] = 0;
 
 	//#pragma test \
