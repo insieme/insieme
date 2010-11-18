@@ -628,6 +628,41 @@ public:
 		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
 	}*/
 	
+	/*void visitLambda(const LambdaPtr& cur) { // NEW ONE
+		XmlElement lambda("lambda", doc);
+		rootElem << (lambda << XmlElement::Attribute("id", GET_ID(cur)));
+
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "functionTypePtr");
+		lambda << type;
+
+		XmlElement captureList("captureList",doc);
+		lambda << captureList;
+
+		const Lambda::CaptureList& capList = cur->getCaptureList();
+		std::for_each(capList.begin(), capList.end(),
+			[this, &captureList](const Lambda::CaptureList::value_type& curr) {
+				this->append(captureList, curr, "variablePtr");
+			}
+		);
+		
+		XmlElement paramList("paramList",doc);
+		lambda << paramList;
+
+		const Lambda::ParamList& parList = cur->getParameterList();
+		std::for_each(parList.begin(), parList.end(),
+			[this, &paramList](const Lambda::ParamList::value_type& curr) {
+				this->append(paramList, curr, "variablePtr");
+			}
+		);
+
+		XmlElement body("body", doc);
+		append(body, cur->getBody(), "statementPtr");
+		lambda << body;
+
+		visitAnnotations(cur->getAnnotations(), lambda);
+	}*/
+	
 	void visitMemberAccessExpr(const MemberAccessExprPtr& cur) {
 		XmlElement memberAccessExpr("memberAccessExpr", doc);
 		rootElem << (memberAccessExpr << XmlElement::Attribute("id", GET_ID(cur)));
@@ -664,6 +699,32 @@ public:
 		tupleProjectionExpr << index;
 
 		visitAnnotations(cur->getAnnotations(), tupleProjectionExpr);
+	}
+	
+	void visitCaptureInitExpr (const CaptureInitExprPtr& cur){
+		XmlElement captureInitExpr("captureInitExpr", doc);
+		rootElem << (captureInitExpr << XmlElement::Attribute("id", GET_ID(cur)));
+		
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "typePtr");
+		captureInitExpr << type;
+		
+		XmlElement lambda("lambda", doc);
+		append(lambda, cur->getLambda(), "lambdaExprPtr");
+		captureInitExpr << lambda;
+		
+		XmlElement initializations("initializations", doc);
+		captureInitExpr << initializations;
+
+		const CaptureInitExpr::Initializations& inits = cur->getInitializations();
+		for(CaptureInitExpr::Initializations::const_iterator iter = inits.begin(), end = inits.end(); iter != end; ++iter) {
+			XmlElement initialization("initialization", doc);
+			append(initialization, iter->first, "VariablePtr");
+			append(initialization, iter->second, "ExpressionPtr");
+			initializations << initialization;
+		}
+		
+		visitAnnotations(cur->getAnnotations(), captureInitExpr);
 	}
 };
 
