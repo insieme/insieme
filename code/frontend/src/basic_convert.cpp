@@ -267,7 +267,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle refs initialization
     if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
         // initialize pointer/reference types with the null value
-    	return builder.callExpr( type, mgr.basic.getRefVar(), defaultInitVal(refTy->getElementType()) );
+    	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
     if ( *type == *mgr.basic.getString() ) {
@@ -368,7 +368,7 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 	assert(retExpr && "Couldn't convert initialization expression");
 
 	if(isRef)
-		retExpr = builder.callExpr( type, mgr.basic.getRefVar(), retExpr );
+		retExpr = builder.refVar( retExpr );
 	// create vector initializator
 	return retExpr;
 }
@@ -382,7 +382,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 	if(core::dynamic_pointer_cast<const core::RefType>(type))
-		retExpr = builder.callExpr( type, mgr.basic.getRefVar(), retExpr );
+		retExpr = builder.refVar( retExpr );
 	return retExpr;
 }
 

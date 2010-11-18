@@ -1067,7 +1067,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			auto fit = this->ctx.needRef.find(currParam);
 			if(fit != this->ctx.needRef.end()) {
 				decls.push_back( this->builder.declarationStmt(fit->second,
-					this->builder.callExpr( fit->second->getType(), this->mgr.basic.getRefVar(), fit->first) // ref.var
+					this->builder.refVar( fit->first ) // ref.var
 				));
 				// replace this parameter in the body
 				// example:
@@ -1100,8 +1100,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
 		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar,
-				builder.callExpr( builder.refType(ctx.globalStruct.first), mgr.basic.getRefVar(), ctx.globalStruct.second )) );
+		stmts.push_back( builder.declarationStmt(ctx.globalVar, builder.refVar( ctx.globalStruct.second )) );
 		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
 		body = builder.compoundStmt(stmts);
 	}

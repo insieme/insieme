@@ -302,7 +302,7 @@ public:
 				// we handle only the situation where the initExpr is an assignment
 				init = callExpr->getArguments()[1]; // getting RHS
 
-				declStmt = builder.declarationStmt( newIndVar, builder.callExpr(varTy, convFact.mgr.basic.getRefVar(), init) );
+				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), inductionVar, newIndVar, true);
 
 				// replace the body with the newly modified one
