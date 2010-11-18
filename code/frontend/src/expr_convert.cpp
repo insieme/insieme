@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
@@ -163,13 +163,13 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
 
 	core::Lambda::CaptureList capture;
-	core::CaptureInitExpr::Initializations initializations;
+	core::CaptureInitExpr::Values values;
 	std::for_each(args.begin(), args.end(),
-		[ &capture, &builder, &bodyStmt, &initializations ] (const core::ExpressionPtr& curr) {
+		[ &capture, &builder, &bodyStmt, &values ] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
 			capture.push_back( parmVar );
-			initializations.insert( std::make_pair(parmVar, bodyVar) );
+			values.push_back( bodyVar );
 			// we have to replace the variable of the body with the newly created parmVar
 			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
 					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
@@ -183,7 +183,7 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 
 	// build the expression body
 	core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
-	core::CaptureInitExprPtr&& retExpr = builder.captureInitExpr(lambdaExpr, initializations);
+	core::CaptureInitExprPtr&& retExpr = builder.captureInitExpr(lambdaExpr, values);
 
 	return builder.callExpr( retTy, retExpr, ExpressionList() );
 }
@@ -370,14 +370,12 @@ public:
 
 			// We find a definition, we lookup if this variable needs to access the globals, in that case the
 			// capture list needs to be initialized with the value of global variable in the current scope
-			core::CaptureInitExpr::Initializations initializations;
+			core::CaptureInitExpr::Values values;
 			if(ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end()) {
 				// we expect to have a the currGlobalVar set to the value of the var keeping global definitions
 				// in the current context
 				assert(ctx.currGlobalVar && "No global definitions forwarded to this point");
-				auto fit = ctx.funcGlobalCaptureMap.find(definition);
-				assert(fit != ctx.funcGlobalCaptureMap.end());
-				initializations.insert( std::make_pair(fit->second, ctx.currGlobalVar) );
+				values.push_back( ctx.currGlobalVar );
 			}
 
 			// If we are resolving the body of a recursive function we have to return the associated
@@ -391,8 +389,8 @@ public:
 					// connected components are called, the introduced mu variable has to be used instead.
 					convFact.currTU = oldTU;
 					core::ExpressionPtr callee;
-					if(!initializations.empty())
-						callee = builder.captureInitExpr(fit->second, initializations);
+					if(!values.empty())
+						callee = builder.captureInitExpr(fit->second, values);
 					else
 						callee = fit->second;
 					return builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
@@ -404,8 +402,8 @@ public:
 				if(fit != ctx.lambdaExprCache.end()) {
 					convFact.currTU = oldTU;
 					core::ExpressionPtr callee;
-					if(!initializations.empty())
-						callee = builder.captureInitExpr(fit->second, initializations);
+					if(!values.empty())
+						callee = builder.captureInitExpr(fit->second, values);
 					else
 						callee = fit->second;
 					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
@@ -421,8 +419,8 @@ public:
 			convFact.currTU = oldTU;
 
 			// initialize the capture list
-			if(!initializations.empty())
-				lambdaExpr = builder.captureInitExpr(lambdaExpr, initializations);
+			if(!values.empty())
+				lambdaExpr = builder.captureInitExpr(lambdaExpr, values);
 
 			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
@@ -1000,11 +998,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 						// if the function belonging to this recursion needs to access global variables
 						// we create the variable that will be used in the caputre list
-						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
-							assert(this->ctx.funcGlobalCaptureMap.find(fd) == this->ctx.funcGlobalCaptureMap.end());
-							core::VariablePtr&& captVar = this->builder.variable( builder.refType(this->ctx.globalStructType) );
-							this->ctx.funcGlobalCaptureMap.insert( std::make_pair(fd, captVar) );
-						}
+//						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
+//							assert(this->ctx.funcGlobalCaptureMap.find(fd) == this->ctx.funcGlobalCaptureMap.end());
+//							core::VariablePtr&& captVar = this->builder.variable( builder.refType(this->ctx.globalStructType) );
+//							this->ctx.funcGlobalCaptureMap.insert( std::make_pair(fd, captVar) );
+//						}
 						var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
 					}
 				}
@@ -1034,14 +1032,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	if(isEntryPoint) {
 		ctx.currGlobalVar = ctx.globalVar;
 	} else if(ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
-		auto fit = ctx.funcGlobalCaptureMap.find(funcDecl);
-		if(fit == ctx.funcGlobalCaptureMap.end()) {
-			// declare a new variable that will be used to hold a reference to the global data stucture
-			core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStructType) );
-			fit = ctx.funcGlobalCaptureMap.insert( std::make_pair(funcDecl, var) ).first;
-		}
-		captureList.push_back( fit->second );
-		ctx.currGlobalVar = fit->second;
+		// declare a new variable that will be used to hold a reference to the global data stucture
+		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStructType) );
+		captureList.push_back( var );
+		ctx.currGlobalVar = var;
 	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
