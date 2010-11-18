@@ -74,7 +74,7 @@ class IRParser {
 	qi::rule<ParseIt, IntTypeParam()> intTypeParamLabel;
 
 	// nonterminal rules with skip parsing
-	qi::rule<ParseIt, TypePtr(), qi::space_type> functionType;
+	qi::rule<ParseIt, TypePtr(), qi::locals<vector<TypePtr>, vector<TypePtr>, TypePtr>, qi::space_type> functionType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeVariable;
 	qi::rule<ParseIt, IntTypeParam(), qi::space_type> intTypeParam;
 	qi::rule<ParseIt, RefTypePtr(), qi::space_type> refType;

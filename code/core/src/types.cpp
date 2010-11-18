@@ -135,7 +135,7 @@ TupleTypePtr TupleType::getEmpty(NodeManager& manager) {
 	return get(manager, toVector<TypePtr>());
 }
 
-TupleTypePtr TupleType::get(NodeManager& manager, const ElementTypeList& elementTypes) {
+TupleTypePtr TupleType::get(NodeManager& manager, const TypeList& elementTypes) {
 	return manager.get(TupleType(elementTypes));
 }
 
@@ -149,7 +149,7 @@ Node::OptionChildList TupleType::getChildNodes() const {
 
 namespace {
 
-	string buildFunctionTypeName(const Type::TypeList& captureTypes, const Type::TypeList& argumentTypes, const TypePtr& returnType) {
+	string buildFunctionTypeName(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) {
 		// create output buffer
 		std::stringstream res;
 
@@ -158,7 +158,7 @@ namespace {
 			res << "[" << join(", ", captureTypes, print<deref<TypePtr>>()) << "]";
 		}
 		// add arguments
-		res << "(" << join(", ", arguementTypes, print<deref<TypePtr>>()) << ")";
+		res << "(" << join(", ", argumentTypes, print<deref<TypePtr>>()) << ")";
 
 		// add result
 		res << "->" << *returnType;
@@ -174,7 +174,7 @@ FunctionType::FunctionType(const TypeList& argumentTypes, const TypePtr& returnT
 
 FunctionType::FunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) :
 	Type(NT_FunctionType, buildFunctionTypeName(captureTypes, argumentTypes, returnType), true, true),
-	captureTypes(isolate(captureTypes)), argumentType(isolate(argumentType)), returnType(isolate(returnType)) {
+	captureTypes(isolate(captureTypes)), argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) {
 }
 
 FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& argumentTypes, const TypePtr& returnType) {
@@ -188,12 +188,14 @@ FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& captureT
 }
 
 FunctionType* FunctionType::createCopyUsing(NodeMapping& mapper) const {
-	return new FunctionType(mapper.map(0, argumentType),mapper.map(1, returnType));
+	return new FunctionType(mapper.map(0, captureTypes), mapper.map(captureTypes.size(), argumentTypes), 
+		mapper.map(captureTypes.size() + argumentTypes.size(), returnType));
 }
 
 Node::OptionChildList FunctionType::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	res->push_back(argumentType);
+	std::copy(captureTypes.begin(), captureTypes.end(), std::back_inserter(*res));
+	std::copy(argumentTypes.begin(), argumentTypes.end(), std::back_inserter(*res));
 	res->push_back(returnType);
 	return res;
 }
