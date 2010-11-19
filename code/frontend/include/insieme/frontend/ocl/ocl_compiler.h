@@ -119,7 +119,7 @@ public:
     }
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendCaptures(std::vector<core::VariablePtr>& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Initializations inits);
+    void appendCaptures(std::vector<core::VariablePtr>& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);

@@ -41,6 +41,9 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/frontend/utils/types_lenght.h"
 
+// old version for compatibility reasons
+#include "insieme/core/lang_basic.h"
+
 namespace insieme {
 namespace frontend {
 namespace ocl {
@@ -143,7 +146,7 @@ public:
 */
 
 
-void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Initializations inits) {
+void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits) {
 
     if(globalRangeUsed)
         CAPTURE(captureList, globalRange, inits);
@@ -204,7 +207,7 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
 
     groupTgUsed = true;
 
-    return builder.callExpr(builder.getNodeManager().basic.getUnit(), core::lang::OP_BARRIER_PTR, groupTg);
+    return builder.callExpr(/*builder.getNodeManager().basic.getUnit()*/core::lang::TYPE_UNIT_PTR, core::lang::OP_BARRIER_PTR, groupTg);
 }
 
 
@@ -305,7 +308,7 @@ public:
                         case ocl::AddressSpaceAnnotation::LOCAL: {
                             localVars.push_back(decl);
                             //TODO remove declaration from source code
-                            return builder.getNodeManager().basic.getNoOp();
+                            return core::lang::STMT_NO_OP_PTR;//builder.getNodeManager().basic.getNoOp();
                             break;
                         }
                         case ocl::AddressSpaceAnnotation::PRIVATE: {
@@ -488,7 +491,7 @@ private:
 
     // creates new variables for all variables in the input vector and stores them in the output vector
     // The elements of the input vector are stored as initialization values in map inits for the new variables
-    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, core::CaptureInitExpr::Initializations inits) {
+    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, core::CaptureInitExpr::Values inits) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(*I);
             *I = builder.variable((*I)->getType());
@@ -497,7 +500,7 @@ private:
         }
     }
 
-    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Initializations inits) {
+    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Values inits) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back((*I)->getVariable());
             *I = builder.declarationStmt(((*I)->getVariable())->getType(), (*I)->getInitialization());
@@ -507,7 +510,7 @@ private:
     }
 
     // appends the variables of declared in inVec to outVec and stores the initializations int inits
-    void appendToCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Initializations inits) {
+    void appendToCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Values inits) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back((*I)->getVariable());
 
@@ -667,10 +670,10 @@ public:
 
             if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                 // parallel function's type, equal for all
-                core::TupleType::ElementTypeList parArgs;
+                core::TypeList parArgs;
                 parArgs.push_back(builder.getNodeManager().basic.getUInt4());
                 parArgs.push_back(builder.getNodeManager().basic.getUInt4());
-                parArgs.push_back(builder.getNodeManager().basic.getJob());
+                parArgs.push_back(/*builder.getNodeManager().basic.getJob()*/core::lang::TYPE_JOB_PTR);
 
                 // type of functions inside jobs
 //                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
@@ -690,7 +693,7 @@ public:
 
                 // capture all arguments
                 core::Lambda::CaptureList localFunCaptures;
-                core::CaptureInitExpr::Initializations localFunInits;
+                core::CaptureInitExpr::Values localFunInits;
 
                 createCaptureList(localFunCaptures, constantArgs, localFunInits);
                 createCaptureList(localFunCaptures, globalArgs, localFunInits);
@@ -702,7 +705,7 @@ public:
                 // catch loop boundaries
                 kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunInits);
 
-                //TODO store return values of parallel
+                //TODO store return Values of parallel
                 core::LambdaExprPtr localParFct = builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, localFunCaptures, funParams, newBody);
 
                 // initialize captured variables
@@ -734,11 +737,11 @@ public:
 
                 expr.push_back(localJob);
 
-                core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(), core::lang::OP_PARALLEL_PTR, expr);
+                core::CallExprPtr localPar = builder.callExpr(/*builder.getNodeManager().basic.getThreadGroup()*/core::lang::TYPE_THREAD_GROUP_PTR, core::lang::OP_PARALLEL_PTR, expr);
 
                 // capture all arguments
                 core::Lambda::CaptureList globalFunCaptures;
-                core::CaptureInitExpr::Initializations globalFunInits;
+                core::CaptureInitExpr::Values globalFunInits;
 
                 createCaptureList(globalFunCaptures, constantArgs, globalFunInits);
                 createCaptureList(globalFunCaptures, globalArgs, globalFunInits);
@@ -783,7 +786,7 @@ public:
 
                 expr.push_back(globalJob);
 
-                core::CallExprPtr globalPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(), core::lang::OP_PARALLEL_PTR, expr);
+                core::CallExprPtr globalPar = builder.callExpr(/*builder.getNodeManager().basic.getThreadGroup()*/core::lang::TYPE_THREAD_GROUP_PTR, core::lang::OP_PARALLEL_PTR, expr);
 
                 // construct updated param list
                 core::Lambda::ParamList newParams;
