@@ -387,9 +387,19 @@ public:
 	 * A factory method for obtaining a new recursive lambda expression instance.
 	 *
 	 * @param manager the manager which should be maintaining the new instance
+	 * @param lambda the definition of this non-recursive lambda function
+	 * @return the requested lambda expression managed by the given manager
+	 */
+	static LambdaExprPtr get(NodeManager& manager, const LambdaPtr& lambda);
+
+	/**
+	 * A factory method for obtaining a new recursive lambda expression instance.
+	 *
+	 * @param manager the manager which should be maintaining the new instance
 	 * @param variable the name of the variable used within the recursive lambda definition for representing the
 	 * 					   recursive function to be defined by the resulting expression.
 	 * @param definition the definition of the recursive lambda.
+	 * @return the requested lambda expression managed by the given manager
 	 */
 	static LambdaExprPtr get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition);
 
@@ -400,6 +410,7 @@ public:
 	 * @param type the type of the resulting lambda expression
 	 * @param params the parameters accepted by the resulting lambda
 	 * @param body the body of the resulting function
+	 * @return the requested lambda expression managed by the given manager
 	 */
 	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
 
@@ -411,6 +422,7 @@ public:
 	 * @param captureList the list of capture variables
 	 * @param params the parameters accepted by the resulting lambda
 	 * @param body the body of the resulting function
+	 * @return the requested lambda expression managed by the given manager
 	 */
 	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body);
 

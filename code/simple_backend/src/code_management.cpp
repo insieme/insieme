@@ -125,8 +125,10 @@ std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodePt
 	std::vector<insieme::simple_backend::CodePtr> flatDeps;
 	insieme::simple_backend::depResolve::resolve(cp, flatDeps);
 	for_each(flatDeps, [&os](const insieme::simple_backend::CodePtr& cur) {
-		os << "\n// start code fragment :: " << cur->getName() << " //\n";
-		os << cur->getCodeStream().getString();
+		if (!cur->isDummy()) {
+			os << "\n// start code fragment :: " << cur->getName() << " //\n";
+			os << cur->getCodeStream().getString();
+		}
 	});
 	return os;
 }

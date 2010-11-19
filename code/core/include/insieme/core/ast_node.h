@@ -247,7 +247,7 @@ private:
 	/**
 	 * A pointer to the manager this instance is maintained by.
 	 */
-	const NodeManager* manager;
+	NodeManager* manager;
 
 	/**
 	 * The list of child nodes referenced by this node.
@@ -364,11 +364,23 @@ public:
 	NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
 
 	/**
-	 * Obtains a pointer to the manager maintaining this instance of an AST node.
+	 * Obtains a reference to the manager maintaining this node instance. In case this
+	 * node is not managed by any node manager (by any reason), an assertion will be violated.
 	 *
-	 * @return a pointer to the corresponding manager
+	 * @return a reference to the manager maintaining this node
 	 */
-	inline const NodeManager* getNodeManager() const {
+	inline NodeManager& getNodeManager() const {
+		assert(manager && "NodeManager must not be null - unmanaged node detected!");
+		return *manager;
+	}
+
+	/**
+	 * Obtains a pointer to the manager maintaining this node instance. In case this
+	 * node is not managed by any node manager (by any reason), NULL will be returned.
+	 *
+	 * @return a pointer to the manager maintaining this node
+	 */
+	inline NodeManager* getNodeManagerPtr() const {
 		return manager;
 	}
 
@@ -492,7 +504,7 @@ const Container& isolate(const Container& container, typename Container::value_t
 template<typename T>
 inline AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
 	// null pointers or proper points do not have to be modified
-	if (!ptr || ptr->getNodeManager() == &manager) {
+	if (!ptr || ptr->getNodeManagerPtr() == &manager) {
 		return ptr;
 	}
 

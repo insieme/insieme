@@ -46,20 +46,17 @@ namespace simple_backend {
 	
 using namespace core;
 
+ConversionContext::ConversionContext(const NodePtr& target)
+	 : typeMan(nameGen), funcMan(*this), nodeManager(target->getNodeManager()), basic(nodeManager.basic) { }
+
+
 ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 	ConvertedCode converted(prog);
 	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
 		ConvertVisitor convVisitor(*this);
 		convVisitor.visit(ep);
 		CodePtr ptr = convVisitor.getCode();
-//		if (ep->getNodeType() == NT_LambdaExpr) {
-//			// remove root node content => not required
-//			CodePtr tmp = CodePtr(new CodeFragment(string("root-node")));
-//			for_each(ptr->getDependencies(), [&tmp](const CodePtr& cur) {
-//				tmp->addDependency(cur);
-//			});
-//			ptr = tmp;
-//		}
+		ptr->setDummy(true);
 		converted.insert(std::make_pair(ep, ptr));
 	});
 	return converted;
@@ -67,63 +64,8 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 
 
 void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
-
 	FunctionManager& funManager = cc.getFuncMan();
-
-	funManager.createCallable(defCodePtr, ptr);
-
-//	// obtain a name for the function ...
-//	//string cFunName = cc.getNameGen().getName(ptr);
-//
-//
-//	// get name for function type
-//	string name = nameGen.getName(ptr, "lambda");
-//	string structName = "struct " + name + "_closure";
-//
-//	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getType());
-//
-//	// define the empty lambda struct
-//	// A) create struct for lambda closure
-//	{
-//		CodePtr cptr(new CodeFragment(string("lambda_") + name));
-//		CodeStream& out = cptr->getCodeStream();
-//		defCodePtr->addDependency(cptr);
-//		out << structName << " { \n";
-//
-//			// add function pointer
-//			out << "    ";
-//			out << cc.getTypeMan().getTypeName(cptr, funType->getReturnType());
-//			out << "(*fun)(" << "void*";
-//			auto arguments = funType->getArgumentType()->getElementTypes();
-//			if (!arguments.empty()) {
-//				out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-//					out << cc.getTypeMan().getTypeName(cptr, cur);
-//				});
-//			}
-//			out << ");\n";
-//
-//			// add struct size
-//			out << "    const size_t size;\n";
-//
-//			// add capture values
-//			for_each(ptr->getCaptureList(), [&](const VariablePtr& var) {
-//				out << "    " << cc.getTypeMan().formatParamter(cptr, var->getType(),nameGen.getVarName(var)) << ";\n";
-//			});
-//		out << "};\n";
-//	}
-//
-//	// B) create function to be computed using function manager + add dependency
-//	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, defCodePtr));
-//
-//	// C) allocate a struct
-//	cStr << "((struct " << nameGen.getName(ptr->getType(), "funType") << "*)&((" << structName << "){&" << cc.getNameGen().getName(ptr) << ", sizeof(" + structName + ")";
-//	if (!ptr->getCaptureList().empty()) {
-//		cStr << "," << join(",", ptr->getCaptureList(), [&, this](std::ostream& out, const VariablePtr& cur) {
-//			//this->visit(cur->getInitialization());
-//		});
-//	}
-//	cStr << "}))";
-
+	cStr << funManager.getFunctionName(defCodePtr, ptr);
 }
 
 namespace {
@@ -194,9 +136,11 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		}
 
 		// try generic build-in C operator handling
-		auto pos = formats.find(literalFun);
+		auto pos = formats.find(literalFun->getValue());
 		if (pos != formats.end()) {
+			cStr << "(";
 			pos->second->format(*this, cStr, ptr);
+			cStr << ")";
 			return;
 		}
 	}
@@ -213,44 +157,65 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		return;
 	}
 
-	// invoke external method ...
-	if (funExp->getNodeType() == NT_Literal) {
-		cc.getFuncMan().createCallable(defCodePtr, static_pointer_cast<const Literal>(funExp));
-		cStr << "(";
-		functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
-		cStr << ")";
-		return;
-	}
 
-	// TODO: add special handling if lambda is directly given (not a variable)
+	switch(funExp->getNodeType()) {
 
-	// handle variables
-	if (funExp->getNodeType() == NT_Variable) {
-		visit(funExp);
-		cStr << "->fun";
-		cStr << "(";
-		visit(funExp);
-		if (!args.empty()) {
-			cStr << ", ";
+		case NT_Literal: {
+			cStr << cc.getFuncMan().getFunctionName(defCodePtr, static_pointer_cast<const Literal>(funExp));
+			cStr << "(";
 			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			cStr << ")";
+			return;
 		}
-		cStr << ")";
-		return;
+
+		case NT_Variable:
+		{
+			visit(funExp);
+			cStr << "->fun";
+			cStr << "(";
+			visit(funExp);
+			if (!args.empty()) {
+				cStr << ", ";
+				functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			}
+			cStr << ")";
+			return;
+		}
+
+		case NT_CallExpr:
+		case NT_CaptureInitExpr:
+		{
+			visit(funExp);
+			cStr << "->fun";
+			cStr << "(";
+			visit(funExp);
+			if (!args.empty()) {
+				cStr << ", ";
+				functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			}
+			cStr << ")";
+			return;
+		}
+
+		case NT_LambdaExpr: {
+			// function (without capture list) is directly provided => simply invoke
+			cStr << cc.getFuncMan().getFunctionName(defCodePtr, static_pointer_cast<const LambdaExpr>(funExp));
+			cStr << "(";
+			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			cStr << ")";
+			return;
+		}
+
+		default :
+			cStr << "<?>Unhandled Type of Call Target</?>";
 	}
 
-	// make code section depending on lambda type definition (required for caller)
-	cc.getTypeMan().getTypeName(defCodePtr, funExp->getType());
+}
 
-	// use type specific call routine ..
-	cStr << "call_" << nameGen.getName(funExp->getType(), "funType") << "(";
-	visit(funExp);
-	if (!args.empty()) {
-		cStr << ", ";
-		functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
-	}
-	cStr << ")";
+void ConvertVisitor::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 
-	//cStr << "<?>Unhandled Call Expression</?>";
+	// add name of function
+	visit(ptr->getLambda());
 
 }
 
@@ -492,7 +457,7 @@ namespace detail {
 		#define ARG(N) getArgument(call, N)
 		#define VISIT_ARG(N) visitArgument(visitor, call, N)
 		#define ADD_FORMATTER(Literal, FORMAT) \
-					res.insert(std::make_pair(Literal, make_formatter([&basic](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
+					res.insert(std::make_pair(Literal->getValue(), make_formatter([&basic](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
 
 
 		ADD_FORMATTER(basic.getRefAssign(), {
@@ -511,6 +476,7 @@ namespace detail {
 
 		//ADD_FORMATTER(lang::OP_SUBSCRIPT_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArray1DSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getVectorSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
@@ -546,7 +512,13 @@ namespace detail {
 		ADD_FORMATTER(basic.getIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getIfThenElse(), { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(1); OUT("))"); });
+		ADD_FORMATTER(basic.getRealEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+
+		ADD_FORMATTER(basic.getIfThenElse(), { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT("))"); });
 
 		#undef ADD_FORMATTER
 		#undef OUT

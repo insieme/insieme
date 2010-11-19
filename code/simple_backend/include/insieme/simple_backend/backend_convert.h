@@ -117,17 +117,18 @@ public:
 class ConversionContext {
 	NameGenerator nameGen;
 	TypeManager typeMan;
-	NodeManager nodeManager;
 	VariableManager varManager;
 	FunctionManager funcMan;
+	NodeManager& nodeManager;
 
 public:
 
+	// a lang basic code generator reference
 	const lang::BasicGenerator& basic;
 
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
 	// (the base class initializers do not dereference it)
-	ConversionContext() : typeMan(nameGen), funcMan(*this), basic(nodeManager.basic) { }
+	ConversionContext(const NodePtr& target);
 	
 	//typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
 
@@ -218,7 +219,8 @@ namespace detail {
 	}
 
 	// define a type for handling formatter
-	typedef std::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
+	//typedef std::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
+	typedef std::unordered_map<string, FormatterPtr> FormatTable;
 
 	// a forward declaration for a method assembling formater tables
 	FormatTable initFormatTable(const lang::BasicGenerator&);
@@ -248,10 +250,10 @@ class ConvertVisitor : public ASTVisitor<> {
 	}
 
 public:
-	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()), 
+	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()),
 		varManager(cc.getVariableManager()), defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()),
 		formats(detail::initFormatTable(cc.basic)) { };
-	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()), 
+	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()),
 		varManager(cc.getVariableManager()), defCodePtr(cptr), cStr(defCodePtr->getCodeStream()),
 		formats(detail::initFormatTable(cc.basic)) { };
 
@@ -311,6 +313,8 @@ public:
 	////////////////////////////////////////////////////////////////////////// Expressions
 
 	void visitCallExpr(const CallExprPtr& ptr);
+
+	void visitCaptureInitExpr(const CaptureInitExprPtr& ptr);
 
 	void visitCastExpr(const CastExprPtr& ptr);
 

@@ -185,6 +185,9 @@ int main(int argc, char** argv) {
 				// write into the file
 				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
+				fout << insieme::core::printer::PrettyPrinter(program);
+				fout << std::endl << std::endl << std::endl;
+				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
 				fout << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
 			} else
 				LOG(INFO) << insieme::core::printer::PrettyPrinter(program);
@@ -207,7 +210,7 @@ int main(int argc, char** argv) {
 			insieme::utils::Timer timer("Simple.Backend");
 
 			LOG(INFO) << "========================== Converting to C++ ================================";
-			insieme::simple_backend::ConversionContext cc;
+			insieme::simple_backend::ConversionContext cc(program);
 			auto converted = cc.convert(program);
 
 			if(!CommandLineOptions::Output.empty()) {

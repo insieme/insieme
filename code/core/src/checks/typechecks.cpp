@@ -42,15 +42,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-namespace {
-
-	const NodeManager& getNodeManager(const NodeAddress& address) {
-		const NodeManager* managerPtr = address->getNodeManager();
-		assert(managerPtr && "Manager Pointer of node must not be NULL!");
-		return *managerPtr;
-	}
-}
-
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 
@@ -143,7 +134,7 @@ OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const Declara
 
 OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
 
-	const NodeManager& manager = getNodeManager(address);
+	const NodeManager& manager = address->getNodeManager();
 	OptionalMessageList res;
 
 	TypePtr conditionType = address->getCondition()->getType();
@@ -161,7 +152,7 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 
 OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
 
-	const NodeManager& manager = getNodeManager(address);
+	const NodeManager& manager = address->getNodeManager();
 	OptionalMessageList res;
 
 	TypePtr conditionType = address->getCondition()->getType();
@@ -178,7 +169,7 @@ OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddre
 
 
 OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& address) {
-	const NodeManager& manager = getNodeManager(address);
+	const NodeManager& manager = address->getNodeManager();
 
 	OptionalMessageList res;
 	TypePtr switchType = address->getSwitchExpr()->getType();
@@ -197,13 +188,10 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	OptionalMessageList res;
 
 	// check whether it is a build-in literal
-	const NodeManager* manager = address->getNodeManager();
-	if (!manager) {
-		return res;
-	}
+	const NodeManager& manager = address->getNodeManager();
 
 	// obtain literal
-	LiteralPtr buildIn = manager->basic.getLiteral(address->getValue());
+	LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
 	if (!buildIn) {
 		return res;
 	}

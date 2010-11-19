@@ -84,7 +84,7 @@ TEST(SimpleBackend, Basic) {
 	ASTBuilder build;
 	ProgramPtr prog = setupSampleProgram(build);
 
-	ConversionContext cc;
+	ConversionContext cc(prog);
 
 	std::cout << "Start visit\n";
 	auto converted = cc.convert(prog);

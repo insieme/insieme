@@ -190,7 +190,7 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 
 	DVLOG(1) << "==== Writing insieme file : " << insiemeFileName << " =================";
 	// Write the insieme file contaning the insieme handled code
-	insieme::simple_backend::ConversionContext convCtx;
+	insieme::simple_backend::ConversionContext convCtx(program);
 	auto converted = convCtx.convert(program);
 	std::fstream outFile(insiemeFileName.c_str(), std::fstream::out | std::fstream::trunc);
 	outFile << converted;

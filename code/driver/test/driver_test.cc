@@ -73,7 +73,7 @@ TEST(DriverTest, HelloWorldTest) {
 
 	LOG(INFO) << "Converting IR to C...";
 
-	ConversionContext cc;
+	ConversionContext cc(program);
 	auto converted = cc.convert(program);
 
 	std::ostringstream ss;

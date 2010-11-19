@@ -52,26 +52,6 @@ using namespace insieme::core;
 
 class ConversionContext;
 
-/** Manages C function generation and lookup for named lambda expressions.
- ** */
-class OldFunctionManager {
-	ConversionContext& cc;
-
-public:
-	typedef std::unordered_map<LambdaExprPtr, CodePtr, hash_target<LambdaExprPtr>, equal_target<LambdaExprPtr>> FunctionMap;
-
-private:
-	FunctionMap functionMap;
-
-public:
-	OldFunctionManager(ConversionContext& cc) : cc(cc) { }
-
-	CodePtr getFunction(const core::LambdaPtr& lambda);
-	CodePtr getFunction(const core::LambdaExprPtr& lambda, const CodePtr& surrounding);
-	CodePtr getFunctionLiteral(const LiteralPtr& literal);
-	void writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr);
-};
-
 
 class FunctionManager {
 
@@ -80,33 +60,26 @@ class FunctionManager {
 	 */
 	ConversionContext& cc;
 
-public:
-
 	/**
-	 * The information stored for each lambda expression within the program.
+	 * A map linking lambda nodes to prototype declarations within the program code.
 	 */
-	struct LambdaCode {
-		CodePtr closure;
-		CodePtr function;
-		TypeManager::FunctionTypeEntry* typeInfo;
-
-		LambdaCode() : closure(), function(), typeInfo(NULL) { }
-		LambdaCode(const CodePtr& closure, const CodePtr& function, TypeManager::FunctionTypeEntry* typeInfo)
-			: closure(closure), function(function), typeInfo(typeInfo) { }
-	};
-
-private:
+	utils::map::PointerMap<core::LambdaPtr, CodePtr> prototypes;
 
 	/**
 	 * A map linking Lambda expressions (recursive or non-recursive) to closure definitions and
 	 * functions.
 	 */
-	utils::map::PointerMap<core::LambdaPtr, LambdaCode> functionDefinitions;
+	utils::map::PointerMap<core::LambdaPtr, CodePtr> functions;
 
 	/**
 	 * A map l
 	 */
 	utils::map::PointerMap<core::LiteralPtr, CodePtr> externalFunctions;
+
+	/**
+	 * A set accumulating all handled lambda definitions.
+	 */
+	utils::map::PointerMap<core::LambdaDefinitionPtr, CodePtr> functionGroup;
 
 public:
 
@@ -118,7 +91,7 @@ public:
 	 * @param context the code fragment the given external function call should be appended to.
 	 * @param external the literal representing the external function.
 	 */
-	void createCallable(const CodePtr& context, const core::LiteralPtr& external);
+	string getFunctionName(const CodePtr& context, const core::LiteralPtr& external);
 
 
 	/**
@@ -129,11 +102,13 @@ public:
 	 */
 	void createCallable(const CodePtr& context, const core::CaptureInitExprPtr& lambda);
 
-	void createCallable(const CodePtr& context, const core::LambdaExprPtr& lambda);
+	string getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda);
 
 private:
 
-	const LambdaCode& resolve(const LambdaPtr& lambda);
+
+	CodePtr resolve(const LambdaDefinitionPtr& definition);
+	CodePtr resolve(const LambdaPtr& lambda);
 
 	CodePtr resolve(const LiteralPtr& literal);
 };

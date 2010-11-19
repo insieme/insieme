@@ -108,8 +108,12 @@ class CodeFragment {
 	std::string name;
 	std::vector<CodePtr> dependencies;
 
+	// A flag indicating whether this code fragment is only used for grouping other fragments via
+	// dependencies (set to true) or to represent actual code.
+	bool dummy;
+
 public:
-	CodeFragment(const std::string& name = "unnamed") : name(name) { }
+	CodeFragment(const std::string& name = "unnamed", bool dummy = false) : name(name), dummy(dummy) { }
 
 	CodePtr addDependency(const std::string& name = "unnamed");
 	void addDependency(const CodePtr& dep);
@@ -117,6 +121,8 @@ public:
 	const std::string& getName() { return name; }
 
 	CodeStream& getCodeStream() { return cStream; }
+	bool isDummy() const { return dummy; }
+	void setDummy(bool value = true) { dummy = value; }
 };
 
 } // namespace simple_backend

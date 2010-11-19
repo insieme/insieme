@@ -85,9 +85,9 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	T* clone = &*manager.get(node);
 	T* clone2 = &*manager2.get(node);
 
-	EXPECT_EQ(clone->getNodeManager(), &manager);
-	EXPECT_EQ(clone2->getNodeManager(), &manager2);
-	EXPECT_NE(node->getNodeManager(), &manager);
+	EXPECT_EQ(&clone->getNodeManager(), &manager);
+	EXPECT_EQ(&clone2->getNodeManager(), &manager2);
+	EXPECT_NE(&node->getNodeManager(), &manager);
 
 	// cloning had to be successful
 	EXPECT_TRUE(clone);
@@ -237,6 +237,29 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 		// all children have to be visited (mask should have all 1s)
 		EXPECT_EQ(static_cast<unsigned>((1<<count) - 1), mask);
 	}
+
+	// check whether annotation is preservered during copy process
+
+	EXPECT_TRUE(node->getAnnotations().empty());
+
+	node->addAnnotation(std::make_shared<DummyAnnotation>(12));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+
+	// clone node
+	NodeManager manager3;
+	NP other = manager3.get(node);
+
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+
+	EXPECT_TRUE(other->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(other->hasAnnotation(DummyAnnotation2::DummyKey));
+
+	EXPECT_EQ(node->getAnnotation(DummyAnnotation::DummyKey)->value,
+			  other->getAnnotation(DummyAnnotation::DummyKey)->value);
+
+	node->remAnnotation(DummyAnnotation::DummyKey);
 }
 
 } // end namespace core

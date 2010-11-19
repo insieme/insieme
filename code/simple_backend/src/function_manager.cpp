@@ -60,160 +60,31 @@ namespace {
 	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, ConversionContext& cc) {
 		return printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeMan(), cc.getNameGen());
 	}
-}
 
+	string getSignatureOf(const CodePtr& context, const FunctionTypePtr& funType, const string& name, TypeManager& typeManager) {
+		std::stringstream ss;
 
-CodePtr OldFunctionManager::getFunction(const LambdaPtr& lambda) {
-//	auto codeIt = functionMap.find(lambda);
-//	if(codeIt != functionMap.end()) {
-//		return codeIt->second;
-//	}
+		ss << typeManager.getTypeName(context, funType->getReturnType()) << " " << name << "(";
 
-	// get the name for the new function
-	string ident = cc.getNameGen().getName(lambda);
+		auto captures = funType->getCaptureTypes();
+		auto arguments = funType->getArgumentTypes();
 
-	auto funType = dynamic_pointer_cast<const FunctionType>(lambda->getType());
-	auto body = lambda->getBody();
-
-	// generate a new function from the lambda expression
-	CodePtr cptr = std::make_shared<CodeFragment>(string("fundef_codefragment_") + ident);
-	CodeStream& cs = cptr->getCodeStream();
-	// write the function header
-	cs << cc.getTypeMan().getTypeName(cptr, funType->getReturnType()) << " " << ident << "(void* _capture";
-	// handle arguments
-	if (!lambda->getParameterList().empty()) {
-		cs << ", " << join(", ", lambda->getParameterList(), [&, this](std::ostream& os, const VariablePtr& param) {
-			printFunctionParamter(os, cptr, param, this->cc);
+		if (!captures.empty()) {
+			ss << "void *" << ((!arguments.empty())?", ":"");
+		}
+		ss << join(", ", arguments, [&](std::ostream& out, const TypePtr& cur) {
+			out << typeManager.getTypeName(context, cur);
 		});
-	}
-	cs << ")";
-	cs << " {" << CodeStream::indR << "\n";
+		ss << ")";
 
-	ConvertVisitor visitor(cc, cptr);
-
-	// extract capture list
-	cs << "// --------- Captured Stuff - Begin -------------\n";
-
-	string name = cc.getNameGen().getName(lambda, "lambda");
-	string structName = "struct " + name + "_closure";
-
-	for_each(lambda->getCaptureList(), [&](const VariablePtr& cur) {
-//		VariableManager::VariableInfo info;
-//		info.location = VariableManager::HEAP;
-//
-//		VariablePtr var = cur->getVariable();
-//		cc.getVariableManager().addInfo(var, info);
-//
-//		// standard handling
-//		cs << cc.getTypeMan().getTypeName(cptr, var->getType(), false);
-//		string name = cc.getNameGen().getVarName(var);
-//		cs << " " << name << " = ((" << structName << "*)_capture)->" << name << ";\n";
-
-	});
-
-	cs << "// --------- Captured Stuff -  End  -------------\n";
-
-
-	// generate the function body
-	visitor.visit(lambda->getBody());
-	cs << CodeStream::indL << "\n}\n";
-	cs << "\n";
-
-	// insert into function map and return
-//	functionMap.insert(std::make_pair(lambda, cptr));
-	return cptr;
-}
-
-CodePtr OldFunctionManager::getFunction(const LambdaExprPtr& lambda, const CodePtr& surrounding) {
-
-	// check whether code has already been generated
-	auto codeIt = functionMap.find(lambda);
-	if(codeIt != functionMap.end()) {
-		return codeIt->second;
+		return ss.str();
 	}
 
-	// generate forward declarations for all functions within this recursive type
-	const LambdaDefinitionPtr& definition = lambda->getDefinition();
-	typedef LambdaDefinition::Definitions::value_type Pair;
-	for_each(definition->getDefinitions(), [&](const Pair& cur){
-
-		// create forward declaration
-		auto funType = dynamic_pointer_cast<const FunctionType>(cur.second->getType());
-		auto body = cur.second->getBody();
-
-		// get a name (for the defined recursive function)
-		LambdaExprPtr recLambda = LambdaExpr::get(cc.getNodeManager(), cur.first, definition);
-		string ident = cc.getNameGen().getName(recLambda);
-
-		// generate a new function from the lambda expression
-		CodePtr cptr(new CodeFragment(string("fundecl_codefragment_") + ident));
-		CodeStream& cs = cptr->getCodeStream();
-		// write the function header
-		cs << cc.getTypeMan().getTypeName(surrounding, funType->getReturnType()) << " " << ident << "(";
-		// handle arguments
-		auto &cci = cc;
-		cs << join(", ", cur.second->getParameterList(), [&](std::ostream& os, const VariablePtr& param) -> std::ostream& {
-			return (os << cci.getTypeMan().getTypeName(cptr, param->getType()) << " " << cci.getNameGen().getVarName(param));
-		});
-		cs << ");\n";
-
-		// bind forward declaration to name
-		functionMap.insert(std::make_pair(recLambda, cptr));
-	});
-
-	// generate the actual definition of the functions
-	for_each(definition->getDefinitions(), [&](const Pair& cur){
-
-		// construct current recursive function
-		LambdaExprPtr recLambda = LambdaExpr::get(cc.getNodeManager(), cur.first, definition);
-
-		// use normal function generator for this work (by printing unrolled version)
-		LambdaExprPtr unrolled = definition->unrollOnce(cc.getNodeManager(), cur.first);
-
-		// get name for function
-//		string name = cc.getNameGen().getName(recLambda);
-//		unrolled.addAnnotation(std::make_shared<c_info::CNameAnnotation>(name));
-//		CodePtr cptr = this->getFunction(unrolled);
-//
-//		// add dependency to code definition
-//		cptr->addDependency(this->getFunction(recLambda, surrounding));
-//
-//		// make surrounding depending on function definition
-//		surrounding->addDependency(cptr);
-	});
-
-	// return lambda now registered within function map
-	return getFunction(lambda, surrounding);
 }
 
-CodePtr OldFunctionManager::getFunctionLiteral(const LiteralPtr& literal) {
-	// TODO refactor duplication w/ above
-//	auto codeIt = functionMap.find(literal);
-//	if(codeIt != functionMap.end()) {
-//		return codeIt->second;
-//	}
 
-	const FunctionTypePtr type = dynamic_pointer_cast<const FunctionType>(literal->getType());
-	assert(type && "Literal is not a function!");
 
-	const string& name = literal->getValue();
-	CodePtr cptr = std::make_shared<CodeFragment>("fundef_codefragment_" + name);
-	CodeStream& cs = cptr->getCodeStream();
-	cs << cc.getTypeMan().getTypeName(cptr, type->getReturnType()) << " " << name << "(";
-	cs << join(", ", type->getArgumentTypes(), [&, this](std::ostream& o, const TypePtr& cur) -> std::ostream& {
-		return (o << this->cc.getTypeMan().getTypeName(cptr, cur));
-	});
-	cs << ");\n";
-	// insert into function map and return
-//	functionMap.insert(std::make_pair(literal, cptr));
-	return cptr;
-}
-
-void OldFunctionManager::writeFunctionCall(const Identifier& funId, const LambdaExprPtr& ptr) {
-	 // TODO
-}
-
-void FunctionManager::createCallable(const CodePtr& context, const core::LiteralPtr& external) {
+string FunctionManager::getFunctionName(const CodePtr& context, const core::LiteralPtr& external) {
 
 	// get prototype definition
 	CodePtr protoType = resolve(external);
@@ -222,7 +93,7 @@ void FunctionManager::createCallable(const CodePtr& context, const core::Literal
 	context->addDependency(protoType);
 
 	// print function name (which then will be call-able)
-	context->getCodeStream() << external->getValue();
+	return external->getValue();
 }
 
 CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
@@ -268,37 +139,87 @@ void FunctionManager::createCallable(const CodePtr& context, const core::Capture
 
 }
 
-void FunctionManager::createCallable(const CodePtr& context, const core::LambdaExprPtr& lambda) {
+string FunctionManager::getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda) {
 
-	// NEXT: create proto-types if not recursive!
+	// the pointer to the prototype
+	CodePtr prototype;
 
-	// resolve lambda
-	const LambdaPtr& def = lambda->getLambda();
-	assert(def->getCaptureList().empty() && "This method cannot support lambdas with capture lists!");
-
-	// copy c-name annotation to lambda - if there is one
-	if(auto cnameAnn = lambda->getVariable()->getAnnotation(c_info::CNameAnnotation::KEY)) {
-		std::cout << "Name found: " << cnameAnn->getName() << " on " << toString(*(lambda->getVariable())) << std::endl;
-		def->addAnnotation(cnameAnn);
+	// look up predefined prototypes
+	auto pos = prototypes.find(lambda->getLambda());
+	if (pos == prototypes.end()) {
+		prototype = resolve(lambda->getDefinition());
+	} else {
+		prototype = pos->second;
 	}
 
+	// resolve lambda definitions and add dependency
+	context->addDependency(prototype);
 
-	// obtain code for lambda
-	const LambdaCode& code = resolve(def);
-
-	// add dependencies
-	context->addDependency(code.function);
-
-	// add function name
-	context->getCodeStream() << code.function->getName();
+	// add function name to stream
+	return cc.getNameGen().getName(lambda->getLambda());
 }
 
 
-const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lambda) {
+CodePtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) {
+
+	// check within register
+	auto pos = functionGroup.find(definition);
+	if (pos != functionGroup.end()) {
+		return pos->second;
+	}
+
+	// TODO special handling of non-recursive functions
+
+	// prepare some manager
+	TypeManager& typeManager = cc.getTypeMan();
+	NameGenerator& nameManager = cc.getNameGen();
+	NodeManager& manager = cc.getNodeManager();
+
+	// create dummy code group depending on all prototypes and functions
+	CodePtr group = std::make_shared<CodeFragment>("Dummy fragment for recursive function group", true);
+
+
+	// A) create prototypes for lambdas
+	for_each(definition->getDefinitions(), [&, this](const std::pair<VariablePtr, LambdaPtr>& cur) {
+
+		string name = nameManager.getName(cur.second);
+
+		const FunctionTypePtr& funType = cur.second->getType();
+		CodePtr prototype = std::make_shared<CodeFragment>("Prototype of " + name);
+		prototype->getCodeStream() << getSignatureOf(prototype, funType, name, typeManager) << ";\n";
+
+		this->prototypes.insert(std::make_pair(cur.second, prototype));
+
+		group->addDependency(prototype);
+	});
+
+	// B) create function definitions for all lambdas
+	for_each(definition->getDefinitions(), [&, this](const std::pair<VariablePtr, LambdaPtr>& cur) {
+
+		// unroll recursive definition once
+		LambdaPtr unrolled = definition->unrollOnce(manager, cur.first)->getLambda();
+
+		// attack the same name to the unrolled version as to the original node
+		string name = nameManager.getName(cur.second);
+		unrolled.addAnnotation(std::make_shared<c_info::CNameAnnotation>(name));
+
+		// resolve recursive this function body once
+		CodePtr function = resolve(unrolled);
+
+		// add dependency
+		group->addDependency(function);
+	});
+
+	// add dependency of context
+	functionGroup.insert(std::make_pair(definition, group));
+	return group;
+}
+
+CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 
 	// lookup definition
-	auto pos = functionDefinitions.find(lambda);
-	if (pos != functionDefinitions.end()) {
+	auto pos = functions.find(lambda);
+	if (pos != functions.end()) {
 		return pos->second;
 	}
 
@@ -307,15 +228,31 @@ const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lam
 	FunctionTypePtr funType = lambda->getType();
 
 	VariableManager varManager;
+	TypeManager& typeManager = cc.getTypeMan();
 
 	// create function code for lambda
-	CodePtr function = std::make_shared<CodeFragment>(name);
+	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
 	CodeStream& cs = function->getCodeStream();
-	cs << cc.getTypeMan().getTypeName(function, funType->getReturnType()) << " " << name << "(";
-	cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& out, const VariablePtr& param) {
-		printFunctionParamter(out, function, param, cc);
-	});
-	cs << ") {" << CodeStream::indR << "\n";
+
+	// write the function header
+	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
+
+	if (lambda->isCapturing()) {
+		cs << "void* _capture";
+		if (!lambda->getParameterList().empty()) {
+			cs << ", ";
+		}
+	}
+	if (!lambda->getParameterList().empty()) {
+		cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& os, const VariablePtr& param) {
+			printFunctionParamter(os, function, param, this->cc);
+		});
+	}
+	cs << ")";
+
+
+	// ad function body
+	cs << " {" << CodeStream::indR << "\n";
 
 	ConvertVisitor visitor(cc, function);
 
@@ -346,12 +283,9 @@ const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lam
 	cs << CodeStream::indL << "\n}\n";
 	cs << "\n";
 
-	// create lambda code object
-	LambdaCode code;
-	code.function = function;
-
-	// register and return reference to inserted element
-	return functionDefinitions.insert(std::make_pair(lambda, code)).first->second;
+	// register and return result
+	functions.insert(std::make_pair(lambda, function));
+	return function;
 }
 
 

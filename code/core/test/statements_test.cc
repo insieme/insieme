@@ -100,6 +100,10 @@ TEST(StatementsTest, CompoundStmt) {
 	ContinueStmtPtr cS = ContinueStmt::get(stmtMan);
 
 	CompoundStmtPtr empty = CompoundStmt::get(stmtMan);
+	CompoundStmtPtr empty2 = CompoundStmt::get(stmtMan);
+
+	EXPECT_EQ(empty, empty2);
+
 	CompoundStmtPtr bSC = CompoundStmt::get(stmtMan, bS);
 	vector<StatementPtr> stmtVec;
 	stmtVec.push_back(bS);

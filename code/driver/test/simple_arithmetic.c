@@ -42,30 +42,12 @@
 
 extern int printf(char *, ...);
 
-int count = 0;
-
-int inc(int step) {
-	count += step;
-	return count;
-}
-
-int dec(int step) {
-	count += step;
-	return count;
-}
-
-int reset() {
-	count = 0;
-	return count;
-}
 
 int main(int argc, char* argv[]) {
-	for (int i=0; i<10; i++) {
-		printf("count=%2d\n", inc(2));
-		printf("count=%2d\n", dec(1));
-		if (i==5) {
-			reset();
-		}
-	}
+	int x = 10;
+	int y = 10;
+
+	printf("res: %d\n", x + y * x + y);
+
 	return 0;
 }

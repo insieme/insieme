@@ -44,7 +44,6 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/core/ast_visitor.h"
-#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace core {
@@ -182,8 +181,8 @@ namespace {
 	//	typedef boost::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
 	typedef boost::unordered_map<string, FormatterPtr, boost::hash<string>> FormatTable;
 
-	// a forward declaration for a method assembling formater tables
-	FormatTable initFormatTable(bool);
+	// a forward declaration for a method assembling formatter tables
+	FormatTable initFormatTable(const PrettyPrinter&);
 
 
 
@@ -229,8 +228,7 @@ namespace {
 		 * @param print the setup of the pretty print
 		 */
 		InspirePrinter(std::ostream& out, const PrettyPrinter& print)
-				: formatTable(initFormatTable(print.hasOption(PrettyPrinter::PRINT_DEREFS))),
-				  indent(0), print(print), depth(0), out(out) { };
+				: formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
 
 		/**
 		 * A macro simplifying the definition for print routine of some node type.
@@ -639,8 +637,11 @@ namespace {
 	 * Creates a format table defining the formatting of various build in functions.
 	 * @param hideDeref if set to true, derefs will be invisible. Otherwise the uniary * operator will be used.
 	 */
-	FormatTable initFormatTable(bool printDeref) {
+	FormatTable initFormatTable(const PrettyPrinter& config) {
 		FormatTable res;
+
+		// get lang basic
+		const lang::BasicGenerator& basic = config.root->getNodeManager().basic;
 
 		#define OUT(Literal) printer.out << Literal
 		#define ARG(N) getArgument(call, N)
@@ -648,54 +649,62 @@ namespace {
 		#define ADD_FORMATTER(Literal, FORMAT) \
 					res.insert(std::make_pair(Literal->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
 
-		if (printDeref) {
-			ADD_FORMATTER(lang::OP_REF_DEREF_PTR, { OUT(" *"); PRINT_ARG(0); });
+
+		if (config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
+			ADD_FORMATTER(basic.getRefDeref(), { OUT(" *"); PRINT_ARG(0); });
 		} else {
-			ADD_FORMATTER(lang::OP_REF_DEREF_PTR, { PRINT_ARG(0); });
+			ADD_FORMATTER(basic.getRefDeref(), { PRINT_ARG(0); });
 		}
 
-		ADD_FORMATTER(lang::OP_REF_ASSIGN_PTR, { PRINT_ARG(0); OUT(" := "); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REF_VAR_PTR, { OUT(" var("); PRINT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lang::OP_REF_NEW_PTR, { OUT(" new("); PRINT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lang::OP_REF_DELETE_PTR, { OUT(" del("); PRINT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefAssign(), { PRINT_ARG(0); OUT(" := "); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRefVar(), { OUT(" var("); PRINT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
 
-		ADD_FORMATTER(lang::OP_SUBSCRIPT_PTR, { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-		ADD_FORMATTER(lang::OP_SUBSCRIPT_SINGLE_PTR, { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArraySubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArray1DSubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 
-		ADD_FORMATTER(lang::OP_REAL_ADD_PTR, { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REAL_SUB_PTR, { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REAL_MUL_PTR, { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_REAL_DIV_PTR, { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getVectorSubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 
-		ADD_FORMATTER(lang::OP_UINT_ADD_PTR, { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_SUB_PTR, { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_MUL_PTR, { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_DIV_PTR, { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_MOD_PTR, { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealSub(), { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealMul(), { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_INT_ADD_PTR, { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_SUB_PTR, { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_MUL_PTR, { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_DIV_PTR, { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_MOD_PTR, { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntSub(), { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntMul(), { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntMod(), { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_BOOL_AND_PTR, { PRINT_ARG(0); OUT("&&"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_BOOL_OR_PTR, { PRINT_ARG(0); OUT("||"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_BOOL_EQ_PTR, { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_BOOL_NOT_PTR, { OUT("!"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getIntAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntSub(), { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntMul(), { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntMod(), { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
 
-		ADD_FORMATTER(lang::OP_UINT_EQ_PTR, { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_GE_PTR, { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_GT_PTR, { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_LT_PTR, { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_UINT_LE_PTR, { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolAnd(), { PRINT_ARG(0); OUT("&&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolOr(), { PRINT_ARG(0); OUT("||"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolNot(), { OUT("!"); PRINT_ARG(0); });
 
-		ADD_FORMATTER(lang::OP_INT_EQ_PTR, { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_GE_PTR, { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_GT_PTR, { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_LT_PTR, { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
-		ADD_FORMATTER(lang::OP_INT_LE_PTR, { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntGe(), { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUIntLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
 
+		ADD_FORMATTER(basic.getIntEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntGe(), { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getIntLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
+
+		ADD_FORMATTER(basic.getRealEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealGe(), { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
 
 		#undef ADD_FORMATTER
 		#undef OUT

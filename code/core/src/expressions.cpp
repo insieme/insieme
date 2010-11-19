@@ -405,7 +405,7 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
     assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
     assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be void.");
-    TypeList guardParams = TypeList(2, getNodeManager()->basic.getUIntGen());
+    TypeList guardParams = TypeList(2, getNodeManager().basic.getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
@@ -750,53 +750,53 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 	});
 
 	// run visitor => if interrupted, the definition is recursive
-std::cout << "Expression " << *lambda << " is recursive: " << visitAllInterruptable(lambda, detector) << std::endl;
 	return visitAllInterruptable(lambda, detector);
 }
 
-//namespace {
-//
-//	class RecLambdaUnroller : public NodeMapping {
-//
-//		NodeManager& manager;
-//		const RecLambdaDefinition& definition;
-//
-//
-//	public:
-//
-//		RecLambdaUnroller(NodeManager& manager, const RecLambdaDefinition& definition)
-//			: manager(manager), definition(definition) { }
-//
-//		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-//			// check whether it is a known variable
-//			if (ptr->getNodeType() == NT_Variable) {
-//				VariablePtr var = static_pointer_cast<const Variable>(ptr);
-//				LambdaExprPtr def = definition.getDefinitionOf(var);
-//				if (def) {
-//					// construct recursive type ...
-//					return RecLambdaExpr::get(manager, var, RecLambdaDefinitionPtr(&definition));
-//				}
-//			}
-//
-//			// replace recurively
-//			return ptr->substitute(manager, *this);
-//		}
-//
-//		NodePtr apply(const NodePtr& node) {
-//			if (!node) {
-//				return node;
-//			}
-//			return node->substitute(manager, *this);
-//		}
-//
-//	};
-//
-//}
+namespace {
+
+	class RecLambdaUnroller : public NodeMapping {
+
+		NodeManager& manager;
+		const LambdaDefinition& definition;
+		const LambdaDefinition::Definitions& definitions;
+
+
+	public:
+
+		RecLambdaUnroller(NodeManager& manager, const LambdaDefinition& definition)
+			: manager(manager), definition(definition), definitions(definition.getDefinitions()) { }
+
+		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+			// check whether it is a known variable
+			if (ptr->getNodeType() == NT_Variable) {
+				VariablePtr var = static_pointer_cast<const Variable>(ptr);
+
+				auto pos = definitions.find(var);
+				if (pos != definitions.end()) {
+					return LambdaExpr::get(manager, var, LambdaDefinitionPtr(&definition));
+				}
+			}
+
+			// replace recursively
+			return ptr->substitute(manager, *this);
+		}
+
+		LambdaPtr apply(const LambdaPtr& node) {
+			if (!node) {
+				return node;
+			}
+			return static_pointer_cast<const Lambda>(node->substitute(manager, *this));
+		}
+
+	};
+
+}
 
 LambdaExprPtr LambdaDefinition::unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
-	assert(false && "Not re-implemented after restructuring!");
-	return LambdaExprPtr();
-	//return static_pointer_cast<const LambdaExpr>(RecLambdaUnroller(manager, *this).apply(getDefinitionOf(variable)));
+	// unroll recursive lambda
+	LambdaPtr lambda = RecLambdaUnroller(manager, *this).apply(getDefinitionOf(variable));
+	return LambdaExpr::get(manager, lambda);
 }
 
 
@@ -833,6 +833,10 @@ bool LambdaExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const LambdaExpr& rhs = static_cast<const LambdaExpr&>(expr);
 	return (*rhs.variable == *variable && *rhs.definition == *definition);
+}
+
+LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
+	return get(manager, lambda->getType(), lambda->getCaptureList(), lambda->getParameterList(), lambda->getBody());
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
