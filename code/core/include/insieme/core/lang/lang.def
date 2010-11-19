@@ -96,6 +96,10 @@ TYPE(VarList, "var_list")
 TYPE(Job, "job")
 TYPE(ThreadGroup, "threadgroup")
 
+// No Argument -> Unit Type -------------------------------------------------------------------------------------------
+
+TYPE(NoArgsOpType, "() -> unit")
+
 // Logical Operations -------------------------------------------------------------------------------------------------
 
 GROUP(LogicOp, BoolAnd, BoolOr, BoolEq, BoolNot)

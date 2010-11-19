@@ -80,7 +80,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"<?>([v1, v2]rec v5.{v5=fun[ref<int<4>> v3, ref<int<4>> v4]() {int.add(ref.deref(v4), 1); return int.sub(ref.deref(v3), 1);}})</?>()"
+	"[v1, v2]fun[ref<int<4>> v3, ref<int<4>> v4](){ (( *v4)+1); return (( *v3)-1);}()"
 	(a+1, b-1);
 }
 
@@ -105,19 +105,19 @@ void unary_op_test() {
 	*b;
 
 	#pragma test \
-	"<?>([v1]rec v4.{v4=fun[ref<int<4>> v3]() {int<4> v2 = ref.deref(v3); ref.assign(v3, int.add(ref.deref(v3), cast<int<4>>(1))); return v2;}})</?>()"
+	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)+CAST<int<4>>(1))); return v2;}()"
 	a++;
 
 	#pragma test \
-	"<?>([v1]rec v4.{v4=fun[ref<int<4>> v3]() {int<4> v2 = ref.deref(v3); ref.assign(v3, int.sub(ref.deref(v3), cast<int<4>>(1))); return v2;}})</?>()"
+	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)-CAST<int<4>>(1))); return v2;}()"
 	a--;
 
 	#pragma test \
-	"<?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() {ref.assign(v2, int.add(ref.deref(v2), cast<int<4>>(1))); ref.deref(v2);}})</?>()"
+	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)+CAST<int<4>>(1))); ( *v2);}()"
 	++a;
 
 	#pragma test \
-	"<?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() {ref.assign(v2, int.sub(ref.deref(v2), cast<int<4>>(1))); ref.deref(v2);}})</?>()"
+	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)-CAST<int<4>>(1))); ( *v2);}()"
 	--a;
 }
 
@@ -155,11 +155,11 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"ite(CAST<bool>(( *v1)), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() return int.add(ref.deref(v4), 1)})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() return int.sub(ref.deref(v2), 1)})</?>)"
+	"ite(CAST<bool>(( *v1)), [v1]fun[ref<int<4>> v4]()return (( *v4)+1), [v1]fun[ref<int<4>> v2]()return (( *v2)-1))"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"ite((( *v1)==0), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() return int.add(ref.deref(v4), 1)})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() return int.sub(ref.deref(v2), 1)})</?>)"
+	"ite((( *v1)==0), [v1]fun[ref<int<4>> v4]()return (( *v4)+1), [v1]fun[ref<int<4>> v2]()return (( *v2)-1))"
 	a == 0 ? a+1 : a-1;
 }
 
@@ -192,7 +192,7 @@ void for_stmt_test() {
 
 	int mq, nq;
 	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; <?>([v1, v2]rec v8.{v8=fun[ref<int<4>> v6, ref<int<4>> v7]() {([v6]rec v5.{v5=fun[ref<int<4>> v4]() {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;}})(); return ref.assign(v7, int.div(ref.deref(v7), 2));}})</?>(); };}"
+	"{ (v1 := 0); while((( *v2)>1)) { { }; [v1, v2]fun[ref<int<4>> v6, ref<int<4>> v7](){ [v6]fun[ref<int<4>> v4](){ decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }(); return (v7 := (( *v7)/2)); }(); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -243,7 +243,7 @@ void switch_stmt_test() {
 
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() {int<4> v3 = ref.deref(v4); ref.assign(v4, int.add(ref.deref(v4), cast<int<4>>(1))); return v3;}})</?>() };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: [v1]fun[ref<int<4>> v4](){ decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }() };}"
 	switch(a) {
 	case 0:
 		break;

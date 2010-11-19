@@ -49,15 +49,19 @@ namespace ocl {
 
 namespace {
 // accesses array arr at index idx
-#define SUBSCRIPT(arr, idx) builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>( \
-                            arr, builder.castExpr(core::lang::TYPE_UINT_4_PTR, builder.literal(toString(idx), core::lang::TYPE_UINT_4_PTR ))))
+#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().basic.getUInt4(), core::lang::OP_SUBSCRIPT_SINGLE_PTR, \
+                                     toVector<core::ExpressionPtr>(arr, builder.castExpr(builder.getNodeManager().basic.getUInt4(), \
+                                     builder.literal(toString(idx), builder.getNodeManager().basic.getUInt4() ))))
+
+// storea the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
+#define CAPTURE(vec, var, list) { vec.push_back(var); \
+                                  var = builder.variable((var)->getType()); \
+                                  inits.push_back(var); }
 
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
-#define CAPTURE(vec, var) { }
-//FIXME const core::VariablePtr initVal = builder.variable((var)->getType()); \
-                            vec.push_back(builder.declarationStmt((var), initVal)); \
-                            (var) = initVal; /* update inVec with new variables */ }
-
+#define SHARE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
+                          vec.push_back(builder.declarationStmt((var), initVal)); \
+                          (var) = initVal; /* update inVec with new variables */ }
 
 enum OCL_SCOPE { OCL_GLOBAL, OCL_LOCAL };
 
@@ -115,7 +119,10 @@ public:
     }
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendCaptures(std::vector<core::VariablePtr>& captureList, OCL_SCOPE scope);
+    void appendCaptures(std::vector<core::VariablePtr>& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits);
+
+    //returns a vector containing declarations with fresh initializations of all needed ocl-variables
+    void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
 
     //returns a call expression accessing the global range at index idx and sets globalRangeUsed flag
     core::CallExprPtr accessGlobalRange(core::ExpressionPtr idx);
