@@ -362,7 +362,7 @@ void init_expr() {
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;
-	#pragma test \
+	//#pragma test \
 	"(v1 := struct{weigth:=( var(10)), age:=( var(20))})"
 	p = (struct Person) {10, 20};
 

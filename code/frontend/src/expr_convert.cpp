@@ -44,7 +44,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/c_info/naming.h"
@@ -105,30 +105,28 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 }
 
 // FIXME: this has to be rewritten once lang/core is in a final state
-std::string getOperationType(const core::TypePtr& type) {
+std::string getOperationType(const core::lang::BasicGenerator& gen, const core::TypePtr& type) {
 	using namespace core::lang;
 	DVLOG(2) << type;
-	if(isUIntType(*type))	return "uint";
-	if(isIntType(*type)) 	return "int";
-	if(isBoolType(*type))	return "bool";
-	if(isRealType(*type))	return "real";
-    if(isVectorType(*type)) {
-        const core::VectorType* vt = dynamic_cast<const core::VectorType*>(&*type);
-
+	if(gen.isUnsignedInt(type))	return "uint";
+	if(gen.isSignedInt(type)) 	return "int";
+	if(gen.isBool(type))		return "bool";
+	if(gen.isReal(type))		return "real";
+    if(const core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(type)) {
         const core::TypePtr ref = vt->getElementType();
         std::ostringstream ss;
 
         if(const core::RefType* subtype = dynamic_cast<const core::RefType*>(&*ref))
-            ss << "vector<" << getOperationType(subtype->getElementType()) << ">";
+            ss << "vector<" << getOperationType(gen, subtype->getElementType()) << ">";
         else
-            ss << "vector<" << getOperationType(ref) << ">";
+            ss << "vector<" << getOperationType(gen, ref) << ">";
 
 //        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
         return ss.str();
     }
     // FIXME
-    return "unit";
-	// assert(false && "Type not supported");
+    DLOG(ERROR) << *type;
+	assert(false && "Type not supported");
 }
 
 }
@@ -503,7 +501,7 @@ public:
 
 		// create Pair type
 		core::TypeList&& argsTy = toVector( exprTy, exprTy );
-		std::string&& opType = getOperationType(exprTy);
+		std::string&& opType = getOperationType(convFact.mgr, exprTy);
 
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
