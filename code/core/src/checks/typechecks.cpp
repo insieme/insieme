@@ -181,7 +181,7 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 	return res;
 }
 
-OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& address) {
+OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& address) {
 
 	OptionalMessageList res;
 

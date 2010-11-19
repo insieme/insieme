@@ -43,6 +43,7 @@
 
 #include "insieme/core/statements.h"
 #include "insieme/core/lang_basic.h"
+#include "insieme/core/ast_visitor.h"
 
 using namespace insieme::core;
 
@@ -786,6 +787,28 @@ namespace {
 		boost::hash_combine(hash, variable->hash());
 		boost::hash_combine(hash, definition->hash());
 		return hash;
+	}
+
+	bool isRecursive(const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
+		const LambdaPtr& lambda = definition->getDefinitionOf(variable);
+
+//		LambdaDefinition::Definitions& definitions = definition->getDefinitions();
+//
+//		// a detector which aborts a visiting in cased a recursive function invocation
+//		// is detected
+//		auto detector = makeLambdaVisitor([&definitions](const NodePtr& node)->bool {
+//			// check node type
+//			if (node->getNodeType() != NT_Variable) {
+//				return true;
+//			}
+//
+//			// if the given node is
+//			return definitions.find(node) != definitions.end();
+//		});
+
+		//return visitAllInterruptable(lambda, makeL)
+		return true;
+
 	}
 
 }

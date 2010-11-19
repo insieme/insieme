@@ -117,9 +117,9 @@ public:
 class ConversionContext {
 	NameGenerator nameGen;
 	TypeManager typeMan;
-	FunctionManager funcMan;
 	NodeManager nodeManager;
 	VariableManager varManager;
+	FunctionManager funcMan;
 
 public:
 
@@ -127,7 +127,7 @@ public:
 
 	// The following may produce warnings, but the use of the this pointer in this case is well specified
 	// (the base class initializers do not dereference it)
-	ConversionContext() : typeMan(nameGen), funcMan(nameGen, typeMan), basic(nodeManager.basic) { }
+	ConversionContext() : typeMan(nameGen), funcMan(*this), basic(nodeManager.basic) { }
 	
 	//typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
 

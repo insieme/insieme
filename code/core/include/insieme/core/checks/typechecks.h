@@ -79,7 +79,7 @@ SIMPLE_CHECK(IfConditionType, IfStmt);
 SIMPLE_CHECK(WhileConditionType, WhileStmt);
 SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
 
-SIMPLE_CHECK(BuildInLiteral, Literal);
+SIMPLE_CHECK(BuiltInLiteral, Literal);
 
 SIMPLE_CHECK(RefCast, CastExpr);
 

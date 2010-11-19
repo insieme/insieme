@@ -76,14 +76,9 @@ public:
 class FunctionManager {
 
 	/**
-	 * The name generator used for deriving fresh type names.
+	 * The conversion context this manager is part of.
 	 */
-	NameGenerator& nameGenerator;
-
-	/**
-	 * The type manager used by the converter using this manager.
-	 */
-	TypeManager& typeManager;
+	ConversionContext& cc;
 
 public:
 
@@ -115,10 +110,7 @@ private:
 
 public:
 
-	FunctionManager(NameGenerator& nameGenerator, TypeManager& typeManager)
-		: nameGenerator(nameGenerator), typeManager(typeManager) { }
-
-
+	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
 
 	/**
 	 * Appends the name of the external function to the given context.

@@ -176,7 +176,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			// TODO handle case where not RHS of local var decl
 			visit(args.front());
 			return;
-		} else if(funName == "pack") {
+		} else if(cc.basic.isVarlistPack(funExp)) {
 			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
@@ -215,7 +215,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 	// invoke external method ...
 	if (funExp->getNodeType() == NT_Literal) {
-		visit(funExp);
+		cc.getFuncMan().createCallable(defCodePtr, static_pointer_cast<const Literal>(funExp));
 		cStr << "(";
 		functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 		cStr << ")";
