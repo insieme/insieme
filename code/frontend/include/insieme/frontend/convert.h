@@ -126,16 +126,12 @@ class ConversionFactory : public boost::noncopyable {
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Gloabal and static variables
-		// map which stores, for each static or global variable, the identifier which will be used
-		// as identification within the global data structure and the initialization value
 		core::VariablePtr   globalVar;
 
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 		UseGlobalFuncMap	globalFuncMap;
-		core::VariablePtr	currGlobalVar;
 
-		core::StructTypePtr globalStructType;
-		core::StructExprPtr	globalStructExpr;
+		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
 
 		std::unordered_map<insieme::core::VariablePtr, insieme::core::VariablePtr, hash_target<insieme::core::VariablePtr>,
 			equal_target<insieme::core::VariablePtr>> needRef;
@@ -169,9 +165,9 @@ class ConversionFactory : public boost::noncopyable {
 	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
 	std::auto_ptr<ClangExprConverter> exprConv; // PIMPL pattern
 
-	core::NodeManager& 		mgr;
-	const core::ASTBuilder  builder;
-    Program& 				program;
+	core::NodeManager& 			mgr;
+	const core::ASTBuilder  	builder;
+    Program& 					program;
 
     /**
      * Maps of statements to pragmas.

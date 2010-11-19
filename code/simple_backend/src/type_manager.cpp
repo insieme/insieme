@@ -224,7 +224,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 
 	// add function pointer 'fun'
 	out << "    " << getTypeName(functorAndCaller, functionType->getReturnType()) << "(*fun)(" << "void*";
-	auto arguments = functionType->getArgumentType()->getElementTypes();
+	auto arguments = functionType->getArgumentTypes();
 	if (!arguments.empty()) {
 		out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
 			out << getTypeName(functorAndCaller, cur);

@@ -35,10 +35,9 @@
  */
 
 #include "insieme/frontend/omp/omp_sema.h"
-
 #include "insieme/core/transform/node_replacer.h"
-
 #include "insieme/utils/set_utils.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace frontend {
@@ -93,21 +92,24 @@ void SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel& p
 
 	LambdaDeltaVisitor ldv;
 	core::visitAllInterruptable(StatementAddress(stmtNode), ldv);
-	
+
 	Lambda::CaptureList captures;
 	um::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(ldv.undeclared, [&](VariablePtr p){
 		//auto declStmt = build.declarationStmt(p->getType(), p);
 		auto var = build.variable(p->getType());
-		captures.push_back(var);
+		captures.push_back(p);
 		replacements[p] = var;
 	});
+
 	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements));
+
+	cl::BasicGenerator typeGen(nodeMan); // FIXME
 
 	auto parLambda = build.lambdaExpr(newStmt, captures, Lambda::ParamList());
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
-	auto parallelCall = build.callExpr(cl::OP_PARALLEL, build.uintVal(8), build.uintVal(8), jobExp);
-	auto mergeCall = build.callExpr(cl::OP_MERGE, parallelCall);
+	auto parallelCall = build.callExpr(typeGen.getParallel(), build.literal("8", typeGen.getUInt4()), build.literal("8", typeGen.getUInt4()), jobExp);
+	auto mergeCall = build.callExpr(typeGen.getMerge(), parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
 	ProgramPtr retProgPtr = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, stmt, mergeCall, true));
 	replacement = retProgPtr;

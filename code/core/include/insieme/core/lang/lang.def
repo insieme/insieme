@@ -35,11 +35,15 @@
  */
 
 // Types --------------------------------------------------------------------------------------------------------------
-
 TYPE(Unit, "unit")
 
-TYPE(IntGen,  "int<#a>")
-TYPE(UIntGen, "uint<#a>")
+TYPE(IntGen, "int<#a>") 
+TYPE(UIntGen,  "uint<#a>")
+
+TYPE(Char,   "char")
+TYPE(UChar,  "uchar")
+TYPE(WChar,  "wchar")
+TYPE(String, "string")
 
 TYPE(Int1,   "int<1>")
 TYPE(UInt1,  "uint<1>")
@@ -49,6 +53,8 @@ TYPE(Int4,   "int<4>")
 TYPE(UInt4,  "uint<4>")
 TYPE(Int8,   "int<8>")
 TYPE(UInt8,  "uint<8>")
+TYPE(Int16,   "int<16>")
+TYPE(UInt16,  "uint<16>")
 TYPE(IntInf, "int<#inf>")
 TYPE(UIntInf,"uint<#inf>")
 
@@ -61,8 +67,11 @@ TYPE(Bool, "bool")
 LITERAL(True,  "true",  "bool")
 LITERAL(False, "false", "bool")
 
+TYPE(Alpha, "'a")
+TYPE(RefAlpha, "ref<'a>")
+
+LITERAL(Null, "null", "ref<'a>")
 TYPE(VarList, "var_list")
-TYPE(String, "string")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------
 
@@ -150,7 +159,7 @@ LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
-LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> uint<#b>")
+LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
 LITERAL(VectorInitUndefined, "vector.initUndefined", "() -> vector<'elem,#a>")						// fugly
 
@@ -168,6 +177,7 @@ LITERAL(Merge, "merge", "(threadgroup) -> unit")
 LITERAL(MergeAll, "mergeAll", "() -> unit")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
+LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vector<int<#a>,#b>, (vector<int<#a>,#b>)->'a)->unit")
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
 // TODO herbert

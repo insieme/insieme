@@ -53,10 +53,10 @@ using namespace insieme::core::lang;
 TEST(StatementsTest, Management) {
 	NodeManager manager;
 	NodeManager manager2;
-	
+
 	BreakStmtPtr bS = BreakStmt::get(manager);
 	CompoundStmtPtr nS = CompoundStmt::get(manager);
-	
+
 	CompoundStmtPtr bSC = CompoundStmt::get(manager, bS);
 	CompoundStmtPtr nSC = CompoundStmt::get(manager, nS);
 
@@ -80,7 +80,7 @@ TEST(StatementsTest, Management) {
 //		EXPECT_TRUE(manager2.addressesLocal(cur));
 //	});
 //	stmt2check.visit(bSCVec2);
-	
+
 	EXPECT_FALSE(manager.addressesLocal(bSCVec2));
 	EXPECT_TRUE(manager.contains(bSCVec2));
 }
@@ -99,7 +99,7 @@ TEST(StatementsTest, CompoundStmt) {
 	NodeManager stmtMan;
 	BreakStmtPtr bS = BreakStmt::get(stmtMan);
 	ContinueStmtPtr cS = ContinueStmt::get(stmtMan);
-	
+
 	CompoundStmtPtr empty = CompoundStmt::get(stmtMan);
 	CompoundStmtPtr bSC = CompoundStmt::get(stmtMan, bS);
 	vector<StatementPtr> stmtVec;
@@ -161,7 +161,7 @@ TEST(StatementsTest, DefaultParams) {
 	LiteralPtr one = builder.literal(TYPE_INT_GEN_PTR, "1");
 	DeclarationStmtPtr decl = builder.declarationStmt(TYPE_INT_GEN_PTR, one);
 	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
-	
+
 	EXPECT_EQ(one, forStmt->getStep());
 }
 

@@ -111,7 +111,7 @@ TEST(ExpressionsTest, TupleExpr) {
 	TupleExprPtr empty = TupleExpr::get(manager, toVector<ExpressionPtr>());
 	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(CONST_BOOL_TRUE_PTR, one));
 
-	TypePtr first = TupleType::get(manager, TupleType::ElementTypeList());
+	TypePtr first = TupleType::get(manager, TypeList());
 	TypePtr second = TupleType::get(manager, toVector<TypePtr>(TYPE_BOOL_PTR, TYPE_UINT_1_PTR));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
@@ -152,7 +152,7 @@ TEST(ExpressionsTest, Lambda) {
 	StatementPtr body = Literal::get(manager, type, "a");
 	VariablePtr varA = Variable::get(manager, type, 1);
 	VariablePtr varB = Variable::get(manager, type, 2);
-	FunctionTypePtr funType = FunctionType::get(manager, TupleType::get(manager), type);
+	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type);
 	LambdaPtr empty = Lambda::get(manager, funType, Lambda::CaptureList(), Lambda::ParamList(), body);
 	LambdaPtr more = Lambda::get(manager, funType, toVector(varA), toVector(varB), body);
 
@@ -168,8 +168,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 	ASTBuilder builder;
 
 	// create a recursive even/odd example
-	TupleTypePtr argumentType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR));
-	FunctionTypePtr functionType = builder.functionType(argumentType, lang::TYPE_BOOL_PTR);
+	FunctionTypePtr functionType = builder.functionType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR), lang::TYPE_BOOL_PTR);
 	VariablePtr evenVar = builder.variable(functionType, 1);
 	VariablePtr oddVar = builder.variable(functionType, 2);
 
@@ -234,33 +233,30 @@ TEST(ExpressionsTest, CaptureInitExpr) {
 	NodeManager manager;
 	ASTBuilder builder(manager);
 
-	TupleTypePtr args = builder.tupleType();
 	TypePtr res = builder.genericType("A");
-	FunctionTypePtr funType = builder.functionType(args, res);
+	FunctionTypePtr funType = builder.functionType(TypeList(), res);
 
 	VariablePtr captureVar = builder.variable(res);
 	LiteralPtr initValue = builder.literal(res, "X");
+	LiteralPtr initValue2 = builder.literal(res, "Y");
 
 	LambdaExprPtr lambda = builder.lambdaExpr(funType, Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
 	LambdaExprPtr lambda2 = builder.lambdaExpr(funType, toVector<VariablePtr>(captureVar), Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
 
-	CaptureInitExpr::Initializations inits;
-	inits.insert(std::make_pair(captureVar, initValue));
-
-	CaptureInitExprPtr empty = builder.captureInitExpr(lambda, CaptureInitExpr::Initializations());
-	CaptureInitExprPtr more = builder.captureInitExpr(lambda2, inits);
+	CaptureInitExprPtr empty = builder.captureInitExpr(lambda, toVector<ExpressionPtr>());
+	CaptureInitExprPtr more = builder.captureInitExpr(lambda2, toVector<ExpressionPtr>(initValue, initValue2));
 
 	EXPECT_EQ(*lambda->getType(), *empty->getType());
 	EXPECT_EQ(*lambda->getType(), *more->getType());
 	EXPECT_EQ(*lambda2->getType(), *more->getType());
 
 	EXPECT_EQ ("([]rec v4.{v4=fun[]() return A})", toString(*empty));
-	EXPECT_EQ ("([v3:=X]rec v5.{v5=fun[A v3]() return A})", toString(*more));
+	EXPECT_EQ ("([X, Y]rec v5.{v5=fun[A v3]() return A})", toString(*more));
 
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, lambda->getType(), toVector<NodePtr>(lambda));
-	basicExprTests(more, lambda2->getType(), toVector<NodePtr>(lambda2, captureVar, initValue));
+	basicExprTests(more, lambda2->getType(), toVector<NodePtr>(lambda2, initValue, initValue2));
 
 }
 

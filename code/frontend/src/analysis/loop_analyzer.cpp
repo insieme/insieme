@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/analysis/loop_analyzer.h"
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/core/lang_basic.h"
 
 // defines which are needed by LLVM

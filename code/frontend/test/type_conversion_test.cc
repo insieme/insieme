@@ -40,7 +40,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/insieme_pragma.h"
 
 #include "insieme/utils/logging.h"
@@ -75,7 +75,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	ConversionFactory convFactory( manager, prog );
 
 	// VOID
-	//CHECK_BUILTIN_TYPE(Void, "unit");
+	CHECK_BUILTIN_TYPE(Void, "unit");
 	// BOOL
 	CHECK_BUILTIN_TYPE(Bool, "bool");
 
@@ -84,9 +84,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Char
 	CHECK_BUILTIN_TYPE(SChar, "char");
 	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "char<2>");
+	CHECK_BUILTIN_TYPE(Char16, "char");
 	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "char<4>");
+	CHECK_BUILTIN_TYPE(Char32, "char");
 	// WChar
 	CHECK_BUILTIN_TYPE(WChar, "wchar");
 
@@ -114,7 +114,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Double
 	CHECK_BUILTIN_TYPE(Double, "real<8>");
 	// LongDouble
-	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+	// CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
 
 }
 
@@ -399,24 +399,23 @@ TEST(TypeConversion, FileTest) {
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
-	const fe::PragmaList& pl = tu.getPragmaList();
+	auto filter = [](const fe::Pragma& curr){ return curr.getType() == "test"; };
 
-	for(auto it = pl.begin(), end = pl.end(); it != end; ++it) {
+	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 		VariableResetHack::reset();
 		ConversionFactory convFactory( manager, prog );
 		convFactory.setTranslationUnit(tu);
 
-		if(const fe::TestPragma* tp = dynamic_cast<const fe::TestPragma*>(&**it)) {
-			if(tp->isStatement())
-				EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertStmt( tp->getStatement() )->toString() + '\"' );
-			else {
-				if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp->getDecl() )) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-				} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp->getDecl() )) {
-					EXPECT_EQ(tp->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
-				}
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+
+		if(tp.isStatement())
+			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
+		else {
+			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
+				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
+				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
 			}
 		}
 	}
 }
-

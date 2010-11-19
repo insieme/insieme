@@ -36,19 +36,26 @@
 
 #include "insieme/core/lang/basic.h"
 
+#include <map>
+
 #include "insieme/core/ir_parse.h"
 #include "insieme/core/ast_builder.h"
+
+#include "insieme/utils/set_utils.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
-
-struct BasicGeneratorImpl {
+	
+struct BasicGenerator::BasicGeneratorImpl {
 	parse::IRParser parser;
 	ASTBuilder build;
 
+	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
+	std::map<std::string, litFunPtr> literalMap;
+
 	#define TYPE(_id, _spec) \
-	TypePtr ptr##_id; 
+	TypePtr ptr##_id;
 
 	#define LITERAL(_id, _name, _spec) \
 	LiteralPtr ptr##_id;
@@ -58,15 +65,22 @@ struct BasicGeneratorImpl {
 	#undef TYPE
 	#undef LITERAL
 
+	BasicGeneratorImpl(NodeManager& nm) : parser(nm), build(nm) {
+		#define TYPE(_id, _spec)
+		#define LITERAL(_id, _name, _spec) \
+		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
+		#include "insieme/core/lang/lang.def"
+		#undef LITERAL
+		#undef TYPE
+	}
+
 	// ----- extra material ---
 
 	StatementPtr ptrNoOp;
-
-	BasicGeneratorImpl(NodeManager& nm) : parser(nm), build(nm) { }
 };
 
-BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) {
-}
+BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) { }
+
 BasicGenerator::~BasicGenerator() {
 	delete pimpl;
 }
@@ -89,6 +103,36 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 
 #undef TYPE
 #undef LITERAL
+
+
+bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
+	if(auto tN = dynamic_pointer_cast<const Type>(node)) {
+		#define TYPE(_id, _spec) \
+		if(node == get##_id()) return true;
+		#define LITERAL(_id, _name, _spec)
+		#include "insieme/core/lang/lang.def"
+		#undef TYPE
+		#undef LITERAL
+	}
+	else if(auto lN = dynamic_pointer_cast<const Literal>(node)) {
+		#define TYPE(_id, _spec)
+		#define LITERAL(_id, _name, _spec)\
+		if(node == get##_id()) return true;
+		#include "insieme/core/lang/lang.def"
+		#undef TYPE
+		#undef LITERAL
+	}
+	return node == getNoOp();
+}
+
+LiteralPtr BasicGenerator::getLiteral(const string& name) const {
+	auto lIt = pimpl->literalMap.find(name);
+	if(lIt != pimpl->literalMap.end()) {
+		return ((*this).*lIt->second)();
+	}
+	return LiteralPtr();
+}
+
 
 // ----- extra material ---
 

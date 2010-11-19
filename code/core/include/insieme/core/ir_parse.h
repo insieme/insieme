@@ -38,6 +38,8 @@
 
 #include <exception>
 
+#define BOOST_SPIRIT_DEBUG
+
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 
@@ -72,7 +74,7 @@ class IRParser {
 	qi::rule<ParseIt, IntTypeParam()> intTypeParamLabel;
 
 	// nonterminal rules with skip parsing
-	qi::rule<ParseIt, TypePtr(), qi::space_type> functionType;
+	qi::rule<ParseIt, TypePtr(), qi::locals<vector<TypePtr>, vector<TypePtr>, TypePtr>, qi::space_type> functionType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeVariable;
 	qi::rule<ParseIt, IntTypeParam(), qi::space_type> intTypeParam;
 	qi::rule<ParseIt, RefTypePtr(), qi::space_type> refType;

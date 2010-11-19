@@ -43,11 +43,11 @@
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/types.h"
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace core {
-	
+
 using std::vector;
 using std::string;
 
@@ -69,9 +69,10 @@ public:
 	ASTBuilder(NodeManager& manager) : manager(manager) { }
 
 
+	typedef vector<TypePtr> TypeList;
+
 	typedef std::pair<Identifier, TypePtr> Entry;
 	typedef vector<Entry> Entries;
-	typedef vector<TypePtr> ElementTypeList;
 
 	typedef std::pair<Identifier, ExpressionPtr> Member;
 	typedef std::vector<Member> Members;
@@ -88,7 +89,8 @@ public:
 
 	typedef LambdaDefinition::Definitions Definitions;
 
-	typedef CaptureInitExpr::Initializations CaptureInits;
+	typedef CaptureInitExpr::Values Values;
+	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> CaptureInits;
 
 	/**
 	 * Obtains a reference to the node manager used by this builder.
@@ -97,29 +99,22 @@ public:
 		return manager;
 	}
 
+	/**
+	 * Obtains a reference to the basic generator within the node manager.
+	 */
+	const lang::BasicGenerator& getBasicGenerator() const {
+		return manager.basic;
+	}
+
 	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet(), bool main = false);
-
-
-	// ---------------------------- Create Derived Types ----------------------------
-
-	lang::UnitTypePtr unitType() const;
-	lang::BoolTypePtr boolType() const;
-	lang::IntTypePtr  intType(unsigned short size = 4) const;
-	lang::UIntTypePtr uintType(unsigned short size = 4) const;
-	lang::RealTypePtr realType(unsigned short size = 4) const;
-
 
 #include "ast_builder.inl"
 
-	// ---------------------------- Convenience -------------------------------------
-	
-	// Values
-	LiteralPtr intVal(long val, unsigned short size = 4) const;
-	LiteralPtr uintVal(long val, unsigned short size = 4) const;
 	LiteralPtr stringVal(const char* str) const;
 
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
+	CallExprPtr refVar(const ExpressionPtr& subExpr) const;
 
 	// Call Expressions
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
@@ -137,13 +132,13 @@ public:
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params = ParamList()) const;
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
 	// Direct lambda with capture initialization // TODO
-	LambdaExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
-	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	ExpressionPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	ExpressionPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 
 
 	// Utilities
 private:
-	static ElementTypeList extractParamTypes(const ParamList& params);
+	static TypeList extractParamTypes(const ParamList& params);
 };
 
 } // namespace core

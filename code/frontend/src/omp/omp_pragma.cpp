@@ -40,7 +40,7 @@
 #include "insieme/frontend/pragma_handler.h"
 #include "insieme/frontend/pragma_matcher.h"
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 
 #include "insieme/utils/logging.h"
 

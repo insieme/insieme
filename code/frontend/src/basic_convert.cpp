@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/global_variables.h"
@@ -105,11 +105,9 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
 	DVLOG(1) << globColl;
-	auto global = globColl.createGlobalStruct(mFact);
-	mFact.ctx.globalStructType = global.first;
-	mFact.ctx.globalStructExpr = global.second;
-	if(global.first)
-		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(global.first));
+	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
+	if(mFact.ctx.globalStruct.first)
+		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
@@ -223,9 +221,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	// check whether this is variable is defined as local or static
 	// DLOG(INFO) << varDecl->getNameAsString() << " " << varDecl->hasGlobalStorage() << " " << varDecl->hasLocalStorage();
 	if(varDecl->hasGlobalStorage()) {
-		assert(ctx.currGlobalVar && "Accessing global variable within a function not receiving the global struct");
+		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
-		return builder.memberAccessExpr(tryDeref(ctx.currGlobalVar), core::Identifier(varDecl->getNameAsString()));
+		return builder.memberAccessExpr(tryDeref(ctx.globalVar), core::Identifier(varDecl->getNameAsString()));
 	}
 
 	// variable is not in the map, create a new var and add it
@@ -249,8 +247,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	if( *type == core::lang::TYPE_ALPHA_VAL ) {
-		return core::lang::CONST_NULL_PTR_PTR;
+	if( *type == *mgr.basic.getAlpha() ) {
+		return mgr.basic.getNull();
 	}
 	// handle integers initialization
     if ( core::lang::isIntegerType(*type) ) {
@@ -269,16 +267,16 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle refs initialization
     if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
         // initialize pointer/reference types with the null value
-    	return builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( defaultInitVal(refTy->getElementType()) ) );
+    	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
-    if ( *type == core::lang::TYPE_STRING_VAL ) {
+    if ( *type == *mgr.basic.getString() ) {
         return builder.literal("", type);
     }
     // handle booleans initialization
-    if ( *type == core::lang::TYPE_BOOL_VAL ) {
+    if ( *type == *mgr.basic.getBool() ) {
         // boolean values are initialized to false
-        return builder.literal("false", core::lang::TYPE_BOOL_PTR);
+        return builder.literal("false", mgr.basic.getBool());
     }
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
@@ -312,7 +310,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy, core::lang::OP_VECTOR_INIT_UNIFORM_PTR, toVector(initVal));
+		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal);
 		// return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
     }
     // handle arrays initialization
@@ -320,7 +318,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	// FIXME
     	assert(vecTy); // silent compiler warning
     	// initialization for arrays is missing, returning NULL!
-    	return core::lang::CONST_NULL_PTR_PTR;
+    	return mgr.basic.getNull();
     }
     assert(false && "Default initialization type not defined");
 }
@@ -370,7 +368,7 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 	assert(retExpr && "Couldn't convert initialization expression");
 
 	if(isRef)
-		retExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( retExpr ) );
+		retExpr = builder.refVar( retExpr );
 	// create vector initializator
 	return retExpr;
 }
@@ -384,7 +382,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 	if(core::dynamic_pointer_cast<const core::RefType>(type))
-		retExpr = builder.callExpr( type, core::lang::OP_REF_VAR_PTR, toVector( retExpr ) );
+		retExpr = builder.refVar( retExpr );
 	return retExpr;
 }
 
@@ -492,7 +490,7 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
 	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-	core::CallExprPtr&& callExpr = mFact.createCallExpr(toVector<core::StatementPtr>(bodyStmt), core::lang::TYPE_UNIT);
+	core::CallExprPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.basic.getUnit() );
 
 	c_info::CLocAnnotation::ArgumentList args;
 	// look for variable names

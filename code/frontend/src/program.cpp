@@ -37,7 +37,7 @@
 #include "insieme/frontend/program.h"
 
 #include "insieme/frontend/pragma_handler.h"
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/insieme_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/omp/omp_pragma.h"

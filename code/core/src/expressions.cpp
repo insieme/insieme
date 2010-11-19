@@ -177,7 +177,7 @@ std::ostream& TupleExpr::printTo(std::ostream& out) const {
 
 
 TupleExprPtr TupleExpr::get(NodeManager& manager, const vector<ExpressionPtr>& expressions) {
-	TupleType::ElementTypeList elemTypes;
+	TypeList elemTypes;
 	std::transform(expressions.cbegin(), expressions.cend(), back_inserter(elemTypes), [](const ExpressionPtr& e) { return e->getType(); });
 	return get(manager, TupleType::get(manager, elemTypes), expressions);
 }
@@ -401,23 +401,25 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
 	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 
-    assert(*static_pointer_cast<const FunctionType>(defaultStmt->getType())->getArgumentType() == TupleType() &&
-            "Default statement is not allowed to have any arguments");
-    assert(static_pointer_cast<const FunctionType>(defaultStmt->getType())->getReturnType()->getName() == "unit" &&
-            "Return value of default statement must be void.");
+	// TODO: use ordinary type checks for this section ...
+	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
+    assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
+    assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be void.");
 
-    std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [](const JobExpr::GuardedStmt& s){
+    TypeList guardParams = toVector<TypePtr>(lang::TYPE_UINT_GEN_PTR, lang::TYPE_UINT_GEN_PTR);
+
+    std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
-        assert(*static_pointer_cast<const FunctionType>(s.first->getType())->getArgumentType() == TupleType(
-                lang::TYPE_UINT_GEN, lang::TYPE_UINT_GEN) && "Guard must have two integer arguments");
-        assert(static_pointer_cast<const FunctionType>(s.first->getType())->getReturnType()->getName() == "bool" &&
-                "Return value of guard must be bool.");
+    	FunctionTypePtr guardType = static_pointer_cast<const FunctionType>(s.first->getType());
+    	assert(guardType->getCaptureTypes().empty() && "Guard must not have any capture variables.");
+        assert(::equals(guardType->getArgumentTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
+        assert(guardType->getReturnType()->getName() == "bool" && "Return value of guard must be bool.");
 
         //Check guarded statements
-        assert(*static_pointer_cast<const FunctionType>(s.second->getType())->getArgumentType() == TupleType() &&
-                "Guarded statement is not allowed to have any arguments");
-        assert(static_pointer_cast<const FunctionType>(s.second->getType())->getReturnType()->getName() == "unit" &&
-                "Return value of guarded statement must be void.");
+        FunctionTypePtr stmtType = static_pointer_cast<const FunctionType>(s.second->getType());
+        assert(stmtType->getCaptureTypes().empty() && "Guarded statement is not allowed to have any capture variables.");
+        assert(stmtType->getArgumentTypes().empty() && "Guarded statement is not allowed to have any arguments");
+        assert(stmtType->getReturnType()->getName() == "unit" && "Return value of guarded statement must be void.");
     });
 
 }
@@ -790,7 +792,7 @@ namespace {
 
 LambdaExpr::LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition)
 	: Expression(NT_LambdaExpr, variable->getType(), ::hashLambdaExpr(variable, definition)),
-	  variable(isolate(variable)), definition(isolate(definition)), lambda(*(definition->getDefinitionOf(variable))) { }
+	  variable(isolate(variable)), definition(isolate(definition)), lambda(definition->getDefinitionOf(variable)) { }
 
 LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
@@ -833,15 +835,15 @@ std::ostream& LambdaExpr::printTo(std::ostream& out) const {
 }
 
 const Lambda::CaptureList& LambdaExpr::getCaptureList() const {
-	return lambda.getCaptureList();
+	return lambda->getCaptureList();
 }
 
 const Lambda::ParamList& LambdaExpr::getParameterList() const {
-	return lambda.getParameterList();
+	return lambda->getParameterList();
 }
 
 const StatementPtr& LambdaExpr::getBody() const {
-	return lambda.getBody();
+	return lambda->getBody();
 }
 
 
@@ -849,71 +851,42 @@ const StatementPtr& LambdaExpr::getBody() const {
 
 namespace {
 
-	std::size_t hashCaptureInitExpr(const ExpressionPtr& lambda, const CaptureInitExpr::Initializations& initializations) {
+	std::size_t hashCaptureInitExpr(const ExpressionPtr& lambda, const CaptureInitExpr::Values& values) {
 		std::size_t hash = HASHVAL_CAPTURE_INIT;
 		boost::hash_combine(hash, lambda->hash());
-		boost::hash_combine(hash, insieme::utils::map::computeHash(initializations, hash_target<VariablePtr>(), hash_target<ExpressionPtr>()));
+		hashPtrRange(hash, values);
 		return hash;
 	}
 
-	const CaptureInitExpr::Initializations& isolateInitializations(const CaptureInitExpr::Initializations& initializatons) {
-		for_each(initializatons, [](const CaptureInitExpr::Initializations::value_type& cur) {
-				isolate(cur.first);
-				isolate(cur.second);
-		});
-		return initializatons;
-	}
-
-	CaptureInitExpr::Initializations copyInitializationsUsing(NodeMapping& mapper, unsigned offset, const CaptureInitExpr::Initializations& initializations) {
-		typedef CaptureInitExpr::Initializations::value_type Value;
-
-		CaptureInitExpr::Initializations res;
-		std::transform(initializations.begin(), initializations.end(), inserter(res, res.end()),
-			[&mapper, &offset](const Value& cur)->Value {
-
-				// apply mapping
-				auto res = std::make_pair(
-						mapper.map(offset, cur.first),
-						mapper.map(offset+1, cur.second));
-				offset += 2;
-				return res;
-		});
-		return res;
-	}
 }
 
-CaptureInitExpr::CaptureInitExpr(const ExpressionPtr& lambda, const Initializations& initializations)
-	: Expression(NT_CaptureInitExpr, lambda->getType(), ::hashCaptureInitExpr(lambda, initializations)),
-	  lambda(isolate(lambda)), initializations(isolateInitializations(initializations)) { }
+CaptureInitExpr::CaptureInitExpr(const ExpressionPtr& lambda, const Values& values)
+	: Expression(NT_CaptureInitExpr, lambda->getType(), ::hashCaptureInitExpr(lambda, values)),
+	  lambda(isolate(lambda)), values(isolate(values)) { }
 
 CaptureInitExpr* CaptureInitExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new CaptureInitExpr(mapper.map(0, lambda), copyInitializationsUsing(mapper, 1, initializations));
+	return new CaptureInitExpr(mapper.map(0, lambda), mapper.map(1, values));
 }
 
 Node::OptionChildList CaptureInitExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(lambda);
-	for_each(initializations, [&res](const std::pair<VariablePtr, ExpressionPtr>& cur) {
-		res->push_back(cur.first);
-		res->push_back(cur.second);
-	});
+	std::copy(values.begin(), values.end(), std::back_inserter(*res));
 	return res;
 }
 
 bool CaptureInitExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const CaptureInitExpr& rhs = static_cast<const CaptureInitExpr&>(expr);
-	return (*rhs.lambda == *lambda && utils::map::equal(initializations, rhs.initializations, equal_target<ExpressionPtr>()));
+	return (*rhs.lambda == *lambda && ::equals(values, values, equal_target<ExpressionPtr>()));
 }
 
-CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const ExpressionPtr& lambda, const CaptureInitExpr::Initializations& initializations) {
-	return manager.get(CaptureInitExpr(lambda, initializations));
+CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const ExpressionPtr& lambda, const Values& values) {
+	return manager.get(CaptureInitExpr(lambda, values));
 }
 
 std::ostream& CaptureInitExpr::printTo(std::ostream& out) const {
-	return out << "([" << join(", ", initializations, [](std::ostream& out, const std::pair<VariablePtr, ExpressionPtr>& cur) {
-		out << *(cur.first) << ":=" << *(cur.second);
-	}) << "]" << *lambda << ")";
+	return out << "([" << join(", ", values, print<deref<ExpressionPtr>>()) << "]" << *lambda << ")";
 }
 
 

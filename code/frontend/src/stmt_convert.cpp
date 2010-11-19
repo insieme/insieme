@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/conversion.h"
+#include "insieme/frontend/convert.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
@@ -44,7 +44,6 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/statements.h"
-#include "insieme/core/lang_basic.h"
 
 #include "insieme/c_info/naming.h"
 #include "insieme/c_info/location.h"
@@ -297,13 +296,13 @@ public:
 
 				// Initialize the value of the new induction variable with the value of the old one
 				core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init);
-				assert(callExpr && *callExpr->getFunctionExpr() == *core::lang::OP_REF_ASSIGN_PTR &&
+				assert(callExpr && *callExpr->getFunctionExpr() == *convFact.mgr.basic.getRefAssign() &&
 						"Expression not handled in a forloop initaliazation statement!");
 
 				// we handle only the situation where the initExpr is an assignment
 				init = callExpr->getArguments()[1]; // getting RHS
 
-				declStmt = builder.declarationStmt( newIndVar, builder.callExpr(varTy, core::lang::OP_REF_VAR_PTR, toVector(init)) );
+				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), inductionVar, newIndVar, true);
 
 				// replace the body with the newly modified one
@@ -327,13 +326,10 @@ public:
 				// in the case we replace the loop iterator with a temporary variable,
 				// we have to assign the final value of the iterator to the old variable
 				// so we don't change the semantics of the code
-				const core::lang::OperatorPtr& refAssign = convFact.mgr.get(core::lang::OP_REF_ASSIGN_PTR);
-				refAssign->addAnnotation( std::make_shared<c_info::COpAnnotation>("=") ); // FIXME
+				core::LiteralPtr&& refAssign = convFact.mgr.basic.getRefAssign();
 
 				// inductionVar = COND()? ---> FIXME!
-				retStmt.push_back( builder.callExpr(
-						core::lang::TYPE_UNIT_PTR, refAssign, toVector<core::ExpressionPtr>( inductionVar, loopAnalysis.getCondExpr() )
-				));
+				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(), refAssign, inductionVar, loopAnalysis.getCondExpr() ));
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {
@@ -420,15 +416,15 @@ public:
 			retStmt.push_back( declStmt );
 
 			// the expression will be a cast to bool of the declared variable
-			condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, declStmt->getVariable());
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), declStmt->getVariable());
 		} else {
 			const Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
 
 			condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
-			if(*condExpr->getType() != core::lang::TYPE_BOOL_VAL) {
+			if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
 				// add a cast expression to bool
-				condExpr = builder.castExpr(core::lang::TYPE_BOOL_PTR, condExpr);
+				condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
 			}
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the IfStmt");
@@ -542,9 +538,9 @@ public:
 			condExpr = convFact.tryDeref( convFact.convertExpr( cond ) );
 
 			// we create a variable to store the value of the condition for this switch
-			core::VariablePtr&& condVar = builder.variable(core::lang::TYPE_INT_4_PTR);
+			core::VariablePtr&& condVar = builder.variable(convFact.mgr.basic.getInt4());
 			// int condVar = condExpr;
-			core::DeclarationStmtPtr&& declVar = builder.declarationStmt(condVar, builder.castExpr(core::lang::TYPE_INT_4_PTR, condExpr));
+			core::DeclarationStmtPtr&& declVar = builder.declarationStmt(condVar, builder.castExpr(convFact.mgr.basic.getInt4(), condExpr));
 			retStmt.push_back(declVar);
 
 			condExpr = condVar;
@@ -605,7 +601,7 @@ public:
 					subStmt = tryAggregateStmts( this->convFact.builder, this->Visit( const_cast<Stmt*>(sub) ) );
 					// if the substatement is a BreakStmt we have to replace it with a noOp and remember to reset the caseStmts
 					if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
-						subStmt = core::lang::STMT_NO_OP_PTR;
+						subStmt = convFact.mgr.basic.getNoOp();
 						breakEncountred = true;
 					}
 				}
@@ -616,7 +612,7 @@ public:
 				isDefault = true;
 				core::StatementPtr&& subStmt = tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
 				if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
-					subStmt = core::lang::STMT_NO_OP_PTR;
+					subStmt = convFact.mgr.basic.getNoOp();
 					breakEncountred = true;
 				}
 				caseStmts.push_back(subStmt);
@@ -698,7 +694,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
 		//TODO: Visual Studio 2010 fix: && removed
-		core::StatementPtr retStmt = core::lang::STMT_NO_OP_PTR;
+		core::StatementPtr retStmt = convFact.mgr.basic.getNoOp();
 
 		// handle eventual OpenMP pragmas attached to the Clang node
 		frontend::omp::attachOmpAnnotation(retStmt, nullStmt, convFact);

@@ -709,4 +709,3 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 }
 
 }
-

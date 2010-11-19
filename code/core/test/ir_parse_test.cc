@@ -67,8 +67,11 @@ TEST(IRParser, TypeTests) {
 	auto intPairType = builder.tupleType(toVector<TypePtr>(intType, intType));
 	EXPECT_EQ(intPairType, parser.parseType("(int<#a>, int<#a>)"));
 
-	auto funType = builder.functionType(intPairType, intType);
+	auto funType = builder.functionType(intPairType->getElementTypes(), intType);
 	EXPECT_EQ(funType, parser.parseType("(int<#a>, int<#a>) -> int<#a>"));
+
+	auto captureFunType = builder.functionType(intPairType->getElementTypes(), toVector<TypePtr>(intType, intType, intType), intType);
+	EXPECT_EQ(captureFunType, parser.parseType("[int<#a>, int<#a>](int<#a>, int<#a>, int<#a>) -> int<#a>"));
 
 	auto arrayType = builder.arrayType(intType);
 	EXPECT_EQ(arrayType, parser.parseType("array<int<#a>, 1>"));

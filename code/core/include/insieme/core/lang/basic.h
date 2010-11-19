@@ -36,10 +36,11 @@
 
 #pragma once
 
+#include <string>
+
 namespace insieme {
 namespace core {
-
-// Forward declarations
+	
 class NodeManager;
 template<class T> class AnnotatedPtr;
 class Type;
@@ -55,10 +56,9 @@ typedef AnnotatedPtr<const Statement> StatementPtr;
 
 namespace lang {
 
-struct BasicGeneratorImpl;
-
 class BasicGenerator {
 	mutable NodeManager& nm;
+	struct BasicGeneratorImpl;
 	mutable BasicGeneratorImpl* pimpl;
 
 public:
@@ -77,6 +77,9 @@ public:
 
 	#undef TYPE
 	#undef LITERAL
+
+	bool isBuiltIn(const NodePtr& node) const;
+	LiteralPtr getLiteral(const std::string& name) const;
 
 	// ----- extra material ---
 

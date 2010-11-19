@@ -57,19 +57,18 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
 	FunctionTypePtr functionType = CAST(FunctionType, funType);
-	TupleTypePtr argumentType = functionType->getArgumentType();
+	TypeList argumentTypes = functionType->getArgumentTypes();
 	TypePtr returnType = functionType->getReturnType();
 
 	// Obtain argument type
-	vector<TypePtr> types;
-	transform(address->getArguments(), back_inserter(types), [](const ExpressionPtr& cur) {
+	TypeList parameterTypes;
+	transform(address->getArguments(), back_inserter(parameterTypes), [](const ExpressionPtr& cur) {
 		return cur->getType();
 	});
-	TupleTypePtr parameterType = TupleType::get(manager, types);
 
 	// 1) check number of arguments
-	int numArguments = argumentType->getElementTypes().size();
-	int numParameter = parameterType->getElementTypes().size();
+	int numArguments = argumentTypes.size();
+	int numParameter = parameterTypes.size();
 	if (numArguments != numParameter) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
@@ -79,13 +78,15 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	}
 
 	// 2) check types of arguments => by computing most general unifier
-	auto mgu = unify(manager, argumentType, parameterType);
+	TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
+	TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
+	auto mgu = unify(manager, argumentTuple, parameterTuple);
 	if (!mgu) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
 						format("Invalid argument type(s) - expected: %s, actual: %s - function type: %s",
-								toString(*argumentType).c_str(),
-								toString(*parameterType).c_str(),
+								toString(*argumentTuple).c_str(),
+								toString(*parameterTuple).c_str(),
 								toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
@@ -185,7 +186,13 @@ OptionalMessageList BuildInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	OptionalMessageList res;
 
 	// check whether it is a build-in literal
-	LiteralPtr buildIn = lang::getBuildInForValue(address->getValue());
+	const NodeManager* manager = address->getNodeManager();
+	if (!manager) {
+		return res;
+	}
+
+	// obtain literal
+	LiteralPtr buildIn = manager->basic.getLiteral(address->getValue());
 	if (!buildIn) {
 		return res;
 	}

@@ -41,12 +41,6 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/frontend/utils/types_lenght.h"
 
-#include "insieme/core/lang/basic.h"
-
-// TODO remove, only for compatibility reasons
-#include "insieme/core/lang_basic.h"
-
-
 namespace insieme {
 namespace frontend {
 namespace ocl {
@@ -658,11 +652,11 @@ public:
                 //check return type
                 assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
 
-                core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+                core::TypeList args = funcType->getArgumentTypes();
                 args.push_back(kd.globalRange->getType());
                 args.push_back(kd.localRange->getType());
 
-                newFuncType = builder.functionType(builder.tupleType(args), retTy);
+                newFuncType = builder.functionType(args, retTy);
             } else {
                 assert(funcType && "Function has unexpected type");
             }
@@ -684,8 +678,7 @@ public:
                 core::Lambda::ParamList funParams;
 
 
-                core::FunctionTypePtr parFuncType= builder.functionType(builder.tupleType(parArgs),
-                        builder.getNodeManager().basic.getUInt4());
+               core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().basic.getUInt4());
 
 // Top down generation of constructs
 
@@ -824,7 +817,7 @@ public:
 
 
                 newBodyStmts.push_back(tmp);
-            
+
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
                 // get address spaces of variables in body

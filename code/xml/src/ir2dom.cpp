@@ -148,8 +148,9 @@ public:
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
 
 		XmlElement argumentType("argumentType", doc);
-		append(argumentType, cur->getArgumentType(), "tupleTypePtr");
-		functionType << argumentType;
+		// TODO: fix this ...
+//		append(argumentType, cur->getArgumentType(), "tupleTypePtr");
+//		functionType << argumentType;
 
 		XmlElement returnType("returnType", doc);
 		append(returnType, cur->getReturnType(), "typePtr");
@@ -628,6 +629,41 @@ public:
 		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
 	}*/
 	
+	/*void visitLambda(const LambdaPtr& cur) { // NEW ONE
+		XmlElement lambda("lambda", doc);
+		rootElem << (lambda << XmlElement::Attribute("id", GET_ID(cur)));
+
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "functionTypePtr");
+		lambda << type;
+
+		XmlElement captureList("captureList",doc);
+		lambda << captureList;
+
+		const Lambda::CaptureList& capList = cur->getCaptureList();
+		std::for_each(capList.begin(), capList.end(),
+			[this, &captureList](const Lambda::CaptureList::value_type& curr) {
+				this->append(captureList, curr, "variablePtr");
+			}
+		);
+		
+		XmlElement paramList("paramList",doc);
+		lambda << paramList;
+
+		const Lambda::ParamList& parList = cur->getParameterList();
+		std::for_each(parList.begin(), parList.end(),
+			[this, &paramList](const Lambda::ParamList::value_type& curr) {
+				this->append(paramList, curr, "variablePtr");
+			}
+		);
+
+		XmlElement body("body", doc);
+		append(body, cur->getBody(), "statementPtr");
+		lambda << body;
+
+		visitAnnotations(cur->getAnnotations(), lambda);
+	}*/
+	
 	void visitMemberAccessExpr(const MemberAccessExprPtr& cur) {
 		XmlElement memberAccessExpr("memberAccessExpr", doc);
 		rootElem << (memberAccessExpr << XmlElement::Attribute("id", GET_ID(cur)));
@@ -664,6 +700,31 @@ public:
 		tupleProjectionExpr << index;
 
 		visitAnnotations(cur->getAnnotations(), tupleProjectionExpr);
+	}
+	
+	void visitCaptureInitExpr (const CaptureInitExprPtr& cur){
+		XmlElement captureInitExpr("captureInitExpr", doc);
+		rootElem << (captureInitExpr << XmlElement::Attribute("id", GET_ID(cur)));
+		
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "typePtr");
+		captureInitExpr << type;
+		
+		XmlElement lambda("lambda", doc);
+		append(lambda, cur->getLambda(), "lambdaExprPtr");
+		captureInitExpr << lambda;
+		
+		XmlElement xmlValues("values", doc);
+		captureInitExpr << xmlValues;
+
+		const CaptureInitExpr::Values& values = cur->getValues();
+		for(CaptureInitExpr::Values::const_iterator iter = values.begin(), end = values.end(); iter != end; ++iter) {
+			XmlElement xmlValue("value", doc);
+			append(xmlValue, *iter, "ExpressionPtr");
+			xmlValues << xmlValue;
+		}
+		
+		visitAnnotations(cur->getAnnotations(), captureInitExpr);
 	}
 };
 

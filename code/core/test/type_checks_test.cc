@@ -57,15 +57,15 @@ TEST(CallExprTypeCheck, Basic) {
 	// ... define some types
 	TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
 	EXPECT_EQ("()", toString(*empty));
-	FunctionTypePtr nullary = builder.functionType(empty, type);
+	FunctionTypePtr nullary = builder.functionType(empty->getElementTypes(), type);
 	EXPECT_EQ("(()->int<a>)", toString(*nullary));
 	TupleTypePtr single = builder.tupleType(toVector(type));
 	EXPECT_EQ("(int<a>)", toString(*single));
-	FunctionTypePtr unary = builder.functionType(single, type);
+	FunctionTypePtr unary = builder.functionType(single->getElementTypes(), type);
 	EXPECT_EQ("((int<a>)->int<a>)", toString(*unary));
 	TupleTypePtr pair = builder.tupleType(toVector(type, type));
 	EXPECT_EQ("(int<a>,int<a>)", toString(*pair));
-	FunctionTypePtr binary = builder.functionType(pair, type);
+	FunctionTypePtr binary = builder.functionType(pair->getElementTypes(), type);
 	EXPECT_EQ("((int<a>,int<a>)->int<a>)", toString(*binary));
 
 	// define literals
@@ -180,8 +180,8 @@ TEST(IfCondition, Basic) {
 	TypePtr boolType = builder.genericType("bool");
 	ExpressionPtr intLit = builder.literal(intType, "4");
 	ExpressionPtr boolLit = builder.literal(boolType, "true");
-	NodePtr ok = builder.ifStmt(boolLit, lang::STMT_NO_OP_PTR);
-	NodePtr err = builder.ifStmt(intLit, lang::STMT_NO_OP_PTR);
+	NodePtr ok = builder.ifStmt(boolLit, builder.getBasicGenerator().getNoOp());
+	NodePtr err = builder.ifStmt(intLit, builder.getBasicGenerator().getNoOp());
 
 	CheckPtr typeCheck = make_check<IfConditionTypeCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());
@@ -198,8 +198,8 @@ TEST(WhileCondition, Basic) {
 	TypePtr boolType = builder.genericType("bool");
 	ExpressionPtr intLit = builder.literal(intType, "4");
 	ExpressionPtr boolLit = builder.literal(boolType, "true");
-	NodePtr ok = builder.whileStmt(boolLit, lang::STMT_NO_OP_PTR);
-	NodePtr err = builder.whileStmt(intLit, lang::STMT_NO_OP_PTR);
+	NodePtr ok = builder.whileStmt(boolLit, builder.getBasicGenerator().getNoOp());
+	NodePtr err = builder.whileStmt(intLit, builder.getBasicGenerator().getNoOp());
 
 	CheckPtr typeCheck = make_check<WhileConditionTypeCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());
@@ -212,7 +212,7 @@ TEST(Switch, Basic) {
 	ASTBuilder builder;
 
 	// OK ... create a function literal
-	TypePtr intType = lang::TYPE_INT_1_PTR;
+	TypePtr intType = builder.getBasicGenerator().getInt1();
 	TypePtr boolType = builder.genericType("bool");
 	ExpressionPtr intLit = builder.literal(intType, "4");
 	ExpressionPtr boolLit = builder.literal(boolType, "true");
@@ -231,7 +231,7 @@ TEST(BuildInLiterals, Basic) {
 
 	// OK ... create a function literal
 
-	LiteralPtr ok = lang::CONST_BOOL_FALSE_PTR;
+	LiteralPtr ok = builder.getBasicGenerator().getFalse();
 	LiteralPtr err = builder.literal(builder.genericType("strangeType"), ok->getValue());
 
 	CheckPtr typeCheck = make_check<BuildInLiteralCheck>();
@@ -272,7 +272,7 @@ TEST(CastExpr, Basic) {
 
 	TypePtr type = builder.genericType("int");
 	TypePtr ref = builder.refType(type);
-	TypePtr fun = builder.functionType(builder.tupleType(toVector(type)), ref);
+	TypePtr fun = builder.functionType(toVector(type), ref);
 
 	CastExprPtr ok = builder.castExpr(type, builder.literal(type, "1"));
 	CastExprPtr err1 = builder.castExpr(fun, builder.literal(type, "1"));
@@ -294,4 +294,3 @@ TEST(CastExpr, Basic) {
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
-

@@ -70,7 +70,7 @@ public:
 
         //check globalRange and localRange arguments
         if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-            core::TupleType::ElementTypeList args = funcType->getArgumentType()->getElementTypes();
+            core::TypeList args = funcType->getArgumentTypes();
 
             // kernel function has at least 2 arguments (localRange, globalRange)
             // TODO change to ocl annotation check
