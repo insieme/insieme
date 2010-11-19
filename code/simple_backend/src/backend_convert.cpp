@@ -97,6 +97,9 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
 	auto funExp = ptr->getFunctionExpr();
 
+	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
+	assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
+
 	// special built in function handling -- TODO make more generic
 	if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
 		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
@@ -185,8 +188,11 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		case NT_CallExpr:
 		case NT_CaptureInitExpr:
 		{
-			visit(funExp);
-			cStr << "->fun";
+
+			TypeManager::FunctionTypeEntry details = cc.getTypeMan().getFunctionTypeDetails(funType);
+			defCodePtr->addDependency(details.functorAndCaller);
+
+			cStr << details.callerName;
 			cStr << "(";
 			visit(funExp);
 			if (!args.empty()) {
@@ -214,9 +220,37 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 void ConvertVisitor::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 
-	// add name of function
+	// resolve resulting type of expression
+	FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
+	TypeManager::FunctionTypeEntry resDetails = cc.getTypeMan().getFunctionTypeDetails(resType);
+	defCodePtr->addDependency(resDetails.functorAndCaller);
+
+	// resolve type of sub-expression
+	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
+	TypeManager::FunctionTypeEntry details = cc.getTypeMan().getFunctionTypeDetails(funType);
+	defCodePtr->addDependency(details.functorAndCaller);
+
+	// create surrounding cast
+	cStr << "((" << resDetails.functorName << "*)";
+
+	// create struct including values
+	cStr << "(&((" << details.functorName << ")";
+	cStr << "{";
+
+	// add function reference
+	cStr << "&";
 	visit(ptr->getLambda());
 
+	 // TODO: add real size
+	cStr << ", 0";
+
+	// add captured parameters
+	for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
+		cStr << ", ";
+		this->visit(cur);
+	});
+
+	cStr << "})))";
 }
 
 void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
@@ -361,16 +395,21 @@ void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 }
 
 void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
-	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType()) <<"){";
+	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
+	int anz = ptr->getMembers().size();
+	int count = 0;
 	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
 		this->visit(cur.second);
-		cStr << ", ";
+		count++;
+		if (count < anz -1) {
+			cStr << ", ";
+		}
 	});
 	cStr << "})";
 }
 
 void ConvertVisitor::visitUnionExpr(const UnionExprPtr& ptr) {
-	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType()) <<"){";
+	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
 	visit(ptr->getMember());
 	cStr << "})";
 }

@@ -232,16 +232,20 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	if (!arguments.empty()) {
 		out << "," << join(",", arguments, elementPrinter);
 	}
-	auto captures = functionType->getCaptureTypes();
-	if (!captures.empty()) {
-		out << "," << join(",", captures, elementPrinter);
-	}
 	out << ");\n";
 	// add field for size of concrete type
 	out << "    const size_t size;\n";
 
-	// add capture variables
 
+
+	// add capture variables
+	auto captures = functionType->getCaptureTypes();
+	if (!captures.empty()) {
+		int i = 0;
+		for_each(captures, [&, this](const TypePtr& cur) {
+				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++)) << ";\n";
+		});
+	}
 
 	out << "};\n";
 
@@ -341,7 +345,7 @@ TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTyp
 	out << "};\n";
 
 	string typeName = prefix + " " + name;
-	return TypeManager::Entry(typeName, typeName, cptr);
+	return TypeManager::Entry(typeName, typeName + "*", cptr);
 }
 
 TypeManager::Entry TypeManager::resolveUnionType(const UnionTypePtr& ptr) {

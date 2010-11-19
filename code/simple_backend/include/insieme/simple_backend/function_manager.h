@@ -72,7 +72,7 @@ class FunctionManager {
 	utils::map::PointerMap<core::LambdaPtr, CodePtr> functions;
 
 	/**
-	 * A map l
+	 * A map linking external function literals to their prototypes.
 	 */
 	utils::map::PointerMap<core::LiteralPtr, CodePtr> externalFunctions;
 

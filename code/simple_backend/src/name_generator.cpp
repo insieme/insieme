@@ -69,6 +69,11 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 		return name;
 	}
 
+	// special handling for variables
+	if (ptr->getNodeType() == NT_Variable) {
+		return string("var_") + toString(static_pointer_cast<const Variable>(ptr)->getId());
+	}
+
 	// generate a new name string
 	std::stringstream name;
 	name << string("__insieme_");
@@ -97,11 +102,7 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 }
 
 string NameGenerator::getVarName(const VariablePtr& var) {
-	if(auto annotation = var->getAnnotation(c_info::CNameAnnotation::KEY)) {
-		return annotation->getName();
-	} else {
-		return string("var_") + toString(var->getId());
-	}
+	return getName(var);
 }
 
 

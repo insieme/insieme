@@ -147,7 +147,15 @@ string FunctionManager::getFunctionName(const CodePtr& context, const core::Lamb
 	// look up predefined prototypes
 	auto pos = prototypes.find(lambda->getLambda());
 	if (pos == prototypes.end()) {
-		prototype = resolve(lambda->getDefinition());
+		if (lambda->isRecursive()) {
+			// resolve recursive functions
+			prototype = resolve(lambda->getDefinition());
+		} else {
+			// resolve non-recursive functions directly (avoids prototype)
+			LambdaPtr fun = lambda->getLambda();
+			prototype = FunctionManager::resolve(fun);
+			prototypes.insert(std::make_pair(fun, prototype));
+		}
 	} else {
 		prototype = pos->second;
 	}
@@ -223,12 +231,15 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 		return pos->second;
 	}
 
+	// provide some manager
+	VariableManager& varManager = cc.getVariableManager();
+	TypeManager& typeManager = cc.getTypeMan();
+	NameGenerator& nameManager = cc.getNameGen();
+
 	// get name
-	string name = cc.getNameGen().getName(lambda);
+	string name = nameManager.getName(lambda);
 	FunctionTypePtr funType = lambda->getType();
 
-	VariableManager varManager;
-	TypeManager& typeManager = cc.getTypeMan();
 
 	// create function code for lambda
 	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
@@ -260,18 +271,19 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 		// extract capture list
 		cs << "// --------- Captured Stuff - Begin -------------\n";
 
-		string structName = "struct " + name + "_closure";
+		// get name of struct from type manager
+		string structName = typeManager.getFunctionTypeDetails(funType).functorName;
 
+		int i = 0;
 		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
 			VariableManager::VariableInfo info;
 			info.location = VariableManager::HEAP;
 
-			cc.getVariableManager().addInfo(var, info);
+			varManager.addInfo(var, info);
 
 			// standard handling
-			cs << cc.getTypeMan().getTypeName(function, var->getType(), false);
-			string name = cc.getNameGen().getVarName(var);
-			cs << " " << name << " = ((" << structName << "*)_capture)->" << name << ";\n";
+			cs << typeManager.getTypeName(function, var->getType(), false);
+			cs << " " << nameManager.getVarName(var) << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
 
 		});
 
