@@ -496,7 +496,7 @@ private:
             outVec.push_back(*I);
             *I = builder.variable((*I)->getType());
 
-            inits[outVec.back()] = *I;
+            inits.push_back(*I);
         }
     }
 
@@ -505,7 +505,7 @@ private:
             outVec.push_back((*I)->getVariable());
             *I = builder.declarationStmt(((*I)->getVariable())->getType(), (*I)->getInitialization());
 
-            inits[outVec.back()] = (*I)->getVariable();
+            inits.push_back((*I)->getVariable());
         }
     }
 
@@ -514,7 +514,7 @@ private:
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back((*I)->getVariable());
 
-            inits[outVec.back()] = (*I)->getVariable();
+            inits.push_back((*I)->getVariable());
         }
     }
 

@@ -56,7 +56,7 @@ namespace {
 // storea the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
 #define CAPTURE(vec, var, list) { vec.push_back(var); \
                                   var = builder.variable((var)->getType()); \
-                                  inits[vec.back()] = var; }
+                                  inits.push_back(var); }
 
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
 #define SHARE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
