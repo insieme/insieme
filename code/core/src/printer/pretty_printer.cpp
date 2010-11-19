@@ -444,6 +444,16 @@ namespace {
 				out << ")";
 		});
 
+		PRINT(CaptureInitExpr, {
+				auto values = node->getValues();
+				if (!values.empty()) {
+					out << "[" << join(", ", values, [&](std::ostream& out, const ExpressionPtr& cur) {
+						this->visit(cur);
+					}) << "]";
+				}
+				visit(node->getLambda());
+		});
+
 		PRINT(CastExpr, {
 				if (print.hasOption(PrettyPrinter::PRINT_CASTS)) {
 					out << "CAST<" << *node->getType() << ">(";
