@@ -140,11 +140,11 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 
 	TypePtr conditionType = address->getCondition()->getType();
 
-	if (*conditionType != lang::TYPE_BOOL_VAL) {
+	if (*conditionType != *manager.basic.getBool()) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: %s, actual: %s",
-								toString(*lang::TYPE_BOOL_PTR).c_str(),
+								toString(*manager.basic.getBool()).c_str(),
 								toString(*conditionType).c_str()),
 						Message::ERROR));
 	}
@@ -153,13 +153,15 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 
 OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
 
+	NodeManager manager;
 	OptionalMessageList res;
+
 	TypePtr conditionType = address->getCondition()->getType();
-	if (*conditionType != lang::TYPE_BOOL_VAL) {
+	if (*conditionType != *manager.basic.getBool()) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: %s, actual: %s",
-								toString(*lang::TYPE_BOOL_PTR).c_str(),
+								toString(*manager.basic.getBool()).c_str(),
 								toString(*conditionType).c_str()),
 						Message::ERROR));
 	}

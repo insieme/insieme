@@ -154,12 +154,12 @@ void if_stmt_test() {
 	}
 
 	int a=1;
-	//#pragma test \
+	#pragma test \
 	"ite(CAST<bool>(( *v1)), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() return int.add(ref.deref(v4), 1)})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() return int.sub(ref.deref(v2), 1)})</?>)"
 	a ? a+1 : a-1;
 
-	//#pragma test \
-	"ite((( *v1)==0), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() {return int.add(ref.deref(v4), 1);}})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() {return int.sub(ref.deref(v2), 1);}})</?>)"
+	#pragma test \
+	"ite((( *v1)==0), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() return int.add(ref.deref(v4), 1)})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() return int.sub(ref.deref(v2), 1)})</?>)"
 	a == 0 ? a+1 : a-1;
 }
 
@@ -362,7 +362,8 @@ void init_expr() {
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;
-	#pragma test "(v1 := struct{weigth:=( var(10)), age:=( var(20))})"
+	#pragma test \
+	"(v1 := struct{weigth:=( var(10)), age:=( var(20))})"
 	p = (struct Person) {10, 20};
 
 }

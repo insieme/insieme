@@ -42,7 +42,6 @@
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/core/statements.h"
-#include "insieme/core/lang_basic.h"
 #include "insieme/core/ast_visitor.h"
 
 using namespace insieme::core;
@@ -406,8 +405,7 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
     assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
     assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be void.");
-
-    TypeList guardParams = toVector<TypePtr>(lang::TYPE_UINT_GEN_PTR, lang::TYPE_UINT_GEN_PTR);
+    TypeList guardParams = TypeList(2, getNodeManager()->basic.getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
@@ -466,7 +464,7 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const LambdaExprPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
-	auto type = lang::TYPE_JOB_PTR;
+	auto type = manager.basic.getJob();
 	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
 }
 

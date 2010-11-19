@@ -44,7 +44,7 @@
 #include "insieme/core/program.h"
 #include "insieme/core/types.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
+// #include "insieme/core/lang_basic.h"
 
 #include "ast_node_test.cc"
 
@@ -60,14 +60,14 @@ TEST(Program, HelloWorld) {
 
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
-	TypePtr unitType = lang::TYPE_UNIT_PTR;
+	TypePtr unitType = build.getNodeManager().basic.getUnit();
 	TypePtr printfType = build.functionType(toVector(stringType, varArgType), unitType);
 
 	auto printfDefinition = build.literal(printfType, "printf");
 
 	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
 
-	ExpressionPtr intLiteral = build.literal(TYPE_INT_GEN_PTR, "4");
+	ExpressionPtr intLiteral = build.literal(build.getNodeManager().basic.getIntGen(), "4");
 	auto invocation = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), invocation);
 
