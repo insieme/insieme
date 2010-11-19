@@ -46,7 +46,6 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/program.h"
-#include "insieme/core/lang_basic.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/c_info/naming.h"
@@ -132,7 +131,7 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	core::ExpressionPtr retExpr = expr;
 	while(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
-		retExpr = builder.callExpr( refTy->getElementType(), core::lang::OP_REF_DEREF_PTR, toVector<core::ExpressionPtr>(retExpr) );
+		retExpr = builder.callExpr( refTy->getElementType(), mgr.basic.getRefDeref(), retExpr );
 	}
 	return retExpr;
 }
@@ -195,7 +194,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 
 		// Throw an error if an unhandled attribute is found
 		ss << "Unexpected attribute";
-		throw &ss;
+		throw &ss; // FIXME define an exception class for this error
 	}}
 	catch(std::ostringstream *errMsg) {
         //show errors if unexpected patterns were found
@@ -251,16 +250,16 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 		return mgr.basic.getNull();
 	}
 	// handle integers initialization
-    if ( core::lang::isIntegerType(*type) ) {
+    if ( mgr.basic.isInt(type) ) {
         // initialize integer value
         return builder.literal("0", type);
     }
-    if ( *type == core::lang::TYPE_CHAR_VAL ) {
+    if ( mgr.basic.isChar(type) ) {
 		// initialize integer value
 		return builder.literal("'\0'", type);
 	}
     // handle reals initialization
-    if ( core::lang::isRealType(*type) ) {
+    if ( mgr.basic.isReal(type) ) {
         // in case of floating types we initialize with a zero value
         return builder.literal("0.0", type);
     }

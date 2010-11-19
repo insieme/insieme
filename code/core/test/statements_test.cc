@@ -43,7 +43,6 @@
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
 
 #include "ast_node_test.cc"
 
@@ -119,22 +118,22 @@ TEST(StatementsTest, IntLiterals) {
 	ASTBuilder builder;
 
 	{
-		LiteralPtr intLit = builder.literal(lang::TYPE_INT_2_PTR, "-10");
+		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "-10");
 		int val = intLit->getValueAs<int>();
 		EXPECT_EQ(val, -10);
 	}
 	{
-		LiteralPtr intLit = builder.literal(lang::TYPE_INT_2_PTR, "0x10");
+		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "0x10");
 		unsigned long val = intLit->getValueAs<unsigned long>();
 		EXPECT_EQ(static_cast<unsigned>(16), val);
 	}
 	{
-		LiteralPtr intLit = builder.literal(lang::TYPE_INT_2_PTR, "-0x10");
+		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "-0x10");
 		short val = intLit->getValueAs<short>();
 		EXPECT_EQ(-16, val);
 	}
 	{
-		LiteralPtr intLit = builder.literal(lang::TYPE_INT_2_PTR, "010");
+		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "010");
 		unsigned short val = intLit->getValueAs<unsigned short>();
 		EXPECT_EQ(static_cast<unsigned>(8), val);
 	}
@@ -144,12 +143,12 @@ TEST(StatementsTest, RealLiterals) {
 	ASTBuilder builder;
 
 	{
-		LiteralPtr floatLit = builder.literal(lang::TYPE_REAL_4_PTR, "0.4");
+		LiteralPtr floatLit = builder.literal(builder.getNodeManager().basic.getFloat(), "0.4");
 		float val = floatLit->getValueAs<float>();
 		EXPECT_FLOAT_EQ (val, 0.4);
 	}
 	{
-		LiteralPtr intLit = builder.literal(lang::TYPE_REAL_8_PTR, "0.00001");
+		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getDouble(), "0.00001");
 		double val = intLit->getValueAs<double>();
 		EXPECT_DOUBLE_EQ (val, 0.00001);
 	}
@@ -158,8 +157,8 @@ TEST(StatementsTest, RealLiterals) {
 TEST(StatementsTest, DefaultParams) {
 	ASTBuilder builder;
 
-	LiteralPtr one = builder.literal(TYPE_INT_GEN_PTR, "1");
-	DeclarationStmtPtr decl = builder.declarationStmt(TYPE_INT_GEN_PTR, one);
+	LiteralPtr one = builder.literal(builder.getNodeManager().basic.getIntGen(), "1");
+	DeclarationStmtPtr decl = builder.declarationStmt(builder.getNodeManager().basic.getIntGen(), one);
 	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
 
 	EXPECT_EQ(one, forStmt->getStep());
@@ -192,7 +191,7 @@ TEST(StatementsTest, Continue) {
 TEST(StatementsTest, Return) {
 	NodeManager manager;
 
-	LiteralPtr literal = Literal::get(manager, lang::TYPE_INT_4_PTR, "12");
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
 	ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
 
 	EXPECT_EQ ("return 12", toString(*stmt));
@@ -204,23 +203,23 @@ TEST(StatementsTest, Return) {
 TEST(StatementsTest, Declaration) {
 	NodeManager manager;
 
-	LiteralPtr literal = Literal::get(manager, lang::TYPE_INT_4_PTR, "12");
-	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), literal);
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
+	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
 
 	EXPECT_EQ ("int<4> v1 = 12", toString(*stmt));
 
 	// check hash codes, children and cloning
-	VariablePtr varExpr = Variable::get(manager, lang::TYPE_INT_4_PTR, 1);
+	VariablePtr varExpr = Variable::get(manager, manager.basic.getInt4(), 1);
 	basicNodeTests(stmt, toVector<NodePtr>(varExpr, literal));
 }
 
 TEST(StatementsTest, Compound) {
 	NodeManager manager;
 
-	LiteralPtr literal = Literal::get(manager, lang::TYPE_INT_4_PTR, "12");
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 2), literal);
-	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 3), literal);
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
+	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
+	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 3), literal);
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager);
 	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1));
@@ -250,12 +249,12 @@ TEST(StatementsTest, Compound) {
 TEST(StatementsTest, For) {
 	NodeManager manager;
 
-	LiteralPtr start = Literal::get(manager, lang::TYPE_INT_4_PTR, "1");
-	LiteralPtr end   = Literal::get(manager, lang::TYPE_INT_4_PTR, "9");
-	LiteralPtr step  = Literal::get(manager, lang::TYPE_INT_4_PTR, "2");
+	LiteralPtr start = Literal::get(manager, manager.basic.getInt4(), "1");
+	LiteralPtr end   = Literal::get(manager, manager.basic.getInt4(), "9");
+	LiteralPtr step  = Literal::get(manager, manager.basic.getInt4(), "2");
 
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 1), start);
-	StatementPtr body = lang::STMT_NO_OP_PTR;
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), start);
+	StatementPtr body = manager.basic.getNoOp();
 
 	ForStmtPtr stmt = ForStmt::get(manager, decl, body, end, step);
 
@@ -268,8 +267,8 @@ TEST(StatementsTest, For) {
 TEST(StatementsTest, While) {
 	NodeManager manager;
 
-	LiteralPtr condition = Literal::get(manager, lang::TYPE_BOOL_PTR, "true");
-	StatementPtr body = lang::STMT_NO_OP_PTR;
+	LiteralPtr condition = Literal::get(manager, manager.basic.getBool(), "true");
+	StatementPtr body = manager.basic.getNoOp();
 
 	WhileStmtPtr stmt = WhileStmt::get(manager, condition, body);
 
@@ -283,9 +282,9 @@ TEST(StatementsTest, While) {
 TEST(StatementsTest, If) {
 	NodeManager manager;
 
-	VariablePtr var = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
-	StatementPtr then = lang::STMT_NO_OP_PTR;
-	StatementPtr other = lang::STMT_NO_OP_PTR;
+	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
+	StatementPtr then = manager.basic.getNoOp();
+	StatementPtr other = manager.basic.getNoOp();
 
 	IfStmtPtr stmt = IfStmt::get(manager, var, then, other);
 
@@ -298,12 +297,12 @@ TEST(StatementsTest, If) {
 TEST(StatementsTest, Switch) {
 	NodeManager manager;
 
-	VariablePtr var = Variable::get(manager, lang::TYPE_INT_4_PTR, 1);
+	VariablePtr var = Variable::get(manager, manager.basic.getInt4(), 1);
 
-	LiteralPtr literalA = Literal::get(manager, lang::TYPE_INT_4_PTR, "1");
-	LiteralPtr literalB = Literal::get(manager, lang::TYPE_INT_4_PTR, "2");
+	LiteralPtr literalA = Literal::get(manager, manager.basic.getInt4(), "1");
+	LiteralPtr literalB = Literal::get(manager, manager.basic.getInt4(), "2");
 
-	StatementPtr caseA = lang::STMT_NO_OP_PTR;
+	StatementPtr caseA = manager.basic.getNoOp();
 	StatementPtr caseB = ContinueStmt::get(manager);
 
 

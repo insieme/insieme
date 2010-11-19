@@ -39,7 +39,6 @@
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/lang_basic.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -58,26 +57,26 @@ using namespace insieme::utils::set;
 TEST(ExpressionsTest, IntLiterals) {
 	ASTBuilder builder;
 
-	LiteralPtr i5 = builder.literal(TYPE_INT_GEN_PTR, "5");
-	LiteralPtr i7 = builder.literal(TYPE_INT_GEN_PTR, "7");
-	LiteralPtr i5long = builder.literal(TYPE_INT_8_PTR, "5");
+	LiteralPtr i5 = builder.literal(builder.getBasicGenerator().getIntGen(), "5");
+	LiteralPtr i7 = builder.literal(builder.getBasicGenerator().getIntGen(), "7");
+	LiteralPtr i5long = builder.literal(builder.getBasicGenerator().getInt8(), "5");
 	
-	EXPECT_EQ( *i5, *builder.literal(TYPE_INT_GEN_PTR, "5") );
+	EXPECT_EQ( *i5, *builder.literal(builder.getBasicGenerator().getIntGen(), "5") );
 	EXPECT_NE( *i5, *i5long );
 	EXPECT_NE( *i5, *i7 );
 	EXPECT_EQ( i5->getValueAs<int>(), 5 );
 
-	basicExprTests(i5, TYPE_INT_GEN_PTR, toList(toVector<NodePtr>(TYPE_INT_GEN_PTR)));
-	basicExprTests(i7, TYPE_INT_GEN_PTR, toList(toVector<NodePtr>(TYPE_INT_GEN_PTR)));
-	basicExprTests(i5long, TYPE_INT_8_PTR, toList(toVector<NodePtr>(TYPE_INT_8_PTR)));
+	basicExprTests(i5, builder.getBasicGenerator().getIntGen(), toList(toVector<NodePtr>(builder.getBasicGenerator().getIntGen())));
+	basicExprTests(i7, builder.getBasicGenerator().getIntGen(), toList(toVector<NodePtr>(builder.getBasicGenerator().getIntGen())));
+	basicExprTests(i5long, builder.getBasicGenerator().getInt8(), toList(toVector<NodePtr>(builder.getBasicGenerator().getInt8())));
 }
 
 TEST(ExpressionsTest, FloatLiterals) {
 	ASTBuilder builder;
 
-	LiteralPtr f5_s = builder.literal(TYPE_REAL_4_PTR, "5.0");
+	LiteralPtr f5_s = builder.literal(builder.getBasicGenerator().getFloat(), "5.0");
 	
-	basicExprTests(f5_s, TYPE_REAL_4_PTR, toList(toVector<NodePtr>(TYPE_REAL_4_PTR)));
+	basicExprTests(f5_s, builder.getBasicGenerator().getFloat(), toList(toVector<NodePtr>(builder.getBasicGenerator().getFloat())));
 
 	// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
 	std::stringstream ss;
@@ -89,30 +88,30 @@ TEST(ExpressionsTest, FloatLiterals) {
 TEST(ExpressionsTest, Variable) {
 	NodeManager manager;
 
-	VariablePtr var = Variable::get(manager, TYPE_BOOL_PTR);
+	VariablePtr var = Variable::get(manager, manager.basic.getBool());
 	EXPECT_EQ (format("v%d", var->getId()), toString(*var));
 
-	VariablePtr var2 = Variable::get(manager, TYPE_BOOL_PTR);
+	VariablePtr var2 = Variable::get(manager, manager.basic.getBool());
 	EXPECT_NE(*var, *var2);
 	EXPECT_LT(var->getId(), var2->getId());
 
-	VariablePtr var3 = Variable::get(manager, TYPE_BOOL_PTR, var->getId());
+	VariablePtr var3 = Variable::get(manager, manager.basic.getBool(), var->getId());
 	EXPECT_EQ(var, var3);
 
 	// check hash codes, children and cloning
-	basicExprTests(var, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
-	basicExprTests(var2, TYPE_BOOL_PTR, toVector<NodePtr>(TYPE_BOOL_PTR));
+	basicExprTests(var, manager.basic.getBool(), toVector<NodePtr>(manager.basic.getBool()));
+	basicExprTests(var2, manager.basic.getBool(), toVector<NodePtr>(manager.basic.getBool()));
 }
 
 TEST(ExpressionsTest, TupleExpr) {
 	NodeManager manager;
 
-	LiteralPtr one = Literal::get(manager, TYPE_UINT_1_PTR, "1");
+	LiteralPtr one = Literal::get(manager, manager.basic.getUInt1(), "1");
 	TupleExprPtr empty = TupleExpr::get(manager, toVector<ExpressionPtr>());
-	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(CONST_BOOL_TRUE_PTR, one));
+	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(manager.basic.getTrue(), one));
 
 	TypePtr first = TupleType::get(manager, TypeList());
-	TypePtr second = TupleType::get(manager, toVector<TypePtr>(TYPE_BOOL_PTR, TYPE_UINT_1_PTR));
+	TypePtr second = TupleType::get(manager, toVector<TypePtr>(manager.basic.getBool(), manager.basic.getUInt1()));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
 
@@ -122,17 +121,17 @@ TEST(ExpressionsTest, TupleExpr) {
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, CONST_BOOL_TRUE_PTR, one));
+	basicExprTests(more, second, toVector<NodePtr>(second, manager.basic.getTrue(), one));
 }
 
 TEST(ExpressionsTest, VectorExpr) {
 	NodeManager manager;
 
 	VectorExprPtr empty = VectorExpr::get(manager, toVector<ExpressionPtr>());
-	VectorExprPtr more = VectorExpr::get(manager, toVector<ExpressionPtr>(CONST_BOOL_TRUE_PTR, CONST_BOOL_FALSE_PTR));
+	VectorExprPtr more = VectorExpr::get(manager, toVector<ExpressionPtr>(manager.basic.getTrue(), manager.basic.getFalse()));
 
 	TypePtr first = VectorType::get(manager, TypeVariable::get(manager, "a"), IntTypeParam::getConcreteIntParam(0));
-	TypePtr second = VectorType::get(manager, TYPE_BOOL, IntTypeParam::getConcreteIntParam(2));
+	TypePtr second = VectorType::get(manager, manager.basic.getBool(), IntTypeParam::getConcreteIntParam(2));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
 
@@ -142,7 +141,7 @@ TEST(ExpressionsTest, VectorExpr) {
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, CONST_BOOL_TRUE_PTR, CONST_BOOL_FALSE_PTR));
+	basicExprTests(more, second, toVector<NodePtr>(second, manager.basic.getTrue(), manager.basic.getFalse()));
 }
 
 TEST(ExpressionsTest, Lambda) {
@@ -166,36 +165,35 @@ TEST(ExpressionsTest, Lambda) {
 
 TEST(ExpressionsTest, LambdaExpr) {
 	ASTBuilder builder;
+	const lang::BasicGenerator& gen = builder.getBasicGenerator();
 
 	// create a recursive even/odd example
-	FunctionTypePtr functionType = builder.functionType(toVector<TypePtr>(lang::TYPE_UINT_4_PTR), lang::TYPE_BOOL_PTR);
+	FunctionTypePtr functionType = builder.functionType(toVector<TypePtr>(gen.getUInt4()), gen.getBool());
 	VariablePtr evenVar = builder.variable(functionType, 1);
 	VariablePtr oddVar = builder.variable(functionType, 2);
 
 
 	Lambda::ParamList param;
-	param.push_back(builder.variable(lang::TYPE_UINT_4_PTR, 3));
+	param.push_back(builder.variable(gen.getUInt4(), 3));
 
-	LiteralPtr zero = builder.literal(TYPE_UINT_1_PTR, "0");
-	VariablePtr x = builder.variable(lang::TYPE_UINT_4_PTR, 3);
-	ExpressionPtr condition = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
+	LiteralPtr zero = builder.literal(gen.getUInt1(), "0");
+	VariablePtr x = builder.variable(gen.getUInt4(), 3);
+	ExpressionPtr condition = builder.callExpr(gen.getBool(), gen.getUIntEq(), x, zero);
 
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,
-			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
+			builder.returnStmt(gen.getTrue()),
 			builder.returnStmt(
-					builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
-							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, oddVar, toVector<ExpressionPtr>(x))))
+					builder.callExpr(gen.getBool(), gen.getBoolNot(), builder.callExpr(gen.getBool(), oddVar, x))
 			)
 	);
 	LambdaPtr evenLambda = builder.lambda(functionType, Lambda::CaptureList(), param, evenBody);
 
 	// build odd body ...
 	StatementPtr oddBody = builder.ifStmt(condition,
-				builder.returnStmt(lang::CONST_BOOL_FALSE_PTR),
+				builder.returnStmt(gen.getFalse()),
 				builder.returnStmt(
-						builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
-								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evenVar, toVector<ExpressionPtr>(x))))
+						builder.callExpr(gen.getBool(), gen.getBoolNot(), builder.callExpr(gen.getBool(), evenVar, x))
 				)
 	);
 	LambdaPtr oddLambda = builder.lambda(functionType, Lambda::CaptureList(), param, oddBody);
