@@ -193,8 +193,6 @@ int main(int argc, char** argv) {
 			// LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 
-		LOG(INFO) << "Has name annotation: " << ((program->hasAnnotation(insieme::c_info::CNameAnnotation::KEY)?"true":"false"));
-
 		if (CommandLineOptions::OpenCL) {
 			LOG(INFO) << "Converting to OpenCL ... ";
 

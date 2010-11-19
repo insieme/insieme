@@ -43,6 +43,15 @@ namespace insieme {
 namespace core {
 namespace checks {
 
+namespace {
+
+	const NodeManager& getNodeManager(const NodeAddress& address) {
+		const NodeManager* managerPtr = address->getNodeManager();
+		assert(managerPtr && "Manager Pointer of node must not be NULL!");
+		return *managerPtr;
+	}
+}
+
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 
@@ -135,12 +144,12 @@ OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const Declara
 
 OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
 
-	NodeManager manager;
+	const NodeManager& manager = getNodeManager(address);
 	OptionalMessageList res;
 
 	TypePtr conditionType = address->getCondition()->getType();
 
-	if (*conditionType != *manager.basic.getBool()) {
+	if (!manager.basic.isBool(conditionType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: %s, actual: %s",
@@ -153,11 +162,11 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 
 OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
 
-	NodeManager manager;
+	const NodeManager& manager = getNodeManager(address);
 	OptionalMessageList res;
 
 	TypePtr conditionType = address->getCondition()->getType();
-	if (*conditionType != *manager.basic.getBool()) {
+	if (!manager.basic.isBool(conditionType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: %s, actual: %s",

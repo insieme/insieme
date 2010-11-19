@@ -61,6 +61,14 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 		return name;
 	}
 
+	// test whether the node has an annotation
+	if(auto cnameAnn = ptr->getAnnotation(c_info::CNameAnnotation::KEY)) {
+		// => take original c name
+		string name = cnameAnn->getName();
+		nameMap.insert(make_pair(ptr, name));
+		return name;
+	}
+
 	// test whether recursive function name is attached
 	if (LambdaExprPtr recLambda = dynamic_pointer_cast<const LambdaExpr>(ptr)) {
 		if(auto cnameAnn = recLambda->getVariable()->getAnnotation(c_info::CNameAnnotation::KEY)) {
