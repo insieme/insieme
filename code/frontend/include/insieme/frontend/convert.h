@@ -219,7 +219,7 @@ public:
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
 
-	core::CallExprPtr createCallExpr(const StatementList& body, core::TypePtr retTy) const;
+	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
 };
 

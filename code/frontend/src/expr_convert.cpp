@@ -155,28 +155,27 @@ namespace conversion {
 
 // creates a function call from a list of expressions,
 // usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
-core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, core::TypePtr retTy) const {
+core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, core::TypePtr retTy) const {
 
-	core::CompoundStmtPtr&& bodyStmt = builder.compoundStmt( body );
 	// keeps the list variables used in the body
-	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
+	insieme::frontend::analysis::VarRefFinder args(body);
 
 	core::Lambda::CaptureList capture;
 	core::TypeList captureListType;
 
 	core::CaptureInitExpr::Values values;
 	std::for_each(args.begin(), args.end(),
-		[ &capture, &captureListType, &builder, &bodyStmt, &values ] (const core::ExpressionPtr& curr) {
+		[ &capture, &captureListType, &builder, &body, &values ] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
 			capture.push_back( parmVar );
 			captureListType.push_back( bodyVar->getType() );
 			values.push_back( bodyVar );
 			// we have to replace the variable of the body with the newly created parmVar
-			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
-					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
+			body = core::dynamic_pointer_cast<const core::Statement>(
+					core::transform::replaceAll(builder.getNodeManager(), body, bodyVar, parmVar, true)
 			);
-			assert(bodyStmt);
+			assert(body);
 		}
 	);
 
@@ -184,10 +183,12 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	core::FunctionTypePtr&& funcTy = builder.functionType( captureListType, core::TypeList(), retTy);
 
 	// build the expression body
-	core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
-	core::CaptureInitExprPtr&& retExpr = builder.captureInitExpr(lambdaExpr, values);
+	core::ExpressionPtr&& retExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), body );
+	if(!values.empty())
+		retExpr = builder.captureInitExpr(retExpr, values);
 
-	return builder.callExpr( retTy, retExpr, ExpressionList() );
+	return retExpr;
+	// return builder.callExpr( retTy, retExpr, ExpressionList() );
 }
 
 //#############################################################################
@@ -498,7 +499,10 @@ public:
 		// if the binary operator is a comma separated expression, we convert it into a function call
 		// which returns the value of the last expression
 		if( binOp->getOpcode() == BO_Comma) {
-			return convFact.createCallExpr(toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)), rhs->getType());
+			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)));
+			core::ExpressionPtr&& lambdaExpr = convFact.createCallExpr(body, rhs->getType());
+			// create a CallExpression
+			return builder.callExpr(lambdaExpr, ExpressionList());
 		}
 
 		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
@@ -718,7 +722,8 @@ public:
 				// return the variable
 				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
 			}
-			return this->convFact.createCallExpr(stmts, subTy);
+			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
+			return builder.callExpr(retExpr, ExpressionList());
 		};
 
 		bool post = true;
@@ -831,12 +836,14 @@ public:
 
 		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
 			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME
 		}
 
-		// builder.callExpr(retTy, core::lang::OP_ITE_PTR, )
-		core::StatementPtr&& ifStmt = builder.ifStmt(condExpr, builder.returnStmt(trueExpr), builder.returnStmt(falseExpr));
-		core::ExpressionPtr&& retExpr = convFact.createCallExpr( toVector( ifStmt ),  retTy);
+		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, convFact.mgr.basic.getIfThenElse(),
+				condExpr,	// Condition
+				convFact.createCallExpr( builder.returnStmt(trueExpr),  retTy), // True
+				convFact.createCallExpr( builder.returnStmt(falseExpr),  retTy) // False
+		);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}
