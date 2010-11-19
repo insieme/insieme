@@ -223,6 +223,9 @@ TEST(ExpressionsTest, LambdaExpr) {
 
 	EXPECT_NE ( even->hash(), odd->hash());
 
+	EXPECT_TRUE(even->isRecursive());
+	EXPECT_TRUE(odd->isRecursive());
+
 	EXPECT_EQ("rec v1.{v1=fun[](uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun[](uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*even));
 	EXPECT_EQ("rec v2.{v1=fun[](uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun[](uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*odd));
 }
@@ -235,28 +238,35 @@ TEST(ExpressionsTest, CaptureInitExpr) {
 
 	TypePtr res = builder.genericType("A");
 	FunctionTypePtr funType = builder.functionType(TypeList(), res);
+	FunctionTypePtr funType2 = builder.functionType(toVector(res,res), TypeList(), res);
 
 	VariablePtr captureVar = builder.variable(res);
 	LiteralPtr initValue = builder.literal(res, "X");
 	LiteralPtr initValue2 = builder.literal(res, "Y");
 
 	LambdaExprPtr lambda = builder.lambdaExpr(funType, Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
-	LambdaExprPtr lambda2 = builder.lambdaExpr(funType, toVector<VariablePtr>(captureVar), Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
+	LambdaExprPtr lambda2 = builder.lambdaExpr(funType2, toVector<VariablePtr>(captureVar), Lambda::ParamList(), builder.returnStmt(builder.literal(res, "A")));
+
+	EXPECT_FALSE(lambda->isRecursive());
+	EXPECT_FALSE(lambda2->isRecursive());
 
 	CaptureInitExprPtr empty = builder.captureInitExpr(lambda, toVector<ExpressionPtr>());
 	CaptureInitExprPtr more = builder.captureInitExpr(lambda2, toVector<ExpressionPtr>(initValue, initValue2));
 
 	EXPECT_EQ(*lambda->getType(), *empty->getType());
 	EXPECT_EQ(*lambda->getType(), *more->getType());
-	EXPECT_EQ(*lambda2->getType(), *more->getType());
+	EXPECT_NE(*lambda2->getType(), *more->getType());
+
+	EXPECT_EQ(*funType, *empty->getType());
+	EXPECT_EQ(*funType, *more->getType());
 
 	EXPECT_EQ ("([]rec v4.{v4=fun[]() return A})", toString(*empty));
 	EXPECT_EQ ("([X, Y]rec v5.{v5=fun[A v3]() return A})", toString(*more));
 
 
 	// check hash codes, children and cloning
-	basicExprTests(empty, lambda->getType(), toVector<NodePtr>(lambda));
-	basicExprTests(more, lambda2->getType(), toVector<NodePtr>(lambda2, initValue, initValue2));
+	basicExprTests(empty, lambda->getType(), toVector<NodePtr>(funType, lambda));
+	basicExprTests(more, lambda->getType(), toVector<NodePtr>(funType, lambda2, initValue, initValue2));
 
 }
 

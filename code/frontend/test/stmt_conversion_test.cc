@@ -92,7 +92,7 @@ std::string getPrettyPrinted(const NodePtr& node) {
 TEST(StmtConversion, FileTest) {
 
 	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
-	CommandLineOptions::Verbosity = 1;
+	CommandLineOptions::Verbosity = 0;
 
 	NodeManager manager;
 	fe::Program prog(manager);

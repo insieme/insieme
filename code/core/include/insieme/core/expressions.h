@@ -297,6 +297,16 @@ public:
 	const LambdaPtr& getDefinitionOf(const VariablePtr& variable) const;
 
 	/**
+	 * Determines whether the definition of the function referenced by the given variable within
+	 * this lambda definition is recursive - hence, whether it is invoking itself or one of the other
+	 * functions within this block.
+	 *
+	 * @param variable the variable identifying the function to be checked within this definition
+	 * @return true if recursive, false otherwise
+	 */
+	bool isRecursive(const VariablePtr& variable) const;
+
+	/**
 	 * Unrolls this definition once for the given variable.
 	 *
 	 * @param manager the manager to be used for maintaining the resulting reference
@@ -340,7 +350,7 @@ class LambdaExpr : public Expression {
 	/**
 	 * A flag indicating whether this lambda is representing a recursive function.
 	 */
-	//const bool isRecursive;
+	const bool recursive;
 
 	/**
 	 * A constructor for creating a new lambda.
@@ -441,6 +451,11 @@ public:
 	 * Obtains a reference to the body of this lambda.
 	 */
 	const StatementPtr& getBody() const;
+
+	/**
+	 * Determines whether this function is recursively defined or not.
+	 */
+	bool isRecursive() const { return recursive; }
 };
 
 class CaptureInitExpr : public Expression {
@@ -473,7 +488,7 @@ private:
 	 * @param values the actual initialization expressions.
 	 * @param definition the recursive definitions to be based on.
 	 */
-	CaptureInitExpr(const ExpressionPtr& lambda, const Values& values);
+	CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values);
 
 	/**
 	 * Creates a clone of this node.

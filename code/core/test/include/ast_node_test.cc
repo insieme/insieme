@@ -85,6 +85,10 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	T* clone = &*manager.get(node);
 	T* clone2 = &*manager2.get(node);
 
+	EXPECT_EQ(clone->getNodeManager(), &manager);
+	EXPECT_EQ(clone2->getNodeManager(), &manager2);
+	EXPECT_NE(node->getNodeManager(), &manager);
+
 	// cloning had to be successful
 	EXPECT_TRUE(clone);
 	EXPECT_TRUE(clone2);
@@ -219,6 +223,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 		auto mapper = makeLambdaMapper([&](unsigned pos, const NodePtr& ptr)-> const NodePtr {
 			count++;
 			EXPECT_EQ(ptr, cur->getChildList()[pos]);
+			EXPECT_EQ(*ptr, *(node->getChildList()[pos]));
 			EXPECT_FALSE(mask & (1<<pos));
 			mask |= 1<<pos;
 			return ptr;
