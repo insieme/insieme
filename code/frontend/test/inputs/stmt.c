@@ -330,11 +330,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"vector.subscript(( *v1), CAST<uint<4>>(0))"
+	"(( *v1)[CAST<uint<4>>(0)])"
 	a[0];
 
 	#pragma test \
-	"(vector.subscript(( *v1), CAST<uint<4>>(0)) := 1)"
+	"((( *v1)[CAST<uint<4>>(0)]) := 1)"
 	a[0] = 1;
 
 	//#pragma test \
@@ -342,11 +342,11 @@ void vector_stmt_test() {
 	int b[2][2];
 
 	#pragma test \
-	"vector.subscript(vector.subscript(( *v1), CAST<uint<4>>(0)), CAST<uint<4>>(0))"
+	"((( *v1)[CAST<uint<4>>(0)])[CAST<uint<4>>(0)])"
 	b[0][0];
 
 	#pragma test \
-	"(vector.subscript(vector.subscript(( *v1), CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
+	"(((( *v1)[CAST<uint<4>>(1)])[CAST<uint<4>>(1)]) := 0)"
 	b[1][1] = 0;
 
 	//#pragma test \
@@ -358,7 +358,7 @@ void init_expr() {
 
 	int* a = 0;
 	#pragma test \
-	"vector.subscript([( var(1)), ( var(2)), ( var(3))], CAST<uint<4>>(1))"
+	"([( var(1)), ( var(2)), ( var(3))][CAST<uint<4>>(1)])"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;

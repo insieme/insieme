@@ -405,7 +405,7 @@ JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const Gu
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
     assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
     assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be void.");
-    TypeList guardParams = TypeList(2, getNodeManager().basic.getUIntGen());
+    TypeList guardParams = TypeList(2, type->getNodeManager().basic.getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
