@@ -473,7 +473,7 @@ private:
 	 * @param values the actual initialization expressions.
 	 * @param definition the recursive definitions to be based on.
 	 */
-	CaptureInitExpr(const ExpressionPtr& lambda, const Values& values);
+	CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values);
 
 	/**
 	 * Creates a clone of this node.

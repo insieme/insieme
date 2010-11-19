@@ -881,18 +881,24 @@ namespace {
 		return hash;
 	}
 
+
+
 }
 
-CaptureInitExpr::CaptureInitExpr(const ExpressionPtr& lambda, const Values& values)
-	: Expression(NT_CaptureInitExpr, lambda->getType(), ::hashCaptureInitExpr(lambda, values)),
+CaptureInitExpr::CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values)
+	: Expression(NT_CaptureInitExpr, type, ::hashCaptureInitExpr(lambda, values)),
 	  lambda(isolate(lambda)), values(isolate(values)) { }
 
 CaptureInitExpr* CaptureInitExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new CaptureInitExpr(mapper.map(0, lambda), mapper.map(1, values));
+	return new CaptureInitExpr(
+			static_pointer_cast<const FunctionType>(mapper.map(0, type)),
+			mapper.map(1, lambda), mapper.map(2, values)
+		);
 }
 
 Node::OptionChildList CaptureInitExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
+	res->push_back(type);
 	res->push_back(lambda);
 	std::copy(values.begin(), values.end(), std::back_inserter(*res));
 	return res;
@@ -905,7 +911,11 @@ bool CaptureInitExpr::equalsExpr(const Expression& expr) const {
 }
 
 CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const ExpressionPtr& lambda, const Values& values) {
-	return manager.get(CaptureInitExpr(lambda, values));
+	const TypePtr& type = lambda->getType();
+	assert(type->getNodeType() == NT_FunctionType && "Lambda has to be of a function type!");
+	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(type);
+	FunctionTypePtr initExprType = FunctionType::get(manager, TypeList(), funType->getArgumentTypes(), funType->getReturnType());
+	return manager.get(CaptureInitExpr(initExprType, lambda, values));
 }
 
 std::ostream& CaptureInitExpr::printTo(std::ostream& out) const {
