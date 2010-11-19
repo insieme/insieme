@@ -5,19 +5,11 @@
 #define false 0
 // --- Entry Point ---
 
-// start code fragment :: lambda_main //
-struct main_closure { 
-    int(*fun)(void*,int,char**);
-    const size_t size;
-};
-
-// start code fragment :: fundef_codefragment_printf //
+// start code fragment :: Prototype for external function: printf //
 int printf(char*, ...);
 
-// start code fragment :: fundef_codefragment_main //
-int main(void* _capture, int argc, char** argv) {
-	// --------- Captured Stuff - Begin -------------
-	// --------- Captured Stuff -  End  -------------
+// start code fragment :: main //
+int main(int argc, char** argv) {
 	{
 		{
 			printf(((char*)("Hallo Insieme, \n\t\"the number %d in compilers!\"")), 1);
@@ -27,4 +19,5 @@ int main(void* _capture, int argc, char** argv) {
 }
 
 
-// start code fragment :: root-node //
+// start code fragment :: unnamed //
+main

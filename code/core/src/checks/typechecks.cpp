@@ -37,7 +37,6 @@
 #include "insieme/core/checks/typechecks.h"
 
 #include "insieme/core/type_utils.h"
-#include "insieme/core/lang_basic.h"
 
 namespace insieme {
 namespace core {
@@ -179,10 +178,11 @@ OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddre
 
 
 OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtAddress& address) {
+	const NodeManager& manager = getNodeManager(address);
 
 	OptionalMessageList res;
 	TypePtr switchType = address->getSwitchExpr()->getType();
-	if (!lang::isIntType(*switchType)) {
+	if (!manager.basic.isSignedInt(switchType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_SWITCH_EXPR,
 						format("Invalid type of switch expression - expected: integral type, actual: %s",
