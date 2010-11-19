@@ -42,37 +42,56 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
-	
+
+// Work around GCC unimplemented features
+template<class ...All>
+struct GroupChecker;
+template<class Head, class ...Tail>
+struct GroupChecker<Head, Tail...> {
+	bool operator ()(const BasicGenerator& bg, const NodePtr& p) {
+		return Head()(bg, p) || GroupChecker<Tail...>()(bg, p);
+	}
+};
+template<>
+struct GroupChecker<> {
+	bool operator ()(const BasicGenerator&, const NodePtr&) {
+		return false;
+	}
+};
+
 struct BasicGenerator::BasicGeneratorImpl {
+	NodeManager &nm;
 	parse::IRParser parser;
 	ASTBuilder build;
 
 	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
 	std::map<std::string, litFunPtr> literalMap;
 
+
+	#define GROUP(_id, ...) \
+	struct _id { bool operator()(const BasicGenerator& bg, const NodePtr& p) const { return bg.is##_id(p); } };
 	#define TYPE(_id, _spec) \
-	TypePtr ptr##_id;
-
+	TypePtr ptr##_id; \
+	GROUP(_id, _spec)
 	#define LITERAL(_id, _name, _spec) \
-	LiteralPtr ptr##_id;
-
+	LiteralPtr ptr##_id; \
+	GROUP(_id, _spec)
 	#include "insieme/core/lang/lang.def"
 
-	#undef TYPE
-	#undef LITERAL
-
-	BasicGeneratorImpl(NodeManager& nm) : parser(nm), build(nm) {
-		#define TYPE(_id, _spec)
+	BasicGeneratorImpl(NodeManager& nm) : nm(nm), parser(nm), build(nm) {
 		#define LITERAL(_id, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
 		#include "insieme/core/lang/lang.def"
-		#undef LITERAL
-		#undef TYPE
 	}
+	
+	#define GROUP(_id, ...) \
+	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.basic, p); };
+	#include "insieme/core/lang/lang.def"
 
 	// ----- extra material ---
 
@@ -99,28 +118,23 @@ LiteralPtr BasicGenerator::get##_id() const { \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
-#include "insieme/core/lang/lang.def"
+#define GROUP(_id, ...) \
+bool BasicGenerator::is##_id(const NodePtr& p) const { \
+	return pimpl->is##_id(p); }
 
-#undef TYPE
-#undef LITERAL
+#include "insieme/core/lang/lang.def"
 
 
 bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 	if(auto tN = dynamic_pointer_cast<const Type>(node)) {
 		#define TYPE(_id, _spec) \
 		if(node == get##_id()) return true;
-		#define LITERAL(_id, _name, _spec)
 		#include "insieme/core/lang/lang.def"
-		#undef TYPE
-		#undef LITERAL
 	}
 	else if(auto lN = dynamic_pointer_cast<const Literal>(node)) {
-		#define TYPE(_id, _spec)
 		#define LITERAL(_id, _name, _spec)\
 		if(node == get##_id()) return true;
 		#include "insieme/core/lang/lang.def"
-		#undef TYPE
-		#undef LITERAL
 	}
 	return node == getNoOp();
 }

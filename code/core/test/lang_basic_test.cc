@@ -62,3 +62,11 @@ TEST(LangBasic, StringGet) {
 	EXPECT_EQ(nm.basic.getBarrier(), nm.basic.getLiteral("barrier"));
 	EXPECT_EQ(LiteralPtr(), nm.basic.getLiteral("surelyNotBuiltInISincerelyHope__"));
 }
+
+TEST(LangBasic, Grouping) {
+	NodeManager nm;
+
+	EXPECT_TRUE(nm.basic.isUnsignedInt(nm.basic.getUInt4()));
+	EXPECT_TRUE(nm.basic.isInt(nm.basic.getUInt4()));
+	EXPECT_FALSE(nm.basic.isReal(nm.basic.getUInt4()));
+}

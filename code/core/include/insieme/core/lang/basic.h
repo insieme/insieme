@@ -73,10 +73,10 @@ public:
 	LiteralPtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
 
-	#include "insieme/core/lang/lang.def"
+	#define GROUP(_id, ...) \
+	bool is##_id(const NodePtr& p) const;
 
-	#undef TYPE
-	#undef LITERAL
+	#include "insieme/core/lang/lang.def"
 
 	bool isBuiltIn(const NodePtr& node) const;
 	LiteralPtr getLiteral(const std::string& name) const;
