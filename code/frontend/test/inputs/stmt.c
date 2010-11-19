@@ -154,12 +154,12 @@ void if_stmt_test() {
 	}
 
 	int a=1;
-	#pragma test \
-	"<?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() {if(cast<bool>(ref.deref(v2))) return int.add(ref.deref(v2), 1) else return int.sub(ref.deref(v2), 1);}})</?>()" // FIXME (use ITE)
+	//#pragma test \
+	"ite(CAST<bool>(( *v1)), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() return int.add(ref.deref(v4), 1)})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() return int.sub(ref.deref(v2), 1)})</?>)"
 	a ? a+1 : a-1;
 
-	#pragma test \
-	"<?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() {if(int.eq(ref.deref(v2), 0)) return int.add(ref.deref(v2), 1) else return int.sub(ref.deref(v2), 1);}})</?>()" // FIXME (use ITE)
+	//#pragma test \
+	"ite((( *v1)==0), <?>([v1]rec v5.{v5=fun[ref<int<4>> v4]() {return int.add(ref.deref(v4), 1);}})</?>, <?>([v1]rec v3.{v3=fun[ref<int<4>> v2]() {return int.sub(ref.deref(v2), 1);}})</?>)"
 	a == 0 ? a+1 : a-1;
 }
 
@@ -352,4 +352,17 @@ void vector_stmt_test() {
 	//#pragma test \
 	"recFun v3 <?>{v3=fun[](array<ref<array<ref<int<4>>,1>>,1> v2) {}}</?>(( *v1))"
 	evil(b);
+}
+
+void init_expr() {
+
+	int* a = 0;
+	#pragma test \
+	"vector.subscript([( var(1)), ( var(2)), ( var(3))], CAST<uint<4>>(1))"
+	((int[3]) {1,2,3})[1];
+
+	struct Person p;
+	#pragma test "(v1 := struct{weigth:=( var(10)), age:=( var(20))})"
+	p = (struct Person) {10, 20};
+
 }

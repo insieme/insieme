@@ -155,28 +155,27 @@ namespace conversion {
 
 // creates a function call from a list of expressions,
 // usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
-core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, core::TypePtr retTy) const {
+core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, core::TypePtr retTy) const {
 
-	core::CompoundStmtPtr&& bodyStmt = builder.compoundStmt( body );
 	// keeps the list variables used in the body
-	insieme::frontend::analysis::VarRefFinder args(bodyStmt);
+	insieme::frontend::analysis::VarRefFinder args(body);
 
 	core::Lambda::CaptureList capture;
 	core::TypeList captureListType;
 
 	core::CaptureInitExpr::Values values;
 	std::for_each(args.begin(), args.end(),
-		[ &capture, &captureListType, &builder, &bodyStmt, &values ] (const core::ExpressionPtr& curr) {
+		[ &capture, &captureListType, &builder, &body, &values ] (const core::ExpressionPtr& curr) {
 			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
 			capture.push_back( parmVar );
 			captureListType.push_back( bodyVar->getType() );
 			values.push_back( bodyVar );
 			// we have to replace the variable of the body with the newly created parmVar
-			bodyStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(
-					core::transform::replaceAll(builder.getNodeManager(), bodyStmt, bodyVar, parmVar, true)
+			body = core::dynamic_pointer_cast<const core::Statement>(
+					core::transform::replaceAll(builder.getNodeManager(), body, bodyVar, parmVar, true)
 			);
-			assert(bodyStmt);
+			assert(body);
 		}
 	);
 
@@ -184,10 +183,12 @@ core::CallExprPtr ConversionFactory::createCallExpr(const StatementList& body, c
 	core::FunctionTypePtr&& funcTy = builder.functionType( captureListType, core::TypeList(), retTy);
 
 	// build the expression body
-	core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), bodyStmt );
-	core::CaptureInitExprPtr&& retExpr = builder.captureInitExpr(lambdaExpr, values);
+	core::ExpressionPtr&& retExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), body );
+	if(!values.empty())
+		retExpr = builder.captureInitExpr(retExpr, values);
 
-	return builder.callExpr( retTy, retExpr, ExpressionList() );
+	return retExpr;
+	// return builder.callExpr( retTy, retExpr, ExpressionList() );
 }
 
 //#############################################################################
@@ -244,7 +245,7 @@ public:
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
 				GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
-					(charLit->isWide() ? convFact.builder.genericType("wchar") : convFact.builder.genericType("char"))
+					(charLit->isWide() ? convFact.mgr.basic.getWChar() : convFact.mgr.basic.getChar())
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -257,8 +258,8 @@ public:
 		START_LOG_EXPR_CONVERSION(stringLit);
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
-				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc()),
-				convFact.builder.genericType(core::Identifier("string"))
+				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() ),
+				convFact.mgr.basic.getString()
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -391,11 +392,8 @@ public:
 					// we are resolving a parent recursive type, so when one of the recursive functions in the
 					// connected components are called, the introduced mu variable has to be used instead.
 					convFact.currTU = oldTU;
-					core::ExpressionPtr callee;
-					if(!values.empty())
-						callee = builder.captureInitExpr(fit->second, values);
-					else
-						callee = fit->second;
+					core::ExpressionPtr&& callee = values.empty() ?
+							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
 					return builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 				}
 			}
@@ -404,11 +402,8 @@ public:
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if(fit != ctx.lambdaExprCache.end()) {
 					convFact.currTU = oldTU;
-					core::ExpressionPtr callee;
-					if(!values.empty())
-						callee = builder.captureInitExpr(fit->second, values);
-					else
-						callee = fit->second;
+					core::ExpressionPtr&& callee = values.empty() ?
+							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
 					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 					// handle eventual pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
@@ -498,7 +493,10 @@ public:
 		// if the binary operator is a comma separated expression, we convert it into a function call
 		// which returns the value of the last expression
 		if( binOp->getOpcode() == BO_Comma) {
-			return convFact.createCallExpr(toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)), rhs->getType());
+			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)));
+			core::ExpressionPtr&& lambdaExpr = convFact.createCallExpr(body, rhs->getType());
+			// create a CallExpression
+			return builder.callExpr(lambdaExpr, ExpressionList());
 		}
 
 		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
@@ -641,17 +639,6 @@ public:
 		if( !isAssignment )
 			lhs = convFact.tryDeref(lhs);
 
-		// check the types
-//		const core::TupleTypePtr& opTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType())->getArgumentType();
-//		if(lhs->getType() != opTy->getElementTypes()[0]) {
-//			// add a castepxr
-//			lhs = convFact.builder.castExpr(opTy->getElementTypes()[0], lhs);
-//		}
-//		if(rhs->getType() != opTy->getElementTypes()[1]) {
-//			// add a castepxr
-//			rhs = convFact.builder.castExpr(opTy->getElementTypes()[1], rhs);
-//		}
-
 		if(isLogical) {
 			exprTy = convFact.mgr.basic.getBool();
 			argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
@@ -718,7 +705,8 @@ public:
 				// return the variable
 				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
 			}
-			return this->convFact.createCallExpr(stmts, subTy);
+			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
+			return builder.callExpr(retExpr, ExpressionList());
 		};
 
 		bool post = true;
@@ -831,12 +819,14 @@ public:
 
 		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
 			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME
 		}
 
-		// builder.callExpr(retTy, core::lang::OP_ITE_PTR, )
-		core::StatementPtr&& ifStmt = builder.ifStmt(condExpr, builder.returnStmt(trueExpr), builder.returnStmt(falseExpr));
-		core::ExpressionPtr&& retExpr = convFact.createCallExpr( toVector( ifStmt ),  retTy);
+		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, convFact.mgr.basic.getIfThenElse(),
+				condExpr,	// Condition
+				convFact.createCallExpr( builder.returnStmt(trueExpr),  retTy), // True
+				convFact.createCallExpr( builder.returnStmt(falseExpr),  retTy) // False
+		);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}
@@ -933,6 +923,15 @@ public:
 	core::ExpressionPtr VisitInitListExpr(clang::InitListExpr* initList) {
 		assert(false && "Visiting of initializer list is not allowed!");
     }
+
+	core::ExpressionPtr VisitCompoundLiteralExpr(clang::CompoundLiteralExpr* compLitExpr) {
+
+		if(clang::InitListExpr* initList = dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
+			return convFact.convertInitExpr(initList, convFact.convertType(compLitExpr->getType().getTypePtr()));
+		}
+
+		return Visit(compLitExpr->getInitializer());
+	}
 };
 
 ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConverter(ConversionFactory& fact) {
@@ -1003,6 +1002,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 					if(this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end()) {
 						core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(this->convertType(GET_TYPE_PTR(fd)));
+						assert(funcType);
 						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
 							funcType = this->builder.functionType(
 									toVector<core::TypePtr>( this->ctx.globalStruct.first ),

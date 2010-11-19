@@ -53,7 +53,7 @@ namespace checks {
 		checks.push_back(make_check<WhileConditionTypeCheck>());
 		checks.push_back(make_check<IfConditionTypeCheck>());
 		checks.push_back(make_check<SwitchExpressionTypeCheck>());
-		checks.push_back(make_check<BuildInLiteralCheck>());
+		checks.push_back(make_check<BuiltInLiteralCheck>());
 		checks.push_back(make_check<RefCastCheck>());
 		checks.push_back(make_check<CastCheck>());
 

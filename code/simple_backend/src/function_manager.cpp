@@ -239,9 +239,9 @@ CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
 	const string& name = literal->getValue();
 	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name);
 	CodeStream& cs = protoType->getCodeStream();
-	cs << typeManager.getTypeName(protoType, type->getReturnType()) << " " << name << "(";
+	cs << cc.getTypeMan().getTypeName(protoType, type->getReturnType()) << " " << name << "(";
 	cs << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
-		out << typeManager.getTypeName(protoType, cur);
+		out << cc.getTypeMan().getTypeName(protoType, cur);
 	});
 	cs << ");\n";
 
@@ -294,7 +294,7 @@ const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lam
 	}
 
 	// get name
-	string name = nameGenerator.getName(lambda);
+	string name = cc.getNameGen().getName(lambda);
 	FunctionTypePtr funType = lambda->getType();
 
 	VariableManager varManager;
@@ -302,43 +302,42 @@ const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lam
 	// create function code for lambda
 	CodePtr function = std::make_shared<CodeFragment>("Implementation of function: " + name);
 	CodeStream& cs = function->getCodeStream();
-	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
+	cs << cc.getTypeMan().getTypeName(function, funType->getReturnType()) << " " << name << "(";
 	cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& out, const VariablePtr& param) {
-		printFunctionParamter(out, function, param, varManager, typeManager, nameGenerator);
+		printFunctionParamter(out, function, param, cc);
 	});
 	cs << ") {" << CodeStream::indR << "\n";
 
-//	ConvertVisitor visitor(cc, cptr);
-//
-//	// extract capture list
-//	cs << "// --------- Captured Stuff - Begin -------------\n";
-//
-//	string name = cc.getNameGen().getName(lambda, "lambda");
-//	string structName = "struct " + name + "_closure";
+	ConvertVisitor visitor(cc, function);
 
-//	for_each(lambda->getCaptureList(), [&](const VariablePtr& cur) {
-//		VariableManager::VariableInfo info;
-//		info.location = VariableManager::HEAP;
-//
-//		VariablePtr var = cur->getVariable();
-//		cc.getVariableManager().addInfo(var, info);
-//
-//		// standard handling
-//		cs << cc.getTypeMan().getTypeName(cptr, var->getType(), false);
-//		string name = cc.getNameGen().getVarName(var);
-//		cs << " " << name << " = ((" << structName << "*)_capture)->" << name << ";\n";
+	if (lambda->isCapturing()) {
+		// extract capture list
+		cs << "// --------- Captured Stuff - Begin -------------\n";
 
-//	});
+		string structName = "struct " + name + "_closure";
 
-//	cs << "// --------- Captured Stuff -  End  -------------\n";
+		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
+			VariableManager::VariableInfo info;
+			info.location = VariableManager::HEAP;
 
+			cc.getVariableManager().addInfo(var, info);
 
-//	// generate the function body
-//	visitor.visit(lambda->getBody());
-//	cs << CodeStream::indL << "\n}\n";
-//	cs << "\n";
+			// standard handling
+			cs << cc.getTypeMan().getTypeName(function, var->getType(), false);
+			string name = cc.getNameGen().getVarName(var);
+			cs << " " << name << " = ((" << structName << "*)_capture)->" << name << ";\n";
 
-	// TODO: resolve the lambda
+		});
+
+		cs << "// --------- Captured Stuff -  End  -------------\n";
+	}
+
+	// generate the function body
+	visitor.visit(lambda->getBody());
+	cs << CodeStream::indL << "\n}\n";
+	cs << "\n";
+
+	// create lambda code object
 	LambdaCode code;
 	code.function = function;
 

@@ -162,6 +162,7 @@ public:
 
 	/**
 	 * Create a new visitor based on the given lambda.
+	 * @param lambda the lambda to be applied on all identified nodes
 	 */
 	LambdaVisitor(Lambda& lambda) : lambda(lambda) {};
 

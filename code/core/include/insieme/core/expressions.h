@@ -218,6 +218,8 @@ public:
 	const ParamList& getParameterList() const { return paramList; }
 	const StatementPtr& getBody() const { return body; }
 
+	bool isCapturing() const { return !captureList.empty(); }
+
 	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body);
 	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
 
@@ -334,6 +336,11 @@ class LambdaExpr : public Expression {
 	 * NOTE: not stored within the XML
 	 */
 	const LambdaPtr& lambda;
+
+	/**
+	 * A flag indicating whether this lambda is representing a recursive function.
+	 */
+	//const bool isRecursive;
 
 	/**
 	 * A constructor for creating a new lambda.

@@ -489,40 +489,42 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
-	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-	core::CallExprPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.basic.getUnit() );
+//	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
+//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.basic.getUnit() );
 
-	c_info::CLocAnnotation::ArgumentList args;
-	// look for variable names
-	for_each(callExpr->getArguments().begin(), callExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
-		// because this callexpr was created out of a stmt block, we are sure
-		// input arguments are Variables
-		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
-		assert(var && "Argument of call expression is not a variable.");
-		// we also have to look at the CNameAnnotation in order to find the name of the original variable
+//	c_info::CLocAnnotation::ArgumentList args;
+//	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {
+//		// look for variable names
+//		for_each(captureExpr->getArguments().begin(), captureExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
+//			// because this callexpr was created out of a stmt block, we are sure
+//			// input arguments are Variables
+//			core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
+//			assert(var && "Argument of call expression is not a variable.");
+//			// we also have to look at the CNameAnnotation in order to find the name of the original variable
+//
+//			std::shared_ptr<c_info::CNameAnnotation>&& nameAnn = var->getAnnotation(c_info::CNameAnnotation::KEY);
+//			assert(nameAnn && "Variable has not CName associated");
+//			args.push_back( nameAnn->getName() );
+//		});
+//	}
 
-		std::shared_ptr<c_info::CNameAnnotation>&& nameAnn = var->getAnnotation(c_info::CNameAnnotation::KEY);
-		assert(nameAnn && "Variable has not CName associated");
-		args.push_back( nameAnn->getName() );
-	});
-
-	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
-	// ------ Adding source location annotation (CLocAnnotation) -------
-	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
-	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
-	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
-		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
-		loc.first = fit->second->getStartLocation();
-	}
-
-	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
-		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
-		false, // this is not a function decl
-		args)
-	);
-
-	return lambdaExpr;
+//	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
+//	// ------ Adding source location annotation (CLocAnnotation) -------
+//	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
+//	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
+//	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
+//		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+//		loc.first = fit->second->getStartLocation();
+//	}
+//
+//	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
+//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
+//		false, // this is not a function decl
+//		args)
+//	);
+//
+//	return lambdaExpr;
 }
 
 

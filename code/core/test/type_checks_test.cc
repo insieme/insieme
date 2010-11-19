@@ -234,7 +234,7 @@ TEST(BuildInLiterals, Basic) {
 	LiteralPtr ok = builder.getBasicGenerator().getFalse();
 	LiteralPtr err = builder.literal(builder.genericType("strangeType"), ok->getValue());
 
-	CheckPtr typeCheck = make_check<BuildInLiteralCheck>();
+	CheckPtr typeCheck = make_check<BuiltInLiteralCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());
 	ASSERT_FALSE(check(err, typeCheck).empty());
 

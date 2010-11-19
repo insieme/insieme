@@ -125,13 +125,16 @@ class ConversionFactory : public boost::noncopyable {
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// Keeps the type and initialization of the global variables within the entrypoint
+		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
+
 		// Gloabal and static variables
 		core::VariablePtr   globalVar;
 
+		// Set of the function which need access to global variables, every time such a function is converted
+		// the data structure containing global variables has to be correctly forwarded by using the capture list
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 		UseGlobalFuncMap	globalFuncMap;
-
-		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
 
 		std::unordered_map<insieme::core::VariablePtr, insieme::core::VariablePtr, hash_target<insieme::core::VariablePtr>,
 			equal_target<insieme::core::VariablePtr>> needRef;
@@ -219,7 +222,7 @@ public:
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
 
-	core::CallExprPtr createCallExpr(const StatementList& body, core::TypePtr retTy) const;
+	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
 };
 
