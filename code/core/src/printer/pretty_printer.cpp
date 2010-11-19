@@ -357,13 +357,56 @@ namespace {
 		});
 
 		PRINT(LambdaExpr, {
-				// TODO : check for recursive or not ...
 
+				// short-cut for non-recursive functions
+				if (!node->isRecursive()) {
+					visit(node->getLambda());
+					return;
+				}
+
+				// general case: recursive function
 				out << "recFun ";
 				this->visit(node->getVariable());
 				out << " ";
 				this->visit(node->getDefinition());
 		});
+
+
+		PRINT(LambdaDefinition, {
+				auto defs = node->getDefinitions();
+				if (defs.empty()) {
+					out << "{ }";
+					return;
+				}
+
+				out << "{"; increaseIndent(); newLine();
+				std::size_t count = 0;
+				for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaPtr>& cur) {
+					out << *cur.first << " = ";
+					this->visit(cur.second);
+					out << ";";
+					if (count++ < defs.size() -1) this->newLine();
+				});
+
+				decreaseIndent();
+				newLine();
+				out << "}";
+		});
+
+
+		PRINT(Lambda, {
+				auto paramPrinter = [&](std::ostream& out, const VariablePtr& cur) {
+					out << *cur->getType() << " " << *cur;
+				};
+
+				out << "fun";
+				if (node->isCapturing()) {
+					out << "[" << join(", ", node->getCaptureList(), paramPrinter) << "]";
+				}
+				out << "(" << join(", ", node->getParameterList(), paramPrinter) << ")";
+				visit(node->getBody());
+		});
+
 
 		PRINT(CallExpr, {
 
@@ -498,39 +541,6 @@ namespace {
 				newLine();
 				out << "}";
 		});
-
-//		PRINT(LambdaDefinition, {
-//				auto defs = node->getDefinitions();
-//				if (defs.empty()) {
-//					out << "{ }";
-//					return;
-//				}
-//
-//				auto paramPrinter = [&](std::ostream& out, const VariablePtr& cur) {
-//					out << *cur->getType() << " " << *cur;
-//				};
-//
-//				out << "{"; increaseIndent(); newLine();
-//				std::size_t count = 0;
-//				for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaDefinition::Lambda>& cur) {
-//					out << *cur.first << " = ";
-//
-//					out << "fun";
-//					if (!cur.second.captureList.empty()) {
-//						out << "[" << ::join(", ", cur.second.captureList, paramPrinter) << "]";
-//					}
-//					out << "(" << ::join(", ", cur.second.paramList, paramPrinter) << ") ";
-//					this->visit(cur.second.body);
-//
-//					out << ";";
-//					if (count++ < defs.size() -1) this->newLine();
-//				});
-//
-//				decreaseIndent();
-//				newLine();
-//				out << "}";
-//		});
-
 
 		PRINT(Program, {
 			out << "// Inspire Program "; newLine();

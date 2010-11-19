@@ -924,6 +924,16 @@ public:
 		assert(false && "Visiting of initializer list is not allowed!");
     }
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//                  	COMPOUND LITERAL EXPRESSION
+	// Introduced in C99 6.5.2.5, used to initialize structures or arrays with
+	// the { } expression, example:
+	// 		strcut A a;
+	// 		a = (struct A) { 10, 20, 30 };
+	//
+	//	or:
+	//		((int [3]){1,2,3})[2]  -> 2
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCompoundLiteralExpr(clang::CompoundLiteralExpr* compLitExpr) {
 
 		if(clang::InitListExpr* initList = dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
@@ -943,7 +953,57 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) cons
 	return exprConv->Visit( const_cast<Expr*>(expr) );
 }
 
+/**
+ * InitListExpr describes an initializer list, which can be used to initialize objects of different types,
+ * InitListExpr including struct/class/union types, arrays, and vectors. For example:
+ *
+ * struct foo x = { 1, { 2, 3 } };
+ *
+ * In insieme this statement has to tranformed into a StructExpr, or VectorExpr depending on the type of the
+ * LHS expression.
+ */
+core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const {
+	bool isRef = false;
+	core::TypePtr currType = type;
+	if(core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		isRef = true;
+		currType = refType->getElementType();
+	}
 
+	core::ExpressionPtr retExpr;
+	if(core::dynamic_pointer_cast<const core::VectorType>(currType) || core::dynamic_pointer_cast<const core::ArrayType>(currType)) {
+		core::TypePtr elemTy = core::dynamic_pointer_cast<const core::SingleElementType>(currType)->getElementType();
+		ExpressionList elements;
+		// get all values of the init expression
+		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+			const clang::Expr* subExpr = initList->getInit(i);
+			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy);
+			// If the type is a refType we have to add a VAR.REF operation
+			elements.push_back( convExpr );
+		}
+		retExpr = builder.vectorExpr(elements);
+	}
+
+	// in the case the initexpr is used to initialize a struct/class we need to create a structExpr
+	// to initialize the structure
+	if(core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
+		core::StructExpr::Members members;
+		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+			const core::NamedCompositeType::Entry& curr = structTy->getEntries()[i];
+			members.push_back( core::StructExpr::Member(curr.first, convertInitExpr(initList->getInit(i), curr.second)) );
+		}
+		retExpr = builder.structExpr(members);
+	}
+
+	assert(retExpr && "Couldn't convert initialization expression");
+
+	if(isRef)
+		retExpr = builder.refVar( retExpr );
+	// create vector initializator
+	return retExpr;
+}
+
+// #define ATTACH_NAME_ANNOTATION_TO_VARIABLE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -984,7 +1044,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				// we create a TypeVar for each type in the mutual dependence
 				core::VariablePtr&& var = builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) );
 				ctx.recVarExprMap.insert( std::make_pair(funcDecl, var) );
+			#ifdef ATTACH_NAME_ANNOTATION_TO_VARIABLE
 				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+			#endif
 			}
 		} else {
 			// we expect the var name to be in currVar
@@ -995,10 +1057,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		if(!ctx.isRecSubFunc) {
 			std::for_each(components.begin(), components.end(),
 				[ this ] (std::set<const FunctionDecl*>::value_type fd) {
-
-					// we count how many variables in the map refers to overloaded versions of the same function
-					// this can happen when a function get overloaded and the cycle of recursion can happen between
-					// the overloaded version, we need unique variable for each version of the function
 
 					if(this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end()) {
 						core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(this->convertType(GET_TYPE_PTR(fd)));
@@ -1012,8 +1070,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 						}
 						core::VariablePtr&& var = this->builder.variable( funcType );
 						this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
-
+					#ifdef ATTACH_NAME_ANNOTATION_TO_VARIABLE
 						var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
+					#endif
 					}
 				}
 			);
@@ -1111,7 +1170,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.globalVar = parentGlobalVar;
 
 	if( components.empty() ) {
-		core::ExpressionPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
+		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
+	#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
+		// attach name annotation to the lambda
+		retLambdaExpr->getLambda()->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+	#endif
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
@@ -1119,6 +1182,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
+#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
+	// attach name annotation to the lambda
+	retLambdaNode->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+#endif
 	// this is a recurive function call
 	if(ctx.isRecSubFunc) {
 		// if we are visiting a nested recursive type it means someone else will take care
@@ -1154,6 +1221,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			this->ctx.recVarExprMap.erase(fd);
 			core::LambdaPtr&& lambda = core::dynamic_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
 			assert(lambda && "Resolution of sub recursive lambda yield a wrong result");
+		#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
+			// attach name annotation to the lambda
+			lambda->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
+		#endif
 			definitions.insert( std::make_pair(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types

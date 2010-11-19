@@ -34,34 +34,52 @@
  * regarding third party software licenses.
  */
 
-// Types --------------------------------------------------------------------------------------------------------------
-TYPE(Unit, "unit")
+#ifndef TYPE
+#define TYPE(_id, _spec)
+#endif
+#ifndef LITERAL
+#define LITERAL(_id, _name, _spec)
+#endif
+#ifndef GROUP
+#define GROUP(_id, ...)
+#endif
 
-TYPE(IntGen, "int<#a>") 
-TYPE(UIntGen,  "uint<#a>")
+// Types --------------------------------------------------------------------------------------------------------------
+TYPE(Unit,   "unit")
 
 TYPE(Char,   "char")
 TYPE(UChar,  "uchar")
 TYPE(WChar,  "wchar")
 TYPE(String, "string")
 
-TYPE(Int1,   "int<1>")
-TYPE(UInt1,  "uint<1>")
-TYPE(Int2,   "int<2>")
-TYPE(UInt2,  "uint<2>")
-TYPE(Int4,   "int<4>")
-TYPE(UInt4,  "uint<4>")
-TYPE(Int8,   "int<8>")
-TYPE(UInt8,  "uint<8>")
+GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
+GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
+GROUP(Int, UnsignedInt, SignedInt)
+
+TYPE(IntGen, "int<#a>")
+TYPE(UIntGen,"uint<#a>")
+
+TYPE(Int1,    "int<1>")
+TYPE(UInt1,   "uint<1>")
+TYPE(Int2,    "int<2>")
+TYPE(UInt2,   "uint<2>")
+TYPE(Int4,    "int<4>")
+TYPE(UInt4,   "uint<4>")
+TYPE(Int8,    "int<8>")
+TYPE(UInt8,   "uint<8>")
 TYPE(Int16,   "int<16>")
 TYPE(UInt16,  "uint<16>")
-TYPE(IntInf, "int<#inf>")
-TYPE(UIntInf,"uint<#inf>")
+TYPE(IntInf,  "int<#inf>")
+TYPE(UIntInf, "uint<#inf>")
+
+GROUP(Real, RealGen, RealInf, Float, Double)
 
 TYPE(RealGen, "real<#a>")
 TYPE(RealInf, "real<#inf>")
 TYPE(Float,   "real<4>")
 TYPE(Double,  "real<8>")
+
+GROUP(BoolLiteral, True, False)
 
 TYPE(Bool, "bool")
 LITERAL(True,  "true",  "bool")
@@ -80,6 +98,8 @@ TYPE(ThreadGroup, "threadgroup")
 
 // Logical Operations -------------------------------------------------------------------------------------------------
 
+GROUP(LogicOp, BoolAnd, BoolOr, BoolEq, BoolNot)
+
 LITERAL(BoolAnd, "bool.and", "(bool,bool) -> bool")
 LITERAL(BoolOr,  "bool.or",  "(bool,bool) -> bool")
 LITERAL(BoolEq,  "bool.eq",  "(bool,bool) -> bool")
@@ -87,11 +107,15 @@ LITERAL(BoolNot, "bool.not", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
+GROUP(IntArithOp, IntAdd, IntSub, IntMul, IntDiv, IntMod)
+
 LITERAL(IntAdd,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntSub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntMul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntDiv,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntMod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
+
+GROUP(UIntArithOp, UIntAdd, UIntSub, UIntMul, UIntDiv, UIntMod)
 
 LITERAL(UIntAdd,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntSub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
@@ -99,12 +123,18 @@ LITERAL(UIntMul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntDiv,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntMod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
 
+GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
+
 LITERAL(RealAdd,  "real.add", "(real<#a>,real<#a>) -> real<#a>")
 LITERAL(RealSub,  "real.sub", "(real<#a>,real<#a>) -> real<#a>")
 LITERAL(RealMul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
 LITERAL(RealDiv,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
 
+GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
+
 // Comparison Operations ----------------------------------------------------------------------------------------------
+
+GROUP(IntCompOp, IntEq, IntNe, IntLt, IntGt, IntLe, IntGe)
 
 LITERAL(IntEq, "int.eq", "(int<#a>,int<#a>) -> bool")
 LITERAL(IntNe, "int.ne", "(int<#a>,int<#a>) -> bool")
@@ -113,12 +143,16 @@ LITERAL(IntGt, "int.gt", "(int<#a>,int<#a>) -> bool")
 LITERAL(IntLe, "int.le", "(int<#a>,int<#a>) -> bool")
 LITERAL(IntGe, "int.ge", "(int<#a>,int<#a>) -> bool")
 
+GROUP(UIntCompOp, UIntEq, UIntNe, UIntLt, UIntGt, UIntLe, UIntGe)
+
 LITERAL(UIntEq, "uint.eq", "(uint<#a>,uint<#a>) -> bool")
 LITERAL(UIntNe, "uint.ne", "(uint<#a>,uint<#a>) -> bool")
 LITERAL(UIntLt, "uint.lt", "(uint<#a>,uint<#a>) -> bool")
 LITERAL(UIntGt, "uint.gt", "(uint<#a>,uint<#a>) -> bool")
 LITERAL(UIntLe, "uint.le", "(uint<#a>,uint<#a>) -> bool")
 LITERAL(UIntGe, "uint.ge", "(uint<#a>,uint<#a>) -> bool")
+
+GROUP(RealCompOp, RealEq, RealNe, RealLt, RealGt, RealLe, RealGe)
 
 LITERAL(RealEq, "real.eq", "(real<#a>,real<#a>) -> bool")
 LITERAL(RealNe, "real.ne", "(real<#a>,real<#a>) -> bool")
@@ -127,7 +161,11 @@ LITERAL(RealGt, "real.gt", "(real<#a>,real<#a>) -> bool")
 LITERAL(RealLe, "real.le", "(real<#a>,real<#a>) -> bool")
 LITERAL(RealGe, "real.ge", "(real<#a>,real<#a>) -> bool")
 
+GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
+
 // Bitwise Operations -------------------------------------------------------------------------------------------------
+
+GROUP(BitwiseIntOp, IntNot, IntAnd, IntOr, IntXor, IntLShift, IntRShift)
 
 LITERAL(IntNot,    "int.not",    "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntAnd,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
@@ -136,6 +174,8 @@ LITERAL(IntXor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntLShift, "int.lshift", "(int<#a>,int<#a>) -> int<#a>")
 LITERAL(IntRShift, "int.rshift", "(int<#a>,int<#a>) -> int<#a>")
 
+GROUP(BitwiseUIntOp, UIntNot, UIntAnd, UIntOr, UIntXor, UIntLShift, UIntRShift)
+
 LITERAL(UIntNot,    "uint.not",    "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntAnd,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntOr,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
@@ -143,7 +183,11 @@ LITERAL(UIntXor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntLShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 LITERAL(UIntRShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 
+GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
+
 // References ---------------------------------------------------------------------------------------------------------
+
+GROUP(RefOp, RefVar, RefNew, RefDelete, RefAssign, RefDeref)
 
 LITERAL(RefVar,    "ref.var",    "('a) -> ref<'a>")
 LITERAL(RefNew,    "ref.new",    "('a) -> ref<'a>")
@@ -153,11 +197,15 @@ LITERAL(RefDeref,  "ref.deref",  "(ref<'a>) -> 'a")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
+GROUP(ArrayOp, Array1DSubscript, ArraySubscript, ArrayLength)
+
 LITERAL(Array1DSubscript, "array.1dsubscript", "(array<'elem,1>, uint<#a>) -> 'elem")
 LITERAL(ArraySubscript, "array.subscript", "(array<'elem,#a>, vector<uint<#b>,#a>) -> 'elem")
 LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
+
+GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined)
 
 LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
@@ -170,8 +218,12 @@ LITERAL(IfThenElse, "ite", "(bool, () -> 'b, () -> 'b) -> 'b")
 
 // Parallel Constructs ------------------------------------------------------------------------------------------------
 
+GROUP(ParallelOp, Parallel, ParallelDetached)
+
 LITERAL(Parallel, "parallel", "(uint<#a>, uint<#b>, job) -> threadgroup")
 LITERAL(ParallelDetached, "parallel&", "(uint<#a>, uint<#b>, job) -> unit")
+
+GROUP(MergeOp, Merge, MergeAll)
 
 LITERAL(Merge, "merge", "(threadgroup) -> unit")
 LITERAL(MergeAll, "mergeAll", "() -> unit")
@@ -181,3 +233,9 @@ LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vec
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
 // TODO herbert
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#undef TYPE
+#undef LITERAL
+#undef GROUP

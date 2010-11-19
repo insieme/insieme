@@ -270,9 +270,18 @@ void FunctionManager::createCallable(const CodePtr& context, const core::Capture
 
 void FunctionManager::createCallable(const CodePtr& context, const core::LambdaExprPtr& lambda) {
 
+	// NEXT: create proto-types if not recursive!
+
 	// resolve lambda
 	const LambdaPtr& def = lambda->getLambda();
 	assert(def->getCaptureList().empty() && "This method cannot support lambdas with capture lists!");
+
+	// copy c-name annotation to lambda - if there is one
+	if(auto cnameAnn = lambda->getVariable()->getAnnotation(c_info::CNameAnnotation::KEY)) {
+		std::cout << "Name found: " << cnameAnn->getName() << " on " << toString(*(lambda->getVariable())) << std::endl;
+		def->addAnnotation(cnameAnn);
+	}
+
 
 	// obtain code for lambda
 	const LambdaCode& code = resolve(def);
@@ -300,7 +309,7 @@ const FunctionManager::LambdaCode& FunctionManager::resolve(const LambdaPtr& lam
 	VariableManager varManager;
 
 	// create function code for lambda
-	CodePtr function = std::make_shared<CodeFragment>("Implementation of function: " + name);
+	CodePtr function = std::make_shared<CodeFragment>(name);
 	CodeStream& cs = function->getCodeStream();
 	cs << cc.getTypeMan().getTypeName(function, funType->getReturnType()) << " " << name << "(";
 	cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& out, const VariablePtr& param) {

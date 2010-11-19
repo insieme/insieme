@@ -52,14 +52,14 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 		ConvertVisitor convVisitor(*this);
 		convVisitor.visit(ep);
 		CodePtr ptr = convVisitor.getCode();
-		if (ep->getNodeType() == NT_LambdaExpr) {
-			// remove root node content => not required
-			CodePtr tmp = CodePtr(new CodeFragment(string("root-node")));
-			for_each(ptr->getDependencies(), [&tmp](const CodePtr& cur) {
-				tmp->addDependency(cur);
-			});
-			ptr = tmp;
-		}
+//		if (ep->getNodeType() == NT_LambdaExpr) {
+//			// remove root node content => not required
+//			CodePtr tmp = CodePtr(new CodeFragment(string("root-node")));
+//			for_each(ptr->getDependencies(), [&tmp](const CodePtr& cur) {
+//				tmp->addDependency(cur);
+//			});
+//			ptr = tmp;
+//		}
 		converted.insert(std::make_pair(ep, ptr));
 	});
 	return converted;

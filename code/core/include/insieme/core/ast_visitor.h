@@ -650,6 +650,7 @@ inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bo
  * @param visitor the visitor to be visiting all the nodes
  * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
  * 				   post order will be enforced.
+ * @return returns true if interrupted, false otherwise
  */
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor, bool preorder = true) {

@@ -362,18 +362,19 @@ TEST(TypeTest, FunctionType) {
 	NodeManager manager;
 
 	TypePtr dummyA = GenericType::get(manager, "dummyA");
+	TypePtr dummyB = GenericType::get(manager, "dummyB");
 	TypePtr alpha = TypeVariable::get(manager, "alpha");
 
-	TupleTypePtr argumentA = TupleType::get(manager, toVector( dummyA ) );
-	TupleTypePtr argumentB = TupleType::get(manager, toVector( alpha ) );
 	TypePtr resultA = GenericType::get(manager, "returnA");
 	TypePtr resultB = GenericType::get(manager, "returnB");
 
-	FunctionTypePtr funTypeA = FunctionType::get(manager, argumentA->getElementTypes(), resultA);
-	FunctionTypePtr funTypeB = FunctionType::get(manager, argumentB->getElementTypes(), resultB);
+	FunctionTypePtr funTypeA = FunctionType::get(manager, toVector(dummyA), resultA);
+	FunctionTypePtr funTypeB = FunctionType::get(manager, toVector(alpha), resultB);
+	FunctionTypePtr funTypeC = FunctionType::get(manager, toVector(dummyB, dummyA), toVector(alpha), resultB);
 
 	EXPECT_EQ ( "((dummyA)->returnA)" , funTypeA->getName() );
 	EXPECT_EQ ( "(('alpha)->returnB)" , funTypeB->getName() );
+	EXPECT_EQ ( "([dummyB,dummyA]('alpha)->returnB)" , funTypeC->getName() );
 
 	vector<TypePtr> subTypesA;
 	subTypesA.push_back(dummyA);
@@ -383,9 +384,16 @@ TEST(TypeTest, FunctionType) {
 	subTypesB.push_back(alpha);
 	subTypesB.push_back(resultB);
 
+	vector<TypePtr> subTypesC;
+	subTypesC.push_back(dummyB);
+	subTypesC.push_back(dummyA);
+	subTypesC.push_back(alpha);
+	subTypesC.push_back(resultB);
+
 	// perform basic type tests
 	basicTypeTests(funTypeA, true, true, toList(subTypesA));
 	basicTypeTests(funTypeB, true, true, toList(subTypesB));
+	basicTypeTests(funTypeC, true, true, toList(subTypesC));
 }
 
 TEST(TypeTest, RecType) {

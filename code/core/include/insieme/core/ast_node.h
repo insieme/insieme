@@ -70,8 +70,7 @@ enum NodeCategory {
 	NC_Type, /* < The node represents a type. */
 	NC_Expression, /* < The node represents an expression. */
 	NC_Statement, /* < The node represents a statement. */
-	NC_Program
-/* < The node represents a program. */
+	NC_Program /* < The node represents a program. */
 };
 
 
