@@ -85,6 +85,10 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	T* clone = &*manager.get(node);
 	T* clone2 = &*manager2.get(node);
 
+	EXPECT_EQ(clone->getNodeManager(), &manager);
+	EXPECT_EQ(clone2->getNodeManager(), &manager2);
+	EXPECT_NE(node->getNodeManager(), &manager);
+
 	// cloning had to be successful
 	EXPECT_TRUE(clone);
 	EXPECT_TRUE(clone2);

@@ -732,6 +732,30 @@ const LambdaPtr& LambdaDefinition::getDefinitionOf(const VariablePtr& variable) 
 	return it->second;
 }
 
+bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
+
+	// obtain lambda definition
+	const LambdaPtr& lambda = getDefinitionOf(variable);
+
+	const Definitions& defs = definitions;
+
+	// a detector which aborts a visiting in cased a recursive function invocation
+	// is detected
+	auto detector = makeLambdaPtrVisitor([&defs](const NodePtr& node)->bool {
+		// check node type
+		if (node->getNodeType() != NT_Variable) {
+			return true;
+		}
+
+		// check whether the variable is a recursive function
+		return defs.find(static_pointer_cast<const Variable>(node)) == defs.end();
+	});
+
+	// run visitor => if interrupted, the definition is recursive
+std::cout << "Expression " << *lambda << " is recursive: " << visitAllInterruptable(lambda, detector) << std::endl;
+	return visitAllInterruptable(lambda, detector);
+}
+
 //namespace {
 //
 //	class RecLambdaUnroller : public NodeMapping {
@@ -789,33 +813,12 @@ namespace {
 		return hash;
 	}
 
-	bool isRecursive(const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
-		const LambdaPtr& lambda = definition->getDefinitionOf(variable);
-
-//		LambdaDefinition::Definitions& definitions = definition->getDefinitions();
-//
-//		// a detector which aborts a visiting in cased a recursive function invocation
-//		// is detected
-//		auto detector = makeLambdaVisitor([&definitions](const NodePtr& node)->bool {
-//			// check node type
-//			if (node->getNodeType() != NT_Variable) {
-//				return true;
-//			}
-//
-//			// if the given node is
-//			return definitions.find(node) != definitions.end();
-//		});
-
-		//return visitAllInterruptable(lambda, makeL)
-		return true;
-
-	}
-
 }
 
 LambdaExpr::LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition)
 	: Expression(NT_LambdaExpr, variable->getType(), ::hashLambdaExpr(variable, definition)),
-	  variable(isolate(variable)), definition(isolate(definition)), lambda(definition->getDefinitionOf(variable)) { }
+	  variable(isolate(variable)), definition(isolate(definition)), lambda(definition->getDefinitionOf(variable)),
+	  recursive(definition->isRecursive(variable)) { }
 
 LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
