@@ -366,15 +366,59 @@ void ASTPrinter::visitReturnStmt(const ReturnStmtPtr& retStmt) {
 }
 
 void ASTPrinter::visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
-	StmtNode lambdaNode( NODE_ID(lambdaExpr), "lambda");
+	StmtNode lambdaNode( NODE_ID(lambdaExpr), "lambdaExpr");
 	checkSemanticErrors(errors, lambdaNode, lambdaExpr);
 	builder->addNode(lambdaNode);
 
 	visitAnnotationList(*builder, NODE_ID(lambdaExpr), lambdaExpr->getAnnotations());
 
 	visitChildList(*builder, toVector(lambdaExpr->getType()), lambdaExpr, "type");
-	visitChildList(*builder, lambdaExpr->getParameterList(), lambdaExpr, "param");
-	visitChildList(*builder, toVector(lambdaExpr->getBody()), lambdaExpr, "body");
+	visitChildList(*builder, toVector(lambdaExpr->getVariable()), lambdaExpr, "var");
+	visitChildList(*builder, toVector(lambdaExpr->getDefinition()), lambdaExpr, "definition");
+	visitChildList(*builder, toVector(lambdaExpr->getLambda()), lambdaExpr, "lambda");
+}
+
+void ASTPrinter::visitLambda(const LambdaPtr& lambda) {
+	StmtNode lambdaNode( NODE_ID(lambda), "lambda");
+	checkSemanticErrors(errors, lambdaNode, lambda);
+	builder->addNode(lambdaNode);
+
+	visitAnnotationList(*builder, NODE_ID(lambda), lambda->getAnnotations());
+
+	visitChildList(*builder, toVector(lambda->getType()), lambda, "type");
+	visitChildList(*builder, lambda->getCaptureList(), lambda, "param");
+	visitChildList(*builder, lambda->getParameterList(), lambda, "param");
+	visitChildList(*builder, toVector(lambda->getBody()), lambda, "body");
+}
+
+void ASTPrinter::visitLambdaDefintion(const LambdaDefinitionPtr& lambdaDef) {
+	StmtNode lambdaNode( NODE_ID(lambdaDef), "lambdaDef");
+	checkSemanticErrors(errors, lambdaNode, lambdaDef);
+	builder->addNode(lambdaNode);
+
+	visitAnnotationList(*builder, NODE_ID(lambdaDef), lambdaDef->getAnnotations());
+
+	size_t num = 1;
+	for_each(lambdaDef->getDefinitions().begin(), lambdaDef->getDefinitions().end(),
+		[&num, &lambdaDef, this](const LambdaDefinition::Definitions::value_type& curr){
+			// this->builder->addLink( DotLink(NODE_ID(recTy), NODE_ID(cur.second), "\"\"") );
+			size_t interId = NODE_ID(lambdaDef) ^ NODE_ID(curr.first) ^ NODE_ID(curr.second);
+
+			JunctionNode node(interId);
+			node[NodeProperty::SHAPE] = "diamond";
+			node[NodeProperty::HEIGHT] = ".25";
+			node[NodeProperty::WIDTH] = ".25";
+			this->builder->addNode(node);
+			std::string label = "def";
+			if(lambdaDef->getDefinitions().size() > 1)
+				label += "_" + utils::numeric_cast<std::string>(num++);
+
+			DotLink link(NODE_ID(lambdaDef), interId, label);
+			this->builder->addLink( link );
+			this->builder->addLink( DotLink(interId, NODE_ID(curr.first), "") );
+			this->builder->addLink( DotLink(interId, NODE_ID(curr.second), "") );
+		}
+	);
 }
 
 void ASTPrinter::visitVariable(const VariablePtr& var) {

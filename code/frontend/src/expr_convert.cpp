@@ -1003,7 +1003,7 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 	return retExpr;
 }
 
-#define ATTACH_NAME_ANNOTATION_TO_VARIABLE
+// #define ATTACH_NAME_ANNOTATION_TO_VARIABLE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1171,6 +1171,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	if( components.empty() ) {
 		core::ExpressionPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
+	#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
+		// attach name annotation to the lambda
+		retLambdaExpr->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+	#endif
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );

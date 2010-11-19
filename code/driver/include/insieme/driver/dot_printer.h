@@ -121,6 +121,8 @@ public:
 
 	// Expressions
 	void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
+	void visitLambda(const LambdaPtr& lambda);
+	void visitLambdaDefintion(const LambdaDefinitionPtr& lambda);
 	void visitVariable(const VariablePtr& var);
 	void visitCallExpr(const CallExprPtr& callExpr);
 	void visitCastExpr(const CastExprPtr& castExpr);
