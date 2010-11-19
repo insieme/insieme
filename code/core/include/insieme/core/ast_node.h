@@ -468,7 +468,7 @@ const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
 	//  is only critical in case nodes are created on the stack using the public constructor
 	//  directly.
 	//
-	//ptr.isolateAnnotations();
+	ptr.isolateAnnotations();
 	return ptr;
 }
 
