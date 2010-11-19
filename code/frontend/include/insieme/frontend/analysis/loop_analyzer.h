@@ -78,8 +78,7 @@ class LoopAnalyzer {
 		insieme::core::ExpressionPtr	condExpr;
 
 		//TODO: recheck: Visual Studio 2010 fix
-		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL) {
-		}
+		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL) {	}
 	};
 
 	const ConversionFactory& 	convFact;

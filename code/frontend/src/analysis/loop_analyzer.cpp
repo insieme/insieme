@@ -37,7 +37,6 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 
 #include "insieme/frontend/convert.h"
-#include "insieme/core/lang_basic.h"
 
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
@@ -120,11 +119,11 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		switch(unOp->getOpcode()) {
 		case UO_PreInc:
 		case UO_PostInc:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", core::lang::TYPE_INT_GEN);
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getUInt1());
 			return;
 		case UO_PreDec:
 		case UO_PostDec:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("-1", core::lang::TYPE_INT_GEN);
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("-1", convFact.getNodeManager().basic.getInt1());
 			return;
 		default:
 			assert(false && "UnaryOperator differet from post/pre inc/dec (++/--) not supported in loop increment expression");
