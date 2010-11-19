@@ -245,7 +245,7 @@ public:
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
 				GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
-					(charLit->isWide() ? convFact.builder.genericType("wchar") : convFact.builder.genericType("char"))
+					(charLit->isWide() ? convFact.mgr.basic.getWChar() : convFact.mgr.basic.getChar())
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -258,8 +258,8 @@ public:
 		START_LOG_EXPR_CONVERSION(stringLit);
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
-				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc()),
-				convFact.builder.genericType(core::Identifier("string"))
+				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() ),
+				convFact.mgr.basic.getString()
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -392,11 +392,8 @@ public:
 					// we are resolving a parent recursive type, so when one of the recursive functions in the
 					// connected components are called, the introduced mu variable has to be used instead.
 					convFact.currTU = oldTU;
-					core::ExpressionPtr callee;
-					if(!values.empty())
-						callee = builder.captureInitExpr(fit->second, values);
-					else
-						callee = fit->second;
+					core::ExpressionPtr&& callee = values.empty() ?
+							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
 					return builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 				}
 			}
@@ -405,11 +402,8 @@ public:
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if(fit != ctx.lambdaExprCache.end()) {
 					convFact.currTU = oldTU;
-					core::ExpressionPtr callee;
-					if(!values.empty())
-						callee = builder.captureInitExpr(fit->second, values);
-					else
-						callee = fit->second;
+					core::ExpressionPtr&& callee = values.empty() ?
+							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
 					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 					// handle eventual pragmas attached to the Clang node
 					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
@@ -644,17 +638,6 @@ public:
 
 		if( !isAssignment )
 			lhs = convFact.tryDeref(lhs);
-
-		// check the types
-//		const core::TupleTypePtr& opTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType())->getArgumentType();
-//		if(lhs->getType() != opTy->getElementTypes()[0]) {
-//			// add a castepxr
-//			lhs = convFact.builder.castExpr(opTy->getElementTypes()[0], lhs);
-//		}
-//		if(rhs->getType() != opTy->getElementTypes()[1]) {
-//			// add a castepxr
-//			rhs = convFact.builder.castExpr(opTy->getElementTypes()[1], rhs);
-//		}
 
 		if(isLogical) {
 			exprTy = convFact.mgr.basic.getBool();
@@ -940,6 +923,15 @@ public:
 	core::ExpressionPtr VisitInitListExpr(clang::InitListExpr* initList) {
 		assert(false && "Visiting of initializer list is not allowed!");
     }
+
+	core::ExpressionPtr VisitCompoundLiteralExpr(clang::CompoundLiteralExpr* compLitExpr) {
+
+		if(clang::InitListExpr* initList = dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
+			return convFact.convertInitExpr(initList, convFact.convertType(compLitExpr->getType().getTypePtr()));
+		}
+
+		return Visit(compLitExpr->getInitializer());
+	}
 };
 
 ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConverter(ConversionFactory& fact) {
@@ -1010,6 +1002,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 					if(this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end()) {
 						core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(this->convertType(GET_TYPE_PTR(fd)));
+						assert(funcType);
 						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
 							funcType = this->builder.functionType(
 									toVector<core::TypePtr>( this->ctx.globalStruct.first ),
