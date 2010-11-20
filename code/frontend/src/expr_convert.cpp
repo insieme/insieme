@@ -634,16 +634,13 @@ public:
 		// build a callExpr with the 2 arguments
 		rhs = convFact.tryDeref(rhs);
 
-		if( !isAssignment )
-			lhs = convFact.tryDeref(lhs);
-
-		if(isLogical) {
-			exprTy = convFact.mgr.basic.getBool();
-			argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
-		}
-
-		if(!isAssignment) {
+		if( !isAssignment ) {
 			std::string&& opType = getOperationType(convFact.mgr, exprTy);
+			lhs = convFact.tryDeref(lhs);
+			if(isLogical) {
+				exprTy = convFact.mgr.basic.getBool();
+				argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
+			}
 			opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
 		}
 
