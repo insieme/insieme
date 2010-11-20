@@ -8,7 +8,7 @@
 // start code fragment :: Prototype for external function: printf //
 int printf(char*, ...);
 
-// start code fragment :: main //
+// start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
 		{
@@ -18,6 +18,3 @@ int main(int argc, char** argv) {
 	}
 }
 
-
-// start code fragment :: unnamed //
-main
