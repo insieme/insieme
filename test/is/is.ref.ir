@@ -328,11 +328,11 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 {
                     for(decl ref<int<4>> v97 =  var(0) .. 5 : 1) {
                         v47 := v44.partial_verify_vals[v97];
-                        if(bool.land(bool.le(0, v47), bool.le(v47, int.shl(1, 16)-1))) {
+                        if(int.land(0<=v47, v47<=int.shl(1, 16)-1)) {
                             decl int<4> v66 = 'S';
                             switch(v66) {
-                                case 'S': if(bool.le(v97, 2)) {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
+                                case 'S': if(v97<=2) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v68](){
                                         decl ref<int<4>> v67 = v68.passed_verification;
@@ -340,7 +340,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v67;
                                     }();
                                 } else {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v71](){
                                         decl ref<int<4>> v70 = v71.passed_verification;
@@ -348,8 +348,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v70;
                                     }();
                                 }
-                                case 'W': if(bool.lt(v97, 2)) {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-2)) {
+                                case 'W': if(v97<2) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-2)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v74](){
                                         decl ref<int<4>> v73 = v74.passed_verification;
@@ -357,7 +357,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v73;
                                     }();
                                 } else {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v77](){
                                         decl ref<int<4>> v76 = v77.passed_verification;
@@ -365,8 +365,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v76;
                                     }();
                                 }
-                                case 'A': if(bool.le(v97, 2)) {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-1)) {
+                                case 'A': if(v97<=2) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-1)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v80](){
                                         decl ref<int<4>> v79 = v80.passed_verification;
@@ -374,7 +374,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v79;
                                     }();
                                 } else {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43-1)) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43-1)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v83](){
                                         decl ref<int<4>> v82 = v83.passed_verification;
@@ -382,8 +382,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v82;
                                     }();
                                 }
-                                case 'B': if(bool.lor(bool.lor(v97==1, v97==2), v97==4)) {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
+                                case 'B': if(int.lor(int.lor(v97==1, v97==2), v97==4)) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v86](){
                                         decl ref<int<4>> v85 = v86.passed_verification;
@@ -391,7 +391,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v85;
                                     }();
                                 } else {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v89](){
                                         decl ref<int<4>> v88 = v89.passed_verification;
@@ -399,8 +399,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v88;
                                     }();
                                 }
-                                case 'C': if(bool.le(v97, 2)) {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
+                                case 'C': if(v97<=2) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v92](){
                                         decl ref<int<4>> v91 = v92.passed_verification;
@@ -408,7 +408,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v91;
                                     }();
                                 } else {
-                                    if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                    if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                         printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v95](){
                                         decl ref<int<4>> v94 = v95.passed_verification;
@@ -426,14 +426,14 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
         }(1);
         v1.passed_verification := 0;
-        if(bool.ne('S', 'S')) printf("\n   iteration\n", varlist.pack(())) else { };
+        if(int.ne('S', 'S')) printf("\n   iteration\n", varlist.pack(())) else { };
         [v1]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v100](int<4> v99){
             v100.start[v99] := [v100]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v101](){
                 decl ref<real<8>> v102 =  var(0.0);
                 [v101]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v104](array<ref<real<8>>,1> v103){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v105 =  var(struct{tv_sec:= var(0), tv_usec:= var(0)});
                     gettimeofday([v105], 0);
-                    if(bool.lt(v104.sec, 0)) v104.sec := v105.tv_sec else { };
+                    if(v104.sec<0) v104.sec := v105.tv_sec else { };
                     v103[0] := v105.tv_sec-v104.sec+1.0e-6*v105.tv_usec;
                 }([v102]);
                 return v102;
@@ -441,7 +441,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         }(0);
         {
             for(decl ref<int<4>> v109 =  var(1) .. 10 : 1) {
-                if(bool.ne('S', 'S')) printf("        %d\n", varlist.pack((v109))) else { };
+                if(int.ne('S', 'S')) printf("        %d\n", varlist.pack((v109))) else { };
                 [v1]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v44](int<4> v43){
                     decl ref<int<4>> v45 =  var(0);
                     decl ref<int<4>> v46 =  var(0);
@@ -504,11 +504,11 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         {
                             for(decl ref<int<4>> v97 =  var(0) .. 5 : 1) {
                                 v47 := v44.partial_verify_vals[v97];
-                                if(bool.land(bool.le(0, v47), bool.le(v47, int.shl(1, 16)-1))) {
+                                if(int.land(0<=v47, v47<=int.shl(1, 16)-1)) {
                                     decl int<4> v66 = 'S';
                                     switch(v66) {
-                                        case 'S': if(bool.le(v97, 2)) {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
+                                        case 'S': if(v97<=2) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v68](){
                                                 decl ref<int<4>> v67 = v68.passed_verification;
@@ -516,7 +516,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v67;
                                             }();
                                         } else {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v71](){
                                                 decl ref<int<4>> v70 = v71.passed_verification;
@@ -524,8 +524,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v70;
                                             }();
                                         }
-                                        case 'W': if(bool.lt(v97, 2)) {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-2)) {
+                                        case 'W': if(v97<2) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-2)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v74](){
                                                 decl ref<int<4>> v73 = v74.passed_verification;
@@ -533,7 +533,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v73;
                                             }();
                                         } else {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v77](){
                                                 decl ref<int<4>> v76 = v77.passed_verification;
@@ -541,8 +541,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v76;
                                             }();
                                         }
-                                        case 'A': if(bool.le(v97, 2)) {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-1)) {
+                                        case 'A': if(v97<=2) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43-1)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v80](){
                                                 decl ref<int<4>> v79 = v80.passed_verification;
@@ -550,7 +550,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v79;
                                             }();
                                         } else {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43-1)) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43-1)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v83](){
                                                 decl ref<int<4>> v82 = v83.passed_verification;
@@ -558,8 +558,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v82;
                                             }();
                                         }
-                                        case 'B': if(bool.lor(bool.lor(v97==1, v97==2), v97==4)) {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
+                                        case 'B': if(int.lor(int.lor(v97==1, v97==2), v97==4)) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v86](){
                                                 decl ref<int<4>> v85 = v86.passed_verification;
@@ -567,7 +567,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v85;
                                             }();
                                         } else {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v89](){
                                                 decl ref<int<4>> v88 = v89.passed_verification;
@@ -575,8 +575,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v88;
                                             }();
                                         }
-                                        case 'C': if(bool.le(v97, 2)) {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
+                                        case 'C': if(v97<=2) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]+v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v92](){
                                                 decl ref<int<4>> v91 = v92.passed_verification;
@@ -584,7 +584,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v91;
                                             }();
                                         } else {
-                                            if(bool.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
+                                            if(int.ne(v44.key_buff1[v47-1], v44.test_rank_array[v97]-v43)) {
                                                 printf("Failed partial verification: ", varlist.pack((v43, v97)));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v95](){
                                                 decl ref<int<4>> v94 = v95.passed_verification;
@@ -612,7 +612,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 [v101]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v104](array<ref<real<8>>,1> v103){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v105 =  var(struct{tv_sec:= var(0), tv_usec:= var(0)});
                     gettimeofday([v105], 0);
-                    if(bool.lt(v104.sec, 0)) v104.sec := v105.tv_sec else { };
+                    if(v104.sec<0) v104.sec := v105.tv_sec else { };
                     v103[0] := v105.tv_sec-v104.sec+1.0e-6*v105.tv_usec;
                 }([v102]);
                 return v102;
@@ -641,7 +641,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             v120 := 0;
             {
                 for(decl ref<int<4>> v131 =  var(1) .. int.shl(1, 16) : 1) 
-                    if(bool.gt(v118.key_array[v131-1], v118.key_array[v131])) [v120]fun[ref<int<4>> v129](){
+                    if(v118.key_array[v131-1]>v118.key_array[v131]) [v120]fun[ref<int<4>> v129](){
                         decl int<4> v128 = v129;
                         v129 := v129+1;
                         return v128;
@@ -649,7 +649,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 ;
                 v119 := int.shl(1, 16);
             };
-            if(bool.ne(v120, 0)) {
+            if(int.ne(v120, 0)) {
                 printf("Full_verify: number of keys out of sort: %d\n", varlist.pack((v120)));
             } else [v118]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v133](){
                 decl ref<int<4>> v132 = v133.passed_verification;
@@ -657,12 +657,12 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 return v132;
             }();
         }();
-        if(bool.ne(v1.passed_verification, 5*10+1)) v1.passed_verification := 0 else { };
+        if(int.ne(v1.passed_verification, 5*10+1)) v1.passed_verification := 0 else { };
         fun(array<ref<char>,1> v136, char v137, int<4> v138, int<4> v139, int<4> v140, int<4> v141, int<4> v142, real<8> v143, real<8> v144, array<ref<char>,1> v145, int<4> v146, array<ref<char>,1> v147, array<ref<char>,1> v148, array<ref<char>,1> v149, array<ref<char>,1> v150, array<ref<char>,1> v151, array<ref<char>,1> v152, array<ref<char>,1> v153, array<ref<char>,1> v154, array<ref<char>,1> v155){
             decl ref<array<ref<char>,1>> v156 =  var("1000");
             printf("\n\n %s Benchmark Completed\n", varlist.pack((v136)));
             printf(" Class           =                        %c\n", varlist.pack((v137)));
-            if(bool.land(v139==0, v140==0)) printf(" Size            =             %12d\n", varlist.pack((v138))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v138, v139, v140)));
+            if(int.land(v139==0, v140==0)) printf(" Size            =             %12d\n", varlist.pack((v138))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v138, v139, v140)));
             printf(" Iterations      =             %12d\n", varlist.pack((v141)));
             printf(" Threads         =             %12d\n", varlist.pack((v142)));
             printf(" Time in seconds =             %12.2f\n", varlist.pack((v143)));
@@ -1015,11 +1015,11 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 {
                     for(decl ref<int<4>> v97 = ( var(0)) .. 5 : 1) {
                         (v47 := ( *(( *( *( *v44).partial_verify_vals))[CAST<uint<4>>(( *v97))])));
-                        if(bool.land(bool.le(0, ( *v47)), bool.le(( *v47), (int.shl(1, 16)-1)))) {
+                        if(int.land((0<=( *v47)), (( *v47)<=(int.shl(1, 16)-1)))) {
                             decl int<4> v66 = CAST<int<4>>('S');
                             switch(v66) {
-                                case 'S': if(bool.le(( *v97), 2)) {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
+                                case 'S': if((( *v97)<=2)) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v68](){
                                         decl ref<int<4>> v67 = ( *( *v68).passed_verification);
@@ -1027,7 +1027,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v67;
                                     }();
                                 } else {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v71](){
                                         decl ref<int<4>> v70 = ( *( *v71).passed_verification);
@@ -1035,8 +1035,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v70;
                                     }();
                                 }
-                                case 'W': if(bool.lt(( *v97), 2)) {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-2)))) {
+                                case 'W': if((( *v97)<2)) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-2)))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v74](){
                                         decl ref<int<4>> v73 = ( *( *v74).passed_verification);
@@ -1044,7 +1044,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v73;
                                     }();
                                 } else {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v77](){
                                         decl ref<int<4>> v76 = ( *( *v77).passed_verification);
@@ -1052,8 +1052,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v76;
                                     }();
                                 }
-                                case 'A': if(bool.le(( *v97), 2)) {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-1)))) {
+                                case 'A': if((( *v97)<=2)) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-1)))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v80](){
                                         decl ref<int<4>> v79 = ( *( *v80).passed_verification);
@@ -1061,7 +1061,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v79;
                                     }();
                                 } else {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-(v43-1)))) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-(v43-1)))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v83](){
                                         decl ref<int<4>> v82 = ( *( *v83).passed_verification);
@@ -1069,8 +1069,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v82;
                                     }();
                                 }
-                                case 'B': if(bool.lor(bool.lor((( *v97)==1), (( *v97)==2)), (( *v97)==4))) {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
+                                case 'B': if(int.lor(int.lor((( *v97)==1), (( *v97)==2)), (( *v97)==4))) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v86](){
                                         decl ref<int<4>> v85 = ( *( *v86).passed_verification);
@@ -1078,7 +1078,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v85;
                                     }();
                                 } else {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v89](){
                                         decl ref<int<4>> v88 = ( *( *v89).passed_verification);
@@ -1086,8 +1086,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v88;
                                     }();
                                 }
-                                case 'C': if(bool.le(( *v97), 2)) {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
+                                case 'C': if((( *v97)<=2)) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v92](){
                                         decl ref<int<4>> v91 = ( *( *v92).passed_verification);
@@ -1095,7 +1095,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                         return v91;
                                     }();
                                 } else {
-                                    if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                    if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                         printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                     } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v95](){
                                         decl ref<int<4>> v94 = ( *( *v95).passed_verification);
@@ -1113,14 +1113,14 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
         }(1);
         (( *v1).passed_verification := 0);
-        if(bool.ne('S', 'S')) printf(CAST<array<ref<char>,1>>("\n   iteration\n"), varlist.pack(())) else { };
+        if(int.ne('S', 'S')) printf(CAST<array<ref<char>,1>>("\n   iteration\n"), varlist.pack(())) else { };
         [v1]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v100](int<4> v99){
             ((( *( *( *v100).start))[CAST<uint<4>>(v99)]) := [v100]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v101](){
                 decl ref<real<8>> v102 = ( var(0.0));
                 [v101]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v104](array<ref<real<8>>,1> v103){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v105 = ( var(struct{tv_sec:=( var(0)), tv_usec:=( var(0))}));
                     gettimeofday([v105], CAST<array<ref<struct<tz_minuteswest:ref<int<4>>,tz_dsttime:ref<int<4>>>>,1>>(( *CAST<ref<'a>>(0))));
-                    if(bool.lt(( *( *v104).sec), 0)) (( *v104).sec := CAST<int<4>>(( *( *v105).tv_sec))) else { };
+                    if((( *( *v104).sec)<0)) (( *v104).sec := CAST<int<4>>(( *( *v105).tv_sec))) else { };
                     ((v103[0]) := (CAST<real<8>>((( *( *v105).tv_sec)-CAST<int<8>>(( *( *v104).sec))))+(1.0e-6*CAST<real<8>>(( *( *v105).tv_usec)))));
                 }([v102]);
                 return v102;
@@ -1128,7 +1128,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         }(0);
         {
             for(decl ref<int<4>> v109 = ( var(1)) .. 10 : 1) {
-                if(bool.ne('S', 'S')) printf(CAST<array<ref<char>,1>>("        %d\n"), varlist.pack((( *v109)))) else { };
+                if(int.ne('S', 'S')) printf(CAST<array<ref<char>,1>>("        %d\n"), varlist.pack((( *v109)))) else { };
                 [v1]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v44](int<4> v43){
                     decl ref<int<4>> v45 = ( var(0));
                     decl ref<int<4>> v46 = ( var(0));
@@ -1191,11 +1191,11 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         {
                             for(decl ref<int<4>> v97 = ( var(0)) .. 5 : 1) {
                                 (v47 := ( *(( *( *( *v44).partial_verify_vals))[CAST<uint<4>>(( *v97))])));
-                                if(bool.land(bool.le(0, ( *v47)), bool.le(( *v47), (int.shl(1, 16)-1)))) {
+                                if(int.land((0<=( *v47)), (( *v47)<=(int.shl(1, 16)-1)))) {
                                     decl int<4> v66 = CAST<int<4>>('S');
                                     switch(v66) {
-                                        case 'S': if(bool.le(( *v97), 2)) {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
+                                        case 'S': if((( *v97)<=2)) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v68](){
                                                 decl ref<int<4>> v67 = ( *( *v68).passed_verification);
@@ -1203,7 +1203,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v67;
                                             }();
                                         } else {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v71](){
                                                 decl ref<int<4>> v70 = ( *( *v71).passed_verification);
@@ -1211,8 +1211,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v70;
                                             }();
                                         }
-                                        case 'W': if(bool.lt(( *v97), 2)) {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-2)))) {
+                                        case 'W': if((( *v97)<2)) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-2)))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v74](){
                                                 decl ref<int<4>> v73 = ( *( *v74).passed_verification);
@@ -1220,7 +1220,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v73;
                                             }();
                                         } else {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v77](){
                                                 decl ref<int<4>> v76 = ( *( *v77).passed_verification);
@@ -1228,8 +1228,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v76;
                                             }();
                                         }
-                                        case 'A': if(bool.le(( *v97), 2)) {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-1)))) {
+                                        case 'A': if((( *v97)<=2)) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+(v43-1)))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v80](){
                                                 decl ref<int<4>> v79 = ( *( *v80).passed_verification);
@@ -1237,7 +1237,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v79;
                                             }();
                                         } else {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-(v43-1)))) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-(v43-1)))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v83](){
                                                 decl ref<int<4>> v82 = ( *( *v83).passed_verification);
@@ -1245,8 +1245,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v82;
                                             }();
                                         }
-                                        case 'B': if(bool.lor(bool.lor((( *v97)==1), (( *v97)==2)), (( *v97)==4))) {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
+                                        case 'B': if(int.lor(int.lor((( *v97)==1), (( *v97)==2)), (( *v97)==4))) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v86](){
                                                 decl ref<int<4>> v85 = ( *( *v86).passed_verification);
@@ -1254,7 +1254,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v85;
                                             }();
                                         } else {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v89](){
                                                 decl ref<int<4>> v88 = ( *( *v89).passed_verification);
@@ -1262,8 +1262,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v88;
                                             }();
                                         }
-                                        case 'C': if(bool.le(( *v97), 2)) {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
+                                        case 'C': if((( *v97)<=2)) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))+v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v92](){
                                                 decl ref<int<4>> v91 = ( *( *v92).passed_verification);
@@ -1271,7 +1271,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                                                 return v91;
                                             }();
                                         } else {
-                                            if(bool.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
+                                            if(int.ne(( *(( *( *( *v44).key_buff1))[CAST<uint<4>>((( *v47)-1))])), (( *(( *( *( *v44).test_rank_array))[CAST<uint<4>>(( *v97))]))-v43))) {
                                                 printf(CAST<array<ref<char>,1>>("Failed partial verification: "), varlist.pack((v43, ( *v97))));
                                             } else [v44]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v95](){
                                                 decl ref<int<4>> v94 = ( *( *v95).passed_verification);
@@ -1299,7 +1299,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 [v101]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v104](array<ref<real<8>>,1> v103){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v105 = ( var(struct{tv_sec:=( var(0)), tv_usec:=( var(0))}));
                     gettimeofday([v105], CAST<array<ref<struct<tz_minuteswest:ref<int<4>>,tz_dsttime:ref<int<4>>>>,1>>(( *CAST<ref<'a>>(0))));
-                    if(bool.lt(( *( *v104).sec), 0)) (( *v104).sec := CAST<int<4>>(( *( *v105).tv_sec))) else { };
+                    if((( *( *v104).sec)<0)) (( *v104).sec := CAST<int<4>>(( *( *v105).tv_sec))) else { };
                     ((v103[0]) := (CAST<real<8>>((( *( *v105).tv_sec)-CAST<int<8>>(( *( *v104).sec))))+(1.0e-6*CAST<real<8>>(( *( *v105).tv_usec)))));
                 }([v102]);
                 return v102;
@@ -1328,7 +1328,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             (v120 := 0);
             {
                 for(decl ref<int<4>> v131 = ( var(1)) .. int.shl(1, 16) : 1) 
-                    if(bool.gt(( *(( *( *( *v118).key_array))[CAST<uint<4>>((( *v131)-1))])), ( *(( *( *( *v118).key_array))[CAST<uint<4>>(( *v131))])))) [v120]fun[ref<int<4>> v129](){
+                    if((( *(( *( *( *v118).key_array))[CAST<uint<4>>((( *v131)-1))]))>( *(( *( *( *v118).key_array))[CAST<uint<4>>(( *v131))])))) [v120]fun[ref<int<4>> v129](){
                         decl int<4> v128 = ( *v129);
                         (v129 := (( *v129)+CAST<int<4>>(1)));
                         return v128;
@@ -1336,7 +1336,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 ;
                 (v119 := int.shl(1, 16));
             };
-            if(bool.ne(( *v120), 0)) {
+            if(int.ne(( *v120), 0)) {
                 printf(CAST<array<ref<char>,1>>("Full_verify: number of keys out of sort: %d\n"), varlist.pack((( *v120))));
             } else [v118]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v133](){
                 decl ref<int<4>> v132 = ( *( *v133).passed_verification);
@@ -1344,12 +1344,12 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 return v132;
             }();
         }();
-        if(bool.ne(( *( *( *v1).passed_verification)), ((5*10)+1))) (( *v1).passed_verification := 0) else { };
+        if(int.ne(( *( *( *v1).passed_verification)), ((5*10)+1))) (( *v1).passed_verification := 0) else { };
         fun(array<ref<char>,1> v136, char v137, int<4> v138, int<4> v139, int<4> v140, int<4> v141, int<4> v142, real<8> v143, real<8> v144, array<ref<char>,1> v145, int<4> v146, array<ref<char>,1> v147, array<ref<char>,1> v148, array<ref<char>,1> v149, array<ref<char>,1> v150, array<ref<char>,1> v151, array<ref<char>,1> v152, array<ref<char>,1> v153, array<ref<char>,1> v154, array<ref<char>,1> v155){
             decl ref<array<ref<char>,1>> v156 = ( var(CAST<array<ref<char>,1>>("1000")));
             printf(CAST<array<ref<char>,1>>("\n\n %s Benchmark Completed\n"), varlist.pack((v136)));
             printf(CAST<array<ref<char>,1>>(" Class           =                        %c\n"), varlist.pack((CAST<int<4>>(v137))));
-            if(bool.land((v139==0), (v140==0))) printf(CAST<array<ref<char>,1>>(" Size            =             %12d\n"), varlist.pack((v138))) else printf(CAST<array<ref<char>,1>>(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v138, v139, v140)));
+            if(int.land((v139==0), (v140==0))) printf(CAST<array<ref<char>,1>>(" Size            =             %12d\n"), varlist.pack((v138))) else printf(CAST<array<ref<char>,1>>(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v138, v139, v140)));
             printf(CAST<array<ref<char>,1>>(" Iterations      =             %12d\n"), varlist.pack((v141)));
             printf(CAST<array<ref<char>,1>>(" Threads         =             %12d\n"), varlist.pack((v142)));
             printf(CAST<array<ref<char>,1>>(" Time in seconds =             %12.2f\n"), varlist.pack((v143)));

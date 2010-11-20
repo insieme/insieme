@@ -279,23 +279,23 @@ void rank(void* _capture, int iteration) {
 			{
 				for(int var_97 = 0; var_97 < 5; var_97 += 1) {
 					(k = (*((*((*var_44).partial_verify_vals))[((unsigned int)(var_97))])));
-					if(((0 <= k) && (k <= ((1 << 16)-1)))) {
+					if(((0<=k) && (k<=((1 << 16)-1)))) {
 						int var_66 = ((int)('S'));
 						switch(var_66) {
 						case 'S':
-							if((var_97 <= 2)) {
+							if((var_97<=2)) {
 								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+iteration))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
 						case 'W':
-							if((var_97 < 2)) {
+							if((var_97<2)) {
 								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+(iteration-2)))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
 						case 'A':
-							if((var_97 <= 2)) {
+							if((var_97<=2)) {
 								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+(iteration-1)))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
@@ -307,7 +307,7 @@ void rank(void* _capture, int iteration) {
 								};
 							}; break;
 						case 'C':
-							if((var_97 <= 2)) {
+							if((var_97<=2)) {
 								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+iteration))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
@@ -376,7 +376,7 @@ void wtime(void* _capture, double* t) {
 	{
 		struct timeval tv = ((struct timeval){00});
 		gettimeofday(<?>{v105}</?>, ((struct timezone*)((*((void*)(0))))));
-		if((((*var_104).sec) < 0)) (((*var_104).sec) = ((int)((tv.tv_sec)))) else {};
+		if((((*var_104).sec)<0)) (((*var_104).sec) = ((int)((tv.tv_sec)))) else {};
 		((t[0]) = (((double)(((tv.tv_sec)-((long)(((*var_104).sec))))))+(1.0e-6*((double)((tv.tv_usec))))));
 	}
 }
@@ -528,7 +528,7 @@ void full_verify(void* _capture) {
 		};
 		(j = 0);
 		{
-			for(int var_131 = 1; var_131 < (1 << 16); var_131 += 1) if(((*((*((*var_118).key_array))[((unsigned int)((var_131-1)))])) > (*((*((*var_118).key_array))[((unsigned int)(var_131))])))) call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_19){&__insieme_supp_20, 0, &j})))) else {};
+			for(int var_131 = 1; var_131 < (1 << 16); var_131 += 1) if(((*((*((*var_118).key_array))[((unsigned int)((var_131-1)))]))>(*((*((*var_118).key_array))[((unsigned int)(var_131))])))) call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_19){&__insieme_supp_20, 0, &j})))) else {};
 			(i = (1 << 16));
 		};
 		if((j != 0)) {
