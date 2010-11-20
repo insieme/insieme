@@ -82,8 +82,8 @@ int main(int argc, char** argv) {
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
-			LOG(INFO) << "Parsing input files: ";
-			std::copy(inputFiles.begin(), inputFiles.end(), std::ostream_iterator<std::string>( std::cout, ", " ) );
+			// LOG(INFO) << "Parsing input files: ";
+			// std::copy(inputFiles.begin(), inputFiles.end(), std::ostream_iterator<std::string>( std::cout, ", " ) );
 			fe::Program p(manager);
 			insieme::utils::Timer clangTimer("Frontend.load [clang]");
 			p.addTranslationUnits(inputFiles);

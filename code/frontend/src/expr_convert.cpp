@@ -501,7 +501,6 @@ public:
 
 		// create Pair type
 		core::TypeList&& argsTy = toVector( exprTy, exprTy );
-		std::string&& opType = getOperationType(convFact.mgr, exprTy);
 
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
@@ -534,6 +533,7 @@ public:
 		}
 
 		if( !op.empty() ) {
+			std::string&& opType = getOperationType(convFact.mgr, exprTy);
 			// The operator is a compound operator, we substitute the RHS expression with the expanded one
 			// core::RefTypePtr&& lhsTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType());
 			// assert( lhsTy && "LHS operand must of type ref<a'>." );
@@ -642,8 +642,10 @@ public:
 			argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
 		}
 
-		if(!isAssignment)
+		if(!isAssignment) {
+			std::string&& opType = getOperationType(convFact.mgr, exprTy);
 			opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
+		}
 
 		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 

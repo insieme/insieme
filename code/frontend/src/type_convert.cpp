@@ -97,39 +97,40 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitBuiltinType(BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
-
+		const core::lang::BasicGenerator& gen = convFact.mgr.basic;
+		
 		switch(buldInTy->getKind()) {
-		case BuiltinType::Void:			return convFact.mgr.basic.getUnit();
-		case BuiltinType::Bool:			return convFact.mgr.basic.getBool();
+		case BuiltinType::Void:			return gen.getUnit();
+		case BuiltinType::Bool:			return gen.getBool();
 
 		// char types
 		case BuiltinType::Char_U:
-		case BuiltinType::UChar:		return convFact.mgr.basic.getUChar();
+		case BuiltinType::UChar:		return gen.getUChar();
 		case BuiltinType::Char16:
 		case BuiltinType::Char32:
 		case BuiltinType::Char_S:
-		case BuiltinType::SChar:		return convFact.mgr.basic.getChar();
-		case BuiltinType::WChar:		return convFact.mgr.basic.getWChar();
+		case BuiltinType::SChar:		return gen.getChar();
+		case BuiltinType::WChar:		return gen.getWChar();
 
 		// integer types
-		case BuiltinType::UShort:		return convFact.mgr.basic.getUInt2();
-		case BuiltinType::Short:		return convFact.mgr.basic.getInt2();
-		case BuiltinType::UInt:			return convFact.mgr.basic.getUInt4();
-		case BuiltinType::Int:			return convFact.mgr.basic.getInt4();
-		case BuiltinType::UInt128:		return convFact.mgr.basic.getUInt16();
-		case BuiltinType::Int128:		return convFact.mgr.basic.getInt16();
-		case BuiltinType::ULong:		return convFact.mgr.basic.getUInt8();
-		case BuiltinType::ULongLong:	return convFact.mgr.basic.getUInt8();
-		case BuiltinType::Long:			return convFact.mgr.basic.getInt8();
-		case BuiltinType::LongLong:		return convFact.mgr.basic.getInt8();
+		case BuiltinType::UShort:		return gen.getUInt2();
+		case BuiltinType::Short:		return gen.getInt2();
+		case BuiltinType::UInt:			return gen.getUInt4();
+		case BuiltinType::Int:			return gen.getInt4();
+		case BuiltinType::UInt128:		return gen.getUInt16();
+		case BuiltinType::Int128:		return gen.getInt16();
+		case BuiltinType::ULong:		return gen.getUInt8();
+		case BuiltinType::ULongLong:	return gen.getUInt8();
+		case BuiltinType::Long:			return gen.getInt8();
+		case BuiltinType::LongLong:		return gen.getInt8();
 
 		// real types
-		case BuiltinType::Float:		return convFact.mgr.basic.getFloat();
-		case BuiltinType::Double:		return convFact.mgr.basic.getDouble();
+		case BuiltinType::Float:		return gen.getFloat();
+		case BuiltinType::Double:		return gen.getDouble();
 		case BuiltinType::LongDouble:	// unsopported FIXME
 
 		// not supported types
-		case BuiltinType::NullPtr:
+		case BuiltinType::NullPtr:		
 		case BuiltinType::Overload:
 		case BuiltinType::Dependent:
 		case BuiltinType::UndeducedAuto:
@@ -167,10 +168,12 @@ public:
 		assert(elemTy && "Conversion of array element type failed.");
 
 		// we need to check if the element type for this not a vector (or array) type
-		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
+				core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
 			elemTy = convFact.builder.refType(elemTy);
 		}
-		core::TypePtr&& retTy = convFact.builder.vectorType( elemTy, core::IntTypeParam::getConcreteIntParam(arrSize) );
+		core::TypePtr&& retTy = convFact.builder.vectorType( elemTy, 
+			core::IntTypeParam::getConcreteIntParam(arrSize) );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -194,7 +197,8 @@ public:
 		assert(elemTy && "Conversion of array element type failed.");
 
 		// we need to check if the element type for this not a vector (or array) type
-		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
+				core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
 			elemTy = convFact.builder.refType(elemTy);
 		}
 
@@ -227,7 +231,8 @@ public:
 		assert(elemTy && "Conversion of array element type failed.");
 
 		// we need to check if the element type for this not a vector (or array) type
-		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
+				core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
 			elemTy = convFact.builder.refType(elemTy);
 		}
 
@@ -450,7 +455,7 @@ public:
 					RecordDecl::field_iterator::value_type curr = *it;
 					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
 					// if the type is not const we have to add a ref because the value could be accessed and changed
-					if(!curr->getType().isConstQualified())
+					if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 						fieldType = convFact.builder.refType(fieldType);
 
 					structElements.push_back( core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), fieldType ) );
