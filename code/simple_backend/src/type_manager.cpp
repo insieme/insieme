@@ -37,7 +37,6 @@
 #include "insieme/simple_backend/type_manager.h"
 
 #include "insieme/core/types.h"
-#include "insieme/core/lang_basic.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -47,7 +46,6 @@ namespace simple_backend {
 
 
 using namespace insieme::core;
-using namespace insieme::core::lang;
 
 TypeManager::Entry toEntry(string name) {
 	return TypeManager::Entry(name, name, CodePtr());
@@ -150,39 +148,46 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 }
 
 TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
+	auto& basic = ptr->getNodeManager().basic;
 
 	// check some primitive types
-	if(isUnitType(*ptr)) {
+	if(basic.isUnit(ptr)) {
 		return toEntry("void");
 	}
-	if(isIntegerType(*ptr)) {
-		string qualifier = isUIntType(*ptr) ? "unsigned " : "";
-		switch(getNumBytes(*ptr)) {
+	if(basic.isInt(ptr)) {
+		string qualifier = basic.isUnsignedInt(ptr) ? "unsigned " : "";
+		auto intParm = ptr->getIntTypeParameter().front();
+		if(intParm.isConcrete()) switch(intParm.getValue()) {
 			case 1: return toEntry(qualifier + "char");
 			case 2: return toEntry(qualifier + "short");
 			case 4: return toEntry(qualifier + "int");
 			case 8: return toEntry(qualifier + "long"); // long long ?
 			default: return toEntry(ptr->getName());
 		}
+		// TODO Warn?
+		return toEntry(ptr->getName());
 	}
-	if(isBoolType(*ptr)) {
+	if(basic.isBool(ptr)) {
 		return toEntry("bool");
 	}
-	if(isRealType(*ptr)) {
-		switch(getNumBytes(*ptr)) {
+	if(basic.isReal(ptr)) {
+		auto intParm = ptr->getIntTypeParameter().front();
+		if(intParm.isConcrete()) switch(intParm.getValue()) {
 			case 4: return toEntry("float");
 			case 8: return toEntry("double");
 			case 16: return toEntry("long double");
 			default: return toEntry(ptr->getName());
 		}
+		// TODO Warn?
+		return toEntry(ptr->getName());
 	}
-	if(*ptr == TYPE_STRING_VAL) {
+	if(basic.isString(ptr)) {
 		return toEntry("string");
 	}
-	if(*ptr == TYPE_CHAR_VAL) {
+	if(basic.isChar(ptr)) {
 		return toEntry("char");
 	}
-	if(*ptr == TYPE_VAR_LIST_VAL) {
+	if(basic.isVarList(ptr)) {
 		return toEntry("...");
 	}
 
@@ -280,9 +285,10 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 
 
 TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
+	auto& basic = ptr->getNodeManager().basic;
 
 	// special handling for void* type
-	if (*ptr == TYPE_REF_ALPHA_VAL) {
+	if(basic.isRefAlpha(ptr)) {
 		return toEntry("void*");
 	}
 
