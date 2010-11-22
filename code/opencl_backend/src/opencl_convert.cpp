@@ -201,7 +201,7 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 	auto typePtr = ptr->getType();
 	const string& val = ptr->getValue();
-	if(*typePtr == lang::TYPE_STRING_VAL) {
+	if (ptr->getNodeManager().basic.isString(typePtr)) {
 		// TODO change once the decision is made how string literals should be represented int the AST
 		if(val.empty() || val[0] != '"' || val[val.length()-1] != '"') {
 			cStr << "\"" << val << "\"";
@@ -222,7 +222,7 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 void ConvertVisitor::visitReturnStmt( const ReturnStmtPtr& ptr )
 {
 	cStr << "return ";
-	if(*ptr->getReturnExpr()->getType() != lang::TYPE_UNIT_VAL) {
+	if (ptr->getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
 		visit(ptr->getReturnExpr());
 	}
 	cStr << ";";
@@ -260,12 +260,15 @@ CodePtr TypeManager::getTypeDefinition(const core::TypePtr type) {
 //TODO OCL: vector<4> etc pp
 string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 	firstRef = true;
-	if(lang::isUnitType(*ptr)) {
+	const core::lang::BasicGenerator& basic = ptr->getNodeManager().basic;
+
+	if(basic.isUnit(ptr)) {
 		return "void";
 	} else
-	if(lang::isIntegerType(*ptr)) {
-		string qualifier = lang::isUIntType(*ptr) ? "unsigned " : "";
-		switch(lang::getNumBytes(*ptr)) {
+	if(basic.isInt(ptr)) {
+		string qualifier = basic.isUnsignedInt(ptr) ? "unsigned " : "";
+		auto intParm = ptr->getIntTypeParameter().front();
+		if(intParm.isConcrete()) switch(intParm.getValue()) {
 			case 1: return qualifier + "char";
 			case 2: return qualifier + "short";
 			case 4: return qualifier + "int";
@@ -273,23 +276,24 @@ string SimpleTypeConverter::visitGenericType(const GenericTypePtr& ptr) {
 			default: return ptr->getName();
 		}
 	} else
-	if(lang::isBoolType(*ptr)) {
+	if(basic.isBool(ptr)) {
 		return "bool";
 	} else
-	if(lang::isRealType(*ptr)) {
-		switch(lang::getNumBytes(*ptr)) {
+	if(basic.isReal(ptr)) {
+		auto intParm = ptr->getIntTypeParameter().front();
+		if(intParm.isConcrete()) switch(intParm.getValue()) {
 			case 4: return "float";
 			case 8: return "double";
 			default: return ptr->getName();
 		}
 	} else
-	if(*ptr == lang::TYPE_STRING_VAL) {
+	if(basic.isString(ptr)) {
 		return "string";
-	} else
-	if(*ptr == lang::TYPE_CHAR_VAL) {
+	}
+	if(basic.isChar(ptr)) {
 		return "char";
-	} else
-	if(*ptr == lang::TYPE_VAR_LIST_VAL) {
+	}
+	if(basic.isVarList(ptr)) {
 		return "...";
 	}
 	//assert(0 && "Unhandled generic type.");

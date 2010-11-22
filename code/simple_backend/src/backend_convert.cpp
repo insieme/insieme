@@ -40,6 +40,7 @@
 
 #include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
+#include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -309,7 +310,16 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var);
 
 	// check whether there is an initialization
-	if (cc.basic.isUndefined(ptr->getInitialization())) {
+	const ExpressionPtr& init = ptr->getInitialization();
+	if (cc.basic.isUndefined(init)) {
+		return;
+	}
+
+	// test whether it is a variable initialization using an undefined value
+	ExpressionPtr varInit = CallExpr::get(cc.getNodeManager(),cc.basic.getRefAlpha(),
+			cc.basic.getRefVar(), toVector<ExpressionPtr>(cc.basic.getUndefined()));
+
+	if (*init == *varInit) {
 		return;
 	}
 
@@ -328,6 +338,19 @@ void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
 			cStr << "\"" << val << "\"";
 		} else {
 			cStr << val;
+		}
+	} else if (cc.basic.isChar(typePtr) || cc.basic.isWChar(typePtr)) {
+		if (val.size()!=1) {
+			cStr << "'?'";
+		} else {
+			// TODO: find some escaping routines
+			cStr << "'";
+			switch(val[0]) {
+			case '\'': cStr << "\\'"; break;
+			default:
+				cStr << val;
+			}
+			 cStr << "'";
 		}
 	} else {
 		cStr << val;
@@ -419,6 +442,22 @@ void ConvertVisitor::visitUnionExpr(const UnionExprPtr& ptr) {
 	cStr << "})";
 }
 
+void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
+
+	// handle single-element initializations
+	if (ptr->getExpressions().size() == 1) {
+		this->visit(ptr->getExpressions()[0]);
+	} else {
+		assert(false && "Not implemented!");
+	}
+
+//	cStr << "&{";
+//	cStr << join(", ", ptr->getExpressions(), [&, this](std::ostream&, const ExpressionPtr& cur) {
+//		this->visit(cur);
+//	});
+//	cStr << "}";
+}
+
 
 // -------------------------------- Variable Manager -----------------------------------------
 
@@ -492,6 +531,21 @@ namespace detail {
 
 	}
 
+	ExpressionPtr evalLazy(const NodePtr& lazy) {
+
+		NodeManager& manager = lazy->getNodeManager();
+
+		ExpressionPtr exprPtr = dynamic_pointer_cast<const Expression>(lazy);
+		assert(exprPtr && "Lazy is not an expression!");
+
+		FunctionTypePtr funType = dynamic_pointer_cast<const FunctionType>(exprPtr->getType());
+		assert(funType && "Illegal lazy type!");
+
+		// form call expression
+		CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
+		return core::transform::tryInline(manager, call);
+	}
+
 
 	FormatTable initFormatTable(const lang::BasicGenerator& basic) {
 
@@ -562,9 +616,19 @@ namespace detail {
 		ADD_FORMATTER(basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getIfThenElse(), { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT("))"); });
+		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
+		ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{}"); });
+		ADD_FORMATTER(basic.getVectorInitUndefined(), { OUT("{}"); });
 
-		ADD_FORMATTER(basic.getVectorInitUndefined(), { });
+
+		ADD_FORMATTER(basic.getIfThenElse(), {
+				OUT("(("); VISIT_ARG(0); OUT(")?(");
+				visitor.visit(evalLazy(ARG(1)));
+				OUT("):(");
+				visitor.visit(evalLazy(ARG(2)));
+				OUT("))");
+		});
+
 
 		#undef ADD_FORMATTER
 		#undef OUT

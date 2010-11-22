@@ -53,8 +53,8 @@ int main(int argc, char** argv) {
 		int var_9 = argc;
 		{
 			int a = 0;
-			f(<?>{v3}</?>);
-			f(<?>{v9}</?>);
+			f(&a);
+			f(&var_9);
 			printf(((char*)("%d\n")), var_9);(var_9 = a);
 			printf(((char*)("%d\n")), var_9);
 		};

@@ -11,16 +11,13 @@ struct Person {
     unsigned int age;
 };
 
-// start code fragment :: Prototype for external function: vector.initUniform //
-<?>'elem</?>[a] vector.initUniform(<?>'elem</?>);
-
 // start code fragment :: Prototype for external function: strcpy //
 char* strcpy(char*, char*);
 
 // start code fragment :: Definition of getPerson //
 struct Person getPerson() {
 	{
-		struct Person res = ((struct Person){vector.initUniform('), 0});
+		struct Person res;
 		strcpy((res.name), ((char*)("John Doe")));
 		((res.age) = ((unsigned int)(101)));
 	}
