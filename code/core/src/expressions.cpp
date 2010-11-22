@@ -401,11 +401,15 @@ const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, unsigned 
 JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
 	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
-
 	// TODO: use ordinary type checks for this section ...
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
     assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
-    assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be void.");
+
+    if(CaptureInitExprPtr cie = dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)){
+        //FIXME check return type also if default type is a capture init expression
+    } else {
+        assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be unit.");
+    }
     TypeList guardParams = TypeList(2, type->getNodeManager().basic.getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
