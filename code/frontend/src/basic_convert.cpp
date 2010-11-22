@@ -212,7 +212,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );
-	if(!varTy.isConstQualified() && !isa<const clang::ParmVarDecl>(varDecl)) {
+	if( !(varTy.isConstQualified() || isa<const clang::ParmVarDecl>(varDecl) || dynamic_pointer_cast<const core::VectorType>(type)) ) {
 		// add a ref in the case of variable which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
@@ -354,23 +354,20 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 
+		// lookup for the variable in the map
+		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
+
 		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
 		// it is not declared as const, successive dataflow analysis could be used to restrict the access
 		// to this variable
-		core::TypePtr&& type = convertType( clangType.getTypePtr() );
-		if(!clangType.isConstQualified() && !isa<clang::ParmVarDecl>(definition))
-			type = builder.refType( type );
 
 		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), type);
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType());
 
 		if(definition->hasGlobalStorage()) {
 			// once we encounter static variables we do remove the declaration
 			return core::DeclarationStmtPtr();
 		}
-
-		// lookup for the variable in the map
-		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 		assert(var);
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
