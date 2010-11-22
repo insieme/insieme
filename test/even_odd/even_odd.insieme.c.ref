@@ -45,8 +45,8 @@ int call___insieme_funType_type_3(struct __insieme_funType_type_3* lambda,unsign
 struct __insieme_funType_type_2 { 
     int(*fun)(void*);
     const size_t size;
-    struct __insieme_funType_type_3* p0;
-    unsigned int p1;
+    struct __insieme_funType_type_3* p0; // ((uint<4>)->int<4>)
+    unsigned int p1; // uint<4>
 };
 
 // start code fragment :: Definition of __insieme_supp_4 //
