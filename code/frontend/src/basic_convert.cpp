@@ -323,7 +323,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 }
 
 core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const {
-	if(!expr)
+	if(!expr && (core::dynamic_pointer_cast<const core::StructType>(type) ||
+				 core::dynamic_pointer_cast<const core::UnionType>(type) ||
+				 core::dynamic_pointer_cast<const core::ArrayType>(type) ||
+				 core::dynamic_pointer_cast<const core::VectorType>(type) )) {
+		return mgr.basic.getUndefined();
+	} else if (!expr)
 		return defaultInitVal(type);
 
 	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
@@ -354,21 +359,18 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 
-		// lookup for the variable in the map
-		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
-
-		// we cannot analyze if the variable will be modified or not, so we make it of type ref<a'> if
-		// it is not declared as const, successive dataflow analysis could be used to restrict the access
-		// to this variable
-
-		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType());
-
 		if(definition->hasGlobalStorage()) {
 			// once we encounter static variables we do remove the declaration
 			return core::DeclarationStmtPtr();
 		}
+
+		// lookup for the variable in the map
+		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 		assert(var);
+
+		// initialization value
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType());
+
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
 		// this variable is extern

@@ -208,7 +208,7 @@ struct __insieme_funType_type_7 {
     const size_t size;
     struct __insieme_globals* p0;
     int* p1;
-    int(* p2)[2048];
+    int p2[2048];
 };
 
 // start code fragment :: Definition of __insieme_supp_8 //
@@ -216,11 +216,11 @@ int __insieme_supp_8(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
 	struct __insieme_globals* var_59 = ((struct __insieme_funType_type_7*)_capture)->p0;
 	int* var_60 = ((struct __insieme_funType_type_7*)_capture)->p1;
-	int[2048]* var_61 = ((struct __insieme_funType_type_7*)_capture)->p2;
+	int*[2048] var_61 = ((struct __insieme_funType_type_7*)_capture)->p2;
 	// --------- Captured Stuff -  End  -------------
 	{
-		int var_58 = (*((*var_61)[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))]));
-		((*((*var_61)[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))])) = ((*((*var_61)[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))]))+((int)(1))));
+		int var_58 = (*(var_61[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))]));
+		((*(var_61[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))])) = ((*(var_61[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))]))+((int)(1))));
 		return var_58;;
 	}
 }
@@ -261,7 +261,7 @@ void rank(void* _capture, int iteration) {
 		{
 			for(int var_63 = 0; var_63 < (1 << 16); var_63 += 1) {
 				((*((*((*var_44).key_buff2))[((unsigned int)(var_63))])) = (*((*((*var_44).key_array))[((unsigned int)(var_63))])));
-				call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&__insieme_supp_8, 0, &var_44, &var_63, &prv_buff1}))));
+				call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&__insieme_supp_8, 0, &var_44, &var_63, prv_buff1}))));
 			};
 			(i = (1 << 16));
 		};

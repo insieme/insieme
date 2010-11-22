@@ -276,7 +276,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             decl ref<int<4>> v51 =  var(0);
             decl ref<int<4>> v52 =  var(0);
             decl ref<int<4>> v53 =  var(0);
-            decl ref<vector<ref<int<4>>,2048>> v54 =  var(vector.initUniform( var(0)));
+            decl vector<ref<int<4>>,2048> v54 = undefined;
             {
                 v44.key_array[v43] := v43;
                 v44.key_array[v43+10] := int.shl(1, 11)-v43;
@@ -302,7 +302,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             {
                 for(decl ref<int<4>> v63 =  var(0) .. int.shl(1, 16) : 1) {
                     v44.key_buff2[v63] := v44.key_array[v63];
-                    [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, ref<vector<ref<int<4>>,2048>> v61](){
+                    [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, vector<ref<int<4>>,2048> v61](){
                         decl int<4> v58 = v61[v59.key_buff2[v60]];
                         v61[v59.key_buff2[v60]] := v61[v59.key_buff2[v60]]+1;
                         return v58;
@@ -452,7 +452,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     decl ref<int<4>> v51 =  var(0);
                     decl ref<int<4>> v52 =  var(0);
                     decl ref<int<4>> v53 =  var(0);
-                    decl ref<vector<ref<int<4>>,2048>> v54 =  var(vector.initUniform( var(0)));
+                    decl vector<ref<int<4>>,2048> v54 = undefined;
                     {
                         v44.key_array[v43] := v43;
                         v44.key_array[v43+10] := int.shl(1, 11)-v43;
@@ -478,7 +478,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     {
                         for(decl ref<int<4>> v63 =  var(0) .. int.shl(1, 16) : 1) {
                             v44.key_buff2[v63] := v44.key_array[v63];
-                            [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, ref<vector<ref<int<4>>,2048>> v61](){
+                            [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, vector<ref<int<4>>,2048> v61](){
                                 decl int<4> v58 = v61[v59.key_buff2[v60]];
                                 v61[v59.key_buff2[v60]] := v61[v59.key_buff2[v60]]+1;
                                 return v58;
@@ -963,7 +963,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             decl ref<int<4>> v51 = ( var(0));
             decl ref<int<4>> v52 = ( var(0));
             decl ref<int<4>> v53 = ( var(0));
-            decl ref<vector<ref<int<4>>,2048>> v54 = ( var(vector.initUniform(( var(0)))));
+            decl vector<ref<int<4>>,2048> v54 = undefined;
             {
                 ((( *( *( *v44).key_array))[CAST<uint<4>>(v43)]) := v43);
                 ((( *( *( *v44).key_array))[CAST<uint<4>>((v43+10))]) := (int.shl(1, 11)-v43));
@@ -982,16 +982,16 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
             {
                 for(decl ref<int<4>> v57 = ( var(0)) .. int.shl(1, 11) : 1) 
-                    ((( *v54)[CAST<uint<4>>(( *v57))]) := 0)
+                    ((v54[CAST<uint<4>>(( *v57))]) := 0)
                 ;
                 (v45 := int.shl(1, 11));
             };
             {
                 for(decl ref<int<4>> v63 = ( var(0)) .. int.shl(1, 16) : 1) {
                     ((( *( *( *v44).key_buff2))[CAST<uint<4>>(( *v63))]) := ( *(( *( *( *v44).key_array))[CAST<uint<4>>(( *v63))])));
-                    [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, ref<vector<ref<int<4>>,2048>> v61](){
-                        decl int<4> v58 = ( *(( *v61)[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]));
-                        ((( *v61)[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]) := (( *(( *v61)[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]))+CAST<int<4>>(1)));
+                    [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, vector<ref<int<4>>,2048> v61](){
+                        decl int<4> v58 = ( *(v61[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]));
+                        ((v61[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]) := (( *(v61[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]))+CAST<int<4>>(1)));
                         return v58;
                     }();
                 };
@@ -999,14 +999,14 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
             {
                 for(decl ref<int<4>> v64 = ( var(0)) .. (int.shl(1, 11)-1) : 1) 
-                    ((( *v54)[CAST<uint<4>>((( *v64)+1))]) := (( *(( *v54)[CAST<uint<4>>((( *v64)+1))]))+( *(( *v54)[CAST<uint<4>>(( *v64))]))))
+                    ((v54[CAST<uint<4>>((( *v64)+1))]) := (( *(v54[CAST<uint<4>>((( *v64)+1))]))+( *(v54[CAST<uint<4>>(( *v64))]))))
                 ;
                 (v45 := (int.shl(1, 11)-1));
             };
             {
                 {
                     for(decl ref<int<4>> v65 = ( var(0)) .. int.shl(1, 11) : 1) 
-                        ((( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]) := (( *(( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]))+( *(( *v54)[CAST<uint<4>>(( *v65))]))))
+                        ((( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]) := (( *(( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]))+( *(v54[CAST<uint<4>>(( *v65))]))))
                     ;
                     (v45 := int.shl(1, 11));
                 };
@@ -1139,7 +1139,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     decl ref<int<4>> v51 = ( var(0));
                     decl ref<int<4>> v52 = ( var(0));
                     decl ref<int<4>> v53 = ( var(0));
-                    decl ref<vector<ref<int<4>>,2048>> v54 = ( var(vector.initUniform(( var(0)))));
+                    decl vector<ref<int<4>>,2048> v54 = undefined;
                     {
                         ((( *( *( *v44).key_array))[CAST<uint<4>>(v43)]) := v43);
                         ((( *( *( *v44).key_array))[CAST<uint<4>>((v43+10))]) := (int.shl(1, 11)-v43));
@@ -1158,16 +1158,16 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     };
                     {
                         for(decl ref<int<4>> v57 = ( var(0)) .. int.shl(1, 11) : 1) 
-                            ((( *v54)[CAST<uint<4>>(( *v57))]) := 0)
+                            ((v54[CAST<uint<4>>(( *v57))]) := 0)
                         ;
                         (v45 := int.shl(1, 11));
                     };
                     {
                         for(decl ref<int<4>> v63 = ( var(0)) .. int.shl(1, 16) : 1) {
                             ((( *( *( *v44).key_buff2))[CAST<uint<4>>(( *v63))]) := ( *(( *( *( *v44).key_array))[CAST<uint<4>>(( *v63))])));
-                            [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, ref<vector<ref<int<4>>,2048>> v61](){
-                                decl int<4> v58 = ( *(( *v61)[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]));
-                                ((( *v61)[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]) := (( *(( *v61)[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]))+CAST<int<4>>(1)));
+                            [v44, v63, v54]fun[ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>> v59, ref<int<4>> v60, vector<ref<int<4>>,2048> v61](){
+                                decl int<4> v58 = ( *(v61[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]));
+                                ((v61[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]) := (( *(v61[CAST<uint<4>>(( *(( *( *( *v59).key_buff2))[CAST<uint<4>>(( *v60))])))]))+CAST<int<4>>(1)));
                                 return v58;
                             }();
                         };
@@ -1175,14 +1175,14 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     };
                     {
                         for(decl ref<int<4>> v64 = ( var(0)) .. (int.shl(1, 11)-1) : 1) 
-                            ((( *v54)[CAST<uint<4>>((( *v64)+1))]) := (( *(( *v54)[CAST<uint<4>>((( *v64)+1))]))+( *(( *v54)[CAST<uint<4>>(( *v64))]))))
+                            ((v54[CAST<uint<4>>((( *v64)+1))]) := (( *(v54[CAST<uint<4>>((( *v64)+1))]))+( *(v54[CAST<uint<4>>(( *v64))]))))
                         ;
                         (v45 := (int.shl(1, 11)-1));
                     };
                     {
                         {
                             for(decl ref<int<4>> v65 = ( var(0)) .. int.shl(1, 11) : 1) 
-                                ((( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]) := (( *(( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]))+( *(( *v54)[CAST<uint<4>>(( *v65))]))))
+                                ((( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]) := (( *(( *( *( *v44).key_buff1))[CAST<uint<4>>(( *v65))]))+( *(v54[CAST<uint<4>>(( *v65))]))))
                             ;
                             (v45 := int.shl(1, 11));
                         };
