@@ -243,7 +243,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	if (!captures.empty()) {
 		int i = 0;
 		for_each(captures, [&, this](const TypePtr& cur) {
-				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++)) << ";\n";
+				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << "; // " << toString(*cur) << "\n";
 		});
 	}
 
@@ -345,7 +345,7 @@ TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTyp
 	out << "};\n";
 
 	string typeName = prefix + " " + name;
-	return TypeManager::Entry(typeName, typeName + "*", cptr);
+	return TypeManager::Entry(typeName, typeName, cptr);
 }
 
 TypeManager::Entry TypeManager::resolveUnionType(const UnionTypePtr& ptr) {

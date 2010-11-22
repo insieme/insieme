@@ -108,7 +108,36 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	return res;
 }
 
+OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& address) {
 
+	NodeManager& manager = address->getNodeManager();
+	OptionalMessageList res;
+
+	// recreate type
+	auto extractType = [](const VariablePtr& var) {
+		return var->getType();
+	};
+
+	TypeList capture;
+	transform(address->getCaptureList(), back_inserter(capture), extractType);
+	TypeList param;
+	transform(address->getParameterList(), back_inserter(param), extractType);
+
+	FunctionTypePtr isType = address->getLambda()->getType();
+	TypePtr result = address->getLambda()->getType()->getReturnType();
+
+	FunctionTypePtr funType = FunctionType::get(manager, capture, param, result);
+	if (*funType != *isType) {
+		add(res, Message(address,
+						EC_TYPE_INVALID_FUNCTION_TYPE,
+						format("Invalid type of lambda expression - expected: %s, actual: %s",
+								toString(*funType).c_str(),
+								toString(*isType).c_str()),
+						Message::ERROR));
+		return res;
+	}
+	return res;
+}
 
 OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 
