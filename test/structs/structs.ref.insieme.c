@@ -5,8 +5,8 @@
 #define false 0
 // --- Entry Point ---
 
-// start code fragment :: type_declaration_pStruct //
-struct pStruct { 
+// start code fragment :: type_declaration_Person //
+struct Person { 
     char name[30];
     unsigned int age;
 };
@@ -18,9 +18,9 @@ struct pStruct {
 char* strcpy(char*, char*);
 
 // start code fragment :: Definition of getPerson //
-struct pStruct* getPerson() {
+struct Person* getPerson() {
 	{
-		struct pStruct res = ((struct pStruct){vector.initUniform(')0});
+		struct Person res = ((struct Person){vector.initUniform(')0});
 		strcpy((res.name), ((char*)("John Doe")));
 		((res.age) = ((unsigned int)(101)));
 	}
@@ -28,7 +28,7 @@ struct pStruct* getPerson() {
 
 
 // start code fragment :: Definition of isTeenager //
-int isTeenager(struct pStruct* person) {
+int isTeenager(struct Person* person) {
 	{
 		return (((person.age)>=((unsigned int)(10))) && ((person.age)<((unsigned int)(20))));;
 	}
@@ -38,7 +38,7 @@ int isTeenager(struct pStruct* person) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct pStruct mrX = getPerson();
+		struct Person mrX = getPerson();
 		return isTeenager(mrX);;
 	}
 }
