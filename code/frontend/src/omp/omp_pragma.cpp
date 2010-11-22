@@ -54,6 +54,7 @@ using namespace std;
 
 namespace {
 
+using namespace insieme;
 using namespace insieme::frontend;
 using namespace insieme::frontend::omp;
 
@@ -63,6 +64,58 @@ struct OmpPragma ## TYPE: public OmpPragma { \
 		   const std::string& name, const insieme::frontend::MatchMap& mmap):	\
 		OmpPragma(startLoc, endLoc, name, mmap) { }	\
 	virtual AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const; 	\
+}
+
+/**
+ * Type traits used to determine the Marker type used to
+ * attach annotations to the current IR node
+ */
+template <class NodeTy>
+struct marker_type_trait;
+
+template <>
+struct marker_type_trait<core::Statement> {
+	// in the case the node is a statement a MarkerStmt has to be used
+	typedef core::MarkerStmt marker_type;
+};
+
+template <>
+struct marker_type_trait<core::Expression> {
+	// in the case the node is an expression a MarkerExpr has to be used
+	typedef core::MarkerExpr marker_type;
+};
+
+/**
+ * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches the resulting annotation
+ * to the IR node
+ */
+template <class NodeTy>
+core::AnnotatedPtr<const NodeTy> attachOmpAnnotation(const core::AnnotatedPtr<const NodeTy>& irNode,
+		const clang::Stmt* clangNode, conversion::ConversionFactory& fact)
+{
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
+	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+	omp::BaseAnnotation::AnnotationList anns;
+	std::for_each(iter.first, iter.second,
+		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
+			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) );
+			if(ompPragma) {
+				VLOG(1) << "@ Statement has an OpenMP pragma attached";
+				anns.push_back( ompPragma->toAnnotation(fact) );
+			}
+	});
+	// If we didn't find OMP annotations, return the node
+	if(anns.empty())
+		return irNode;
+
+	// otherwise create a marker node and attach the annotation to the marker
+	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
+	// create an expression marker
+	core::AnnotatedPtr<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
+	// attach the annotation to the marker node
+	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
+	return marker;
 }
 
 // Defines basic OpenMP pragma types which will be created by the pragma_matcher class
@@ -250,38 +303,26 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
 }
 
-/**
- * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches the resulting annotation
- * to the IR node
- */
-void attachOmpAnnotation(const core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
-	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
-	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
+	return ::attachOmpAnnotation(irNode, clangNode, fact);
+}
 
-	omp::BaseAnnotation::AnnotationList anns;
-	std::for_each(iter.first, iter.second,
-		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
-			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) );
-			if(ompPragma) {
-				VLOG(1) << "Statement has an OpenMP pragma attached";
-				anns.push_back( ompPragma->toAnnotation(fact) );
-			}
-	});
-	// If we find annotations, attach them to the pointer
-	if(!anns.empty())
-		irNode.addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
+core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
+	return ::attachOmpAnnotation(irNode, clangNode, fact);
 }
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
 	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
 
-//	DLOG(INFO) << "~~~PRAGMA~~~" << std::endl;
-//	for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
-//		DLOG(INFO) << "KEYWORD: " << i->first << ":" << std::endl;
-//		for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
-//			DLOG(INFO) << (*i2)->toStr() << ", ";
-//		DLOG(INFO) << std::endl;
-//	}
+	if(VLOG_IS_ON(2)) {
+		DVLOG(2) << "~~~PRAGMA~~~" << std::endl;
+		for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
+			DVLOG(2) << "KEYWORD: " << i->first << ":" << std::endl;
+			for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
+				DVLOG(2) << (*i2)->toStr() << ", ";
+			DVLOG(2) << std::endl;
+		}
+	}
 }
 
 } // End omp namespace

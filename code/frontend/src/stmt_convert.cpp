@@ -131,8 +131,8 @@ public:
 			core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
 			if(retStmt) {
 				// handle eventual OpenMP pragmas attached to the Clang node
-				frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-				return StmtWrapper(retStmt );
+				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
+				return StmtWrapper(annotatedNode );
 			}
 			return StmtWrapper();
 		}
@@ -144,8 +144,8 @@ public:
 				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 				if(retStmt) {
 					// handle eventual OpenMP pragmas attached to the Clang node
-					frontend::omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-					retList.push_back( retStmt );
+					core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
+					retList.push_back( annotatedNode );
 				}
 			}
 		return retList;
@@ -160,10 +160,10 @@ public:
 
 		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.convertExpr( retStmt->getRetValue() ) );
 		// handle eventual OpenMP pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(ret, retStmt, convFact);
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(ret, retStmt, convFact);
 
 		END_LOG_STMT_CONVERSION( ret );
-		return StmtWrapper( ret );
+		return StmtWrapper( annotatedNode );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,10 +208,10 @@ public:
 				core::StatementPtr&& whileStmt = builder.whileStmt( convFact.convertExpr( forStmt->getCond() ), builder.compoundStmt(whileBody) );
 
 				// handle eventual pragmas refering to the Clang node
-				frontend::omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
+				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
 
 				END_LOG_STMT_CONVERSION( whileStmt );
-				return StmtWrapper( whileStmt );
+				return StmtWrapper( annotatedNode );
 			}
 
 			StmtWrapper&& initExpr = Visit( initStmt );
@@ -319,8 +319,8 @@ public:
 			assert(irFor && "Created for statement is not valid");
 
 			// handle eventual pragmas attached to the Clang node
-			frontend::omp::attachOmpAnnotation(irFor, forStmt, convFact);
-			retStmt.push_back( irFor );
+			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irFor, forStmt, convFact);
+			retStmt.push_back( annotatedNode );
 
 			if(iteratorChanged) {
 				// in the case we replace the loop iterator with a temporary variable,
@@ -377,9 +377,8 @@ public:
 				);
 
 			// handle eventual pragmas attached to the Clang node
-			frontend::omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
-
-			retStmt.push_back( whileStmt );
+			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
+			retStmt.push_back( annotatedNode );
 		}
 		retStmt = tryAggregateStmts(builder, retStmt);
 
@@ -442,10 +441,10 @@ public:
 		core::StatementPtr&& irNode = builder.ifStmt(condExpr, thenBody, elseBody);
 
 		// handle eventual OpenMP pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(irNode, ifStmt, convFact);
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, ifStmt, convFact);
 
 		// adding the ifstmt to the list of returned stmts
-		retStmt.push_back( irNode );
+		retStmt.push_back( annotatedNode );
 
 		// try to aggregate statements into a CompoundStmt if more than 1 statement
 		// has been created from this IfStmt
@@ -503,10 +502,10 @@ public:
 		core::StatementPtr&& irNode = builder.whileStmt(condExpr, body);
 
 		// handle eventual OpenMP pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(irNode, whileStmt, convFact);
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, whileStmt, convFact);
 
 		// adding the WhileStmt to the list of returned stmts
-		retStmt.push_back( irNode );
+		retStmt.push_back( annotatedNode );
 		retStmt = tryAggregateStmts(builder, retStmt);
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
@@ -648,10 +647,10 @@ public:
 		core::StatementPtr&& irNode = builder.switchStmt(condExpr, cases, defStmt);
 
 		// handle eventual OpenMP pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(irNode, switchStmt, convFact);
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, switchStmt, convFact);
 
 		// Appends the switchstmt to the current list of stmt
-		retStmt.push_back( irNode );
+		retStmt.push_back( annotatedNode );
 		retStmt = tryAggregateStmts(builder, retStmt);
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
@@ -680,13 +679,13 @@ public:
 				std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 			}
 		);
-		core::StatementPtr retStmt = convFact.builder.compoundStmt(stmtList);
+		core::StatementPtr&& retStmt = convFact.builder.compoundStmt(stmtList);
 
 		// handle eventual OpenMP pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(retStmt, compStmt, convFact);
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, compStmt, convFact);
 
 		END_LOG_STMT_CONVERSION(retStmt);
-		return StmtWrapper( retStmt );
+		return StmtWrapper( annotatedNode );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -694,12 +693,12 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
 		//TODO: Visual Studio 2010 fix: && removed
-		core::StatementPtr retStmt = convFact.mgr.basic.getNoOp();
+		core::StatementPtr&& retStmt = convFact.mgr.basic.getNoOp();
 
 		// handle eventual OpenMP pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(retStmt, nullStmt, convFact);
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, nullStmt, convFact);
 
-		return StmtWrapper( retStmt );
+		return StmtWrapper( annotatedNode );
 	}
 
 	FORWARD_VISITOR_CALL(IntegerLiteral)

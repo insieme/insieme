@@ -282,7 +282,10 @@ public:
 	//							PARENTESIS EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitParenExpr(clang::ParenExpr* parExpr) {
-		return Visit( parExpr->getSubExpr() );
+		core::ExpressionPtr&& retExpr = Visit( parExpr->getSubExpr() );
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, parExpr, convFact);
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -366,8 +369,8 @@ public:
 				core::ExpressionPtr irNode =
 						convFact.builder.callExpr(	funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
 				// handle eventual pragmas attached to the Clang node
-				frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
-				return irNode;
+				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+				return annotatedNode;
 			}
 
 			// We find a definition, we lookup if this variable needs to access the globals, in that case the
@@ -404,8 +407,8 @@ public:
 							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
 					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
 					// handle eventual pragmas attached to the Clang node
-					frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
-					return irNode;
+					core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+					return annotatedNode;
 				}
 			}
 
@@ -420,8 +423,8 @@ public:
 
 			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
-			frontend::omp::attachOmpAnnotation(irNode, callExpr, convFact);
-			return irNode;
+			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+			return annotatedNode;
 		}
 		assert(false && "Call expression not referring a function");
 	}
@@ -473,9 +476,9 @@ public:
 
 		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(base, ident);
 		// handle eventual pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(retExpr, membExpr, convFact);
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, membExpr, convFact);
 
-		return retExpr;
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -650,10 +653,10 @@ public:
 		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
 
 		// handle eventual pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(retExpr, binOp, convFact);
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
 
 		END_LOG_EXPR_CONVERSION( retExpr );
-		return retExpr;
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -790,12 +793,12 @@ public:
 		}
 
 		// handle eventual pragmas attached to the Clang node
-		frontend::omp::attachOmpAnnotation(subExpr, unOp, convFact);
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(subExpr, unOp, convFact);
 
 		// add the operator name in order to help the convertion process in the backend
 		subExpr->addAnnotation( std::make_shared<c_info::COpAnnotation>( UnaryOperator::getOpcodeStr(unOp->getOpcode()) ) );
 
-		return subExpr;
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -824,8 +827,12 @@ public:
 				convFact.createCallExpr( builder.returnStmt(trueExpr),  retTy), // True
 				convFact.createCallExpr( builder.returnStmt(falseExpr),  retTy) // False
 		);
+
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, condOp, convFact);
+
 		END_LOG_EXPR_CONVERSION(retExpr);
-		return retExpr;
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -862,8 +869,10 @@ public:
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(convFact.mgr.basic.getUInt4(), idx) );
 
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, arraySubExpr, convFact);
 		END_LOG_EXPR_CONVERSION(retExpr);
-		return retExpr;
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -908,7 +917,10 @@ public:
 		START_LOG_EXPR_CONVERSION(declRef);
 		// check whether this is a reference to a variable
 		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
-			return convFact.lookUpVariable(varDecl);
+			core::ExpressionPtr&& retExpr = convFact.lookUpVariable(varDecl);
+			// handle eventual pragmas attached to the Clang node
+			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
+			return annotatedNode;
 		}
 		// todo: C++ check whether this is a reference to a class field, or method (function).
 		assert(false && "DeclRefExpr not supported!");

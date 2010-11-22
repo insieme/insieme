@@ -74,7 +74,9 @@ public:
  */
 void registerPragmaHandlers(clang::Preprocessor& pp);
 
-void attachOmpAnnotation(const insieme::core::NodePtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
+core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
+core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
+// todo type?
 
 } // End omp namespace
 } // End frontend namespace
