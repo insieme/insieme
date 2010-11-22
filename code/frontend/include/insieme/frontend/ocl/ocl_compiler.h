@@ -41,19 +41,17 @@
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/program.h"
 
-#include "insieme/core/lang_basic.h"
-
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
 namespace {
 // accesses array arr at index idx
-#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().basic.getUInt4(), core::lang::OP_SUBSCRIPT_SINGLE_PTR, \
+#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(), \
                                      toVector<core::ExpressionPtr>(arr, builder.castExpr(builder.getNodeManager().basic.getUInt4(), \
                                      builder.literal(toString(idx), builder.getNodeManager().basic.getUInt4() ))))
 
-// storea the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
+// store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
 #define CAPTURE(vec, var, list) { vec.push_back(var); \
                                   var = builder.variable((var)->getType()); \
                                   inits.push_back(var); }
@@ -67,7 +65,7 @@ enum OCL_SCOPE { OCL_GLOBAL, OCL_LOCAL };
 
 struct KernelData {
 public:
-    core::ASTBuilder builder;
+    core::ASTBuilder& builder;
     // loop bounds
     core::VariablePtr globalRange; bool globalRangeUsed;
     core::VariablePtr numGroups; bool numGroupsUsed;
@@ -80,19 +78,19 @@ public:
     core::VariablePtr localTg; bool localTgUsed;
 
     core::CallExprPtr vecAccess(core::VariablePtr vec, core::ExpressionPtr idx) {
-        return builder.callExpr(core::lang::TYPE_UINT_4_PTR, core::lang::OP_SUBSCRIPT_SINGLE_PTR, toVector<core::ExpressionPtr>(vec, idx) );
+        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(), toVector<core::ExpressionPtr>(vec, idx) );
     }
 
-    static core::VariablePtr get3DvecVar(core::ASTBuilder builder) {
-        return builder.variable(builder.vectorType(core::lang::TYPE_UINT_4_PTR, core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+    static core::VariablePtr get3DvecVar(core::ASTBuilder& builder) {
+        return builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
     }
-    static core::VariablePtr getThreadGroupVar(core::ASTBuilder builder) {
-        return builder.variable(core::lang::TYPE_THREAD_GROUP_PTR);
+    static core::VariablePtr getThreadGroupVar(core::ASTBuilder& builder) {
+        return builder.variable(builder.getNodeManager().basic.getThreadGroup());
     }
 
     //default constructor
-    KernelData(core::ASTBuilder astBuilder) :
-        globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
+    KernelData(core::ASTBuilder& astBuilder) :
+        builder(astBuilder), globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
         groupId(get3DvecVar(astBuilder)), localId(get3DvecVar(astBuilder)),
         groupTg(getThreadGroupVar(astBuilder)), localTg(getThreadGroupVar(astBuilder)){
         globalRangeUsed = false;
@@ -102,7 +100,6 @@ public:
         localIdUsed = false;
         groupTgUsed = false;
         localTgUsed = false;
-
     };
 
 /* unused at the moment
