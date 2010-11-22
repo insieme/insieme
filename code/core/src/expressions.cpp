@@ -50,7 +50,8 @@ enum {
 	HASHVAL_LITERAL = 100 /* offset from statements */,
 	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_CAPTURE_INIT,
 	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_LAMBDA_DEFINITION,
-	HASHVAL_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE, HASHVAL_MEMBER_ACCESS, HASHVAL_TUPLE_PROJECTION
+	HASHVAL_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE, HASHVAL_MEMBER_ACCESS, HASHVAL_TUPLE_PROJECTION,
+	HASHVAL_MARKER
 };
 
 // ------------------------------------- Expression ---------------------------------
@@ -1027,3 +1028,50 @@ std::ostream& TupleProjectionExpr::printTo(std::ostream& out) const {
 TupleProjectionExprPtr TupleProjectionExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index) {
 	return manager.get(TupleProjectionExpr(subExpression, index));
 }
+
+
+// ------------------------ The Marker Expression ------------------------
+
+namespace {
+
+	std::size_t hashMarkerExpr(const ExpressionPtr& subExpression, const unsigned id) {
+		std::size_t hash = HASHVAL_MARKER;
+		boost::hash_combine(hash, subExpression);
+		boost::hash_combine(hash, id);
+		return hash;
+	}
+
+}
+
+
+unsigned int MarkerExpr::counter = 0;
+
+MarkerExpr::MarkerExpr(const ExpressionPtr& subExpression, const unsigned id)
+	: Expression(NT_MarkerExpr, subExpression->getType(), hashMarkerExpr(subExpression, id)),
+	  subExpression(isolate(subExpression)), id(id) { };
+
+
+MarkerExpr* MarkerExpr::createCopyUsing(NodeMapping& mapper) const {
+	return new MarkerExpr(mapper.map(0, subExpression), id);
+}
+
+bool MarkerExpr::equalsExpr(const Expression& expr) const {
+	// static cast to marker (guaranteed by super implementation)
+	const MarkerExpr& rhs = static_cast<const MarkerExpr&>(expr);
+	return (rhs.id == id && *rhs.subExpression == *subExpression);
+}
+
+Node::OptionChildList MarkerExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(subExpression);
+	return res;
+}
+
+std::ostream& MarkerExpr::printTo(std::ostream& out) const {
+	return out << "<M id=" << id << ">" << subExpression << "</M>";
+}
+
+MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression) {
+	return manager.get(MarkerExpr(subExpression, ++counter));
+}
+

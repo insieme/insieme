@@ -228,6 +228,14 @@ AST_TERMINAL(LambdaDefinition, Node)
 
 AST_TERMINAL(RecTypeDefinition, Node)
 
+
+//
+// --- Marker ---
+//
+AST_TERMINAL(MarkerExpr, Expression)
+AST_TERMINAL(MarkerStmt, Statement)
+
+
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 
 // --- Cleaning up Macro definitions ---

@@ -335,6 +335,32 @@ TEST(ExpressionsTest, TupleProjectionExpr) {
 	basicExprTests(access2, typeB, toVector<NodePtr>(tuple));
 }
 
+
+TEST(ExpressionsTest, MarkerExpr) {
+	NodeManager manager;
+
+	TypePtr type = GenericType::get(manager, "A");
+	LiteralPtr literal = Literal::get(manager, type, "1");
+
+	MarkerExprPtr markerA = MarkerExpr::get(manager, literal);
+	MarkerExprPtr markerB = MarkerExpr::get(manager, literal);
+
+	EXPECT_NE(markerA, markerB);
+	EXPECT_NE(*markerA, *markerB);
+
+	EXPECT_EQ(type, markerA->getType());
+	EXPECT_EQ(markerA->getType(), markerB->getType());
+
+	EXPECT_EQ(literal, markerA->getSubExpression());
+	EXPECT_EQ(markerA->getSubExpression(), markerB->getSubExpression());
+
+	EXPECT_NE(markerA->getID(), markerB->getID());
+
+	// check hash codes, children and cloning
+	basicExprTests(markerA, type, toVector<NodePtr>(literal));
+	basicExprTests(markerB, type, toVector<NodePtr>(literal));
+}
+
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children) {
 

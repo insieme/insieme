@@ -758,6 +758,32 @@ public:
 	static TupleProjectionExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index);
 };
 
+
+class MarkerExpr : public Expression {
+
+	static unsigned int counter;
+
+	const ExpressionPtr subExpression;
+	const unsigned id;
+
+	MarkerExpr(const ExpressionPtr& subExpression, const unsigned id);
+	virtual MarkerExpr* createCopyUsing(NodeMapping& mapper) const;
+
+protected:
+
+	bool equalsExpr(const Expression& expr) const;
+	virtual OptionChildList getChildNodes() const;
+
+public:
+
+	virtual std::ostream& printTo(std::ostream& out) const;
+	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression);
+
+	const ExpressionPtr& getSubExpression() const { return subExpression; }
+	const unsigned int getID() const { return id; }
+};
+
+
 } // end namespace core
 } // end namespace insieme
 

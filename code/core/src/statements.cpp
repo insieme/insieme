@@ -46,7 +46,7 @@ namespace core {
 
 enum {
 	HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE, HASHVAL_DECLARATION, HASHVAL_RETURN,
-	HASHVAL_COMPOUND, HASHVAL_WHILE, HASHVAL_FOR, HASHVAL_IF, HASHVAL_SWITCH
+	HASHVAL_COMPOUND, HASHVAL_WHILE, HASHVAL_FOR, HASHVAL_IF, HASHVAL_SWITCH, HASHVAL_MARKER
 };
 
 
@@ -461,6 +461,52 @@ SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchE
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {
 	return manager.get(SwitchStmt(switchExpr, cases, defaultCase));
+}
+
+
+// ------------------------ The Marker Statement ------------------------
+
+namespace {
+
+	std::size_t hashMarkerStmt(const StatementPtr& subStatement, const unsigned id) {
+		std::size_t hash = HASHVAL_MARKER;
+		boost::hash_combine(hash, subStatement);
+		boost::hash_combine(hash, id);
+		return hash;
+	}
+
+}
+
+
+unsigned int MarkerStmt::counter = 0;
+
+MarkerStmt::MarkerStmt(const StatementPtr& subStatement, const unsigned id)
+	: Statement(NT_MarkerStmt, hashMarkerStmt(subStatement, id)),
+	  subStatement(isolate(subStatement)), id(id) { };
+
+
+MarkerStmt* MarkerStmt::createCopyUsing(NodeMapping& mapper) const {
+	return new MarkerStmt(mapper.map(0, subStatement), id);
+}
+
+bool MarkerStmt::equalsStmt(const Statement& expr) const {
+	// static cast to marker (guaranteed by super implementation)
+	const MarkerStmt& rhs = static_cast<const MarkerStmt&>(expr);
+	return (rhs.id == id && *rhs.subStatement == *subStatement);
+}
+
+Node::OptionChildList MarkerStmt::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	res->push_back(subStatement);
+	return res;
+}
+
+std::ostream& MarkerStmt::printTo(std::ostream& out) const {
+	return out << "<M id=" << id << ">" << subStatement << "</M>";
+}
+
+MarkerStmtPtr MarkerStmt::get(NodeManager& manager, const StatementPtr& subStatement) {
+	return manager.get(MarkerStmt(subStatement, ++counter));
 }
 
 } // end namespace core

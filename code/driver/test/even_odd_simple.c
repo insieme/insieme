@@ -64,6 +64,6 @@ int main(int argc, char* argv[]) {
 	int x = 10;
 	printf("x=%d\n", x);
 	printf("even(x)=%s\n", toStr(even(x)));
-	printf("odd(x)=%s\n", toStr(odd(x)));
+	//printf("odd(x)=%s\n", toStr(odd(x)));
 	return 0;
 }
