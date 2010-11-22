@@ -37,7 +37,8 @@
 #include "insieme/simple_backend/type_manager.h"
 
 #include "insieme/core/types.h"
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/statements.h"
 
 #include "insieme/c_info/naming.h"
 
