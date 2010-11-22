@@ -372,6 +372,8 @@ public:
 
 	void visitVariable(const VariablePtr& ptr);
 
+	void visitVectorExpr(const VectorExprPtr& ptr);
+
 };
 
 } // namespace simple_backend

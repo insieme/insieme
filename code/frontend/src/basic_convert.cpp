@@ -323,10 +323,18 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 }
 
 core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const {
-	if(!expr && (core::dynamic_pointer_cast<const core::StructType>(type) ||
-				 core::dynamic_pointer_cast<const core::UnionType>(type) ||
-				 core::dynamic_pointer_cast<const core::ArrayType>(type) ||
-				 core::dynamic_pointer_cast<const core::VectorType>(type) )) {
+	// get kind of initialized value
+	core::NodeType kind = type->getNodeType();
+	if (kind == core::NT_RefType) {
+		kind = core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType();
+	}
+
+	// if no init expression is provided => use undefined for given set of types
+	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType
+			  || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
+		if (type->getNodeType() == core::NT_RefType) {
+			return builder.refVar(mgr.basic.getUndefined());
+		}
 		return mgr.basic.getUndefined();
 	} else if (!expr)
 		return defaultInitVal(type);

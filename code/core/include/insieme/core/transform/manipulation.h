@@ -108,6 +108,8 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
  */
 NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, bool preservePtrAnnotationsWhenModified = false);
 
+ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call);
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

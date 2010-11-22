@@ -123,6 +123,121 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 	}, preservePtrAnnotationsWhenModified);
 }
 
+namespace {
+
+	class InlineSubstituter : public NodeMapping {
+
+		bool successful;
+
+		utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+
+	public:
+
+		InlineSubstituter(utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements)
+			: successful(true), replacements(replacements) { }
+
+		const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+			if (!successful) {
+				return ptr;
+			}
+
+			if (ptr->getNodeType() != NT_Variable) {
+				return ptr->substitute(ptr->getNodeManager(), *this);
+			}
+
+			const VariablePtr& var = static_pointer_cast<const Variable>(ptr);
+			auto pos = replacements.find(var);
+			if (pos != replacements.end()) {
+				ExpressionPtr res = pos->second;
+				replacements.erase(var);
+				return res;
+			}
+
+			successful = false;
+			return ptr;
+		}
+
+		bool wasSuccessful() const {
+			return successful;
+		}
+	};
+
+}
+
+
+ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call) {
+
+	// Step 1 - get capture init and lambda expression
+	ExpressionPtr target = call->getFunctionExpr();
+	CaptureInitExprPtr capture;
+	LambdaExprPtr lambda;
+
+	// check for capture init expression ...
+	if (target->getNodeType() == NT_CaptureInitExpr) {
+		capture = static_pointer_cast<const CaptureInitExpr>(target);
+		target = capture->getLambda();
+	}
+
+	// check for lambda ...
+	if (target->getNodeType() == NT_LambdaExpr) {
+		lambda = static_pointer_cast<const LambdaExpr>(target);
+	} else {
+		// no in-lining possible
+		return call;
+	}
+
+	// Step 2 - check body => has to be a return statement
+	StatementPtr bodyStmt = lambda->getLambda()->getBody();
+
+	if (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
+		const vector<StatementPtr>& stmts = compound->getStatements();
+		if (stmts.size() == 1) {
+			bodyStmt = stmts[0];
+		} else {
+			// no in-lining possible (to many statements)
+			return call;
+		}
+	}
+
+	// check for expression
+	ExpressionPtr body;
+	if (ReturnStmtPtr returnStmt = dynamic_pointer_cast<const ReturnStmt>(bodyStmt)) {
+		body = returnStmt->getReturnExpr();
+	} else {
+		// no in-lining possible (not a simple expression)
+		return call;
+	}
+
+	// Step 3 - collect variables replacements
+	const Lambda::CaptureList& captureList = lambda->getCaptureList();
+	const Lambda::ParamList& paramList = lambda->getParameterList();
+
+	utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
+
+	// add captured variables
+	if (capture) {
+		int index = 0;
+		::for_each(capture->getValues(), [&](const ExpressionPtr& cur) {
+			replacements.insert(std::make_pair(captureList[index++], cur));
+		});
+	}
+
+	// add call parameters
+	int index = 0;
+	::for_each(call->getArguments(), [&](const ExpressionPtr& cur) {
+		replacements.insert(std::make_pair(paramList[index++], cur));
+	});
+
+	// Step 4 - substitute variables within body
+	InlineSubstituter substituter(replacements);
+	ExpressionPtr res = static_pointer_cast<const Expression>(body->substitute(manager, substituter));
+
+	// check result
+	if (substituter.wasSuccessful()) {
+		return res;
+	}
+	return call;
+}
 
 } // end namespace transform
 } // end namespace core
