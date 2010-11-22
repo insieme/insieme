@@ -36,8 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/lang_basic.h"
+#include "insieme/core/lang/basic.h"
 
+#include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
