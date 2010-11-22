@@ -47,6 +47,7 @@ enum {
 	EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS = EC_GROUP_TYPE + 1,
 	EC_TYPE_INVALID_ARGUMENT_TYPE,
 	EC_TYPE_INVALID_RETURN_TYPE,
+	EC_TYPE_INVALID_FUNCTION_TYPE,
 
 	EC_TYPE_INVALID_INITIALIZATION_EXPR,
 
@@ -74,6 +75,7 @@ enum {
 	}
 
 SIMPLE_CHECK(CallExprType, CallExpr);
+SIMPLE_CHECK(FunctionType, LambdaExpr);
 SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
 SIMPLE_CHECK(IfConditionType, IfStmt);
 SIMPLE_CHECK(WhileConditionType, WhileStmt);

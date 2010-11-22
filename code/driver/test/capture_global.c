@@ -55,7 +55,9 @@ int dec(int step) {
 }
 
 int reset() {
+	static int reset_count=1;
 	count = 0;
+	reset_count += 1;
 	return count;
 }
 
