@@ -219,6 +219,10 @@ LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> 'e
 LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
 LITERAL(VectorInitUndefined, "vector.initUndefined", "() -> vector<'elem,#a>")						// fugly
 
+// Arrays and Vectors -------------------------------------------------------------------------------------------------
+
+GROUP(SubscriptOperator, Array1DSubscript, ArraySubscript, VectorSubscript)
+
 // Misc. --------------------------------------------------------------------------------------------------------------
 
 LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")

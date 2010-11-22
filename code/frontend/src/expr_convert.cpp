@@ -1060,7 +1060,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 						assert(funcType);
 						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
 							funcType = this->builder.functionType(
-									toVector<core::TypePtr>( this->ctx.globalStruct.first ),
+									toVector<core::TypePtr>( this->builder.refType(this->ctx.globalStruct.first )),
 									funcType->getArgumentTypes(),
 									funcType->getReturnType()
 								);
@@ -1158,9 +1158,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
 
 	// if this function gets the globals in the capture list we have to create a different type
-	if(ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
+	if(!isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
-		funcType = builder.functionType(toVector<core::TypePtr>(ctx.globalStruct.first), funcType->getArgumentTypes(), funcType->getReturnType());
+		funcType = builder.functionType(toVector<core::TypePtr>(builder.refType(ctx.globalStruct.first)),
+				funcType->getArgumentTypes(), funcType->getReturnType());
 	}
 
 	// reset old global var

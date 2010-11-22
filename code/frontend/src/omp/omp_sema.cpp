@@ -79,7 +79,7 @@ bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn){
 			LOG(INFO) << "annotation: " << *subAnn;
 			if(auto par = std::dynamic_pointer_cast<Parallel>(subAnn)) {
-				handleParallel(stmt, *par);
+				handleParallel(stmt, par);
 			}
 		});
 		return false;
@@ -87,32 +87,39 @@ bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
 	return true;
 }
 
-void SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel& par) {
+void SemaVisitor::handleParallel(const StatementAddress& stmt, const ParallelPtr& par) {
 	auto stmtNode = stmt.getAddressedNode();
 
 	LambdaDeltaVisitor ldv;
 	core::visitAllInterruptable(StatementAddress(stmtNode), ldv);
 
 	Lambda::CaptureList captures;
+	CaptureInitExpr::Values initVals;
 	um::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(ldv.undeclared, [&](VariablePtr p){
 		//auto declStmt = build.declarationStmt(p->getType(), p);
 		auto var = build.variable(p->getType());
-		captures.push_back(p);
+		initVals.push_back(p);
+		captures.push_back(var);
 		replacements[p] = var;
 	});
 
 	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements));
 
-	cl::BasicGenerator typeGen(nodeMan); // FIXME
+	auto& basic = nodeMan.basic;
 
 	auto parLambda = build.lambdaExpr(newStmt, captures, Lambda::ParamList());
-	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
-	auto parallelCall = build.callExpr(typeGen.getParallel(), build.literal("8", typeGen.getUInt4()), build.literal("8", typeGen.getUInt4()), jobExp);
-	auto mergeCall = build.callExpr(typeGen.getMerge(), parallelCall);
+	auto parLambdaInited = build.captureInitExpr(parLambda, initVals);
+	auto jobExp = build.jobExpr(parLambdaInited, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
+	auto parallelCall = build.callExpr(basic.getParallel(), build.literal("8", basic.getUInt4()), build.literal("8", basic.getUInt4()), jobExp);
+	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
 	ProgramPtr retProgPtr = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, stmt, mergeCall, true));
 	replacement = retProgPtr;
+}
+
+void SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr& forP) {
+
 }
 
 } // namespace omp

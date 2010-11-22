@@ -59,7 +59,8 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 
 	bool visitStatement(const core::StatementAddress& stmt);
 
-	void handleParallel(const core::StatementAddress& stmt, const Parallel& par);
+	void handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
+	void handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
 
 public:
 	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }

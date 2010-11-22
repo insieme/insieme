@@ -80,10 +80,8 @@ namespace {
 				// check location of memory allocation for variable (only HEAP needs to be dereferenced)
 				return (cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(target)).location == VariableManager::HEAP);
 			case NT_CallExpr:
-				// for only a small number of functions (build ins) returning a ref does not mean it is a pointer
-
-				return !(cc.getNodeManager().basic.isArraySubscript(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()) ||
-						 cc.getNodeManager().basic.isArray1DSubscript(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
+				// subscript operator should not be again dereferenced in the end
+				return !(cc.basic.isSubscriptOperator(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
 			case NT_MemberAccessExpr:
 				return false;
 			default:
@@ -105,6 +103,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
 		auto funName = literalFun->getValue();
 		//LOG(INFO) << "+++++++ val: " << funName << "\n";
+		//if (cc.basic.isRefDeref(literalFun)) {
 		if(funName == "ref.deref") {
 
 			// test whether a deref is required
@@ -307,9 +306,15 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	}
 
 	// standard handling
-	cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var) << " = ";
+	cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var);
+
+	// check whether there is an initialization
+	if (cc.basic.isUndefined(ptr->getInitialization())) {
+		return;
+	}
 
 	// generate initializer expression
+	cStr << " = ";
 	visit(ptr->getInitialization());
 }
 
@@ -401,7 +406,7 @@ void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
 	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
 		this->visit(cur.second);
 		count++;
-		if (count < anz -1) {
+		if (count < anz) {
 			cStr << ", ";
 		}
 	});
@@ -558,6 +563,8 @@ namespace detail {
 		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getIfThenElse(), { OUT("(("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT("))"); });
+
+		ADD_FORMATTER(basic.getVectorInitUndefined(), { });
 
 		#undef ADD_FORMATTER
 		#undef OUT
