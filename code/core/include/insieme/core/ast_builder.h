@@ -71,18 +71,17 @@ public:
 
 	typedef vector<TypePtr> TypeList;
 
-	typedef std::pair<Identifier, TypePtr> Entry;
-	typedef vector<Entry> Entries;
+	typedef NamedCompositeType::Entry Entry;
+	typedef NamedCompositeType::Entries Entries;
 
-	typedef std::pair<Identifier, ExpressionPtr> Member;
-	typedef std::vector<Member> Members;
+	typedef StructExpr::Member Member;
+	typedef StructExpr::Members Members;
 
-	typedef std::vector<DeclarationStmtPtr> LocalDecls;
-	typedef std::pair<LambdaExprPtr, LambdaExprPtr> GuardedStmt;
-	typedef std::vector<GuardedStmt> GuardedStmts;
+	typedef JobExpr::LocalDecls LocalDecls;
+	typedef JobExpr::GuardedStmt GuardedStmt;
+	typedef JobExpr::GuardedStmts GuardedStmts;
 
-	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;
-	typedef std::unordered_map<VariablePtr, LambdaExprPtr, hash_target<VariablePtr>, equal_target<VariablePtr>> RecFunDefs;
+	typedef RecTypeDefinition::RecTypeDefs RecTypeDefs;
 
 	typedef Lambda::CaptureList CaptureList;
 	typedef Lambda::ParamList ParamList;
