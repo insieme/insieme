@@ -1051,7 +1051,6 @@ public:
 	const IntTypeParam getSize() const;
 };
 
-
 } // end namespace core
 } // end namespace insieme
 

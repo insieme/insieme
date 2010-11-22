@@ -53,7 +53,7 @@ void call___insieme_funType_type_0(struct __insieme_funType_type_0* lambda,int p
 struct __insieme_funType_type_1 { 
     void(*fun)(void*,int);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: Definition of timer_clear //
@@ -62,7 +62,7 @@ void timer_clear(void* _capture, int n) {
 	struct __insieme_globals* var_13 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((*((*((*var_13).elapsed))[((unsigned int)(n))])) = 0.0);
+		(((*((*var_13).elapsed))[((unsigned int)(n))]) = 0.0);
 	}
 }
 
@@ -82,7 +82,7 @@ void call___insieme_funType_type_2(struct __insieme_funType_type_2* lambda,doubl
 struct __insieme_funType_type_3 { 
     void(*fun)(void*,double,double);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_4 //
@@ -100,7 +100,7 @@ double call___insieme_funType_type_4(struct __insieme_funType_type_4* lambda,dou
 struct __insieme_funType_type_5 { 
     double(*fun)(void*,double*,double*);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: Definition of randlc //
@@ -182,7 +182,7 @@ void create_seq(void* _capture, double seed, double a) {
 					(x = (x+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, &var_17}))), <?>{v22}</?>, <?>{v23}</?>)));
 					(x = (x+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, &var_17}))), <?>{v22}</?>, <?>{v23}</?>)));
 					(x = (x+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, &var_17}))), <?>{v22}</?>, <?>{v23}</?>)));
-					((*((*((*var_17).key_array))[((unsigned int)(var_41))])) = ((int)((((double)(k))*x))));
+					(((*((*var_17).key_array))[((unsigned int)(var_41))]) = ((int)((((double)(k))*x))));
 				};
 				(i = (1 << 16));
 			};
@@ -206,9 +206,9 @@ int call___insieme_funType_type_6(struct __insieme_funType_type_6* lambda) { ret
 struct __insieme_funType_type_7 { 
     int(*fun)(void*);
     const size_t size;
-    struct __insieme_globals* p0;
-    int* p1;
-    int p2[2048];
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
+    int* p1; // ref<int<4>>
+    int p2[2048]; // vector<ref<int<4>>,2048>
 };
 
 // start code fragment :: Definition of __insieme_supp_8 //
@@ -219,8 +219,8 @@ int __insieme_supp_8(void* _capture) {
 	int*[2048] var_61 = ((struct __insieme_funType_type_7*)_capture)->p2;
 	// --------- Captured Stuff -  End  -------------
 	{
-		int var_58 = (*(var_61[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))]));
-		((*(var_61[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))])) = ((*(var_61[((unsigned int)((*((*((*var_59).key_buff2))[((unsigned int)((*var_60)))]))))]))+((int)(1))));
+		int var_58 = (var_61[((unsigned int)(((*((*var_59).key_buff2))[((unsigned int)((*var_60)))])))]);
+		((var_61[((unsigned int)(((*((*var_59).key_buff2))[((unsigned int)((*var_60)))])))]) = ((var_61[((unsigned int)(((*((*var_59).key_buff2))[((unsigned int)((*var_60)))])))])+((int)(1))));
 		return var_58;;
 	}
 }
@@ -243,72 +243,72 @@ void rank(void* _capture, int iteration) {
 		int max_key_val = 0;
 		int prv_buff1[2048];
 		{
-			((*((*((*var_44).key_array))[((unsigned int)(iteration))])) = iteration);
-			((*((*((*var_44).key_array))[((unsigned int)((iteration+10)))])) = ((1 << 11)-iteration));
+			(((*((*var_44).key_array))[((unsigned int)(iteration))]) = iteration);
+			(((*((*var_44).key_array))[((unsigned int)((iteration+10)))]) = ((1 << 11)-iteration));
 			{
-				for(int var_55 = 0; var_55 < 5; var_55 += 1) ((*((*((*var_44).partial_verify_vals))[((unsigned int)(var_55))])) = (*((*((*var_44).key_array))[((unsigned int)((*((*((*var_44).test_index_array))[((unsigned int)(var_55))]))))])));
+				for(int var_55 = 0; var_55 < 5; var_55 += 1) (((*((*var_44).partial_verify_vals))[((unsigned int)(var_55))]) = ((*((*var_44).key_array))[((unsigned int)(((*((*var_44).test_index_array))[((unsigned int)(var_55))])))]));
 				(i = 5);
 			};
 			{
-				for(int var_56 = 0; var_56 < (1 << 11); var_56 += 1) ((*((*((*var_44).key_buff1))[((unsigned int)(var_56))])) = 0);
+				for(int var_56 = 0; var_56 < (1 << 11); var_56 += 1) (((*((*var_44).key_buff1))[((unsigned int)(var_56))]) = 0);
 				(i = (1 << 11));
 			};
 		};
 		{
-			for(int var_57 = 0; var_57 < (1 << 11); var_57 += 1) ((*(prv_buff1[((unsigned int)(var_57))])) = 0);
+			for(int var_57 = 0; var_57 < (1 << 11); var_57 += 1) ((prv_buff1[((unsigned int)(var_57))]) = 0);
 			(i = (1 << 11));
 		};
 		{
 			for(int var_63 = 0; var_63 < (1 << 16); var_63 += 1) {
-				((*((*((*var_44).key_buff2))[((unsigned int)(var_63))])) = (*((*((*var_44).key_array))[((unsigned int)(var_63))])));
+				(((*((*var_44).key_buff2))[((unsigned int)(var_63))]) = ((*((*var_44).key_array))[((unsigned int)(var_63))]));
 				call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&__insieme_supp_8, 0, &var_44, &var_63, prv_buff1}))));
 			};
 			(i = (1 << 16));
 		};
 		{
-			for(int var_64 = 0; var_64 < ((1 << 11)-1); var_64 += 1) ((*(prv_buff1[((unsigned int)((var_64+1)))])) = ((*(prv_buff1[((unsigned int)((var_64+1)))]))+(*(prv_buff1[((unsigned int)(var_64))]))));
+			for(int var_64 = 0; var_64 < ((1 << 11)-1); var_64 += 1) ((prv_buff1[((unsigned int)((var_64+1)))]) = ((prv_buff1[((unsigned int)((var_64+1)))])+(prv_buff1[((unsigned int)(var_64))])));
 			(i = ((1 << 11)-1));
 		};
 		{
 			{
-				for(int var_65 = 0; var_65 < (1 << 11); var_65 += 1) ((*((*((*var_44).key_buff1))[((unsigned int)(var_65))])) = ((*((*((*var_44).key_buff1))[((unsigned int)(var_65))]))+(*(prv_buff1[((unsigned int)(var_65))]))));
+				for(int var_65 = 0; var_65 < (1 << 11); var_65 += 1) (((*((*var_44).key_buff1))[((unsigned int)(var_65))]) = (((*((*var_44).key_buff1))[((unsigned int)(var_65))])+(prv_buff1[((unsigned int)(var_65))])));
 				(i = (1 << 11));
 			};
 		};
 		{
 			{
 				for(int var_97 = 0; var_97 < 5; var_97 += 1) {
-					(k = (*((*((*var_44).partial_verify_vals))[((unsigned int)(var_97))])));
+					(k = ((*((*var_44).partial_verify_vals))[((unsigned int)(var_97))]));
 					if(((0<=k) && (k<=((1 << 16)-1)))) {
 						int var_66 = ((int)('S'));
 						switch(var_66) {
 						case 'S':
 							if((var_97<=2)) {
-								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+iteration))) {
+								if((((*((*var_44).key_buff1))[((unsigned int)((k-1)))]) != (((*((*var_44).test_rank_array))[((unsigned int)(var_97))])+iteration))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
 						case 'W':
 							if((var_97<2)) {
-								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+(iteration-2)))) {
+								if((((*((*var_44).key_buff1))[((unsigned int)((k-1)))]) != (((*((*var_44).test_rank_array))[((unsigned int)(var_97))])+(iteration-2)))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
 						case 'A':
 							if((var_97<=2)) {
-								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+(iteration-1)))) {
+								if((((*((*var_44).key_buff1))[((unsigned int)((k-1)))]) != (((*((*var_44).test_rank_array))[((unsigned int)(var_97))])+(iteration-1)))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
 						case 'B':
 							if((((var_97==1) || (var_97==2)) || (var_97==4))) {
-								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+iteration))) {
+								if((((*((*var_44).key_buff1))[((unsigned int)((k-1)))]) != (((*((*var_44).test_rank_array))[((unsigned int)(var_97))])+iteration))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
 						case 'C':
 							if((var_97<=2)) {
-								if(((*((*((*var_44).key_buff1))[((unsigned int)((k-1)))])) != ((*((*((*var_44).test_rank_array))[((unsigned int)(var_97))]))+iteration))) {
+								if((((*((*var_44).key_buff1))[((unsigned int)((k-1)))]) != (((*((*var_44).test_rank_array))[((unsigned int)(var_97))])+iteration))) {
 									printf(((char*)("Failed partial verification: ")), iteration, var_97);
 								};
 							}; break;
@@ -338,7 +338,7 @@ double call___insieme_funType_type_9(struct __insieme_funType_type_9* lambda) { 
 struct __insieme_funType_type_10 { 
     double(*fun)(void*);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_11 //
@@ -356,7 +356,7 @@ void call___insieme_funType_type_11(struct __insieme_funType_type_11* lambda,dou
 struct __insieme_funType_type_12 { 
     void(*fun)(void*,double*);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: type_declaration_timeval //
@@ -374,7 +374,7 @@ void wtime(void* _capture, double* t) {
 	struct __insieme_globals* var_104 = ((struct __insieme_funType_type_12*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		struct timeval tv = ((struct timeval){00});
+		struct timeval tv = ((struct timeval){0, 0});
 		gettimeofday(<?>{v105}</?>, ((struct timezone*)((*((void*)(0))))));
 		if((((*var_104).sec)<0)) (((*var_104).sec) = ((int)((tv.tv_sec)))) else {};
 		((t[0]) = (((double)(((tv.tv_sec)-((long)(((*var_104).sec))))))+(1.0e-6*((double)((tv.tv_usec))))));
@@ -401,7 +401,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_100 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((*((*((*var_100).start))[((unsigned int)(n))])) = call___insieme_funType_type_9(((struct __insieme_funType_type_9*)(&((struct __insieme_funType_type_10){&elapsed_time, 0, &var_100})))));
+		(((*((*var_100).start))[((unsigned int)(n))]) = call___insieme_funType_type_9(((struct __insieme_funType_type_9*)(&((struct __insieme_funType_type_10){&elapsed_time, 0, &var_100})))));
 	}
 }
 
@@ -415,8 +415,8 @@ void timer_stop(void* _capture, int n) {
 		double t = 0.0;
 		double now = 0.0;
 		(now = call___insieme_funType_type_9(((struct __insieme_funType_type_9*)(&((struct __insieme_funType_type_10){&elapsed_time, 0, &var_111})))));
-		(t = (now-(*((*((*var_111).start))[((unsigned int)(n))]))));
-		((*((*((*var_111).elapsed))[((unsigned int)(n))])) = ((*((*((*var_111).elapsed))[((unsigned int)(n))]))+t));
+		(t = (now-((*((*var_111).start))[((unsigned int)(n))])));
+		(((*((*var_111).elapsed))[((unsigned int)(n))]) = (((*((*var_111).elapsed))[((unsigned int)(n))])+t));
 	}
 }
 
@@ -436,7 +436,7 @@ double call___insieme_funType_type_13(struct __insieme_funType_type_13* lambda,i
 struct __insieme_funType_type_14 { 
     double(*fun)(void*,int);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: Definition of timer_read //
@@ -465,7 +465,7 @@ void call___insieme_funType_type_15(struct __insieme_funType_type_15* lambda) { 
 struct __insieme_funType_type_16 { 
     void(*fun)(void*);
     const size_t size;
-    struct __insieme_globals* p0;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_17 //
@@ -473,8 +473,8 @@ struct __insieme_funType_type_16 {
 struct __insieme_funType_type_17 { 
     int(*fun)(void*);
     const size_t size;
-    struct __insieme_globals* p0;
-    int* p1;
+    struct __insieme_globals* p0; // ref<struct<sec:ref<int<4>>,start:ref<ref<vector<ref<real<8>>,64>>>,elapsed:ref<ref<vector<ref<real<8>>,64>>>,key_buff_ptr_global:ref<ref<array<ref<int<4>>,1>>>,passed_verification:ref<ref<int<4>>>,key_array:ref<ref<vector<ref<int<4>>,65536>>>,key_buff1:ref<ref<vector<ref<int<4>>,65536>>>,key_buff2:ref<ref<vector<ref<int<4>>,65536>>>,partial_verify_vals:ref<ref<vector<ref<int<4>>,5>>>,test_index_array:ref<ref<vector<ref<int<4>>,5>>>,test_rank_array:ref<ref<vector<ref<int<4>>,5>>>,S_test_index_array:ref<vector<ref<int<4>>,5>>,S_test_rank_array:ref<vector<ref<int<4>>,5>>,W_test_index_array:ref<vector<ref<int<4>>,5>>,W_test_rank_array:ref<vector<ref<int<4>>,5>>,A_test_index_array:ref<vector<ref<int<4>>,5>>,A_test_rank_array:ref<vector<ref<int<4>>,5>>,B_test_index_array:ref<vector<ref<int<4>>,5>>,B_test_rank_array:ref<vector<ref<int<4>>,5>>,C_test_index_array:ref<vector<ref<int<4>>,5>>,C_test_rank_array:ref<vector<ref<int<4>>,5>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>>>
+    int* p1; // ref<int<4>>
 };
 
 // start code fragment :: Definition of __insieme_supp_18 //
@@ -484,8 +484,8 @@ int __insieme_supp_18(void* _capture) {
 	int* var_125 = ((struct __insieme_funType_type_17*)_capture)->p1;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*((*var_124).key_buff_ptr_global))[((unsigned int)((*((*((*var_124).key_buff2))[((unsigned int)((*var_125)))]))))]) = (((*((*var_124).key_buff_ptr_global))[((unsigned int)((*((*((*var_124).key_buff2))[((unsigned int)((*var_125)))]))))])-((int)(1))));
-		((*((*var_124).key_buff_ptr_global))[((unsigned int)((*((*((*var_124).key_buff2))[((unsigned int)((*var_125)))]))))]);
+		(((*((*var_124).key_buff_ptr_global))[((unsigned int)(((*((*var_124).key_buff2))[((unsigned int)((*var_125)))])))]) = (((*((*var_124).key_buff_ptr_global))[((unsigned int)(((*((*var_124).key_buff2))[((unsigned int)((*var_125)))])))])-((int)(1))));
+		((*((*var_124).key_buff_ptr_global))[((unsigned int)(((*((*var_124).key_buff2))[((unsigned int)((*var_125)))])))]);
 	}
 }
 
@@ -495,7 +495,7 @@ int __insieme_supp_18(void* _capture) {
 struct __insieme_funType_type_19 { 
     int(*fun)(void*);
     const size_t size;
-    int* p0;
+    int* p0; // ref<int<4>>
 };
 
 // start code fragment :: Definition of __insieme_supp_20 //
@@ -523,12 +523,12 @@ void full_verify(void* _capture) {
 		int m = 0;
 		int unique_keys = 0;
 		{
-			for(int var_127 = 0; var_127 < (1 << 16); var_127 += 1) ((*((*((*var_118).key_array))[((unsigned int)(call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_17){&__insieme_supp_18, 0, &var_118, &var_127}))))))])) = (*((*((*var_118).key_buff2))[((unsigned int)(var_127))])));
+			for(int var_127 = 0; var_127 < (1 << 16); var_127 += 1) (((*((*var_118).key_array))[((unsigned int)(call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_17){&__insieme_supp_18, 0, &var_118, &var_127}))))))]) = ((*((*var_118).key_buff2))[((unsigned int)(var_127))]));
 			(i = (1 << 16));
 		};
 		(j = 0);
 		{
-			for(int var_131 = 1; var_131 < (1 << 16); var_131 += 1) if(((*((*((*var_118).key_array))[((unsigned int)((var_131-1)))]))>(*((*((*var_118).key_array))[((unsigned int)(var_131))])))) call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_19){&__insieme_supp_20, 0, &j})))) else {};
+			for(int var_131 = 1; var_131 < (1 << 16); var_131 += 1) if((((*((*var_118).key_array))[((unsigned int)((var_131-1)))])>((*((*var_118).key_array))[((unsigned int)(var_131))]))) call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_19){&__insieme_supp_20, 0, &j})))) else {};
 			(i = (1 << 16));
 		};
 		if((j != 0)) {
@@ -568,7 +568,7 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){el, start, elapsed, key_buff_ptr_global, passed_verification, key_array, key_buff1, key_buff2, partial_verify_vals, test_index_array, test_rank_array, <?>{ref.var(48427),ref.var(17148),ref.var(23627),ref.var(62548),ref.var(4431)}</?>, <?>{ref.var(0),ref.var(18),ref.var(346),ref.var(64917),ref.var(65463)}</?>, <?>{ref.var(357773),ref.var(934767),ref.var(875723),ref.var(898999),ref.var(404505)}</?>, <?>{ref.var(1249),ref.var(11698),ref.var(1039987),ref.var(1043896),ref.var(1048018)}</?>, <?>{ref.var(2112377),ref.var(662041),ref.var(5336171),ref.var(3642833),ref.var(4250760)}</?>, <?>{ref.var(104),ref.var(17523),ref.var(123928),ref.var(8288932),ref.var(8388264)}</?>, <?>{ref.var(41869),ref.var(812306),ref.var(5102857),ref.var(18232239),ref.var(26860214)}</?>, <?>{ref.var(33422937),ref.var(10244),ref.var(59149),ref.var(33135281),ref.var(99)}</?>, <?>{ref.var(44172927),ref.var(72999161),ref.var(74326391),ref.var(129606274),ref.var(21736814)}</?>, <?>{ref.var(61147),ref.var(882988),ref.var(266290),ref.var(133997595),ref.var(133525895)}</?>, 0, 0.0, 0.0, 0.00.0});
+		struct __insieme_globals var_1 = ((struct __insieme_globals){el, start, elapsed, key_buff_ptr_global, passed_verification, key_array, key_buff1, key_buff2, partial_verify_vals, test_index_array, test_rank_array, <?>{ref.var(48427),ref.var(17148),ref.var(23627),ref.var(62548),ref.var(4431)}</?>, <?>{ref.var(0),ref.var(18),ref.var(346),ref.var(64917),ref.var(65463)}</?>, <?>{ref.var(357773),ref.var(934767),ref.var(875723),ref.var(898999),ref.var(404505)}</?>, <?>{ref.var(1249),ref.var(11698),ref.var(1039987),ref.var(1043896),ref.var(1048018)}</?>, <?>{ref.var(2112377),ref.var(662041),ref.var(5336171),ref.var(3642833),ref.var(4250760)}</?>, <?>{ref.var(104),ref.var(17523),ref.var(123928),ref.var(8288932),ref.var(8388264)}</?>, <?>{ref.var(41869),ref.var(812306),ref.var(5102857),ref.var(18232239),ref.var(26860214)}</?>, <?>{ref.var(33422937),ref.var(10244),ref.var(59149),ref.var(33135281),ref.var(99)}</?>, <?>{ref.var(44172927),ref.var(72999161),ref.var(74326391),ref.var(129606274),ref.var(21736814)}</?>, <?>{ref.var(61147),ref.var(882988),ref.var(266290),ref.var(133997595),ref.var(133525895)}</?>, 0, 0.0, 0.0, 0.0, 0.0});
 		int i = 0;
 		int iteration = 0;
 		int itemp = 0;
@@ -581,28 +581,28 @@ int main(int argc, char** argv) {
 				switch(var_10) {
 				case 'S':
 					{
-						((*((*(var_1.test_index_array))[((unsigned int)(var_11))])) = (*((var_1.S_test_index_array)[((unsigned int)(var_11))])));
-						((*((*(var_1.test_rank_array))[((unsigned int)(var_11))])) = (*((var_1.S_test_rank_array)[((unsigned int)(var_11))])));
+						(((*(var_1.test_index_array))[((unsigned int)(var_11))]) = ((var_1.S_test_index_array)[((unsigned int)(var_11))]));
+						(((*(var_1.test_rank_array))[((unsigned int)(var_11))]) = ((var_1.S_test_rank_array)[((unsigned int)(var_11))]));
 					}; break;
 				case 'A':
 					{
-						((*((*(var_1.test_index_array))[((unsigned int)(var_11))])) = (*((var_1.A_test_index_array)[((unsigned int)(var_11))])));
-						((*((*(var_1.test_rank_array))[((unsigned int)(var_11))])) = (*((var_1.A_test_rank_array)[((unsigned int)(var_11))])));
+						(((*(var_1.test_index_array))[((unsigned int)(var_11))]) = ((var_1.A_test_index_array)[((unsigned int)(var_11))]));
+						(((*(var_1.test_rank_array))[((unsigned int)(var_11))]) = ((var_1.A_test_rank_array)[((unsigned int)(var_11))]));
 					}; break;
 				case 'W':
 					{
-						((*((*(var_1.test_index_array))[((unsigned int)(var_11))])) = (*((var_1.W_test_index_array)[((unsigned int)(var_11))])));
-						((*((*(var_1.test_rank_array))[((unsigned int)(var_11))])) = (*((var_1.W_test_rank_array)[((unsigned int)(var_11))])));
+						(((*(var_1.test_index_array))[((unsigned int)(var_11))]) = ((var_1.W_test_index_array)[((unsigned int)(var_11))]));
+						(((*(var_1.test_rank_array))[((unsigned int)(var_11))]) = ((var_1.W_test_rank_array)[((unsigned int)(var_11))]));
 					}; break;
 				case 'B':
 					{
-						((*((*(var_1.test_index_array))[((unsigned int)(var_11))])) = (*((var_1.B_test_index_array)[((unsigned int)(var_11))])));
-						((*((*(var_1.test_rank_array))[((unsigned int)(var_11))])) = (*((var_1.B_test_rank_array)[((unsigned int)(var_11))])));
+						(((*(var_1.test_index_array))[((unsigned int)(var_11))]) = ((var_1.B_test_index_array)[((unsigned int)(var_11))]));
+						(((*(var_1.test_rank_array))[((unsigned int)(var_11))]) = ((var_1.B_test_rank_array)[((unsigned int)(var_11))]));
 					}; break;
 				case 'C':
 					{
-						((*((*(var_1.test_index_array))[((unsigned int)(var_11))])) = (*((var_1.C_test_index_array)[((unsigned int)(var_11))])));
-						((*((*(var_1.test_rank_array))[((unsigned int)(var_11))])) = (*((var_1.C_test_rank_array)[((unsigned int)(var_11))])));
+						(((*(var_1.test_index_array))[((unsigned int)(var_11))]) = ((var_1.C_test_index_array)[((unsigned int)(var_11))]));
+						(((*(var_1.test_rank_array))[((unsigned int)(var_11))]) = ((var_1.C_test_rank_array)[((unsigned int)(var_11))]));
 					}; break;
 				};
 			};

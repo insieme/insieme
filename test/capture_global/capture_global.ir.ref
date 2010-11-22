@@ -1,0 +1,53 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v1 =  var(struct{count:= var(0), reset_count:= var(1)});
+        for(decl ref<int<4>> v12 =  var(0) .. 10 : 1) {
+            printf("count=%2d\n", varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v5](int<4> v4){
+                v5.count := v5.count+v4;
+                return v5.count;
+            }(2))));
+            printf("count=%2d\n", varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v8](int<4> v7){
+                v8.count := v8.count+v7;
+                return v8.count;
+            }(1))));
+            if(v12==5) {
+                [v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v10](){
+                    v10.count := 0;
+                    v10.reset_count := v10.reset_count+1;
+                    return v10.count;
+                }();
+            } else { };
+        };
+        return 0;
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v1 = ( var(struct{count:=( var(0)), reset_count:=( var(1))}));
+        for(decl ref<int<4>> v12 = ( var(0)) .. 10 : 1) {
+            printf(CAST<array<ref<char>,1>>("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v5](int<4> v4){
+                (( *v5).count := (( *( *v5).count)+v4));
+                return ( *v5).count;
+            }(2))));
+            printf(CAST<array<ref<char>,1>>("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v8](int<4> v7){
+                (( *v8).count := (( *( *v8).count)+v7));
+                return ( *v8).count;
+            }(1))));
+            if((( *v12)==5)) {
+                [v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v10](){
+                    (( *v10).count := 0);
+                    (( *v10).reset_count := (( *( *v10).reset_count)+1));
+                    return ( *v10).count;
+                }();
+            } else { };
+        };
+        return 0;
+    }
+

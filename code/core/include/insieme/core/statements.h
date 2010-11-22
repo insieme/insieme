@@ -269,5 +269,30 @@ public:
 	static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase);
 };
 
+
+class MarkerStmt : public Statement {
+
+	static unsigned int counter;
+
+	const StatementPtr subStatement;
+	const unsigned id;
+
+	MarkerStmt(const StatementPtr& subStatement, const unsigned id);
+	virtual MarkerStmt* createCopyUsing(NodeMapping& mapper) const;
+
+protected:
+
+	virtual bool equalsStmt(const Statement& stmt) const;
+	virtual OptionChildList getChildNodes() const;
+
+public:
+
+	virtual std::ostream& printTo(std::ostream& out) const;
+	static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subStatement);
+
+	const StatementPtr& getSubStatement() const { return subStatement; }
+	const unsigned int getID() const { return id; }
+};
+
 } // end namespace core
 } // end namespace insieme

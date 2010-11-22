@@ -18,9 +18,9 @@ struct Person {
 char* strcpy(char*, char*);
 
 // start code fragment :: Definition of getPerson //
-struct Person* getPerson() {
+struct Person getPerson() {
 	{
-		struct Person res = ((struct Person){vector.initUniform(')0});
+		struct Person res = ((struct Person){vector.initUniform('), 0});
 		strcpy((res.name), ((char*)("John Doe")));
 		((res.age) = ((unsigned int)(101)));
 	}
@@ -28,7 +28,7 @@ struct Person* getPerson() {
 
 
 // start code fragment :: Definition of isTeenager //
-int isTeenager(struct Person* person) {
+int isTeenager(struct Person person) {
 	{
 		return (((person.age)>=((unsigned int)(10))) && ((person.age)<((unsigned int)(20))));;
 	}
