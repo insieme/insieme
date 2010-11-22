@@ -199,6 +199,10 @@ LITERAL(RefDelete, "ref.delete", "(ref<'a>) -> unit")
 LITERAL(RefAssign, "ref.assign", "(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  "ref.deref",  "(ref<'a>) -> 'a")
 
+// General ------------------------------------------------------------------------------------------------------------
+
+LITERAL(Undefined, "undefined", "'a")
+
 // Arrays -------------------------------------------------------------------------------------------------------------
 
 GROUP(ArrayOp, Array1DSubscript, ArraySubscript, ArrayLength)
