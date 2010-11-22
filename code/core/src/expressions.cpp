@@ -397,7 +397,7 @@ const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, unsigned 
 	return localGuardedStmts;
 }
 
-JobExpr::JobExpr(const TypePtr& type, const LambdaExprPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
+JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
 	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 
@@ -463,7 +463,7 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 	return out;
 }
 
-JobExprPtr JobExpr::get(NodeManager& manager, const LambdaExprPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
+JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
 	auto type = manager.basic.getJob();
 	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
 }
