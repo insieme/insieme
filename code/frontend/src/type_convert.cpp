@@ -36,7 +36,6 @@
 
 #include "insieme/frontend/convert.h"
 
-#include "insieme/frontend/utils/types_lenght.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/source_locations.h"
 

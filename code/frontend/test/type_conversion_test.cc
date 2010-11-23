@@ -127,13 +127,14 @@ TEST(TypeConversion, HandlePointerType) {
 	const fe::ClangCompiler& clang = tu.getCompiler();
 	ConversionFactory convFactory( manager, prog );
 
-	BuiltinType intTy(BuiltinType::Int);
-	QualType pointerTy = clang.getASTContext().getPointerType(QualType(&intTy, 0));
+	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
+	QualType pointerTy = clang.getASTContext().getPointerType(QualType(intTy, 0));
 
 	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("array<ref<int<4>>,1>", insiemeTy->toString());
 
+	operator delete (intTy);
 }
 
 TEST(TypeConversion, HandleReferenceType) {
@@ -145,13 +146,14 @@ TEST(TypeConversion, HandleReferenceType) {
 	const fe::ClangCompiler& clang = tu.getCompiler();
 	ConversionFactory convFactory( manager, prog );
 
-	BuiltinType intTy(BuiltinType::Int);
-	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(&intTy, 0));
+	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
+	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(intTy, 0));
 
 	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
 	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
 
+	operator delete (intTy);
 }
 
 TEST(TypeConversion, HandleStructType) {
