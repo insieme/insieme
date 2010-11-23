@@ -156,7 +156,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 	if (preservePtrAnnotationsWhenModified) {
 		// ... restore annotations.
 		res.setAnnotations(root.getAnnotations());
-		res->setAnnotations(ptr->getAnnotations());
+		res->setAnnotations(root->getAnnotations());
 	}
 
 	return res;
