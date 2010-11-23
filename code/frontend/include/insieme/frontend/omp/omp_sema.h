@@ -57,10 +57,10 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 
 	bool visitNode(const core::NodeAddress& node);
 
-	bool visitStatement(const core::StatementAddress& stmt);
+	bool visitMarkerStmt(const core::MarkerStmtAddress& mark);
 
-	void handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
-	void handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
+	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
+	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
 
 public:
 	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }
@@ -71,11 +71,7 @@ public:
 
 /** Applies OMP semantics to given code fragment.
  ** */
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
-	SemaVisitor v(resultStorage);
-	core::visitAllInterruptable(core::ProgramAddress(prog), v);
-	return v.getReplacement();
-}
+const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);
 
 
 } // namespace omp

@@ -29,9 +29,9 @@ int __insieme_supp_2(void* _capture) {
 	int* var_6 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		int var_5 = (var_6[0]);
-		((var_6[0]) = ((var_6[0])+((int)(1))));
-		return var_5;;
+		int var_5 = (var_6[0]);((var_6[0]) = ((var_6[0])+((int)(1))));return var_5;;
+		
+		
 	}
 }
 
@@ -50,14 +50,15 @@ int printf(char*, ...);
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		int var_9 = argc;
-		{
-			int a = 0;
-			f(&a);
-			f(&var_9);
-			printf(((char*)("%d\n")), var_9);(var_9 = a);
-			printf(((char*)("%d\n")), var_9);
+		int var_9 = argc;{
+			int a = 0;f(&a);f(&var_9);printf("%d\n", var_9);(var_9 = a);printf("%d\n", var_9);
+			
+			
+			
+			
+			
 		};
+		
 	}
 }
 

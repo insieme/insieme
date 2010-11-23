@@ -38,8 +38,8 @@ int inc(void* _capture, int step) {
 	struct __insieme_globals* var_5 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*var_5).count) = (((*var_5).count)+step));
-		return ((*var_5).count);;
+		(((*var_5).count) = (((*var_5).count)+step));return ((*var_5).count);;
+		
 	}
 }
 
@@ -50,8 +50,8 @@ int dec(void* _capture, int step) {
 	struct __insieme_globals* var_8 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*var_8).count) = (((*var_8).count)+step));
-		return ((*var_8).count);;
+		(((*var_8).count) = (((*var_8).count)+step));return ((*var_8).count);;
+		
 	}
 }
 
@@ -80,9 +80,9 @@ int reset(void* _capture) {
 	struct __insieme_globals* var_10 = ((struct __insieme_funType_type_3*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*var_10).count) = 0);
-		(((*var_10).reset_count) = (((*var_10).reset_count)+1));
-		return ((*var_10).count);;
+		(((*var_10).count) = 0);(((*var_10).reset_count) = (((*var_10).reset_count)+1));return ((*var_10).count);;
+		
+		
 	}
 }
 
@@ -90,15 +90,15 @@ int reset(void* _capture) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){0, 1});
-		for(int i = 0; i < 10; i += 1) {
-			printf(((char*)("count=%2d\n")), call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&inc, 0, &var_1}))), 2));
-			printf(((char*)("count=%2d\n")), call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&dec, 0, &var_1}))), 1));
-			if((i==5)) {
+		struct __insieme_globals var_1 = ((struct __insieme_globals){01, });for(int i = 0; i < 10; i += 1) {
+			printf("count=%2d\n", call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&inc, 0, &var_1}))), 2));printf("count=%2d\n", call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&dec, 0, &var_1}))), 1));if((i==5)) {
 				call___insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&reset, 0, &var_1}))));
 			} else {};
-		};
-		return 0;;
+			
+			
+		};return 0;;
+		
+		
 	}
 }
 

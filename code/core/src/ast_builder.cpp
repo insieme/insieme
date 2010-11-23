@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <boost/tuple/tuple.hpp>
+
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/core/annotated_ptr.h"
@@ -45,6 +47,31 @@
 
 namespace insieme {
 namespace core {
+
+namespace {
+
+	typedef boost::tuple<vector<TypePtr>, vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
+
+	InitDetails splitUp(const ASTBuilder::CaptureInits& captureInits) {
+
+		// prepare containers
+		InitDetails res;
+		vector<TypePtr>& types = res.get<0>();
+		vector<VariablePtr>& vars = res.get<1>();
+		vector<ExpressionPtr>& inits = res.get<2>();
+
+		// process the given map
+		for_each(captureInits, [&](const ASTBuilder::CaptureInits::value_type& cur) {
+			types.push_back(cur.first->getType());
+			vars.push_back(cur.first);
+			inits.push_back(cur.second);
+		});
+
+		// return results
+		return res;
+	}
+
+}
 
 ProgramPtr ASTBuilder::createProgram(const Program::EntryPointSet& entryPoints, bool main) {
 	return Program::create(manager, entryPoints, main);
@@ -96,13 +123,42 @@ LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& 
 	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), captures, params, body);
+	return lambdaExpr(functionType(extractParamTypes(captures), extractParamTypes(params), manager.basic.getUnit()), captures, params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
 	return lambdaExpr(functionType(extractParamTypes(params), returnType), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), returnType), captures, params, body);
+	return lambdaExpr(functionType(extractParamTypes(captures), extractParamTypes(params), returnType), captures, params, body);
+}
+
+
+ExpressionPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
+	return lambdaExpr(manager.basic.getUnit(), body, captureMap, params);
+}
+
+ExpressionPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
+
+	// process capture map
+	InitDetails&& details = splitUp(captureMap);
+
+	vector<TypePtr>& captureTypes = details.get<0>();
+	vector<VariablePtr>& captureVars = details.get<1>();
+	vector<ExpressionPtr>& values = details.get<2>();
+
+
+	// build function type
+	FunctionTypePtr funType = functionType(captureTypes, extractParamTypes(params), returnType);
+
+	LambdaExprPtr lambda = lambdaExpr(funType, captureVars, params, body);
+
+	// add capture init expression
+	if (captureMap.empty()) {
+		return lambda;
+	}
+
+	// add capture init expression
+	return captureInitExpr(lambda, values);
 }
 
 
