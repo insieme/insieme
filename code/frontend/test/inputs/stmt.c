@@ -104,20 +104,20 @@ void unary_op_test() {
 	//#pragma test "(( *v1)[0])"
 	*b;
 
-//	#pragma test \
-//	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)+CAST<int<4>>(1))); return v2;}()"
+	#pragma test \
+	"int.postInc(v1)"
 	a++;
 
-//	#pragma test \
-//	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)-CAST<int<4>>(1))); return v2;}()"
+	#pragma test \
+	"int.postDec(v1)"
 	a--;
 
-//	#pragma test \
-//	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)+CAST<int<4>>(1))); ( *v2);}()"
+	#pragma test \
+	"int.preInc(v1)"
 	++a;
 
-//	#pragma test \
-//	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)-CAST<int<4>>(1))); ( *v2);}()"
+	#pragma test \
+	"int.preDec(v1)"
 	--a;
 }
 
@@ -243,7 +243,7 @@ void switch_stmt_test() {
 
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: [v1]fun[ref<int<4>> v4](){ decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }() };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: int.postInc(v1) };}"
 	switch(a) {
 	case 0:
 		break;

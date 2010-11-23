@@ -1,8 +1,8 @@
 PREFIX=/home/motonacciu/software/llvm-2.8
 
 # export LD_LIBRARY_PATH=/software/lib-gcc450:/software/gcc450/lib64
-export CXX="/home/motonacciu/software/distcc311/bin/distcc g++"
-export CC="/home/motonacciu/software/distcc311/bin/distcc gcc"
+export CXX="g++"
+export CC="gcc"
 
 # download llvm 
 wget http://llvm.org/pre-releases/2.8/llvmCore-2.8-rc2.src.tar.gz

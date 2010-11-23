@@ -502,10 +502,10 @@ public:
 			return builder.callExpr(lambdaExpr, ExpressionList());
 		}
 
-		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
-
-		// create Pair type
-		core::TypeList&& argsTy = toVector( exprTy, exprTy );
+		// the type of this expression is the type of the LHS expression
+		core::TypePtr exprTy = lhs->getType()->getNodeType() == core::NT_RefType ?
+				core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType() :
+				lhs->getType();
 
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
@@ -543,9 +543,8 @@ public:
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
-			const core::TypePtr& lhsSubTy = subExprLHS->getType();
-			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(lhsSubTy, op);
-			rhs = builder.callExpr(lhsSubTy, opFunc, subExprLHS, rhs);
+			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 		}
 
 		bool isAssignment = false;
@@ -606,7 +605,7 @@ public:
 			baseOp = BO_Assign;
 			// poor C codes assign value to function parameters, this is not allowed here as input parameters
 			// are of non REF type. What we need to do is introduce a declaration for these variables
-			// and use the created variable on the stack instead of the input prameters
+			// and use the created variable on the stack instead of the input parameters
 			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(binOp->getLHS());
 			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
 				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(lhs);
@@ -620,7 +619,6 @@ public:
 			}
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			// DLOG(INFO) << *lhs;
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			isAssignment = true;
 			opFunc = convFact.mgr.basic.getRefAssign();
@@ -637,10 +635,8 @@ public:
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
 			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
-			if(isLogical) {
+			if(isLogical)
 				exprTy = convFact.mgr.basic.getBool();
-				argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
-			}
 		}
 		assert(opFunc);
 		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
