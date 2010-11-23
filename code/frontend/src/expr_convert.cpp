@@ -254,10 +254,12 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitStringLiteral(clang::StringLiteral* stringLit) {
 		START_LOG_EXPR_CONVERSION(stringLit);
+		std::string&& strValue = GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() );
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.literal(
-				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() ),
-				convFact.mgr.basic.getString()
+			convFact.builder.literal( strValue,
+				// convFact.mgr.basic.getString()
+				convFact.getASTBuilder().vectorType(convFact.getASTBuilder().refType(convFact.mgr.basic.getChar()),
+						core::IntTypeParam::getConcreteIntParam(strValue.size()))
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;

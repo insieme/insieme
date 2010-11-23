@@ -18,7 +18,7 @@ char* strcpy(char*, char*);
 struct Person getPerson() {
 	{
 		struct Person res;
-		strcpy((res.name), ((char*)("John Doe")));
+		strcpy((res.name), "John Doe");
 		((res.age) = ((unsigned int)(101)));
 	}
 }
