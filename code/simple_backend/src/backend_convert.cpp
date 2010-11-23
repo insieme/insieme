@@ -576,34 +576,35 @@ namespace detail {
 		ADD_FORMATTER(basic.getRealMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getUIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getBoolAnd(), { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolOr(), { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolNot(), { OUT("!"); VISIT_ARG(0); });
 
-		ADD_FORMATTER(basic.getUIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getRealEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
