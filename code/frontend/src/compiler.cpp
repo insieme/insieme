@@ -212,6 +212,7 @@ ASTContext& 	ClangCompiler::getASTContext() const { return pimpl->clang.getASTCo
 Preprocessor& 	ClangCompiler::getPreprocessor() const { return pimpl->clang.getPreprocessor(); }
 Diagnostic& 	ClangCompiler::getDiagnostics() const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 	ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
+TargetInfo& 	ClangCompiler::getTargetInfo() const { return pimpl->clang.getTarget(); }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();

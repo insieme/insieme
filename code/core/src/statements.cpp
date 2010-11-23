@@ -502,7 +502,7 @@ Node::OptionChildList MarkerStmt::getChildNodes() const {
 }
 
 std::ostream& MarkerStmt::printTo(std::ostream& out) const {
-	return out << "<M id=" << id << ">" << subStatement << "</M>";
+	return out << "<M id=" << id << ">" << *subStatement << "</M>";
 }
 
 MarkerStmtPtr MarkerStmt::get(NodeManager& manager, const StatementPtr& subStatement) {

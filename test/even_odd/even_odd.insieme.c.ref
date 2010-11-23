@@ -34,9 +34,9 @@ int odd(unsigned int x) {
 int main(int argc, char** argv) {
 	{
 		int x = 10;
-		printf(((char*)("x=%d\n")), x);
-		printf(((char*)("even(x)=%s\n")), (((((bool)(even(((unsigned int)(x))))))?(((char*)("true"))):(((char*)("false"))))));
-		printf(((char*)("odd(x)=%s\n")), (((((bool)(odd(((unsigned int)(x))))))?(((char*)("true"))):(((char*)("false"))))));
+		printf("x=%d\n", x);
+		printf("even(x)=%s\n", (((((bool)(even(((unsigned int)(x))))))?("true"):("false"))));
+		printf("odd(x)=%s\n", (((((bool)(odd(((unsigned int)(x))))))?("true"):("false"))));
 		return 0;;
 	}
 }

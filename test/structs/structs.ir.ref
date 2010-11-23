@@ -21,7 +21,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v3 = ( var(fun(){
             decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 = ( var(undefined));
-            strcpy(( *v4).name, CAST<array<ref<char>,1>>("John Doe"));
+            strcpy(( *v4).name, "John Doe");
             (( *v4).age := CAST<uint<4>>(101));
         }()));
         return fun(struct<name:vector<ref<char>,30>,age:ref<uint<4>>> v6){

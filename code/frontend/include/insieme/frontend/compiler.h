@@ -56,6 +56,7 @@ class Parser;
 class Token;
 class Scope;
 class Expr;
+class TargetInfo;
 
 namespace idx {
 class Program;
@@ -150,6 +151,7 @@ public:
 	clang::SourceManager& getSourceManager() const;
 	clang::Preprocessor& getPreprocessor() const;
 	clang::Diagnostic& getDiagnostics() const;
+	clang::TargetInfo& getTargetInfo() const;
 	~ClangCompiler();
 };
 

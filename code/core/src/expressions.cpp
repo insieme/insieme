@@ -1072,7 +1072,7 @@ Node::OptionChildList MarkerExpr::getChildNodes() const {
 }
 
 std::ostream& MarkerExpr::printTo(std::ostream& out) const {
-	return out << "<M id=" << id << ">" << subExpression << "</M>";
+	return out << "<M id=" << id << ">" << *subExpression << "</M>";
 }
 
 MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression) {

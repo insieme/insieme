@@ -254,10 +254,12 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitStringLiteral(clang::StringLiteral* stringLit) {
 		START_LOG_EXPR_CONVERSION(stringLit);
+		std::string&& strValue = GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() );
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.literal(
-				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() ),
-				convFact.mgr.basic.getString()
+			convFact.builder.literal( strValue,
+				// convFact.mgr.basic.getString()
+				convFact.getASTBuilder().vectorType(convFact.getASTBuilder().refType(convFact.mgr.basic.getChar()),
+						core::IntTypeParam::getConcreteIntParam(strValue.size()))
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -1012,7 +1014,6 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 	return retExpr;
 }
 
-// #define ATTACH_NAME_ANNOTATION_TO_VARIABLE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1053,9 +1054,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				// we create a TypeVar for each type in the mutual dependence
 				core::VariablePtr&& var = builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) );
 				ctx.recVarExprMap.insert( std::make_pair(funcDecl, var) );
-			#ifdef ATTACH_NAME_ANNOTATION_TO_VARIABLE
-				var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
-			#endif
 			}
 		} else {
 			// we expect the var name to be in currVar
@@ -1079,9 +1077,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 						}
 						core::VariablePtr&& var = this->builder.variable( funcType );
 						this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
-					#ifdef ATTACH_NAME_ANNOTATION_TO_VARIABLE
-						var->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
-					#endif
 					}
 				}
 			);
@@ -1181,10 +1176,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	if( components.empty() ) {
 		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
-	#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
 		// attach name annotation to the lambda
 		retLambdaExpr->getLambda()->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
-	#endif
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
@@ -1231,10 +1224,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			this->ctx.recVarExprMap.erase(fd);
 			core::LambdaPtr&& lambda = core::dynamic_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
 			assert(lambda && "Resolution of sub recursive lambda yield a wrong result");
-		#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
 			// attach name annotation to the lambda
 			lambda->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
-		#endif
 			definitions.insert( std::make_pair(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types

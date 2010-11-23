@@ -458,6 +458,17 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 //	cStr << "}";
 }
 
+void ConvertVisitor::visitMarkerExpr(const MarkerExprPtr& ptr) {
+	// just ignore
+	visit(ptr->getSubExpression());
+}
+
+void ConvertVisitor::visitMarkerStmt(const MarkerStmtPtr& ptr) {
+	// just ignore
+	visit(ptr->getSubStatement());
+}
+
+
 
 // -------------------------------- Variable Manager -----------------------------------------
 
