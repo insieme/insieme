@@ -91,6 +91,7 @@ private:
 		// restore annotations if requested
 		if (preservePtrAnnotationsWhenModified) {
 			res.setAnnotations(ptr.getAnnotations());
+			res->setAnnotations(ptr->getAnnotations());
 		}
 
 		// done
@@ -155,6 +156,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 	if (preservePtrAnnotationsWhenModified) {
 		// ... restore annotations.
 		res.setAnnotations(root.getAnnotations());
+		res->setAnnotations(ptr->getAnnotations());
 	}
 
 	return res;
