@@ -109,14 +109,6 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 			// add operation
 			if (deref) cStr << "(*";
-
-			// add * for stack variables
-//			if (VariablePtr var = dynamic_pointer_cast<const Variable>(ptr->getArguments()[0])) {
-//				if (cc.getVariableManager().getInfo(var).location == VariableManager::STACK) {
-//					cStr << "*";
-//				}
-//			}
-
 			visit(args.front());
 			if (deref) cStr << ")";
 
@@ -333,32 +325,8 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 }
 
 void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
-
-	auto typePtr = ptr->getType();
-	const string& val = ptr->getValue();
-	if (cc.basic.isString(typePtr)) {
-		// TODO change once the decision is made how string literals should be represented int the AST
-		if(val.empty() || val[0] != '"' || val[val.length()-1] != '"') {
-			cStr << "\"" << val << "\"";
-		} else {
-			cStr << val;
-		}
-	} else if (cc.basic.isChar(typePtr) || cc.basic.isWChar(typePtr)) {
-		if (val.size()!=1) {
-			cStr << "'?'";
-		} else {
-			// TODO: find some escaping routines
-			cStr << "'";
-			switch(val[0]) {
-			case '\'': cStr << "\\'"; break;
-			default:
-				cStr << val;
-			}
-			 cStr << "'";
-		}
-	} else {
-		cStr << val;
-	}
+	// just print literal
+	cStr << ptr->getValue();
 }
 
 void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
