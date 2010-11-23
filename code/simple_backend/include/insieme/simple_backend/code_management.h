@@ -44,6 +44,8 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
+#include "insieme/utils/string_utils.h"
+
 namespace insieme {
 namespace simple_backend {
 	
@@ -61,7 +63,7 @@ private:
 
 	template<typename T>
 	friend CodeStream& operator<<(CodeStream& cstr, const T& param);
-	
+
 	template<typename T>
 	void append(const T& param) {
 		std::stringstream ssTmp;

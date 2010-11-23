@@ -392,12 +392,10 @@ void ConvertVisitor::visitSwitchStmt(const SwitchStmtPtr& ptr) {
 void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 	if(ptr->getStatements().size() > 0) {
 		cStr << "{" << CodeStream::indR << "\n";
-		for_each(ptr->getChildList(), [&](const NodePtr& cur) { 
+		cStr << join("\n", ptr->getChildList(), [&](std::ostream&, const NodePtr& cur) {
 			this->visit(cur); 
 			cStr << ";";
-			if(cur != ptr->getChildList().back()) cStr << "\n";
-		});
-		cStr << CodeStream::indL << "\n}";
+		}) << CodeStream::indL << "\n}";
 	} else {
 		cStr << "{}";
 	}
@@ -424,16 +422,9 @@ void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 
 void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
 	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
-	int anz = ptr->getMembers().size();
-	int count = 0;
-	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
+	cStr << join(", ", ptr->getMembers(), [&](std::ostream&, const StructExpr::Member& cur) {
 		this->visit(cur.second);
-		count++;
-		if (count < anz) {
-			cStr << ", ";
-		}
-	});
-	cStr << "})";
+	}) << "})";
 }
 
 void ConvertVisitor::visitUnionExpr(const UnionExprPtr& ptr) {
@@ -447,9 +438,19 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	// handle single-element initializations
 	if (ptr->getExpressions().size() == 1) {
 		this->visit(ptr->getExpressions()[0]);
-	} else {
-		assert(false && "Not implemented!");
+		return;
 	}
+
+	// test whether all expressions are calls to ref.var ...
+	cStr << "{";
+	cStr << join(", ", ptr->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) {
+		if (!(cur->getNodeType() == NT_CallExpr && cc.basic.isRefVar(static_pointer_cast<const CallExpr>(cur)->getFunctionExpr()))) {
+			assert(false && "Vector initialization not supported for the given values!");
+		}
+		this->visit(cur);
+	});
+	cStr << "}";
+
 
 //	cStr << "&{";
 //	cStr << join(", ", ptr->getExpressions(), [&, this](std::ostream&, const ExpressionPtr& cur) {
