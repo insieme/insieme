@@ -339,7 +339,7 @@ public:
 
         core::TypePtr&& subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
         // Adding the name of the typedef as annotation
-        // subType.addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
+        subType->addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
 
         END_LOG_TYPE_CONVERSION( subType );
         return  subType;
