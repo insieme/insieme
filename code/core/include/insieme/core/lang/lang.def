@@ -275,7 +275,7 @@ LITERAL(Merge, "merge", "(threadgroup) -> unit")
 LITERAL(MergeAll, "mergeAll", "() -> unit")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
-LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vector<int<#a>,#b>, (vector<int<#a>,#b>)->'a)->unit")
+LITERAL(PFor, "pfor", "(threadgroup, vector<uint<#a>,#b>, vector<uint<#a>,#b>, vector<uint<#a>,#b>, (vector<uint<#a>,#b>)->'a)->unit")
 
 LITERAL(GetThreadGroup, "getThreadgroup", "(uint<#a>) -> threadgroup")
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
