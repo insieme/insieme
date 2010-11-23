@@ -39,7 +39,6 @@
 #include "insieme/c_info/naming.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/types_lenght.h"
 
 namespace insieme {
 namespace frontend {
@@ -142,24 +141,43 @@ public:
 };
 */
 
-
-void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits) {
+void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
 
     if(globalRangeUsed)
-        CAPTURE(captureList, globalRange, inits);
+        iCAPTURE(captureList, globalRange, cTypes);
 
     if(numGroupsUsed)
-        CAPTURE(captureList, numGroups, inits);
+        iCAPTURE(captureList, numGroups, cTypes);
 
     if(localRangeUsed || scope == OCL_GLOBAL)
-        CAPTURE(captureList, localRange, inits);
+        iCAPTURE(captureList, localRange, cTypes);
 
-    if(groupTgUsed) {
-        CAPTURE(captureList, groupTg, inits);
-    }
+    if(groupTgUsed)
+        iCAPTURE(captureList, groupTg, cTypes);
 
     if(localTgUsed && scope == OCL_LOCAL)
-        CAPTURE(captureList, localTg, inits);
+        iCAPTURE(captureList, localTg, cTypes);
+
+}
+
+
+//TODO remove
+void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits, core::TypeList cTypes) {
+
+    if(globalRangeUsed)
+        CAPTURE(captureList, globalRange, inits, cTypes);
+
+    if(numGroupsUsed)
+        CAPTURE(captureList, numGroups, inits, cTypes);
+
+    if(localRangeUsed || scope == OCL_GLOBAL)
+        CAPTURE(captureList, localRange, inits, cTypes);
+
+    if(groupTgUsed)
+        CAPTURE(captureList, groupTg, inits, cTypes);
+
+    if(localTgUsed && scope == OCL_LOCAL)
+        CAPTURE(captureList, localTg, inits, cTypes);
 
 }
 
@@ -486,6 +504,29 @@ private:
 
     // creates new variables for all variables in the input vector and stores them in the output vector
     // The elements of the input vector are stored as initialization values in map inits for the new variables
+    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::VariablePtr>& inVec, core::TypeList& types) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            core::VariablePtr tmp = builder.variable((*I)->getType());
+
+            outVec[(*I)] = tmp;
+            types.push_back((*I)->getType());
+
+            *I = tmp;
+        }
+    }
+
+    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            core::DeclarationStmtPtr tmp = builder.declarationStmt((*I)->getVariable()->getType(), (*I)->getInitialization());
+
+            outVec[(*I)->getVariable()] = tmp->getVariable();
+            types.push_back((*I)->getVariable()->getType());
+
+            *I = tmp;
+        }
+    }
+
+    //TODO remove
     void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, core::CaptureInitExpr::Values inits,
             core::TypeList types) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
@@ -520,6 +561,33 @@ private:
     }
 
 
+    core::ExpressionPtr genLocalCie(core::StatementPtr& body, core::Lambda::ParamList params) {
+        // capture all arguments
+        core::ASTBuilder::CaptureInits localFunCaptures;
+//        core::CaptureInitExpr::Values localFunInits;
+        core::TypeList localFunCtypes;
+
+        createCaptureList(localFunCaptures, constantArgs, localFunCtypes);
+        createCaptureList(localFunCaptures, globalArgs, localFunCtypes);
+        createCaptureList(localFunCaptures, localArgs, localFunCtypes);
+        createCaptureList(localFunCaptures, privateArgs, localFunCtypes);
+        // in-body local variables
+        std::vector<core::DeclarationStmtPtr> localVars = kernelMapper.getLocalDeclarations();
+        createCaptureList(localFunCaptures, kernelMapper.getLocalDeclarations(), localFunCtypes);
+        // catch loop boundaries
+//TODO store types of loop boudaries
+        kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunCtypes);
+
+        core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
+
+        return builder.lambdaExpr(lpfType, body, localFunCaptures, params);
+//                        builder.lambdaExpr(newStmt, captures, Lambda::ParamList());
+
+//FIXME captures initializations
+        // initialize captured variables
+//        return builder.captureInitExpr(localParFct, localFunInits);
+
+    }
 
 /*
     // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
@@ -640,9 +708,9 @@ public:
 
             // add vector<uint<4>,3> globalRange and localRange to parameters
 /*            core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
-            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
+            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.uintType( 4 ), vecSize));
             params.push_back(globalRange);
-            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
+            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.uintType( 4 ), vecSize));
             params.push_back(localRange);*/
 //            params.push_back(globalRange);
 //            params.push_back(localRange);
@@ -678,15 +746,12 @@ public:
                 // type of functions inside jobs
 //                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
 
-                core::Lambda::ParamList funParams;
-
-
                core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().basic.getUInt4());
 
 // Top down generation of constructs
                // start vector of pfor loops, will be set to [0,0,0]
-//               core::VariablePtr nullVec = builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(),
-//                       core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+               core::VariablePtr nullVec = builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(),
+                       core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
 
                // increment vector for loops, will be set to [1,1,1]
                core::VariablePtr incVec = builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(),
@@ -700,11 +765,17 @@ public:
 
 //                , noGuardedStatementsNeeded, kernelMapper.getLocalDeclarations()
 //TODO add pfor
-                // TODO check args
+                // TODO change localTg to getThreadGroup
+
+                // build capture init expression to be used as body of pfor loop
+                core::Lambda::ParamList xxx = toVector(kd.localId);
+                core::ExpressionPtr localPforFun = genLocalCie(newBody, xxx);
+
                 expr.push_back(kd.localTg);
+                expr.push_back(nullVec);
                 expr.push_back(kd.localRange);
                 expr.push_back(incVec);
-                expr.push_back(kd.localId);
+                expr.push_back(localPforFun);
 
                 core::CallExprPtr localPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), expr);
 
@@ -722,11 +793,11 @@ public:
                 createCaptureList(localFunCaptures, localVars, localFunInits, localFunCtypes);
                 // catch loop boundaries
 //TODO store types of loop boudaries
-                kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunInits);
+                kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunInits, localFunCtypes);
 
                 core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
 
-                core::LambdaExprPtr localParFct = builder.lambdaExpr(lpfType, newBody, localFunCaptures, funParams);
+                core::LambdaExprPtr localParFct = builder.lambdaExpr(lpfType, localPfor, localFunCaptures, core::Lambda::ParamList());
 //                        builder.lambdaExpr(newStmt, captures, Lambda::ParamList());
 
 //FIXME captures initializations
@@ -771,7 +842,7 @@ public:
                 createCaptureList(globalFunCaptures, localArgs, globalFunInits, globalFunCtypes);
                 createCaptureList(globalFunCaptures, privateArgs, globalFunInits, globalFunCtypes);
                 // catch loop boundaries
-                kd.appendCaptures(globalFunCaptures, OCL_GLOBAL, globalFunInits);
+                kd.appendCaptures(globalFunCaptures, OCL_GLOBAL, globalFunInits, globalFunCtypes);
                 // TODO catch global variables
 
                 //core::DeclarationStmtPtr localThreadGroup = builder.declarationStmt(kd.localTg, localPar); inlined, see next line, created only if needed
@@ -782,9 +853,7 @@ public:
                 else
                     tmp = localPar;
 
-                core::LambdaExprPtr globalParFct = builder.lambdaExpr(tmp, globalFunCaptures, funParams);
-                        //builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, globalFunCaptures, funParams, tmp);
-                                                  // builder.lambdaExpr(newBody, localFunCaptures, core::Lambda::ParamList());
+                core::LambdaExprPtr globalParFct = builder.lambdaExpr(tmp, globalFunCaptures, core::Lambda::ParamList());
 
                 // catch all arguments which are shared in global range
                 core::JobExpr::LocalDecls globalJobShared;
