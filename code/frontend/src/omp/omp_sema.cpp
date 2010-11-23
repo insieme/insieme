@@ -92,10 +92,17 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn){
 			LOG(INFO) << "annotation: " << *subAnn;
 			NodePtr newNode;
-			if(auto par = std::dynamic_pointer_cast<Parallel>(subAnn)) {
-				newNode = handleParallel(stmt, par);
+			if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
+				newNode = handleParallel(stmt, parAnn);
+			} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
+				newNode = handleFor(stmt, forAnn);
 			}
+			else assert(0 && "Unhandled OMP annotation.");
+			LOG(INFO) << "Pre replace: " << *mark.getRootNode();
+			LOG(INFO) << "Replace: " << *mark;
+			LOG(INFO) << "   with: " << *newNode;
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, newNode, true));
+			LOG(INFO) << "Post replace: " << replacement;
 		});
 		return false;
 	}
@@ -133,6 +140,7 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
 	assert(forStmt && "OpenMP for attached to non-for statement");
 
+	LOG(INFO) << "for stmtNode:\n" << stmtNode;
 	return stmtNode;
 }
 
