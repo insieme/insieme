@@ -161,9 +161,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 		case NT_Literal: {
 			cStr << cc.getFuncMan().getFunctionName(defCodePtr, static_pointer_cast<const Literal>(funExp));
-			cStr << "(";
 			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
-			cStr << ")";
 			return;
 		}
 
@@ -545,9 +543,15 @@ namespace detail {
 		#define OUT(Literal) cStr << Literal
 		#define ARG(N) getArgument(call, N)
 		#define VISIT_ARG(N) visitArgument(visitor, call, N)
-		#define ADD_FORMATTER(Literal, FORMAT) \
-					res.insert(std::make_pair(Literal->getValue(), make_formatter([&basic](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) FORMAT )))
+		#define ADD_FORMATTER_DETAIL(Literal, Brackets, FORMAT) \
+					res.insert(std::make_pair(Literal->getValue(), make_formatter([&basic](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) { \
+						if (Brackets) OUT("("); \
+						FORMAT \
+						if (Brackets) OUT(")"); \
+					} )))
 
+		#define ADD_FORMATTER(Literal, FORMAT) \
+					ADD_FORMATTER_DETAIL(Literal, true, FORMAT)
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = visitor.getConversionContext().getNodeManager();
@@ -608,20 +612,21 @@ namespace detail {
 		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
 		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
-		ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{}"); });
-		ADD_FORMATTER(basic.getVectorInitUndefined(), { OUT("{}"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
 
 
 		ADD_FORMATTER(basic.getIfThenElse(), {
-				OUT("(("); VISIT_ARG(0); OUT(")?(");
+				OUT("("); VISIT_ARG(0); OUT(")?(");
 				visitor.visit(evalLazy(ARG(1)));
 				OUT("):(");
 				visitor.visit(evalLazy(ARG(2)));
-				OUT("))");
+				OUT(")");
 		});
 
 
 		#undef ADD_FORMATTER
+		#undef ADD_FORMATTER_DETAIL
 		#undef OUT
 		#undef ARG
 		#undef VISIT_ARG
@@ -643,6 +648,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::Conve
 	out << "#define bool int\n";
 	out << "#define true 1\n";
 	out << "#define false 0\n";
+	out << "#define null 0\n";
 
 	for_each(code.getProgram()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
 		out << "// --- Entry Point ---\n";
