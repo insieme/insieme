@@ -74,8 +74,8 @@ public:
 
             // kernel function has at least 2 arguments (localRange, globalRange)
             // TODO change to ocl annotation check
-std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY) << std::endl;
-            if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
+std::cout << "ocl annotations: " << func.hasAnnotation(fe::ocl::BaseAnnotation::KEY) << std::endl;
+            if(func.hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
 
                 core::FunctionType ft = *funcType;
                 core::TypePtr retTy = ft.getReturnType();
@@ -91,7 +91,7 @@ std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation:
 //std::cout << "Nchilds: " << func->getChildList().size() << std::endl;
 
                 core::NodePtr node = func->getChildList()[0];
-                std::cout << "this is lambdaaaa" << node->toString() << "\n";
+                std::cout << "this is lambdaaaa  " << node->toString() << "\n";
 
                 if(core::CompoundStmtPtr body = core::dynamic_pointer_cast<const core::CompoundStmt>(func->getChildList().back())){
 
@@ -107,7 +107,6 @@ std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation:
                         }
                         return false;
                     });
-
                     if(core::NodeType::NT_DeclarationStmt != (*parallelFunctionCall)->getNodeType()) // check for call expr only if it is not a declexpr
                         EXPECT_EQ(core::NodeType::NT_CallExpr, (*parallelFunctionCall)->getNodeType());
                 }
@@ -146,6 +145,8 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "hello.cl" << "' to IR...";
     fe::Program prog(manager);
+
+    std::cout << SRC_DIR << std::endl;
     prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
     program = prog.convert();
     LOG(INFO) << "Done.";
@@ -155,6 +156,9 @@ TEST(OclCompilerTest, HelloCLTest) {
     OclTestVisitor otv;
     core::visitAll(program, otv);
 
+    core::printer::PrettyPrinter pp(program);
+
+    std::cout << pp << std::endl;
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck());
     std::sort(errors.begin(), errors.end());
