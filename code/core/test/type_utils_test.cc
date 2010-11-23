@@ -42,6 +42,7 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/type_utils.h"
+#include "insieme/core/ir_parse.h"
 
 namespace insieme {
 namespace core {
@@ -286,6 +287,19 @@ TEST(TypeUtils, FreeTypeVariableAssignment) {
 	EXPECT_NE(getParamVariables(resA), getParamVariables(resB));
 }
 
+
+TEST(TypeUtils, ArrayVectorRelation) {
+
+	NodeManager manager;
+
+	TypePtr typeA = parse::parseType(manager, "(array<ref<char>,1>,var_list)");
+	TypePtr typeB = parse::parseType(manager, "(vector<ref<char>,25>,var_list)");
+
+	EXPECT_NE(typeA, typeB);
+
+	EXPECT_PRED2(unifyable, typeA, typeB);
+
+}
 
 } // end namespace core
 } // end namespace insieme
