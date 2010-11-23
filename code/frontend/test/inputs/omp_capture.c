@@ -44,5 +44,10 @@ int main() {
 	{
 		int b;
 		printf("hell world #%d/%d\n", a, b);
+		
+		#pragma omp for
+		for(int i=0; i<100; ++i) {
+			printf("%d", i+a);
+		}
 	}
 }
