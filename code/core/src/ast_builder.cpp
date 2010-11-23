@@ -79,9 +79,17 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointSet& entryPoints, 
 
 // ---------------------------- Convenience -------------------------------------
 
-LiteralPtr ASTBuilder::stringVal(const char* str) const {
+LiteralPtr ASTBuilder::stringLit(const char* str) const {
 	return literal(str, manager.basic.getString());
 }
+
+LiteralPtr ASTBuilder::intLit(const int val) const {
+    return literal(manager.basic.getInt4(), toString(val));
+}
+LiteralPtr ASTBuilder::uintLit(const unsigned int val) const {
+    return literal(manager.basic.getUInt4(), toString(val));
+}
+
 
 CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
 	RefTypePtr&& refTy = dynamic_pointer_cast<const RefType>(subExpr->getType());
@@ -160,6 +168,14 @@ ExpressionPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementP
 	// add capture init expression
 	return captureInitExpr(lambda, values);
 }
+
+CallExprPtr ASTBuilder::getThreadGroup(const ExpressionPtr& level) const {
+    if(!level)
+        return callExpr(manager.basic.getGetThreadGroup(), uintLit(0));
+
+    return callExpr(manager.basic.getGetThreadGroup(), level);
+}
+
 
 
 // ---------------------------- Utilities ---------------------------------------
