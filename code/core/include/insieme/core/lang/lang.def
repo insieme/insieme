@@ -44,7 +44,10 @@
 #define GROUP(_id, ...)
 #endif
 #ifndef OPERATOR
-#define OPERATOR(_id, ...)
+#define OPERATOR(_id, _str)
+#endif
+#ifndef OPERATION
+#define OPERATION(_type, _op, _name, _spec)
 #endif
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
@@ -104,22 +107,27 @@ TYPE(NoArgsOpType, "() -> unit")
 
 // Operators ----------------------------------------------------------------------------------------------------------
 
+// binary
 OPERATOR(Add, 	"+")
-OPERATOR(Sub, 	"-")
+OPERATOR(Sub,	"-")
 OPERATOR(Mul, 	"*")
 OPERATOR(Div, 	"/")
 OPERATOR(Mod, 	"%")
 OPERATOR(And, 	"&")
 OPERATOR(Or, 	"|")
-OPERATOR(Not,	"~")
 OPERATOR(Xor, 	"^")
 OPERATOR(LShift,"<<")
 OPERATOR(RShift,">>")
 
-// -- logical
+// unary
+OPERATOR(Not,	"~")
+OPERATOR(Plus,	"+")
+OPERATOR(Minus,	"-")
+
+// logical
 OPERATOR(LNot, 	"!")
 OPERATOR(Eq, 	"==")
-OPERATOR(Neq,	"!=")
+OPERATOR(Ne,	"!=")
 OPERATOR(Lt, 	"<")
 OPERATOR(Le,	"<=")
 OPERATOR(Gt, 	">")
@@ -127,90 +135,91 @@ OPERATOR(Ge,	">=")
 
 // Logical Operations -------------------------------------------------------------------------------------------------
 
-GROUP(LogicOp, BoolAnd, BoolOr, BoolEq, BoolNot)
+GROUP(LogicOp, BoolAnd, BoolOr, BoolEq, BoolNe, BoolNot)
 
-LITERAL(BoolAnd, "bool.and", "(bool,bool) -> bool")
-LITERAL(BoolOr,  "bool.or",  "(bool,bool) -> bool")
-LITERAL(BoolEq,  "bool.eq",  "(bool,bool) -> bool")
-LITERAL(BoolNot, "bool.not", "(bool) -> bool")
+OPERATION(Bool, And, "bool.and", "(bool,bool) -> bool")
+OPERATION(Bool, Or,  "bool.or",  "(bool,bool) -> bool")
+OPERATION(Bool, Eq,  "bool.eq",  "(bool,bool) -> bool")
+OPERATION(Bool, Ne,  "bool.ne",  "(bool,bool) -> bool")
+OPERATION(Bool, Not, "bool.not", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, IntAdd, IntSub, IntMul, IntDiv, IntMod)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod)
 
-LITERAL(IntAdd,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntSub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntMul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntDiv,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntMod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Sub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Mul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Div,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
 
-GROUP(UIntArithOp, UIntAdd, UIntSub, UIntMul, UIntDiv, UIntMod)
+GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod)
 
-LITERAL(UIntAdd,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntSub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntMul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntDiv,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntMod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Add,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Sub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Mul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Div,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Mod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
 
 GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
 
-LITERAL(RealAdd,  "real.add", "(real<#a>,real<#a>) -> real<#a>")
-LITERAL(RealSub,  "real.sub", "(real<#a>,real<#a>) -> real<#a>")
-LITERAL(RealMul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
-LITERAL(RealDiv,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Add,  "real.add", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Sub,  "real.sub", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Mul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
 // Comparison Operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntCompOp, IntEq, IntNe, IntLt, IntGt, IntLe, IntGe)
+GROUP(IntCompOp, SignedIntEq, SignedIntNe, SignedIntLt, SignedIntGt, SignedIntLe, SignedIntGe)
 
-LITERAL(IntEq, "int.eq", "(int<#a>,int<#a>) -> bool")
-LITERAL(IntNe, "int.ne", "(int<#a>,int<#a>) -> bool")
-LITERAL(IntLt, "int.lt", "(int<#a>,int<#a>) -> bool")
-LITERAL(IntGt, "int.gt", "(int<#a>,int<#a>) -> bool")
-LITERAL(IntLe, "int.le", "(int<#a>,int<#a>) -> bool")
-LITERAL(IntGe, "int.ge", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Eq, "int.eq", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Ne, "int.ne", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Lt, "int.lt", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Gt, "int.gt", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Le, "int.le", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Ge, "int.ge", "(int<#a>,int<#a>) -> bool")
 
-GROUP(UIntCompOp, UIntEq, UIntNe, UIntLt, UIntGt, UIntLe, UIntGe)
+GROUP(UIntCompOp, UnsignedIntEq, UnsignedIntNe, UnsignedIntLt, UnsignedIntGt, UnsignedIntLe, UnsignedIntGe)
 
-LITERAL(UIntEq, "uint.eq", "(uint<#a>,uint<#a>) -> bool")
-LITERAL(UIntNe, "uint.ne", "(uint<#a>,uint<#a>) -> bool")
-LITERAL(UIntLt, "uint.lt", "(uint<#a>,uint<#a>) -> bool")
-LITERAL(UIntGt, "uint.gt", "(uint<#a>,uint<#a>) -> bool")
-LITERAL(UIntLe, "uint.le", "(uint<#a>,uint<#a>) -> bool")
-LITERAL(UIntGe, "uint.ge", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Eq, "uint.eq", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Ne, "uint.ne", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Lt, "uint.lt", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Gt, "uint.gt", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Le, "uint.le", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Ge, "uint.ge", "(uint<#a>,uint<#a>) -> bool")
 
 GROUP(RealCompOp, RealEq, RealNe, RealLt, RealGt, RealLe, RealGe)
 
-LITERAL(RealEq, "real.eq", "(real<#a>,real<#a>) -> bool")
-LITERAL(RealNe, "real.ne", "(real<#a>,real<#a>) -> bool")
-LITERAL(RealLt, "real.lt", "(real<#a>,real<#a>) -> bool")
-LITERAL(RealGt, "real.gt", "(real<#a>,real<#a>) -> bool")
-LITERAL(RealLe, "real.le", "(real<#a>,real<#a>) -> bool")
-LITERAL(RealGe, "real.ge", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Eq, "real.eq", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Ne, "real.ne", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Lt, "real.lt", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Gt, "real.gt", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Le, "real.le", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
-GROUP(BitwiseIntOp, IntNot, IntAnd, IntOr, IntXor, IntLShift, IntRShift)
+GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
 
-LITERAL(IntNot,    "int.not",    "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntAnd,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntOr,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntXor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntLShift, "int.lshift", "(int<#a>,int<#a>) -> int<#a>")
-LITERAL(IntRShift, "int.rshift", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Not,    "int.not",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, And,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Or,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Xor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, LShift, "int.lshift", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, RShift, "int.rshift", "(int<#a>,int<#a>) -> int<#a>")
 
-GROUP(BitwiseUIntOp, UIntNot, UIntAnd, UIntOr, UIntXor, UIntLShift, UIntRShift)
+GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
 
-LITERAL(UIntNot,    "uint.not",    "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntAnd,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntOr,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntXor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntLShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
-LITERAL(UIntRShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
@@ -276,3 +285,5 @@ LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vec
 #undef TYPE
 #undef LITERAL
 #undef GROUP
+#undef OPERATOR
+#undef OPERATION

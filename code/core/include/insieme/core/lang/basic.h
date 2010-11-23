@@ -65,6 +65,12 @@ public:
 	BasicGenerator(NodeManager& nm);
 	~BasicGenerator();
 
+	enum Operator {
+	#define OPERATOR(_id, _str) \
+	_id,
+	#include "insieme/core/lang/lang.def"
+	};
+
 	#define TYPE(_id, _spec) \
 	TypePtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
@@ -73,6 +79,10 @@ public:
 	LiteralPtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
 
+	#define OPERATION(_type, _op, _name, _spec) \
+	LiteralPtr get##_type##_op() const; \
+	bool is##_type##_op(const NodePtr& p) const;
+
 	#define GROUP(_id, ...) \
 	bool is##_id(const NodePtr& p) const;
 
@@ -80,7 +90,7 @@ public:
 
 	bool isBuiltIn(const NodePtr& node) const;
 	LiteralPtr getLiteral(const std::string& name) const;
-
+	LiteralPtr getOperator(const TypePtr& type, const Operator& op) const;
 	// ----- extra material ---
 
 	StatementPtr getNoOp() const;

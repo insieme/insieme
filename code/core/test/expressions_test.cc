@@ -178,7 +178,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 
 	LiteralPtr zero = builder.literal(gen.getUInt1(), "0");
 	VariablePtr x = builder.variable(gen.getUInt4(), 3);
-	ExpressionPtr condition = builder.callExpr(gen.getBool(), gen.getUIntEq(), x, zero);
+	ExpressionPtr condition = builder.callExpr(gen.getBool(), gen.getUnsignedIntEq(), x, zero);
 
 	// build even body ...
 	StatementPtr evenBody = builder.ifStmt(condition,

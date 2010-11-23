@@ -138,11 +138,7 @@ std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-    // force logging to stderr
-    LogToStderr();
-
-    // Set severity level
-    SetStderrLogging(5);
+	insieme::utils::InitLogger("ut_ocl_compiler_test", INFO, true);
 //    CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::create(manager);

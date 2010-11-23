@@ -510,100 +510,94 @@ public:
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
 		// a op= b  ---->  a = a op b
-		std::string op;
 		clang::BinaryOperatorKind baseOp;
+		core::lang::BasicGenerator::Operator op;
+		bool isCompound = true;
+
 		switch( binOp->getOpcode() ) {
 		// a *= b
-		case BO_MulAssign: 	op = "mul"; baseOp = BO_Mul; break;
+		case BO_MulAssign: 	op = core::lang::BasicGenerator::Mul; baseOp = BO_Mul; break;
 		// a /= b
-		case BO_DivAssign: 	op = "div"; baseOp = BO_Div; break;
+		case BO_DivAssign: 	op = core::lang::BasicGenerator::Div; baseOp = BO_Div; break;
 		// a %= b
-		case BO_RemAssign:	op = "mod"; baseOp = BO_Rem; break;
+		case BO_RemAssign:	op = core::lang::BasicGenerator::Mod; baseOp = BO_Rem; break;
 		// a += b
-		case BO_AddAssign: 	op = "add"; baseOp = BO_Add; break;
+		case BO_AddAssign: 	op = core::lang::BasicGenerator::Add; baseOp = BO_Add; break;
 		// a -= b
-		case BO_SubAssign:	op = "sub"; baseOp = BO_Sub; break;
+		case BO_SubAssign:	op = core::lang::BasicGenerator::Sub; baseOp = BO_Sub; break;
 		// a <<= b
-		case BO_ShlAssign: 	op = "shl"; baseOp = BO_Shl; break;
+		case BO_ShlAssign: 	op = core::lang::BasicGenerator::LShift; baseOp = BO_Shl; break;
 		// a >>= b
-		case BO_ShrAssign: 	op = "shr"; baseOp = BO_Shr; break;
+		case BO_ShrAssign: 	op = core::lang::BasicGenerator::RShift; baseOp = BO_Shr; break;
 		// a &= b
-		case BO_AndAssign: 	op = "and"; baseOp = BO_And; break;
+		case BO_AndAssign: 	op = core::lang::BasicGenerator::And; baseOp = BO_And; break;
 		// a |= b
-		case BO_OrAssign: 	op = "or"; 	baseOp = BO_Or; break;
+		case BO_OrAssign: 	op = core::lang::BasicGenerator::Or; baseOp = BO_Or; break;
 		// a ^= b
-		case BO_XorAssign: 	op = "xor"; baseOp = BO_Xor; break;
+		case BO_XorAssign: 	op = core::lang::BasicGenerator::Xor; baseOp = BO_Xor; break;
 		default:
-			break;
+			isCompound = false;
 		}
 
-		if( !op.empty() ) {
-			std::string&& opType = getOperationType(convFact.mgr, exprTy);
-			// The operator is a compound operator, we substitute the RHS expression with the expanded one
-			// core::RefTypePtr&& lhsTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType());
-			// assert( lhsTy && "LHS operand must of type ref<a'>." );
-			core::LiteralPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
-
+		if( isCompound ) {
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 			const core::TypePtr& lhsSubTy = subExprLHS->getType();
+			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(lhsSubTy, op);
 			rhs = builder.callExpr(lhsSubTy, opFunc, builder.deref(lhs), rhs);
-
-			// add an annotation to the subexpression
-			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
 		}
 
 		bool isAssignment = false;
 		bool isLogical = false;
+
 		baseOp = binOp->getOpcode();
 
 		core::LiteralPtr opFunc;
-
 		switch( binOp->getOpcode() ) {
 		case BO_PtrMemD:
 		case BO_PtrMemI:
 			assert(false && "Operator not yet supported!");
 
 		// a * b
-		case BO_Mul: 	op = "mul";  break;
+		case BO_Mul: 	op = core::lang::BasicGenerator::Mul;  break;
 		// a / b
-		case BO_Div: 	op = "div";  break;
+		case BO_Div: 	op = core::lang::BasicGenerator::Div;  break;
 		// a % b
-		case BO_Rem: 	op = "mod";  break;
+		case BO_Rem: 	op = core::lang::BasicGenerator::Mod;  break;
 		// a + b
-		case BO_Add: 	op = "add";  break;
+		case BO_Add: 	op = core::lang::BasicGenerator::Add;  break;
 		// a - b
-		case BO_Sub: 	op = "sub";  break;
+		case BO_Sub: 	op = core::lang::BasicGenerator::Sub;  break;
 		// a << b
-		case BO_Shl: 	op = "shl";  break;
+		case BO_Shl: 	op = core::lang::BasicGenerator::LShift;  break;
 		// a >> b
-		case BO_Shr: 	op = "shr";  break;
+		case BO_Shr: 	op = core::lang::BasicGenerator::RShift;  break;
 		// a & b
-		case BO_And: 	op = "and";  break;
+		case BO_And: 	op = core::lang::BasicGenerator::And;  break;
 		// a ^ b
-		case BO_Xor: 	op = "xor";  break;
+		case BO_Xor: 	op = core::lang::BasicGenerator::Xor;  break;
 		// a | b
-		case BO_Or:  	op = "or"; 	 break;
+		case BO_Or:  	op = core::lang::BasicGenerator::Or; 	 break;
 
 		// Logic operators
 
 		// a && b
-		case BO_LAnd: 	op = "land"; isLogical=true; break;
+		case BO_LAnd: 	op = core::lang::BasicGenerator::And; isLogical=true; break;
 		// a || b
-		case BO_LOr:  	op = "lor";  isLogical=true; break;
+		case BO_LOr:  	op = core::lang::BasicGenerator::Or;  isLogical=true; break;
 		// a < b
-		case BO_LT:	 	op = "lt";   isLogical=true; break;
+		case BO_LT:	 	op = core::lang::BasicGenerator::Lt;   isLogical=true; break;
 		// a > b
-		case BO_GT:  	op = "gt";   isLogical=true; break;
+		case BO_GT:  	op = core::lang::BasicGenerator::Gt;   isLogical=true; break;
 		// a <= b
-		case BO_LE:  	op = "le";   isLogical=true; break;
+		case BO_LE:  	op = core::lang::BasicGenerator::Le;   isLogical=true; break;
 		// a >= b
-		case BO_GE:  	op = "ge";   isLogical=true; break;
+		case BO_GE:  	op = core::lang::BasicGenerator::Ge;   isLogical=true; break;
 		// a == b
-		case BO_EQ:  	op = "eq";   isLogical=true; break;
+		case BO_EQ:  	op = core::lang::BasicGenerator::Eq;   isLogical=true; break;
 		// a != b
-		case BO_NE:	 	op = "ne";   isLogical=true; break;
+		case BO_NE:	 	op = core::lang::BasicGenerator::Ne;   isLogical=true; break;
 
 		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
@@ -640,19 +634,15 @@ public:
 		rhs = convFact.tryDeref(rhs);
 
 		if( !isAssignment ) {
-			std::string&& opType = getOperationType(convFact.mgr, exprTy);
 			lhs = convFact.tryDeref(lhs);
+			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
 			if(isLogical) {
 				exprTy = convFact.mgr.basic.getBool();
 				argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
 			}
-			opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
 		}
-
+		assert(opFunc);
 		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
-
-		// add the operator name in order to help the convertion process in the backend
-		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
@@ -691,7 +681,7 @@ public:
 					subExpr, // ref<a'> a
 					builder.callExpr(
 						subTy,
-						( additive ? convFact.mgr.basic.getIntAdd() : convFact.mgr.basic.getIntSub() ),
+						( additive ? convFact.mgr.basic.getSignedIntAdd() : convFact.mgr.basic.getSignedIntSub() ),
 							toVector<core::ExpressionPtr>(
 								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
 								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
