@@ -545,7 +545,7 @@ public:
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 			const core::TypePtr& lhsSubTy = subExprLHS->getType();
 			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(lhsSubTy, op);
-			rhs = builder.callExpr(lhsSubTy, opFunc, builder.deref(lhs), rhs);
+			rhs = builder.callExpr(lhsSubTy, opFunc, subExprLHS, rhs);
 		}
 
 		bool isAssignment = false;
@@ -620,6 +620,7 @@ public:
 			}
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
+			// DLOG(INFO) << *lhs;
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			isAssignment = true;
 			opFunc = convFact.mgr.basic.getRefAssign();

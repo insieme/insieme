@@ -141,45 +141,45 @@ public:
 };
 */
 
-void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
-
-    if(globalRangeUsed)
-        iCAPTURE(captureList, globalRange, cTypes);
-
-    if(numGroupsUsed)
-        iCAPTURE(captureList, numGroups, cTypes);
-
-    if(localRangeUsed || scope == OCL_GLOBAL)
-        iCAPTURE(captureList, localRange, cTypes);
-
-    if(groupTgUsed)
-        iCAPTURE(captureList, groupTg, cTypes);
-
-    if(localTgUsed && scope == OCL_LOCAL)
-        iCAPTURE(captureList, localTg, cTypes);
-
-}
+//void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
+//
+//    if(globalRangeUsed)
+//        iCAPTURE(captureList, globalRange, cTypes);
+//
+//    if(numGroupsUsed)
+//        iCAPTURE(captureList, numGroups, cTypes);
+//
+//    if(localRangeUsed || scope == OCL_GLOBAL)
+//        iCAPTURE(captureList, localRange, cTypes);
+//
+//    if(groupTgUsed)
+//        iCAPTURE(captureList, groupTg, cTypes);
+//
+//    if(localTgUsed && scope == OCL_LOCAL)
+//        iCAPTURE(captureList, localTg, cTypes);
+//
+//}
 
 
 //TODO remove
-void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits, core::TypeList cTypes) {
-
-    if(globalRangeUsed)
-        CAPTURE(captureList, globalRange, inits, cTypes);
-
-    if(numGroupsUsed)
-        CAPTURE(captureList, numGroups, inits, cTypes);
-
-    if(localRangeUsed || scope == OCL_GLOBAL)
-        CAPTURE(captureList, localRange, inits, cTypes);
-
-    if(groupTgUsed)
-        CAPTURE(captureList, groupTg, inits, cTypes);
-
-    if(localTgUsed && scope == OCL_LOCAL)
-        CAPTURE(captureList, localTg, inits, cTypes);
-
-}
+//void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits, core::TypeList cTypes) {
+//
+//    if(globalRangeUsed)
+//        CAPTURE(captureList, globalRange, inits, cTypes);
+//
+//    if(numGroupsUsed)
+//        CAPTURE(captureList, numGroups, inits, cTypes);
+//
+//    if(localRangeUsed || scope == OCL_GLOBAL)
+//        CAPTURE(captureList, localRange, inits, cTypes);
+//
+//    if(groupTgUsed)
+//        CAPTURE(captureList, groupTg, inits, cTypes);
+//
+//    if(localTgUsed && scope == OCL_LOCAL)
+//        CAPTURE(captureList, localTg, inits, cTypes);
+//
+//}
 
 void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE scope) {
 
@@ -576,7 +576,7 @@ private:
         createCaptureList(localFunCaptures, kernelMapper.getLocalDeclarations(), localFunCtypes);
         // catch loop boundaries
 //TODO store types of loop boudaries
-        kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunCtypes);
+        // kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunCtypes);
 
         core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
 
@@ -793,7 +793,7 @@ public:
                 createCaptureList(localFunCaptures, localVars, localFunInits, localFunCtypes);
                 // catch loop boundaries
 //TODO store types of loop boudaries
-                kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunInits, localFunCtypes);
+                //kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunInits, localFunCtypes);
 
                 core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
 
@@ -842,7 +842,7 @@ public:
                 createCaptureList(globalFunCaptures, localArgs, globalFunInits, globalFunCtypes);
                 createCaptureList(globalFunCaptures, privateArgs, globalFunInits, globalFunCtypes);
                 // catch loop boundaries
-                kd.appendCaptures(globalFunCaptures, OCL_GLOBAL, globalFunInits, globalFunCtypes);
+                //kd.appendCaptures(globalFunCaptures, OCL_GLOBAL, globalFunInits, globalFunCtypes);
                 // TODO catch global variables
 
                 //core::DeclarationStmtPtr localThreadGroup = builder.declarationStmt(kd.localTg, localPar); inlined, see next line, created only if needed
