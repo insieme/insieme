@@ -77,9 +77,6 @@ namespace {
 	 */
 	bool requiresDeref(const ExpressionPtr& target, ConversionContext& cc) {
 		switch (target->getNodeType()) {
-			case NT_Variable:
-				// check location of memory allocation for variable (only HEAP needs to be dereferenced)
-				return (cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(target)).location == VariableManager::HEAP);
 			case NT_CallExpr:
 				// subscript operator should not be again dereferenced in the end
 				return !(cc.basic.isSubscriptOperator(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
@@ -112,7 +109,14 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 			// add operation
 			if (deref) cStr << "(*";
-			if (ptr->getArguments()[0]->getNodeType() == NT_Variable) cStr << "*";
+
+			// add * for stack variables
+//			if (VariablePtr var = dynamic_pointer_cast<const Variable>(ptr->getArguments()[0])) {
+//				if (cc.getVariableManager().getInfo(var).location == VariableManager::STACK) {
+//					cStr << "*";
+//				}
+//			}
+
 			visit(args.front());
 			if (deref) cStr << ")";
 
@@ -270,10 +274,10 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			// distinguish between var and new
 			CallExprPtr call = static_pointer_cast<const CallExpr>(initialization);
 			ExpressionPtr function = call->getFunctionExpr();
-			if (function->getNodeType() == NT_Literal) {
-				// mark as a stack variable only if created using var.new => otherwise always a pointer (conservative)
-				info.location = cc.getNodeManager().basic.isRefVar(function)?VariableManager::STACK:VariableManager::HEAP;
-			}
+
+			// mark as a stack variable only if created using var.new => otherwise always a pointer (conservative)
+			info.location = cc.getNodeManager().basic.isRefVar(function)?VariableManager::STACK:VariableManager::HEAP;
+
 			break;
 		}
 		default: ;// nothing
@@ -410,7 +414,9 @@ void ConvertVisitor::visitCastExpr(const CastExprPtr& ptr) {
 }
 
 void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
-	if (ptr->getType()->getNodeType() == NT_RefType) {
+	if (ptr->getType()->getNodeType() == NT_RefType
+			&& cc.getVariableManager().getInfo(ptr).location == VariableManager::STACK) {
+
 		cStr << "&";
 	}
 	cStr << nameGen.getVarName(ptr);
@@ -426,8 +432,7 @@ void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
 	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
 	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
 		this->visit(cur.second);
-		cStr << ";";
-		if(cur != ptr->getMembers().back()) cStr << "\n";
+		if(cur != ptr->getMembers().back()) cStr << ", ";
 	});
 	cStr << "})";
 }
