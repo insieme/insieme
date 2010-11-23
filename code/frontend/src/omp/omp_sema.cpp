@@ -48,6 +48,17 @@ namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
 
+const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
+	ProgramPtr result = prog;
+	for(;;) {
+		SemaVisitor v(resultStorage);
+		core::visitAllInterruptable(core::ProgramAddress(result), v);
+		if(v.getReplacement()) result = v.getReplacement();
+		else break;	
+	}
+	return result;
+}
+
 /** Will certainly determine the declaration status of variables inside a block.
  */
 struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
@@ -69,12 +80,13 @@ struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
 };
 
 
-bool SemaVisitor::visitNode(const core::NodeAddress& node) {
+bool SemaVisitor::visitNode(const NodeAddress& node) {
 	return true; // default behaviour: continue visiting
 }
 
-bool SemaVisitor::visitStatement(const StatementAddress& stmt) {
-	if(BaseAnnotationPtr anno = stmt.getAddressedNode().getAnnotation(BaseAnnotation::KEY)) {
+bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
+	const StatementAddress stmt = static_address_cast<const Statement>(mark.getAddressOfChild(0));
+	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp annotation(s) on: \n" << *stmt;
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn){
 			LOG(INFO) << "annotation: " << *subAnn;
@@ -97,14 +109,13 @@ void SemaVisitor::handleParallel(const StatementAddress& stmt, const ParallelPtr
 	CaptureInitExpr::Values initVals;
 	um::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(ldv.undeclared, [&](VariablePtr p){
-		//auto declStmt = build.declarationStmt(p->getType(), p);
 		auto var = build.variable(p->getType());
 		initVals.push_back(p);
 		captures.push_back(var);
 		replacements[p] = var;
 	});
 
-	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements));
+	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements, true));
 
 	auto& basic = nodeMan.basic;
 
@@ -113,7 +124,7 @@ void SemaVisitor::handleParallel(const StatementAddress& stmt, const ParallelPtr
 	auto jobExp = build.jobExpr(parLambdaInited, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(basic.getParallel(), build.literal("8", basic.getUInt4()), build.literal("8", basic.getUInt4()), jobExp);
 	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
-	//LOG(INFO) << "mergeCall:\n" << mergeCall;
+	LOG(INFO) << "mergeCall:\n" << mergeCall;
 	ProgramPtr retProgPtr = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, stmt, mergeCall, true));
 	replacement = retProgPtr;
 }

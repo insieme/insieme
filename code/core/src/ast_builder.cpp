@@ -123,13 +123,13 @@ LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& 
 	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), captures, params, body);
+	return lambdaExpr(functionType(extractParamTypes(captures), extractParamTypes(params), manager.basic.getUnit()), captures, params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
 	return lambdaExpr(functionType(extractParamTypes(params), returnType), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), returnType), captures, params, body);
+	return lambdaExpr(functionType(extractParamTypes(captures), extractParamTypes(params), returnType), captures, params, body);
 }
 
 
