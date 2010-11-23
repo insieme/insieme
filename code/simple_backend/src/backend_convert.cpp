@@ -392,10 +392,12 @@ void ConvertVisitor::visitSwitchStmt(const SwitchStmtPtr& ptr) {
 void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 	if(ptr->getStatements().size() > 0) {
 		cStr << "{" << CodeStream::indR << "\n";
-		cStr << join("\n", ptr->getChildList(), [&](std::ostream&, const NodePtr& cur) {
-			this->visit(cur); 
+		for_each(ptr->getChildList(), [&](const NodePtr& cur) {
+			this->visit(cur);
 			cStr << ";";
-		}) << CodeStream::indL << "\n}";
+			if(cur != ptr->getChildList().back()) cStr << "\n";
+		});
+		cStr << CodeStream::indL << "\n}";
 	} else {
 		cStr << "{}";
 	}
@@ -422,9 +424,12 @@ void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 
 void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
 	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
-	cStr << join(", ", ptr->getMembers(), [&](std::ostream&, const StructExpr::Member& cur) {
+	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
 		this->visit(cur.second);
-	}) << "})";
+		cStr << ";";
+		if(cur != ptr->getMembers().back()) cStr << "\n";
+	});
+	cStr << "})";
 }
 
 void ConvertVisitor::visitUnionExpr(const UnionExprPtr& ptr) {
@@ -443,11 +448,12 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 
 	// test whether all expressions are calls to ref.var ...
 	cStr << "{";
-	cStr << join(", ", ptr->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) {
+	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!(cur->getNodeType() == NT_CallExpr && cc.basic.isRefVar(static_pointer_cast<const CallExpr>(cur)->getFunctionExpr()))) {
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		this->visit(cur);
+		if(cur != ptr->getExpressions().back()) cStr << ", ";
 	});
 	cStr << "}";
 
