@@ -124,6 +124,11 @@ OPERATOR(Not,	"~")
 OPERATOR(Plus,	"+")
 OPERATOR(Minus,	"-")
 
+OPERATOR(PreInc,  "++")
+OPERATOR(PostInc, "++")
+OPERATOR(PreDec,  "--")
+OPERATOR(PostDec, "--")
+
 // logical
 OPERATOR(LNot, 	"!")
 OPERATOR(Eq, 	"==")
@@ -153,6 +158,11 @@ OPERATION(SignedInt, Mul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Div,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
 
+OPERATION(SignedInt, PreInc,  "int.preInc",  "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
+
 GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod)
 
 OPERATION(UnsignedInt, Add,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
@@ -160,6 +170,12 @@ OPERATION(UnsignedInt, Sub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Mul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Div,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Mod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
+
+OPERATION(UnsignedInt, PreInc,  "uint.preInc",  "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PostInc, "uint.postInc", "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PreDec,  "uint.preDec",  "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PostDec, "uint.postDec", "(ref<uint<#a>>) -> uint<#a>")
+
 
 GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
 
@@ -218,8 +234,8 @@ OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<#a>) -> uint<#a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 

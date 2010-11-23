@@ -104,20 +104,20 @@ void unary_op_test() {
 	//#pragma test "(( *v1)[0])"
 	*b;
 
-	#pragma test \
-	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)+CAST<int<4>>(1))); return v2;}()"
+//	#pragma test \
+//	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)+CAST<int<4>>(1))); return v2;}()"
 	a++;
 
-	#pragma test \
-	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)-CAST<int<4>>(1))); return v2;}()"
+//	#pragma test \
+//	"[v1]fun[ref<int<4>> v3](){ decl int<4> v2 = ( *v3); (v3 := (( *v3)-CAST<int<4>>(1))); return v2;}()"
 	a--;
 
-	#pragma test \
-	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)+CAST<int<4>>(1))); ( *v2);}()"
+//	#pragma test \
+//	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)+CAST<int<4>>(1))); ( *v2);}()"
 	++a;
 
-	#pragma test \
-	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)-CAST<int<4>>(1))); ( *v2);}()"
+//	#pragma test \
+//	"[v1]fun[ref<int<4>> v2](){ (v2 := (( *v2)-CAST<int<4>>(1))); ( *v2);}()"
 	--a;
 }
 
@@ -191,8 +191,8 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; [v1, v2]fun[ref<int<4>> v6, ref<int<4>> v7](){ [v6]fun[ref<int<4>> v4](){ decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }(); return (v7 := (( *v7)/2)); }(); };}"
+//	#pragma test \
+//	"{ (v1 := 0); while((( *v2)>1)) { { }; [v1, v2]fun[ref<int<4>> v6, ref<int<4>> v7](){ [v6]fun[ref<int<4>> v4](){ decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }(); return (v7 := (( *v7)/2)); }(); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);

@@ -124,6 +124,12 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
 					// print elements of the tuple directly ...
 					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
+
+					// in case there is no argument => print 0
+					if (arguments->getExpressions().empty()) {
+						this->cStr << "0";
+					}
+
 					return;
 				}
 			}
@@ -137,9 +143,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		// try generic build-in C operator handling
 		auto pos = formats.find(literalFun->getValue());
 		if (pos != formats.end()) {
-			cStr << "(";
 			pos->second->format(*this, cStr, ptr);
-			cStr << ")";
 			return;
 		}
 	}
@@ -161,7 +165,9 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 		case NT_Literal: {
 			cStr << cc.getFuncMan().getFunctionName(defCodePtr, static_pointer_cast<const Literal>(funExp));
+			cStr << "(";
 			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			cStr << ")";
 			return;
 		}
 
@@ -334,15 +340,47 @@ void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
 	cStr << ";";
 }
 
+namespace {
+
+	StatementPtr wrapBody(StatementPtr body) {
+		if (body->getNodeCategory() == NC_Expression) {
+			return CompoundStmt::get(body->getNodeManager(), toVector(body));
+		}
+		return body;
+	}
+
+}
+
+void ConvertVisitor::visitForStmt(const ForStmtPtr& ptr) {
+	auto decl = ptr->getDeclaration();
+	auto var = decl->getVariable();
+	string ident = cc.getNameGen().getVarName(var);
+	cStr << "for(";
+	visit(decl);
+	cStr << "; " << ident << " < ";
+	visit(ptr->getEnd());
+	cStr << "; " << ident << " += ";
+	visit(ptr->getStep());
+	cStr << ") ";
+	visit(wrapBody(ptr->getBody()));
+}
+
 void ConvertVisitor::visitIfStmt(const IfStmtPtr& ptr) {
 	cStr << "if(";
 	visit(ptr->getCondition());
 	cStr << ") ";
-	visit(ptr->getThenBody());
-	if (cc.basic.isNoOp(ptr->getElseBody())) {
+	visit(wrapBody(ptr->getThenBody()));
+	if (!cc.basic.isNoOp(ptr->getElseBody())) {
 		cStr << " else ";
-		visit(ptr->getElseBody());
+		visit(wrapBody(ptr->getElseBody()));
 	}
+}
+
+void ConvertVisitor::visitWhileStmt(const WhileStmtPtr& ptr) {
+	cStr << "while(";
+	visit(ptr->getCondition());
+	cStr << ") ";
+	visit(wrapBody(ptr->getBody()));
 }
 
 void ConvertVisitor::visitSwitchStmt(const SwitchStmtPtr& ptr) {
@@ -518,21 +556,33 @@ namespace detail {
 			}
 		}
 
-	}
+		ExpressionPtr evalLazy(const NodePtr& lazy) {
 
-	ExpressionPtr evalLazy(const NodePtr& lazy) {
+			NodeManager& manager = lazy->getNodeManager();
 
-		NodeManager& manager = lazy->getNodeManager();
+			ExpressionPtr exprPtr = dynamic_pointer_cast<const Expression>(lazy);
+			assert(exprPtr && "Lazy is not an expression!");
 
-		ExpressionPtr exprPtr = dynamic_pointer_cast<const Expression>(lazy);
-		assert(exprPtr && "Lazy is not an expression!");
+			FunctionTypePtr funType = dynamic_pointer_cast<const FunctionType>(exprPtr->getType());
+			assert(funType && "Illegal lazy type!");
 
-		FunctionTypePtr funType = dynamic_pointer_cast<const FunctionType>(exprPtr->getType());
-		assert(funType && "Illegal lazy type!");
+			// form call expression
+			CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
+			return core::transform::tryInline(manager, call);
+		}
 
-		// form call expression
-		CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
-		return core::transform::tryInline(manager, call);
+		void handleIncOperand(ConvertVisitor& visitor, const NodePtr& target) {
+
+			assert(dynamic_pointer_cast<const Expression>(target) && "Operator must be an expression.");
+
+			// check whether a deref is required
+			if (requiresDeref(static_pointer_cast<const Expression>(target), visitor.getConversionContext())) {
+				visitor.getCode()->getCodeStream() << "*";
+			}
+			visitor.visit(target);
+
+		}
+
 	}
 
 
@@ -582,11 +632,38 @@ namespace detail {
 		ADD_FORMATTER(basic.getUnsignedIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
 
+		ADD_FORMATTER(basic.getUnsignedIntAnd(), { VISIT_ARG(0); OUT("&"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntOr(), { VISIT_ARG(0); OUT("|"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntNot(), { OUT("~"); VISIT_ARG(0); });
+
+		ADD_FORMATTER(basic.getUnsignedIntLShift(), { VISIT_ARG(0); OUT("<<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntRShift(), { VISIT_ARG(0); OUT(">>"); VISIT_ARG(1); });
+
+		ADD_FORMATTER(basic.getUnsignedIntPreInc(), { OUT("++"); handleIncOperand(visitor, ARG(0)); });
+		ADD_FORMATTER(basic.getUnsignedIntPostInc(), { handleIncOperand(visitor, ARG(0)); OUT("++"); });
+		ADD_FORMATTER(basic.getUnsignedIntPreDec(), { OUT("--"); handleIncOperand(visitor, ARG(0)); });
+		ADD_FORMATTER(basic.getUnsignedIntPostDec(), { handleIncOperand(visitor, ARG(0)); OUT("--"); });
+
+
 		ADD_FORMATTER(basic.getSignedIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
+
+		ADD_FORMATTER(basic.getSignedIntLShift(), { VISIT_ARG(0); OUT("<<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntRShift(), { VISIT_ARG(0); OUT(">>"); VISIT_ARG(1); });
+
+		ADD_FORMATTER(basic.getSignedIntPreInc(), { OUT("++"); handleIncOperand(visitor, ARG(0)); });
+		ADD_FORMATTER(basic.getSignedIntPostInc(), { handleIncOperand(visitor, ARG(0)); OUT("++"); });
+		ADD_FORMATTER(basic.getSignedIntPreDec(), { OUT("--"); handleIncOperand(visitor, ARG(0)); });
+		ADD_FORMATTER(basic.getSignedIntPostDec(), { handleIncOperand(visitor, ARG(0)); OUT("--"); });
+
+		ADD_FORMATTER(basic.getSignedIntAnd(), { VISIT_ARG(0); OUT("&"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntOr(), { VISIT_ARG(0); OUT("|"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); VISIT_ARG(0); });
 
 		ADD_FORMATTER(basic.getBoolAnd(), { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolOr(), { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
@@ -595,18 +672,21 @@ namespace detail {
 		ADD_FORMATTER(basic.getBoolNot(), { OUT("!"); VISIT_ARG(0); });
 
 		ADD_FORMATTER(basic.getUnsignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getSignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getRealEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getRealNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
