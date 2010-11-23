@@ -433,8 +433,8 @@ JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& defaultStmt, const Gu
 JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new JobExpr(
 			mapper.map(0, type),
-			mapper.map(2 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
-			copyGuardedStmtsUsing(mapper, 2 + localDecls.size(), guardedStmts),
+			mapper.map(1 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
+			copyGuardedStmtsUsing(mapper, 1 + localDecls.size(), guardedStmts),
 			mapper.map(1, localDecls));
 }
 
