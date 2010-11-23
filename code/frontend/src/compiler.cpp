@@ -129,7 +129,9 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	pimpl->clang.setInvocation(CI);
 
 	TargetOptions TO;
-	TO.Triple = llvm::sys::getHostTriple();
+	// fix the target architecture to be a 64 bit machine
+	TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	// TO.Triple = llvm::sys::getHostTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
 
 	pimpl->clang.createPreprocessor();
@@ -166,7 +168,9 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	);
 
 	TargetOptions TO;
-	TO.Triple = llvm::sys::getHostTriple();
+	// fix the target architecture to be a 64 bit machine
+	TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	// TO.Triple = llvm::sys::getHostTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
 
 	std::string extension(file_name.substr(file_name.rfind('.'), std::string::npos));
