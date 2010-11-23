@@ -157,8 +157,8 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 			entryType = fact.getASTBuilder().refType( entryType );
 		}
 		if(it->second) {
-			// the variable is defined as exter, so we don't have to allocate memory for it
-			// just refear to the memory location someone else has defined
+			// the variable is defined as extern, so we don't have to allocate memory for it
+			// just refear to the memory location someone else has initialized
 			entryType = fact.getASTBuilder().refType( entryType );
 		}
 		core::Identifier ident(it->first->getNameAsString());
@@ -177,16 +177,15 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		} else {
 			initExpr = fact.defaultInitVal(entryType);
 		}
-
+		// assert(*initExpr->getType() == *entryType);
 		// default initialization
 		members.push_back( core::StructExpr::Member(ident, initExpr) );
 
 	}
 	core::StructTypePtr&& structTy = fact.getASTBuilder().structType(entries);
-	DLOG(INFO) << *structTy;
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<c_info::CNameAnnotation>(std::string("__insieme_globals")) );
-	return std::make_pair(structTy, fact.getASTBuilder().structExpr(members) );
+	return std::make_pair(structTy, fact.getASTBuilder().structExpr(structTy, members) );
 }
 
 void GlobalVarCollector::dump(std::ostream& out) const {
