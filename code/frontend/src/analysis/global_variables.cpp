@@ -43,6 +43,7 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/c_info/naming.h"
 
@@ -150,7 +151,11 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
 	for(auto it = globals.begin(), end = globals.end(); it != end; ++it) {
-		core::TypePtr&& entryType = fact.getASTBuilder().refType( fact.convertType(it->first->getType().getTypePtr()) );
+		// get entry type and wrap it into a reference if necessary
+		core::TypePtr&& entryType = fact.convertType(it->first->getType().getTypePtr());
+		if (!core::dynamic_pointer_cast<const core::VectorType>(entryType)) {
+			entryType = fact.getASTBuilder().refType( entryType );
+		}
 		if(it->second) {
 			// the variable is defined as exter, so we don't have to allocate memory for it
 			// just refear to the memory location someone else has defined
@@ -178,6 +183,7 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 
 	}
 	core::StructTypePtr&& structTy = fact.getASTBuilder().structType(entries);
+	DLOG(INFO) << *structTy;
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<c_info::CNameAnnotation>(std::string("__insieme_globals")) );
 	return std::make_pair(structTy, fact.getASTBuilder().structExpr(members) );

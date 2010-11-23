@@ -473,7 +473,7 @@ private:
         }
 
 
-        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUIntMul(),
+        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntMul(),
             toVector<core::ExpressionPtr>( vecProduct(vec, n), SUBSCRIPT(vec, n, builder) ));
     }
 
@@ -786,7 +786,6 @@ public:
                 core::LambdaExprPtr localParFct = builder.lambdaExpr(lpfType, localPfor, localFunCaptures, core::Lambda::ParamList());
 //                        builder.lambdaExpr(newStmt, captures, Lambda::ParamList());
 
-
                 // initialize captured variables
                 core::CaptureInitExprPtr localCaptureInits = builder.captureInitExpr(localParFct, localFunInits);
 
@@ -884,7 +883,7 @@ public:
                 std::vector<core::ExpressionPtr> groupRdeclInit ;
                 for(size_t i = 0; i < 3; ++i) {
                     groupRdeclInit.push_back(
-                        builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUIntDiv(), toVector<core::ExpressionPtr>(
+                        builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntDiv(), toVector<core::ExpressionPtr>(
                             SUBSCRIPT(kd.globalRange, i, builder),  SUBSCRIPT(kd.localRange, i, builder) )));
                 }
 
