@@ -52,7 +52,7 @@ namespace printer {
 
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
-const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS;
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -560,6 +560,20 @@ namespace {
 				this->newLine();
 				this->newLine();
 			});
+		});
+
+		PRINT(MarkerExpr, {
+			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
+			if (showMarker) out << "<m id=" << node->getID() << ">";
+			visit(node->getSubExpression());
+			if (showMarker) out << "</m>";
+		});
+
+		PRINT(MarkerStmt, {
+			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
+			if (showMarker) out << "<m id=" << node->getID() << ">";
+			visit(node->getSubStatement());
+			if (showMarker) out << "</m>";
 		});
 
 		/**

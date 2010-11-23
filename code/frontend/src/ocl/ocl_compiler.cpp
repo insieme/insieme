@@ -39,7 +39,6 @@
 #include "insieme/c_info/naming.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/types_lenght.h"
 
 namespace insieme {
 namespace frontend {

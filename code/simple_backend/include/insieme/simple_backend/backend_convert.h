@@ -348,6 +348,10 @@ public:
 
 	void visitLiteral(const LiteralPtr& ptr);
 
+	void visitMarkerExpr(const MarkerExprPtr& ptr);
+
+	void visitMarkerStmt(const MarkerStmtPtr& ptr);
+
 public:
 
 	void visitStructExpr(const StructExprPtr& ptr);
