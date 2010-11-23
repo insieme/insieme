@@ -228,7 +228,7 @@ namespace {
 		}
 		if (a == NT_VectorType && b == NT_ArrayType) {
 			TypePtr elementType = static_pointer_cast<const VectorType>(typeA)->getElementType();
-			typeB = ArrayType::get(manager, elementType, IntTypeParam::getConcreteIntParam(1));
+			typeA = ArrayType::get(manager, elementType, IntTypeParam::getConcreteIntParam(1));
 			return;
 		}
 	}

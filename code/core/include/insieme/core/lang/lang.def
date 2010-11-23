@@ -43,7 +43,9 @@
 #ifndef GROUP
 #define GROUP(_id, ...)
 #endif
-
+#ifndef OPERATOR
+#define OPERATOR(_id, ...)
+#endif
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
 
@@ -99,6 +101,29 @@ TYPE(ThreadGroup, "threadgroup")
 // No Argument -> Unit Type -------------------------------------------------------------------------------------------
 
 TYPE(NoArgsOpType, "() -> unit")
+
+// Operators ----------------------------------------------------------------------------------------------------------
+
+OPERATOR(Add, 	"+")
+OPERATOR(Sub, 	"-")
+OPERATOR(Mul, 	"*")
+OPERATOR(Div, 	"/")
+OPERATOR(Mod, 	"%")
+OPERATOR(And, 	"&")
+OPERATOR(Or, 	"|")
+OPERATOR(Not,	"~")
+OPERATOR(Xor, 	"^")
+OPERATOR(LShift,"<<")
+OPERATOR(RShift,">>")
+
+// -- logical
+OPERATOR(LNot, 	"!")
+OPERATOR(Eq, 	"==")
+OPERATOR(Neq,	"!=")
+OPERATOR(Lt, 	"<")
+OPERATOR(Le,	"<=")
+OPERATOR(Gt, 	">")
+OPERATOR(Ge,	">=")
 
 // Logical Operations -------------------------------------------------------------------------------------------------
 

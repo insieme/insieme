@@ -33,11 +33,11 @@ int odd(unsigned int x) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		int x = 10;
-		printf("x=%d\n", x);
-		printf("even(x)=%s\n", (((((bool)(even(((unsigned int)(x))))))?("true"):("false"))));
-		printf("odd(x)=%s\n", (((((bool)(odd(((unsigned int)(x))))))?("true"):("false"))));
-		return 0;;
+		int x = 10;printf("x=%d\n", x);printf("even(x)=%s\n", (((((bool)(even(((unsigned int)(x))))))?("true"):("false"))));printf("odd(x)=%s\n", (((((bool)(odd(((unsigned int)(x))))))?("true"):("false"))));return 0;;
+		
+		
+		
+		
 	}
 }
 
