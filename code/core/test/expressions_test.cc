@@ -361,6 +361,50 @@ TEST(ExpressionsTest, MarkerExpr) {
 	basicExprTests(markerB, type, toVector<NodePtr>(literal));
 }
 
+TEST(ExpressionsTest, JobExpr) {
+	NodeManager manager;
+
+	TypePtr intType = manager.basic.getUIntGen();
+	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(), manager.basic.getUnit());
+	FunctionTypePtr guardType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(intType, intType), manager.basic.getBool());
+
+	ExpressionPtr handlerA = Variable::get(manager, funType);
+	ExpressionPtr handlerB = Variable::get(manager, funType);
+	ExpressionPtr handlerC = Variable::get(manager, funType);
+
+	ExpressionPtr guardA = Variable::get(manager, guardType);
+	ExpressionPtr guardB = Variable::get(manager, guardType);
+	ExpressionPtr guardC = Variable::get(manager, guardType);
+	ExpressionPtr defaultHandler = Variable::get(manager, funType);
+
+	JobExpr::GuardedStmts stmts;
+	stmts.push_back(JobExpr::GuardedStmt(guardA, handlerA));
+	stmts.push_back(JobExpr::GuardedStmt(guardB, handlerB));
+	stmts.push_back(JobExpr::GuardedStmt(guardC, handlerC));
+
+	vector<DeclarationStmtPtr> localDeclarations;
+	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
+	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
+
+	JobExprPtr job = JobExpr::get(manager, defaultHandler, stmts, localDeclarations);
+
+	// check hash codes, children and cloning
+	TypePtr type = manager.basic.getJob();
+	vector<NodePtr> childList;
+	childList.push_back(type);
+	childList.push_back(localDeclarations[0]);
+	childList.push_back(localDeclarations[1]);
+	childList.push_back(guardA);
+	childList.push_back(handlerA);
+	childList.push_back(guardB);
+	childList.push_back(handlerB);
+	childList.push_back(guardC);
+	childList.push_back(handlerC);
+	childList.push_back(defaultHandler);
+
+	basicExprTests(job, type, childList);
+}
+
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children) {
 
