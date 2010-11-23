@@ -99,7 +99,7 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 
 			// add the variable to the list of global vars (if not already there)
 			if(globals.find(varDecl) == globals.end()) {
-				if(varDecl->isExternC()) {
+				if(varDecl->hasExternalStorage()) {
 					// look for the definition. If we find it it means we have access to the translation unit defining this variable
 					const VarDecl* def = varDecl->getDefinition();
 					if(!def) {

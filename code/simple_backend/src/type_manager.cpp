@@ -223,7 +223,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	CodePtr functorAndCaller(new CodeFragment(string("Definitions for function type: ") + name));
 	CodeStream& out = functorAndCaller->getCodeStream();
 
-	auto elementPrinter = [&, this](std::ostream& out, const TypePtr& cur) {
+	auto elementPrinter = [&](std::ostream& out, const TypePtr& cur) {
 		out << getTypeName(functorAndCaller, cur);
 	};
 
@@ -247,7 +247,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	auto captures = functionType->getCaptureTypes();
 	if (!captures.empty()) {
 		int i = 0;
-		for_each(captures, [&, this](const TypePtr& cur) {
+		for_each(captures, [&](const TypePtr& cur) {
 				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << "; // " << toString(*cur) << "\n";
 		});
 	}
