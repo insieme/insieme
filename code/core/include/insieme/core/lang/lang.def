@@ -273,11 +273,13 @@ LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
-GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined)
+GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction)
 
 LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
 LITERAL(VectorInitUndefined, "vector.initUndefined", "() -> vector<'elem,#a>")						// fugly
+LITERAL(VectorPointwise, "vector.pointwise", "(vector<'elem,#l>, vector<'elem,#l>, ('elem, 'elem) -> 'res) -> vector<'res,#l>")
+LITERAL(VectorReduction, "vector.reduction", "(vector<'elem,#l>, ('elem, 'elem) -> 'res) -> 'res")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
