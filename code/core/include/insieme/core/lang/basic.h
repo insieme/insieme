@@ -38,6 +38,8 @@
 
 #include <string>
 
+#include "insieme/core/int_type_param.h"
+
 namespace insieme {
 namespace core {
 	
@@ -96,6 +98,11 @@ public:
 	StatementPtr getNoOp() const;
 	bool isNoOp(const NodePtr& p) const;
 
+	// a factory method for intTypeParam literals
+	LiteralPtr getIntTypeParamLiteral(IntTypeParam param) const;
+
+	// a factory method for a type literal
+	LiteralPtr getTypeLiteral(const TypePtr& type) const;
 };
 
 } // namespace lang
