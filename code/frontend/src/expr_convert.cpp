@@ -789,8 +789,12 @@ public:
 			break;
 		// -a
 		case UO_Minus:
-			// TODO:
-			// assert(false && "Conversion of unary operator '-' not supported");
+			subExpr = convFact.tryDeref(subExpr);
+
+			subExpr = builder.callExpr( subExpr->getType(),
+					builder.getNodeManager().basic.getSignedIntSub(),
+					builder.literal("0", convFact.mgr.basic.getInt4()), subExpr );
+			break;
 		// ~a
 		case UO_Not:
 			// TODO:
