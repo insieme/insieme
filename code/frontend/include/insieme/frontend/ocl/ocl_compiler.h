@@ -52,7 +52,7 @@ namespace {
 
 // uniform initialization of 3D vecotr of type uint<4>
 #define INT3DVECINIT(strVal)  builder.vectorExpr(toVector<core::ExpressionPtr>(builder.literal(BASIC.getInt4(), strVal), \
-                               builder.literal(BASIC.getInt4(), strVal), builder.literal(BASIC.getInt4(), strVal)))
+                              builder.literal(BASIC.getInt4(), strVal), builder.literal(BASIC.getInt4(), strVal)))
 
 // accesses array arr at index idx
 #define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(), \
@@ -71,6 +71,7 @@ namespace {
                           (var) = initVal; /* update inVec with new variables */ }
 
 enum OCL_SCOPE { OCL_LOCAL_PAR, OCL_LOCAL_JOB, OCL_GLOBAL_PAR, OCL_GLOBAL_JOB };
+enum OCL_PAR_LEVEL { OPL_GLOBAL, OPL_GROUP, OPL_LOCAL };
 
 struct KernelData {
 public:
@@ -110,14 +111,11 @@ public:
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
 
-    //returns a call expression accessing the global range at index idx and sets globalRangeUsed flag
-    core::CallExprPtr accessGlobalRange(core::ExpressionPtr idx);
+    //returns a call expression accessing the wished range at index idx and sets the appropriate Used flag
+    core::CallExprPtr accessRange(OCL_PAR_LEVEL level, core::ExpressionPtr idx);
 
-    //returns a call expression accessing the group size at index idx and sets numGroupsUsed flag
-    core::CallExprPtr accessNumGroups(core::ExpressionPtr idx);
-
-    //returns a call expression accessing the local range at index idx and sets localRangeUsed flag
-    core::CallExprPtr accessLocalRange(core::ExpressionPtr idx);
+    //returns a call expression calculating the global id from the pfor loops variable and local range
+    core::CallExprPtr accessId(OCL_PAR_LEVEL level, core::ExpressionPtr idx);
 
     //returns a call expression to a merge function
     core::CallExprPtr callBarrier(core::ExpressionPtr memFence);
