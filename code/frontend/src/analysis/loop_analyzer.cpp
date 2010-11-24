@@ -158,7 +158,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		assert(isa<const DeclRefExpr>(binOp->getLHS()));
 		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 		assert(lhs->getDecl() == loopHelper.inductionVar);
-		core::ExpressionPtr&& condExpr = convFact.convertExpr( binOp->getRHS() );
+		core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
 		switch(binOp->getOpcode()) {
 		case BO_LT:
 			// return: condExpr
