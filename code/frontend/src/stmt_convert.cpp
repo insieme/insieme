@@ -157,8 +157,9 @@ public:
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
+		core::ExpressionPtr&& retExpr = convFact.convertExpr( retStmt->getRetValue() );
 
-		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.convertExpr( retStmt->getRetValue() ) );
+		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.tryDeref(retExpr) );
 		// handle eventual OpenMP pragmas attached to the Clang node
 		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(ret, retStmt, convFact);
 
