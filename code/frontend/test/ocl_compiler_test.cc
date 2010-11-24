@@ -74,8 +74,8 @@ public:
 
             // kernel function has at least 2 arguments (localRange, globalRange)
             // TODO change to ocl annotation check
-std::cout << "ocl annotations: " << func.hasAnnotation(fe::ocl::BaseAnnotation::KEY) << std::endl;
-            if(func.hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
+std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY) << std::endl;
+            if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
 
                 core::FunctionType ft = *funcType;
                 core::TypePtr retTy = ft.getReturnType();
