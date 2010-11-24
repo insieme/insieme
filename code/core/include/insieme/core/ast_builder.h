@@ -109,7 +109,10 @@ public:
 
 #include "ast_builder.inl"
 
-	LiteralPtr stringVal(const char* str) const;
+	// Literals
+	LiteralPtr stringLit(const char* str) const;
+    LiteralPtr intLit(const int val) const;
+    LiteralPtr uintLit(const unsigned int val) const;
 
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
@@ -135,6 +138,8 @@ public:
 	ExpressionPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 	ExpressionPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 
+	// Direct call expression of getThreadGroup
+	CallExprPtr getThreadGroup(const ExpressionPtr& level = ExpressionPtr()) const;
 
 	// Utilities
 private:

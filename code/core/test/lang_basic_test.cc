@@ -54,15 +54,15 @@ TEST(LangBasic, BoolChecks) {
 	NodeManager nm;
 
 	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getInt4()));
-	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getIntLShift()));
-	EXPECT_FALSE(nm.basic.isBuiltIn(GenericType::get(nm, "surelyNotBuiltInISincerelyHope__")));
+	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getSignedIntLShift()));
+	// EXPECT_FALSE(nm.basic.isBuiltIn(GenericType::get(nm, "surelyNotBuiltInISincerelyHope__")));
 }
 
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
 
 	EXPECT_EQ(nm.basic.getBarrier(), nm.basic.getLiteral("barrier"));
-	EXPECT_EQ(LiteralPtr(), nm.basic.getLiteral("surelyNotBuiltInISincerelyHope__"));
+	// EXPECT_EQ(LiteralPtr(), nm.basic.getLiteral("surelyNotBuiltInISincerelyHope__"));
 }
 
 TEST(LangBasic, Grouping) {
@@ -71,4 +71,23 @@ TEST(LangBasic, Grouping) {
 	EXPECT_TRUE(nm.basic.isUnsignedInt(nm.basic.getUInt4()));
 	EXPECT_TRUE(nm.basic.isInt(nm.basic.getUInt4()));
 	EXPECT_FALSE(nm.basic.isReal(nm.basic.getUInt4()));
+}
+
+TEST(LangBasic, OperatorGet) {
+	NodeManager nm;
+
+	LiteralPtr op = nm.basic.getOperator(nm.basic.getUInt4(), nm.basic.Add);
+	EXPECT_TRUE(op);
+	EXPECT_EQ(*op, *nm.basic.getUnsignedIntAdd());
+	EXPECT_NE(*op, *nm.basic.getSignedIntAdd());
+
+	LiteralPtr op2 = nm.basic.getOperator(nm.basic.getInt2(), nm.basic.Mul);
+	EXPECT_TRUE(op2);
+	EXPECT_EQ(*op2, *nm.basic.getSignedIntMul());
+	EXPECT_NE(*op2, *nm.basic.getUnsignedIntMul());
+
+	LiteralPtr op3 = nm.basic.getOperator(nm.basic.getBool(), nm.basic.Eq);
+	EXPECT_TRUE(op3);
+	EXPECT_EQ(*op3, *nm.basic.getBoolEq());
+	EXPECT_NE(*op3, *nm.basic.getBoolNe());
 }

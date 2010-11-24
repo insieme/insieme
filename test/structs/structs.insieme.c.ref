@@ -3,6 +3,7 @@
 #define bool int
 #define true 1
 #define false 0
+#define null 0
 // --- Entry Point ---
 
 // start code fragment :: type_declaration_Person //
@@ -17,9 +18,9 @@ char* strcpy(char*, char*);
 // start code fragment :: Definition of getPerson //
 struct Person getPerson() {
 	{
-		struct Person res;strcpy((res.name), "John Doe");((res.age) = ((unsigned int)(101)));
-		
-		
+		struct Person res;
+		strcpy(((res).name), "John Doe");
+		(((res).age) = ((unsigned int)(101)));
 	}
 }
 
@@ -27,7 +28,7 @@ struct Person getPerson() {
 // start code fragment :: Definition of isTeenager //
 int isTeenager(struct Person person) {
 	{
-		return (((person.age)>=((unsigned int)(10))) && ((person.age)<((unsigned int)(20))));;
+		return (((person.age)>=((unsigned int)(10)))&&((person.age)<((unsigned int)(20))));;
 	}
 }
 
@@ -35,8 +36,8 @@ int isTeenager(struct Person person) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct Person mrX = getPerson();return isTeenager(mrX);;
-		
+		struct Person mrX = getPerson();
+		return isTeenager((mrX));;
 	}
 }
 

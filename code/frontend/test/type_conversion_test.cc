@@ -80,13 +80,13 @@ TEST(TypeConversion, HandleBuildinType) {
 	CHECK_BUILTIN_TYPE(Bool, "bool");
 
 	// UChar
-	CHECK_BUILTIN_TYPE(UChar, "uchar");
+	CHECK_BUILTIN_TYPE(UChar, "uint<1>");
 	// Char
 	CHECK_BUILTIN_TYPE(SChar, "char");
 	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "char");
+	CHECK_BUILTIN_TYPE(Char16, "int<2>");
 	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "char");
+	CHECK_BUILTIN_TYPE(Char32, "int<4>");
 	// WChar
 	CHECK_BUILTIN_TYPE(WChar, "wchar");
 

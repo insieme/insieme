@@ -248,7 +248,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	if (!captures.empty()) {
 		int i = 0;
 		for_each(captures, [&](const TypePtr& cur) {
-				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << "; // " << toString(*cur) << "\n";
+				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << ";\n";
 		});
 	}
 
@@ -327,7 +327,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		res += "*";
 	}
 
-	return toEntry(res);
+	return Entry(res, res, subDef.definition);
 }
 
 TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {

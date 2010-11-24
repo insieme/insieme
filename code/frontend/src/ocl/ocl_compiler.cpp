@@ -86,7 +86,7 @@ public:
             if(!isKernelFunction)
                 return program;
 
-            //Todo remove
+            // remove
             const core::LambdaExpr kernel = *func;
 
             core::LambdaExpr::ParamList params = kernel.getParams();
@@ -95,7 +95,7 @@ public:
             // params.push_back
 
             const core::StatementPtr& body = kernel.getBody();
-            //Todo remove
+            // remove
             const core::Statement& bodydummy = *kernel.getBody();
             const core::Node::ChildList& children = bodydummy.getChildList();
 
@@ -141,24 +141,22 @@ public:
 };
 */
 
-
-void KernelData::appendCaptures(core::Lambda::CaptureList& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits) {
+void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
 
     if(globalRangeUsed)
-        CAPTURE(captureList, globalRange, inits);
+        CAPTURE(captureList, globalRange, cTypes);
 
-    if(numGroupsUsed)
-        CAPTURE(captureList, numGroups, inits);
+    if(numGroupsUsed || scope == OCL_GLOBAL_JOB)
+        CAPTURE(captureList, numGroups, cTypes);
 
-    if(localRangeUsed || scope == OCL_GLOBAL)
-        CAPTURE(captureList, localRange, inits);
+    if(localRangeUsed || scope != OCL_LOCAL_PAR)
+        CAPTURE(captureList, localRange, cTypes);
 
-    if(groupTgUsed) {
-        CAPTURE(captureList, groupTg, inits);
-    }
+    if(groupIdUsed && scope != OCL_GLOBAL_JOB)
+        CAPTURE(captureList, groupId, cTypes);
 
-    if(localTgUsed && scope == OCL_LOCAL)
-        CAPTURE(captureList, localTg, inits);
+    if(localIdUsed && scope == OCL_LOCAL_PAR)
+        CAPTURE(captureList, localId, cTypes);
 
 }
 
@@ -167,19 +165,17 @@ void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE s
     if(globalRangeUsed)
          SHARE(sharedList, globalRange);
 
-     if(numGroupsUsed)
+     if(numGroupsUsed || scope == OCL_GLOBAL_JOB)
          SHARE(sharedList, numGroups);
 
-     if(localRangeUsed || scope == OCL_GLOBAL)
+     if(localRangeUsed || scope != OCL_LOCAL_PAR)
          SHARE(sharedList, localRange);
 
-     if(groupTgUsed) {
-         SHARE(sharedList, groupTg);
-     }
+     if(groupIdUsed && scope != OCL_GLOBAL_JOB)
+         SHARE(sharedList, groupId);
 
-     if(localTgUsed && scope == OCL_LOCAL)
-         SHARE(sharedList, localTg);
-
+     if(localIdUsed && scope == OCL_LOCAL_PAR)
+         SHARE(sharedList, localId);
 }
 
 core::CallExprPtr KernelData::accessGlobalRange(core::ExpressionPtr idx) {
@@ -201,9 +197,8 @@ core::CallExprPtr KernelData::accessLocalRange(core::ExpressionPtr idx) {
 
 core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
 
-    groupTgUsed = true;
-
-    return builder.callExpr(builder.getNodeManager().basic.getUnit(), builder.getNodeManager().basic.getBarrier(), groupTg);
+//TODO implement global mem fence
+    return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
 
@@ -211,9 +206,6 @@ class KernelMapper : public core::NodeMapping {
     const core::ASTBuilder& builder;
 
     // Vectors to store local variables
-    //TODO remove these two, should be empty anyway?
-    std::vector<core::VariablePtr> constantArgs;
-    std::vector<core::VariablePtr> globalVars;
 
     std::vector<core::DeclarationStmtPtr> localVars;
     std::vector<core::VariablePtr> privateVars;
@@ -361,8 +353,6 @@ public:
     // gets vectors of variables and appends the variables found in the function body to them
     void getMemspaces(std::vector<core::VariablePtr>& constantV, std::vector<core::VariablePtr>& globalV,
             std::vector<core::VariablePtr>& localV, std::vector<core::VariablePtr>& privateV){
-        append(globalV, globalVars);
-        append(constantV, constantArgs);
         append(localV, localVars);
         append(privateV, privateVars);
     }
@@ -378,8 +368,6 @@ public:
     }
 
     void resetMemspaces() {
-        globalVars.clear();
-        constantArgs.clear();
         localVars.clear();
         privateVars.clear();
     }
@@ -456,7 +444,7 @@ private:
         }
 
 
-        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUIntMul(),
+        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntMul(),
             toVector<core::ExpressionPtr>( vecProduct(vec, n), SUBSCRIPT(vec, n, builder) ));
     }
 
@@ -485,15 +473,25 @@ private:
 
     // creates new variables for all variables in the input vector and stores them in the output vector
     // The elements of the input vector are stored as initialization values in map inits for the new variables
-    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::VariablePtr>& inVec, core::CaptureInitExpr::Values inits,
-            core::TypeList types) {
+    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::VariablePtr>& inVec, core::TypeList& types) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back(*I);
+            core::VariablePtr tmp = builder.variable((*I)->getType());
+
+            outVec[(*I)] = tmp;
             types.push_back((*I)->getType());
 
-            *I = builder.variable((*I)->getType());
+            *I = tmp;
+        }
+    }
 
-            inits.push_back(*I);
+    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            core::DeclarationStmtPtr tmp = builder.declarationStmt((*I)->getVariable()->getType(), (*I)->getInitialization());
+
+            outVec[(*I)->getVariable()] = tmp->getVariable();
+            types.push_back((*I)->getVariable()->getType());
+
+            *I = tmp;
         }
     }
 
@@ -519,7 +517,44 @@ private:
     }
 
 
+    // TODO make body ref
+    core::ExpressionPtr genLocalCie(core::StatementPtr body, core::Lambda::ParamList params, OCL_SCOPE scope) {
+        // capture all arguments
+        core::ASTBuilder::CaptureInits localFunCaptures;
+        core::TypeList localFunCtypes;
 
+        createCaptureList(localFunCaptures, constantArgs, localFunCtypes);
+        createCaptureList(localFunCaptures, globalArgs, localFunCtypes);
+        createCaptureList(localFunCaptures, localArgs, localFunCtypes);
+        createCaptureList(localFunCaptures, privateArgs, localFunCtypes);
+        // in-body local variables
+        if(scope == OCL_LOCAL_JOB || scope == OCL_LOCAL_PAR)
+            createCaptureList(localFunCaptures, kernelMapper.getLocalDeclarations(), localFunCtypes);
+        // catch loop boundaries
+
+        kd.appendCaptures(localFunCaptures, scope, localFunCtypes);
+
+        core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
+
+        return builder.lambdaExpr(lpfType, body, localFunCaptures, params);
+    }
+
+
+    std::vector<core::ExpressionPtr> gen3dPforArgs(core::VariablePtr end, core::ExpressionPtr body) {
+        std::vector<core::ExpressionPtr> expr;
+
+        expr.push_back(builder.getThreadGroup());
+        // start vector of pfor loop: [0,0,0]
+        expr.push_back(INT3DVECINIT("0"));
+        // end vector of pfor
+        expr.push_back(/*builder.castExpr(builder.vectorType(BASIC.getInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),*/ end)/*)*/;
+        // increment vector of pfor loop: [1,1,1]
+        expr.push_back(INT3DVECINIT("1"));
+        // lambda to be called
+        expr.push_back(body);
+
+        return expr;
+    }
 /*
     // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
     void getInitialVariables(VariableMapping& variableMapping) {
@@ -555,8 +590,6 @@ public:
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
-
-        //TODO keep annotations when copying, element should not be used after this call
 
         // check if we are at a function node
         if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)){
@@ -639,9 +672,9 @@ public:
 
             // add vector<uint<4>,3> globalRange and localRange to parameters
 /*            core::IntTypeParam vecSize = core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3));
-            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
+            core::VariablePtr globalRange = builder.variable(builder.vectorType(builder.uintType( 4 ), vecSize));
             params.push_back(globalRange);
-            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.uintType( INT_LENGTH ), vecSize));
+            core::VariablePtr localRange = builder.variable(builder.vectorType(builder.uintType( 4 ), vecSize));
             params.push_back(localRange);*/
 //            params.push_back(globalRange);
 //            params.push_back(localRange);
@@ -664,7 +697,6 @@ public:
             }
 
             //TODO handle subnodes.
-            //Maybe prettier in another mapper
             const core::StatementPtr& oldBody = func->getBody();
 
             if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
@@ -677,74 +709,38 @@ public:
                 // type of functions inside jobs
 //                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
 
-                core::Lambda::ParamList funParams;
-
-
                core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().basic.getUInt4());
 
 // Top down generation of constructs
-               // start vector of pfor loops, will be set to [0,0,0]
-//               core::VariablePtr nullVec = builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(),
-//                       core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
-
-               // increment vector for loops, will be set to [1,1,1]
-               core::VariablePtr incVec = builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(),
-                       core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
 
                std::vector<core::ExpressionPtr> expr;
 
-// Bottom up generation/composition of constructs
-
                 core::JobExpr::GuardedStmts noGuardedStatementsNeeded;
 
-//                , noGuardedStatementsNeeded, kernelMapper.getLocalDeclarations()
-//TODO add pfor
-                // TODO check args
-                expr.push_back(kd.localTg);
-                expr.push_back(kd.localRange);
-                expr.push_back(incVec);
-                expr.push_back(kd.localId);
+// Bottom up generation/composition of constructs
 
-                core::CallExprPtr localPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), expr);
+                // build expression to be used as body of local pfor loop
+                core::Lambda::ParamList localIdAsAVector = toVector(kd.localId);
+                core::ExpressionPtr localPforFun = genLocalCie(newBody, localIdAsAVector, OCL_LOCAL_PAR);
 
-                // capture all arguments
-                core::Lambda::CaptureList localFunCaptures;
-                core::CaptureInitExpr::Values localFunInits;
-                core::TypeList localFunCtypes;
+                core::CallExprPtr localPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.localRange, localPforFun));
 
-                createCaptureList(localFunCaptures, constantArgs, localFunInits, localFunCtypes);
-                createCaptureList(localFunCaptures, globalArgs, localFunInits, localFunCtypes);
-                createCaptureList(localFunCaptures, localArgs, localFunInits, localFunCtypes);
-                createCaptureList(localFunCaptures, privateArgs, localFunInits, localFunCtypes);
-                // in-body local variables
-                std::vector<core::DeclarationStmtPtr> localVars = kernelMapper.getLocalDeclarations();
-                createCaptureList(localFunCaptures, localVars, localFunInits, localFunCtypes);
-                // catch loop boundaries
-//TODO store types of loop boudaries
-                kd.appendCaptures(localFunCaptures, OCL_LOCAL, localFunInits);
+                // build expression to be used as body of local job
+                core::ExpressionPtr localParFct = genLocalCie(localPfor, core::Lambda::ParamList(), OCL_LOCAL_JOB);
 
-                core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
-
-                core::LambdaExprPtr localParFct = builder.lambdaExpr(lpfType, newBody, localFunCaptures, funParams);
-//                        builder.lambdaExpr(newStmt, captures, Lambda::ParamList());
-
-//FIXME captures initializations
-                // initialize captured variables
-                core::CaptureInitExprPtr localCaptureInits = builder.captureInitExpr(localParFct, localFunInits);
-
-                // catch all arguments which are shared in local range
                 core::JobExpr::LocalDecls localJobShared;
 
                 createDeclarations(localJobShared, constantArgs);
                 createDeclarations(localJobShared, globalArgs);
                 createDeclarations(localJobShared, localArgs);
                 // in-body local variables
-                appendToVector(localJobShared, localVars);
+                appendToVector(localJobShared, kernelMapper.getLocalDeclarations());
                 // catch loop boundaries
-                kd.appendShared(localJobShared, OCL_LOCAL);
+                kd.appendShared(localJobShared, OCL_LOCAL_JOB);
                 // TODO catch global variables
 
-                core::JobExprPtr localJob = builder.jobExpr(localCaptureInits, noGuardedStatementsNeeded, localJobShared);
+
+                core::JobExprPtr localJob = builder.jobExpr(localParFct, noGuardedStatementsNeeded, localJobShared);
 
                 expr.clear();
                 //construct vector of arguments for local parallel
@@ -760,30 +756,20 @@ public:
                 core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(),
                         builder.getNodeManager().basic.getParallel(), expr);
 
-                // capture all arguments
-                core::Lambda::CaptureList globalFunCaptures;
-                core::CaptureInitExpr::Values globalFunInits;
-                core::TypeList globalFunCtypes;
+                // create global pfor loop body
+                core::Lambda::ParamList groupIdAsAVector = toVector(kd.groupId);
+                core::ExpressionPtr globalPforFun = genLocalCie(localPar, groupIdAsAVector, OCL_GLOBAL_PAR);
 
-                createCaptureList(globalFunCaptures, constantArgs, globalFunInits, globalFunCtypes);
-                createCaptureList(globalFunCaptures, globalArgs, globalFunInits, globalFunCtypes);
-                createCaptureList(globalFunCaptures, localArgs, globalFunInits, globalFunCtypes);
-                createCaptureList(globalFunCaptures, privateArgs, globalFunInits, globalFunCtypes);
-                // catch loop boundaries
-                kd.appendCaptures(globalFunCaptures, OCL_GLOBAL, globalFunInits);
-                // TODO catch global variables
+                core::CallExprPtr globalPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.globalRange, globalPforFun));
 
-                //core::DeclarationStmtPtr localThreadGroup = builder.declarationStmt(kd.localTg, localPar); inlined, see next line, created only if needed
+                std::vector<core::StatementPtr> gobalBodyStmts;
+                gobalBodyStmts.push_back(globalPfor);
+                gobalBodyStmts.push_back(BASIC.getMergeAll());
+                core::CompoundStmtPtr globalParBody = builder.compoundStmt(gobalBodyStmts);
 
-                core::StatementPtr tmp;
-                if(kd.localTgUsed)
-                    tmp = builder.declarationStmt(kd.localTg, localPar);
-                else
-                    tmp = localPar;
 
-                core::LambdaExprPtr globalParFct = builder.lambdaExpr(tmp, globalFunCaptures, funParams);
-                        //builder.lambdaExpr(core::lang::TYPE_NO_ARGS_OP_PTR, globalFunCaptures, funParams, tmp);
-                                                  // builder.lambdaExpr(newBody, localFunCaptures, core::Lambda::ParamList());
+                // build expression to be used as body of global job
+                core::ExpressionPtr globalParFct = genLocalCie(globalParBody, core::Lambda::ParamList(), OCL_GLOBAL_JOB);
 
                 // catch all arguments which are shared in global range
                 core::JobExpr::LocalDecls globalJobShared;
@@ -791,13 +777,11 @@ public:
                 createDeclarations(globalJobShared, constantArgs);
                 createDeclarations(globalJobShared, globalArgs);
                 // catch loop boundaries
-                kd.appendShared(globalJobShared, OCL_GLOBAL);
+                kd.appendShared(globalJobShared, OCL_GLOBAL_JOB);
                 // TODO catch global variables
 
-                // initialize captured variables
-                core::CaptureInitExprPtr globalCaptureInits = builder.captureInitExpr(globalParFct, globalFunInits);
 
-                core::JobExprPtr globalJob = builder.jobExpr(globalCaptureInits, noGuardedStatementsNeeded, globalJobShared);
+                core::JobExprPtr globalJob = builder.jobExpr(globalParFct, noGuardedStatementsNeeded, globalJobShared);
 
                 expr.clear();
                 //construct vector of arguments for local parallel
@@ -826,7 +810,7 @@ public:
                 std::vector<core::ExpressionPtr> groupRdeclInit ;
                 for(size_t i = 0; i < 3; ++i) {
                     groupRdeclInit.push_back(
-                        builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUIntDiv(), toVector<core::ExpressionPtr>(
+                        builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntDiv(), toVector<core::ExpressionPtr>(
                             SUBSCRIPT(kd.globalRange, i, builder),  SUBSCRIPT(kd.localRange, i, builder) )));
                 }
 
@@ -839,13 +823,7 @@ public:
 
                 //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
-                if(kd.groupTgUsed)
-                    tmp = builder.declarationStmt(kd.groupTg, globalPar);
-                else
-                    tmp = globalPar;
-
-
-                newBodyStmts.push_back(tmp);
+                newBodyStmts.push_back(globalPar);
 
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
@@ -853,9 +831,9 @@ public:
                 kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
-                newFunc.addAnnotation(funcAnnotation);
+                newFunc->addAnnotation(funcAnnotation);
                 // put cname annotation to the new function
-                newFunc.addAnnotation(cName);
+                newFunc->addAnnotation(cName);
 
                 return newFunc;
             }
@@ -881,15 +859,6 @@ public:
         }
 
         return element->substitute(builder.getNodeManager(), *this);
-    }
-
-    //TODO remove, for debugging only
-    void showKernelMapper() {
-
-        std::cout << "Constant vars: " << constantArgs.size() << std::endl;
-        std::cout << "Global vars: " << globalArgs.size() << std::endl;
-        std::cout << "Local vars: " << localArgs.size() << std::endl;
-        std::cout << "Private vars: " << privateArgs.size() << std::endl;
     }
 };
 

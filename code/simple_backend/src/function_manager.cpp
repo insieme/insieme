@@ -282,8 +282,8 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 			varManager.addInfo(var, info);
 
 			// standard handling
-			cs << typeManager.getTypeName(function, var->getType(), false);
-			cs << " " << nameManager.getVarName(var) << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
+			cs << typeManager.formatParamter(function, var->getType(), nameManager.getVarName(var), false);
+			cs << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
 
 		});
 

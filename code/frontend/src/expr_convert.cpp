@@ -502,108 +502,101 @@ public:
 			return builder.callExpr(lambdaExpr, ExpressionList());
 		}
 
-		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
-
-		// create Pair type
-		core::TypeList&& argsTy = toVector( exprTy, exprTy );
+		// the type of this expression is the type of the LHS expression
+		core::TypePtr exprTy = lhs->getType()->getNodeType() == core::NT_RefType ?
+				core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType() :
+				lhs->getType();
 
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
 		// a op= b  ---->  a = a op b
-		std::string op;
 		clang::BinaryOperatorKind baseOp;
+		core::lang::BasicGenerator::Operator op;
+		bool isCompound = true;
+
 		switch( binOp->getOpcode() ) {
 		// a *= b
-		case BO_MulAssign: 	op = "mul"; baseOp = BO_Mul; break;
+		case BO_MulAssign: 	op = core::lang::BasicGenerator::Mul; baseOp = BO_Mul; break;
 		// a /= b
-		case BO_DivAssign: 	op = "div"; baseOp = BO_Div; break;
+		case BO_DivAssign: 	op = core::lang::BasicGenerator::Div; baseOp = BO_Div; break;
 		// a %= b
-		case BO_RemAssign:	op = "mod"; baseOp = BO_Rem; break;
+		case BO_RemAssign:	op = core::lang::BasicGenerator::Mod; baseOp = BO_Rem; break;
 		// a += b
-		case BO_AddAssign: 	op = "add"; baseOp = BO_Add; break;
+		case BO_AddAssign: 	op = core::lang::BasicGenerator::Add; baseOp = BO_Add; break;
 		// a -= b
-		case BO_SubAssign:	op = "sub"; baseOp = BO_Sub; break;
+		case BO_SubAssign:	op = core::lang::BasicGenerator::Sub; baseOp = BO_Sub; break;
 		// a <<= b
-		case BO_ShlAssign: 	op = "shl"; baseOp = BO_Shl; break;
+		case BO_ShlAssign: 	op = core::lang::BasicGenerator::LShift; baseOp = BO_Shl; break;
 		// a >>= b
-		case BO_ShrAssign: 	op = "shr"; baseOp = BO_Shr; break;
+		case BO_ShrAssign: 	op = core::lang::BasicGenerator::RShift; baseOp = BO_Shr; break;
 		// a &= b
-		case BO_AndAssign: 	op = "and"; baseOp = BO_And; break;
+		case BO_AndAssign: 	op = core::lang::BasicGenerator::And; baseOp = BO_And; break;
 		// a |= b
-		case BO_OrAssign: 	op = "or"; 	baseOp = BO_Or; break;
+		case BO_OrAssign: 	op = core::lang::BasicGenerator::Or; baseOp = BO_Or; break;
 		// a ^= b
-		case BO_XorAssign: 	op = "xor"; baseOp = BO_Xor; break;
+		case BO_XorAssign: 	op = core::lang::BasicGenerator::Xor; baseOp = BO_Xor; break;
 		default:
-			break;
+			isCompound = false;
 		}
 
-		if( !op.empty() ) {
-			std::string&& opType = getOperationType(convFact.mgr, exprTy);
-			// The operator is a compound operator, we substitute the RHS expression with the expanded one
-			// core::RefTypePtr&& lhsTy = core::dynamic_pointer_cast<const core::RefType>(lhs->getType());
-			// assert( lhsTy && "LHS operand must of type ref<a'>." );
-			core::LiteralPtr&& opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
-
+		if( isCompound ) {
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
-			const core::TypePtr& lhsSubTy = subExprLHS->getType();
-			rhs = builder.callExpr(lhsSubTy, opFunc, builder.deref(lhs), rhs);
-
-			// add an annotation to the subexpression
-			opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp)) );
+			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 		}
 
 		bool isAssignment = false;
 		bool isLogical = false;
+
 		baseOp = binOp->getOpcode();
 
 		core::LiteralPtr opFunc;
-
 		switch( binOp->getOpcode() ) {
 		case BO_PtrMemD:
 		case BO_PtrMemI:
 			assert(false && "Operator not yet supported!");
 
 		// a * b
-		case BO_Mul: 	op = "mul";  break;
+		case BO_Mul: 	op = core::lang::BasicGenerator::Mul;  break;
 		// a / b
-		case BO_Div: 	op = "div";  break;
+		case BO_Div: 	op = core::lang::BasicGenerator::Div;  break;
 		// a % b
-		case BO_Rem: 	op = "mod";  break;
+		case BO_Rem: 	op = core::lang::BasicGenerator::Mod;  break;
 		// a + b
-		case BO_Add: 	op = "add";  break;
+		case BO_Add: 	op = core::lang::BasicGenerator::Add;  break;
 		// a - b
-		case BO_Sub: 	op = "sub";  break;
+		case BO_Sub: 	op = core::lang::BasicGenerator::Sub;  break;
 		// a << b
-		case BO_Shl: 	op = "shl";  break;
+		case BO_Shl: 	op = core::lang::BasicGenerator::LShift;  break;
 		// a >> b
-		case BO_Shr: 	op = "shr";  break;
+		case BO_Shr: 	op = core::lang::BasicGenerator::RShift;  break;
 		// a & b
-		case BO_And: 	op = "and";  break;
+		case BO_And: 	op = core::lang::BasicGenerator::And;  break;
 		// a ^ b
-		case BO_Xor: 	op = "xor";  break;
+		case BO_Xor: 	op = core::lang::BasicGenerator::Xor;  break;
 		// a | b
-		case BO_Or:  	op = "or"; 	 break;
+		case BO_Or:  	op = core::lang::BasicGenerator::Or; 	 break;
 
 		// Logic operators
 
 		// a && b
-		case BO_LAnd: 	op = "land"; isLogical=true; break;
+		case BO_LAnd: 	op = core::lang::BasicGenerator::And; isLogical=true; break;
 		// a || b
-		case BO_LOr:  	op = "lor";  isLogical=true; break;
+		case BO_LOr:  	op = core::lang::BasicGenerator::Or;  isLogical=true; break;
 		// a < b
-		case BO_LT:	 	op = "lt";   isLogical=true; break;
+		case BO_LT:	 	op = core::lang::BasicGenerator::Lt;   isLogical=true; break;
 		// a > b
-		case BO_GT:  	op = "gt";   isLogical=true; break;
+		case BO_GT:  	op = core::lang::BasicGenerator::Gt;   isLogical=true; break;
 		// a <= b
-		case BO_LE:  	op = "le";   isLogical=true; break;
+		case BO_LE:  	op = core::lang::BasicGenerator::Le;   isLogical=true; break;
 		// a >= b
-		case BO_GE:  	op = "ge";   isLogical=true; break;
+		case BO_GE:  	op = core::lang::BasicGenerator::Ge;   isLogical=true; break;
 		// a == b
-		case BO_EQ:  	op = "eq";   isLogical=true; break;
+		case BO_EQ:  	op = core::lang::BasicGenerator::Eq;   isLogical=true; break;
 		// a != b
-		case BO_NE:	 	op = "ne";   isLogical=true; break;
+		case BO_NE:	 	op = core::lang::BasicGenerator::Ne;   isLogical=true; break;
 
 		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign:
 		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
@@ -612,7 +605,7 @@ public:
 			baseOp = BO_Assign;
 			// poor C codes assign value to function parameters, this is not allowed here as input parameters
 			// are of non REF type. What we need to do is introduce a declaration for these variables
-			// and use the created variable on the stack instead of the input prameters
+			// and use the created variable on the stack instead of the input parameters
 			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(binOp->getLHS());
 			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
 				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(lhs);
@@ -640,19 +633,13 @@ public:
 		rhs = convFact.tryDeref(rhs);
 
 		if( !isAssignment ) {
-			std::string&& opType = getOperationType(convFact.mgr, exprTy);
 			lhs = convFact.tryDeref(lhs);
-			if(isLogical) {
+			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+			if(isLogical)
 				exprTy = convFact.mgr.basic.getBool();
-				argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
-			}
-			opFunc = builder.literal( opType + "." + op, builder.functionType(argsTy, exprTy));
 		}
-
+		assert(opFunc);
 		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
-
-		// add the operator name in order to help the convertion process in the backend
-		opFunc->addAnnotation( std::make_shared<c_info::COpAnnotation>( BinaryOperator::getOpcodeStr(baseOp) ) );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
@@ -670,65 +657,86 @@ public:
 		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
 
 		// build lambda expression for post/pre increment/decrement unary operators
-		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
-			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
-			assert( expTy && "LHS operand must of type ref<a'>." );
-			const core::TypePtr& subTy = expTy->getElementType();
+		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op)->core::ExpressionPtr {
 
-			core::VariablePtr tmpVar;
-			std::vector<core::StatementPtr> stmts;
-			if(post) {
-				tmpVar = builder.variable(subTy);
-				// ref<a'> __tmp = subexpr
-				stmts.push_back(builder.declarationStmt(tmpVar,
-						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) ));
-			}
-			// subexpr op= 1
-			stmts.push_back(
-				builder.callExpr(
-					convFact.mgr.basic.getUnit(),
-					convFact.mgr.basic.getRefAssign(),
-					subExpr, // ref<a'> a
-					builder.callExpr(
-						subTy,
-						( additive ? convFact.mgr.basic.getIntAdd() : convFact.mgr.basic.getIntSub() ),
-							toVector<core::ExpressionPtr>(
-								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
-								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
-							)
-						) // a - 1
-				)
-			);
-			if(post) {
-				assert(tmpVar);
-				// return __tmp
-				stmts.push_back( builder.returnStmt( tmpVar ) );
+			core::TypePtr type = subExpr->getType();
+			assert(type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type");
+
+			core::TypePtr elementType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
+
+			core::TypePtr genType;
+			if (convFact.mgr.basic.isSignedInt(elementType)) {
+				genType = convFact.mgr.basic.getIntGen();
+			} else if (convFact.mgr.basic.isUnsignedInt(elementType)) {
+				genType = convFact.mgr.basic.getUIntGen();
 			} else {
-				// return the variable
-				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
+				assert(false && "Illegal operand type for increment/decrement operator.");
 			}
-			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
-			return builder.callExpr(retExpr, ExpressionList());
+
+			return convFact.builder.callExpr(elementType, convFact.mgr.basic.getOperator(genType, op), subExpr);
 		};
 
-		bool post = true;
+		// build lambda expression for post/pre increment/decrement unary operators
+//		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
+//			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
+//			assert( expTy && "LHS operand must of type ref<a'>." );
+//			const core::TypePtr& subTy = expTy->getElementType();
+//
+//			core::VariablePtr tmpVar;
+//			std::vector<core::StatementPtr> stmts;
+//			if(post) {
+//				tmpVar = builder.variable(subTy);
+//				// ref<a'> __tmp = subexpr
+//				stmts.push_back(builder.declarationStmt(tmpVar,
+//						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) ));
+//			}
+//			// subexpr op= 1
+//			stmts.push_back(
+//				builder.callExpr(
+//					convFact.mgr.basic.getUnit(),
+//					convFact.mgr.basic.getRefAssign(),
+//					subExpr, // ref<a'> a
+//					builder.callExpr(
+//						subTy,
+//						( additive ? convFact.mgr.basic.getSignedIntAdd() : convFact.mgr.basic.getSignedIntSub() ),
+//							toVector<core::ExpressionPtr>(
+//								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
+//								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
+//							)
+//						) // a - 1
+//				)
+//			);
+//			if(post) {
+//				assert(tmpVar);
+//				// return __tmp
+//				stmts.push_back( builder.returnStmt( tmpVar ) );
+//			} else {
+//				// return the variable
+//				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
+//			}
+//			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
+//			return builder.callExpr(retExpr, ExpressionList());
+//		};
+
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
 		// a++ ==> (__tmp = a, a=a+1, __tmp)
 		// ++a ==> ( a=a+1, a)
 		// --a
 		case UO_PreDec:
-			post = false;
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
+			break;
 		// a--
 		case UO_PostDec:
-			subExpr = encloseIncrementOperator(subExpr, post, false);
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec);
 			break;
 		// a++
 		case UO_PreInc:
-			post = false;
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc);
+			break;
 		// ++a
 		case UO_PostInc:
-			subExpr = encloseIncrementOperator(subExpr, post, true);
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc);
 			break;
 		// &a
 		case UO_AddrOf:
