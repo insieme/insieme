@@ -158,7 +158,23 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		assert(isa<const DeclRefExpr>(binOp->getLHS()));
 		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 		assert(lhs->getDecl() == loopHelper.inductionVar);
-		loopHelper.condExpr = convFact.convertExpr( binOp->getRHS() );
+		core::ExpressionPtr&& condExpr = convFact.convertExpr( binOp->getRHS() );
+		switch(binOp->getOpcode()) {
+		case BO_LT:
+			// return: condExpr
+			loopHelper.condExpr = condExpr;
+			break;
+		case BO_LE:
+			// return: condExpr + 1
+			loopHelper.condExpr = convFact.getASTBuilder().callExpr( condExpr->getType(),
+					convFact.getNodeManager().basic.getOperator(condExpr->getType(), core::lang::BasicGenerator::Add),
+					condExpr, convFact.getASTBuilder().literal(convFact.getNodeManager().basic.getUInt4(), "1") );
+			break;
+		default:
+			assert(false && "Condition expression not supported");
+		}
+
+
 		return;
 	}
 	throw LoopNormalizationError();

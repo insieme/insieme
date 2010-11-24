@@ -184,7 +184,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 	StatementPtr evenBody = builder.ifStmt(condition,
 			builder.returnStmt(gen.getTrue()),
 			builder.returnStmt(
-					builder.callExpr(gen.getBool(), gen.getBoolNot(), builder.callExpr(gen.getBool(), oddVar, x))
+					builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), oddVar, x))
 			)
 	);
 	LambdaPtr evenLambda = builder.lambda(functionType, Lambda::CaptureList(), param, evenBody);
@@ -193,7 +193,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 	StatementPtr oddBody = builder.ifStmt(condition,
 				builder.returnStmt(gen.getFalse()),
 				builder.returnStmt(
-						builder.callExpr(gen.getBool(), gen.getBoolNot(), builder.callExpr(gen.getBool(), evenVar, x))
+						builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), evenVar, x))
 				)
 	);
 	LambdaPtr oddLambda = builder.lambda(functionType, Lambda::CaptureList(), param, oddBody);

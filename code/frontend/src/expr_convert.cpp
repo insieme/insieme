@@ -582,9 +582,9 @@ public:
 		// Logic operators
 
 		// a && b
-		case BO_LAnd: 	op = core::lang::BasicGenerator::And; isLogical=true; break;
+		case BO_LAnd: 	op = core::lang::BasicGenerator::LAnd; isLogical=true; break;
 		// a || b
-		case BO_LOr:  	op = core::lang::BasicGenerator::Or;  isLogical=true; break;
+		case BO_LOr:  	op = core::lang::BasicGenerator::LOr;  isLogical=true; break;
 		// a < b
 		case BO_LT:	 	op = core::lang::BasicGenerator::Lt;   isLogical=true; break;
 		// a > b
