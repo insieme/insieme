@@ -327,7 +327,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		res += "*";
 	}
 
-	return toEntry(res);
+	return Entry(res, res, subDef.definition);
 }
 
 TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
