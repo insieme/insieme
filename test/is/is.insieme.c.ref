@@ -14,9 +14,9 @@ struct __insieme_globals {
     double(* elapsed)[64];
     int* key_buff_ptr_global;
     int passed_verification;
-    int(* key_array)[65536];
-    int(* key_buff1)[65536];
-    int(* key_buff2)[65536];
+    int(* key_array)[33554432];
+    int(* key_buff1)[33554432];
+    int(* key_buff2)[33554432];
     int(* partial_verify_vals)[5];
     int(* test_index_array)[5];
     int(* test_rank_array)[5];
@@ -177,16 +177,16 @@ void create_seq(void* _capture, double seed, double a) {
 			int i = 0;
 			int j = 0;
 			int k = 0;
-			((k) = ((1<<11)/4));
+			((k) = ((1<<21)/4));
 			{
-				for(int var_41 = 0; var_41 < (1<<16); var_41 += 1) {
+				for(int var_41 = 0; var_41 < (1<<25); var_41 += 1) {
 					((x) = call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23));
 					((x) = ((x)+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
 					((x) = ((x)+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
 					((x) = ((x)+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
 					(((*((*var_17).key_array))[((unsigned int)((var_41)))]) = ((int)((((double)((k)))*(x)))));
 				};
-				((i) = (1<<16));
+				((i) = (1<<25));
 			};
 		};
 	}
@@ -204,14 +204,14 @@ void rank(void* _capture, int iteration) {
 		int k = 0;
 		int l = 0;
 		int m = 0;
-		int shift = (11-9);
+		int shift = (21-10);
 		int key = 0;
 		int min_key_val = 0;
 		int max_key_val = 0;
-		int prv_buff1[2048];
+		int prv_buff1[2097152];
 		{
 			(((*((*var_44).key_array))[((unsigned int)(iteration))]) = iteration);
-			(((*((*var_44).key_array))[((unsigned int)((iteration+10)))]) = ((1<<11)-iteration));
+			(((*((*var_44).key_array))[((unsigned int)((iteration+10)))]) = ((1<<21)-iteration));
 			{
 				for(int var_55 = 0; var_55 < 5; var_55 += 1) {
 					(((*((*var_44).partial_verify_vals))[((unsigned int)((var_55)))]) = ((*((*var_44).key_array))[((unsigned int)(((*((*var_44).test_index_array))[((unsigned int)((var_55)))])))]));
@@ -219,45 +219,45 @@ void rank(void* _capture, int iteration) {
 				((i) = 5);
 			};
 			{
-				for(int var_56 = 0; var_56 < (1<<11); var_56 += 1) {
+				for(int var_56 = 0; var_56 < (1<<21); var_56 += 1) {
 					(((*((*var_44).key_buff1))[((unsigned int)((var_56)))]) = 0);
 				};
-				((i) = (1<<11));
+				((i) = (1<<21));
 			};
 		};
 		{
-			for(int var_57 = 0; var_57 < (1<<11); var_57 += 1) {
+			for(int var_57 = 0; var_57 < (1<<21); var_57 += 1) {
 				((prv_buff1[((unsigned int)((var_57)))]) = 0);
 			};
-			((i) = (1<<11));
+			((i) = (1<<21));
 		};
 		{
-			for(int var_58 = 0; var_58 < (1<<16); var_58 += 1) {
+			for(int var_58 = 0; var_58 < (1<<25); var_58 += 1) {
 				(((*((*var_44).key_buff2))[((unsigned int)((var_58)))]) = ((*((*var_44).key_array))[((unsigned int)((var_58)))]));
 				((prv_buff1[((unsigned int)(((*((*var_44).key_buff2))[((unsigned int)((var_58)))])))])++);
 			};
-			((i) = (1<<16));
+			((i) = (1<<25));
 		};
 		{
-			for(int var_59 = 0; var_59 < ((1<<11)-1); var_59 += 1) {
+			for(int var_59 = 0; var_59 < ((1<<21)-1); var_59 += 1) {
 				((prv_buff1[((unsigned int)(((var_59)+1)))]) = ((prv_buff1[((unsigned int)(((var_59)+1)))])+(prv_buff1[((unsigned int)((var_59)))])));
 			};
-			((i) = ((1<<11)-1));
+			((i) = ((1<<21)-1));
 		};
 		{
 			{
-				for(int var_60 = 0; var_60 < (1<<11); var_60 += 1) {
+				for(int var_60 = 0; var_60 < (1<<21); var_60 += 1) {
 					(((*((*var_44).key_buff1))[((unsigned int)((var_60)))]) = (((*((*var_44).key_buff1))[((unsigned int)((var_60)))])+(prv_buff1[((unsigned int)((var_60)))])));
 				};
-				((i) = (1<<11));
+				((i) = (1<<21));
 			};
 		};
 		{
 			{
 				for(int var_62 = 0; var_62 < 5; var_62 += 1) {
 					((k) = ((*((*var_44).partial_verify_vals))[((unsigned int)((var_62)))]));
-					if(((0<=(k))&&((k)<=((1<<16)-1)))) {
-						int var_61 = ((int)('S'));
+					if(((0<=(k))&&((k)<=((1<<25)-1)))) {
+						int var_61 = ((int)('B'));
 						switch(var_61) {
 						case 'S':
 							if(((var_62)<=2)) {
@@ -507,17 +507,17 @@ void full_verify(void* _capture) {
 		int m = 0;
 		int unique_keys = 0;
 		{
-			for(int var_89 = 0; var_89 < (1<<16); var_89 += 1) {
+			for(int var_89 = 0; var_89 < (1<<25); var_89 += 1) {
 				(((*((*var_83).key_array))[((unsigned int)((--(((*var_83).key_buff_ptr_global)[((unsigned int)(((*((*var_83).key_buff2))[((unsigned int)((var_89)))])))]))))]) = ((*((*var_83).key_buff2))[((unsigned int)((var_89)))]));
 			};
-			((i) = (1<<16));
+			((i) = (1<<25));
 		};
 		((j) = 0);
 		{
-			for(int var_90 = 1; var_90 < (1<<16); var_90 += 1) if((((*((*var_83).key_array))[((unsigned int)(((var_90)-1)))])>((*((*var_83).key_array))[((unsigned int)((var_90)))]))) {
+			for(int var_90 = 1; var_90 < (1<<25); var_90 += 1) if((((*((*var_83).key_array))[((unsigned int)(((var_90)-1)))])>((*((*var_83).key_array))[((unsigned int)((var_90)))]))) {
 				(j++);
 			};
-			((i) = (1<<16));
+			((i) = (1<<25));
 		};
 		if(((j)!=0)) {
 			printf("Full_verify: number of keys out of sort: %d\n", (j));
@@ -566,7 +566,7 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){(0-1), calloc(sizeof(double[64]), 1), calloc(sizeof(double[64]), 1), null, 0, calloc(sizeof(int[65536]), 1), calloc(sizeof(int[65536]), 1), calloc(sizeof(int[65536]), 1), calloc(sizeof(int[5]), 1), calloc(sizeof(int[5]), 1), calloc(sizeof(int[5]), 1), memcpy(malloc(sizeof(int[5])), &((int[5]){48427, 17148, 23627, 62548, 4431}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){0, 18, 346, 64917, 65463}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){357773, 934767, 875723, 898999, 404505}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){1249, 11698, 1039987, 1043896, 1048018}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){2112377, 662041, 5336171, 3642833, 4250760}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){104, 17523, 123928, 8288932, 8388264}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){41869, 812306, 5102857, 18232239, 26860214}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){33422937, 10244, 59149, 33135281, 99}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){44172927, 72999161, 74326391, 129606274, 21736814}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){61147, 882988, 266290, 133997595, 133525895}), sizeof(int[5])), 0, 0.0, 0.0, 0.0, 0.0});
+		struct __insieme_globals var_1 = ((struct __insieme_globals){(0-1), calloc(sizeof(double[64]), 1), calloc(sizeof(double[64]), 1), null, 0, calloc(sizeof(int[33554432]), 1), calloc(sizeof(int[33554432]), 1), calloc(sizeof(int[33554432]), 1), calloc(sizeof(int[5]), 1), calloc(sizeof(int[5]), 1), calloc(sizeof(int[5]), 1), memcpy(malloc(sizeof(int[5])), &((int[5]){48427, 17148, 23627, 62548, 4431}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){0, 18, 346, 64917, 65463}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){357773, 934767, 875723, 898999, 404505}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){1249, 11698, 1039987, 1043896, 1048018}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){2112377, 662041, 5336171, 3642833, 4250760}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){104, 17523, 123928, 8288932, 8388264}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){41869, 812306, 5102857, 18232239, 26860214}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){33422937, 10244, 59149, 33135281, 99}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){44172927, 72999161, 74326391, 129606274, 21736814}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){61147, 882988, 266290, 133997595, 133525895}), sizeof(int[5])), 0, 0.0, 0.0, 0.0, 0.0});
 		int i = 0;
 		int iteration = 0;
 		int itemp = 0;
@@ -575,7 +575,7 @@ int main(int argc, char** argv) {
 		double maxtime = 0.0;
 		{
 			for(int var_11 = 0; var_11 < 5; var_11 += 1) {
-				int var_10 = ((int)('S'));
+				int var_10 = ((int)('B'));
 				switch(var_10) {
 				case 'S':
 					{
@@ -608,19 +608,19 @@ int main(int argc, char** argv) {
 		};
 		{};
 		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n", 0);
-		printf(" Size:  %d  (class %c)\n", (1<<16), 'S');
+		printf(" Size:  %d  (class %c)\n", (1<<25), 'B');
 		printf(" Iterations:   %d\n", 10);
 		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_clear, 0, &var_1}))), 0);
 		call___insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&create_seq, 0, &var_1}))), 314159265.00, 1220703125.00);
 		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), 1);
 		(((var_1).passed_verification) = 0);
-		if(('S'!='S')) {
+		if(('B'!='S')) {
 			printf("\n   iteration\n", 0);
 		};
 		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_start, 0, &var_1}))), 0);
 		{
 			for(int var_74 = 1; var_74 < (10+1); var_74 += 1) {
-				if(('S'!='S')) {
+				if(('B'!='S')) {
 					printf("        %d\n", (var_74));
 				};
 				call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), (var_74));
@@ -633,7 +633,7 @@ int main(int argc, char** argv) {
 		if((((var_1).passed_verification)!=((5*10)+1))) {
 			(((var_1).passed_verification) = 0);
 		};
-		c_print_results("IS", ((char)('S')), (1<<16), 0, 0, 10, (nthreads), (timecounter), ((((double)((10*(1<<16))))/(timecounter))/1000000.), "keys ranked", ((var_1).passed_verification), "2.3", "03 Nov 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randlc");
+		c_print_results("IS", ((char)('B')), (1<<25), 0, 0, 10, (nthreads), (timecounter), ((((double)((10*(1<<25))))/(timecounter))/1000000.), "keys ranked", ((var_1).passed_verification), "2.3", "03 Nov 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randlc");
 	}
 }
 
