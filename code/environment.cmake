@@ -188,6 +188,7 @@ endif()
 # Add debug symbols
 if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -g )
+#	add_definitions( -p )
 endif()
 
 # --------------------------------------------------------- Valgrind / GTest testiong suite

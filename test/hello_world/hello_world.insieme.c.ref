@@ -1,5 +1,6 @@
 // --- Generated Inspire Code ---
 #include <stddef.h>
+#include <stdlib.h>
 #define bool int
 #define true 1
 #define false 0

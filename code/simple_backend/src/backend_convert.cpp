@@ -80,8 +80,16 @@ namespace {
 			case NT_CallExpr:
 				// subscript operator should not be again dereferenced in the end
 				return !(cc.basic.isSubscriptOperator(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
-			case NT_MemberAccessExpr:
+			case NT_MemberAccessExpr: {
+				TypePtr type = target->getType();
+				if (RefTypePtr refType = dynamic_pointer_cast<const RefType>(type)) {
+					NodeType elementType = refType->getElementType()->getNodeType();
+					if (elementType == NT_RefType || elementType == NT_VectorType) {
+						return true;
+					}
+				}
 				return false;
+			}
 			default:
 				return true;
 		}
@@ -113,11 +121,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			if (deref) cStr << ")";
 
 			return;
-		} if(funName == "ref.var") {
-			// TODO handle case where not RHS of local var decl
-			visit(args.front());
-			return;
-		} else if(cc.basic.isVarlistPack(funExp)) {
+		} if(cc.basic.isVarlistPack(funExp)) {
 			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
@@ -612,12 +616,48 @@ namespace detail {
 				VISIT_ARG(1);
 		});
 
-		// TODO: integrate those as well ...
-//		ADD_FORMATTER(lang::OP_REF_VAR_PTR, { OUT(" var("); VISIT_ARG(0); OUT(")"); });
-//		ADD_FORMATTER(lang::OP_REF_NEW_PTR, { OUT(" new("); VISIT_ARG(0); OUT(")"); });
-//		ADD_FORMATTER(lang::OP_REF_DELETE_PTR, { OUT(" del("); VISIT_ARG(0); OUT(")"); });
 
-		//ADD_FORMATTER(lang::OP_SUBSCRIPT_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { VISIT_ARG(0); });
+		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, {
+
+				TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
+
+				string stmt = toString(*ARG(0));
+
+				// TODO: make this nice - e.g. it does not work for initializing floats
+				if (stmt == "vector.initUndefined()" || stmt == "undefined") {
+					OUT("malloc(sizeof(");
+					OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
+					OUT("))");
+					return;
+				}
+
+				if (stmt == "vector.initUniform(ref.var(0))" || stmt == "vector.initUniform(ref.var(0.0))") {
+					OUT("calloc(sizeof(");
+					OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
+					OUT("), 1)");
+					return;
+				}
+
+				// TODO: sue memset!!
+
+				string typeName = visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true);
+
+				OUT("memcpy(");
+				OUT("malloc(");
+				OUT("sizeof(");
+				OUT(typeName);
+				OUT(")), &((");
+				OUT(typeName);
+				OUT(")");
+				VISIT_ARG(0);
+				OUT("), sizeof(");
+				OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
+				OUT("))");
+		});
+
+		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
+
 		ADD_FORMATTER(basic.getArray1DSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getVectorSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 
@@ -733,6 +773,8 @@ namespace detail {
 std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
 	out << "// --- Generated Inspire Code ---\n";
 	out << "#include <stddef.h>\n";
+	out << "#include <stdlib.h>\n";
+	//out << "#include <string.h>\n";
 	out << "#define bool int\n";
 	out << "#define true 1\n";
 	out << "#define false 0\n";

@@ -192,6 +192,16 @@ bool BasicGenerator::isNoOp(const NodePtr& p) const {
 	return *p == *getNoOp();
 }
 
+LiteralPtr BasicGenerator::getIntTypeParamLiteral(IntTypeParam param) const {
+	auto type = pimpl->build.genericType("intTypeParam", TypeList(), toVector(param));
+	return pimpl->build.literal(type, toString(param));
+}
+
+LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
+	auto literalType = pimpl->build.genericType("Type", toVector(type));
+	return pimpl->build.literal(literalType, toString(type));
+}
+
 } // namespace lang
 } // namespace core
 } // namespace insieme

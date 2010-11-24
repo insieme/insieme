@@ -145,8 +145,8 @@ GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
 OPERATION(Bool, LAnd, "bool.and", "(bool,bool) -> bool")
 OPERATION(Bool, LOr,  "bool.or",  "(bool,bool) -> bool")
-OPERATION(Bool, Eq,  "bool.eq",  "(bool,bool) -> bool")
-OPERATION(Bool, Ne,  "bool.ne",  "(bool,bool) -> bool")
+OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
+OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
@@ -275,11 +275,11 @@ LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
 
 GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction)
 
-LITERAL(VectorSubscript, "vector.subscript", "(vector<'elem,#l>, uint<#a>) -> 'elem")
-LITERAL(VectorInitUniform, "vector.initUniform", "('elem) -> vector<'elem,#a>")						// fugly
-LITERAL(VectorInitUndefined, "vector.initUndefined", "() -> vector<'elem,#a>")						// fugly
-LITERAL(VectorPointwise, "vector.pointwise", "(vector<'elem,#l>, vector<'elem,#l>, ('elem, 'elem) -> 'res) -> vector<'res,#l>")
-LITERAL(VectorReduction, "vector.reduction", "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
+LITERAL(VectorSubscript,     "vector.subscript",     "(vector<'elem,#l>, uint<#a>) -> 'elem")
+LITERAL(VectorInitUniform,   "vector.initUniform",   "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined, "vector.initUndefined", "(intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorPointwise,     "vector.pointwise",     "(vector<'elem,#l>, vector<'elem,#l>, ('elem, 'elem) -> 'res) -> vector<'res,#l>")
+LITERAL(VectorReduction,     "vector.reduction",     "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
