@@ -156,6 +156,7 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 	if(globals.empty())
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
 
+	const core::ASTBuilder& builder = fact.getASTBuilder();
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
 	for(auto it = globals.begin(), end = globals.end(); it != end; ++it) {
@@ -166,14 +167,11 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		// has to be set properly
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
 
-		core::TypePtr&& entryType = fact.convertType(it->first->getType().getTypePtr());
-		if (!core::dynamic_pointer_cast<const core::VectorType>(entryType)) {
-			entryType = fact.getASTBuilder().refType( entryType );
-		}
+		core::RefTypePtr&& entryType = builder.refType( fact.convertType(it->first->getType().getTypePtr()) );
 		if(it->second) {
 			// the variable is defined as extern, so we don't have to allocate memory for it
 			// just refear to the memory location someone else has initialized
-			entryType = fact.getASTBuilder().refType( entryType );
+			entryType = builder.refType( entryType );
 		}
 		core::Identifier ident(it->first->getNameAsString());
 		// add type to the global struct
@@ -184,25 +182,33 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		// variable which we assume will be visible from the entry point
 		core::ExpressionPtr initExpr;
 		if(it->second) {
-			initExpr = fact.getASTBuilder().literal(it->first->getNameAsString(), entryType);
-		} else if(it->first->getInit()) {
-			// this means the variable is not declared static inside a function so we have to initialize its value
-			initExpr = fact.convertInitExpr(it->first->getInit(), entryType);
+			initExpr = builder.literal(it->first->getNameAsString(), entryType);
 		} else {
-			initExpr = fact.defaultInitVal(entryType);
+			if(it->first->getInit()) {
+				// this means the variable is not declared static inside a function so we have to initialize its value
+				initExpr = fact.convertInitExpr(it->first->getInit(), entryType->getElementType());
+			} else {
+				initExpr = fact.defaultInitVal(entryType->getElementType());
+			}
+			// allocate vectors in the heap with ref.new
+			if(entryType->getElementType()->getNodeType() == core::NT_VectorType) {
+				initExpr = builder.callExpr(entryType, builder.getBasicGenerator().getRefNew(), initExpr);
+			} else {
+				initExpr = builder.callExpr(entryType, builder.getBasicGenerator().getRefVar(), initExpr);
+			}
 		}
 		// assert(*initExpr->getType() == *entryType);
 		// default initialization
 		members.push_back( core::StructExpr::Member(ident, initExpr) );
 
 	}
-	core::StructTypePtr&& structTy = fact.getASTBuilder().structType(entries);
+	core::StructTypePtr&& structTy = builder.structType(entries);
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<c_info::CNameAnnotation>(std::string("__insieme_globals")) );
 	// set back the original TU
 	assert(currTU);
 	fact.setTranslationUnit(fact.getProgram().getTranslationUnit(currTU));
-	return std::make_pair(structTy, fact.getASTBuilder().structExpr(structTy, members) );
+	return std::make_pair(structTy, builder.structExpr(structTy, members) );
 }
 
 void GlobalVarCollector::dump(std::ostream& out) const {

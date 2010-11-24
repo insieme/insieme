@@ -305,7 +305,7 @@ public:
 			return subExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
@@ -320,8 +320,14 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
+		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
+		// replaced with a null literal
+		if(*type == *convFact.builder.getNodeManager().basic.getRefAlpha() &&
+				*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+			return convFact.builder.getNodeManager().basic.getNull();
+		}
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
@@ -676,48 +682,6 @@ public:
 			return convFact.builder.callExpr(elementType, convFact.mgr.basic.getOperator(genType, op), subExpr);
 		};
 
-		// build lambda expression for post/pre increment/decrement unary operators
-//		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
-//			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
-//			assert( expTy && "LHS operand must of type ref<a'>." );
-//			const core::TypePtr& subTy = expTy->getElementType();
-//
-//			core::VariablePtr tmpVar;
-//			std::vector<core::StatementPtr> stmts;
-//			if(post) {
-//				tmpVar = builder.variable(subTy);
-//				// ref<a'> __tmp = subexpr
-//				stmts.push_back(builder.declarationStmt(tmpVar,
-//						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) ));
-//			}
-//			// subexpr op= 1
-//			stmts.push_back(
-//				builder.callExpr(
-//					convFact.mgr.basic.getUnit(),
-//					convFact.mgr.basic.getRefAssign(),
-//					subExpr, // ref<a'> a
-//					builder.callExpr(
-//						subTy,
-//						( additive ? convFact.mgr.basic.getSignedIntAdd() : convFact.mgr.basic.getSignedIntSub() ),
-//							toVector<core::ExpressionPtr>(
-//								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
-//								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
-//							)
-//						) // a - 1
-//				)
-//			);
-//			if(post) {
-//				assert(tmpVar);
-//				// return __tmp
-//				stmts.push_back( builder.returnStmt( tmpVar ) );
-//			} else {
-//				// return the variable
-//				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
-//			}
-//			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
-//			return builder.callExpr(retExpr, ExpressionList());
-//		};
-
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
 		// a++ ==> (__tmp = a, a=a+1, __tmp)
@@ -783,23 +747,30 @@ public:
 			break;
 		// -a
 		case UO_Minus:
-			// TODO:
-			// assert(false && "Conversion of unary operator '-' not supported");
+			subExpr = convFact.tryDeref(subExpr);
+
+			subExpr = builder.callExpr( subExpr->getType(),
+					builder.getNodeManager().basic.getSignedIntSub(),
+					builder.literal("0", convFact.mgr.basic.getInt4()), subExpr );
+			break;
 		// ~a
 		case UO_Not:
-			// TODO:
-			// assert(false && "Conversion of unary operator '~' not supported");
+			subExpr = convFact.tryDeref(subExpr);
+			subExpr = builder.callExpr( subExpr->getType(),
+						builder.getNodeManager().basic.getOperator(subExpr->getType(), core::lang::BasicGenerator::Not), subExpr
+					  );
+			break;
 		// !a
 		case UO_LNot:
-			// TODO:
-			// assert(false && "Conversion of unary operator '!' not supported");
-
+			subExpr = convFact.tryDeref(subExpr);
+			assert(*subExpr->getType() == *builder.getNodeManager().basic.getBool());
+			subExpr = builder.callExpr( subExpr->getType(), builder.getNodeManager().basic.getBoolLNot(), subExpr );
+			break;
 		case UO_Real:
 		case UO_Imag:
 		case UO_Extension: //TODO:
 		default:
-			break;
-			// assert(false && "Unary operator not supported");
+			assert(false && "Unary operator not supported");
 		}
 
 		// handle eventual pragmas attached to the Clang node

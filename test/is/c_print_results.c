@@ -40,9 +40,9 @@ void c_print_results( char   *name,
     
     printf( " Threads         =             %12d\n", nthreads );
  
-    printf( " Time in seconds =             %12.2f\n", t );
+    printf( " Time in seconds =             %12.2f\n", 0 /* t */ );
 
-    printf( " Mop/s total     =             %12.2f\n", mops );
+    printf( " Mop/s total     =             %12.2f\n", 0 /* mops */ );
 
     printf( " Operation type  = %24s\n", optype);
 
