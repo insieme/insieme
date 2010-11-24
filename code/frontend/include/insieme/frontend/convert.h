@@ -224,6 +224,8 @@ public:
 
 	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
+	const Program& getProgram() const { return program; }
+
 };
 
 // ------------------------------------ ASTConverter ---------------------------

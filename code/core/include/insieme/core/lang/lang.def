@@ -129,6 +129,8 @@ OPERATOR(PreDec,  "--")
 OPERATOR(PostDec, "--")
 
 // logical
+OPERATOR(LAnd, 	"&&")
+OPERATOR(LOr, 	"||")
 OPERATOR(LNot, 	"!")
 OPERATOR(Eq, 	"==")
 OPERATOR(Ne,	"!=")
@@ -141,8 +143,8 @@ OPERATOR(Ge,	">=")
 
 GROUP(LogicOp, BoolAnd, BoolOr, BoolEq, BoolNe, BoolNot)
 
-OPERATION(Bool, And, "bool.and", "(bool,bool) -> bool")
-OPERATION(Bool, Or,  "bool.or",  "(bool,bool) -> bool")
+OPERATION(Bool, LAnd, "bool.and", "(bool,bool) -> bool")
+OPERATION(Bool, LOr,  "bool.or",  "(bool,bool) -> bool")
 OPERATION(Bool, Eq,  "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,  "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, Not, "bool.not", "(bool) -> bool")

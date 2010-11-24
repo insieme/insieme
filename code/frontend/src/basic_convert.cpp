@@ -101,7 +101,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.currTU = &mProg.getTranslationUnit(ret.second);
 
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
 	DVLOG(1) << globColl;
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
@@ -129,11 +129,11 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
-	core::ExpressionPtr retExpr = expr;
-	while(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
-		retExpr = builder.callExpr( refTy->getElementType(), mgr.basic.getRefDeref(), retExpr );
+	// core::ExpressionPtr retExpr = expr;
+	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		return builder.callExpr( refTy->getElementType(), mgr.basic.getRefDeref(), expr );
 	}
-	return retExpr;
+	return expr;
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (local version)
