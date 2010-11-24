@@ -610,8 +610,7 @@ main( argc, argv )
         
 
 /*  Printout initial NPB info */
-    printf( "\n\n NAS Parallel Benchmarks 2.3 OpenMP C version"
-	    " - IS Benchmark\n\n" );
+    printf( "\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n" );
     printf( " Size:  %d  (class %c)\n", TOTAL_KEYS, CLASS );
     printf( " Iterations:   %d\n", MAX_ITERATIONS );
 

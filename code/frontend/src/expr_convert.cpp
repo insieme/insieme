@@ -305,7 +305,7 @@ public:
 			return subExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
@@ -320,8 +320,14 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
+		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
+		// replaced with a null literal
+		if(*type == *convFact.builder.getNodeManager().basic.getRefAlpha() &&
+				*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+			return convFact.builder.getNodeManager().basic.getNull();
+		}
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(!core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
