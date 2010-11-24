@@ -53,7 +53,6 @@
 TYPE(Unit,   "unit")
 
 TYPE(Char,   "char")
-TYPE(UChar,  "uchar")
 TYPE(WChar,  "wchar")
 TYPE(String, "string")
 
@@ -187,6 +186,15 @@ OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
 // Comparison Operations ----------------------------------------------------------------------------------------------
+
+GROUP(CharCompOp, CharEq, CharNe, CharLt, CharGt, CharLe, CharGe)
+
+OPERATION(Char, Eq, "char.eq", "(char,char) -> bool")
+OPERATION(Char, Ne, "char.ne", "(char,char) -> bool")
+OPERATION(Char, Lt, "char.lt", "(char,char) -> bool")
+OPERATION(Char, Gt, "char.gt", "(char,char) -> bool")
+OPERATION(Char, Le, "char.le", "(char,char) -> bool")
+OPERATION(Char, Ge, "char.ge", "(char,char) -> bool")
 
 GROUP(IntCompOp, SignedIntEq, SignedIntNe, SignedIntLt, SignedIntGt, SignedIntLe, SignedIntGe)
 
