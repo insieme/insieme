@@ -104,9 +104,9 @@ public:
 
 		// char types
 		case BuiltinType::Char_U:
-		case BuiltinType::UChar:		return gen.getUChar();
-		case BuiltinType::Char16:
-		case BuiltinType::Char32:
+		case BuiltinType::UChar:		return gen.getUInt1();
+		case BuiltinType::Char16:		return gen.getInt2();
+		case BuiltinType::Char32:		return gen.getInt4();
 		case BuiltinType::Char_S:
 		case BuiltinType::SChar:		return gen.getChar();
 		case BuiltinType::WChar:		return gen.getWChar();
