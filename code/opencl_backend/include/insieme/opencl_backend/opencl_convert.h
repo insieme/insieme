@@ -197,6 +197,8 @@ public:
 
 	CodePtr getCode() { return defCodePtr; }
 
+	ConversionContext& getConversionContext() const { return cc; }
+
 	//void visitNode(const NodePtr& node) {
 	//	std::cout << *node << std::endl;
 	//}

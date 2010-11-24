@@ -283,32 +283,16 @@ public:
 
 	void visitDeclarationStmt(const DeclarationStmtPtr& ptr);
 
-	void visitForStmt(const ForStmtPtr& ptr) {
-		auto decl = ptr->getDeclaration();
-		auto var = decl->getVariable();
-		string ident = cc.getNameGen().getVarName(var);
-		cStr << "for(";
-		visit(decl);
-		cStr << "; " << ident << " < ";
-		visit(ptr->getEnd());
-		cStr << "; " << ident << " += "; 
-		visit(ptr->getStep());
-		cStr << ") ";
-		visit(ptr->getBody());
-	}
+	void visitForStmt(const ForStmtPtr& ptr);
 
 	void visitIfStmt(const IfStmtPtr& ptr);
+
+	void visitWhileStmt(const WhileStmtPtr& ptr);
 
 	void visitReturnStmt(const ReturnStmtPtr& ptr);
 
 	void visitSwitchStmt(const SwitchStmtPtr& ptr);
 
-	void visitWhileStmt(const WhileStmtPtr& ptr) {
-		cStr << "while(";
-		visit(ptr->getCondition());
-		cStr << ") ";
-		visit(ptr->getBody());
-	}
 
 	////////////////////////////////////////////////////////////////////////// Expressions
 

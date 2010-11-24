@@ -502,10 +502,10 @@ public:
 			return builder.callExpr(lambdaExpr, ExpressionList());
 		}
 
-		core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
-
-		// create Pair type
-		core::TypeList&& argsTy = toVector( exprTy, exprTy );
+		// the type of this expression is the type of the LHS expression
+		core::TypePtr exprTy = lhs->getType()->getNodeType() == core::NT_RefType ?
+				core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType() :
+				lhs->getType();
 
 		// we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
@@ -543,9 +543,8 @@ public:
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
-			const core::TypePtr& lhsSubTy = subExprLHS->getType();
-			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(lhsSubTy, op);
-			rhs = builder.callExpr(lhsSubTy, opFunc, subExprLHS, rhs);
+			core::LiteralPtr&& opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 		}
 
 		bool isAssignment = false;
@@ -606,7 +605,7 @@ public:
 			baseOp = BO_Assign;
 			// poor C codes assign value to function parameters, this is not allowed here as input parameters
 			// are of non REF type. What we need to do is introduce a declaration for these variables
-			// and use the created variable on the stack instead of the input prameters
+			// and use the created variable on the stack instead of the input parameters
 			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(binOp->getLHS());
 			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
 				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(lhs);
@@ -620,7 +619,6 @@ public:
 			}
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			// DLOG(INFO) << *lhs;
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
 			isAssignment = true;
 			opFunc = convFact.mgr.basic.getRefAssign();
@@ -637,10 +635,8 @@ public:
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
 			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
-			if(isLogical) {
+			if(isLogical)
 				exprTy = convFact.mgr.basic.getBool();
-				argsTy = toVector(lhs->getType(), rhs->getType()); // FIXME
-			}
 		}
 		assert(opFunc);
 		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
@@ -661,65 +657,86 @@ public:
 		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
 
 		// build lambda expression for post/pre increment/decrement unary operators
-		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
-			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
-			assert( expTy && "LHS operand must of type ref<a'>." );
-			const core::TypePtr& subTy = expTy->getElementType();
+		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op)->core::ExpressionPtr {
 
-			core::VariablePtr tmpVar;
-			std::vector<core::StatementPtr> stmts;
-			if(post) {
-				tmpVar = builder.variable(subTy);
-				// ref<a'> __tmp = subexpr
-				stmts.push_back(builder.declarationStmt(tmpVar,
-						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) ));
-			}
-			// subexpr op= 1
-			stmts.push_back(
-				builder.callExpr(
-					convFact.mgr.basic.getUnit(),
-					convFact.mgr.basic.getRefAssign(),
-					subExpr, // ref<a'> a
-					builder.callExpr(
-						subTy,
-						( additive ? convFact.mgr.basic.getSignedIntAdd() : convFact.mgr.basic.getSignedIntSub() ),
-							toVector<core::ExpressionPtr>(
-								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
-								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
-							)
-						) // a - 1
-				)
-			);
-			if(post) {
-				assert(tmpVar);
-				// return __tmp
-				stmts.push_back( builder.returnStmt( tmpVar ) );
+			core::TypePtr type = subExpr->getType();
+			assert(type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type");
+
+			core::TypePtr elementType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
+
+			core::TypePtr genType;
+			if (convFact.mgr.basic.isSignedInt(elementType)) {
+				genType = convFact.mgr.basic.getIntGen();
+			} else if (convFact.mgr.basic.isUnsignedInt(elementType)) {
+				genType = convFact.mgr.basic.getUIntGen();
 			} else {
-				// return the variable
-				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
+				assert(false && "Illegal operand type for increment/decrement operator.");
 			}
-			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
-			return builder.callExpr(retExpr, ExpressionList());
+
+			return convFact.builder.callExpr(elementType, convFact.mgr.basic.getOperator(genType, op), subExpr);
 		};
 
-		bool post = true;
+		// build lambda expression for post/pre increment/decrement unary operators
+//		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, bool post, bool additive) {
+//			core::RefTypePtr expTy = core::dynamic_pointer_cast<const core::RefType>(subExpr->getType());
+//			assert( expTy && "LHS operand must of type ref<a'>." );
+//			const core::TypePtr& subTy = expTy->getElementType();
+//
+//			core::VariablePtr tmpVar;
+//			std::vector<core::StatementPtr> stmts;
+//			if(post) {
+//				tmpVar = builder.variable(subTy);
+//				// ref<a'> __tmp = subexpr
+//				stmts.push_back(builder.declarationStmt(tmpVar,
+//						builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) ));
+//			}
+//			// subexpr op= 1
+//			stmts.push_back(
+//				builder.callExpr(
+//					convFact.mgr.basic.getUnit(),
+//					convFact.mgr.basic.getRefAssign(),
+//					subExpr, // ref<a'> a
+//					builder.callExpr(
+//						subTy,
+//						( additive ? convFact.mgr.basic.getSignedIntAdd() : convFact.mgr.basic.getSignedIntSub() ),
+//							toVector<core::ExpressionPtr>(
+//								builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ),
+//								builder.castExpr( subTy, builder.literal("1", convFact.mgr.basic.getInt4()))
+//							)
+//						) // a - 1
+//				)
+//			);
+//			if(post) {
+//				assert(tmpVar);
+//				// return __tmp
+//				stmts.push_back( builder.returnStmt( tmpVar ) );
+//			} else {
+//				// return the variable
+//				stmts.push_back( builder.callExpr( subTy, convFact.mgr.basic.getRefDeref(), subExpr ) );
+//			}
+//			core::ExpressionPtr&& retExpr = this->convFact.createCallExpr(builder.compoundStmt(stmts), subTy);
+//			return builder.callExpr(retExpr, ExpressionList());
+//		};
+
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
 		// a++ ==> (__tmp = a, a=a+1, __tmp)
 		// ++a ==> ( a=a+1, a)
 		// --a
 		case UO_PreDec:
-			post = false;
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
+			break;
 		// a--
 		case UO_PostDec:
-			subExpr = encloseIncrementOperator(subExpr, post, false);
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec);
 			break;
 		// a++
 		case UO_PreInc:
-			post = false;
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc);
+			break;
 		// ++a
 		case UO_PostInc:
-			subExpr = encloseIncrementOperator(subExpr, post, true);
+			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc);
 			break;
 		// &a
 		case UO_AddrOf:

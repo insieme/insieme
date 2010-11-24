@@ -248,7 +248,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	if (!captures.empty()) {
 		int i = 0;
 		for_each(captures, [&](const TypePtr& cur) {
-				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << "; // " << toString(*cur) << "\n";
+				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << ";\n";
 		});
 	}
 
