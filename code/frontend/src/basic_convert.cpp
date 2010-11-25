@@ -256,7 +256,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     if ( mgr.basic.isChar(type) ) {
 		// initialize integer value
-		return builder.literal("'\0'", type);
+		return builder.literal("\'\\0\'", type);
 	}
     // handle reals initialization
     if ( mgr.basic.isReal(type) ) {
@@ -309,8 +309,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal);
-		// return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
+		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal, mgr.basic.getIntTypeParamLiteral(vecTy->getSize()));
     }
     // handle arrays initialization
     if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
@@ -481,6 +480,7 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 //	);
 //
 //	return lambdaExpr;
+	return core::LambdaExprPtr();
 }
 
 

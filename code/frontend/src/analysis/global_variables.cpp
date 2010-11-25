@@ -197,7 +197,6 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 				initExpr = builder.callExpr(entryType, builder.getBasicGenerator().getRefVar(), initExpr);
 			}
 		}
-		// assert(*initExpr->getType() == *entryType);
 		// default initialization
 		members.push_back( core::StructExpr::Member(ident, initExpr) );
 
