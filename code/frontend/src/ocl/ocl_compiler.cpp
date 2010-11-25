@@ -223,9 +223,14 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
     }
 
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
-        if(lit->getValue() == "0u" || lit->getValue() == "1u"){
+/*      Defualt value anyway....
+ *      if(lit->getValue() == "0u") {
             //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
-            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(lit));
+            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
+        }*/
+        if(lit->getValue() == "1u"){
+            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
 
@@ -377,7 +382,7 @@ public:
 *//*
         if(core::CompoundStmtPtr body = dynamic_pointer_cast<const core::CompoundStmt>(element->substitute(builder.getNodeManager(), *this))){
             std::cout << "the body\n";
-/* do this recursively
+*//* do this recursively
             const core::Node::ChildList& children = body->getChildList();
 
             //&builder should be captured, but is member variable
