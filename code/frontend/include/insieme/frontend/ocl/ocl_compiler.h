@@ -85,7 +85,8 @@ public:
     core::VariablePtr localId; bool localIdUsed;
 
     core::CallExprPtr vecAccess(core::VariablePtr& vec, core::ExpressionPtr& idx) {
-        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(), toVector<core::ExpressionPtr>(vec, idx) );
+        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(),
+                toVector<core::ExpressionPtr>(vec, idx) );
     }
 
     static core::VariablePtr get3DvecVar(core::ASTBuilder& builder) {

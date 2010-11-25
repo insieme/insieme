@@ -205,7 +205,6 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL level, core::ExpressionPtr 
         return builder.callExpr(BASIC.getUnsignedIntAdd(), vecAccess(localId, idx),
                 builder.callExpr(BASIC.getUnsignedIntMul(), vecAccess(localRange, idx), vecAccess(groupId, idx)));
     case OPL_GROUP :
-std::cout << "dunno, i'm substituting...\n";
         groupIdUsed = true;
         return vecAccess(groupId, idx);
     //case OPL_LOCAL :
@@ -217,10 +216,21 @@ std::cout << "dunno, i'm substituting...\n";
 
 
 core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
-    if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(memFence)){
-        if(lit->getValue() == "0" || lit->getValue() == "1"){
+    //get rid of casts
+    core::NodePtr arg = memFence;
+    while(arg->getNodeType() == core::NT_CastExpr) {
+        arg = arg->getChildList().at(1);
+    }
+
+    if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
+/*      Defualt value anyway....
+ *      if(lit->getValue() == "0u") {
             //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
-            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(lit));
+            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
+        }*/
+        if(lit->getValue() == "1u"){
+            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
 
@@ -300,7 +310,7 @@ public:
                 }
                 if(literal->getValue() == "get_group_id") {
                     assert(args.size() == 1 && "Function get_group_id must have exactly 1 argument");
-std::cout << "WWWWWWWWWWWWWWWWWWWWWWWHHHHHHHHHHHHHHHHHHHHHHHHHHHHHYYYYYYYYYYYYYYYYYYYYYYYY " << literal << std::endl;
+
                     return kd.accessId(OPL_GROUP, args.at(0));
                 }
                 if(literal->getValue() == "get_local_id") {
@@ -369,10 +379,10 @@ std::cout << "WWWWWWWWWWWWWWWWWWWWWWWHHHHHHHHHHHHHHHHHHHHHHHHHHHHHYYYYYYYYYYYYYY
             core::Variable v = *var;
             std::cout << "VarID: " << v.getId() << " VarType: " << v.getType() << std::endl;
         }
-*/
+*//*
         if(core::CompoundStmtPtr body = dynamic_pointer_cast<const core::CompoundStmt>(element->substitute(builder.getNodeManager(), *this))){
             std::cout << "the body\n";
-/* do this recursively
+*//* do this recursively
             const core::Node::ChildList& children = body->getChildList();
 
             //&builder should be captured, but is member variable
@@ -381,17 +391,17 @@ std::cout << "WWWWWWWWWWWWWWWWWWWWWWWHHHHHHHHHHHHHHHHHHHHHHHHHHHHHYYYYYYYYYYYYYY
                 //look for ocl buildin functions and translate them to IR statements
 
                 }
-            );*/
+            );
 
                 return body;
 //                core::LambdaExpr localZparallel = builder.l
      //           core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
-            }
+            }*/
  //           else
    //             assert(body && "KenrnelMapper corrupted function body.");
 //        }
 
-        return element;
+        return element->substitute(builder.getNodeManager(), *this);
     }
 
 
