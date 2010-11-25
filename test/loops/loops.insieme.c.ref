@@ -1,0 +1,25 @@
+// --- Generated Inspire Code ---
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		int a = 10;
+		for(int idx = 0; idx < (a); idx += 1) {
+			printf("idx=%d", (idx));
+		};
+		for(int idx = (((int)(0))-(a)); idx < ((((int)(0))-0)+1); idx += 1) {
+			printf("idx=%d", (((int)(0))-(idx)));
+		};
+	}
+}
+

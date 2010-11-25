@@ -101,6 +101,11 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefVar(), subExpr);
 }
 
+ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
+	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
+			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
+}
+
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
 	TypePtr&& retType = manager.basic.getUnit();
 	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {

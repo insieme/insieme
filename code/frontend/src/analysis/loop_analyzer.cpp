@@ -35,7 +35,6 @@
  */
 
 #include "insieme/frontend/analysis/loop_analyzer.h"
-
 #include "insieme/frontend/convert.h"
 
 // defines which are needed by LLVM
@@ -71,6 +70,11 @@ struct VarRefFinder: public StmtVisitor<VarRefFinder>, insieme::frontend::analys
 		);
 	}
 };
+
+insieme::core::ExpressionPtr addOne(const insieme::core::ASTBuilder& builder, const insieme::core::ExpressionPtr& expr) {
+	return builder.callExpr( expr->getType(), builder.getBasicGenerator().getOperator(expr->getType(), insieme::core::lang::BasicGenerator::Add),
+			expr, builder.literal(builder.getBasicGenerator().getInt4(), "1") );
+}
 
 }
 
@@ -119,14 +123,12 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		switch(unOp->getOpcode()) {
 		case UO_PreInc:
 		case UO_PostInc:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getUInt1());
-			return;
 		case UO_PreDec:
 		case UO_PostDec:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("-1", convFact.getNodeManager().basic.getInt1());
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getInt1());
 			return;
 		default:
-			assert(false && "UnaryOperator differet from post/pre inc/dec (++/--) not supported in loop increment expression");
+			assert(false && "UnaryOperator different from post/pre inc/dec (++/--) not supported in loop increment expression");
 		}
 	}
 
@@ -148,6 +150,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 	}
 }
 
+
 void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
 	const Expr* cond = forStmt->getCond();
@@ -166,9 +169,15 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 			break;
 		case BO_LE:
 			// return: condExpr + 1
-			loopHelper.condExpr = convFact.getASTBuilder().callExpr( condExpr->getType(),
-					convFact.getNodeManager().basic.getOperator(condExpr->getType(), core::lang::BasicGenerator::Add),
-					condExpr, convFact.getASTBuilder().literal(convFact.getNodeManager().basic.getUInt4(), "1") );
+			loopHelper.condExpr = addOne(convFact.getASTBuilder(), condExpr);
+			break;
+		case BO_GT:
+			loopHelper.condExpr = convFact.getASTBuilder().invertSign(condExpr);
+			loopHelper.invert = true;
+			break;
+		case BO_GE:
+			loopHelper.condExpr = addOne(convFact.getASTBuilder(), convFact.getASTBuilder().invertSign(condExpr));
+			loopHelper.invert = true;
 			break;
 		default:
 			assert(false && "Condition expression not supported");

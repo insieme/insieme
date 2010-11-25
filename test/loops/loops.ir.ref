@@ -1,0 +1,29 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+        decl ref<int<4>> v3 =  var(10);
+        for(decl ref<int<4>> v4 =  var(0) .. v3 : 1) {
+            printf("idx=%d", varlist.pack((v4)));
+        };
+        for(decl ref<int<4>> v5 =  var(0-v3) .. 0-0+1 : 1) {
+            printf("idx=%d", varlist.pack((0-v5)));
+        };
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+        decl ref<int<4>> v3 = ( var(10));
+        for(decl ref<int<4>> v4 = ( var(0)) .. ( *v3) : 1) {
+            printf("idx=%d", varlist.pack((( *v4))));
+        };
+        for(decl ref<int<4>> v5 = ( var((CAST<int<4>>(0)-( *v3)))) .. ((CAST<int<4>>(0)-0)+1) : 1) {
+            printf("idx=%d", varlist.pack(((CAST<int<4>>(0)-( *v5)))));
+        };
+    }
+

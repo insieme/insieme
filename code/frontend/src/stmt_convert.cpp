@@ -259,7 +259,7 @@ public:
 				initExpr = *fit;
 			}
 
-			assert(initExpr.isSingleStmt() && "Init expression for loop sttatement contains multiple statements");
+			assert(initExpr.isSingleStmt() && "Init expression for loop statement contains multiple statements");
 			// We are in the case where we are sure there is exactly 1 element in the
 			// initialization expression
 			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
@@ -283,7 +283,7 @@ public:
 				//			}
 				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				core::ExpressionPtr&& init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
-				assert(init && "Init statement for loop is not an xpression");
+				assert(init && "Init statement for loop is not an expression");
 
 				const core::TypePtr& varTy = inductionVar->getType();
 				// we create a new induction variable, we don't register it to the variable
@@ -298,7 +298,7 @@ public:
 				// Initialize the value of the new induction variable with the value of the old one
 				core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init);
 				assert(callExpr && *callExpr->getFunctionExpr() == *convFact.mgr.basic.getRefAssign() &&
-						"Expression not handled in a forloop initaliazation statement!");
+						"Expression not handled in a forloop initialization statement!");
 
 				// we handle only the situation where the initExpr is an assignment
 				init = callExpr->getArguments()[1]; // getting RHS
@@ -313,8 +313,21 @@ public:
 				iteratorChanged = true;
 			}
 
-			assert(declStmt && "Falied convertion of loop init expression");
+			assert(declStmt && "Failed conversion of loop init expression");
 
+			if(loopAnalysis.isInverted()) {
+				// invert init value
+				core::ExpressionPtr&& invInitExpr = builder.invertSign(builder.deref(declStmt->getInitialization())); // FIXME
+				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
+						core::transform::replaceAll(builder.getNodeManager(), declStmt, declStmt->getInitialization(), builder.refVar(invInitExpr), true)
+				);
+
+				// invert the sign of the loop index in body of the loop
+				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
+				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
+						inductionVar, true);
+				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
+			}
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
 			assert(irFor && "Created for statement is not valid");

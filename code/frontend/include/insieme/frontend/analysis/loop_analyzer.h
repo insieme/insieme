@@ -76,9 +76,10 @@ class LoopAnalyzer {
 		const clang::VarDecl* 			inductionVar;
 		insieme::core::ExpressionPtr 	incrExpr;
 		insieme::core::ExpressionPtr	condExpr;
+		bool 							invert;
 
 		//TODO: recheck: Visual Studio 2010 fix
-		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL) {	}
+		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL), invert(false) {	}
 	};
 
 	const ConversionFactory& 	convFact;
@@ -100,6 +101,8 @@ public:
 	insieme::core::ExpressionPtr getIncrExpr() const { return loopHelper.incrExpr; }
 
 	insieme::core::ExpressionPtr getCondExpr() const { return loopHelper.condExpr; }
+
+	bool isInverted() const { return loopHelper.invert; }
 };
 
 } // End analysis namespace

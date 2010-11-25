@@ -2695,15 +2695,14 @@ c-------------------------------------------------------------------*/
 
   int i, j, k, m, n;
 
-  // for (i = grid_points[0]-2; i >= 0; i--) { // HACK
-  for (i = 0; i < grid_points[0]-1; i++) {
+  for (i = grid_points[0]-2; i >= 0; i--) {
 #pragma omp for
     for (j = 1; j < grid_points[1]-1; j++) {
       for (k = 1; k < grid_points[2]-1; k++) {
 	for (m = 0; m < BLOCK_SIZE; m++) {
 	  for (n = 0; n < BLOCK_SIZE; n++) {
-	    rhs[grid_points[0]-2-i][j][k][m] = rhs[grid_points[0]-2-i][j][k][m]
-	      - lhs[grid_points[0]-2-i][j][k][CC][m][n]*rhs[grid_points[0]-1-i][j][k][n];
+	    rhs[i][j][k][m] = rhs[i][j][k][m]
+	      - lhs[i][j][k][CC][m][n]*rhs[i+1][j][k][n];
 	  }
 	}
       }
@@ -3335,15 +3334,14 @@ c-------------------------------------------------------------------*/
 
   int i, j, k, m, n;
       
-//  for (j = grid_points[1]-2; j >= 0; j--) { // HACK
-	for (j = 0; j < grid_points[1]-1; j++) {
+  for (j = grid_points[1]-2; j >= 0; j--) {
 #pragma omp for
     for (i = 1; i < grid_points[0]-1; i++) {
       for (k = 1; k < grid_points[2]-1; k++) {
 	for (m = 0; m < BLOCK_SIZE; m++) {
 	  for (n = 0; n < BLOCK_SIZE; n++) {
-	    rhs[i][grid_points[1]-2-j][k][m] = rhs[i][grid_points[1]-2-j][k][m] 
-	      - lhs[i][grid_points[1]-2-j][k][CC][m][n]*rhs[i][grid_points[1]-2-j+1][k][n];
+	    rhs[i][j][k][m] = rhs[i][j][k][m] 
+	      - lhs[i][j][k][CC][m][n]*rhs[i][j+1][k][n];
 	  }
 	}
       }
@@ -3496,12 +3494,11 @@ c-------------------------------------------------------------------*/
 #pragma omp for  
   for (i = 1; i < grid_points[0]-1; i++) {
     for (j = 1; j < grid_points[1]-1; j++) {
-//      for (k = grid_points[2]-2; k >= 0; k--) {
-		for (k = 0; k < grid_points[2]-1; k++) {
+      for (k = grid_points[2]-2; k >= 0; k--) {
 	for (m = 0; m < BLOCK_SIZE; m++) {
 	  for (n = 0; n < BLOCK_SIZE; n++) {
-	    rhs[i][j][grid_points[2]-2-k][m] = rhs[i][j][grid_points[2]-2-k][m] 
-	      - lhs[i][j][grid_points[2]-2-k][CC][m][n]*rhs[i][j][grid_points[2]-2-k+1][n];
+	    rhs[i][j][k][m] = rhs[i][j][k][m] 
+	      - lhs[i][j][k][CC][m][n]*rhs[i][j][k+1][n];
 	  }
 	}
       }
