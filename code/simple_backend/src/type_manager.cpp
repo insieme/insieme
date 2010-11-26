@@ -218,7 +218,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	// get name for function type
 	string name = nameGenerator.getName(functionType, "funType");
 	string functorName = "struct " + name;
-	string callerName = "call_" + name;
+	string callerName = "call" + name;
 
 	CodePtr functorAndCaller(new CodeFragment(string("Definitions for function type: ") + name));
 	CodeStream& out = functorAndCaller->getCodeStream();

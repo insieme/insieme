@@ -1,4 +1,5 @@
 // --- Generated Inspire Code ---
+#include <alloca.h>
 #include <stddef.h>
 #include <stdlib.h>
 #define bool int
@@ -48,7 +49,7 @@ struct __insieme_funType_type_0 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_0
-void call___insieme_funType_type_0(struct __insieme_funType_type_0* lambda,int p1) { return lambda->fun(lambda,p1); }
+void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda,int p1) { return lambda->fun(lambda,p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
 // Abstract prototype for lambdas of type __insieme_funType_type_1
@@ -77,7 +78,7 @@ struct __insieme_funType_type_2 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_2
-void call___insieme_funType_type_2(struct __insieme_funType_type_2* lambda,double p1,double p2) { return lambda->fun(lambda,p1,p2); }
+void call__insieme_funType_type_2(struct __insieme_funType_type_2* lambda,double p1,double p2) { return lambda->fun(lambda,p1,p2); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_3 //
 // Abstract prototype for lambdas of type __insieme_funType_type_3
@@ -95,7 +96,7 @@ struct __insieme_funType_type_4 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_4
-double call___insieme_funType_type_4(struct __insieme_funType_type_4* lambda,double* p1,double* p2) { return lambda->fun(lambda,p1,p2); }
+double call__insieme_funType_type_4(struct __insieme_funType_type_4* lambda,double* p1,double* p2) { return lambda->fun(lambda,p1,p2); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_5 //
 // Abstract prototype for lambdas of type __insieme_funType_type_5
@@ -180,10 +181,10 @@ void create_seq(void* _capture, double seed, double a) {
 			((k) = ((1<<21)/4));
 			{
 				for(int var_41 = 0; var_41 < (1<<25); var_41 += 1) {
-					((x) = call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23));
-					((x) = ((x)+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
-					((x) = ((x)+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
-					((x) = ((x)+call___insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
+					((x) = call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23));
+					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
+					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
+					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
 					(((*((*var_17).key_array))[((unsigned int)((var_41)))]) = ((int)((((double)((k)))*(x)))));
 				};
 				((i) = (1<<25));
@@ -350,7 +351,7 @@ struct __insieme_funType_type_6 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_6
-double call___insieme_funType_type_6(struct __insieme_funType_type_6* lambda) { return lambda->fun(lambda); }
+double call__insieme_funType_type_6(struct __insieme_funType_type_6* lambda) { return lambda->fun(lambda); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_7 //
 // Abstract prototype for lambdas of type __insieme_funType_type_7
@@ -368,7 +369,7 @@ struct __insieme_funType_type_8 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_8
-void call___insieme_funType_type_8(struct __insieme_funType_type_8* lambda,double* p1) { return lambda->fun(lambda,p1); }
+void call__insieme_funType_type_8(struct __insieme_funType_type_8* lambda,double* p1) { return lambda->fun(lambda,p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_9 //
 // Abstract prototype for lambdas of type __insieme_funType_type_9
@@ -416,7 +417,7 @@ double elapsed_time(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		double t = 0.0;
-		call___insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&wtime, 0, var_66}))), &t);
+		call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&wtime, 0, var_66}))), &t);
 		return (t);;
 	}
 }
@@ -428,7 +429,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_65 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*((*var_65).start))[((unsigned int)(n))]) = call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_65})))));
+		(((*((*var_65).start))[((unsigned int)(n))]) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_65})))));
 	}
 }
 
@@ -441,7 +442,7 @@ void timer_stop(void* _capture, int n) {
 	{
 		double t = 0.0;
 		double now = 0.0;
-		((now) = call___insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_76})))));
+		((now) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_76})))));
 		((t) = ((now)-((*((*var_76).start))[((unsigned int)(n))])));
 		(((*((*var_76).elapsed))[((unsigned int)(n))]) = (((*((*var_76).elapsed))[((unsigned int)(n))])+(t)));
 	}
@@ -456,7 +457,7 @@ struct __insieme_funType_type_10 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_10
-double call___insieme_funType_type_10(struct __insieme_funType_type_10* lambda,int p1) { return lambda->fun(lambda,p1); }
+double call__insieme_funType_type_10(struct __insieme_funType_type_10* lambda,int p1) { return lambda->fun(lambda,p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_11 //
 // Abstract prototype for lambdas of type __insieme_funType_type_11
@@ -485,7 +486,7 @@ struct __insieme_funType_type_12 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_12
-void call___insieme_funType_type_12(struct __insieme_funType_type_12* lambda) { return lambda->fun(lambda); }
+void call__insieme_funType_type_12(struct __insieme_funType_type_12* lambda) { return lambda->fun(lambda); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_13 //
 // Abstract prototype for lambdas of type __insieme_funType_type_13
@@ -566,7 +567,33 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){(((int)(0))-1), memcpy(malloc(sizeof(double[64])), &((double[64]){}), sizeof(double[64])), memcpy(malloc(sizeof(double[64])), &((double[64]){}), sizeof(double[64])), null, 0, memcpy(malloc(sizeof(int[33554432])), &((int[33554432]){}), sizeof(int[33554432])), memcpy(malloc(sizeof(int[33554432])), &((int[33554432]){}), sizeof(int[33554432])), memcpy(malloc(sizeof(int[33554432])), &((int[33554432]){}), sizeof(int[33554432])), memcpy(malloc(sizeof(int[5])), &((int[5]){}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){48427, 17148, 23627, 62548, 4431}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){0, 18, 346, 64917, 65463}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){357773, 934767, 875723, 898999, 404505}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){1249, 11698, 1039987, 1043896, 1048018}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){2112377, 662041, 5336171, 3642833, 4250760}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){104, 17523, 123928, 8288932, 8388264}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){41869, 812306, 5102857, 18232239, 26860214}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){33422937, 10244, 59149, 33135281, 99}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){44172927, 72999161, 74326391, 129606274, 21736814}), sizeof(int[5])), memcpy(malloc(sizeof(int[5])), &((int[5]){61147, 882988, 266290, 133997595, 133525895}), sizeof(int[5])), 0, 0.0, 0.0, 0.0, 0.0});
+		struct __insieme_globals var_1 = ((struct __insieme_globals){(((int)(0))-1),
+			calloc(sizeof(double[64]), 1),
+			calloc(sizeof(double[64]), 1),
+			null,
+			0,
+			calloc(sizeof(int[33554432]), 1),
+			calloc(sizeof(int[33554432]), 1),
+			calloc(sizeof(int[33554432]), 1),
+			calloc(sizeof(int[5]), 1),
+			calloc(sizeof(int[5]), 1),
+			calloc(sizeof(int[5]), 1),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){48427, 17148, 23627, 62548, 4431}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){0, 18, 346, 64917, 65463}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){357773, 934767, 875723, 898999, 404505}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){1249, 11698, 1039987, 1043896, 1048018}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){2112377, 662041, 5336171, 3642833, 4250760}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){104, 17523, 123928, 8288932, 8388264}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){41869, 812306, 5102857, 18232239, 26860214}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){33422937, 10244, 59149, 33135281, 99}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){44172927, 72999161, 74326391, 129606274, 21736814}), sizeof(int[5])),
+			memcpy(malloc(sizeof(int[5])), &((int[5]){61147, 882988, 266290, 133997595, 133525895}), sizeof(int[5])),
+			0,
+			0.0,
+			0.0,
+			0.0,
+			0.0
+		});
 		int i = 0;
 		int iteration = 0;
 		int itemp = 0;
@@ -610,26 +637,26 @@ int main(int argc, char** argv) {
 		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n", 0);
 		printf(" Size:  %d  (class %c)\n", (1<<25), 'B');
 		printf(" Iterations:   %d\n", 10);
-		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_clear, 0, &var_1}))), 0);
-		call___insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&create_seq, 0, &var_1}))), 314159265.00, 1220703125.00);
-		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), 1);
+		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_clear, 0, &var_1}))), 0);
+		call__insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&create_seq, 0, &var_1}))), 314159265.00, 1220703125.00);
+		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), 1);
 		(((var_1).passed_verification) = 0);
 		if(('B'!='S')) {
 			printf("\n   iteration\n", 0);
 		};
-		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_start, 0, &var_1}))), 0);
+		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_start, 0, &var_1}))), 0);
 		{
 			for(int var_74 = 1; var_74 < (10+1); var_74 += 1) {
 				if(('B'!='S')) {
 					printf("        %d\n", (var_74));
 				};
-				call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), (var_74));
+				call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), (var_74));
 			};
 			((iteration) = (10+1));
 		};
-		call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_stop, 0, &var_1}))), 0);
-		((timecounter) = call___insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&timer_read, 0, &var_1}))), 0));
-		call___insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&full_verify, 0, &var_1}))));
+		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_stop, 0, &var_1}))), 0);
+		((timecounter) = call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&timer_read, 0, &var_1}))), 0));
+		call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&full_verify, 0, &var_1}))));
 		if((((var_1).passed_verification)!=((5*10)+1))) {
 			(((var_1).passed_verification) = 0);
 		};

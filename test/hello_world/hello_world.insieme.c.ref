@@ -1,4 +1,5 @@
 // --- Generated Inspire Code ---
+#include <alloca.h>
 #include <stddef.h>
 #include <stdlib.h>
 #define bool int
