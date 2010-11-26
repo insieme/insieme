@@ -457,6 +457,11 @@ public:
 		StatementPtr&& subStatement = createNode<Statement>(elem, "subStatement", "statementPtr");
 		return createIrNode<MarkerStmt>(elem, subStatement, numeric_cast<int>(elem.getAttr("identifier")));
 	}
+	
+	NodePtr handle_markerExpr(const XmlElement& elem) {
+		ExpressionPtr&& subExpression = createNode<Expression>(elem, "subExpression", "expressionPtr");
+		return createIrNode<MarkerExpr>(elem, subExpression, numeric_cast<int>(elem.getAttr("identifier")));
+	}
 
 	NodePtr handle_program(const XmlElement& elem) {
 		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
@@ -501,6 +506,7 @@ public:
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
 		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(captureInitExpr)	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
+		DISPATCH(markerExpr)
 		assert(false && "XML node not handled!");
 	}
 

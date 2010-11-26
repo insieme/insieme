@@ -692,6 +692,19 @@ public:
 
 		visitAnnotations(cur->getAnnotations(), markerStmt);
 	}
+	
+	void visitMarkerExpr(const MarkerExprPtr& cur) {
+		XmlElement markerExpr("markerExpr", doc);
+		markerExpr << XmlElement::Attribute("id", GET_ID(cur))
+				 << XmlElement::Attribute("identifier", numeric_cast<std::string>(cur->getID()));
+		rootElem << markerExpr;
+
+		XmlElement subExpression("subExpression", doc);
+		append(subExpression, cur->getSubExpression(), "expressionPtr");
+		markerExpr << subExpression;
+
+		visitAnnotations(cur->getAnnotations(), markerExpr);
+	}
 };
 
 }

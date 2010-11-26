@@ -1079,3 +1079,7 @@ MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpr
 	return manager.get(MarkerExpr(subExpression, ++counter));
 }
 
+MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id) {
+	return manager.get(MarkerExpr(subExpression, id));
+}
+
