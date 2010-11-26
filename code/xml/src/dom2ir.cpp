@@ -172,10 +172,18 @@ public:
 	}
 
 	NodePtr handle_functionType(const XmlElement& elem) {
-//		TupleTypePtr&& captureType = createNode<TupleType>(elem, "captureType","tupleTypePtr");
-//		TupleTypePtr&& argType = createNode<TupleType>(elem, "argumentType","tupleTypePtr");
-//		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
-//		return createIrNode<FunctionType>(elem, captureType, argType, retType);
+		XmlElementList&& caps = elem.getFirstChildByName("captureTypeList")->getChildrenByName("captureType");
+		TypeList captureTypes;
+		for(auto iter = caps.begin(), end = caps.end(); iter != end; ++iter) {
+			captureTypes.push_back(createNode<Type>(*iter, "typePtr"));
+		}
+		XmlElementList&& args = elem.getFirstChildByName("argumentTypeList")->getChildrenByName("argumentType");
+		TypeList argumentTypes;
+		for(auto iter = args.begin(), end = args.end(); iter != end; ++iter) {
+			argumentTypes.push_back(createNode<Type>(*iter, "typePtr"));
+		}
+		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
+		return createIrNode<FunctionType>(elem, captureTypes, argumentTypes, retType);
 	}
 
 private:
