@@ -64,7 +64,7 @@ class XmlVisitor : public ASTVisitor<void> {
 	void append(XmlElement& xmlNode, const T& expr, const std::string& name) {
 		XmlElement expressionPtr(name, doc);
 		xmlNode << (expressionPtr << XmlElement::Attribute("ref", GET_ID(expr)));
-		visitAnnotations(expr.getAnnotations(), expressionPtr);
+		//visitAnnotations(expr.getAnnotations(), expressionPtr);
 	}
 
 	template <typename T>
@@ -74,6 +74,17 @@ class XmlVisitor : public ASTVisitor<void> {
 				XmlElement subNode(groupName, this->doc);
 				this->append(subNode, curr, elemName);
 				xmlParentNode << subNode;
+			}
+		);
+	}
+	
+	template <typename T>
+	void appendL(XmlElement& xmlParentNode, const std::vector<T>& list, const std::string& groupName, const std::string& elemName) {
+		XmlElement subNode(groupName, this->doc);
+		xmlParentNode << subNode;
+		std::for_each(list.begin(), list.end(),
+			[this, &subNode, elemName](const T& curr) {
+				this->append(subNode, curr, elemName);
 			}
 		);
 	}
@@ -146,11 +157,9 @@ public:
 	void visitFunctionType(const FunctionTypePtr& cur) {
 		XmlElement functionType("functionType", doc);
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
-
-		XmlElement argumentType("argumentType", doc);
-		// TODO: fix this ...
-//		append(argumentType, cur->getArgumentType(), "tupleTypePtr");
-//		functionType << argumentType;
+		
+		appendL(functionType, cur->getCaptureTypes(), "captureTypeList", "typePtr");
+		appendL(functionType, cur->getArgumentTypes(), "argumentTypeList", "typePtr");
 
 		XmlElement returnType("returnType", doc);
 		append(returnType, cur->getReturnType(), "typePtr");
@@ -513,17 +522,15 @@ public:
 		visitAnnotations(cur->getAnnotations(), declarationStmt);
 	}
 
-	/*void visitJobExpr(const JobExprPtr& cur) {
+	void visitJobExpr(const JobExprPtr& cur) {
 		XmlElement jobExpr("jobExpr", doc);
 		rootElem << (jobExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
 		XmlElement type("type", doc);
 		append(type, cur->getType(), "typePtr");
 		jobExpr << type;
-
-		XmlElement declarations("declarations", doc);
-		appendList(declarations, cur->getLocalDecls(), "declaration", "declarationStmtPtr");
-		jobExpr << declarations;
+		
+		appendL(jobExpr, cur->getLocalDecls(), "declarations", "declarationStmtPtr");
 
 		XmlElement guardedStatements("guardedStatements", doc);
 		jobExpr << guardedStatements;
@@ -532,47 +539,37 @@ public:
 		std::for_each(stmtsVec.begin(), stmtsVec.end(),
 			[ this, &guardedStatements ](const JobExpr::GuardedStmt& curr) {
 				XmlElement guardedStatement("guardedStatement", this->doc);
-				this->append(guardedStatement, curr.first, "lambdaExprPtr");
-				this->append(guardedStatement, curr.second, "lambdaExprPtr");
+				this->append(guardedStatement, curr.first, "expressionPtr");
+				this->append(guardedStatement, curr.second, "expressionPtr");
 				guardedStatements << guardedStatement;
 			}
 		);
 
 		XmlElement defaultStatement("defaultStatement", doc);
-		append(defaultStatement, cur->getDefaultStmt(), "lambdaExprPtr");
+		append(defaultStatement, cur->getDefaultStmt(), "expressionPtr");
 		jobExpr << defaultStatement;
 
 		visitAnnotations(cur->getAnnotations(), jobExpr);
-	}*/
+	}
 
-	/*void visitLambdaExpr(const LambdaExprPtr& cur) {
+	void visitLambdaExpr(const LambdaExprPtr& cur) {
 		XmlElement lambdaExpr("lambdaExpr", doc);
 		rootElem << (lambdaExpr << XmlElement::Attribute("id", GET_ID(cur)));
 
 		XmlElement type("type", doc);
-		append(type, cur->getType(), "typePtr");
+		append(type, cur->getType(), "functionTypePtr");
 		lambdaExpr << type;
-
-		XmlElement captureList("captureList",doc);
-		lambdaExpr << captureList;
-
-		const LambdaExpr::CaptureList& capList = cur->getCaptureList();
-		std::for_each(capList.begin(), capList.end(),
-			[this, &captureList](const LambdaExpr::CaptureList::value_type& curr) {
-				this->append(captureList, curr, "declarationStmtPtr");
-			}
-		);
-
-		XmlElement params("params",doc);
-		appendList(params, cur->getParams(), "param", "variablePtr");
-		lambdaExpr << params;
-
-		XmlElement body("body", doc);
-		append(body, cur->getBody(), "statementPtr");
-		lambdaExpr << body;
+		
+		XmlElement variable("variable", doc);
+		append(variable, cur->getVariable(), "variablePtr");
+		lambdaExpr << variable;
+		
+		XmlElement definition("definition", doc);
+		append(definition, cur->getDefinition(), "lambdaDefinitionPtr");
+		lambdaExpr << definition;
 
 		visitAnnotations(cur->getAnnotations(), lambdaExpr);
-	}*/
+	}
 
 	void visitProgram(const ProgramPtr& cur) {
 		XmlElement program("program", doc);
@@ -590,46 +587,27 @@ public:
 		visitAnnotations(cur->getAnnotations(), program);
 	}
 
-	/*void visitRecLambdaExpr(const RecLambdaExprPtr& cur) {
-		XmlElement recLambdaExpr("recLambdaExpr", doc);
-		rootElem << (recLambdaExpr << XmlElement::Attribute("id", GET_ID(cur)));
-
-		XmlElement type("type", doc);
-		append(type, cur->getType(), "typePtr");
-		recLambdaExpr << type;
-
-		XmlElement variable("variable", doc);
-		append(variable, cur->getVariable(), "variablePtr");
-		recLambdaExpr << variable;
-
-		XmlElement definition("definition", doc);
-		append(definition, cur->getDefinition(), "recLambdaDefinitionPtr");
-		recLambdaExpr << definition;
-
-		visitAnnotations(cur->getAnnotations(), recLambdaExpr);
-	}*/
-
-	/*void visitRecLambdaDefinition(const RecLambdaDefinitionPtr& cur) {
-		XmlElement recLambdaDefinition("recLambdaDefinition", doc);
-		rootElem << (recLambdaDefinition << XmlElement::Attribute("id", GET_ID(cur)));
+	void visitLambdaDefinition(const LambdaDefinitionPtr& cur) {
+		XmlElement lambdaDefinition("lambdaDefinition", doc);
+		rootElem << (lambdaDefinition << XmlElement::Attribute("id", GET_ID(cur)));
 
 		XmlElement definitions("definitions", doc);
-		recLambdaDefinition << definitions;
+		lambdaDefinition << definitions;
 
-		const RecLambdaDefinition::RecFunDefs& defs = cur->getDefinitions();
+		const LambdaDefinition::Definitions& defs = cur->getDefinitions();
 		std::for_each(defs.begin(), defs.end(),
-			[this, &definitions ](const RecLambdaDefinition::RecFunDefs::value_type& cur) {
+			[this, &definitions ](const LambdaDefinition::Definitions::value_type& cur) {
 				XmlElement definition("definition", doc);
 				append(definition, cur.first, "variablePtr");
-				append(definition, cur.second, "lambdaExprPtr");
+				append(definition, cur.second, "lambdaPtr");
 				definitions << definition;
 			}
 		);
 
-		visitAnnotations(cur->getAnnotations(), recLambdaDefinition);
-	}*/
+		visitAnnotations(cur->getAnnotations(), lambdaDefinition);
+	}
 	
-	/*void visitLambda(const LambdaPtr& cur) { // NEW ONE
+	void visitLambda(const LambdaPtr& cur) {
 		XmlElement lambda("lambda", doc);
 		rootElem << (lambda << XmlElement::Attribute("id", GET_ID(cur)));
 
@@ -637,32 +615,15 @@ public:
 		append(type, cur->getType(), "functionTypePtr");
 		lambda << type;
 
-		XmlElement captureList("captureList",doc);
-		lambda << captureList;
-
-		const Lambda::CaptureList& capList = cur->getCaptureList();
-		std::for_each(capList.begin(), capList.end(),
-			[this, &captureList](const Lambda::CaptureList::value_type& curr) {
-				this->append(captureList, curr, "variablePtr");
-			}
-		);
-		
-		XmlElement paramList("paramList",doc);
-		lambda << paramList;
-
-		const Lambda::ParamList& parList = cur->getParameterList();
-		std::for_each(parList.begin(), parList.end(),
-			[this, &paramList](const Lambda::ParamList::value_type& curr) {
-				this->append(paramList, curr, "variablePtr");
-			}
-		);
+		appendL(lambda, cur->getCaptureList(), "captureList", "variablePtr");
+		appendL(lambda, cur->getParameterList(), "paramList", "variablePtr");
 
 		XmlElement body("body", doc);
 		append(body, cur->getBody(), "statementPtr");
 		lambda << body;
 
 		visitAnnotations(cur->getAnnotations(), lambda);
-	}*/
+	}
 	
 	void visitMemberAccessExpr(const MemberAccessExprPtr& cur) {
 		XmlElement memberAccessExpr("memberAccessExpr", doc);
@@ -707,24 +668,29 @@ public:
 		rootElem << (captureInitExpr << XmlElement::Attribute("id", GET_ID(cur)));
 		
 		XmlElement type("type", doc);
-		append(type, cur->getType(), "typePtr");
+		append(type, cur->getType(), "functionTypePtr");
 		captureInitExpr << type;
 		
 		XmlElement lambda("lambda", doc);
-		append(lambda, cur->getLambda(), "lambdaExprPtr");
+		append(lambda, cur->getLambda(), "expressionPtr");
 		captureInitExpr << lambda;
 		
-		XmlElement xmlValues("values", doc);
-		captureInitExpr << xmlValues;
-
-		const CaptureInitExpr::Values& values = cur->getValues();
-		for(CaptureInitExpr::Values::const_iterator iter = values.begin(), end = values.end(); iter != end; ++iter) {
-			XmlElement xmlValue("value", doc);
-			append(xmlValue, *iter, "ExpressionPtr");
-			xmlValues << xmlValue;
-		}
+		appendL(captureInitExpr, cur->getValues(), "values", "expressionPtr");
 		
 		visitAnnotations(cur->getAnnotations(), captureInitExpr);
+	}
+	
+	void visitMarkerStmt(const MarkerStmtPtr& cur) {
+		XmlElement markerStmt("markerStmt", doc);
+		markerStmt << XmlElement::Attribute("id", GET_ID(cur))
+				 << XmlElement::Attribute("identifier", numeric_cast<std::string>(cur->getID()));
+		rootElem << markerStmt;
+
+		XmlElement subStatement("subStatement", doc);
+		append(subStatement, cur->getSubStatement(), "statementPtr");
+		markerStmt << subStatement;
+
+		visitAnnotations(cur->getAnnotations(), markerStmt);
 	}
 };
 
