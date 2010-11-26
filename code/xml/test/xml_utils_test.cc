@@ -1258,3 +1258,31 @@ TEST(XmlTest, MarkerStmtTest) {
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
+
+TEST(XmlTest, MarkerExprTest) {
+	NodeManager manager;
+
+	TypePtr type = GenericType::get(manager, "A");
+	LiteralPtr literal = Literal::get(manager, type, "1");
+
+	MarkerExprPtr markerA = MarkerExpr::get(manager, literal);
+	DummyAnnotationPtr dummy_mn(new DummyAnnotation("marker n"));
+	markerA->addAnnotation(dummy_mn);
+
+	NodePtr root = markerA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}

@@ -471,6 +471,15 @@
 	<xs:attribute name="identifier" type="xs:integer" use="required"/>
 </xs:complexType>
 
+<xs:complexType name="T_markerExpr">
+	<xs:all>
+		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
+	</xs:all>
+	<xs:attribute name="id" type="xs:integer" use="required"/>
+	<xs:attribute name="identifier" type="xs:integer" use="required"/>
+</xs:complexType>
+
 <xs:complexType name="T_typeVariable">
 	<xs:all>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
@@ -595,6 +604,7 @@
 		<xs:element name="memberAccessExpr" type="T_memberAccessExpr"/>
 		<xs:element name="tupleProjectionExpr" type="T_tupleProjectionExpr"/>
 		<xs:element name="markerStmt" type="T_markerStmt"/>
+		<xs:element name="markerExpr" type="T_markerExpr"/>
 		
 	</xs:choice>
 </xs:group>
