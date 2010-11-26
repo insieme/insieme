@@ -150,12 +150,13 @@ TEST(OclCompilerTest, HelloCLTest) {
     program = prog.convert();
     LOG(INFO) << "Done.";
 
-    LOG(INFO) << "Printing the IR: " << *program;
+    core::printer::PrettyPrinter pp(program);
+
+    LOG(INFO) << "Printing the IR: " << pp;
 
     OclTestVisitor otv;
     core::visitAll(program, otv);
 
-    core::printer::PrettyPrinter pp(program);
 
     LOG(INFO) << pp;
 
