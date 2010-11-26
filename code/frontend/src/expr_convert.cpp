@@ -747,11 +747,7 @@ public:
 			break;
 		// -a
 		case UO_Minus:
-			subExpr = convFact.tryDeref(subExpr);
-
-			subExpr = builder.callExpr( subExpr->getType(),
-					builder.getNodeManager().basic.getSignedIntSub(),
-					builder.literal("0", convFact.mgr.basic.getInt4()), subExpr );
+			subExpr = builder.invertSign(convFact.tryDeref(subExpr));
 			break;
 		// ~a
 		case UO_Not:
