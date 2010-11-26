@@ -64,7 +64,7 @@ class XmlVisitor : public ASTVisitor<void> {
 	void append(XmlElement& xmlNode, const T& expr, const std::string& name) {
 		XmlElement expressionPtr(name, doc);
 		xmlNode << (expressionPtr << XmlElement::Attribute("ref", GET_ID(expr)));
-		visitAnnotations(expr.getAnnotations(), expressionPtr);
+		//visitAnnotations(expr.getAnnotations(), expressionPtr);
 	}
 
 	template <typename T>

@@ -105,9 +105,6 @@
 	</xs:all>
 </xs:complexType>
 
-
-
-
 <!-- T_intTypeParams -->
 <xs:complexType name="T_intTypeParams">
 	<xs:sequence>
