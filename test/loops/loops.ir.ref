@@ -1,13 +1,26 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<int<4>> v3 =  var(10);
-        for(decl ref<int<4>> v4 =  var(0) .. v3 : 1) {
-            printf("idx=%d", varlist.pack((v4)));
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<N:ref<int<4>>>> v1 =  var(struct{N:= var(10)});
+        decl ref<int<4>> v4 =  var(10);
+        for(decl ref<int<4>> v5 =  var(0) .. v4 : 1) {
+            printf("idx=%d", varlist.pack((v5)));
         };
-        for(decl ref<int<4>> v5 =  var(0-v3) .. 0-0+1 : 1) {
-            printf("idx=%d", varlist.pack((0-v5)));
+        for(decl ref<int<4>> v6 =  var(0-v4) .. 0-0+1 : 1) {
+            printf("idx=%d", varlist.pack((0-v6)));
+        };
+        for(decl ref<int<4>> v7 =  var(0-v1.N) .. 0-0 : 1) {
+            printf("idx=%d", varlist.pack((0-v7)));
+        };
+        {
+            decl ref<int<4>> v8 = v4;
+            while(v1.N>0) {
+                {
+                    printf("idx=%d", varlist.pack((v4)));
+                };
+                int.postDec(v1.N);
+            };
         };
     }
 
@@ -17,13 +30,26 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<int<4>> v3 = ( var(10));
-        for(decl ref<int<4>> v4 = ( var(0)) .. ( *v3) : 1) {
-            printf("idx=%d", varlist.pack((( *v4))));
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<N:ref<int<4>>>> v1 = ( var(struct{N:=( var(10))}));
+        decl ref<int<4>> v4 = ( var(10));
+        for(decl ref<int<4>> v5 = ( var(0)) .. ( *v4) : 1) {
+            printf("idx=%d", varlist.pack((( *v5))));
         };
-        for(decl ref<int<4>> v5 = ( var((CAST<int<4>>(0)-( *v3)))) .. ((CAST<int<4>>(0)-0)+1) : 1) {
-            printf("idx=%d", varlist.pack(((CAST<int<4>>(0)-( *v5)))));
+        for(decl ref<int<4>> v6 = ( var((CAST<int<4>>(0)-( *v4)))) .. ((CAST<int<4>>(0)-0)+1) : 1) {
+            printf("idx=%d", varlist.pack(((CAST<int<4>>(0)-( *v6)))));
+        };
+        for(decl ref<int<4>> v7 = ( var((CAST<int<4>>(0)-( *( *v1).N)))) .. (CAST<int<4>>(0)-0) : 1) {
+            printf("idx=%d", varlist.pack(((CAST<int<4>>(0)-( *v7)))));
+        };
+        {
+            decl ref<int<4>> v8 = v4;
+            while((( *( *v1).N)>0)) {
+                {
+                    printf("idx=%d", varlist.pack((( *v4))));
+                };
+                int.postDec(( *v1).N);
+            };
         };
     }
 

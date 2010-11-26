@@ -69,26 +69,25 @@ public:
 
 
         //check globalRange and localRange arguments
-        if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-            core::TypeList args = funcType->getArgumentTypes();
+        if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
+            const core::TypeList& args = funcType->getArgumentTypes();
 
             // kernel function has at least 2 arguments (localRange, globalRange)
             // TODO change to ocl annotation check
-std::cout << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY) << std::endl;
+DLOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
             if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
 
-                core::FunctionType ft = *funcType;
-                core::TypePtr retTy = ft.getReturnType();
+                const core::TypePtr& retTy = funcType->getReturnType();
 
                 //check return type
                 EXPECT_EQ("unit", retTy->getName());
-
+                EXPECT_GT(args.size(), static_cast<size_t>(2));
                 core::TypePtr globalRange = args.at(args.size()-2);
                 EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
                 core::TypePtr localRange = args.back();
                 EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
 
-//std::cout << "Nchilds: " << func->getChildList().size() << std::endl;
+DLOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 
                 core::NodePtr node = func->getChildList()[0];
                 std::cout << "this is lambdaaaa  " << node->toString() << "\n";
@@ -151,14 +150,14 @@ TEST(OclCompilerTest, HelloCLTest) {
     program = prog.convert();
     LOG(INFO) << "Done.";
 
-    LOG(INFO) << "Printing the IR: " << program;
+    LOG(INFO) << "Printing the IR: " << *program;
 
     OclTestVisitor otv;
     core::visitAll(program, otv);
 
     core::printer::PrettyPrinter pp(program);
 
-    std::cout << pp << std::endl;
+    LOG(INFO) << pp;
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck());
     std::sort(errors.begin(), errors.end());

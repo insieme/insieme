@@ -185,37 +185,7 @@ public:
 			core::ExpressionPtr&& incExpr = loopAnalysis.getIncrExpr();
 			core::ExpressionPtr&& condExpr = loopAnalysis.getCondExpr();
 
-			Stmt* initStmt = forStmt->getInit();
-			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
-			if( !initStmt ) {
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				// we are analyzing a loop where the init expression is empty, e.g.:
-				//
-				// 		for(; cond; inc) { body }
-				//
-				// As the IR doesn't support loop stmt with no initialization we represent
-				// the for loop as while stmt, i.e.
-				//
-				// 		while( cond ) {
-				//			{ body }
-				//  		inc;
-				// 		}
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-				vector<core::StatementPtr> whileBody(body);
-				// adding the incExpr at after the loop body
-				whileBody.push_back( convFact.convertExpr( forStmt->getInc() ) );
-
-				core::StatementPtr&& whileStmt = builder.whileStmt( convFact.convertExpr( forStmt->getCond() ), builder.compoundStmt(whileBody) );
-
-				// handle eventual pragmas refering to the Clang node
-				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
-
-				END_LOG_STMT_CONVERSION( whileStmt );
-				return StmtWrapper( annotatedNode );
-			}
-
-			StmtWrapper&& initExpr = Visit( initStmt );
+			StmtWrapper&& initExpr = Visit( forStmt->getInit() );
 			// induction variable for this loop
 			core::VariablePtr&& inductionVar = core::dynamic_pointer_cast<const core::Variable>(convFact.lookUpVariable(loopAnalysis.getInductionVar()));
 			assert(inductionVar);
@@ -317,9 +287,16 @@ public:
 
 			if(loopAnalysis.isInverted()) {
 				// invert init value
-				core::ExpressionPtr&& invInitExpr = builder.invertSign(builder.deref(declStmt->getInitialization())); // FIXME
+				core::ExpressionPtr init = declStmt->getInitialization();
+				if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init)) {
+					if(*callExpr->getFunctionExpr() == *builder.getBasicGenerator().getRefVar()) {
+						assert(callExpr->getArguments().size() == 1);
+						init = callExpr->getArguments()[0];
+					}
+				}
+				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
 				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
-						core::transform::replaceAll(builder.getNodeManager(), declStmt, declStmt->getInitialization(), builder.refVar(invInitExpr), true)
+						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, builder.refVar(invInitExpr), true)
 				);
 
 				// invert the sign of the loop index in body of the loop
@@ -347,6 +324,13 @@ public:
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {
+
+			Stmt* initStmt = forStmt->getInit();
+			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
+			if( initStmt ) {
+				StmtWrapper init = Visit( forStmt->getInit() );
+				std::copy(init.begin(), init.end(), std::back_inserter(retStmt));
+			}
 
 			if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
 				assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
@@ -382,7 +366,7 @@ public:
 			//			}
 			//		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			retStmt.push_back( Visit( forStmt->getInit() ).getSingleStmt() ); // init;
+
 			core::StatementPtr&& whileStmt = builder.whileStmt(
 				convFact.convertExpr( forStmt->getCond() ), // cond
 					builder.compoundStmt(
@@ -393,6 +377,10 @@ public:
 			// handle eventual pragmas attached to the Clang node
 			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
 			retStmt.push_back( annotatedNode );
+
+		    clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+		    pp.Diag(forStmt->getLocStart(),
+		    		pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, std::string("For loop converted into while loop, cause: ") + e.what() ));
 		}
 		retStmt = tryAggregateStmts(builder, retStmt);
 

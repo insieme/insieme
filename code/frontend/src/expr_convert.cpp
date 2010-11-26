@@ -747,11 +747,7 @@ public:
 			break;
 		// -a
 		case UO_Minus:
-			subExpr = convFact.tryDeref(subExpr);
-
-			subExpr = builder.callExpr( subExpr->getType(),
-					builder.getNodeManager().basic.getSignedIntSub(),
-					builder.literal("0", convFact.mgr.basic.getInt4()), subExpr );
+			subExpr = builder.invertSign(convFact.tryDeref(subExpr));
 			break;
 		// ~a
 		case UO_Not:
@@ -1000,6 +996,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
 	assert(currTU);
+	DLOG(INFO) << "~ Converting function: " << funcDecl->getNameAsString() << " rec?: " << ctx.isRecSubFunc;
 
 	DVLOG(1) << "#----------------------------------------------------------------------------------#";
 	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
@@ -1164,10 +1161,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
-#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
 	// attach name annotation to the lambda
 	retLambdaNode->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
-#endif
 	// this is a recurive function call
 	if(ctx.isRecSubFunc) {
 		// if we are visiting a nested recursive type it means someone else will take care

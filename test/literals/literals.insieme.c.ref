@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 		printf("Character: %c\n", 'c');
 		printf("Prime:     %c\n", '\'');
 		printf("NewLine:   %c", '\n');
-		printf("Signed:    %ld\n", (0-2l));
+		printf("Signed:    %ld\n", (((long)(0))-2l));
 		printf("Unsigned:  %ld\n", 2ul);
 		printf("Full:      %lld\n", 0xFull);
 		char c = '\0';
