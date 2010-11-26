@@ -419,11 +419,11 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 	// if OpenCL related annotations have been found, create OclBaseAnnotation and
 	// add it to the funciton's attribute
 	if(!kernelAnnotation.empty())
-		node.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+		node->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 
 	// --------------------------------- C NAME ----------------------------------------------
 	// annotate with the C name of the function
-	node.addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+	node->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
 
 	// ----------------------- SourceLocation Annotation -------------------------------------
 	// for each entry function being converted we register the location where it was originally
@@ -436,7 +436,7 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 	}
 
 	assert(currTU && "Translation unit not correctly set");
-	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+	node->addAnnotation( std::make_shared<c_info::CLocAnnotation>(
 		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
 		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
 	);

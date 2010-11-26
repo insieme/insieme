@@ -1161,10 +1161,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
-#ifndef ATTACH_NAME_ANNOTATION_TO_VARIABLE
 	// attach name annotation to the lambda
 	retLambdaNode->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
-#endif
 	// this is a recurive function call
 	if(ctx.isRecSubFunc) {
 		// if we are visiting a nested recursive type it means someone else will take care
