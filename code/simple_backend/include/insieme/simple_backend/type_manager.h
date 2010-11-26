@@ -154,6 +154,8 @@ private:
 	Entry resolveChannelType(const core::ChannelTypePtr& ptr);
 	Entry resolveRefType(const core::RefTypePtr& ptr);
 
+	Entry resolveRecType(const core::RecTypePtr& ptr);
+	void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);
 };
 
 } // end: namespace simple_backend

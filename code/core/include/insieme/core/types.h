@@ -608,6 +608,15 @@ public:
 		return definitions;
 	}
 
+	/**
+	 * Unrolls this definition once for the given variable.
+	 *
+	 * @param manager the manager to be used for maintaining the resulting type pointer
+	 * @param variable the variable defining the definition to be unrolled once
+	 * @return the resulting, unrolled type
+	 */
+	TypePtr unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const;
+
 	const TypePtr getDefinitionOf(const TypeVariablePtr& variable) const;
 
 	virtual std::ostream& printTo(std::ostream& out) const;

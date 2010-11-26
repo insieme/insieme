@@ -209,7 +209,7 @@ CodePtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) {
 
 		// attack the same name to the unrolled version as to the original node
 		string name = nameManager.getName(cur.second);
-		unrolled.addAnnotation(std::make_shared<c_info::CNameAnnotation>(name));
+		nameManager.setName(unrolled, name);
 
 		// resolve recursive this function body once
 		CodePtr function = resolve(unrolled);

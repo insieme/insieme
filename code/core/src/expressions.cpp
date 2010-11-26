@@ -788,9 +788,6 @@ namespace {
 		}
 
 		LambdaPtr apply(const LambdaPtr& node) {
-			if (!node) {
-				return node;
-			}
 			return static_pointer_cast<const Lambda>(node->substitute(manager, *this));
 		}
 

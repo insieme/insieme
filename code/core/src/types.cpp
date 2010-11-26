@@ -364,6 +364,48 @@ Node::OptionChildList RecTypeDefinition::getChildNodes() const {
 	return res;
 }
 
+namespace {
+
+	class RecTypeUnroller : public NodeMapping {
+
+		NodeManager& manager;
+		const RecTypeDefinition& definition;
+		const RecTypeDefinition::RecTypeDefs& definitions;
+
+
+	public:
+
+		RecTypeUnroller(NodeManager& manager, const RecTypeDefinition& definition)
+			: manager(manager), definition(definition), definitions(definition.getDefinitions()) { }
+
+		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+			// check whether it is a known variable
+			if (ptr->getNodeType() == NT_TypeVariable) {
+				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(ptr);
+
+				auto pos = definitions.find(var);
+				if (pos != definitions.end()) {
+					return RecType::get(manager, var, RecTypeDefinitionPtr(&definition));
+				}
+			}
+
+			// replace recursively
+			return ptr->substitute(manager, *this);
+		}
+
+		TypePtr apply(const TypePtr& node) {
+			return static_pointer_cast<const Type>(node->substitute(manager, *this));
+		}
+
+	};
+
+}
+
+TypePtr RecTypeDefinition::unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const {
+	// unroll recursive type using helper
+	return RecTypeUnroller(manager, *this).apply(getDefinitionOf(variable));
+}
+
 std::ostream& RecTypeDefinition::printTo(std::ostream& out) const {
 	return out << "{" << join(", ", definitions, [](std::ostream& out, const RecTypeDefs::value_type& cur) {
 		out << *cur.first << "=" << *cur.second;

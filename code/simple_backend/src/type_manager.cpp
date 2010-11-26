@@ -128,14 +128,15 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 		res = resolveStructType(static_pointer_cast<const StructType>(type)); break;
 	case NT_UnionType:
 		res = resolveUnionType(static_pointer_cast<const UnionType>(type)); break;
-	case NT_ArrayType:
-		res = resolveArrayType(static_pointer_cast<const ArrayType>(type)); break;
 	case NT_VectorType:
 		res = resolveVectorType(static_pointer_cast<const VectorType>(type)); break;
+	case NT_ArrayType:
+		res = resolveArrayType(static_pointer_cast<const ArrayType>(type)); break;
 	case NT_RefType:
 		res = resolveRefType(static_pointer_cast<const RefType>(type)); break;
+	case NT_RecType:
+		res = resolveRecType(static_pointer_cast<const RecType>(type)); break;
 //	case NT_ChannelType:
-
 	default:
 		// return unsupported type
 		res = toEntry(format("<?>%s</?>", toString(*type).c_str()));
@@ -332,12 +333,8 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 
 TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
 
-	string name;
-	if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
-		name = annotation->getName();
-	} else {
-		name = nameGenerator.getName(ptr, "userdefined_type");
-	}
+	// fetch name for composed type
+	string name = nameGenerator.getName(ptr, "userdefined_type");
 
 	// create a new code fragment for the struct definition
 	CodePtr cptr(new CodeFragment(string("type_declaration_") + name));
@@ -360,6 +357,78 @@ TypeManager::Entry TypeManager::resolveUnionType(const UnionTypePtr& ptr) {
 
 TypeManager::Entry TypeManager::resolveStructType(const StructTypePtr& ptr) {
 	return resolveNamedCompositType(ptr, "struct");
+}
+
+
+
+TypeManager::Entry TypeManager::resolveRecType(const core::RecTypePtr& ptr) {
+
+	// resolve recursive type definition
+	resolveRecTypeDefinition(ptr->getDefinition());
+
+	// look up type again (now it should be known)
+	return resolveType(ptr);
+}
+
+void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr) {
+
+	// create dummy code group depending on all prototype definitions
+	CodePtr group = std::make_shared<CodeFragment>("Dummy fragment for recursive type group", true);
+
+	NodeManager& manager = ptr->getNodeManager();
+
+	// A) create prototype and add entry for each recursively defined type
+	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+
+		// create recursive type using current type variable
+		RecTypePtr type = RecType::get(manager, cur.first, ptr);
+
+		// create prototype
+		string name = nameGenerator.getName(type, "userdefined_rec_type");
+
+		switch(cur.second->getNodeType()) {
+		case NT_StructType:
+			name = "struct " + name; break;
+		case NT_UnionType:
+			name = "union " + name; break;
+		default:
+			assert(false && "Cannot support recursive type which isn't a struct or union!");
+		}
+
+		CodePtr prototype = std::make_shared<CodeFragment>("Prototype of " + name);
+		prototype->getCodeStream() << name << ";\n";
+
+		this->typeDefinitions.insert(std::make_pair(type, Entry(name, name, prototype)));
+
+		group->addDependency(prototype);
+	});
+
+
+
+	// A) unroll types and write definitions
+	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+
+		// obtain unrolled type
+		TypePtr unrolled = ptr->unrollOnce(manager, cur.first);
+
+		// fix name of unrolled struct
+		nameGenerator.setName(unrolled, nameGenerator.getName(RecType::get(manager, cur.first, ptr)));
+
+		// resolve unrolled type and add dependency to group
+		group->addDependency(resolveType(unrolled).definition);
+	});
+
+
+	// C) update type definition map to reference entire group
+	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+
+		// create recursive type using current type variable
+		RecTypePtr type = RecType::get(manager, cur.first, ptr);
+
+		// ... update code pointer to reference entire group
+		this->typeDefinitions.find(type)->second.definition = group;
+	});
+
 }
 
 } // end: namespace simple_backend
