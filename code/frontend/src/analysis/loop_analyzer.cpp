@@ -52,16 +52,24 @@ namespace {
 /**
  * Returns the list of variables referenced within an expression
  */
-struct VarRefFinder: public StmtVisitor<VarRefFinder>, insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
+struct VarRefFinder: public StmtVisitor<VarRefFinder>, public insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
 
-	VarRefFinder(const Expr* expr) {
-		VisitStmt( const_cast<Expr*>(expr) );
+	VarRefFinder(const Stmt* expr) {
+		if(expr)
+			Visit( const_cast<Stmt*>(expr) );
 	}
 
 	void VisitDeclRefExpr(DeclRefExpr *declRef) {
-		if(VarDecl* varDec = dyn_cast<VarDecl>(declRef->getDecl())) {
-			insert(varDec);
+		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
+			insert(varDecl);
 		}
+	}
+
+	void VisitDeclStmt(DeclStmt* declStmt) {
+		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
+			if( VarDecl* varDecl = dyn_cast<VarDecl>(*it) ) {
+				insert(varDecl);
+			}
 	}
 
 	void VisitStmt(Stmt* stmt) {
@@ -94,12 +102,16 @@ namespace analysis {
 
 void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// an induction variable of a loop should appear in both the condition and increment expressions
+	VarDeclSet&& initExprVars = VarRefFinder(forStmt->getInit());
 	VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
 	VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
 
 	// do an intersection
-	VarDeclSet commonVars;
+	VarDeclSet commonVars, commonVarsTmp;
 	std::set_intersection(incExprVars.begin(), incExprVars.end(), condExprVars.begin(), condExprVars.end(),
+			std::inserter(commonVarsTmp, commonVarsTmp.begin())
+	);
+	std::set_intersection(commonVarsTmp.begin(), commonVarsTmp.end(), initExprVars.begin(), initExprVars.end(),
 			std::inserter(commonVars, commonVars.begin())
 	);
 
@@ -113,6 +125,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// TODO: handle border cases here
 
 	// if we cannot still determine the induction variable, throw an exception
+
 	throw InductionVariableNotFoundException();
 }
 

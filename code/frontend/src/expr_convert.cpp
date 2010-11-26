@@ -1000,6 +1000,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
 	assert(currTU);
+	DLOG(INFO) << "~ Converting function: " << funcDecl->getNameAsString() << " rec?: " << ctx.isRecSubFunc;
 
 	DVLOG(1) << "#----------------------------------------------------------------------------------#";
 	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
