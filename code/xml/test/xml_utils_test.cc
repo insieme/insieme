@@ -1140,49 +1140,32 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-/*TEST(XmlTest, JobExprTest) {
+TEST(XmlTest, JobExprTest) {
     NodeManager manager;
 
-	LambdaExpr::ParamList guardArgs;
-    guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
-    guardArgs.push_back(Variable::get(manager, TYPE_UINT_INF_PTR));
-	StatementPtr guardBody = CompoundStmt::get(manager, ReturnStmt::get(manager, CONST_BOOL_FALSE_PTR));
-	LambdaExprPtr guard = LambdaExpr::get(manager, TYPE_GUARD_OP_PTR, guardArgs, guardBody);
-	DummyAnnotationPtr dummy_ge(new DummyAnnotation("guard e"));
-	DummyAnnotationPtr dummy_gn(new DummyAnnotation("guard n"));
-	guard.addAnnotation(dummy_ge);
-	guard->addAnnotation(dummy_gn);
+	TypePtr intType = manager.basic.getUIntGen();
+	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(), manager.basic.getUnit());
+	FunctionTypePtr guardType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(intType, intType), manager.basic.getBool());
 
-    LambdaExpr::ParamList list;
-	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-	LambdaExprPtr stat1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list, body);
-	DummyAnnotationPtr dummy_se(new DummyAnnotation("stat1 e"));
-	DummyAnnotationPtr dummy_sn(new DummyAnnotation("stat1 n"));
-	stat1.addAnnotation(dummy_se);
-	stat1->addAnnotation(dummy_sn);
+	ExpressionPtr handlerA = Variable::get(manager, funType);
+	ExpressionPtr handlerB = Variable::get(manager, funType);
+	ExpressionPtr handlerC = Variable::get(manager, funType);
 
-	JobExpr::GuardedStmts guarded;
-	guarded.push_back(make_pair(guard, stat1));
+	ExpressionPtr guardA = Variable::get(manager, guardType);
+	ExpressionPtr guardB = Variable::get(manager, guardType);
+	ExpressionPtr guardC = Variable::get(manager, guardType);
+	ExpressionPtr defaultHandler = Variable::get(manager, funType);
 
-    LambdaExpr::ParamList list2;
-	StatementPtr body2 = ReturnStmt::get(manager, CONST_BOOL_FALSE_PTR);
-	LambdaExprPtr default1 = LambdaExpr::get(manager, TYPE_NO_ARGS_OP_PTR, list2, body2);
-	DummyAnnotationPtr dummy_de(new DummyAnnotation("default1 e"));
-	DummyAnnotationPtr dummy_dn(new DummyAnnotation("default1 n"));
-	default1.addAnnotation(dummy_de);
-	default1->addAnnotation(dummy_dn);
-	
-	VariablePtr var1 = Variable::get(manager, lang::TYPE_BOOL_PTR, 1);
-	LiteralPtr literalA = Literal::get(manager, lang::TYPE_INT_4_PTR, "4");
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, var1, literalA);
-	DummyAnnotationPtr dummy_dece(new DummyAnnotation("decl e"));
-	DummyAnnotationPtr dummy_decn(new DummyAnnotation("decl n"));
-	decl.addAnnotation(dummy_dece);
-	decl->addAnnotation(dummy_decn);
-	JobExpr::LocalDecls decls;
-	decls.push_back(decl);
-	
-	JobExprPtr job = JobExpr::get(manager, default1, guarded, decls);
+	JobExpr::GuardedStmts stmts;
+	stmts.push_back(JobExpr::GuardedStmt(guardA, handlerA));
+	stmts.push_back(JobExpr::GuardedStmt(guardB, handlerB));
+	stmts.push_back(JobExpr::GuardedStmt(guardC, handlerC));
+
+	vector<DeclarationStmtPtr> localDeclarations;
+	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
+	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
+
+	JobExprPtr job = JobExpr::get(manager, defaultHandler, stmts, localDeclarations);
 	DummyAnnotationPtr dummy_je(new DummyAnnotation("job e"));
 	DummyAnnotationPtr dummy_jn(new DummyAnnotation("job n"));
 	job.addAnnotation(dummy_je);
@@ -1204,80 +1187,26 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
+}
 
-/*TEST(XmlTest, LambdaExprTest) {
-	NodeManager manager;
-	
-	LambdaExpr::CaptureList capList;
-	
-	DeclarationStmtPtr decl1 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 65), Literal::get(manager, "7", lang::TYPE_INT_4_PTR));
-	DummyAnnotationPtr dummy_l1e(new DummyAnnotation("lit1 e"));
-	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("lit1 n"));
-	decl1.addAnnotation(dummy_l1e);
-	decl1->addAnnotation(dummy_l1n);
-	
-	DeclarationStmtPtr decl2 = DeclarationStmt::get(manager, Variable::get(manager, lang::TYPE_INT_4_PTR, 75), Literal::get(manager, "8", lang::TYPE_INT_4_PTR));
-	DummyAnnotationPtr dummy_l2e(new DummyAnnotation("lit2 e"));
-	DummyAnnotationPtr dummy_l2n(new DummyAnnotation("lit2 n"));
-	decl2.addAnnotation(dummy_l2e);
-	decl2->addAnnotation(dummy_l2n);
-	
-	capList.push_back(decl1);
-	capList.push_back(decl2);
-	
-	LambdaExpr::ParamList list;
-	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
-	list.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));
-
-	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
-	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
-	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
-	body.addAnnotation(dummy_be);
-	body->addAnnotation(dummy_bn);
-	
-	LambdaExprPtr expr = LambdaExpr::get(manager, TYPE_BINARY_BOOL_OP_PTR, list, body);
-	DummyAnnotationPtr dummy_le(new DummyAnnotation("lambda e"));
-	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lambda n"));
-	expr.addAnnotation(dummy_le);
-	expr->addAnnotation(dummy_ln);
-
-	NodePtr root = expr;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-	
-	NodeManager manager2;
-	NodePtr root2 = xml.convertDomToIr(manager2);
-	
-	EXPECT_EQ(*root, *root2);
-	EXPECT_NE(root, root2);
-	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
-
-/*TEST(XmlTest, LambdaTest) { // NEW ONE
+TEST(XmlTest, LambdaTest) {
 	NodeManager manager;
 	
 	GenericTypePtr type1 = GenericType::get(manager, "val");
 	GenericTypePtr type2 = GenericType::get(manager, "int");
 	GenericTypePtr type3 = GenericType::get(manager, "var");
 	
-	FunctionTypePtr funType = FunctionType::get(manager, TupleType::get(manager, toVector<TypePtr>(type1, type3)), type2);
+	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(type1, type3), type2);
 	
 	Lambda::ParamList paramList;
-	paramList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 1));
-	paramList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 2));	
+	paramList.push_back(Variable::get(manager, manager.basic.getBool(), 1));
+	paramList.push_back(Variable::get(manager, manager.basic.getBool(), 2));	
 	
 	Lambda::CaptureList captureList;
-	captureList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 3));
-	captureList.push_back(Variable::get(manager, TYPE_BOOL_PTR, 4));
+	captureList.push_back(Variable::get(manager, manager.basic.getBool(), 3));
+	captureList.push_back(Variable::get(manager, manager.basic.getBool(), 4));
 
-	StatementPtr body = ReturnStmt::get(manager, CONST_BOOL_TRUE_PTR);
+	StatementPtr body = ReturnStmt::get(manager, manager.basic.getTrue());
 	DummyAnnotationPtr dummy_be(new DummyAnnotation("body e"));
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
 	body.addAnnotation(dummy_be);
@@ -1305,7 +1234,7 @@ TEST(XmlTest, VariableTest) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
+}
 
 TEST(XmlTest, ProgramTest) {
 	NodeManager manager;
@@ -1344,69 +1273,6 @@ TEST(XmlTest, ProgramTest) {
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
-
-/*TEST(XmlTest, RecLambdaExprTest) {
-	ASTBuilder builder;
-
-	TupleTypePtr argType = builder.tupleType(toVector<TypePtr>(lang::TYPE_UINT_8_PTR));
-	FunctionTypePtr funType = builder.functionType(argType, lang::TYPE_BOOL_PTR);
-	VariablePtr evVar = builder.variable(funType, 1);
-	VariablePtr odVar = builder.variable(funType, 2);
-
-
-	LambdaExpr::ParamList params;
-	params.push_back(builder.variable(lang::TYPE_UINT_8_PTR, 3));
-
-	LiteralPtr zero = builder.literal(TYPE_UINT_1_PTR, "0");
-	VariablePtr x = builder.variable(lang::TYPE_UINT_8_PTR, 3);
-	ExpressionPtr cond = builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_UINT_EQ_PTR,toVector<ExpressionPtr>(x,zero));
-
-	StatementPtr evBody = builder.ifStmt(cond,
-			builder.returnStmt(lang::CONST_BOOL_TRUE_PTR),
-			builder.returnStmt(
-					builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
-							toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, odVar, toVector<ExpressionPtr>(x))))
-			)
-	);
-	LambdaExprPtr evLambda = builder.lambdaExpr(funType, params, evBody);
-
-	// build odd body ...
-	StatementPtr odBody = builder.ifStmt(cond,
-				builder.returnStmt(lang::CONST_BOOL_FALSE_PTR),
-				builder.returnStmt(
-						builder.callExpr(lang::TYPE_BOOL_PTR, lang::OP_BOOL_NOT_PTR,
-								toVector<ExpressionPtr>(builder.callExpr(lang::TYPE_BOOL_PTR, evVar, toVector<ExpressionPtr>(x))))
-				)
-	);
-	LambdaExprPtr odLambda = builder.lambdaExpr(funType, params, odBody);
-
-	// finish definition
-	RecLambdaDefinition::RecFunDefs defs;
-	defs.insert(std::make_pair(evVar, evLambda));
-	defs.insert(std::make_pair(odVar, odLambda));
-	RecLambdaDefinitionPtr definition = builder.recLambdaDefinition(defs);
-	
-	// create recursive lambda nodes
-	RecLambdaExprPtr even = builder.recLambdaExpr(evVar, definition);
-	RecLambdaExprPtr odd  = builder.recLambdaExpr(odVar,  definition);
-	
-	NodePtr root = even;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-	
-	NodeManager manager2;
-	NodePtr root2 = xml.convertDomToIr(manager2);
-	
-	EXPECT_EQ(*root, *root2);
-	EXPECT_NE(root, root2);
-	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
 
 TEST(XmlTest, MemberAccessExprTest) {
 	NodeManager manager;
@@ -1480,10 +1346,23 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-/*TEST(XmlTest, CaptureInitExpr) {
+TEST(XmlTest, CaptureInitExpr) {
 	NodeManager manager;
 
-	CaptureInitExpr expr = CaptureInitExpr::get(manager, lambda, inits);
+	TypePtr res = GenericType::get(manager,"A");
+	FunctionTypePtr funType2 = FunctionType::get(manager, toVector(res,res), TypeList(), res);
+	VariablePtr captureVar = Variable::get(manager, res);
+	
+	LiteralPtr initValue = Literal::get(manager, res, "X");
+	LiteralPtr initValue2 = Literal::get(manager, res, "Y");
+	
+	LambdaExprPtr lambda2 = LambdaExpr::get(manager, funType2, toVector<VariablePtr>(captureVar), Lambda::ParamList(), ReturnStmt::get(manager, Literal::get(manager, res, "A")));
+	
+	CaptureInitExprPtr expr = CaptureInitExpr::get(manager, lambda2, toVector<ExpressionPtr>(initValue, initValue2));
+	DummyAnnotationPtr dummy_ce(new DummyAnnotation("capinit e"));
+	DummyAnnotationPtr dummy_cn(new DummyAnnotation("capinit n"));
+	expr.addAnnotation(dummy_ce);
+	expr->addAnnotation(dummy_cn);
 	
 	NodePtr root = expr;
 	
@@ -1501,5 +1380,30 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
+}
 
+TEST(XmlTest, MarkerStmtTest) {
+	NodeManager manager;
+
+	TypePtr type = GenericType::get(manager, "A");
+	LiteralPtr literal = Literal::get(manager, type, "1");
+
+	MarkerStmtPtr markerA = MarkerStmt::get(manager, literal);
+
+	NodePtr root = markerA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
