@@ -57,7 +57,8 @@ def run_test(test_case_name, test_num):
 	  inputs = test_case_name + '.c'
 	  if os.path.exists(test_case_name + '/inputs.data'):
 	  		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
-	  		
+	  
+	  sys.stderr.write(" * Running Insieme Compiler...\n")	  		
 	  os.chdir(test_case_name)
 	  # RUN insieme to generate the IR dump and C output
 	  ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP}".format(
@@ -69,6 +70,7 @@ def run_test(test_case_name, test_num):
 	  
 	  if not os.path.exists(refIr):
 		  shutil.copyfile(testIr, refIr)
+	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
 
 	  sys.stderr.write(" * Comparing generated IR...\n")
 	  if not check_diff(test_case_name, refIr, testIr):
@@ -90,11 +92,11 @@ def run_test(test_case_name, test_num):
 	  # file containing the output of the test program
 	  test_out = "test.out"
 	  
+	  sys.stderr.write(" * Compiling C input...\n")
 	  ret = run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
 	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
 	 					)
-	  os.system("./ref > {0}".format(ref_out))
-	  
+
 	  sys.stderr.write(" * Compiling generated C output...\n")
 	  ret = run_cmd("{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
 	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
@@ -104,6 +106,9 @@ def run_test(test_case_name, test_num):
 			return 1
 	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
 	  
+	  sys.stderr.write(" * Running input program...\n")
+	  os.system("./ref > {0}".format(ref_out))
+	  sys.stderr.write(" * Running output program...\n")
 	  os.system("./test > {0}".format(test_out))
 	  
 	  sys.stderr.write(" * Checking generated program output...\n")
