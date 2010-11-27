@@ -93,7 +93,7 @@ def run_test(test_case_name, test_num):
 	  test_out = "test.out"
 	  
 	  sys.stderr.write(" * Compiling C input...\n")
-	  ret = run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+	  ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
 	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
 	 					)
 

@@ -122,6 +122,8 @@ class ConversionFactory : public boost::noncopyable {
 
 		bool isResolvingFunctionType;
 
+		typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+		TypeCache typeCache;
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,7 +210,7 @@ public:
 
 	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 
-	core::TypePtr 		convertType(const clang::Type* type) const;
+	core::TypePtr 		convertType(const clang::Type* type);
 	core::StatementPtr 	convertStmt(const clang::Stmt* stmt) const;
 	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
 
