@@ -40,7 +40,6 @@
 #include <memory>
 #include <map>
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/ast_node.h"
 #include "insieme/core/identifier.h"
 #include "insieme/core/statements.h"

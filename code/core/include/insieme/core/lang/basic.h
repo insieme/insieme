@@ -44,16 +44,16 @@ namespace insieme {
 namespace core {
 	
 class NodeManager;
-template<class T> class AnnotatedPtr;
+template<class T> class Pointer;
 class Type;
-typedef AnnotatedPtr<const Type> TypePtr;
+typedef Pointer<const Type> TypePtr;
 class Literal;
-typedef AnnotatedPtr<const Literal> LiteralPtr;
+typedef Pointer<const Literal> LiteralPtr;
 
 class Node;
-typedef AnnotatedPtr<const Node> NodePtr;
+typedef Pointer<const Node> NodePtr;
 class Statement;
-typedef AnnotatedPtr<const Statement> StatementPtr;
+typedef Pointer<const Statement> StatementPtr;
 
 
 namespace lang {

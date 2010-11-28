@@ -56,8 +56,8 @@ namespace core {
 template<typename T> class Address;
 typedef Address<const Node> NodeAddress;
 
-template<typename T> class AnnotatedPtr;
-typedef AnnotatedPtr<const Node> NodePtr;
+template<typename T> class Pointer;
+typedef Pointer<const Node> NodePtr;
 
 // TODO: encapsulate path in an actual object
 
@@ -144,7 +144,7 @@ public:
 	 * A constructor creating an address for the given root node.
 	 */
 	template<typename B>
-	explicit Address(const AnnotatedPtr<B>& root, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
+	explicit Address(const Pointer<B>& root, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
 		: utils::HashableImmutableData<Address<T>>(hashPath(toPath(root))),
 		  path(std::make_shared<Path>(toPath(root))) {}
 
@@ -204,7 +204,7 @@ public:
 	 *
 	 * @return a pointer to the addressed node.
 	 */
-	AnnotatedPtr<const T> getAddressedNode() const {
+	Pointer<const T> getAddressedNode() const {
 		assert(!path->empty() && "Invalid node address!");
 		assert(dynamic_pointer_cast<const T>((*path)[path->size() - 1].second) && "Illegal Node-Pointer cast!");
 		return static_pointer_cast<const T>((*path)[path->size() - 1].second);

@@ -38,7 +38,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/ast_pointer.h"
 #include "insieme/core/ast_builder.h"
 
 #include "dummy_annotations.cc"
@@ -56,21 +56,21 @@ struct B : public A { };
 
 
 // testing basic properties
-TEST(AnnotatedPtr, Basic) {
+TEST(Pointer, Basic) {
 
 	// FIXME: annotated pointer are getting bigger and bigger ...
-	// Size has been reduced from 40 bytes + a unordered map to 16 bytes (64-bit)
-	EXPECT_EQ ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
+	// Size has been reduced from 40 bytes + a unordered map to 8 bytes (64-bit)
+	EXPECT_EQ ( sizeof(Pointer<int>) , sizeof(int*) );
 
 	int a = 10;
 	int b = 15;
 
 	// test simple creation
-	AnnotatedPtr<int> refA(&a);
+	Pointer<int> refA(&a);
 	EXPECT_EQ (*refA, a);
 
 	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
+	Pointer<int> refB(&b);
 	EXPECT_EQ (*refB, b);
 
 	// test whether modifications are reflected
@@ -79,24 +79,24 @@ TEST(AnnotatedPtr, Basic) {
 
 }
 
-TEST(AnnotatedPtr, UpCast) {
+TEST(Pointer, UpCast) {
 
 	// create two related instances
 	A a;
 	B b;
 
 	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
+	Pointer<A> refA(&a);
+	Pointer<B> refB(&b);
 
 	// make assignment (if it compiles, test passed!)
 	refA = refB;
 }
 
-TEST(AnnotatedPtr, SimplePointerTest) {
+TEST(Pointer, SimplePointerTest) {
 
 	int value = 3;
-	AnnotatedPtr<int> ptr(&value);
+	Pointer<int> ptr(&value);
 
 	EXPECT_EQ( 3, value);
 	EXPECT_EQ( 3, *ptr);

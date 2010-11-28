@@ -38,7 +38,6 @@
 
 #include <glog/logging.h>
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"

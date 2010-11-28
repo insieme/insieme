@@ -42,7 +42,8 @@
 #include "insieme/utils/instance_manager.h"
 #include "insieme/utils/string_utils.h"
 
-#include "insieme/core/annotated_ptr.h"
+#include "insieme/core/annotation.h"
+#include "insieme/core/ast_pointer.h"
 #include "insieme/core/int_type_param.h"
 
 #include "insieme/core/lang/basic.h"
@@ -74,8 +75,8 @@ enum NodeCategory {
 };
 
 
+template<typename T> class Pointer;
 template<typename T> class Address;
-template<typename T> class AnnotatedPtr;
 
 /**
  * Adds forward declarations for all AST node types. Further, for each
@@ -83,7 +84,7 @@ template<typename T> class AnnotatedPtr;
  */
 #define NODE(NAME) \
 	class NAME; \
-	typedef AnnotatedPtr<const NAME> NAME ## Ptr; \
+	typedef Pointer<const NAME> NAME ## Ptr; \
 	typedef Address<const NAME> NAME ## Address;
 
 	// take all nodes from within the definition file
@@ -94,7 +95,7 @@ template<typename T> class AnnotatedPtr;
 /**
  * Implements a node manager to be used for maintaining AST node instances.
  */
-class NodeManager: public InstanceManager<Node, AnnotatedPtr> {
+class NodeManager: public InstanceManager<Node, Pointer> {
 public:
 	const lang::BasicGenerator basic;
 
@@ -103,7 +104,7 @@ public:
 
 
 // forward declaration of the clonePtr operation
-template<typename T> AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr);
+template<typename T> Pointer<T> clonePtr(NodeManager& manager, const Pointer<T>& ptr);
 
 /**
  * This class constitutes an interface for utility class required for transforming AST nodes.
@@ -147,7 +148,7 @@ public:
 	 * A generic version of the map operation handling pointer types properly.
 	 */
 	template<typename T>
-	inline AnnotatedPtr<T> map(unsigned index, const AnnotatedPtr<T>& ptr) {
+	inline Pointer<T> map(unsigned index, const Pointer<T>& ptr) {
 		// short-cut for null
 		if (!ptr) {
 			return static_pointer_cast<T> (ptr);
@@ -213,7 +214,7 @@ class Node: public insieme::utils::HashableImmutableData<Node>, public Annotatab
 	/**
 	 * Allow the instance manager to access the private clone method.
 	 */
-	friend class InstanceManager<Node, AnnotatedPtr> ;
+	friend class InstanceManager<Node, Pointer> ;
 
 public:
 
@@ -472,7 +473,7 @@ public:
  * @return a reference to the handed in pointer.
  */
 template<typename T>
-const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
+const Pointer<const T>& isolate(const Pointer<const T>& ptr) {
 	// no longer required ...
 	// TODO: remove this function
 	// ptr.isolateAnnotations();
@@ -507,7 +508,7 @@ const Container& isolate(const Container& container, typename Container::value_t
  * @return the pointer to the cloned node within the given manager
  */
 template<typename T>
-inline AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr) {
+inline Pointer<T> clonePtr(NodeManager& manager, const Pointer<T>& ptr) {
 	// null pointers or proper points do not have to be modified
 	if (!ptr || ptr->getNodeManagerPtr() == &manager) {
 		return ptr;

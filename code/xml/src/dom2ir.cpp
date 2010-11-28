@@ -99,25 +99,25 @@ class NodeBuilder {
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem) {
-		AnnotatedPtr<const T>&& pointer = dynamic_pointer_cast<const T>(getElementId(elem.getAttr("ref")).second);
+	Pointer<const T> createNode(const XmlElement& elem) {
+		Pointer<const T>&& pointer = dynamic_pointer_cast<const T>(getElementId(elem.getAttr("ref")).second);
 		assert(pointer && "Element not of the expected type.");
 		return pointer;
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first, const string& second) {
+	Pointer<const T> createNode(const XmlElement& elem, const string& first, const string& second) {
 		return createNode<T>(*elem.getFirstChildByName(first)->getFirstChildByName(second));
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first) {
+	Pointer<const T> createNode(const XmlElement& elem, const string& first) {
 		return createNode<T>(*elem.getFirstChildByName(first));
 	}
 
 	template <class NodeTy, class ... Args>
-	AnnotatedPtr<const NodeTy> createIrNode(const XmlElement& elem, Args ... args) {
-		AnnotatedPtr<const NodeTy> irNode = NodeTy::get(mgr, args...);
+	Pointer<const NodeTy> createIrNode(const XmlElement& elem, Args ... args) {
+		Pointer<const NodeTy> irNode = NodeTy::get(mgr, args...);
 		buildAnnotations(elem, *irNode);
 		updateMap(elem, irNode);
 		return irNode;

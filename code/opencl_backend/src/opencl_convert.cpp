@@ -39,7 +39,6 @@
 //#include <glog/logging.h>
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
 
 namespace insieme {

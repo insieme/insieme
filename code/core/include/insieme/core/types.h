@@ -53,7 +53,6 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/core/ast_node.h"
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/identifier.h"
 
 using std::string;

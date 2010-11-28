@@ -43,8 +43,6 @@
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/instance_manager.h"
 
-#include "insieme/core/annotated_ptr.h"
-
 using std::string;
 
 namespace insieme {

@@ -38,7 +38,6 @@
 
 #include "insieme/core/ast_builder.h"
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/program.h"
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"

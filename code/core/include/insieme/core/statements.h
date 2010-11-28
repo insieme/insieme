@@ -48,7 +48,6 @@
 #include "insieme/utils/instance_manager.h"
 
 #include "insieme/core/ast_node.h"
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
 #include "insieme/core/identifier.h"
 
