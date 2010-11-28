@@ -1,0 +1,21 @@
+/*
+ * jacobi_mpi.cpp
+ *
+ * Standard SEND/RECV
+ *
+ *  Created on: Sep 12, 2008
+ *      Author: spellegrini
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <time.h>
+
+double init_func(int x, int y) {
+	return 40 * sin((double)(16 * (2 * x - 1) * y));
+}
+
+#define N 5
+
+

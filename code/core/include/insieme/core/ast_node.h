@@ -154,7 +154,7 @@ public:
 		}
 
 		// map and cast
-		NodePtr res = mapElement(index, ptr);
+		const NodePtr res = mapElement(index, ptr);
 		// during development, make cast secure
 		assert(dynamic_pointer_cast<T> (res) && "Invalid conversion");
 		return static_pointer_cast<T> (res);
@@ -473,7 +473,9 @@ public:
  */
 template<typename T>
 const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
-	ptr.isolateAnnotations();
+	// no longer required ...
+	// TODO: remove this function
+	// ptr.isolateAnnotations();
 	return ptr;
 }
 
@@ -486,9 +488,12 @@ const AnnotatedPtr<const T>& isolate(const AnnotatedPtr<const T>& ptr) {
  */
 template<typename Container>
 const Container& isolate(const Container& container, typename Container::value_type* = 0) {
-	for_each(container, [](const typename Container::value_type& cur) {
-				cur.isolateAnnotations();
-			});
+	// no longer required ...
+	// TODO: remove this function
+
+//	for_each(container, [](const typename Container::value_type& cur) {
+//				cur.isolateAnnotations();
+//			});
 	return container;
 }
 
@@ -509,13 +514,7 @@ inline AnnotatedPtr<T> clonePtr(NodeManager& manager, const AnnotatedPtr<T>& ptr
 	}
 
 	// obtain pointer to same instance within new manager
-	AnnotatedPtr<T> res = manager.get(ptr);
-
-	// add annotations
-	res.setAnnotations(ptr.getAnnotations());
-
-	// done
-	return res;
+	return manager.get(ptr);
 }
 
 /**

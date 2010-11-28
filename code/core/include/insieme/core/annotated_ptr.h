@@ -54,7 +54,7 @@ struct StaticAnnotatedPtrCast;
 struct AnnotatedPtrChildFactory;
 
 template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
+class AnnotatedPtr : public InstancePtr<T> {
 public:
 
 	typedef StaticAnnotatedPtrCast StaticCast;
@@ -64,9 +64,15 @@ public:
 
 	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
 
-	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
-		: InstancePtr<T>(from.ptr), Annotatable(from) { }
+	/**
+	 * A conversion operator to a annotated pointer referencing a super type of the type
+	 * pointed to by this instance can be efficiently realized using a reinterpret_cast. This
+	 * operator is realizing this efficient conversion.
+	 */
+	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
+	operator const AnnotatedPtr<B>() const {
+		return *reinterpret_cast<const AnnotatedPtr<B>* >(this);
+	}
 };
 
 template<typename B, typename T>

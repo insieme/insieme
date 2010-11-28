@@ -99,7 +99,7 @@ bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
 	}
 
 	// check annotations of pointer and nodes ...
-	if (!hasSameAnnotations(nodeA, nodeB) || !hasSameAnnotations(*nodeA, *nodeB)) {
+	if (!hasSameAnnotations(*nodeA, *nodeB)) {
 		return false;
 	}
 

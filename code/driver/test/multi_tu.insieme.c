@@ -34,79 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include <string>
-
-#include <gtest/gtest.h>
-
-#include "insieme/core/annotated_ptr.h"
-#include "insieme/core/ast_builder.h"
-
-#include "dummy_annotations.cc"
-
-using std::string;
-
-using namespace insieme::core;
-
-// ------------- utility classes required for the test case --------------
-
-struct A {
-	void f() {};
+// start code fragment :: type_declaration___insieme_unnamed_userdefined_type_type_0 //
+struct __insieme_unnamed_userdefined_type_type_0 { 
 };
-struct B : public A { };
 
-
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
-
-	// FIXME: annotated pointer are getting bigger and bigger ...
-	// Size has been reduced from 40 bytes + a unordered map to 16 bytes (64-bit)
-	EXPECT_EQ ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+// start code fragment :: fundef_codefragment_g //
+int g(int a){
+	return (a - 1);;
 }
 
-TEST(AnnotatedPtr, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
+// start code fragment :: fundef_codefragment_f //
+int f(int a, int b){
+	return (g((a + b)) + 1000);;
 }
 
-TEST(AnnotatedPtr, SimplePointerTest) {
-
-	int value = 3;
-	AnnotatedPtr<int> ptr(&value);
-
-	EXPECT_EQ( 3, value);
-	EXPECT_EQ( 3, *ptr);
-
-	value = 4;
-	EXPECT_EQ( 4, value);
-	EXPECT_EQ( 4, *ptr);
-
-	*ptr = 5;
-	EXPECT_EQ( 5, value);
-	EXPECT_EQ( 5, *ptr);
+// start code fragment :: fundef_codefragment_main //
+int main(int argc, char** argv){
+	struct __insieme_unnamed_userdefined_type_type_0 var_8 = ((struct __insieme_unnamed_userdefined_type_type_0){});
+	return f(argc, argc);;
 }
+
+// start code fragment :: unnamed //
 

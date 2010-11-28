@@ -102,7 +102,6 @@ class NodeBuilder {
 	AnnotatedPtr<const T> createNode(const XmlElement& elem) {
 		AnnotatedPtr<const T>&& pointer = dynamic_pointer_cast<const T>(getElementId(elem.getAttr("ref")).second);
 		assert(pointer && "Element not of the expected type.");
-		buildAnnotations(elem, pointer);
 		return pointer;
 	}
 
@@ -487,7 +486,6 @@ public:
 		assert(!ref.empty());
 		auto fit = elemMap.find(numeric_cast<unsigned long>(ref));
 		assert(fit != elemMap.end() && "Element not in the map");
-		buildAnnotations(*type, fit->second.second);
 
 		return fit->second.second;
 	}

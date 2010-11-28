@@ -53,26 +53,6 @@
 #include <iostream>
 
 /**
- * This utility struct definition defines a predicate comparing two pointers
- * based on the value they are pointing to.
- *
- * @tparam Tp the type of pointer to be compared
- */
-template<typename Tp>
-struct pointing_to_equal: public std::binary_function<Tp, Tp, bool> {
-	/**
-	 * Performs the actual comparison by using the operator== of the generic
-	 * type Tp.
-	 *
-	 * @param x the pointer to the first element to be compared
-	 * @param y the pointer to the second element to be compared
-	 */
-	bool operator()(const Tp& x, const Tp& y) const {
-		return *x == *y;
-	}
-};
-
-/**
  * An instance manager is capable of handling a set of instances of a generic type T. Instances
  * representing the same value are shared. Hence, to avoid altering the instances referenced by
  * others, the handled types have to be constant (which is enforced).
@@ -93,7 +73,7 @@ class InstanceManager : private boost::noncopyable {
 	 * within this set will be automatically deleted when this instance manager instance
 	 * is destroyed.
 	 */
-	std::unordered_set<const T*, hash_target<const T*>, pointing_to_equal<const T*>> storage;
+	std::unordered_set<const T*, hash_target<const T*>, equal_target<const T*>> storage;
 
 	/**
 	 * A private method used to clone instances to be managed by this type.
@@ -160,27 +140,6 @@ public:
 
 		// ensure the element can be found again
 		assert ( check.first == storage.find(instance) && "Unable to add clone - value already present!" );
-
-//if (!check.second) {
-//
-//	hash_target<const T> hasher;
-//
-//	std::cout << "ERROR adding \"" << *instance << "\" failed!" << std::endl;
-//	std::cout << "   Hash Instance:  " << hasher(instance) << std::endl;
-//	std::cout << "   Hash Clone:     " << hasher(newElement) << std::endl;
-//	std::cout << "   Equals:         " << (bool)(*instance == *newElement) << std::endl;
-//	std::cout << "   Found Instance: " << (bool)(storage.find(instance) != storage.end()) << std::endl;
-//	std::cout << "   Found Clone:    " << (bool)(storage.find(newElement) != storage.end()) << std::endl;
-//
-//	std::for_each(storage.cbegin(), storage.cend(),
-//			[&instance, &hasher, &newElement](const T* cur) {
-//				std::cout << "     - " << *cur << " - hash: " << hasher(cur) << " - " << (bool)(*cur == *newElement) << std::endl;
-//	});
-//	std::cout << "   Found Instance: " << (bool)(storage.find(instance) != storage.end()) << std::endl;
-//	std::cout << "   Found Clone:    " << (bool)(storage.find(newElement) != storage.end()) << std::endl;
-//
-//	std::cout << std::endl;
-//}
 
 		return std::make_pair(R<const S>(newElement), true);
 	}

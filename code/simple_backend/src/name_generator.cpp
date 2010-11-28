@@ -62,14 +62,6 @@ string NameGenerator::getName( const NodePtr& ptr, const string& fragment) {
 		return name;
 	}
 
-	// test whether a name is attached ...
-	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
-		// => take original c name
-		string name = cnameAnn->getName();
-		nameMap.insert(make_pair(ptr, name));
-		return name;
-	}
-
 	// special handling for variables
 	if (ptr->getNodeType() == NT_Variable) {
 		return string("var_") + toString(static_pointer_cast<const Variable>(ptr)->getId());

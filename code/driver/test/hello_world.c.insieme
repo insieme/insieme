@@ -1,0 +1,4 @@
+
+extern int printf(char*, ...);
+
+

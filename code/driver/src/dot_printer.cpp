@@ -158,22 +158,7 @@ void visitChildList(BuilderTy& builder,
 	unsigned elemCount = 0;
 	std::for_each(children.begin(), children.end(), [ & ](const ElemTy& curr) {
 		std::string label = labelPrefix + (children.size() > 1 ? ("_" + utils::numeric_cast<std::string>(elemCount++)) : "");
-		if(curr.getAnnotations().empty()) {
-			builder.addLink( DotLink(builder.getNodeId(parent), builder.getNodeId(curr), label) );
-		} else {
-			// introducing an intermediate node to attach annotations to the pointer
-			size_t interId = builder.getNodeId(parent) ^ builder.getNodeId(curr);
-
-			JunctionNode node(interId);
-			builder.addNode(node);
-
-			DotLink l1(builder.getNodeId(parent), interId, label);
-			l1[NodeProperty::DIRECTION] = "none";
-			builder.addLink( l1 );
-			builder.addLink( DotLink(interId, builder.getNodeId(curr), "") );
-
-			visitAnnotationList(builder, interId, curr.getAnnotations());
-		}
+		builder.addLink( DotLink(builder.getNodeId(parent), builder.getNodeId(curr), label) );
 	});
 }
 

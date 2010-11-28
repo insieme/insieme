@@ -656,8 +656,11 @@ public:
 
             bool isKernelFunction = false;
             bool workGroupSizeDefined = false;
-            auto cName = element.getAnnotation(c_info::CNameAnnotation::KEY);
-            auto funcAnnotation = element.getAnnotation(ocl::BaseAnnotation::KEY);
+
+            // TODO: annotations on pointers are no longer supported!
+            // Code has been changed to read annotations form nodes => if wrong, please fix it
+            auto cName = element->getAnnotation(c_info::CNameAnnotation::KEY);
+            auto funcAnnotation = element->getAnnotation(ocl::BaseAnnotation::KEY);
             if(funcAnnotation) {
 
                 size_t wgs[3];

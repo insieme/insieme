@@ -725,17 +725,6 @@ void XmlUtil::convertIrToDom(const NodePtr& node) {
 	nodePtr << XmlElement::Attribute("ref", GET_ID(node));
 	rootNode << nodePtr;
 
-	AnnotationMap map = node.getAnnotations();
-	if (!map.empty()) {
-		XmlElement annotations("annotations", doc);
-		nodePtr << annotations;
-
-		XmlConverter& xmlConverter = XmlConverter::get();
-		for(AnnotationMap::const_iterator iter = map.begin(); iter != map.end(); ++iter) {
-			annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
-		}
-	}
-
 	XmlVisitor visitor(doc);
 	visitAllOnce(node, visitor);
 }

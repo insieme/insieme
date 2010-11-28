@@ -34,79 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include <string>
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/annotated_ptr.h"
-#include "insieme/core/ast_builder.h"
-
-#include "dummy_annotations.cc"
-
-using std::string;
-
-using namespace insieme::core;
-
-// ------------- utility classes required for the test case --------------
-
-struct A {
-	void f() {};
-};
-struct B : public A { };
-
-
-// testing basic properties
-TEST(AnnotatedPtr, Basic) {
-
-	// FIXME: annotated pointer are getting bigger and bigger ...
-	// Size has been reduced from 40 bytes + a unordered map to 16 bytes (64-bit)
-	EXPECT_EQ ( sizeof(AnnotatedPtr<int>) , 2*sizeof(int*) );
-
-	int a = 10;
-	int b = 15;
-
-	// test simple creation
-	AnnotatedPtr<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
-	// ... and for another element
-	AnnotatedPtr<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		{
+			printf("Hallo Insieme, \n\t\"the number %d in compilers!\"", 1);
+		};
+		return 0;;
+	}
 }
 
-TEST(AnnotatedPtr, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	AnnotatedPtr<A> refA(&a);
-	AnnotatedPtr<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
-TEST(AnnotatedPtr, SimplePointerTest) {
-
-	int value = 3;
-	AnnotatedPtr<int> ptr(&value);
-
-	EXPECT_EQ( 3, value);
-	EXPECT_EQ( 3, *ptr);
-
-	value = 4;
-	EXPECT_EQ( 4, value);
-	EXPECT_EQ( 4, *ptr);
-
-	*ptr = 5;
-	EXPECT_EQ( 5, value);
-	EXPECT_EQ( 5, *ptr);
-}
 
