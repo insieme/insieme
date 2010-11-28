@@ -77,7 +77,7 @@ TypeVariablePtr TypeVariable::getFromId(NodeManager& manager, const Identifier& 
 }
 
 TypeVariable* TypeVariable::createCopyUsing(NodeMapping&) const {
-	return new TypeVariable(*this);
+	return new TypeVariable(getVarName());
 }
 
 // ---------------------------------------- Tuple Type --------------------------------

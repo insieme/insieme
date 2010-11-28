@@ -43,7 +43,7 @@
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/string_utils.h"
-
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace core {
@@ -137,8 +137,7 @@ private:
 
 // Some type definitions for combined types required for handling annotations
 typedef std::shared_ptr<Annotation> AnnotationPtr;
-typedef std::unordered_map<const AnnotationKey*, AnnotationPtr, hash_target<const AnnotationKey*>> AnnotationMap;
-typedef std::shared_ptr<AnnotationMap> SharedAnnotationMap;
+typedef utils::map::PointerMap<const AnnotationKey*, AnnotationPtr> AnnotationMap;
 
 /**
  * The base class of an annotatable object. This base class is maintaining a map of annotations
@@ -147,12 +146,16 @@ typedef std::shared_ptr<AnnotationMap> SharedAnnotationMap;
 class Annotatable {
 
 	/**
+	 * Defines the type of the internally used annotation map reference. The annotation map may be shared
+	 * among multiple, identical instances of an annotatable Object (created via a copy constructor). Further,
+	 * an indirection level is introduced, which allows the annotation map to be lazy constructed.
+	 */
+	typedef std::shared_ptr<std::unique_ptr<AnnotationMap>> SharedAnnotationMap;
+
+	/**
 	 * The internal storage for annotations. It links every key to its corresponding value.
 	 * The actual register is shared among copies of this class. Hence, the register is referenced
-	 * via a shared pointer.
-	 *
-	 * NOTE: the shared pointer cannot be initialized with NULL (thereby avoiding the initialization
-	 * overhead) since updating it afterward would make copies no longer share the same register.
+	 * via a shared pointer referencing an optional annotation map.
 	 */
 	mutable SharedAnnotationMap map;
 
@@ -161,7 +164,7 @@ public:
 	/**
 	 * The constructor of this class is initializing the referenced shared annotation register.
 	 */
-	Annotatable() : map(SharedAnnotationMap(new AnnotationMap())) {};
+	Annotatable() : map(std::make_shared<std::unique_ptr<AnnotationMap>>()) {};
 
 	/**
 	 * The destructor is marked virtual since most likely derived classes will be used by client code.
@@ -186,9 +189,14 @@ public:
 	template<typename Key>
 	typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key* key) const {
 
+		// check whether there are annotations
+		if (!hasAnnotations()) {
+			return std::shared_ptr<typename Key::annotation_type>();
+		}
+
 		// search for entry
-		auto pos = map->find(key);
-		if (pos == map->end() ) {
+		auto pos = (*map)->find(key);
+		if (pos == (*map)->end() ) {
 			return std::shared_ptr<typename Key::annotation_type>();
 		}
 
@@ -218,9 +226,15 @@ public:
 	 * @param key a pointer to the key addressing the element to be removed.
 	 */
 	void remAnnotation(const AnnotationKey* key) const {
-		auto pos = map->find(key);
-		if (pos != map->end()) {
-			map->erase(pos);
+
+		// check whether there are annotations at all
+		if (!(*map)) {
+			return;
+		}
+
+		auto pos = (*map)->find(key);
+		if (pos != (*map)->end()) {
+			(*map)->erase(pos);
 		}
 	}
 
@@ -240,7 +254,7 @@ public:
 	 * @return true if found, false otherwise
 	 */
 	bool hasAnnotation(const AnnotationKey* key) const {
-		return map->find(key) != map->end();
+		return (*map) && (*map)->find(key) != (*map)->end();
 	}
 
 	/**
@@ -257,7 +271,8 @@ public:
 	 * Obtains an immutable reference to the internally maintained annotations.
 	 */
 	const AnnotationMap& getAnnotations() const {
-		return *map;
+		initAnnotationMap();
+		return **map;
 	}
 
 	/**
@@ -269,8 +284,9 @@ public:
 	 * @param annotations the annotations to be assigned
 	 */
 	void setAnnotations(const AnnotationMap& annotations) const {
-		// copy annotation map ...
-		map = std::make_shared<AnnotationMap>(annotations);
+		// replace all currently assigned annotations
+		initAnnotationMap();
+		(**map) = annotations;
 	}
 
 	/**
@@ -282,6 +298,27 @@ public:
 	const void isolateAnnotations() const {
 		// copy current annotations
 		setAnnotations(getAnnotations());
+	}
+
+	/**
+	 * Tests whether this annotatable object has annotations or not.
+	 *
+	 * @return true if it annotations are attached, false otherwise
+	 */
+	bool hasAnnotations() const {
+		// check state of internally maintained map
+		return *map && !((*map)->empty());
+	}
+
+private:
+
+	void initAnnotationMap() const {
+		// test whether it has already been initialized
+		if (*map) {
+			return;
+		}
+		// it has to be ... the annotation map has to be created
+		*map = std::unique_ptr<AnnotationMap>(new AnnotationMap());
 	}
 };
 

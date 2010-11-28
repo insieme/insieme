@@ -46,32 +46,48 @@ void Annotatable::addAnnotation(const AnnotationPtr& annotation) const {
 	// check pre-condition
 	assert ( annotation && "Cannot add NULL annotation!" );
 
+	// ensure map to be initialized
+	initAnnotationMap();
+
 	// insert new element
 	auto key = annotation->getKey();
 	auto value = std::make_pair(key, annotation);
-	auto res = map->insert(value);
+	auto res = (*map)->insert(value);
 
 	if (!res.second) {
 		// equivalent element already present => remove old and add new element
-		map->erase(res.first);
-		res = map->insert(value);
+		(*map)->erase(res.first);
+		res = (*map)->insert(value);
 	}
 
 	// check post-condition
 	assert ( res.second && "Insert not successful!");
 	assert ( hasAnnotation(key) && "Insert not successful!");
-	assert ( &*((*map->find(key)).second)==&*annotation && "Insert not successful!");
+	assert ( &*((*(*map)->find(key)).second)==&*annotation && "Insert not successful!");
 };
 
 
 bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& annotatableB) {
 
-	// extract maps
-	const AnnotationMap& mapA = annotatableA.getAnnotations();
-	const AnnotationMap& mapB = annotatableB.getAnnotations();
+	// check whether both have no annotations ...
+	if (!annotatableA.hasAnnotations() && !annotatableB.hasAnnotations()) {
+		return true;
+	}
 
-	// compare maps
-	return insieme::utils::map::equal(mapA, mapB, equal_target<AnnotationPtr>());
+	// check in case both have annotations ...
+	if (annotatableA.hasAnnotations() && annotatableB.hasAnnotations()) {
+
+		// extract maps
+		const AnnotationMap& mapA = annotatableA.getAnnotations();
+		const AnnotationMap& mapB = annotatableB.getAnnotations();
+
+		// compare maps
+		return insieme::utils::map::equal(mapA, mapB, equal_target<AnnotationPtr>());
+
+	}
+
+	// one does have annotations, the other doesn't
+	return false;
 }
 
 
