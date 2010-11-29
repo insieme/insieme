@@ -248,8 +248,8 @@ NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper
 		return NodePtr(NULL);
 	}
 
-
-	NodePtr res = root->substitute(mgr, mapper);
+	// map root node element
+	NodePtr res = mapper.map(0, root);
 
 	// check whether something has changed
 	if (res == root) {

@@ -64,6 +64,9 @@ TEST(NodeReplacer, Basic) {
 	mod = transform::replaceAll(manager, typeC, typeB, typeD);
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 
+	mod = transform::replaceAll(manager, typeC, typeC, typeD);
+	EXPECT_EQ("D", toString(*mod));
+
 }
 
 
