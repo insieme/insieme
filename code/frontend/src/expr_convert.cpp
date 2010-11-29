@@ -438,6 +438,24 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						SIZEOF ALIGNOF EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+		START_LOG_EXPR_CONVERSION(expr);
+		if(expr->isSizeOf()) {
+			core::LiteralPtr size;
+			core::TypePtr&& type = convFact.convertType( expr->getArgumentType().getTypePtr() );
+			if( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
+				size = convFact.mgr.basic.getIntTypeParamLiteral(vecTy->getSize());
+			} else {
+				size = convFact.mgr.basic.getTypeLiteral(type);
+			}
+			return convFact.getASTBuilder().callExpr( convFact.mgr.basic.getSizeof(), size );
+		}
+		assert(false && "SizeOfAlignOfExpr not yet supported");
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX MEMBER CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
@@ -466,6 +484,7 @@ public:
 		if(membExpr->isArrow()) {
 			// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
 			base = convFact.tryDeref( Visit(membExpr->getBase()) );
+
 			if(core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ||
 				core::dynamic_pointer_cast<const core::ArrayType>(base->getType())) {
 
@@ -480,6 +499,7 @@ public:
 				base = convFact.tryDeref(base);
 			}
 		}
+		DLOG(INFO) << *base->getType();
 		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
 
 		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(base, ident);
