@@ -64,22 +64,10 @@ class XmlVisitor : public ASTVisitor<void> {
 	void append(XmlElement& xmlNode, const T& expr, const std::string& name) {
 		XmlElement expressionPtr(name, doc);
 		xmlNode << (expressionPtr << XmlElement::Attribute("ref", GET_ID(expr)));
-		//visitAnnotations(expr.getAnnotations(), expressionPtr);
-	}
-
-	template <typename T>
-	void appendList(XmlElement& xmlParentNode, const std::vector<T>& list, const std::string& groupName, const std::string& elemName) {
-		std::for_each(list.begin(), list.end(),
-			[this, groupName, elemName, &xmlParentNode](const T& curr) {
-				XmlElement subNode(groupName, this->doc);
-				this->append(subNode, curr, elemName);
-				xmlParentNode << subNode;
-			}
-		);
 	}
 	
 	template <typename T>
-	void appendL(XmlElement& xmlParentNode, const std::vector<T>& list, const std::string& groupName, const std::string& elemName) {
+	void appendList(XmlElement& xmlParentNode, const std::vector<T>& list, const std::string& groupName, const std::string& elemName) {
 		XmlElement subNode(groupName, this->doc);
 		xmlParentNode << subNode;
 		std::for_each(list.begin(), list.end(),
@@ -158,8 +146,8 @@ public:
 		XmlElement functionType("functionType", doc);
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
 		
-		appendL(functionType, cur->getCaptureTypes(), "captureTypeList", "typePtr");
-		appendL(functionType, cur->getArgumentTypes(), "argumentTypeList", "typePtr");
+		appendList(functionType, cur->getCaptureTypes(), "captureTypeList", "typePtr");
+		appendList(functionType, cur->getArgumentTypes(), "argumentTypeList", "typePtr");
 
 		XmlElement returnType("returnType", doc);
 		append(returnType, cur->getReturnType(), "typePtr");
@@ -202,10 +190,7 @@ public:
 	void visitTupleType(const TupleTypePtr& cur) {
 		XmlElement tupleType("tupleType", doc);
 		rootElem << (tupleType << XmlElement::Attribute("id", GET_ID(cur)));
-
-		XmlElement elementTypeList("elementTypeList",doc);
-		appendList(elementTypeList, cur->getElementTypes(), "elementType", "typePtr");
-		tupleType << elementTypeList;
+		appendList(tupleType, cur->getElementTypes(), "elementTypeList", "typePtr");
 
 		visitAnnotations(cur->getAnnotations(), tupleType);
 	}
@@ -375,10 +360,7 @@ public:
 	void visitCompoundStmt(const CompoundStmtPtr& cur) {
 		XmlElement compoundStmt("compoundStmt", doc);
 		rootElem << (compoundStmt << XmlElement::Attribute("id", GET_ID(cur)));
-
-		XmlElement statements("statements", doc);
-		appendList(statements, cur->getStatements(), "statement", "statementPtr");
-		compoundStmt << statements;
+		appendList(compoundStmt, cur->getStatements(), "statements", "statementPtr");
 
 		visitAnnotations(cur->getAnnotations(), compoundStmt);
 	}
@@ -437,10 +419,8 @@ public:
 		XmlElement type("type", doc);
 		append(type, cur->getType(), "typePtr");
 		vectorExpr << type;
-
-		XmlElement expressions("expressions",doc);
-		appendList(expressions, cur->getExpressions(), "expression", "expressionPtr");
-		vectorExpr << expressions;
+		
+		appendList(vectorExpr, cur->getExpressions(), "expressions", "expressionPtr");
 
 		visitAnnotations(cur->getAnnotations(), vectorExpr);
 	}
@@ -453,9 +433,7 @@ public:
 		append(type, cur->getType(), "typePtr");
 		tupleExpr << type;
 
-		XmlElement expressions("expressions",doc);
-		appendList(expressions, cur->getExpressions(), "expression", "expressionPtr");
-		tupleExpr << expressions;
+		appendList(tupleExpr, cur->getExpressions(), "expressions", "expressionPtr");
 
 		visitAnnotations(cur->getAnnotations(), tupleExpr);
 	}
@@ -487,9 +465,7 @@ public:
 		append(function, cur->getFunctionExpr(), "expressionPtr");
 		callExpr << function;
 
-		XmlElement arguments("arguments",doc);
-		appendList(arguments, cur->getArguments(), "argument", "expressionPtr");
-		callExpr << arguments;
+		appendList(callExpr, cur->getArguments(), "arguments", "expressionPtr");
 
 		visitAnnotations(cur->getAnnotations(), callExpr);
 	}
@@ -530,7 +506,7 @@ public:
 		append(type, cur->getType(), "typePtr");
 		jobExpr << type;
 		
-		appendL(jobExpr, cur->getLocalDecls(), "declarations", "declarationStmtPtr");
+		appendList(jobExpr, cur->getLocalDecls(), "declarations", "declarationStmtPtr");
 
 		XmlElement guardedStatements("guardedStatements", doc);
 		jobExpr << guardedStatements;
@@ -575,15 +551,11 @@ public:
 		XmlElement program("program", doc);
 		program << XmlElement::Attribute("id", GET_ID(cur))
 				<< XmlElement::Attribute("main", toString(cur->isMain()));
-		
 		rootElem << program;
 		
-		XmlElement expressions("expressions", doc);
-		appendList(expressions,
+		appendList(program,
 			std::vector<ExpressionPtr>(cur->getEntryPoints().begin(), cur->getEntryPoints().end()) , // FIXME: this copy can be avoided
-			"expression", "expressionPtr");
-		program << expressions;
-
+			"expressions", "expressionPtr");
 		visitAnnotations(cur->getAnnotations(), program);
 	}
 
@@ -615,8 +587,8 @@ public:
 		append(type, cur->getType(), "functionTypePtr");
 		lambda << type;
 
-		appendL(lambda, cur->getCaptureList(), "captureList", "variablePtr");
-		appendL(lambda, cur->getParameterList(), "paramList", "variablePtr");
+		appendList(lambda, cur->getCaptureList(), "captureList", "variablePtr");
+		appendList(lambda, cur->getParameterList(), "paramList", "variablePtr");
 
 		XmlElement body("body", doc);
 		append(body, cur->getBody(), "statementPtr");
@@ -675,7 +647,7 @@ public:
 		append(lambda, cur->getLambda(), "expressionPtr");
 		captureInitExpr << lambda;
 		
-		appendL(captureInitExpr, cur->getValues(), "values", "expressionPtr");
+		appendList(captureInitExpr, cur->getValues(), "values", "expressionPtr");
 		
 		visitAnnotations(cur->getAnnotations(), captureInitExpr);
 	}

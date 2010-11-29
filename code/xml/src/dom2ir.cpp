@@ -206,10 +206,10 @@ public:
 	}
 
 	NodePtr handle_tupleType(const XmlElement& elem) {
-		XmlElementList&& types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("elementType");
+		XmlElementList&& types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("typePtr");
 		TypeList elementList;
 		for(auto iter = types.begin(), end = types.end(); iter != end; ++iter) {
-			elementList.push_back(createNode<Type>(*iter, "typePtr"));
+			elementList.push_back(createNode<Type>(*iter));
 		}
 		return createIrNode<TupleType>(elem, elementList);
 	}
@@ -290,10 +290,10 @@ public:
 	}
 
 	NodePtr handle_compoundStmt(const XmlElement& elem) {
-		XmlElementList&& stats = elem.getFirstChildByName("statements")->getChildrenByName("statement");
+		XmlElementList&& stats = elem.getFirstChildByName("statements")->getChildrenByName("statementPtr");
 		vector<StatementPtr> stmtVec;
 		for(auto iter = stats.begin(), end = stats.end(); iter != end; ++iter) {
-			stmtVec.push_back( createNode<Statement>(*iter, "statementPtr") );
+			stmtVec.push_back( createNode<Statement>(*iter));
 		}
 		return createIrNode<CompoundStmt>(elem, stmtVec);
 	}
@@ -327,21 +327,21 @@ public:
 
 	NodePtr handle_vectorExpr(const XmlElement& elem) {
 		VectorTypePtr&& typeT = createNode<VectorType>(elem, "type", "typePtr");
-		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 		vector<ExpressionPtr> exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.push_back( createNode<Expression>(*iter, "expressionPtr") );
+			exprVec.push_back( createNode<Expression>(*iter));
 		}
 		return createIrNode<VectorExpr>(elem, typeT, exprVec);
 	}
 
 	NodePtr handle_tupleExpr(const XmlElement& elem) {
 		TupleTypePtr&& typeT = createNode<TupleType>(elem, "type", "typePtr");
-		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 
 		vector<ExpressionPtr> exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.push_back( createNode<Expression>(*iter, "expressionPtr") );
+			exprVec.push_back( createNode<Expression>(*iter));
 		}
 		return createIrNode<TupleExpr>(elem, typeT, exprVec);
 	}
@@ -355,11 +355,11 @@ public:
 	NodePtr handle_callExpr(const XmlElement& elem) {
 		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
 		ExpressionPtr&& expr = createNode<Expression>(elem, "function", "expressionPtr");
-		XmlElementList&& args = elem.getFirstChildByName("arguments")->getChildrenByName("argument");
+		XmlElementList&& args = elem.getFirstChildByName("arguments")->getChildrenByName("expressionPtr");
 
 		vector<ExpressionPtr> argVec;
 		for(auto iter = args.begin(), end = args.end(); iter != end; ++iter) {
-			argVec.push_back( createNode<Expression>(*iter,"expressionPtr") );
+			argVec.push_back( createNode<Expression>(*iter));
 		}
 		return createIrNode<CallExpr>(elem, typeT, expr, argVec);
 	}
@@ -463,11 +463,11 @@ public:
 	}
 
 	NodePtr handle_program(const XmlElement& elem) {
-		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 
 		Program::EntryPointSet exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.insert( createNode<Expression>(*iter, "expressionPtr") );
+			exprVec.insert( createNode<Expression>(*iter));
 		}
 		
 		bool main = (elem.getAttr("main") == "1") ? true : false;
