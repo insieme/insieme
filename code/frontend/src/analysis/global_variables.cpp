@@ -186,7 +186,7 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		} else {
 			if(it->first->getInit()) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
-				initExpr = fact.convertInitExpr(it->first->getInit(), entryType->getElementType());
+				initExpr = fact.convertInitExpr(it->first->getInit(), entryType->getElementType(), false);
 			} else {
 				initExpr = fact.defaultInitVal(entryType->getElementType());
 			}
