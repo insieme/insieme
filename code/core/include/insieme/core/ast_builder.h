@@ -120,6 +120,10 @@ public:
 
 	ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
 
+	// Compound Statements
+	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2);
+	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3);
+
 	// Call Expressions
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
@@ -137,8 +141,8 @@ public:
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
 
 	// Direct lambda with capture initialization
-	ExpressionPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
-	ExpressionPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	CaptureInitExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 
 	// Direct call expression of getThreadGroup
 	CallExprPtr getThreadGroup(const ExpressionPtr& level = ExpressionPtr()) const;
