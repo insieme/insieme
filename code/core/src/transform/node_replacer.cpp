@@ -152,35 +152,6 @@ private:
 	}
 };
 
-
-class NodeAddressReplacer : public NodeMapping {
-	const unsigned indexToReplace;
-	const NodePtr& replacement;
-
-	public:
-
-		NodeAddressReplacer(unsigned index, const NodePtr& replacement)
-			: indexToReplace(index), replacement(replacement) { }
-
-	private:
-
-		/**
-		 * Represents an identity-operation except for the one element to be replaced,
-		 * which is identified by its index.
-		 *
-		 * @param index the index of the element to be mapped
-		 * @param ptr a pointer to the element to be mapped
-		 * @return a pointer to the mapped element
-		 */
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-			if (indexToReplace == index) {
-				return replacement;
-			}
-			return ptr;
-		}
-
-};
-
 class VariableReplacer : public NodeMapping {
 
 	NodeManager& manager;
@@ -235,6 +206,35 @@ private:
 		// done
 		return res;
 	}
+};
+
+
+class NodeAddressReplacer : public NodeMapping {
+	const unsigned indexToReplace;
+	const NodePtr& replacement;
+
+	public:
+
+		NodeAddressReplacer(unsigned index, const NodePtr& replacement)
+			: indexToReplace(index), replacement(replacement) { }
+
+	private:
+
+		/**
+		 * Represents an identity-operation except for the one element to be replaced,
+		 * which is identified by its index.
+		 *
+		 * @param index the index of the element to be mapped
+		 * @param ptr a pointer to the element to be mapped
+		 * @return a pointer to the mapped element
+		 */
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+			if (indexToReplace == index) {
+				return replacement;
+			}
+			return ptr;
+		}
+
 };
 
 }
