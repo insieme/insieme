@@ -122,11 +122,9 @@ NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel
 		captures[var] = p;
 		replacements[p] = var;
 	});
-
 	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements, true));
 
 	auto& basic = nodeMan.basic;
-
 	auto parLambda = build.lambdaExpr(newStmt, captures);
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(basic.getParallel(), build.literal("8", basic.getUInt4()), build.literal("8", basic.getUInt4()), jobExp);
@@ -139,6 +137,8 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	auto stmtNode = stmt.getAddressedNode();
 	ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
 	assert(forStmt && "OpenMP for attached to non-for statement");
+
+
 
 	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
 	return stmtNode;
