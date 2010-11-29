@@ -20,9 +20,9 @@ char* strcpy(char*, char*);
 // start code fragment :: Definition of getPerson //
 struct Person getPerson() {
 	{
-		struct Person res;
-		strcpy(((res).name), "John Doe");
-		(((res).age) = ((unsigned int)(101)));
+		struct Person* res;
+		strcpy(((*res).name), "John Doe");
+		(((*res).age) = ((unsigned int)(101)));
 	}
 }
 

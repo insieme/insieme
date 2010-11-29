@@ -47,6 +47,7 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/c_info/naming.h"
 #include "insieme/c_info/location.h"
@@ -84,6 +85,45 @@ c_info::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocatio
 	FileID&& fileId = sm.getFileID(loc);
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
+};
+
+struct HeapAllocator: public core::ASTVisitor<core::CallExprPtr> {
+
+	HeapAllocator(core::NodeManager& mgr, const core::TypePtr& targetType) : mgr(mgr), targetType(targetType) { }
+
+	core::CallExprPtr visitCallExpr(const core::CallExprPtr& callExpr) {
+		DLOG(INFO) << "CALLEXPR: " << *callExpr;
+		if(core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
+			callExpr->getArguments()[0]->getType();
+		}
+
+		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
+			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
+				core::ASTBuilder builder(mgr);
+				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
+				core::CallExprPtr&& size = builder.callExpr(mgr.basic.getSignedIntDiv(), callExpr->getArguments().front(),
+						builder.callExpr( mgr.basic.getSizeof(), mgr.basic.getTypeLiteral(targetType)));
+
+				return builder.callExpr(mgr.basic.getRefNew(), builder.callExpr(mgr.basic.getVectorInitUndefined(), size));
+			}
+		}
+
+		visitNode(callExpr);
+	}
+
+	core::CallExprPtr visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
+		visit(declStmt->getInitialization());
+	}
+
+	core::CallExprPtr visitNode(const core::NodePtr& node) {
+		std::for_each(node->getChildList().begin(), node->getChildList().end(),
+			[ this ] (core::NodePtr curr){	this->visit(curr);	});
+		return core::CallExprPtr();
+	}
+
+private:
+	core::NodeManager& 	mgr;
+	core::TypePtr	targetType;
 };
 
 } // End empty namespace
@@ -331,10 +371,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	// if no init expression is provided => use undefined for given set of types
 	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType
 			  || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
-		if (type->getNodeType() == core::NT_RefType) {
-			return builder.refVar(mgr.basic.getUndefined());
-		}
-		return mgr.basic.getUndefined();
+		return builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
 	} else if (!expr)
 		return defaultInitVal(type);
 
@@ -343,14 +380,8 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
-	// If the init expr is malloc/calloc function, a ref.new has to be used for initialization
-	if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(retExpr)) {
-		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
-			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
-				DLOG(INFO) << "MALLOC FOUND!";
-			}
-		}
-	}
+	HeapAllocator ha(mgr, type);
+	ha.visit(retExpr);
 
 	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
 		retExpr = builder.refVar( retExpr );
