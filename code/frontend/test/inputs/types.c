@@ -81,7 +81,7 @@ struct Person {
 
 void test_func() {
 	#pragma test \
-	"ref<struct<height:ref<int<4>>,age:ref<int<4>>>> v1 = undefined(AP(ref<struct<height:ref<int<4>>,age:ref<int<4>>>>))"
+	"ref<struct<height:ref<int<4>>,age:ref<int<4>>>> v1 = ref.var(undefined(AP(struct<height:ref<int<4>>,age:ref<int<4>>>)))"
 	struct Person p;
 
 	#pragma test \
