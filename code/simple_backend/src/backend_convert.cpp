@@ -317,10 +317,8 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	}
 
 	// test whether it is a variable initialization using an undefined value
-	ExpressionPtr varInit = CallExpr::get(cc.getNodeManager(),cc.basic.getRefAlpha(),
-			cc.basic.getRefVar(), toVector<ExpressionPtr>(cc.basic.getUndefined()));
-
-	if (*init == *varInit) {
+	if (core::analysis::isCallOf(init, cc.basic.getRefVar()) &&
+		core::analysis::isCallOf(static_pointer_cast<const CallExpr>(init)->getArguments()[0], cc.basic.getUndefined())) {
 		return;
 	}
 

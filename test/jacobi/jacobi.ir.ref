@@ -7,10 +7,10 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<real<8>> v5 =  var(0.0);
         decl ref<real<8>> v6 =  var(0.0);
         v3 := clock();
-        decl vector<vector<ref<real<4>>,650>,650> v7 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
-        decl vector<vector<ref<real<4>>,650>,650> v8 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
-        decl vector<vector<ref<real<4>>,650>,650> v9 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
-        decl vector<vector<ref<real<4>>,650>,650> v10 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
+        decl vector<vector<ref<real<4>>,650>,650> v7 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl vector<vector<ref<real<4>>,650>,650> v8 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl vector<vector<ref<real<4>>,650>,650> v9 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl vector<vector<ref<real<4>>,650>,650> v10 = undefined(vector<vector<ref<real<4>>,650>,650>);
         memset(v7, 0, 650*650);
         memset(v9, 0, 650*650);
         for(decl ref<int<4>> v11 =  var(0) .. 650 : 1) 
@@ -64,10 +64,10 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<real<8>> v5 = ( var(0.0));
         decl ref<real<8>> v6 = ( var(0.0));
         (v3 := clock());
-        decl vector<vector<ref<real<4>>,650>,650> v7 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
-        decl vector<vector<ref<real<4>>,650>,650> v8 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
-        decl vector<vector<ref<real<4>>,650>,650> v9 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
-        decl vector<vector<ref<real<4>>,650>,650> v10 = undefined(AP(vector<vector<ref<real<4>>,650>,650>));
+        decl vector<vector<ref<real<4>>,650>,650> v7 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl vector<vector<ref<real<4>>,650>,650> v8 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl vector<vector<ref<real<4>>,650>,650> v9 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl vector<vector<ref<real<4>>,650>,650> v10 = undefined(vector<vector<ref<real<4>>,650>,650>);
         memset(v7, 0, CAST<uint<8>>((650*650)));
         memset(v9, 0, CAST<uint<8>>((650*650)));
         for(decl ref<int<4>> v11 = ( var(0)) .. 650 : 1) 
