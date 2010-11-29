@@ -105,6 +105,14 @@ ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
 }
 
+CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) {
+	return compoundStmt(toVector(s1, s2));
+}
+CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) {
+	return compoundStmt(toVector(s1, s2, s3));
+
+}
+
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
 	TypePtr&& retType = manager.basic.getUnit();
 	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {
@@ -145,11 +153,11 @@ LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementP
 }
 
 
-ExpressionPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
+CaptureInitExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
 	return lambdaExpr(manager.basic.getUnit(), body, captureMap, params);
 }
 
-ExpressionPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
+CaptureInitExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
 
 	// process capture map
 	InitDetails&& details = splitUp(captureMap);
@@ -163,12 +171,7 @@ ExpressionPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementP
 	FunctionTypePtr funType = functionType(captureTypes, extractParamTypes(params), returnType);
 
 	LambdaExprPtr lambda = lambdaExpr(funType, captureVars, params, body);
-
-	// add capture init expression
-	if (captureMap.empty()) {
-		return lambda;
-	}
-
+	
 	// add capture init expression
 	return captureInitExpr(lambda, values);
 }
