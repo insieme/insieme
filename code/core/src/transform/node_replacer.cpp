@@ -39,6 +39,8 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_address.h"
 
+#include "insieme/utils/container_utils.h"
+
 namespace {
 
 using namespace insieme::core;
@@ -53,11 +55,13 @@ class NodeReplacer : public NodeMapping {
 	NodeManager& manager;
 	const PointerMap<NodePtr, NodePtr>& replacements;
 	const bool preservePtrAnnotationsWhenModified;
+	const bool includesTypes;
 
 public:
 
 	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
+		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
+		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { return cur.first->getNodeCategory() == NC_Type; })) { }
 
 private:
 
@@ -74,10 +78,60 @@ private:
 		// if element to be replaced is a not a type but the current node is,
 		// the recursion can be pruned (since types only have other types as
 		// sub-nodes)
-		// TODO: re-enable type shortcut
-//		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
-//			return ptr;
-//		}
+		if (!includesTypes && ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// recursive replacement has to be continued
+		NodePtr res = ptr->substitute(manager, *this);
+
+		// check whether something has changed ...
+		if (res == ptr) {
+			// => nothing changed
+			return ptr;
+		}
+
+		// restore annotations if requested
+		if (preservePtrAnnotationsWhenModified) {
+			res->setAnnotations(ptr->getAnnotations());
+		}
+
+		// done
+		return res;
+	}
+};
+
+/**
+ * Visitor which replace a specific node of the IR starting from a root node.
+ */
+class SingleNodeReplacer : public NodeMapping {
+	NodeManager& manager;
+	const NodePtr& target;
+	const NodePtr& replacement;
+	const bool preservePtrAnnotationsWhenModified;
+	const bool targetIsType;
+
+public:
+
+	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
+		: manager(manager), target(target), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified), targetIsType(target->getNodeCategory()==NC_Type) { }
+
+private:
+
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+
+		// handle replacement
+		if (*ptr == *target) {
+			return replacement;
+		}
+
+		// prune types if possible
+		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
 
 		// recursive replacement has to be continued
 		NodePtr res = ptr->substitute(manager, *this);
@@ -127,22 +181,74 @@ class NodeAddressReplacer : public NodeMapping {
 
 };
 
+class VariableReplacer : public NodeMapping {
+
+	NodeManager& manager;
+	const VariablePtr variable;
+	const NodePtr replacement;
+	const bool preservePtrAnnotationsWhenModified;
+
+
+public:
+
+	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
+		: manager(manager), variable(variable), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
+
+private:
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+		// check whether the element has been found
+		if (*ptr == *variable) {
+			return replacement;
+		}
+
+		// shortcut for types => will never be changed
+		if (ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// handle scope limiting elements
+		switch(ptr->getNodeType()) {
+		case NT_JobExpr:
+		case NT_LambdaExpr:
+			// enters a new scope => variable will no longer occur
+			return ptr;
+		default: { }
+		}
+
+		// recursive replacement has to be continued
+		NodePtr res = ptr->substitute(manager, *this);
+
+		// check whether something has changed ...
+		if (res == ptr) {
+			// => nothing changed
+			return ptr;
+		}
+
+		// restore annotations if requested
+		if (preservePtrAnnotationsWhenModified) {
+			res->setAnnotations(ptr->getAnnotations());
+		}
+
+		// done
+		return res;
+	}
+};
+
 }
 
 namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper, bool preservePtrAnnotationsWhenModified) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
 
-	if (replacements.empty()) {
-		return root;
-	}
 
-	auto mapper = ::NodeReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
 	NodePtr res = root->substitute(mgr, mapper);
 
 	// check whether something has changed
@@ -160,11 +266,40 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 	return res;
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
-	PointerMap<NodePtr, NodePtr> map;
-	map.insert(std::make_pair(toReplace, replacement));
-	return replaceAll(mgr, root, map, preservePtrAnnotationsWhenModified);
+
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+
+	// shortcut for empty replacements
+	if (replacements.empty()) {
+		return root;
+	}
+
+	// handle single element case
+	if (replacements.size() == 1) {
+		auto pair = *replacements.begin();
+		return replaceAll(mgr, root, pair.first, pair.second, preservePtrAnnotationsWhenModified);
+	}
+
+	// handle entire map
+	auto mapper = ::NodeReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
+	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
 }
+
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+
+	if (toReplace->getNodeType() == NT_Variable) {
+		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement, preservePtrAnnotationsWhenModified);
+	}
+
+	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
+	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+}
+
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+	auto mapper = ::VariableReplacer(mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
+	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+}
+
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
 	assert( toReplace.isValid() && "Invalid node address provided!");

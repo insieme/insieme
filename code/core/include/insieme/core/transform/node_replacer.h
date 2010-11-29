@@ -64,6 +64,10 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 		const NodePtr& toReplace, const NodePtr& replacement,
 		bool preservePtrAnnotationsWhenModified = false);
 
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
+		const VariablePtr& toReplace, const NodePtr& replacement,
+		bool preservePtrAnnotationsWhenModified = false);
+
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
  * The replacements are provided via a map.
