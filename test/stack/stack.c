@@ -60,9 +60,9 @@ int main() {
 	int i=0;
 
 	Stack stack;
-	/*	
+		
 	stack = newStack();
-
+	
 	for (i=0; i<10; i++) {
 		printf("Pushing %d\n", i);
 		push(stack, i);
@@ -72,7 +72,6 @@ int main() {
 	}
 
 	dumpStack(stack);
-	*/
 
 	return 0;
 }
