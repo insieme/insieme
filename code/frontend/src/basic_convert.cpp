@@ -94,13 +94,13 @@ struct HeapAllocator: public core::ASTVisitor<core::CallExprPtr> {
 	core::CallExprPtr visitCallExpr(const core::CallExprPtr& callExpr) {
 		DLOG(INFO) << "CALLEXPR: " << *callExpr;
 		if(core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
-			;
+			callExpr->getArguments()[0]->getType();
 		}
 
 		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
 			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
 				core::ASTBuilder builder(mgr);
-				assert(callExpr->getArguments().size() == 1 && "Malloc taking more than 1 argument");
+				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
 				core::CallExprPtr&& size = builder.callExpr(mgr.basic.getSignedIntDiv(), callExpr->getArguments().front(),
 						builder.callExpr( mgr.basic.getSizeof(), mgr.basic.getTypeLiteral(targetType)));
 
