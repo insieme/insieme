@@ -86,7 +86,7 @@ bool SemaVisitor::visitNode(const NodeAddress& node) {
 
 bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 	const StatementAddress stmt = static_address_cast<const Statement>(mark.getAddressOfChild(0));
-	LOG(INFO) << "marker on: \n" << *stmt;
+	//LOG(INFO) << "marker on: \n" << *stmt;
 	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp annotation(s) on: \n" << *stmt;
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn){
@@ -98,11 +98,11 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 				newNode = handleFor(stmt, forAnn);
 			}
 			else assert(0 && "Unhandled OMP annotation.");
-			LOG(INFO) << "Pre replace: " << *mark.getRootNode();
-			LOG(INFO) << "Replace: " << *mark;
-			LOG(INFO) << "   with: " << *newNode;
+			//LOG(INFO) << "Pre replace: " << *mark.getRootNode();
+			//LOG(INFO) << "Replace: " << *mark;
+			//LOG(INFO) << "   with: " << *newNode;
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, newNode, true));
-			LOG(INFO) << "Post replace: " << replacement;
+			//LOG(INFO) << "Post replace: " << replacement;
 		});
 		return false;
 	}
@@ -122,11 +122,9 @@ NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel
 		captures[var] = p;
 		replacements[p] = var;
 	});
-
 	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements, true));
 
 	auto& basic = nodeMan.basic;
-
 	auto parLambda = build.lambdaExpr(newStmt, captures);
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(basic.getParallel(), build.literal("8", basic.getUInt4()), build.literal("8", basic.getUInt4()), jobExp);
@@ -140,7 +138,9 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
 	assert(forStmt && "OpenMP for attached to non-for statement");
 
-	LOG(INFO) << "for stmtNode:\n" << stmtNode;
+
+
+	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
 	return stmtNode;
 }
 

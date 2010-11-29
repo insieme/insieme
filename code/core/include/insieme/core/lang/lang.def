@@ -49,6 +49,7 @@
 #ifndef OPERATION
 #define OPERATION(_type, _op, _name, _spec)
 #endif
+
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
 
@@ -107,16 +108,16 @@ TYPE(NoArgsOpType, "() -> unit")
 // Operators ----------------------------------------------------------------------------------------------------------
 
 // binary
-OPERATOR(Add, 	"+")
-OPERATOR(Sub,	"-")
-OPERATOR(Mul, 	"*")
-OPERATOR(Div, 	"/")
-OPERATOR(Mod, 	"%")
-OPERATOR(And, 	"&")
-OPERATOR(Or, 	"|")
-OPERATOR(Xor, 	"^")
-OPERATOR(LShift,"<<")
-OPERATOR(RShift,">>")
+OPERATOR(Add, 	 "+")
+OPERATOR(Sub,	 "-")
+OPERATOR(Mul, 	 "*")
+OPERATOR(Div, 	 "/")
+OPERATOR(Mod, 	 "%")
+OPERATOR(And, 	 "&")
+OPERATOR(Or, 	 "|")
+OPERATOR(Xor, 	 "^")
+OPERATOR(LShift, "<<")
+OPERATOR(RShift, ">>")
 
 // unary
 OPERATOR(Not,	"~")
