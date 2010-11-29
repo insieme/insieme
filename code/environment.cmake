@@ -188,6 +188,9 @@ endif()
 # Add debug symbols
 if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -g )
+	# ENABLE PROFILING
+	#add_definitions( -pg )
+	#SET(CMAKE_EXE_LINKER_FLAGS -pg)
 endif()
 
 # --------------------------------------------------------- Valgrind / GTest testiong suite

@@ -40,8 +40,6 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "insieme/core/annotation.h"
-
 #include "insieme/utils/instance_ptr.h"
 #include "insieme/utils/type_traits_utils.h"
 
@@ -50,46 +48,52 @@ namespace insieme {
 namespace core {
 
 // Forward declaration of cast functor.
-struct StaticAnnotatedPtrCast;
-struct AnnotatedPtrChildFactory;
+struct StaticPointerCast;
+struct PointerChildFactory;
 
 template<typename T>
-class AnnotatedPtr : public InstancePtr<T>, public Annotatable {
+class Pointer : public InstancePtr<T> {
 public:
 
-	typedef StaticAnnotatedPtrCast StaticCast;
-	typedef AnnotatedPtrChildFactory ChildFactory;
+	typedef StaticPointerCast StaticCast;
+	typedef PointerChildFactory ChildFactory;
 
-	AnnotatedPtr() : InstancePtr<T>(NULL) {}
+	Pointer() : InstancePtr<T>(NULL) {}
 
-	AnnotatedPtr(T* ptr) : InstancePtr<T>(ptr) { }
+	Pointer(T* ptr) : InstancePtr<T>(ptr) { }
 
-	template<typename B>
-	AnnotatedPtr(const AnnotatedPtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
-		: InstancePtr<T>(from.ptr), Annotatable(from) { }
+	/**
+	 * A conversion operator to a annotated pointer referencing a super type of the type
+	 * pointed to by this instance can be efficiently realized using a reinterpret_cast. This
+	 * operator is realizing this efficient conversion.
+	 */
+	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
+	operator const Pointer<B>() const {
+		return *reinterpret_cast<const Pointer<B>* >(this);
+	}
 };
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>>::type
-dynamic_pointer_cast(AnnotatedPtr<T> src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>>::type
+dynamic_pointer_cast(Pointer<T> src) {
 	if(!src || dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<AnnotatedPtr<B>* >(&src));
+		return *(reinterpret_cast<Pointer<B>* >(&src));
 	}
 	return NULL;
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, AnnotatedPtr<B>&>::type
-static_pointer_cast(AnnotatedPtr<T>& src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>&>::type
+static_pointer_cast(Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return reinterpret_cast<AnnotatedPtr<B>&>(src);
+	return reinterpret_cast<Pointer<B>&>(src);
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const AnnotatedPtr<B>&>::type
-static_pointer_cast(const AnnotatedPtr<T>& src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, const Pointer<B>&>::type
+static_pointer_cast(const Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return reinterpret_cast<const AnnotatedPtr<B>&>(src);
+	return reinterpret_cast<const Pointer<B>&>(src);
 }
 
 /**
@@ -97,9 +101,9 @@ static_pointer_cast(const AnnotatedPtr<T>& src) {
  * The purpose of this struct is to allow the static_pointer_cast function to be defined as
  * a pointer conversion function required as a template parameter of the AST Visitor class.
  */
-struct StaticAnnotatedPtrCast {
+struct StaticPointerCast {
 	template<typename Target, typename Source>
-	const AnnotatedPtr<Target>& operator()(const AnnotatedPtr<Source>& value) const {
+	const Pointer<Target>& operator()(const Pointer<Source>& value) const {
 		return static_pointer_cast<Target>(value);
 	}
 };
@@ -111,9 +115,9 @@ class Node;
 /**
  * A static functor object extracting child node pointer from given pointer.
  */
-struct AnnotatedPtrChildFactory {
+struct PointerChildFactory {
 	template<typename Source>
-	inline const AnnotatedPtr<const Node> operator()(const AnnotatedPtr<Source>& value, std::size_t childIndex) const {
+	inline const Pointer<const Node> operator()(const Pointer<Source>& value, std::size_t childIndex) const {
 		return value->getChildList()[childIndex];
 	}
 };
@@ -122,7 +126,7 @@ struct AnnotatedPtrChildFactory {
 } // end namespace insieme
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const insieme::core::AnnotatedPtr<T>& ptr) {
+std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
 //	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
 	out << "AP(";
 	if (!!ptr) {

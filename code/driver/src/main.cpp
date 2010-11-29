@@ -165,12 +165,6 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
 			NodePtr&& xmlNode= xml::XmlUtil::read(manager, CommandLineOptions::LoadXML);
-			// used for debuging XML, removed once in production
-			if(program) {
-				assert(xmlNode != program);
-				assert(*xmlNode == *program);
-				assert(equalsWithAnnotations(xmlNode, program));
-			}
 			program = core::dynamic_pointer_cast<const Program>(xmlNode);
 			assert(program && "Loaded XML doesn't represent a valid program");
 			timer.stop();

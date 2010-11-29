@@ -1,5 +1,7 @@
 // --- Generated Inspire Code ---
+#include <alloca.h>
 #include <stddef.h>
+#include <stdlib.h>
 #define bool int
 #define true 1
 #define false 0
@@ -23,7 +25,7 @@ struct __insieme_funType_type_0 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_0
-int call___insieme_funType_type_0(struct __insieme_funType_type_0* lambda,int p1) { return lambda->fun(lambda,p1); }
+int call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda,int p1) { return lambda->fun(lambda,p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
 // Abstract prototype for lambdas of type __insieme_funType_type_1
@@ -65,7 +67,7 @@ struct __insieme_funType_type_2 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_2
-int call___insieme_funType_type_2(struct __insieme_funType_type_2* lambda) { return lambda->fun(lambda); }
+int call__insieme_funType_type_2(struct __insieme_funType_type_2* lambda) { return lambda->fun(lambda); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_3 //
 // Abstract prototype for lambdas of type __insieme_funType_type_3
@@ -91,12 +93,14 @@ int reset(void* _capture) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){0, 1});
+		struct __insieme_globals var_1 = ((struct __insieme_globals){0,
+			1
+		});
 		for(int i = 0; i < 10; i += 1) {
-			printf("count=%2d\n", call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&inc, 0, &var_1}))), 2));
-			printf("count=%2d\n", call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&dec, 0, &var_1}))), 1));
+			printf("count=%2d\n", call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&inc, 0, &var_1}))), 2));
+			printf("count=%2d\n", call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&dec, 0, &var_1}))), 1));
 			if(((i)==5)) {
-				call___insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&reset, 0, &var_1}))));
+				call__insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&reset, 0, &var_1}))));
 			};
 		};
 		return 0;;

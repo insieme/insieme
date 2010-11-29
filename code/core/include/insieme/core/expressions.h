@@ -40,7 +40,6 @@
 #include <memory>
 #include <map>
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/ast_node.h"
 #include "insieme/core/identifier.h"
 #include "insieme/core/statements.h"
@@ -778,6 +777,8 @@ public:
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression);
+	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id);
+	
 
 	const ExpressionPtr& getSubExpression() const { return subExpression; }
 	const unsigned int getID() const { return id; }

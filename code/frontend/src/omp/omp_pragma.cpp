@@ -90,7 +90,7 @@ struct marker_type_trait<core::Expression> {
  * to the IR node
  */
 template <class NodeTy>
-core::AnnotatedPtr<const NodeTy> attachOmpAnnotation(const core::AnnotatedPtr<const NodeTy>& irNode,
+core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& irNode,
 		const clang::Stmt* clangNode, conversion::ConversionFactory& fact)
 {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
@@ -112,7 +112,7 @@ core::AnnotatedPtr<const NodeTy> attachOmpAnnotation(const core::AnnotatedPtr<co
 	// otherwise create a marker node and attach the annotation to the marker
 	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
 	// create an expression marker
-	core::AnnotatedPtr<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
+	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 	return marker;

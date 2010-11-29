@@ -1,8 +1,11 @@
 // --- Generated Inspire Code ---
+#include <alloca.h>
 #include <stddef.h>
+#include <stdlib.h>
 #define bool int
 #define true 1
 #define false 0
+#define null 0
 // --- Entry Point ---
 
 // start code fragment :: Prototype for external function: printf //
@@ -17,7 +20,7 @@ int odd(unsigned int);
 // start code fragment :: Definition of even //
 int even(unsigned int x) {
 	{
-		return ((((x==((unsigned int)(0))))?(1):(odd((x-((unsigned int)(1)))))));;
+		return (((x==((unsigned int)(0))))?(1):(odd((x-((unsigned int)(1))))));;
 	}
 }
 
@@ -25,7 +28,7 @@ int even(unsigned int x) {
 // start code fragment :: Definition of odd //
 int odd(unsigned int x) {
 	{
-		return ((((x==((unsigned int)(0))))?(0):(even((x-((unsigned int)(1)))))));;
+		return (((x==((unsigned int)(0))))?(0):(even((x-((unsigned int)(1))))));;
 	}
 }
 
@@ -33,11 +36,11 @@ int odd(unsigned int x) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		int x = 10;printf("x=%d\n", x);printf("even(x)=%s\n", (((((bool)(even(((unsigned int)(x))))))?("true"):("false"))));printf("odd(x)=%s\n", (((((bool)(odd(((unsigned int)(x))))))?("true"):("false"))));return 0;;
-		
-		
-		
-		
+		int x = 10;
+		printf("x=%d\n", (x));
+		printf("even(x)=%s\n", ((((bool)(even(((unsigned int)((x)))))))?("true"):("false")));
+		printf("odd(x)=%s\n", ((((bool)(odd(((unsigned int)((x)))))))?("true"):("false")));
+		return 0;;
 	}
 }
 

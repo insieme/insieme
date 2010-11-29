@@ -1,8 +1,11 @@
 // --- Generated Inspire Code ---
+#include <alloca.h>
 #include <stddef.h>
+#include <stdlib.h>
 #define bool int
 #define true 1
 #define false 0
+#define null 0
 // --- Entry Point ---
 
 // start code fragment :: Definition of g //

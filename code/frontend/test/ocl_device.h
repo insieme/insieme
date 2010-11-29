@@ -39,8 +39,8 @@
 //OpenCL constants
 //TODO change to enums
 //enum cl_mem_fence_flags {CLK_LOCAL_MEM_FENCE, CLK_GLOBAL_MEM_FENCE};
-#define CLK_LOCAL_MEM_FENCE 0
-#define CLK_GLOBAL_MEM_FENCE 1
+#define CLK_LOCAL_MEM_FENCE 0u
+#define CLK_GLOBAL_MEM_FENCE 1u
 // avoid naming conflicts with insieme barriers
 #define barrier(mem_fence) ocl_barrier(mem_fence)
 
@@ -105,8 +105,8 @@ fvec(float,16)
 //define build-in functions
 unsigned int get_global_id(unsigned int dmindx);
 unsigned int get_global_size(unsigned int dmindx);
-unsigned int get_global_offset(unsigned int dmindx);
-unsigned int get_gourp_id(unsigned int dmindx);
+// unsupported at the moment: unsigned int get_global_offset(unsigned int dmindx);
+unsigned int get_group_id(unsigned int dmindx);
 unsigned int get_num_groups(unsigned int dmindx);
 unsigned int get_local_id(unsigned int dmindx);
 unsigned int get_local_size(unsigned int dmindx);

@@ -38,20 +38,22 @@
 
 #include <string>
 
+#include "insieme/core/int_type_param.h"
+
 namespace insieme {
 namespace core {
 	
 class NodeManager;
-template<class T> class AnnotatedPtr;
+template<class T> class Pointer;
 class Type;
-typedef AnnotatedPtr<const Type> TypePtr;
+typedef Pointer<const Type> TypePtr;
 class Literal;
-typedef AnnotatedPtr<const Literal> LiteralPtr;
+typedef Pointer<const Literal> LiteralPtr;
 
 class Node;
-typedef AnnotatedPtr<const Node> NodePtr;
+typedef Pointer<const Node> NodePtr;
 class Statement;
-typedef AnnotatedPtr<const Statement> StatementPtr;
+typedef Pointer<const Statement> StatementPtr;
 
 
 namespace lang {
@@ -96,6 +98,11 @@ public:
 	StatementPtr getNoOp() const;
 	bool isNoOp(const NodePtr& p) const;
 
+	// a factory method for intTypeParam literals
+	LiteralPtr getIntTypeParamLiteral(IntTypeParam param) const;
+
+	// a factory method for a type literal
+	LiteralPtr getTypeLiteral(const TypePtr& type) const;
 };
 
 } // namespace lang

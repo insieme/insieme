@@ -160,7 +160,7 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 	std::for_each(entryPoints.begin(), entryPoints.end(),
 		[ &list ](const core::ExpressionPtr& curr) {
 			// we expect entry point to have annotations with corresponding source locations
-			std::shared_ptr<insieme::c_info::CLocAnnotation>&& locAnn = curr.getAnnotation(insieme::c_info::CLocAnnotation::KEY);
+			std::shared_ptr<insieme::c_info::CLocAnnotation>&& locAnn = curr->getAnnotation(insieme::c_info::CLocAnnotation::KEY);
 			assert(locAnn && "Entry point has not source location annotation, impossible to rewrite it back in the correct location");
 
 			// in case of function decl we wipe out the old definition from the source file

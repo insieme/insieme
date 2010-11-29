@@ -48,7 +48,6 @@
 #include "insieme/utils/instance_manager.h"
 
 #include "insieme/core/ast_node.h"
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
 #include "insieme/core/identifier.h"
 
@@ -289,6 +288,7 @@ public:
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 	static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subStatement);
+	static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subStatement, const unsigned id);
 
 	const StatementPtr& getSubStatement() const { return subStatement; }
 	const unsigned int getID() const { return id; }

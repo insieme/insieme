@@ -1,45 +1,17 @@
 // --- Generated Inspire Code ---
+#include <alloca.h>
 #include <stddef.h>
+#include <stdlib.h>
 #define bool int
 #define true 1
 #define false 0
+#define null 0
 // --- Entry Point ---
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_0 //
-// Abstract prototype for lambdas of type __insieme_funType_type_0
-struct __insieme_funType_type_0 { 
-    int(*fun)(void*);
-    const size_t size;
-};
-
-// Type safe function for invoking lambdas of type __insieme_funType_type_0
-int call___insieme_funType_type_0(struct __insieme_funType_type_0* lambda) { return lambda->fun(lambda); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
-// Abstract prototype for lambdas of type __insieme_funType_type_1
-struct __insieme_funType_type_1 { 
-    int(*fun)(void*);
-    const size_t size;
-    int* p0; // array<ref<int<4>>,1>
-};
-
-// start code fragment :: Definition of __insieme_supp_2 //
-int __insieme_supp_2(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	int* var_6 = ((struct __insieme_funType_type_1*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	{
-		int var_5 = (var_6[0]);((var_6[0]) = ((var_6[0])+((int)(1))));return var_5;;
-		
-		
-	}
-}
-
 
 // start code fragment :: Definition of f //
 int f(int* a) {
 	{
-		return call___insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&__insieme_supp_2, 0, a}))));;
+		return ((a[0])++);;
 	}
 }
 
@@ -50,15 +22,14 @@ int printf(char*, ...);
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		int var_9 = argc;{
-			int a = 0;f(&a);f(&var_9);printf("%d\n", var_9);(var_9 = a);printf("%d\n", var_9);
-			
-			
-			
-			
-			
+		int var_6 = argc;
+		{
+			int a = 0;
+			f(&a);
+			f(&var_6);
+			printf("%d\n", (var_6));((var_6) = (a));
+			printf("%d\n", (var_6));
 		};
-		
 	}
 }
 

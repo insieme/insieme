@@ -2,26 +2,18 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<int<4>> v9 =  var(v1);
+        decl ref<int<4>> v6 =  var(v1);
         {
             decl ref<int<4>> v3 =  var(0);
             fun(array<ref<int<4>>,1> v4){
-                return [v4]fun[array<ref<int<4>>,1> v6](){
-                    decl int<4> v5 = v6[0];
-                    v6[0] := v6[0]+1;
-                    return v5;
-                }();
+                return int.postInc(v4[0]);
             }([v3]);
             fun(array<ref<int<4>>,1> v4){
-                return [v4]fun[array<ref<int<4>>,1> v6](){
-                    decl int<4> v5 = v6[0];
-                    v6[0] := v6[0]+1;
-                    return v5;
-                }();
-            }([v9]);
-            printf("%d\n", varlist.pack((v9)));
-            v9 := v3;
-            printf("%d\n", varlist.pack((v9)));
+                return int.postInc(v4[0]);
+            }([v6]);
+            printf("%d\n", varlist.pack((v6)));
+            v6 := v3;
+            printf("%d\n", varlist.pack((v6)));
         };
     }
 
@@ -32,26 +24,18 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<int<4>> v9 = ( var(v1));
+        decl ref<int<4>> v6 = ( var(v1));
         {
             decl ref<int<4>> v3 = ( var(0));
             fun(array<ref<int<4>>,1> v4){
-                return [v4]fun[array<ref<int<4>>,1> v6](){
-                    decl int<4> v5 = ( *(v6[0]));
-                    ((v6[0]) := (( *(v6[0]))+CAST<int<4>>(1)));
-                    return v5;
-                }();
+                return int.postInc((v4[0]));
             }([v3]);
             fun(array<ref<int<4>>,1> v4){
-                return [v4]fun[array<ref<int<4>>,1> v6](){
-                    decl int<4> v5 = ( *(v6[0]));
-                    ((v6[0]) := (( *(v6[0]))+CAST<int<4>>(1)));
-                    return v5;
-                }();
-            }([v9]);
-            printf("%d\n", varlist.pack((( *v9))));
-            (v9 := ( *v3));
-            printf("%d\n", varlist.pack((( *v9))));
+                return int.postInc((v4[0]));
+            }([v6]);
+            printf("%d\n", varlist.pack((( *v6))));
+            (v6 := ( *v3));
+            printf("%d\n", varlist.pack((( *v6))));
         };
     }
 

@@ -90,7 +90,6 @@ private:
 
 		// restore annotations if requested
 		if (preservePtrAnnotationsWhenModified) {
-			res.setAnnotations(ptr.getAnnotations());
 			res->setAnnotations(ptr->getAnnotations());
 		}
 
@@ -155,7 +154,6 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 	// if annotations should be preserved anyway ...
 	if (preservePtrAnnotationsWhenModified) {
 		// ... restore annotations.
-		res.setAnnotations(root.getAnnotations());
 		res->setAnnotations(root->getAnnotations());
 	}
 
@@ -184,8 +182,9 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 
 		// restore annotations
 		if (preservePtrAnnotationsWhenModified) {
-			// copy annotations from parent pointer ...
-			res->getChildList()[lastPos].setAnnotations(cur.second->getChildList()[lastPos].getAnnotations());
+			// copy annotations ...
+			// TODO: determine whether annotations should be merged or overridden
+			res->setAnnotations(cur.second->getAnnotations());
 		}
 
 		// update last-pos

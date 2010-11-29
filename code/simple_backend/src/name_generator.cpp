@@ -48,7 +48,7 @@ namespace simple_backend {
 
 using namespace insieme::core;
 
-string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
+string NameGenerator::getName( const NodePtr& ptr, const string& fragment) {
 
 	// test whether a name has already been picked
 	auto it = nameMap.find(ptr);
@@ -56,14 +56,6 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 
 	// test whether the node has an annotation
 	if(auto cnameAnn = ptr->getAnnotation(c_info::CNameAnnotation::KEY)) {
-		// => take original c name
-		string name = cnameAnn->getName();
-		nameMap.insert(make_pair(ptr, name));
-		return name;
-	}
-
-	// test whether a name is attached ...
-	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
 		// => take original c name
 		string name = cnameAnn->getName();
 		nameMap.insert(make_pair(ptr, name));
@@ -100,6 +92,11 @@ string NameGenerator::getName( const NodePtr& ptr, const string fragment) {
 	name << "_" << num++;
 	nameMap.insert(make_pair(ptr, name.str()));
 	return getName(ptr, fragment);
+}
+
+void NameGenerator::setName(const core::NodePtr& ptr, const string& name) {
+	auto res = nameMap.insert(make_pair(ptr, name));
+	assert(res.second && "Tried to alter name after first assignment!");
 }
 
 string NameGenerator::getVarName(const VariablePtr& var) {

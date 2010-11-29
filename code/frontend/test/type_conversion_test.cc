@@ -59,7 +59,8 @@ using namespace insieme::frontend::conversion;
 namespace fe = insieme::frontend;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ clang::Type* builtin = new clang::BuiltinType(clang::BuiltinType::TypeName); \
+	{ ConversionFactory convFactory( manager, prog );\
+	clang::Type* builtin = new clang::BuiltinType(clang::BuiltinType::TypeName); \
 	TypePtr convType = convFactory.convertType( builtin ); \
 	EXPECT_TRUE(convType); \
 	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); \
@@ -72,7 +73,6 @@ TEST(TypeConversion, HandleBuildinType) {
 
 	NodeManager manager;
 	fe::Program prog(manager);
-	ConversionFactory convFactory( manager, prog );
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");

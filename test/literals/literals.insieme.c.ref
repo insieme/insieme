@@ -1,0 +1,32 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Prototype for external function: printf //
+int printf();
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		printf("Hello");
+		printf("Hello %s\n", "World");
+		printf("Integer:   %d\n", 14);
+		printf("Float:     %f\n", 0.54);
+		printf("Character: %c\n", 'c');
+		printf("Prime:     %c\n", '\'');
+		printf("NewLine:   %c", '\n');
+		printf("Signed:    %ld\n", (((long)(0))-2l));
+		printf("Unsigned:  %ld\n", 2ul);
+		printf("Full:      %lld\n", 0xFull);
+		char c = '\0';
+		printf("Full:      %c\n", ((int)((c))));
+		return 0;;
+	}
+}
+

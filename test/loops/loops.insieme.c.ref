@@ -1,0 +1,45 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: type_declaration___insieme_globals //
+struct __insieme_globals { 
+    int N;
+};
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		struct __insieme_globals var_1 = ((struct __insieme_globals){10
+		});
+		int a = 10;
+		for(int idx = 0; idx < (a); idx += 1) {
+			printf("idx=%d", (idx));
+		};
+		for(int idx = (((int)(0))-(a)); idx < ((((int)(0))-0)+1); idx += 1) {
+			printf("idx=%d", (((int)(0))-(idx)));
+		};
+		for(int idx = (((int)(0))-((var_1).N)); idx < (((int)(0))-0); idx += 1) {
+			printf("idx=%d", (((int)(0))-(idx)));
+		};
+		{
+			int idx = &a;
+			while((((var_1).N)>0)) {
+				{
+					printf("idx=%d", (a));
+				};
+				(((var_1).N)--);
+			};
+		};
+	}
+}
+

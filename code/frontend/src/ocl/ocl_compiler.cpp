@@ -152,11 +152,13 @@ void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL
     if(localRangeUsed || scope != OCL_LOCAL_PAR)
         CAPTURE(captureList, localRange, cTypes);
 
-    if(groupIdUsed && scope != OCL_GLOBAL_JOB)
+    if(groupIdUsed && scope != OCL_GLOBAL_JOB && scope != OCL_GLOBAL_PAR)
         CAPTURE(captureList, groupId, cTypes);
 
-    if(localIdUsed && scope == OCL_LOCAL_PAR)
+//the local ID is never captured at the moment since it is the argument of the innermost pfor function
+/*    if(localIdUsed && scope == OCL_LOCAL_PAR) {
         CAPTURE(captureList, localId, cTypes);
+    }*/
 
 }
 
@@ -178,26 +180,62 @@ void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE s
          SHARE(sharedList, localId);
 }
 
-core::CallExprPtr KernelData::accessGlobalRange(core::ExpressionPtr idx) {
-    globalRangeUsed = true;
-    return vecAccess(globalRange, idx);
+core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionPtr idx) {
+    switch(level) {
+    case OPL_GLOBAL :
+        globalRangeUsed = true;
+        return vecAccess(globalRange, idx);
+    case OPL_GROUP :
+        numGroupsUsed = true;
+        return vecAccess(numGroups, idx);
+    //case OPL_LOCAL :
+    default:
+        localRangeUsed = true;
+        return vecAccess(localRange, idx);
+    }
 }
 
-
-core::CallExprPtr KernelData::accessNumGroups(core::ExpressionPtr idx) {
-    numGroupsUsed = true;
-    return vecAccess(numGroups, idx);
+core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL level, core::ExpressionPtr idx){
+    switch(level) {
+    case OPL_GLOBAL :
+        groupIdUsed = true;
+        localIdUsed = true;
+        localRangeUsed = true;
+        //calculate localId + (localRange * groupId)
+        return builder.callExpr(BASIC.getUnsignedIntAdd(), vecAccess(localId, idx),
+                builder.callExpr(BASIC.getUnsignedIntMul(), vecAccess(localRange, idx), vecAccess(groupId, idx)));
+    case OPL_GROUP :
+        groupIdUsed = true;
+        return vecAccess(groupId, idx);
+    //case OPL_LOCAL :
+    default:
+        localIdUsed = true;
+        return vecAccess(localId, idx);
+    }
 }
 
-
-core::CallExprPtr KernelData::accessLocalRange(core::ExpressionPtr idx) {
-    localRangeUsed = true;
-    return vecAccess(localRange, idx);
-}
 
 core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
+    //get rid of casts
+    core::NodePtr arg = memFence;
+    while(arg->getNodeType() == core::NT_CastExpr) {
+        arg = arg->getChildList().at(1);
+    }
 
-//TODO implement global mem fence
+    if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
+/*      Defualt value anyway....
+ *      if(lit->getValue() == "0u") {
+            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
+        }*/
+        if(lit->getValue() == "1u"){
+            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
+        }
+    }
+
+    // TODO show warning
+// return CLK_LOCAL_MEM_FENCE barrier if the argument has unexpected type
     return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
@@ -249,19 +287,36 @@ public:
                 const vector<core::ExpressionPtr>& args = call->getArguments();
                 // reading parallel loop boundaries
                 if(literal->getValue() == "get_global_size") {
-                    assert(args.size() == 1 && "Function get_global_id must have exactly 1 argument");
+                    assert(args.size() == 1 && "Function get_global_size must have exactly 1 argument");
 
-                    return kd.accessGlobalRange(args.at(0));
+                    return kd.accessRange(OPL_GLOBAL, args.at(0));
                 }
                 if(literal->getValue() == "get_num_groups") {
                     assert(args.size() == 1 && "Function get_num_groups must have exactly 1 argument");
 
-                    return kd.accessNumGroups(args.at(0));
+                    return kd.accessRange(OPL_GROUP, args.at(0));
                 }
                 if(literal->getValue() == "get_local_size") {
+                    assert(args.size() == 1 && "Function get_local_size must have exactly 1 argument");
+
+                    return kd.accessRange(OPL_LOCAL, args.at(0));
+                }
+
+                // thread identification
+                if(literal->getValue() == "get_global_id") {
+                    assert(args.size() == 1 && "Function get_global_id must have exactly 1 argument");
+
+                    return kd.accessId(OPL_GLOBAL, args.at(0));
+                }
+                if(literal->getValue() == "get_group_id") {
+                    assert(args.size() == 1 && "Function get_group_id must have exactly 1 argument");
+
+                    return kd.accessId(OPL_GROUP, args.at(0));
+                }
+                if(literal->getValue() == "get_local_id") {
                     assert(args.size() == 1 && "Function get_local_id must have exactly 1 argument");
 
-                    return kd.accessLocalRange(args.at(0));
+                    return kd.accessId(OPL_LOCAL, args.at(0));
                 }
 
                 // syncronization
@@ -317,17 +372,17 @@ public:
 
                 }
             }
-            return element;//->substitute(builder.getNodeManager(), *this);
+            return element->substitute(builder.getNodeManager(), *this);
         }
 /*
         if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(element)) {
             core::Variable v = *var;
             std::cout << "VarID: " << v.getId() << " VarType: " << v.getType() << std::endl;
         }
-*/
+*//*
         if(core::CompoundStmtPtr body = dynamic_pointer_cast<const core::CompoundStmt>(element->substitute(builder.getNodeManager(), *this))){
             std::cout << "the body\n";
-/* do this recursively
+*//* do this recursively
             const core::Node::ChildList& children = body->getChildList();
 
             //&builder should be captured, but is member variable
@@ -336,17 +391,17 @@ public:
                 //look for ocl buildin functions and translate them to IR statements
 
                 }
-            );*/
+            );
 
                 return body;
 //                core::LambdaExpr localZparallel = builder.l
      //           core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params,localZjob);
-            }
+            }*/
  //           else
    //             assert(body && "KenrnelMapper corrupted function body.");
 //        }
 
-        return element;
+        return element->substitute(builder.getNodeManager(), *this);
     }
 
 
@@ -438,6 +493,9 @@ private:
     // function to calculate the product of all elements in a vector
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
+
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getVectorReduction(), vec, builder.uintLit(1), BASIC.getUnsignedIntMul());
+
         --n;
         if(n == 0) {
             return SUBSCRIPT(vec,0,builder);
@@ -598,8 +656,11 @@ public:
 
             bool isKernelFunction = false;
             bool workGroupSizeDefined = false;
-            auto cName = element.getAnnotation(c_info::CNameAnnotation::KEY);
-            auto funcAnnotation = element.getAnnotation(ocl::BaseAnnotation::KEY);
+
+            // TODO: annotations on pointers are no longer supported!
+            // Code has been changed to read annotations form nodes => if wrong, please fix it
+            auto cName = element->getAnnotation(c_info::CNameAnnotation::KEY);
+            auto funcAnnotation = element->getAnnotation(ocl::BaseAnnotation::KEY);
             if(funcAnnotation) {
 
                 size_t wgs[3];
@@ -760,7 +821,7 @@ public:
                 core::Lambda::ParamList groupIdAsAVector = toVector(kd.groupId);
                 core::ExpressionPtr globalPforFun = genLocalCie(localPar, groupIdAsAVector, OCL_GLOBAL_PAR);
 
-                core::CallExprPtr globalPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.globalRange, globalPforFun));
+                core::CallExprPtr globalPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.numGroups, globalPforFun));
 
                 std::vector<core::StatementPtr> gobalBodyStmts;
                 gobalBodyStmts.push_back(globalPfor);
@@ -818,7 +879,9 @@ public:
  //               core::DeclarationStmtPtr startVecDecl = builder.declarationStmt(nullVec, )
 
                 //declare group range
-                core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups, builder.vectorExpr(groupRdeclInit));
+                core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
+                        builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
+                        BASIC.getVectorPointwise(), kd.globalRange, kd.localRange, BASIC.getUnsignedIntDiv()));
                 newBodyStmts.push_back(groupRdecl);
 
                 //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed

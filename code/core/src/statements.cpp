@@ -509,5 +509,9 @@ MarkerStmtPtr MarkerStmt::get(NodeManager& manager, const StatementPtr& subState
 	return manager.get(MarkerStmt(subStatement, ++counter));
 }
 
+MarkerStmtPtr MarkerStmt::get(NodeManager& manager, const StatementPtr& subStatement, const unsigned id) {
+	return manager.get(MarkerStmt(subStatement, id));
+}
+
 } // end namespace core
 } // end namespace insieme

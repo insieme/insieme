@@ -226,20 +226,6 @@ TEST(Annotation, AnnotationsAndClone) {
 	EXPECT_TRUE(type2->hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE(type2->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	// more deeply nested migration
-	GenericTypePtr base = GenericType::get(manager, "B");
-	GenericTypePtr derived = GenericType::get(manager, "D", toVector<TypePtr>(), toVector<IntTypeParam>(), base);
-
-	// => base pointer and pointer within derived type should be connected
-	base.addAnnotation(std::make_shared<DummyAnnotation>(12));
-	EXPECT_TRUE( base.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( derived->getBaseType().hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE( base.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( derived->getBaseType().hasAnnotation(DummyAnnotation2::DummyKey));
-
-	// when migrating to another manager ...
-	GenericTypePtr derived2 = manager2.get(derived);
-
 }
 
 TEST(Annotation, CastTest) {
@@ -248,37 +234,37 @@ TEST(Annotation, CastTest) {
 
 	// create a node
 	GenericTypePtr type = GenericType::get(manager, "A");
-	type.addAnnotation(std::make_shared<DummyAnnotation>(1));
-	EXPECT_TRUE(type.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(type.hasAnnotation(DummyAnnotation2::DummyKey));
+	type->addAnnotation(std::make_shared<DummyAnnotation>(1));
+	EXPECT_TRUE(type->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(type->hasAnnotation(DummyAnnotation2::DummyKey));
 
 	// cast up ...
 	NodePtr node = type;
-	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(node.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	node.addAnnotation(std::make_shared<DummyAnnotation2>(12));
-	EXPECT_TRUE(type.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(type.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation2::DummyKey));
+	node->addAnnotation(std::make_shared<DummyAnnotation2>(12));
+	EXPECT_TRUE(type->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation2::DummyKey));
 
 	// dynamic pointer cast
 	TypePtr type2 = dynamic_pointer_cast<const Type>(node);
-	EXPECT_TRUE(type.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(type.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE(type2.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(type2.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(type->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE(type2->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type2->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	type2.remAnnotation(DummyAnnotation::DummyKey);
-	EXPECT_FALSE(type.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(type.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE(node.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(node.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE(type2.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(type2.hasAnnotation(DummyAnnotation2::DummyKey));
+	type2->remAnnotation(DummyAnnotation::DummyKey);
+	EXPECT_FALSE(type->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(type2->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(type2->hasAnnotation(DummyAnnotation2::DummyKey));
 }
 
 TEST(Annotation, EqualsTest) {
@@ -294,17 +280,6 @@ TEST(Annotation, EqualsTest) {
 	EXPECT_EQ(*type1, *type2);
 
 	// add an annotation
-	type1->getTypeParameter()[0].addAnnotation(std::make_shared<DummyAnnotation>(1));
-
-	EXPECT_TRUE(type1->getTypeParameter()[0].hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(type2->getTypeParameter()[0].hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_EQ(*type1, *type2);
-
-	EXPECT_FALSE(equalsWithAnnotations(type1, type2));
-	EXPECT_FALSE(equalsWithAnnotations(type1->getTypeParameter()[0], type2->getTypeParameter()[0]));
-
-	// add an annotation
-	type1->getTypeParameter()[0].remAnnotation(DummyAnnotation::DummyKey);
 	type1->getTypeParameter()[0]->addAnnotation(std::make_shared<DummyAnnotation>(1));
 
 	EXPECT_TRUE(type1->getTypeParameter()[0]->hasAnnotation(DummyAnnotation::DummyKey));

@@ -138,12 +138,6 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	// add one annotation to each child - exposing its index
-	int i = 0;
-	for_each(node->getChildList(), [&i](const NodePtr& cur) {
-		cur.addAnnotation(std::make_shared<DummyAnnotation2>(i++));
-	});
-
 	NodeManager managerA;
 	NodeManager managerB;
 
@@ -151,19 +145,6 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	// check child annotations
-	i = 0;
-	for_each(node->getChildList(), [&i](const NodePtr& cur) {
-
-		EXPECT_FALSE(cur.hasAnnotation(DummyAnnotation::DummyKey));
-		EXPECT_TRUE(cur.hasAnnotation(DummyAnnotation2::DummyKey));
-
-		if (cur.hasAnnotation(DummyAnnotation2::DummyKey)) {
-			EXPECT_EQ(i, cur.getAnnotation(DummyAnnotation2::DummyKey)->value);
-		}
-
-		i++;
-	});
 
 	EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
 	EXPECT_EQ(*node, *nodeInA);
@@ -207,8 +188,6 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 
 				EXPECT_NE(cur.first, cur.second);
 				EXPECT_EQ(*cur.first, *cur.second);
-				EXPECT_NE(&cur.first.getAnnotations(), &cur.second.getAnnotations());
-
 			});
 		}
 	}

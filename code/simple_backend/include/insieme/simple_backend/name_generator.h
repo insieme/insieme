@@ -58,7 +58,9 @@ class NameGenerator {
 public:
 	NameGenerator() : num(0) { }
 
-	string getName(const core::NodePtr& ptr, const string fragment = "");
+	string getName(const core::NodePtr& ptr, const string& fragment = "");
+
+	void setName(const core::NodePtr& ptr, const string& name);
 
 	string getVarName(const core::VariablePtr& var);
 };

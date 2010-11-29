@@ -38,9 +38,9 @@
 
 #include <glog/logging.h>
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -80,8 +80,16 @@ namespace {
 			case NT_CallExpr:
 				// subscript operator should not be again dereferenced in the end
 				return !(cc.basic.isSubscriptOperator(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
-			case NT_MemberAccessExpr:
+			case NT_MemberAccessExpr: {
+				TypePtr type = target->getType();
+				if (RefTypePtr refType = dynamic_pointer_cast<const RefType>(type)) {
+					NodeType elementType = refType->getElementType()->getNodeType();
+					if (elementType == NT_RefType || elementType == NT_VectorType) {
+						return true;
+					}
+				}
 				return false;
+			}
 			default:
 				return true;
 		}
@@ -113,11 +121,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			if (deref) cStr << ")";
 
 			return;
-		} if(funName == "ref.var") {
-			// TODO handle case where not RHS of local var decl
-			visit(args.front());
-			return;
-		} else if(cc.basic.isVarlistPack(funExp)) {
+		} if(cc.basic.isVarlistPack(funExp)) {
 			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
@@ -267,12 +271,9 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
 			break;
 		case NT_CallExpr: {
-			// distinguish between var and new
-			CallExprPtr call = static_pointer_cast<const CallExpr>(initialization);
-			ExpressionPtr function = call->getFunctionExpr();
 
-			// mark as a stack variable only if created using var.new => otherwise always a pointer (conservative)
-			info.location = cc.getNodeManager().basic.isRefVar(function)?VariableManager::STACK:VariableManager::HEAP;
+			// mark as a stack variable only if created using ref.var => otherwise always a pointer (conservative)
+			info.location = core::analysis::isCallOf(initialization, cc.basic.getRefVar())?VariableManager::STACK:VariableManager::HEAP;
 
 			break;
 		}
@@ -325,7 +326,13 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	// generate initializer expression
 	cStr << " = ";
-	visit(ptr->getInitialization());
+	if (core::analysis::isCallOf(ptr->getInitialization(), cc.basic.getRefVar())) {
+		// in case it is allocated on a stack, skip ref.var
+		CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
+		visit(call->getArguments()[0]);
+	} else {
+		visit(ptr->getInitialization());
+	}
 }
 
 void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
@@ -434,10 +441,17 @@ void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 
 void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
 	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
+	cStr << CodeStream::indR;
 	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
-		this->visit(cur.second);
-		if(cur != ptr->getMembers().back()) cStr << ", ";
+		// skip ref.var if present
+		if (core::analysis::isCallOf(cur.second, cc.basic.getRefVar())) {
+			this->visit(static_pointer_cast<const CallExpr>(cur.second)->getArguments()[0]);
+		} else {
+			this->visit(cur.second);
+		}
+		if(cur != ptr->getMembers().back()) cStr << ",\n";
 	});
+	cStr << CodeStream::indL << "\n";
 	cStr << "})";
 }
 
@@ -458,10 +472,11 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	// test whether all expressions are calls to ref.var ...
 	cStr << "{";
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
-		if (!(cur->getNodeType() == NT_CallExpr && cc.basic.isRefVar(static_pointer_cast<const CallExpr>(cur)->getFunctionExpr()))) {
+		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
 			assert(false && "Vector initialization not supported for the given values!");
 		}
-		this->visit(cur);
+		// print argument of ref.var
+		this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
 		if(cur != ptr->getExpressions().back()) cStr << ", ";
 	});
 	cStr << "}";
@@ -583,6 +598,58 @@ namespace detail {
 
 		}
 
+		void handleRefConstructor(ConvertVisitor& visitor, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
+
+			// check input parameters
+			assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
+
+			// extract type
+			TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
+			string typeName = visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true);
+
+			// use stack or heap allocator
+			string allocator = (isNew)?"malloc":"alloca";
+
+			// special handling of some initialization values
+			string stmt = toString(*initValue);
+			const core::lang::BasicGenerator& basic = visitor.getConversionContext().basic;
+
+			// TODO: use pattern matching!
+
+			// check for vector init undefined and undefined
+			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || basic.isUndefined(initValue)) {
+				cStr << allocator << "(sizeof(" << typeName << "))";
+				return;
+			}
+
+			if (isNew && core::analysis::isCallOf(initValue, basic.getVectorInitUniform())) {
+				const NodePtr& param = static_pointer_cast<const CallExpr>(initValue)->getArguments()[0];
+				if (core::analysis::isCallOf(param, basic.getRefVar())) {
+					const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
+					if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
+						if (literal->getValueAs<double>() == 0.0) {
+							cStr << "calloc(sizeof(" << typeName << "), 1)";
+							return;
+						}
+					}
+				}
+			}
+
+			// TODO: use memset for other initializations => see memset!!
+
+			cStr << "memcpy(";
+			cStr << allocator << "(";
+			cStr << "sizeof(";
+			cStr << typeName;
+			cStr << ")), &((";
+			cStr << typeName;
+			cStr << ")";
+			visitor.visit(initValue);
+			cStr << "), sizeof(";
+			cStr << typeName;
+			cStr << "))";
+		}
+
 	}
 
 
@@ -612,12 +679,12 @@ namespace detail {
 				VISIT_ARG(1);
 		});
 
-		// TODO: integrate those as well ...
-//		ADD_FORMATTER(lang::OP_REF_VAR_PTR, { OUT(" var("); VISIT_ARG(0); OUT(")"); });
-//		ADD_FORMATTER(lang::OP_REF_NEW_PTR, { OUT(" new("); VISIT_ARG(0); OUT(")"); });
-//		ADD_FORMATTER(lang::OP_REF_DELETE_PTR, { OUT(" del("); VISIT_ARG(0); OUT(")"); });
 
-		//ADD_FORMATTER(lang::OP_SUBSCRIPT_PTR, { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(visitor, cStr, ARG(0), false); });
+		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(visitor, cStr, ARG(0), true); });
+
+		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
+
 		ADD_FORMATTER(basic.getArray1DSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getVectorSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 
@@ -665,11 +732,18 @@ namespace detail {
 		ADD_FORMATTER(basic.getSignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); VISIT_ARG(0); });
 
-		ADD_FORMATTER(basic.getBoolAnd(), { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolOr(), { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolLAnd(), { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolLOr(), { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolNot(), { OUT("!"); VISIT_ARG(0); });
+		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); VISIT_ARG(0); });
+
+		ADD_FORMATTER(basic.getCharNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getCharEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getCharGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getCharGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getCharLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getCharLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getUnsignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
@@ -725,7 +799,10 @@ namespace detail {
 
 std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
 	out << "// --- Generated Inspire Code ---\n";
+	out << "#include <alloca.h>\n";
 	out << "#include <stddef.h>\n";
+	out << "#include <stdlib.h>\n";
+	//out << "#include <string.h>\n";
 	out << "#define bool int\n";
 	out << "#define true 1\n";
 	out << "#define false 0\n";

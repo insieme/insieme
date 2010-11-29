@@ -35,7 +35,6 @@
  */
 
 #include "insieme/frontend/analysis/loop_analyzer.h"
-
 #include "insieme/frontend/convert.h"
 
 // defines which are needed by LLVM
@@ -53,16 +52,24 @@ namespace {
 /**
  * Returns the list of variables referenced within an expression
  */
-struct VarRefFinder: public StmtVisitor<VarRefFinder>, insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
+struct VarRefFinder: public StmtVisitor<VarRefFinder>, public insieme::frontend::analysis::LoopAnalyzer::VarDeclSet {
 
-	VarRefFinder(const Expr* expr) {
-		VisitStmt( const_cast<Expr*>(expr) );
+	VarRefFinder(const Stmt* expr) {
+		if(expr)
+			Visit( const_cast<Stmt*>(expr) );
 	}
 
 	void VisitDeclRefExpr(DeclRefExpr *declRef) {
-		if(VarDecl* varDec = dyn_cast<VarDecl>(declRef->getDecl())) {
-			insert(varDec);
+		if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
+			insert(varDecl);
 		}
+	}
+
+	void VisitDeclStmt(DeclStmt* declStmt) {
+		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
+			if( VarDecl* varDecl = dyn_cast<VarDecl>(*it) ) {
+				insert(varDecl);
+			}
 	}
 
 	void VisitStmt(Stmt* stmt) {
@@ -71,6 +78,11 @@ struct VarRefFinder: public StmtVisitor<VarRefFinder>, insieme::frontend::analys
 		);
 	}
 };
+
+insieme::core::ExpressionPtr addOne(const insieme::core::ASTBuilder& builder, const insieme::core::ExpressionPtr& expr) {
+	return builder.callExpr( expr->getType(), builder.getBasicGenerator().getOperator(expr->getType(), insieme::core::lang::BasicGenerator::Add),
+			expr, builder.literal(builder.getBasicGenerator().getInt4(), "1") );
+}
 
 }
 
@@ -90,12 +102,16 @@ namespace analysis {
 
 void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// an induction variable of a loop should appear in both the condition and increment expressions
+	VarDeclSet&& initExprVars = VarRefFinder(forStmt->getInit());
 	VarDeclSet&& incExprVars = VarRefFinder(forStmt->getInc());
 	VarDeclSet&& condExprVars = VarRefFinder(forStmt->getCond());
 
 	// do an intersection
-	VarDeclSet commonVars;
+	VarDeclSet commonVars, commonVarsTmp;
 	std::set_intersection(incExprVars.begin(), incExprVars.end(), condExprVars.begin(), condExprVars.end(),
+			std::inserter(commonVarsTmp, commonVarsTmp.begin())
+	);
+	std::set_intersection(commonVarsTmp.begin(), commonVarsTmp.end(), initExprVars.begin(), initExprVars.end(),
 			std::inserter(commonVars, commonVars.begin())
 	);
 
@@ -109,6 +125,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// TODO: handle border cases here
 
 	// if we cannot still determine the induction variable, throw an exception
+
 	throw InductionVariableNotFoundException();
 }
 
@@ -119,14 +136,12 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		switch(unOp->getOpcode()) {
 		case UO_PreInc:
 		case UO_PostInc:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getUInt1());
-			return;
 		case UO_PreDec:
 		case UO_PostDec:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("-1", convFact.getNodeManager().basic.getInt1());
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getInt1());
 			return;
 		default:
-			assert(false && "UnaryOperator differet from post/pre inc/dec (++/--) not supported in loop increment expression");
+			assert(false && "UnaryOperator different from post/pre inc/dec (++/--) not supported in loop increment expression");
 		}
 	}
 
@@ -148,6 +163,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 	}
 }
 
+
 void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
 	const Expr* cond = forStmt->getCond();
@@ -158,7 +174,29 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		assert(isa<const DeclRefExpr>(binOp->getLHS()));
 		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
 		assert(lhs->getDecl() == loopHelper.inductionVar);
-		loopHelper.condExpr = convFact.convertExpr( binOp->getRHS() );
+		core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
+		switch(binOp->getOpcode()) {
+		case BO_LT:
+			// return: condExpr
+			loopHelper.condExpr = condExpr;
+			break;
+		case BO_LE:
+			// return: condExpr + 1
+			loopHelper.condExpr = addOne(convFact.getASTBuilder(), condExpr);
+			break;
+		case BO_GT:
+			loopHelper.condExpr = convFact.getASTBuilder().invertSign(condExpr);
+			loopHelper.invert = true;
+			break;
+		case BO_GE:
+			loopHelper.condExpr = addOne(convFact.getASTBuilder(), convFact.getASTBuilder().invertSign(condExpr));
+			loopHelper.invert = true;
+			break;
+		default:
+			assert(false && "Condition expression not supported");
+		}
+
+
 		return;
 	}
 	throw LoopNormalizationError();

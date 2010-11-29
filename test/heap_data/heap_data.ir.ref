@@ -1,0 +1,41 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<a:ref<vector<ref<int<4>>,50>>>> v1 =  var(struct{a:= new(vector.initUniform( var(0), 50))});
+        [v1]fun[ref<struct<a:ref<vector<ref<int<4>>,50>>>> v4](){
+            for(decl ref<int<4>> v5 =  var(0) .. 50 : 1) {
+                v4.a[v5] := v5;
+            };
+        }();
+        printf("sum=%d\n", varlist.pack(([v1]fun[ref<struct<a:ref<vector<ref<int<4>>,50>>>> v7](){
+            decl ref<int<4>> v8 =  var(0);
+            for(decl ref<int<4>> v9 =  var(0) .. 50 : 1) {
+                v8 := v8+v7.a[v9];
+            };
+            return v8;
+        }())));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<a:ref<vector<ref<int<4>>,50>>>> v1 = ( var(struct{a:=( new(vector.initUniform(( var(0)), 50)))}));
+        [v1]fun[ref<struct<a:ref<vector<ref<int<4>>,50>>>> v4](){
+            for(decl ref<int<4>> v5 = ( var(0)) .. 50 : 1) {
+                ((( *( *v4).a)[CAST<uint<4>>(( *v5))]) := ( *v5));
+            };
+        }();
+        printf("sum=%d\n", varlist.pack(([v1]fun[ref<struct<a:ref<vector<ref<int<4>>,50>>>> v7](){
+            decl ref<int<4>> v8 = ( var(0));
+            for(decl ref<int<4>> v9 = ( var(0)) .. 50 : 1) {
+                (v8 := (( *v8)+( *(( *( *v7).a)[CAST<uint<4>>(( *v9))]))));
+            };
+            return ( *v8);
+        }())));
+    }
+

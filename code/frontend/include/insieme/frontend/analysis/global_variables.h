@@ -48,6 +48,7 @@
 namespace clang {
 namespace idx {
 class Indexer;
+class TranslationUnit;
 } // end idx namespace
 }
 
@@ -75,6 +76,8 @@ public:
 	// to  the existing value has to be generated
 	typedef std::map<const clang::VarDecl*, bool> GlobalVarVect;
 
+	typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
+
 	// Set of functions already visited, this avoid the solver to loop in the
 	// case of recursive function calls
 	typedef std::set<const clang::FunctionDecl*> VisitedFuncSet;
@@ -87,7 +90,8 @@ public:
 	// has to bo forwarded through this function via the capture list
 	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 
-	GlobalVarCollector(clang::idx::Indexer& indexer, UseGlobalFuncMap& globalFuncMap) : indexer(indexer), usingGlobals(globalFuncMap) { }
+	GlobalVarCollector(const clang::idx::TranslationUnit* currTU, clang::idx::Indexer& indexer, UseGlobalFuncMap& globalFuncMap) :
+		currTU(currTU), indexer(indexer), usingGlobals(globalFuncMap) { }
 
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
@@ -100,10 +104,12 @@ public:
 
 	void dump(std::ostream& out) const ;
 
-	std::pair<core::StructTypePtr, core::StructExprPtr> createGlobalStruct(const conversion::ConversionFactory& fact) const;
+	std::pair<core::StructTypePtr, core::StructExprPtr> createGlobalStruct(conversion::ConversionFactory& fact) const;
 
 private:
 	GlobalVarVect 	globals;
+	VarTUMap		varTU;
+	const clang::idx::TranslationUnit* currTU;
 	VisitedFuncSet 	visited;
 	FunctionStack	funcStack;
 

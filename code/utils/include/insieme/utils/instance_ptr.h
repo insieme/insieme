@@ -59,10 +59,16 @@ public:
 
 	InstancePtr(T* ptr) : ptr(ptr) { }
 
-	template<typename B>
-	InstancePtr(const InstancePtr<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0) : ptr(from.ptr) { }
-	
-	virtual ~InstancePtr() {};
+	~InstancePtr() {};
+
+	/**
+	 * A conversion operator converting this instance pointer instance into a instance referencing
+	 * a base type without changing the actual pointer.
+	 */
+	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
+	operator const InstancePtr<B>() const {
+		return *reinterpret_cast<const InstancePtr<B>* >(this);
+	}
 
 	operator bool() const {
 		return ptr!=NULL;

@@ -39,7 +39,6 @@
 //#include <glog/logging.h>
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/annotated_ptr.h"
 #include "insieme/core/types.h"
 
 namespace insieme {
@@ -119,7 +118,7 @@ ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
 
 void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 	string cFunName = cc.getNameGen().getName(ptr);
-	if(auto cnameAnn = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
+	if(auto cnameAnn = ptr->getAnnotation(c_info::CNameAnnotation::KEY)) { // originally a named C function
 		cFunName = cnameAnn->getName();
 	}
 	defCodePtr->addDependency(cc.getFuncMan().getFunction(ptr, cFunName));
@@ -311,7 +310,7 @@ string SimpleTypeConverter::visitRefType(const RefTypePtr& ptr) {
 string SimpleTypeConverter::visitStructType(const StructTypePtr& ptr) {
 	firstRef = true;
 	string structName;
-	if(auto annotation = ptr.getAnnotation(c_info::CNameAnnotation::KEY)) {
+	if(auto annotation = ptr->getAnnotation(c_info::CNameAnnotation::KEY)) {
 		structName = annotation->getName();
 	} else {
 		structName = nameGen.getName(ptr, "unnamed_struct");

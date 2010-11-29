@@ -54,15 +54,17 @@ namespace frontend {
 namespace analysis {
 
 class LoopNormalizationError: public std::exception {
+	std::string cause;
 public:
 	LoopNormalizationError(): std::exception() { }
-	const char* what() throw() { return NULL; }
+	LoopNormalizationError(const std::string& cause): std::exception(), cause(cause) { }
+	const char* what() const throw() { return cause.c_str(); }
 	~LoopNormalizationError() throw() { }
 };
 
 class InductionVariableNotFoundException: public LoopNormalizationError {
 public:
-	InductionVariableNotFoundException(): LoopNormalizationError() { }
+	InductionVariableNotFoundException(): LoopNormalizationError("failed to determine loop induction variable") { }
 };
 
 using insieme::frontend::conversion::ConversionFactory;
@@ -76,9 +78,10 @@ class LoopAnalyzer {
 		const clang::VarDecl* 			inductionVar;
 		insieme::core::ExpressionPtr 	incrExpr;
 		insieme::core::ExpressionPtr	condExpr;
+		bool 							invert;
 
 		//TODO: recheck: Visual Studio 2010 fix
-		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL) {	}
+		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL), invert(false) {	}
 	};
 
 	const ConversionFactory& 	convFact;
@@ -100,6 +103,8 @@ public:
 	insieme::core::ExpressionPtr getIncrExpr() const { return loopHelper.incrExpr; }
 
 	insieme::core::ExpressionPtr getCondExpr() const { return loopHelper.condExpr; }
+
+	bool isInverted() const { return loopHelper.invert; }
 };
 
 } // End analysis namespace

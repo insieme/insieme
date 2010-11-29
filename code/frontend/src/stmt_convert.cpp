@@ -157,8 +157,9 @@ public:
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
 		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
+		core::ExpressionPtr&& retExpr = convFact.convertExpr( retStmt->getRetValue() );
 
-		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.convertExpr( retStmt->getRetValue() ) );
+		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.tryDeref(retExpr) );
 		// handle eventual OpenMP pragmas attached to the Clang node
 		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(ret, retStmt, convFact);
 
@@ -184,37 +185,7 @@ public:
 			core::ExpressionPtr&& incExpr = loopAnalysis.getIncrExpr();
 			core::ExpressionPtr&& condExpr = loopAnalysis.getCondExpr();
 
-			Stmt* initStmt = forStmt->getInit();
-			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
-			if( !initStmt ) {
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				// we are analyzing a loop where the init expression is empty, e.g.:
-				//
-				// 		for(; cond; inc) { body }
-				//
-				// As the IR doesn't support loop stmt with no initialization we represent
-				// the for loop as while stmt, i.e.
-				//
-				// 		while( cond ) {
-				//			{ body }
-				//  		inc;
-				// 		}
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-				vector<core::StatementPtr> whileBody(body);
-				// adding the incExpr at after the loop body
-				whileBody.push_back( convFact.convertExpr( forStmt->getInc() ) );
-
-				core::StatementPtr&& whileStmt = builder.whileStmt( convFact.convertExpr( forStmt->getCond() ), builder.compoundStmt(whileBody) );
-
-				// handle eventual pragmas refering to the Clang node
-				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
-
-				END_LOG_STMT_CONVERSION( whileStmt );
-				return StmtWrapper( annotatedNode );
-			}
-
-			StmtWrapper&& initExpr = Visit( initStmt );
+			StmtWrapper&& initExpr = Visit( forStmt->getInit() );
 			// induction variable for this loop
 			core::VariablePtr&& inductionVar = core::dynamic_pointer_cast<const core::Variable>(convFact.lookUpVariable(loopAnalysis.getInductionVar()));
 			assert(inductionVar);
@@ -258,7 +229,7 @@ public:
 				initExpr = *fit;
 			}
 
-			assert(initExpr.isSingleStmt() && "Init expression for loop sttatement contains multiple statements");
+			assert(initExpr.isSingleStmt() && "Init expression for loop statement contains multiple statements");
 			// We are in the case where we are sure there is exactly 1 element in the
 			// initialization expression
 			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
@@ -282,7 +253,7 @@ public:
 				//			}
 				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				core::ExpressionPtr&& init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
-				assert(init && "Init statement for loop is not an xpression");
+				assert(init && "Init statement for loop is not an expression");
 
 				const core::TypePtr& varTy = inductionVar->getType();
 				// we create a new induction variable, we don't register it to the variable
@@ -297,7 +268,7 @@ public:
 				// Initialize the value of the new induction variable with the value of the old one
 				core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init);
 				assert(callExpr && *callExpr->getFunctionExpr() == *convFact.mgr.basic.getRefAssign() &&
-						"Expression not handled in a forloop initaliazation statement!");
+						"Expression not handled in a forloop initialization statement!");
 
 				// we handle only the situation where the initExpr is an assignment
 				init = callExpr->getArguments()[1]; // getting RHS
@@ -312,8 +283,28 @@ public:
 				iteratorChanged = true;
 			}
 
-			assert(declStmt && "Falied convertion of loop init expression");
+			assert(declStmt && "Failed conversion of loop init expression");
 
+			if(loopAnalysis.isInverted()) {
+				// invert init value
+				core::ExpressionPtr init = declStmt->getInitialization();
+				if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init)) {
+					if(*callExpr->getFunctionExpr() == *builder.getBasicGenerator().getRefVar()) {
+						assert(callExpr->getArguments().size() == 1);
+						init = callExpr->getArguments()[0];
+					}
+				}
+				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
+				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
+						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, builder.refVar(invInitExpr), true)
+				);
+
+				// invert the sign of the loop index in body of the loop
+				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
+				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
+						inductionVar, true);
+				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
+			}
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
 			assert(irFor && "Created for statement is not valid");
@@ -333,6 +324,13 @@ public:
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {
+
+			Stmt* initStmt = forStmt->getInit();
+			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
+			if( initStmt ) {
+				StmtWrapper init = Visit( forStmt->getInit() );
+				std::copy(init.begin(), init.end(), std::back_inserter(retStmt));
+			}
 
 			if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
 				assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
@@ -368,7 +366,7 @@ public:
 			//			}
 			//		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			retStmt.push_back( Visit( forStmt->getInit() ).getSingleStmt() ); // init;
+
 			core::StatementPtr&& whileStmt = builder.whileStmt(
 				convFact.convertExpr( forStmt->getCond() ), // cond
 					builder.compoundStmt(
@@ -379,6 +377,10 @@ public:
 			// handle eventual pragmas attached to the Clang node
 			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
 			retStmt.push_back( annotatedNode );
+
+		    clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+		    pp.Diag(forStmt->getLocStart(),
+		    		pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, std::string("For loop converted into while loop, cause: ") + e.what() ));
 		}
 		retStmt = tryAggregateStmts(builder, retStmt);
 

@@ -101,7 +101,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.currTU = &mProg.getTranslationUnit(ret.second);
 
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
 	DVLOG(1) << globColl;
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
@@ -129,11 +129,11 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
-	core::ExpressionPtr retExpr = expr;
-	while(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(retExpr->getType())) {
-		retExpr = builder.callExpr( refTy->getElementType(), mgr.basic.getRefDeref(), retExpr );
+	// core::ExpressionPtr retExpr = expr;
+	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		return builder.callExpr( refTy->getElementType(), mgr.basic.getRefDeref(), expr );
 	}
-	return retExpr;
+	return expr;
 }
 
 /* Function to convert Clang attributes of declarations to IR annotations (local version)
@@ -256,7 +256,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     if ( mgr.basic.isChar(type) ) {
 		// initialize integer value
-		return builder.literal("'\0'", type);
+		return builder.literal("\'\\0\'", type);
 	}
     // handle reals initialization
     if ( mgr.basic.isReal(type) ) {
@@ -309,8 +309,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal);
-		// return builder.vectorExpr( std::vector<core::ExpressionPtr>(vecTy->getSize().getValue(), initVal) );
+		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal, mgr.basic.getIntTypeParamLiteral(vecTy->getSize()));
     }
     // handle arrays initialization
     if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
@@ -343,7 +342,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 		return convertInitializerList( listExpr, type );
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
-	if(core::dynamic_pointer_cast<const core::RefType>(type))
+	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
 		retExpr = builder.refVar( retExpr );
 	return retExpr;
 }
@@ -420,11 +419,11 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 	// if OpenCL related annotations have been found, create OclBaseAnnotation and
 	// add it to the funciton's attribute
 	if(!kernelAnnotation.empty())
-		node.addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+		node->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 
 	// --------------------------------- C NAME ----------------------------------------------
 	// annotate with the C name of the function
-	node.addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+	node->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
 
 	// ----------------------- SourceLocation Annotation -------------------------------------
 	// for each entry function being converted we register the location where it was originally
@@ -437,7 +436,7 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 	}
 
 	assert(currTU && "Translation unit not correctly set");
-	node.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+	node->addAnnotation( std::make_shared<c_info::CLocAnnotation>(
 		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
 		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
 	);
@@ -481,6 +480,7 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 //	);
 //
 //	return lambdaExpr;
+	return core::LambdaExprPtr();
 }
 
 

@@ -441,8 +441,7 @@ void rank( int iteration )
                     {
                         if( key_buff1[k-1] != test_rank_array[i]+iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -452,8 +451,7 @@ void rank( int iteration )
                     {
                         if( key_buff1[k-1] != test_rank_array[i]-iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -466,8 +464,7 @@ void rank( int iteration )
                         if( key_buff1[k-1] != 
                                           test_rank_array[i]+(iteration-2) )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -477,8 +474,7 @@ void rank( int iteration )
                     {
                         if( key_buff1[k-1] != test_rank_array[i]-iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -491,8 +487,7 @@ void rank( int iteration )
                         if( key_buff1[k-1] != 
                                           test_rank_array[i]+(iteration-1) )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -503,8 +498,7 @@ void rank( int iteration )
                         if( key_buff1[k-1] != 
                                           test_rank_array[i]-(iteration-1) )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -516,8 +510,7 @@ void rank( int iteration )
         	    {
                         if( key_buff1[k-1] != test_rank_array[i]+iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -527,8 +520,7 @@ void rank( int iteration )
                     {
                         if( key_buff1[k-1] != test_rank_array[i]-iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -540,8 +532,7 @@ void rank( int iteration )
         	    {
                         if( key_buff1[k-1] != test_rank_array[i]+iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -551,8 +542,7 @@ void rank( int iteration )
                     {
                         if( key_buff1[k-1] != test_rank_array[i]-iteration )
                         {
-                            printf( "Failed partial verification: "
-                                  "iteration %d, test key %d\n", 
+                            printf( "Failed partial verification: iteration %d, test key %d\n", 
                                    iteration, i );
                         }
                         else
@@ -620,8 +610,7 @@ main( argc, argv )
         
 
 /*  Printout initial NPB info */
-    printf( "\n\n NAS Parallel Benchmarks 2.3 OpenMP C version"
-	    " - IS Benchmark\n\n" );
+    printf( "\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n" );
     printf( " Size:  %d  (class %c)\n", TOTAL_KEYS, CLASS );
     printf( " Iterations:   %d\n", MAX_ITERATIONS );
 

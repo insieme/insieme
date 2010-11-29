@@ -160,7 +160,7 @@ public:
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
-			return Visit( arrTy->desugar().getTypePtr() );
+			return convFact.convertType( arrTy->desugar().getTypePtr() );
 
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
@@ -390,7 +390,7 @@ public:
 
 		// will store the converted type
 		core::TypePtr retTy;
-		DVLOG(2) << "Converting TagType: " << tagType->getDecl()->getName().str();
+		DLOG(INFO) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
 
 		const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
 		// iterate through all the re-declarations to see if one of them provides a definition
@@ -581,9 +581,15 @@ ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConverter(Conv
 	return new ClangTypeConverter(fact);
 }
 
-core::TypePtr ConversionFactory::convertType(const clang::Type* type) const {
+core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
-	return typeConv->Visit( const_cast<Type*>(type) );
+	auto fit = ctx.typeCache.find(type);
+	if(fit == ctx.typeCache.end()) {
+		core::TypePtr&& retTy = typeConv->Visit( const_cast<Type*>(type) );
+		ctx.typeCache.insert( std::make_pair(type,retTy) );
+		return retTy;
+	}
+	return fit->second;
 }
 
 } // End conversion namespace

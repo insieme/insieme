@@ -421,8 +421,8 @@ TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
-	InterruptingVisitor<AnnotatedPtr> limit3(3);
-	InterruptingVisitor<AnnotatedPtr> limit10(10);
+	InterruptingVisitor<Pointer> limit3(3);
+	InterruptingVisitor<Pointer> limit10(10);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
@@ -460,8 +460,8 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
-	InterruptingVisitor<AnnotatedPtr> limit3(3);
-	InterruptingVisitor<AnnotatedPtr> limit10(10);
+	InterruptingVisitor<Pointer> limit3(3);
+	InterruptingVisitor<Pointer> limit10(10);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 

@@ -788,9 +788,6 @@ namespace {
 		}
 
 		LambdaPtr apply(const LambdaPtr& node) {
-			if (!node) {
-				return node;
-			}
 			return static_pointer_cast<const Lambda>(node->substitute(manager, *this));
 		}
 
@@ -1077,5 +1074,9 @@ std::ostream& MarkerExpr::printTo(std::ostream& out) const {
 
 MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression) {
 	return manager.get(MarkerExpr(subExpression, ++counter));
+}
+
+MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id) {
+	return manager.get(MarkerExpr(subExpression, id));
 }
 

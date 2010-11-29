@@ -43,6 +43,7 @@
 
 #include "insieme/utils/functional_utils.h"
 
+#include "insieme/core/ast_pointer.h"
 #include "insieme/core/ast_address.h"
 #include "insieme/core/ast_node.h"
 #include "insieme/core/expressions.h"
@@ -62,7 +63,7 @@ namespace core {
 
 template<
 	typename ReturnType = void,
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class ASTVisitor {
 
@@ -149,7 +150,7 @@ class AddressVisitor : public ASTVisitor<ReturnType, Address> { };
 template<
 	typename Lambda,
 	typename ResultType = void,
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class LambdaVisitor : public ASTVisitor<ResultType, Ptr> {
 
@@ -198,8 +199,8 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Ptr> m
  * @return the resulting visitor.
  */
 template<typename Lambda>
-inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, AnnotatedPtr> makeLambdaPtrVisitor(Lambda lambda) {
-	return makeLambdaVisitor<AnnotatedPtr, Lambda>(lambda);
+inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Pointer> makeLambdaPtrVisitor(Lambda lambda) {
+	return makeLambdaVisitor<Pointer, Lambda>(lambda);
 };
 
 /**
@@ -222,7 +223,7 @@ inline LambdaVisitor<Lambda, typename lambda_traits<Lambda>::result_type, Addres
  */
 template<
 	typename SubVisitorResultType,
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class RecursiveASTVisitor : public ASTVisitor<void, Ptr> {
 
@@ -280,7 +281,7 @@ public:
  * true otherwise.
  */
 template<
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class RecursiveInterruptableASTVisitor : public ASTVisitor<bool, Ptr> {
 
@@ -353,7 +354,7 @@ public:
  */
 template<
 	typename SubVisitorResultType,
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr> {
 
@@ -416,7 +417,7 @@ public:
  */
 template<
 	typename SubVisitorResultType,
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class VisitOnceASTVisitor : public ASTVisitor<void, Ptr> {
 
@@ -487,7 +488,7 @@ public:
  * the
  */
 template<
-	template<class Target> class Ptr = AnnotatedPtr
+	template<class Target> class Ptr = Pointer
 >
 class VisitOnceInterruptableASTVisitor : public ASTVisitor<bool, Ptr> {
 

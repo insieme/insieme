@@ -99,26 +99,25 @@ class NodeBuilder {
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem) {
-		AnnotatedPtr<const T>&& pointer = dynamic_pointer_cast<const T>(getElementId(elem.getAttr("ref")).second);
+	Pointer<const T> createNode(const XmlElement& elem) {
+		Pointer<const T>&& pointer = dynamic_pointer_cast<const T>(getElementId(elem.getAttr("ref")).second);
 		assert(pointer && "Element not of the expected type.");
-		buildAnnotations(elem, pointer);
 		return pointer;
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first, const string& second) {
+	Pointer<const T> createNode(const XmlElement& elem, const string& first, const string& second) {
 		return createNode<T>(*elem.getFirstChildByName(first)->getFirstChildByName(second));
 	}
 
 	template <class T>
-	AnnotatedPtr<const T> createNode(const XmlElement& elem, const string& first) {
+	Pointer<const T> createNode(const XmlElement& elem, const string& first) {
 		return createNode<T>(*elem.getFirstChildByName(first));
 	}
 
 	template <class NodeTy, class ... Args>
-	AnnotatedPtr<const NodeTy> createIrNode(const XmlElement& elem, Args ... args) {
-		AnnotatedPtr<const NodeTy> irNode = NodeTy::get(mgr, args...);
+	Pointer<const NodeTy> createIrNode(const XmlElement& elem, Args ... args) {
+		Pointer<const NodeTy> irNode = NodeTy::get(mgr, args...);
 		buildAnnotations(elem, *irNode);
 		updateMap(elem, irNode);
 		return irNode;
@@ -172,10 +171,18 @@ public:
 	}
 
 	NodePtr handle_functionType(const XmlElement& elem) {
-//		TupleTypePtr&& captureType = createNode<TupleType>(elem, "captureType","tupleTypePtr");
-//		TupleTypePtr&& argType = createNode<TupleType>(elem, "argumentType","tupleTypePtr");
-//		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
-//		return createIrNode<FunctionType>(elem, captureType, argType, retType);
+		XmlElementList&& caps = elem.getFirstChildByName("captureTypeList")->getChildrenByName("typePtr");
+		TypeList captureTypes;
+		for(auto iter = caps.begin(), end = caps.end(); iter != end; ++iter) {
+			captureTypes.push_back(createNode<Type>(*iter));
+		}
+		XmlElementList&& args = elem.getFirstChildByName("argumentTypeList")->getChildrenByName("typePtr");
+		TypeList argumentTypes;
+		for(auto iter = args.begin(), end = args.end(); iter != end; ++iter) {
+			argumentTypes.push_back(createNode<Type>(*iter));
+		}
+		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
+		return createIrNode<FunctionType>(elem, captureTypes, argumentTypes, retType);
 	}
 
 private:
@@ -199,10 +206,10 @@ public:
 	}
 
 	NodePtr handle_tupleType(const XmlElement& elem) {
-		XmlElementList&& types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("elementType");
+		XmlElementList&& types = elem.getFirstChildByName("elementTypeList")->getChildrenByName("typePtr");
 		TypeList elementList;
 		for(auto iter = types.begin(), end = types.end(); iter != end; ++iter) {
-			elementList.push_back(createNode<Type>(*iter, "typePtr"));
+			elementList.push_back(createNode<Type>(*iter));
 		}
 		return createIrNode<TupleType>(elem, elementList);
 	}
@@ -283,10 +290,10 @@ public:
 	}
 
 	NodePtr handle_compoundStmt(const XmlElement& elem) {
-		XmlElementList&& stats = elem.getFirstChildByName("statements")->getChildrenByName("statement");
+		XmlElementList&& stats = elem.getFirstChildByName("statements")->getChildrenByName("statementPtr");
 		vector<StatementPtr> stmtVec;
 		for(auto iter = stats.begin(), end = stats.end(); iter != end; ++iter) {
-			stmtVec.push_back( createNode<Statement>(*iter, "statementPtr") );
+			stmtVec.push_back( createNode<Statement>(*iter));
 		}
 		return createIrNode<CompoundStmt>(elem, stmtVec);
 	}
@@ -320,21 +327,21 @@ public:
 
 	NodePtr handle_vectorExpr(const XmlElement& elem) {
 		VectorTypePtr&& typeT = createNode<VectorType>(elem, "type", "typePtr");
-		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 		vector<ExpressionPtr> exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.push_back( createNode<Expression>(*iter, "expressionPtr") );
+			exprVec.push_back( createNode<Expression>(*iter));
 		}
 		return createIrNode<VectorExpr>(elem, typeT, exprVec);
 	}
 
 	NodePtr handle_tupleExpr(const XmlElement& elem) {
 		TupleTypePtr&& typeT = createNode<TupleType>(elem, "type", "typePtr");
-		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 
 		vector<ExpressionPtr> exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.push_back( createNode<Expression>(*iter, "expressionPtr") );
+			exprVec.push_back( createNode<Expression>(*iter));
 		}
 		return createIrNode<TupleExpr>(elem, typeT, exprVec);
 	}
@@ -348,11 +355,11 @@ public:
 	NodePtr handle_callExpr(const XmlElement& elem) {
 		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
 		ExpressionPtr&& expr = createNode<Expression>(elem, "function", "expressionPtr");
-		XmlElementList&& args = elem.getFirstChildByName("arguments")->getChildrenByName("argument");
+		XmlElementList&& args = elem.getFirstChildByName("arguments")->getChildrenByName("expressionPtr");
 
 		vector<ExpressionPtr> argVec;
 		for(auto iter = args.begin(), end = args.end(); iter != end; ++iter) {
-			argVec.push_back( createNode<Expression>(*iter,"expressionPtr") );
+			argVec.push_back( createNode<Expression>(*iter));
 		}
 		return createIrNode<CallExpr>(elem, typeT, expr, argVec);
 	}
@@ -362,57 +369,76 @@ public:
 		return createIrNode<Variable>(elem, typeT, numeric_cast<int>(elem.getAttr("identifier")));
 	}
 
-	/*NodePtr handle_jobExpr(const XmlElement& elem) {
-		XmlElementList&& decls = elem.getFirstChildByName("declarations")->getChildrenByName("declaration");
-		JobExpr::LocalDecls declVec;
+	NodePtr handle_jobExpr(const XmlElement& elem) {
+		XmlElementList&& decls = elem.getFirstChildByName("declarations")->getChildrenByName("declarationStmtPtr");
+		JobExpr::LocalDecls localDecls;
 		for(auto iter = decls.begin(), end = decls.end(); iter != end; ++iter) {
-			declVec.push_back( createNode<DeclarationStmt>(*iter, "declarationStmtPtr") );
+			localDecls.push_back(createNode<DeclarationStmt>(*iter));
 		}
+		
 		XmlElementList&& stmts = elem.getFirstChildByName("guardedStatements")->getChildrenByName("guardedStatement");
-		JobExpr::GuardedStmts stmtVec;
+		JobExpr::GuardedStmts guardedStmts;
 		for(auto iter = stmts.begin(), end = stmts.end(); iter != end; ++iter) {
-			XmlElementList&& types = iter->getChildrenByName("lambdaExprPtr");
-			stmtVec.push_back( std::make_pair(createNode<LambdaExpr>(types[0]), createNode<LambdaExpr>(types[1])) );
+			XmlElementList&& types = iter->getChildrenByName("expressionPtr");
+			guardedStmts.push_back( std::make_pair(createNode<Expression>(types[0]), createNode<Expression>(types[1])) );
 		}
-		LambdaExprPtr&& def = createNode<LambdaExpr>(elem, "defaultStatement", "lambdaExprPtr");
+		
+		ExpressionPtr&& defaultStmt = createNode<Expression>(elem, "defaultStatement", "expressionPtr");
+		
+		return createIrNode<JobExpr>(elem, defaultStmt, guardedStmts, localDecls);
+	}
 
-		return createIrNode<JobExpr>(elem, def, stmtVec, declVec);
-	}*/
+	NodePtr handle_lambdaDefinition(const XmlElement& elem) {
+		XmlElementList&& defs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
 
-	/*NodePtr handle_lambdaExpr(const XmlElement& elem) {
-		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
-		XmlElementList&& decls = elem.getFirstChildByName("captureList")->getChildrenByName("declarationStmtPtr");
-
-		LambdaExpr::CaptureList captList;
-		for(auto iter = decls.begin(), end = decls.end(); iter != end; ++iter) {
-			captList.push_back( createNode<DeclarationStmt>(*iter) );
-		}
-		vector<XmlElement>&& params = elem.getFirstChildByName("params")->getChildrenByName("param");
-
-		LambdaExpr::ParamList parList;
-		for(auto iter = params.begin(), end = params.end(); iter != end; ++iter) {
-			parList.push_back( createNode<Variable>(*iter, "variablePtr") );
-		}
-		StatementPtr&& body = createNode<Statement>(elem, "body", "statementPtr");
-		return createIrNode<LambdaExpr>(elem, typeT, captList, parList, body);
-	}*/
-
-	/*NodePtr handle_recLambdaDefinition(const XmlElement& elem) {
-		XmlElementList&& funs = elem.getFirstChildByName("definitions")->getChildrenByName("definition");
-		RecLambdaDefinition::RecFunDefs funVec;
-		for(auto iter = funs.begin(), end = funs.end(); iter != end; ++iter) {
+		LambdaDefinition::Definitions definitions;
+		for(auto iter = defs.begin(), end = defs.end(); iter != end; ++iter) {
 			VariablePtr&& var = createNode<Variable>(*iter, "variablePtr");
-			LambdaExprPtr&& lExpr = createNode<LambdaExpr>(*iter, "lambdaExprPtr");
-			funVec.insert( std::make_pair(var, lExpr) );
+			LambdaPtr&& lambda = createNode<Lambda>(*iter, "lambdaPtr");
+			definitions.insert( std::make_pair(var, lambda) );
 		}
-		return createIrNode<RecLambdaDefinition>(elem, funVec);
-	}*/
 
-	/*NodePtr handle_recLambdaExpr(const XmlElement& elem) {
-		VariablePtr&& var = createNode<Variable>(elem, "variable", "variablePtr");
-		RecLambdaDefinitionPtr&& def = createNode<RecLambdaDefinition>(elem, "definition", "recLambdaDefinitionPtr");
-		return createIrNode<RecLambdaExpr>(elem, var, def);
-	}*/
+		return createIrNode<LambdaDefinition>(elem, definitions);
+	}
+
+	NodePtr handle_lambdaExpr(const XmlElement& elem) {
+		VariablePtr&& variable = createNode<Variable>(elem, "variable", "variablePtr");
+		LambdaDefinitionPtr&& definition = createNode<LambdaDefinition>(elem, "definition", "lambdaDefinitionPtr");
+		
+		return createIrNode<LambdaExpr>(elem, variable, definition);
+	}
+	
+	NodePtr handle_lambda(const XmlElement& elem) {
+		FunctionTypePtr&& typeT = createNode<FunctionType>(elem, "type", "functionTypePtr");
+		
+		XmlElementList&& caps = elem.getFirstChildByName("captureList")->getChildrenByName("variablePtr");
+		Lambda::CaptureList captureList;
+		for(auto iter = caps.begin(), end = caps.end(); iter != end; ++iter) {
+			captureList.push_back(createNode<Variable>(*iter));
+		}
+		
+		XmlElementList&& pars = elem.getFirstChildByName("paramList")->getChildrenByName("variablePtr");
+		Lambda::ParamList paramList;
+		for(auto iter = pars.begin(), end = pars.end(); iter != end; ++iter) {
+			paramList.push_back(createNode<Variable>(*iter));
+		}
+		
+		StatementPtr&& body = createNode<Statement>(elem, "body", "statementPtr");
+		
+		return createIrNode<Lambda>(elem, typeT, captureList, paramList, body);
+	}
+	
+	NodePtr handle_captureInitExpr(const XmlElement& elem) {
+		ExpressionPtr&& lambda = createNode<Expression>(elem, "lambda", "expressionPtr");
+		
+		XmlElementList&& vals = elem.getFirstChildByName("values")->getChildrenByName("expressionPtr");
+		CaptureInitExpr::Values values;
+		for(auto iter = vals.begin(), end = vals.end(); iter != end; ++iter) {
+			values.push_back(createNode<Expression>(*iter));
+		}
+		
+		return createIrNode<CaptureInitExpr>(elem, lambda, values);
+	}
 	
 	NodePtr handle_memberAccessExpr(const XmlElement& elem) {
 		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
@@ -425,13 +451,23 @@ public:
 		const unsigned index = numeric_cast<unsigned>(elem.getFirstChildByName("index")->getText());
 		return createIrNode<TupleProjectionExpr>(elem, expr, index);
 	}
+	
+	NodePtr handle_markerStmt(const XmlElement& elem) {
+		StatementPtr&& subStatement = createNode<Statement>(elem, "subStatement", "statementPtr");
+		return createIrNode<MarkerStmt>(elem, subStatement, numeric_cast<int>(elem.getAttr("identifier")));
+	}
+	
+	NodePtr handle_markerExpr(const XmlElement& elem) {
+		ExpressionPtr&& subExpression = createNode<Expression>(elem, "subExpression", "expressionPtr");
+		return createIrNode<MarkerExpr>(elem, subExpression, numeric_cast<int>(elem.getAttr("identifier")));
+	}
 
 	NodePtr handle_program(const XmlElement& elem) {
-		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expression");
+		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 
 		Program::EntryPointSet exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.insert( createNode<Expression>(*iter, "expressionPtr") );
+			exprVec.insert( createNode<Expression>(*iter));
 		}
 		
 		bool main = (elem.getAttr("main") == "1") ? true : false;
@@ -450,7 +486,6 @@ public:
 		assert(!ref.empty());
 		auto fit = elemMap.find(numeric_cast<unsigned long>(ref));
 		assert(fit != elemMap.end() && "Element not in the map");
-		buildAnnotations(*type, fit->second.second);
 
 		return fit->second.second;
 	}
@@ -467,8 +502,9 @@ public:
 		DISPATCH(forStmt)			DISPATCH(ifStmt)			DISPATCH(switchStmt)		DISPATCH(whileStmt)				DISPATCH(breakStmt)
 		DISPATCH(continueStmt)		DISPATCH(compoundStmt)		DISPATCH(declarationStmt)	DISPATCH(structExpr)			DISPATCH(unionExpr)
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
-		/*DISPATCH(jobExpr)			DISPATCH(lambdaExpr)*/		DISPATCH(program)			/*DISPATCH(recLambdaDefinition)	DISPATCH(recLambdaExpr)*/
-		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(tupleProjectionExpr)
+		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
+		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(captureInitExpr)	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
+		DISPATCH(markerExpr)
 		assert(false && "XML node not handled!");
 	}
 
