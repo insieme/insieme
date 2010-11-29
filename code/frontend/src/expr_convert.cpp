@@ -776,6 +776,10 @@ public:
 		// !a
 		case UO_LNot:
 			subExpr = convFact.tryDeref(subExpr);
+			if(*subExpr->getType() != *builder.getNodeManager().basic.getBool()) {
+				// for now add a cast expression to bool FIXME
+				subExpr = convFact.getASTBuilder().castExpr(builder.getNodeManager().basic.getBool(), subExpr);
+			}
 			assert(*subExpr->getType() == *builder.getNodeManager().basic.getBool());
 			subExpr = builder.callExpr( subExpr->getType(), builder.getNodeManager().basic.getBoolLNot(), subExpr );
 			break;

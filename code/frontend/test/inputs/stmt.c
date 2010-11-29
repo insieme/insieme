@@ -339,7 +339,7 @@ void vector_stmt_test() {
 
 	//#pragma test \
 	"decl ref<vector<vector<ref<int<4>>,2>,2>> v1 = ( var(vector.initUniform(vector.initUniform(( var(0))))))"
-	int b[2][2];
+	int b[2][3];
 
 	#pragma test \
 	"((v1[CAST<uint<4>>(0)])[CAST<uint<4>>(0)])"
