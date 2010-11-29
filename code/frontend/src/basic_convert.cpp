@@ -342,6 +342,16 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 		return convertInitializerList( listExpr, type );
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
+
+	// If the init expr is malloc/calloc function, a ref.new has to be used for initialization
+	if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(retExpr)) {
+		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
+			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
+				DLOG(INFO) << "MALLOC FOUND!";
+			}
+		}
+	}
+
 	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
 		retExpr = builder.refVar( retExpr );
 	return retExpr;
