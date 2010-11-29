@@ -57,10 +57,10 @@ void basic_type_test() {
 	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
 	double g;
 	
-	#pragma test "vector<ref<real<4>>,3> v1 = undefined(AP(vector<ref<real<4>>,3>))"
+	#pragma test "vector<ref<real<4>>,3> v1 = undefined(vector<ref<real<4>>,3>)"
 	float v[3];
 
-    #pragma test "vector<vector<ref<int<4>>,2>,3> v1 = undefined(AP(vector<vector<ref<int<4>>,2>,3>))"
+    #pragma test "vector<vector<ref<int<4>>,2>,3> v1 = undefined(vector<vector<ref<int<4>>,2>,3>)"
 	int vv[3][2];
 
 	#pragma test "vector<ref<real<4>>,3> v1 = {ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0))}"
@@ -81,7 +81,7 @@ struct Person {
 
 void test_func() {
 	#pragma test \
-	"ref<struct<height:ref<int<4>>,age:ref<int<4>>>> v1 = ref.var(undefined(AP(struct<height:ref<int<4>>,age:ref<int<4>>>)))"
+	"ref<struct<height:ref<int<4>>,age:ref<int<4>>>> v1 = ref.var(undefined(struct<height:ref<int<4>>,age:ref<int<4>>>))"
 	struct Person p;
 
 	#pragma test \
