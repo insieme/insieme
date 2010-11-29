@@ -45,7 +45,7 @@ void push(Stack stack, int value) {
 }
 
 int pop(Stack stack) {
-	if (!stack->top) {
+	if (!((bool)stack->top)) {
 		return -1;
 	}
 	item* tmp = stack->top;
