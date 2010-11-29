@@ -312,7 +312,7 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	// check whether there is an initialization
 	const ExpressionPtr& init = ptr->getInitialization();
-	if (cc.basic.isUndefined(init)) {
+	if (core::analysis::isCallOf(init, cc.basic.getUndefined())) {
 		return;
 	}
 

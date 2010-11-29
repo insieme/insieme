@@ -936,6 +936,9 @@ namespace {
 
 	TypePtr getMemberType(const ExpressionPtr& subExpression, const Identifier& member) {
 		TypePtr type = subExpression->getType();
+		if (type->getNodeType() == NT_RecType) {
+			type = static_pointer_cast<const RecType>(type)->unroll(type->getNodeManager());
+		}
 		assert(type->getNodeType() == NT_StructType && "Accessing member of non-struct type!");
 		StructTypePtr structType = static_pointer_cast<const StructType>(type);
 		TypePtr res = structType->getTypeOfMember(member);

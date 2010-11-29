@@ -105,29 +105,29 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 }
 
 // FIXME: this has to be rewritten once lang/core is in a final state
-std::string getOperationType(const core::lang::BasicGenerator& gen, const core::TypePtr& type) {
-	using namespace core::lang;
-	DVLOG(2) << type;
-	if(gen.isUnsignedInt(type))	return "uint";
-	if(gen.isSignedInt(type)) 	return "int";
-	if(gen.isBool(type))		return "bool";
-	if(gen.isReal(type))		return "real";
-    if(const core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-        const core::TypePtr ref = vt->getElementType();
-        std::ostringstream ss;
-
-        if(const core::RefType* subtype = dynamic_cast<const core::RefType*>(&*ref))
-            ss << "vector<" << getOperationType(gen, subtype->getElementType()) << ">";
-        else
-            ss << "vector<" << getOperationType(gen, ref) << ">";
-
-//        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
-        return ss.str();
-    }
-    // FIXME
-    DLOG(ERROR) << *type;
-	assert(false && "Type not supported");
-}
+//std::string getOperationType(const core::lang::BasicGenerator& gen, const core::TypePtr& type) {
+//	using namespace core::lang;
+//	DVLOG(2) << type;
+//	if(gen.isUnsignedInt(type))	return "uint";
+//	if(gen.isSignedInt(type)) 	return "int";
+//	if(gen.isBool(type))		return "bool";
+//	if(gen.isReal(type))		return "real";
+//    if(const core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(type)) {
+//        const core::TypePtr ref = vt->getElementType();
+//        std::ostringstream ss;
+//
+//        if(const core::RefType* subtype = dynamic_cast<const core::RefType*>(&*ref))
+//            ss << "vector<" << getOperationType(gen, subtype->getElementType()) << ">";
+//        else
+//            ss << "vector<" << getOperationType(gen, ref) << ">";
+//
+////        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
+//        return ss.str();
+//    }
+//    // FIXME
+//    DLOG(ERROR) << *type;
+//	assert(false && "Type not supported");
+//}
 
 }
 
@@ -186,7 +186,6 @@ core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, c
 		retExpr = builder.captureInitExpr(retExpr, values);
 
 	return retExpr;
-	// return builder.callExpr( retTy, retExpr, ExpressionList() );
 }
 
 //#############################################################################
@@ -346,8 +345,6 @@ public:
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 			// collects the type of each argument of the expression
 			ExpressionList args;
-//			const core::TupleType::ElementTypeList& argTypes = funcTy->getArgumentType()->getElementTypes();
-
 			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
 				Expr* currArg = callExpr->getArg(argId);
 				core::ExpressionPtr&& arg = this->Visit(currArg);
@@ -429,12 +426,30 @@ public:
 			if(!values.empty())
 				lambdaExpr = builder.captureInitExpr(lambdaExpr, values);
 
-			core::ExpressionPtr irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+			core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
 			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
 			return annotatedNode;
 		}
 		assert(false && "Call expression not referring a function");
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						SIZEOF ALIGNOF EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+		START_LOG_EXPR_CONVERSION(expr);
+		if(expr->isSizeOf()) {
+			core::LiteralPtr size;
+			core::TypePtr&& type = convFact.convertType( expr->getArgumentType().getTypePtr() );
+			if( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
+				size = convFact.mgr.basic.getIntTypeParamLiteral(vecTy->getSize());
+			} else {
+				size = convFact.mgr.basic.getTypeLiteral(type);
+			}
+			return convFact.getASTBuilder().callExpr( convFact.mgr.basic.getSizeof(), size );
+		}
+		assert(false && "SizeOfAlignOfExpr not yet supported");
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -466,6 +481,7 @@ public:
 		if(membExpr->isArrow()) {
 			// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
 			base = convFact.tryDeref( Visit(membExpr->getBase()) );
+
 			if(core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ||
 				core::dynamic_pointer_cast<const core::ArrayType>(base->getType())) {
 
@@ -480,6 +496,7 @@ public:
 				base = convFact.tryDeref(base);
 			}
 		}
+		// DLOG(INFO) << *base->getType();
 		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
 
 		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(base, ident);
@@ -759,6 +776,10 @@ public:
 		// !a
 		case UO_LNot:
 			subExpr = convFact.tryDeref(subExpr);
+			if(*subExpr->getType() != *builder.getNodeManager().basic.getBool()) {
+				// for now add a cast expression to bool FIXME
+				subExpr = convFact.getASTBuilder().castExpr(builder.getNodeManager().basic.getBool(), subExpr);
+			}
 			assert(*subExpr->getType() == *builder.getNodeManager().basic.getBool());
 			subExpr = builder.callExpr( subExpr->getType(), builder.getNodeManager().basic.getBoolLNot(), subExpr );
 			break;

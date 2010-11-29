@@ -677,6 +677,12 @@ public:
 	 */
 	static RecTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition);
 
+	/**
+	 * Unrolls this recursive type.
+	 */
+	TypePtr unroll(NodeManager& manager) const {
+		return definition->unrollOnce(manager, typeVariable);
+	}
 };
 
 
