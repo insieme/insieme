@@ -110,6 +110,19 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 
 ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call);
 
+
+/** Builds a lambda expression that can be called in place of [root].
+ ** Captures all free variables and returns a capture init expression.
+ ** This is the statement version that generates an initialized lambda returning unit.
+ ** */
+CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified = false);
+
+/** Builds a lambda expression that can be called in place of [root].
+ ** Captures all free variables and returns a capture init expression.
+ ** This is the expression version that generates an initialized lambda returning the same value/type root would have returned.
+ ** */
+CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified = false);
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

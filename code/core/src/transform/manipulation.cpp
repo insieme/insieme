@@ -37,8 +37,8 @@
 #include <algorithm>
 
 #include "insieme/core/transform/manipulation.h"
-
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ast_builder.h"
 
 namespace insieme {
 namespace core {
@@ -237,6 +237,65 @@ ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call) {
 		return res;
 	}
 	return call;
+}
+
+// ------------------------------ lambda extraction -------------------------------------------------------------------
+
+namespace { 
+	 /** Will certainly determine the declaration status of variables inside a block.
+	 */
+	struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
+		utils::set::PointerSet<VariablePtr> declared;
+		utils::set::PointerSet<VariablePtr> undeclared;
+
+		bool visitNode(const NodeAddress& node) { return true; } // default behaviour: continue visiting
+
+		bool visitDeclarationStmt(const DeclarationStmtAddress &decl) {
+			declared.insert(decl->getVariable());
+			return true;
+		}
+
+		bool visitVariable(const VariableAddress& var) {
+			auto vp = var.getAddressedNode();
+			if(declared.find(vp) == declared.end()) undeclared.insert(vp);
+			return true;
+		}
+
+		// due to the structure of the IR, nested lambdas can never reuse outer variables
+		bool visitLambda(const LambdaAddress&) {
+			return false;
+		}
+	};
+
+	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, ASTBuilder::CaptureInits& captures) {
+		LambdaDeltaVisitor ldv;
+		visitAllInterruptable(StatementAddress(root), ldv);
+
+		ASTBuilder build(manager);
+		utils::map::PointerMap<NodePtr, NodePtr> replacements;
+		for_each(ldv.undeclared, [&](VariablePtr p){
+			auto var = build.variable(p->getType());
+			captures[var] = p;
+			replacements[p] = var;
+		});
+
+		return replaceAll(manager, root, replacements, preservePtrAnnotationsWhenModified);
+	}
+}
+
+CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified /*= false*/) {
+	ASTBuilder build(manager);
+	ASTBuilder::CaptureInits captures;
+	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(extractLambdaImpl(manager, root, preservePtrAnnotationsWhenModified, captures));
+	return build.lambdaExpr(newStmt, captures);
+}
+
+CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified /*= false*/) {
+	ASTBuilder build(manager);
+	ASTBuilder::CaptureInits captures;
+	ExpressionPtr newExpr = dynamic_pointer_cast<const Expression>(extractLambdaImpl(manager, root, preservePtrAnnotationsWhenModified, captures));
+	auto body = build.returnStmt(newExpr);
+	return build.lambdaExpr(root->getType(), body, captures);
 }
 
 } // end namespace transform
