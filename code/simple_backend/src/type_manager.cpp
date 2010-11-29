@@ -51,38 +51,115 @@ TypeManager::Entry toEntry(string name) {
 	return TypeManager::Entry(name, name, CodePtr());
 }
 
-string TypeManager::formatParamter(CodePtr& context, const TypePtr& type, const string& name, bool decl) {
+string TypeManager::formatParamter(CodePtr& context, const TypePtr& paramType, const string& name, bool decl) {
 
-	// create output ...
+	// make local copy
+	TypePtr type = paramType;
 
-	// special handling for vectors and pointer to vectors
+	// special handling for nested arrays / vectors ...
+	NodeType kind = type->getNodeType();
 	RefTypePtr ref = dynamic_pointer_cast<const RefType>(type);
-	if (ref || type->getNodeType() == NT_VectorType) {
-		TypePtr element = (ref)?ref->getElementType():type;
-		if (element->getNodeType() == NT_VectorType) {
+	if (kind == NT_RefType || kind == NT_VectorType || kind == NT_ArrayType) {
 
-			// special handling for references to vectors ...
-			// -- result has to look like float(* var)[5][5]
-
-			// assemble parameter entry ...
-			string postfix = "";
-			TypePtr cur = element;
-			while (cur->getNodeType() == NT_VectorType) {
-				VectorTypePtr curVec = static_pointer_cast<const VectorType>(cur);
-				postfix = postfix + "[" + toString(curVec->getSize()) + "]";
-				cur = curVec->getElementType();
-				if (cur->getNodeType() == NT_RefType) {
-					cur = static_pointer_cast<const RefType>(cur)->getElementType();
-				}
-			}
-
-			string prefix = getTypeName(context, cur, decl);
-			if (ref) {
-				prefix = prefix + "(*";
-				postfix = ")" + postfix;
-			}
-			return prefix + " " + name + postfix;
+		// count pointers in front of arrays
+		int refCount = 0;
+		while(kind == NT_RefType) {
+			refCount++;
+			type = static_pointer_cast<const RefType>(type)->getElementType();
+			kind = type->getNodeType();
 		}
+
+		// reduce number of references if declaring a C array (implicit in C)
+		refCount -= (decl && kind != NT_VectorType)?1:0;
+
+		// count arrays
+		int arrayCount = 0;
+		while(kind == NT_ArrayType) {
+			ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
+			arrayCount += arrayType->getDimension().getValue();
+
+			type = arrayType->getElementType();
+			kind = type->getNodeType();
+
+			// discard embedded reference type
+			if (kind == NT_RefType) {
+				type = static_pointer_cast<const RefType>(type)->getElementType();
+				kind = type->getNodeType();
+			}
+		}
+
+		// count vectors
+		int vectorCount = 0;
+		string postfix = "";
+		while(kind == NT_VectorType) {
+			vectorCount++;
+
+			VectorTypePtr vectorType = static_pointer_cast<const VectorType>(type);
+			postfix = postfix + "[" + toString(vectorType->getSize()) + "]";
+
+			type = vectorType->getElementType();
+			kind = type->getNodeType();
+
+			// discard embedded reference type
+			if (kind == NT_RefType) {
+				type = static_pointer_cast<const RefType>(type)->getElementType();
+				kind = type->getNodeType();
+			}
+		}
+
+		// test whether there has been an array / vector nested ...
+		if (arrayCount + vectorCount == 0) {
+			// no special treatment required
+			return getTypeName(context, paramType, decl) + " " + name;
+		}
+
+		// check for a mixed node
+		if (kind == NT_ArrayType || kind == NT_RefType) {
+			// mixed mode ... just finish counting and use stars
+			while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
+				refCount++;
+				type = static_pointer_cast<const RefType>(type);
+				NodeType newKind = type->getNodeType();
+
+				if (kind == NT_VectorType && newKind == NT_RefType) {
+					type = static_pointer_cast<const VectorType>(type)->getElementType();
+					newKind = type->getNodeType();
+				} else if (kind == NT_ArrayType && newKind == NT_RefType) {
+					type = static_pointer_cast<const ArrayType>(type)->getElementType();
+					newKind = type->getNodeType();
+				}
+				kind = newKind;
+			}
+
+			// sum up references
+			refCount += arrayCount + vectorCount;
+
+			// make an assertion on the result
+			assert(refCount > 0 && "RefCount should be larger than 0!");
+
+			// build up type***...*** name;
+			string prefix = getTypeName(context, type, decl);
+			for (int i=0; i<refCount; i++) {
+				prefix += "*";
+			}
+			return prefix + " " + name;
+		}
+
+		// create type declaration
+		string prefix = getTypeName(context, type, decl);
+		if (vectorCount > 0 && (refCount + arrayCount) > 0) {
+			prefix += "(";
+		}
+		for (int i=0; i<refCount; i++) {
+			prefix += "*";
+		}
+		for (int i=0; i<arrayCount; i++) {
+			prefix += "*";
+		}
+		if (vectorCount > 0 && (refCount + arrayCount) > 0) {
+			postfix = ")" + postfix;
+		}
+		return prefix + " " + name + postfix;
 	}
 
 	// default case - simple case - type followed by name

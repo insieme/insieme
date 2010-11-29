@@ -371,8 +371,12 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	// if no init expression is provided => use undefined for given set of types
 	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType
 			  || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
+		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		    // FIXME add zero initialization of references if needed
+			return builder.refVar( builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(refTy->getElementType()) ) );
+		}
 		return zeroInit ? builder.callExpr( mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(type))
-		        : builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
+                : builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
 	} else if (!expr)
 		return defaultInitVal(type);
 

@@ -59,7 +59,7 @@ namespace core {
 #define CONCRETE(name) NT_ ## name,
 enum NodeType {
 // the necessary information is obtained from the node-definition file
-#include "ast_nodes.def"
+#include "insieme/core/ast_nodes.def"
 };
 #undef CONCRETE
 
@@ -88,7 +88,7 @@ template<typename T> class Address;
 	typedef Address<const NAME> NAME ## Address;
 
 	// take all nodes from within the definition file
-	#include "ast_nodes.def"
+	#include "insieme/core/ast_nodes.def"
 
 #undef NODE
 
