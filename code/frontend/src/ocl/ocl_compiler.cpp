@@ -605,7 +605,7 @@ private:
         // start vector of pfor loop: [0,0,0]
         expr.push_back(INT3DVECINIT("0"));
         // end vector of pfor
-        expr.push_back(/*builder.castExpr(builder.vectorType(BASIC.getInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),*/ end)/*)*/;
+        expr.push_back(end)/*)*/;
         // increment vector of pfor loop: [1,1,1]
         expr.push_back(INT3DVECINIT("1"));
         // lambda to be called
@@ -825,7 +825,8 @@ public:
 
                 std::vector<core::StatementPtr> gobalBodyStmts;
                 gobalBodyStmts.push_back(globalPfor);
-                gobalBodyStmts.push_back(BASIC.getMergeAll());
+                expr.clear();
+                gobalBodyStmts.push_back(builder.callExpr(BASIC.getMergeAll(), expr));
                 core::CompoundStmtPtr globalParBody = builder.compoundStmt(gobalBodyStmts);
 
 
