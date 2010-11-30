@@ -130,7 +130,7 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 
 				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
 				assert(type->getNodeType() == core::NT_ArrayType);
-				const core::TypePtr& elemType = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
+				core::TypePtr elemType = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
 
 				// The number of elements to be allocated of type 'targetType' is:
 				//      expr / sizeof(targetType)
@@ -139,8 +139,13 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 					getSizeOfType(builder, elemType)
 				);
 
+				assert(elemType->getNodeType() == core::NT_RefType);
+				elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
+
 				return builder.callExpr(builder.getBasicGenerator().getRefNew(),
-						builder.callExpr(builder.getBasicGenerator().getVectorInitUndefined(), size));
+						builder.callExpr(builder.getBasicGenerator().getArrayCreate1D(),
+						builder.refVar(builder.callExpr(builder.getBasicGenerator().getUndefined(),
+							builder.getBasicGenerator().getTypeLiteral(elemType))), size));
 			}
 		}
 	}

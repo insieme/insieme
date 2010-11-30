@@ -4,7 +4,7 @@
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl vector<ref<int<4>>,4> v3 = [ var(1),  var(2),  var(3),  var(4)];
         printf("%d\n", varlist.pack((4*sizeof(int<4>))));
-        decl ref<array<ref<int<4>>,1>> v4 =  new(vector.initUndefined(4*sizeof(int<4>)/sizeof(int<4>)));
+        decl ref<array<ref<int<4>>,1>> v4 =  new(array.create.1D( var(undefined(int<4>)), 4*sizeof(int<4>)/sizeof(int<4>)));
         memcpy(v4, v3, 4*sizeof(int<4>));
         for(decl ref<uint<8>> v5 =  var(0) .. 4*sizeof(int<4>)/sizeof(int<4>) : 1) {
             printf("%d, ", varlist.pack((v4[v5])));
@@ -22,7 +22,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl vector<ref<int<4>>,4> v3 = [( var(1)), ( var(2)), ( var(3)), ( var(4))];
         printf("%d\n", varlist.pack(((4*sizeof(int<4>)))));
-        decl ref<array<ref<int<4>>,1>> v4 = ( new(vector.initUndefined(((4*sizeof(int<4>))/sizeof(int<4>)))));
+        decl ref<array<ref<int<4>>,1>> v4 = ( new(array.create.1D(( var(undefined(int<4>))), ((4*sizeof(int<4>))/sizeof(int<4>)))));
         memcpy(( *v4), v3, (4*sizeof(int<4>)));
         for(decl ref<uint<8>> v5 = ( var(CAST<uint<8>>(0))) .. ((4*sizeof(int<4>))/sizeof(int<4>)) : 1) {
             printf("%d, ", varlist.pack((( *(( *v4)[CAST<uint<4>>(( *v5))])))));
