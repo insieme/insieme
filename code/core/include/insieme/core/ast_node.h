@@ -51,6 +51,23 @@
 namespace insieme {
 namespace core {
 
+template<typename T> class Pointer;
+template<typename T> class Address;
+
+/**
+ * Adds forward declarations for all AST node types. Further, for each
+ * type a type definition for a corresponding annotated pointer is added.
+ */
+#define NODE(NAME) \
+	class NAME; \
+	typedef Pointer<const NAME> NAME ## Ptr; \
+	typedef Address<const NAME> NAME ## Address;
+
+	// take all nodes from within the definition file
+	#include "insieme/core/ast_nodes.def"
+
+#undef NODE
+
 /**
  * Defines an enumeration containing an entry for every node type. This
  * enumeration can than be used to identify the actual type of AST nodes
@@ -73,24 +90,6 @@ enum NodeCategory {
 	NC_Statement, /* < The node represents a statement. */
 	NC_Program /* < The node represents a program. */
 };
-
-
-template<typename T> class Pointer;
-template<typename T> class Address;
-
-/**
- * Adds forward declarations for all AST node types. Further, for each
- * type a type definition for a corresponding annotated pointer is added.
- */
-#define NODE(NAME) \
-	class NAME; \
-	typedef Pointer<const NAME> NAME ## Ptr; \
-	typedef Address<const NAME> NAME ## Address;
-
-	// take all nodes from within the definition file
-	#include "insieme/core/ast_nodes.def"
-
-#undef NODE
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.
