@@ -1,4 +1,4 @@
-import os, subprocess, shlex, sys, shutil
+import os, subprocess, shlex, sys, shutil, time
 
 INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 CFLAGS = "--std=c99 -I."
@@ -22,11 +22,14 @@ class bcolors:
         self.ENDC = ''
 
 def run_cmd(cmd):
-    pid = subprocess.Popen( shlex.split(cmd), stderr=subprocess.PIPE)
-    pid.wait()
-    if pid.returncode == 0:
-        return None;
-    return pid.communicate()[1]
+	start = time.time()
+	pid = subprocess.Popen( shlex.split(cmd), stderr=subprocess.PIPE)
+	pid.wait()
+	elapsed = time.time() - start
+	sys.stderr.write(" [{0:.4f} secs]\n".format(elapsed) )
+	if pid.returncode == 0:
+		return None;
+	return pid.communicate()[1]
 
 def check_for_error(test_case, ret):
     if ret is not None:
@@ -42,86 +45,91 @@ def check_diff(test_case_name, ref, test):
     return not check_for_error(test_case_name, ret)
 
 def run_test(test_case_name, test_num): 
-	  sys.stderr.write("#----------------------------------------\n")
-	  sys.stderr.write("# {0}: {1}\n".format(test_num, test_case_name))
-	  
-	  # name of the file contaning the reference IR for the current test
-	  refIr   = test_case_name + '.ir.ref'
-	  # name of the file containing the generated IR for the case test
-	  testIr  = test_case_name + '.ir'
-	  # name of the file containing the reference C output for the current test
-	  refC    = test_case_name + '.insieme.c.ref'
-	  # name of the file containing the generated C output for the current test
-	  testC   = test_case_name + '.insieme.c'
-	  
-	  inputs = test_case_name + '.c'
-	  if os.path.exists(test_case_name + '/inputs.data'):
-	  		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
-	  
-	  sys.stderr.write(" * Running Insieme Compiler...\n")	  		
-	  os.chdir(test_case_name)
-	  # RUN insieme to generate the IR dump and C output
-	  ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP}".format(
-	  						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC}) 
-	  					)
-	  if check_for_error(test_case_name, ret):
-	  	os.chdir("../")
-	  	return 1
-	  
-	  if not os.path.exists(refIr):
-		  shutil.copyfile(testIr, refIr)
-	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	sys.stderr.write("#----------------------------------------\n")
+	sys.stderr.write("# {0}: {1}\n".format(test_num, test_case_name))
 
-	  sys.stderr.write(" * Comparing generated IR...\n")
-	  if not check_diff(test_case_name, refIr, testIr):
-			os.chdir("../")
-			return 1
-	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	# name of the file contaning the reference IR for the current test
+	refIr   = test_case_name + '.ir.ref'
+	# name of the file containing the generated IR for the case test
+	testIr  = test_case_name + '.ir'
+	# name of the file containing the reference C output for the current test
+	refC    = test_case_name + '.insieme.c.ref'
+	# name of the file containing the generated C output for the current test
+	testC   = test_case_name + '.insieme.c'
+
+	inputs = test_case_name + '.c'
+	if os.path.exists(test_case_name + '/inputs.data'):
+		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
+
+	sys.stderr.write(" * Running Insieme Compiler...")	  		
+	os.chdir(test_case_name)
+	# RUN insieme to generate the IR dump and C output
+	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP}".format(
+						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC}) 
+					)
+	if check_for_error(test_case_name, ret):
+		os.chdir("../")
+		return 1
+
+	if not os.path.exists(refIr):
+	  shutil.copyfile(testIr, refIr)
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+
+	sys.stderr.write(" * Comparing generated IR...")
+	if not check_diff(test_case_name, refIr, testIr):
+		os.chdir("../")
+		return 1
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+
+	if not os.path.exists(refC):
+	  shutil.copyfile(testC, refC)
+	  
+	sys.stderr.write(" * Comparing generated C output...")
+	if not check_diff(test_case_name, refC, testC):
+		os.chdir("../")
+		return 1
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+
+	# file containing the output of the reference program
+	ref_out = "ref.out"
+	# file containing the output of the test program
+	test_out = "test.out"
+
+	sys.stderr.write(" * Compiling C input...")
+	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
+					)
+
+	sys.stderr.write(" * Compiling generated C output...")
+	ret = run_cmd("{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
+					)
+	if check_for_error(test_case_name, ret):
+		os.chdir("../")
+		return 1
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+
+	sys.stderr.write(" * Running input program... ")
+	start = time.time()
+	os.system("./ref > {0}".format(ref_out))
+	sys.stderr.write(" [{0:.3f} secs]\n".format(time.time() - start))
 	
-	  if not os.path.exists(refC):
-		  shutil.copyfile(testC, refC)
-		  
-	  sys.stderr.write(" * Comparing generated C output...\n")
-	  if not check_diff(test_case_name, refC, testC):
-	      os.chdir("../")
-	      return 1
-	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	  
-	  # file containing the output of the reference program
-	  ref_out = "ref.out"
-	  # file containing the output of the test program
-	  test_out = "test.out"
-	  
-	  sys.stderr.write(" * Compiling C input...\n")
-	  ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
-	 					)
+	sys.stderr.write(" * Running output program...")
+	start = time.time()
+	os.system("./test > {0}".format(test_out))
+	sys.stderr.write(" [{0:.3f} secs]\n".format(time.time() - start))
 
-	  sys.stderr.write(" * Compiling generated C output...\n")
-	  ret = run_cmd("{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-	  						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
-	  					)
-	  if check_for_error(test_case_name, ret):
-			os.chdir("../")
-			return 1
-	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	  
-	  sys.stderr.write(" * Running input program...\n")
-	  os.system("./ref > {0}".format(ref_out))
-	  sys.stderr.write(" * Running output program...\n")
-	  os.system("./test > {0}".format(test_out))
-	  
-	  sys.stderr.write(" * Checking generated program output...\n")
-	  if not check_diff(test_case_name, ref_out, test_out):
-	     	os.chdir("../")
-	     	return 1
-	  sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
-	  
-	  map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
-	  
-	  sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]\n" + bcolors.ENDC)
-	  os.chdir("../")
-	  return 0
+	sys.stderr.write(" * Checking generated program output...")
+	if not check_diff(test_case_name, ref_out, test_out):
+		os.chdir("../")
+		return 1
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+
+	map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
+
+	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]\n" + bcolors.ENDC)
+	os.chdir("../")
+	return 0
 
 def run_tests():
 	failed_test = 0

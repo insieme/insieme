@@ -134,9 +134,10 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 
 				// The number of elements to be allocated of type 'targetType' is:
 				//      expr / sizeof(targetType)
-				core::CallExprPtr&& size = builder.callExpr(builder.getBasicGenerator().getSignedIntDiv(),
-					callExpr->getArguments().front(),
-					getSizeOfType(builder, elemType)
+				core::CallExprPtr&& size = builder.callExpr(
+					builder.getBasicGenerator().getSignedIntDiv(),
+						callExpr->getArguments().front(),
+						getSizeOfType(builder, elemType)
 				);
 
 				assert(elemType->getNodeType() == core::NT_RefType);
@@ -151,31 +152,6 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 	}
 	return core::ExpressionPtr();
 }
-
-// FIXME: this has to be rewritten once lang/core is in a final state
-//std::string getOperationType(const core::lang::BasicGenerator& gen, const core::TypePtr& type) {
-//	using namespace core::lang;
-//	DVLOG(2) << type;
-//	if(gen.isUnsignedInt(type))	return "uint";
-//	if(gen.isSignedInt(type)) 	return "int";
-//	if(gen.isBool(type))		return "bool";
-//	if(gen.isReal(type))		return "real";
-//    if(const core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-//        const core::TypePtr ref = vt->getElementType();
-//        std::ostringstream ss;
-//
-//        if(const core::RefType* subtype = dynamic_cast<const core::RefType*>(&*ref))
-//            ss << "vector<" << getOperationType(gen, subtype->getElementType()) << ">";
-//        else
-//            ss << "vector<" << getOperationType(gen, ref) << ">";
-//
-////        ss << "vector<" << getOperationType(vt->getElementType()) << ">";
-//        return ss.str();
-//    }
-//    // FIXME
-//    DLOG(ERROR) << *type;
-//	assert(false && "Type not supported");
-//}
 
 }
 
