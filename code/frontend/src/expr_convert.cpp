@@ -371,16 +371,6 @@ public:
 			const core::ASTBuilder& builder = convFact.builder;
 
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
-			// collects the type of each argument of the expression
-			ExpressionList args;
-			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
-				Expr* currArg = callExpr->getArg(argId);
-				core::ExpressionPtr&& arg = this->Visit(currArg);
-				arg = this->convFact.tryDeref(arg);
-				args.push_back( arg );
-			}
-
-			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
 			const TranslationUnit* oldTU = convFact.currTU;
 
@@ -397,9 +387,29 @@ public:
 					convFact.currTU = &Program::getTranslationUnit(ret.second);
 				}
 			}
+
+			if(!definition) {
+				//------------------------------------------------
+				//     Handle of special buildin functions
+				//------------------------------------------------
+				// free(): check whether this is a call to the free() function
+				if(funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
+					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), Visit(callExpr->getArg(0)) );
+				}
+			}
+
+			// collects the type of each argument of the expression
+			ExpressionList args;
+			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
+				core::ExpressionPtr&& arg = convFact.tryDeref( Visit( callExpr->getArg(argId) ) );
+				args.push_back( arg );
+			}
+
+			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
+
 			if(!definition) {
 				// No definition has been found in any of the translation units, we mark this function as extern!
-				core::ExpressionPtr irNode =
+				core::ExpressionPtr&& irNode =
 						convFact.builder.callExpr(	funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
 				// handle eventual pragmas attached to the Clang node
 				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
