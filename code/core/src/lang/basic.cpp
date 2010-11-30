@@ -199,7 +199,7 @@ LiteralPtr BasicGenerator::getIntTypeParamLiteral(IntTypeParam param) const {
 
 LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
 	auto literalType = pimpl->build.genericType("Type", toVector(type));
-	return pimpl->build.literal(literalType, toString(type));
+	return pimpl->build.literal(literalType, toString(*type));
 }
 
 } // namespace lang

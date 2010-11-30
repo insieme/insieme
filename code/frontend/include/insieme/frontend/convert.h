@@ -217,7 +217,7 @@ public:
 	core::NodePtr 	 		 convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
 	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
 	core::ExpressionPtr	 	 defaultInitVal(const core::TypePtr& type) const;
-	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const ;
+	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const ;
 
 	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
 

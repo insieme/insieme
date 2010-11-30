@@ -400,12 +400,12 @@ void wtime(void* _capture, double* t) {
 	struct __insieme_globals* var_69 = ((struct __insieme_funType_type_9*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		struct timeval* tv;
-		gettimeofday(tv, ((struct timezone*)(null)));
+		struct timeval tv;
+		gettimeofday(&tv, ((struct timezone*)(null)));
 		if((((*var_69).sec)<0)) {
-			(((*var_69).sec) = ((int)(((*tv).tv_sec))));
+			(((*var_69).sec) = ((int)(((tv).tv_sec))));
 		};
-		((t[0]) = (((double)((((*tv).tv_sec)-((long)(((*var_69).sec))))))+(1.0e-6*((double)(((*tv).tv_usec))))));
+		((t[0]) = (((double)((((tv).tv_sec)-((long)(((*var_69).sec))))))+(1.0e-6*((double)(((tv).tv_usec))))));
 	}
 }
 

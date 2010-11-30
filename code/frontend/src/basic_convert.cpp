@@ -364,7 +364,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     assert(false && "Default initialization type not defined");
 }
 
-core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type) const {
+core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const {
 	// get kind of initialized value
 	core::NodeType kind = type->getNodeType();
 	if (kind == core::NT_RefType) {
@@ -374,7 +374,12 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	// if no init expression is provided => use undefined for given set of types
 	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType
 			  || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
-		return builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
+		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		    // FIXME add zero initialization of references if needed
+			return builder.refVar( builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(refTy->getElementType()) ) );
+		}
+		return zeroInit ? builder.callExpr( mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(type))
+                : builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
 	} else if (!expr)
 		return defaultInitVal(type);
 
@@ -410,7 +415,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	core::DeclarationStmtPtr retStmt;
 
 	if(const VarDecl* definition = varDecl->getDefinition()) {
-		clang::QualType clangType = definition->getType();
+        clang::QualType clangType = definition->getType();
 		if(!clangType.isCanonical())
 			clangType = clangType->getCanonicalTypeInternal();
 
@@ -423,8 +428,33 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 		assert(var);
 
+        // flag to determine if a variable should be initialized with zeros instead of uninitialized
+        bool zeroInit = false;
+
+        // check for annotations which would lead to a zero init annotation
+		if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
+		    auto declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
+		    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
+		            I < declarationAnnotation->getAnnotationListEnd(); ++I) {
+		        if(ocl::AddressSpaceAnnotationPtr as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
+		            if(ocl::AddressSpaceAnnotation::addressSpace::LOCAL == as->getAddressSpace() ||
+		                    ocl::AddressSpaceAnnotation::addressSpace::PRIVATE == as->getAddressSpace()) {
+		                //TODO check why this fails:
+		                //assert(!definition->getInit() && "OpenCL local variables cannot have an initialization expression");
+		                zeroInit = true;
+		                std::cout << "init with zeros\n";
+		            }
+		        }
+		    }
+		}
+
+/*
+		if(definition->getAnnotation().str() == "__local") {
+		    zeroInit = true;
+*/
+
 		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType());
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), zeroInit);
 
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {

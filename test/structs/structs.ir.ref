@@ -3,7 +3,7 @@
 //  Entry Point: 
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v3 =  var(fun(){
-            decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 = undefined(AP(ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>>));
+            decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 =  var(undefined(struct<name:vector<ref<char>,30>,age:ref<uint<4>>>));
             strcpy(v4.name, "John Doe");
             v4.age := 101;
         }());
@@ -20,7 +20,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 //  Entry Point: 
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v3 = ( var(fun(){
-            decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 = undefined(AP(ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>>));
+            decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 = ( var(undefined(struct<name:vector<ref<char>,30>,age:ref<uint<4>>>)));
             strcpy(( *v4).name, "John Doe");
             (( *v4).age := CAST<uint<4>>(101));
         }()));

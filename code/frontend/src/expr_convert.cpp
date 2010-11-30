@@ -944,7 +944,7 @@ public:
 	core::ExpressionPtr VisitCompoundLiteralExpr(clang::CompoundLiteralExpr* compLitExpr) {
 
 		if(clang::InitListExpr* initList = dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
-			return convFact.convertInitExpr(initList, convFact.convertType(compLitExpr->getType().getTypePtr()));
+			return convFact.convertInitExpr(initList, convFact.convertType(compLitExpr->getType().getTypePtr()), false);
 		}
 
 		return Visit(compLitExpr->getInitializer());
@@ -984,7 +984,7 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 		// get all values of the init expression
 		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
 			const clang::Expr* subExpr = initList->getInit(i);
-			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy);
+			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy, false);
 			// If the type is a refType we have to add a VAR.REF operation
 			elements.push_back( convExpr );
 		}
@@ -997,7 +997,7 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 		core::StructExpr::Members members;
 		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
 			const core::NamedCompositeType::Entry& curr = structTy->getEntries()[i];
-			members.push_back( core::StructExpr::Member(curr.first, convertInitExpr(initList->getInit(i), curr.second)) );
+			members.push_back( core::StructExpr::Member(curr.first, convertInitExpr(initList->getInit(i), curr.second, false)) );
 		}
 		retExpr = builder.structExpr(members);
 	}

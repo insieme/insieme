@@ -2,4 +2,7 @@
 build*
 *.insieme
 *.insieme.c
+*.out
+*.ir
 *~
+
