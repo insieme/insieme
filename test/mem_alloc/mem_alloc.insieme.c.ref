@@ -1,0 +1,34 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Prototype for external function: sizeof //
+unsigned long sizeof([[unhandled_simple_type: type<'a>]]);
+
+// start code fragment :: Prototype for external function: memcpy //
+int memcpy();
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		int src_array[4];
+		printf("%d\n", (sizeof(4)*sizeof(int<4>)));
+		int** dest_array = malloc(sizeof(<?>'elem</?>[a]));
+		memcpy((*dest_array), src_array, (sizeof(4)*sizeof(int<4>)));
+		for(unsigned long idx = ((unsigned long)(0)); idx < ((sizeof(4)*sizeof(int<4>))/sizeof(int<4>)); idx += 1) {
+			printf("%d, ", ((*dest_array)[((unsigned int)((idx)))]));
+		};
+		printf("\n", 0);
+		( free(dest_array));
+	}
+}
+
