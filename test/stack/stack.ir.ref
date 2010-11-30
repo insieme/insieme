@@ -1,0 +1,101 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v1 =  var(0);
+        decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v2 =  var(undefined(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>));
+        v2 := fun(){
+            decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v3 =  new(vector.initUndefined(sizeof(struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>)/sizeof(struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>)));
+            v3[0].top := null;
+            return v3;
+        }();
+        {
+            for(decl ref<int<4>> v9 =  var(0) .. 10 : 1) {
+                printf("Pushing %d\n", varlist.pack((v9)));
+                fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v5, int<4> v6){
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v7 =  new(vector.initUndefined(sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})/sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})));
+                    v7[0].value := v6;
+                    v7[0].next := v5[0].top;
+                    v5[0].top := v7;
+                }(v2, v9);
+            };
+            v1 := 10;
+        };
+        {
+            for(decl ref<int<4>> v14 =  var(0) .. 5 : 1) {
+                printf("Poping  %d\n", varlist.pack((fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v10){
+                    if(!v10[0].top) {
+                        return 0-1;
+                    } else { };
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v11 = v10[0].top;
+                    decl ref<int<4>> v12 = v11[0].value;
+                    v10[0].top := v11[0].next;
+                     del(v11);
+                    return v12;
+                }(v2))));
+            };
+            v1 := 5;
+        };
+        fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
+            while(v15[0].top) {
+                decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = v15[0].top;
+                v15[0].top := v16[0].next;
+                 del(v16);
+            };
+             del(v15);
+        }(v2);
+        return 0;
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v1 = ( var(0));
+        decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v2 = ( var(undefined(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>)));
+        (v2 := fun(){
+            decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v3 = ( new(vector.initUndefined((sizeof(struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>)/sizeof(struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>)))));
+            (( *(( *v3)[0])).top := CAST<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>(null));
+            return ( *v3);
+        }());
+        {
+            for(decl ref<int<4>> v9 = ( var(0)) .. 10 : 1) {
+                printf("Pushing %d\n", varlist.pack((( *v9))));
+                fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v5, int<4> v6){
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v7 = ( new(vector.initUndefined((sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})/sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})))));
+                    (( *(( *v7)[0])).value := v6);
+                    (( *(( *v7)[0])).next := ( *( *(v5[0])).top));
+                    (( *(v5[0])).top := ( *v7));
+                }(( *v2), ( *v9));
+            };
+            (v1 := 10);
+        };
+        {
+            for(decl ref<int<4>> v14 = ( var(0)) .. 5 : 1) {
+                printf("Poping  %d\n", varlist.pack((fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v10){
+                    if((!CAST<bool>(( *( *(v10[0])).top)))) {
+                        return (CAST<int<4>>(0)-1);
+                    } else { };
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v11 = ( *(v10[0])).top;
+                    decl ref<int<4>> v12 = ( *(( *v11)[0])).value;
+                    (( *(v10[0])).top := ( *( *(( *v11)[0])).next));
+                    ( del(v11));
+                    return ( *v12);
+                }(( *v2)))));
+            };
+            (v1 := 5);
+        };
+        fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
+            while(( *(v15[0])).top) {
+                decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = ( *(v15[0])).top;
+                (( *(v15[0])).top := ( *( *(( *v16)[0])).next));
+                ( del(v16));
+            };
+            ( del(v15));
+        }(( *v2));
+        return 0;
+    }
+

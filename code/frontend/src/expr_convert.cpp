@@ -396,6 +396,13 @@ public:
 
 			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
+			// collects the type of each argument of the expression
+			ExpressionList args;
+			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
+				core::ExpressionPtr&& arg = convFact.tryDeref( Visit( callExpr->getArg(argId) ) );
+				args.push_back( arg );
+			}
+
 			const TranslationUnit* oldTU = convFact.currTU;
 
 			const FunctionDecl* definition = NULL;
@@ -420,13 +427,6 @@ public:
 				if(funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
 					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), Visit(callExpr->getArg(0)) );
 				}
-			}
-
-			// collects the type of each argument of the expression
-			ExpressionList args;
-			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
-				core::ExpressionPtr&& arg = convFact.tryDeref( Visit( callExpr->getArg(argId) ) );
-				args.push_back( arg );
 			}
 
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);

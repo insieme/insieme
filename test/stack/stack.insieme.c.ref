@@ -1,0 +1,100 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Prototype of struct item //
+struct item;
+
+// start code fragment :: type_declaration_item //
+struct item { 
+    int value;
+    struct item* next;
+};
+
+// start code fragment :: type_declaration_stack //
+struct stack { 
+    struct item* top;
+};
+
+// start code fragment :: Definition of newStack //
+struct stack* newStack() {
+	{
+		struct stack** res = malloc(sizeof(<?>'elem</?>[a]));
+		((((*res)[0]).top) = ((struct item*)(null)));
+		return (*res);;
+	}
+}
+
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Definition of push //
+void push(struct stack* stack, int value) {
+	{
+		struct item** element = malloc(sizeof(<?>'elem</?>[a]));
+		((((*element)[0]).value) = value);
+		((((*element)[0]).next) = ((stack[0]).top));
+		(((stack[0]).top) = (*element));
+	}
+}
+
+
+// start code fragment :: Definition of pop //
+int pop(struct stack* stack) {
+	{
+		if((!((bool)(((stack[0]).top))))) {
+			return (((int)(0))-1);;
+		};
+		struct item** tmp = ((stack[0]).top);
+		int* res = (((*tmp)[0]).value);
+		(((stack[0]).top) = (((*tmp)[0]).next));
+		( free(tmp));
+		return (*res);;
+	}
+}
+
+
+// start code fragment :: Definition of dumpStack //
+void dumpStack(struct stack* stack) {
+	{
+		while(((stack[0]).top)) {
+			struct item** tmp = ((stack[0]).top);
+			(((stack[0]).top) = (((*tmp)[0]).next));
+			( free(tmp));
+		};
+		( free(stack));
+	}
+}
+
+
+// start code fragment :: Definition of main //
+int main() {
+	{
+		int i = 0;
+		struct stack* stack;
+		((stack) = newStack());
+		{
+			for(int var_9 = 0; var_9 < 10; var_9 += 1) {
+				printf("Pushing %d\n", (var_9));
+				push((stack), (var_9));
+			};
+			((i) = 10);
+		};
+		{
+			for(int var_14 = 0; var_14 < 5; var_14 += 1) {
+				printf("Poping  %d\n", pop((stack)));
+			};
+			((i) = 5);
+		};
+		dumpStack((stack));
+		return 0;;
+	}
+}
+
