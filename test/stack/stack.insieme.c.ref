@@ -22,10 +22,16 @@ struct stack {
     struct item* top;
 };
 
+// start code fragment :: Prototype for external function: array.create.1D //
+<?>'elem</?>* array.create.1D(<?>'elem</?>, unsigned long);
+
+// start code fragment :: Prototype for external function: undefined //
+<?>'a</?> undefined([[unhandled_simple_type: type<'a>]]);
+
 // start code fragment :: Definition of newStack //
 struct stack* newStack() {
 	{
-		struct stack** res = malloc(sizeof(<?>'elem</?>[a]));
+		struct stack** res = memcpy(malloc(sizeof(<?>'elem</?>*)), &((<?>'elem</?>*)array.create.1D(memcpy(alloca(sizeof(<?>'a</?>)), &((<?>'a</?>)undefined(struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>)), sizeof(<?>'a</?>)), (sizeof(struct stack)/sizeof(struct stack)))), sizeof(<?>'elem</?>*));
 		((((*res)[0]).top) = ((struct item*)(null)));
 		return (*res);;
 	}
@@ -38,7 +44,7 @@ int printf(char*, ...);
 // start code fragment :: Definition of push //
 void push(struct stack* stack, int value) {
 	{
-		struct item** element = malloc(sizeof(<?>'elem</?>[a]));
+		struct item** element = memcpy(malloc(sizeof(<?>'elem</?>*)), &((<?>'elem</?>*)array.create.1D(memcpy(alloca(sizeof(<?>'a</?>)), &((<?>'a</?>)undefined(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})), sizeof(<?>'a</?>)), (sizeof(struct item)/sizeof(struct item)))), sizeof(<?>'elem</?>*));
 		((((*element)[0]).value) = value);
 		((((*element)[0]).next) = ((stack[0]).top));
 		(((stack[0]).top) = (*element));

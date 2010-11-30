@@ -43,6 +43,8 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/types.h"
 #include "insieme/core/type_utils.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace core {
@@ -176,13 +178,28 @@ CaptureInitExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const State
 	return captureInitExpr(lambda, values);
 }
 
-CallExprPtr ASTBuilder::getThreadGroup(const ExpressionPtr& level) const {
-    if(!level)
-        return callExpr(manager.basic.getGetThreadGroup(), uintLit(0));
-
+CallExprPtr ASTBuilder::getThreadGroup(ExpressionPtr level) const {
+    if(!level) level = uintLit(0);
     return callExpr(manager.basic.getGetThreadGroup(), level);
 }
 
+CallExprPtr ASTBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
+	if(!step) step = uintLit(1);
+	return callExpr(manager.basic.getPFor(), 
+		toVector<ExpressionPtr>(getThreadGroup(), vectorExpr(toVector(start)), vectorExpr(toVector(end)), vectorExpr(toVector(step)), body));
+}
+
+CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
+	auto decl = initialFor->getDeclaration();
+	auto loopvar = decl->getVariable();
+	auto forBody = initialFor->getBody();
+
+	auto pforLambdaParam = variable(vectorType(loopvar->getType(), IntTypeParam::getConcreteIntParam(1)));
+	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, loopvar, 
+		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(1))));
+	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
+	return pfor(lambda, decl->getInitialization(), initialFor->getEnd(), initialFor->getStep());
+}
 
 
 // ---------------------------- Utilities ---------------------------------------

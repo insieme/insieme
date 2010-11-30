@@ -267,15 +267,16 @@ namespace {
 		}
 	};
 
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, ASTBuilder::CaptureInits& captures) {
+	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, ASTBuilder::CaptureInits& captures,
+			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr> passAsArguments) {
 		LambdaDeltaVisitor ldv;
 		visitAllInterruptable(StatementAddress(root), ldv);
 
 		ASTBuilder build(manager);
-		utils::map::PointerMap<NodePtr, NodePtr> replacements;
-		for_each(ldv.undeclared, [&](VariablePtr p){
+		for_each(ldv.undeclared, [&](VariablePtr p) {
 			auto var = build.variable(p->getType());
-			captures[var] = p;
+			if(std::find(passAsArguments.cbegin(), passAsArguments.cend(), p) == passAsArguments.end()) 
+				captures[var] = p;
 			replacements[p] = var;
 		});
 
@@ -283,17 +284,23 @@ namespace {
 	}
 }
 
-CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified /*= false*/) {
+CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, 
+		std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
-	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(extractLambdaImpl(manager, root, preservePtrAnnotationsWhenModified, captures));
+	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, 
+		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures);
 }
 
-CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified /*= false*/) {
+CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
+		std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
-	ExpressionPtr newExpr = dynamic_pointer_cast<const Expression>(extractLambdaImpl(manager, root, preservePtrAnnotationsWhenModified, captures));
+	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, 
+		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
 	return build.lambdaExpr(root->getType(), body, captures);
 }
