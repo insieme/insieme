@@ -39,6 +39,7 @@
 #include <vector>
 #include <string>
 
+#include "insieme/core/ast_node.h"
 #include "insieme/core/program.h"
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"
@@ -145,7 +146,13 @@ public:
 	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 
 	// Direct call expression of getThreadGroup
-	CallExprPtr getThreadGroup(const ExpressionPtr& level = ExpressionPtr()) const;
+	CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
+
+	// Direct call expression of pfor
+	CallExprPtr pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step = ExpressionPtr()) const;
+
+	// Build a Call expression for a pfor that mimics the effect of the given for statement
+	CallExprPtr pfor(const ForStmtPtr& initialFor) const;
 
 	// Utilities
 private:
