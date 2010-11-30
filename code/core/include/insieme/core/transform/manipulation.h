@@ -118,9 +118,11 @@ ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call);
  ** @param manager the manager used to create new nodes
  ** @param root the target statement that should form the body of the extracted lambda
  ** @param preservePtrAnnotationsWhenModified take a guess
+ ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
  ** */
-CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified = false);
+CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified = false,
+	std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
 
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a capture init expression.
@@ -129,9 +131,11 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root,
  ** @param manager the manager used to create new nodes
  ** @param root the target expression that should form the return value of the extracted lambda
  ** @param preservePtrAnnotationsWhenModified take a guess
+ ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
  ** */
-CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified = false);
+CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified = false,
+	std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
 
 } // end namespace transform
 } // end namespace core

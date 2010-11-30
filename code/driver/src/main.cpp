@@ -127,6 +127,7 @@ int main(int argc, char** argv) {
 				ompTimer.stop();
 				LOG(INFO) << ompTimer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+				cout << core::printer::PrettyPrinter(program);
 				// check again
 				if(CommandLineOptions::CheckSema) {
 					checker();

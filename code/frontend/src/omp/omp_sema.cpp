@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/core/lang/basic.h"
 
@@ -58,27 +59,6 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	}
 	return result;
 }
-
-/** Will certainly determine the declaration status of variables inside a block.
- */
-struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
-	us::PointerSet<VariablePtr> declared;
-	us::PointerSet<VariablePtr> undeclared;
-
-	bool visitNode(const NodeAddress& node) { return true; } // default behaviour: continue visiting
-
-	bool visitDeclarationStmt(const DeclarationStmtAddress &decl) {
-		declared.insert(decl->getVariable());
-		return true;
-	}
-
-	bool visitVariable(const VariableAddress& var) {
-		auto vp = var.getAddressedNode();
-		if(declared.find(vp) == declared.end()) undeclared.insert(vp);
-		return true;
-	}
-};
-
 
 bool SemaVisitor::visitNode(const NodeAddress& node) {
 	return true; // default behaviour: continue visiting
@@ -112,20 +92,9 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const ParallelPtr& par) {
 	auto stmtNode = stmt.getAddressedNode();
 
-	LambdaDeltaVisitor ldv;
-	core::visitAllInterruptable(StatementAddress(stmtNode), ldv);
-	
-	ASTBuilder::CaptureInits captures;
-	um::PointerMap<NodePtr, NodePtr> replacements;
-	for_each(ldv.undeclared, [&](VariablePtr p){
-		auto var = build.variable(p->getType());
-		captures[var] = p;
-		replacements[p] = var;
-	});
-	StatementPtr newStmt = dynamic_pointer_cast<const Statement>(transform::replaceAll(nodeMan, stmtNode, replacements, true));
+	auto parLambda = transform::extractLambda(nodeMan, stmtNode, true);
 
 	auto& basic = nodeMan.basic;
-	auto parLambda = build.lambdaExpr(newStmt, captures);
 	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
 	auto parallelCall = build.callExpr(basic.getParallel(), build.literal("8", basic.getUInt4()), build.literal("8", basic.getUInt4()), jobExp);
 	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
@@ -138,10 +107,11 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
 	assert(forStmt && "OpenMP for attached to non-for statement");
 
-
+	auto& basic = nodeMan.basic;
+	auto pfor = build.pfor(forStmt);
 
 	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
-	return stmtNode;
+	return pfor;
 }
 
 } // namespace omp
