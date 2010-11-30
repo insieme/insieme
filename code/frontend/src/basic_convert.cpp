@@ -373,10 +373,11 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 			  || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
 		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 		    // FIXME add zero initialization of references if needed
-			return builder.refVar( builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(refTy->getElementType()) ) );
+			core::TypePtr res = refTy->getElementType();
+			return builder.refVar( builder.callExpr( res, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(res) ) );
 		}
-		return zeroInit ? builder.callExpr( mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(type))
-                : builder.callExpr( mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
+		return zeroInit ? builder.callExpr( type, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(type))
+                : builder.callExpr( type, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(type) );
 	} else if (!expr)
 		return defaultInitVal(type);
 
