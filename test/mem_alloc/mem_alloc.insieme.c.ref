@@ -1,0 +1,37 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Prototype for external function: array.create.1D //
+<?>'elem</?>* array.create.1D(<?>'elem</?>, unsigned long);
+
+// start code fragment :: Prototype for external function: undefined //
+<?>'a</?> undefined([[unhandled_simple_type: type<'a>]]);
+
+// start code fragment :: Prototype for external function: memcpy //
+int memcpy();
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		int src_array[4];
+		printf("%d\n", (4*sizeof(int)));
+		int** dest_array = memcpy(malloc(sizeof(<?>'elem</?>*)), &((<?>'elem</?>*)array.create.1D(memcpy(alloca(sizeof(<?>'a</?>)), &((<?>'a</?>)undefined(int<4>)), sizeof(<?>'a</?>)), ((4*sizeof(int))/sizeof(int)))), sizeof(<?>'elem</?>*));
+		memcpy((*dest_array), src_array, (4*sizeof(int)));
+		for(unsigned long idx = ((unsigned long)(0)); idx < ((4*sizeof(int))/sizeof(int)); idx += 1) {
+			printf("%d, ", ((*dest_array)[((unsigned int)((idx)))]));
+		};
+		printf("\n", 0);
+		( free(dest_array));
+	}
+}
+

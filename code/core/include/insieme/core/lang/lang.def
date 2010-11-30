@@ -268,11 +268,16 @@ LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
-GROUP(ArrayOp, Array1DSubscript, ArraySubscript, ArrayLength)
+GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND)
 
-LITERAL(Array1DSubscript, "array.1dsubscript", "(array<'elem,1>, uint<#a>) -> 'elem")
-LITERAL(ArraySubscript, "array.subscript", "(array<'elem,#a>, vector<uint<#b>,#a>) -> 'elem")
-LITERAL(ArrayLength, "array.length", "(array<'elem,#a> -> uint<#b>)")
+LITERAL(ArrayCreate1D, "array.create.1D", "('elem, uint<8>) -> array<'elem,1>")
+LITERAL(ArrayCreateND, "array.create.ND", "('elem, vector<uint<8>,#n>) -> array<'elem,#n>")
+
+LITERAL(ArrayLength1D, "array.length.1D", "(array<'elem,1>) -> uint<8>")
+LITERAL(ArrayLengthND, "array.length.ND", "(array<'elem,#n>) -> vector<uint<8>,#n>")
+
+LITERAL(ArraySubscript1D, "array.subscript.1D", "(array<'elem,1>, uint<8>) -> 'elem")
+LITERAL(ArraySubscriptND, "array.subscript.ND", "(array<'elem,#n>, vector<uint<8>,#a>) -> 'elem")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
@@ -286,7 +291,7 @@ LITERAL(VectorReduction,     "vector.reduction",     "(vector<'elem,#l>, 'res, (
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
-GROUP(SubscriptOperator, Array1DSubscript, ArraySubscript, VectorSubscript)
+GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript)
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
