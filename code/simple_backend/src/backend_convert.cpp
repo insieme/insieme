@@ -273,8 +273,7 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		case NT_CallExpr: {
 
 			// mark as a stack variable only if created using ref.var => otherwise always a pointer (conservative)
-			info.location = core::analysis::isCallOf(initialization, cc.basic.getRefVar())?VariableManager::STACK:VariableManager::HEAP;
-
+			info.location = VariableManager::STACK;
 			break;
 		}
 		default: ;// nothing
@@ -283,32 +282,9 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	varManager.addInfo(var, info);
 
 
-	// handle fixed size vectors of simple types (C arrays)
-	vector<unsigned> vecLengths;
-	auto innerType = var->getType();
-	if(auto innerRefType = dynamic_pointer_cast<const RefType>(innerType)) {
-		innerType = innerRefType->getElementType();
-	}
-	while(auto innerVecType = dynamic_pointer_cast<const VectorType>(innerType)) {
-		//LOG(INFO) << "+++++++ innerVec\n";
-		assert(innerVecType->getSize().isConcrete() && "Vectors with non-concrete size not yet supported");
-		vecLengths.push_back(innerVecType->getSize().getValue());
-		innerType = innerVecType->getElementType();
-		if(auto innerRefType = dynamic_pointer_cast<const RefType>(innerType)) {
-			innerType = innerRefType->getElementType();
-		}
-	}
-
-	if(!vecLengths.empty()) { // TODO check that innerType is "simple" enough to be part of C array
-		//LOG(INFO) << "+++++++ innerType " << innerType << "\n";
-		cStr << cc.getTypeMan().getTypeName(defCodePtr, innerType, true) << " " << nameGen.getVarName(var);
-		for_each(vecLengths, [this](unsigned vl) { this->cStr << "[" << vl << "]"; });
-		// TODO initialization
-		return;
-	}
-
 	// standard handling
-	cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), info.location == VariableManager::STACK) << " " << nameGen.getVarName(var);
+	cStr << cc.getTypeMan().formatParamter(defCodePtr, var->getType(), nameGen.getVarName(var), true);
+	//cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), true) << " " << nameGen.getVarName(var);
 
 	// check whether there is an initialization
 	const ExpressionPtr& init = ptr->getInitialization();
@@ -601,6 +577,17 @@ namespace detail {
 			// check input parameters
 			assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
 
+			// quick check for arrays => extra handling
+			const core::lang::BasicGenerator& basic = visitor.getConversionContext().basic;
+			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
+			    core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
+
+				// vector creation is sufficient
+				visitor.visit(initValue);
+				return;
+			}
+
+
 			// extract type
 			TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
 			string typeName = visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true);
@@ -610,13 +597,11 @@ namespace detail {
 
 			// special handling of some initialization values
 			string stmt = toString(*initValue);
-			const core::lang::BasicGenerator& basic = visitor.getConversionContext().basic;
 
 			// TODO: use pattern matching!
 
 			// check for vector init undefined and undefined
 			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || basic.isUndefined(initValue)) {
-std::cout << "Typename: " << typeName << " for type " << toString(*type) << " in " << toString(*initValue) << std::endl;
 				cStr << allocator << "(sizeof(" << typeName << "))";
 				return;
 			}
@@ -682,9 +667,29 @@ std::cout << "Typename: " << typeName << " for type " << toString(*type) << " in
 		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(visitor, cStr, ARG(0), false); });
 		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(visitor, cStr, ARG(0), true); });
 
-		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free(*"); VISIT_ARG(0); OUT(")"); });
+
+		ADD_FORMATTER(basic.getArrayCreate1D(), {
+
+				// ensure array is randomly initialized
+				assert(core::analysis::isCallOf(ARG(0), basic.getRefVar()) && "Non-ref initalization of arrays not supported yet!" );
+				ExpressionPtr initValue = static_pointer_cast<const CallExpr>(ARG(0))->getArguments()[0];
+				assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
+
+				// all arrays are allocated on the HEAP
+				OUT("malloc(");
+				OUT("sizeof(");
+				TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
+				OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
+				OUT(")*");
+				VISIT_ARG(1);
+				OUT(")");
+
+		});
 
 		ADD_FORMATTER(basic.getArraySubscript1D(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+
+
 		ADD_FORMATTER(basic.getVectorSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
@@ -784,7 +789,6 @@ std::cout << "Typename: " << typeName << " for type " << toString(*type) << " in
 						static_pointer_cast<const Expression>(ARG(0))->getType()
 				);
 				assert(type && "Illegal argument to sizeof operator");
-				std::cout << toString(*type) << std::endl;
 				TypePtr target = type->getTypeParameter()[0];
 				OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), target, true));
 				OUT(")");
