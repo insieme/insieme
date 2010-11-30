@@ -525,7 +525,7 @@ public:
 
 				core::LiteralPtr&& op = core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ?
 						builder.getBasicGenerator().getVectorSubscript() :
-						builder.getBasicGenerator().getArray1DSubscript();
+						builder.getBasicGenerator().getArraySubscript1D();
 
 				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType());
 				assert(subTy);
@@ -790,7 +790,7 @@ public:
 
 				core::LiteralPtr&& op = core::dynamic_pointer_cast<const core::VectorType>(subExpr->getType()) ?
 						builder.getBasicGenerator().getVectorSubscript() :
-						builder.getBasicGenerator().getArray1DSubscript();
+						builder.getBasicGenerator().getArraySubscript1D();
 
 				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", convFact.mgr.basic.getUInt4()) );
 			}
@@ -897,7 +897,7 @@ public:
 
 		core::LiteralPtr&& op = core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ?
 				convFact.builder.getBasicGenerator().getVectorSubscript() :
-				convFact.builder.getBasicGenerator().getArray1DSubscript();
+				convFact.builder.getBasicGenerator().getArraySubscript1D();
 
 		// We are sure the type of base is either a vector or an array
 		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
