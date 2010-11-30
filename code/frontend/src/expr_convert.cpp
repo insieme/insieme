@@ -104,16 +104,40 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 	return args;
 }
 
+core::CallExprPtr getSizeOfType(const core::ASTBuilder& builder, const core::TypePtr& type) {
+	core::LiteralPtr size;
+
+	if( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
+		return builder.callExpr(
+			builder.getBasicGenerator().getSignedIntMul(),
+			builder.callExpr( builder.getBasicGenerator().getSizeof(), builder.getBasicGenerator().getIntTypeParamLiteral(vecTy->getSize())),
+			getSizeOfType(builder, vecTy->getElementType())
+		);
+	}
+	// in case of ref<'a>, recurr on 'a
+	if( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+		return getSizeOfType( builder, refTy->getElementType() );
+	}
+
+	return builder.callExpr( builder.getBasicGenerator().getSizeof(), builder.getBasicGenerator().getTypeLiteral(type) );
+}
+
 core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr) {
 	if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(subExpr)) {
 		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
 			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
 				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
 
+				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
+				assert(type->getNodeType() == core::NT_ArrayType);
+				const core::TypePtr& elemType = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
+
 				// The number of elements to be allocated of type 'targetType' is:
 				//      expr / sizeof(targetType)
-				core::CallExprPtr&& size = builder.callExpr(builder.getBasicGenerator().getSignedIntDiv(), callExpr->getArguments().front(),
-						builder.callExpr( builder.getBasicGenerator().getSizeof(), builder.getBasicGenerator().getTypeLiteral(type)));
+				core::CallExprPtr&& size = builder.callExpr(builder.getBasicGenerator().getSignedIntDiv(),
+					callExpr->getArguments().front(),
+					getSizeOfType(builder, elemType)
+				);
 
 				return builder.callExpr(builder.getBasicGenerator().getRefNew(),
 						builder.callExpr(builder.getBasicGenerator().getVectorInitUndefined(), size));
@@ -478,14 +502,10 @@ public:
 	core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
 		START_LOG_EXPR_CONVERSION(expr);
 		if(expr->isSizeOf()) {
-			core::LiteralPtr size;
-			core::TypePtr&& type = convFact.convertType( expr->getArgumentType().getTypePtr() );
-			if( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
-				size = convFact.mgr.basic.getIntTypeParamLiteral(vecTy->getSize());
-			} else {
-				size = convFact.mgr.basic.getTypeLiteral(type);
-			}
-			return convFact.getASTBuilder().callExpr( convFact.mgr.basic.getSizeof(), size );
+			core::TypePtr&& type = expr->isArgumentType() ?
+				convFact.convertType( expr->getArgumentType().getTypePtr() ) :
+				convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
+			return getSizeOfType(convFact.getASTBuilder(), type);
 		}
 		assert(false && "SizeOfAlignOfExpr not yet supported");
 	}
@@ -530,11 +550,10 @@ public:
 				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType());
 				assert(subTy);
 
-				base = builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getInt4()) );
-				base = convFact.tryDeref(base);
+				base = convFact.tryDeref( builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getInt4()) ) );
 			}
 		}
-		// DLOG(INFO) << *base->getType();
+
 		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
 
 		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(base, ident);
