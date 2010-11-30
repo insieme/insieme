@@ -11,6 +11,7 @@ cmake_minimum_required(VERSION 2.6)
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_core_incs 	include/*.h )
+file(GLOB_RECURSE insieme_core_defs 	include/*.def )
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
@@ -20,7 +21,7 @@ include_directories( ${insieme_utils_include_dir} )
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb )
          
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} )
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
 
 # add dependencies
 add_dependencies( insieme_core insieme_utils)
