@@ -648,9 +648,9 @@ public:
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
-
-        // check if we are at a function node
-        if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)){
+        if(element->getNodeType() == core::NT_LambdaExpr) {
+        	// check if we are at a function node
+        	const core::LambdaExprPtr& func = static_pointer_cast<const core::LambdaExpr>(element);
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
 

@@ -61,6 +61,8 @@
 #include "clang/Sema/ExternalSemaSource.h"
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/timer.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -264,7 +266,12 @@ const core::ProgramPtr& Program::convert() {
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
+	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
+	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
 	mProgram = addParallelism(mProgram, mMgr);
+	convertTimer.stop();
+	LOG(INFO) << convertTimer;
+
 	return mProgram;
 }
 

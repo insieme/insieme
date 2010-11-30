@@ -176,7 +176,7 @@ namespace conversion {
 
 
 // creates a function call from a list of expressions,
-// usefull for implementing the semantics of ++ or -- or comma separated expressions in the IR
+// useful for implementing the semantics of ++ or -- or comma separated expressions in the IR
 core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, core::TypePtr retTy) const {
 
 	// keeps the list variables used in the body
@@ -402,7 +402,7 @@ public:
 
 			if(!definition) {
 				//------------------------------------------------
-				//     Handle of special buildin functions
+				//     Handle of 'special' built-in functions
 				//------------------------------------------------
 				// free(): check whether this is a call to the free() function
 				if(funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
@@ -1055,7 +1055,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
 	assert(currTU);
-	DLOG(INFO) << "~ Converting function: " << funcDecl->getNameAsString() << " rec?: " << ctx.isRecSubFunc;
+	DLOG(INFO) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 
 	DVLOG(1) << "#----------------------------------------------------------------------------------#";
 	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
@@ -1169,8 +1169,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				// }
 				// as the variable can olny appear in the RHS of expression, we have to sobstitute it with
 				// its dereference
-				body = core::dynamic_pointer_cast<const core::Statement>(core::transform::replaceAll(this->builder.getNodeManager(), body,
-						fit->first, this->tryDeref(fit->second), true));
+				body = core::dynamic_pointer_cast<const core::Statement>(
+						core::transform::replaceAll(this->builder.getNodeManager(), body, fit->first, this->tryDeref(fit->second), true)
+				);
 				assert(body);
 			}
 		}
