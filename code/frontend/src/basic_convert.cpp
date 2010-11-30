@@ -44,6 +44,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/map_utils.h"
 
 #include "insieme/core/program.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -85,45 +86,6 @@ c_info::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocatio
 	FileID&& fileId = sm.getFileID(loc);
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
-};
-
-struct HeapAllocator: public core::ASTVisitor<core::CallExprPtr> {
-
-	HeapAllocator(core::NodeManager& mgr, const core::TypePtr& targetType) : mgr(mgr), targetType(targetType) { }
-
-	core::CallExprPtr visitCallExpr(const core::CallExprPtr& callExpr) {
-		DLOG(INFO) << "CALLEXPR: " << *callExpr;
-		if(core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
-			callExpr->getArguments()[0]->getType();
-		}
-
-		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
-			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
-				core::ASTBuilder builder(mgr);
-				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
-				core::CallExprPtr&& size = builder.callExpr(mgr.basic.getSignedIntDiv(), callExpr->getArguments().front(),
-						builder.callExpr( mgr.basic.getSizeof(), mgr.basic.getTypeLiteral(targetType)));
-
-				return builder.callExpr(mgr.basic.getRefNew(), builder.callExpr(mgr.basic.getVectorInitUndefined(), size));
-			}
-		}
-
-		visitNode(callExpr);
-	}
-
-	core::CallExprPtr visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		visit(declStmt->getInitialization());
-	}
-
-	core::CallExprPtr visitNode(const core::NodePtr& node) {
-		std::for_each(node->getChildList().begin(), node->getChildList().end(),
-			[ this ] (core::NodePtr curr){	this->visit(curr);	});
-		return core::CallExprPtr();
-	}
-
-private:
-	core::NodeManager& 	mgr;
-	core::TypePtr	targetType;
 };
 
 } // End empty namespace
@@ -385,9 +347,6 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 		return convertInitializerList( listExpr, type );
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
-
-	HeapAllocator ha(mgr, type);
-	ha.visit(retExpr);
 
 	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
 		retExpr = builder.refVar( retExpr );

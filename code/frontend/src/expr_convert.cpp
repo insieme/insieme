@@ -104,6 +104,25 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 	return args;
 }
 
+core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr) {
+	if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(subExpr)) {
+		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
+			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
+				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
+
+				// The number of elements to be allocated of type 'targetType' is:
+				//      expr / sizeof(targetType)
+				core::CallExprPtr&& size = builder.callExpr(builder.getBasicGenerator().getSignedIntDiv(), callExpr->getArguments().front(),
+						builder.callExpr( builder.getBasicGenerator().getSizeof(), builder.getBasicGenerator().getTypeLiteral(type)));
+
+				return builder.callExpr(builder.getBasicGenerator().getRefNew(),
+						builder.callExpr(builder.getBasicGenerator().getVectorInitUndefined(), size));
+			}
+		}
+	}
+	return core::ExpressionPtr();
+}
+
 // FIXME: this has to be rewritten once lang/core is in a final state
 //std::string getOperationType(const core::lang::BasicGenerator& gen, const core::TypePtr& type) {
 //	using namespace core::lang;
@@ -294,7 +313,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
 		START_LOG_EXPR_CONVERSION(implCastExpr);
-		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
+		core::TypePtr&& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
 		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
@@ -302,6 +321,10 @@ public:
 		if( dynamic_pointer_cast<const core::ArrayType>(nonRefExpr->getType()) ||
 			dynamic_pointer_cast<const core::VectorType>(nonRefExpr->getType()) )
 			return subExpr;
+
+		// Mallocs/Allocs are replaced with ref.new expression
+		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
+			return retExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
@@ -325,6 +348,11 @@ public:
 				*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
 			return convFact.builder.getNodeManager().basic.getNull();
 		}
+
+		// Mallocs/Allocs are replaced with ref.new expression
+		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
+			return retExpr;
+
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
 			subExpr = convFact.tryDeref(subExpr);
