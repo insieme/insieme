@@ -616,6 +616,7 @@ namespace detail {
 
 			// check for vector init undefined and undefined
 			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || basic.isUndefined(initValue)) {
+std::cout << "Typename: " << typeName << " for type " << toString(*type) << " in " << toString(*initValue) << std::endl;
 				cStr << allocator << "(sizeof(" << typeName << "))";
 				return;
 			}
@@ -683,7 +684,7 @@ namespace detail {
 
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
 
-		ADD_FORMATTER(basic.getArray1DSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArraySubscript1D(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getVectorSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
@@ -774,6 +775,18 @@ namespace detail {
 				visitor.visit(evalLazy(ARG(1)));
 				OUT("):(");
 				visitor.visit(evalLazy(ARG(2)));
+				OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(basic.getSizeof(), false, {
+				OUT("sizeof(");
+				GenericTypePtr type = dynamic_pointer_cast<const GenericType>(
+						static_pointer_cast<const Expression>(ARG(0))->getType()
+				);
+				assert(type && "Illegal argument to sizeof operator");
+				std::cout << toString(*type) << std::endl;
+				TypePtr target = type->getTypeParameter()[0];
+				OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), target, true));
 				OUT(")");
 		});
 
