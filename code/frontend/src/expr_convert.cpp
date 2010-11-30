@@ -110,7 +110,7 @@ core::CallExprPtr getSizeOfType(const core::ASTBuilder& builder, const core::Typ
 	if( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		return builder.callExpr(
 			builder.getBasicGenerator().getSignedIntMul(),
-			builder.callExpr( builder.getBasicGenerator().getSizeof(), builder.getBasicGenerator().getIntTypeParamLiteral(vecTy->getSize())),
+			builder.getBasicGenerator().getIntTypeParamLiteral(vecTy->getSize()),
 			getSizeOfType(builder, vecTy->getElementType())
 		);
 	}
