@@ -174,6 +174,11 @@ LiteralPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator
 		if(((*this).*curr.second.first)(type))
 			return ((*this).*curr.second.second)();
 	}
+
+	if(VectorTypePtr vecTy = dynamic_pointer_cast<const VectorType>(type)){
+	    return (*this).getLiteral(string("vector.pointwise"));
+	}
+
 	DLOG(ERROR) << type;
 	DLOG(ERROR) << op;
 	assert(false && "Required combination of operator and type not declared");
