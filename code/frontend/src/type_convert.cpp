@@ -390,7 +390,7 @@ public:
 
 		// will store the converted type
 		core::TypePtr retTy;
-		DLOG(INFO) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
+		VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
 
 		const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
 		// iterate through all the re-declarations to see if one of them provides a definition

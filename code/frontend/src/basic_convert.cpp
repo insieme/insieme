@@ -88,47 +88,6 @@ c_info::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocatio
 	return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
-struct HeapAllocator: public core::ASTVisitor<void> {
-
-	HeapAllocator(core::NodeManager& mgr, const core::TypePtr& targetType) : mgr(mgr), targetType(targetType) { }
-
-	void visitCastExpr(const core::CastExprPtr& castExpr) {
-		cast = castExpr;
-		targetType = cast->getType();
-		visit(castExpr->getSubExpression());
-	}
-
-	void visitCallExpr(const core::CallExprPtr& callExpr) {
-		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
-			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
-				core::ASTBuilder builder(mgr);
-				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
-
-				// The number of elements to be allocated of type 'targetType' is:
-				//      expr / sizeof(targetType)
-				core::CallExprPtr&& size = builder.callExpr(mgr.basic.getSignedIntDiv(), callExpr->getArguments().front(),
-						builder.callExpr( mgr.basic.getSizeof(), mgr.basic.getTypeLiteral(targetType)));
-
-				core::ExpressionPtr&& replacement =
-						builder.callExpr(mgr.basic.getRefNew(), builder.callExpr(mgr.basic.getVectorInitUndefined(), size));
-
-				replacements.insert( std::make_pair(cast, replacement) );
-			}
-		}
-		core::ASTVisitor<void>::visitCallExpr(callExpr);
-	}
-
-	utils::map::PointerMap<core::NodePtr, core::NodePtr> getReplacements() const {
-		return replacements;
-	}
-
-private:
-	core::NodeManager& 	mgr;
-	core::TypePtr		targetType;
-	core::ExpressionPtr	cast;
-	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-};
-
 } // End empty namespace
 
 namespace insieme {
@@ -388,13 +347,6 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
-	HeapAllocator v(mgr, type);
-	core::visitAll(retExpr,v);
-	if(!v.getReplacements().empty()) {
-		return dynamic_pointer_cast<const core::Expression>(core::transform::replaceAll(mgr, retExpr, v.getReplacements(), true));
-
-		// retExpr =  v.getReplacements().begin()->second; // FIXME
-	}
 	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
 		retExpr = builder.refVar( retExpr );
 	return retExpr;
