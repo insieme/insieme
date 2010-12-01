@@ -137,7 +137,7 @@ DLOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 
 TEST(OclCompilerTest, HelloCLTest) {
 	insieme::utils::InitLogger("ut_ocl_compiler_test", INFO, true);
-    CommandLineOptions::Verbosity = 2;
+    //CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::create(manager);
 
@@ -154,9 +154,8 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     LOG(INFO) << "Printing the IR: " << pp;
 
-    // FIXME
-//    OclTestVisitor otv;
-//    core::visitAll(program, otv);
+    OclTestVisitor otv;
+    core::visitAll(program, otv);
 
 
     LOG(INFO) << pp;
