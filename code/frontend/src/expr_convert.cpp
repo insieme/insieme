@@ -874,10 +874,14 @@ public:
 			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME
 		}
 
+		if (retTy->getNodeType() == core::NT_RefType) {
+			retTy= core::static_pointer_cast<const core::RefType>(retTy)->getElementType();
+		}
+
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, convFact.mgr.basic.getIfThenElse(),
 				condExpr,	// Condition
-				convFact.createCallExpr( builder.returnStmt(trueExpr),  retTy), // True
-				convFact.createCallExpr( builder.returnStmt(falseExpr),  retTy) // False
+				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy), // True
+				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node
