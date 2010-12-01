@@ -40,6 +40,7 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/frontend/pragma_handler.h"
+#include "insieme/utils/map_utils.h"
 
 // Forward declarations
 namespace clang {
@@ -138,8 +139,10 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 		UseGlobalFuncMap	globalFuncMap;
 
-		std::unordered_map<insieme::core::VariablePtr, insieme::core::VariablePtr, hash_target<insieme::core::VariablePtr>,
-			equal_target<insieme::core::VariablePtr>> needRef;
+		// Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
+		// a new variable is created in function body and the value of the input parameter assigned to it
+		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
+		WrapRefMap wrapRefMap;
 
 		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};

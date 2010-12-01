@@ -121,9 +121,13 @@ public:
 
 	ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
 
+	// Vectors
+	CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
+	CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
+
 	// Compound Statements
-	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2);
-	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3);
+	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;
+	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const;
 
 	// Call Expressions
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;

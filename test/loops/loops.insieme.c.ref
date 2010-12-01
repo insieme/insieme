@@ -16,6 +16,9 @@ struct __insieme_globals {
 // start code fragment :: Prototype for external function: printf //
 int printf(char*, ...);
 
+// start code fragment :: Prototype for external function: ceil //
+double ceil(double);
+
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
@@ -40,6 +43,13 @@ int main(int argc, char** argv) {
 				(((var_1).N)--);
 			};
 		};
+		{
+			for(int var_9 = 1; var_9 < 15; var_9 += 3) {
+				printf("a=%d\n", (var_9));
+			};
+			((a) = (1+((int)((ceil(((double)(((15-1)/3))))*3)))));
+		};
+		printf("a=%d\n", (a));
 	}
 }
 
