@@ -69,33 +69,6 @@ void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
 	cStr << funManager.getFunctionName(defCodePtr, ptr);
 }
 
-namespace {
-
-	/**
-	 * Determines whether using the given expression as a LHS expression within an assignment or within a
-	 * RHS read requires a de-referencing within C.
-	 */
-	bool requiresDeref(const ExpressionPtr& target, ConversionContext& cc) {
-		switch (target->getNodeType()) {
-			case NT_CallExpr:
-				// subscript operator should not be again dereferenced in the end
-				return !(cc.basic.isSubscriptOperator(static_pointer_cast<const CallExpr>(target)->getFunctionExpr()));
-			case NT_MemberAccessExpr: {
-				TypePtr type = target->getType();
-				if (RefTypePtr refType = dynamic_pointer_cast<const RefType>(type)) {
-					NodeType elementType = refType->getElementType()->getNodeType();
-					if (elementType == NT_RefType || elementType == NT_VectorType) {
-						return true;
-					}
-				}
-				return false;
-			}
-			default:
-				return true;
-		}
-	}
-}
-
 void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	//DLOG(INFO) << "CALLEXPR - " << ptr->getFunctionExpr() << ". prev cStr: \n" << cStr.getString();
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
@@ -112,13 +85,10 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		//if (cc.basic.isRefDeref(literalFun)) {
 		if(funName == "ref.deref") {
 
-			// test whether a deref is required
-			bool deref = requiresDeref(args.front(), cc);
-
 			// add operation
-			if (deref) cStr << "(*";
+			cStr << "(*";
 			visit(args.front());
-			if (deref) cStr << ")";
+			cStr << ")";
 
 			return;
 		} if(cc.basic.isVarlistPack(funExp)) {
@@ -405,6 +375,12 @@ void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
 }
 
 void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
+	TypePtr type = ptr->getType();
+	if (type->getNodeType() == NT_RefType &&
+		static_pointer_cast<const RefType>(type)->getElementType()->getNodeType() != NT_VectorType) {
+
+		cStr << "&";
+	}
 	cStr << "(";
 	visit(ptr->getSubExpression());
 	cStr << "." << ptr->getMemberName() << ")";
@@ -562,11 +538,10 @@ namespace detail {
 			assert(dynamic_pointer_cast<const Expression>(target) && "Operator must be an expression.");
 
 			// check whether a deref is required
-			if (requiresDeref(static_pointer_cast<const Expression>(target), visitor.getConversionContext())) {
-				visitor.getCode()->getCodeStream() << "*";
-			}
+			CodeStream& stream = visitor.getCode()->getCodeStream();
+			stream << "(*";
 			visitor.visit(target);
-
+			stream << ")";
 		}
 
 		void handleRefConstructor(ConvertVisitor& visitor, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
@@ -684,10 +659,20 @@ namespace detail {
 
 		});
 
-		ADD_FORMATTER(basic.getArraySubscript1D(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER_DETAIL(basic.getArraySubscript1D(), false, {
+				bool isRef = call->getType()->getNodeType() == NT_RefType;
+				if (isRef) OUT("&(");
+				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
+				if (isRef) OUT(")");
+		});
 
 
-		ADD_FORMATTER(basic.getVectorSubscript(), { VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorSubscript(), false, {
+				bool isRef = call->getType()->getNodeType() == NT_RefType;
+				if (isRef) OUT("&(");
+				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
+				if (isRef) OUT(")");
+		});
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
