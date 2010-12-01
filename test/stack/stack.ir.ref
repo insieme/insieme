@@ -19,7 +19,7 @@ fun(){
                     v5[0].top := v7;
                 }(v2, v9);
             };
-            v1 := 10;
+            v1 := 0+ceil(10-0/1)*1;
         };
         {
             for(decl ref<int<4>> v14 =  var(0) .. 5 : 1) {
@@ -34,7 +34,7 @@ fun(){
                     return v12;
                 }(v2))));
             };
-            v1 := 5;
+            v1 := 0+ceil(5-0/1)*1;
         };
         fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
             decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v17 =  var(v15);
@@ -74,7 +74,7 @@ fun(){
                     (( *(v5[0])).top := ( *v7));
                 }(( *v2), ( *v9));
             };
-            (v1 := 10);
+            (v1 := (0+CAST<int<4>>((ceil(CAST<real<8>>(((10-0)/1)))*1))));
         };
         {
             for(decl ref<int<4>> v14 = ( var(0)) .. 5 : 1) {
@@ -89,7 +89,7 @@ fun(){
                     return ( *v12);
                 }(( *v2)))));
             };
-            (v1 := 5);
+            (v1 := (0+CAST<int<4>>((ceil(CAST<real<8>>(((5-0)/1)))*1))));
         };
         fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
             decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v17 = ( var(v15));

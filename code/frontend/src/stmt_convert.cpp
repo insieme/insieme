@@ -285,15 +285,16 @@ public:
 
 			assert(declStmt && "Failed conversion of loop init expression");
 
+			core::ExpressionPtr init = declStmt->getInitialization();
+			if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init)) {
+				if(*callExpr->getFunctionExpr() == *builder.getBasicGenerator().getRefVar()) {
+					assert(callExpr->getArguments().size() == 1);
+					init = callExpr->getArguments()[0];
+				}
+			}
+
 			if(loopAnalysis.isInverted()) {
 				// invert init value
-				core::ExpressionPtr init = declStmt->getInitialization();
-				if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init)) {
-					if(*callExpr->getFunctionExpr() == *builder.getBasicGenerator().getRefVar()) {
-						assert(callExpr->getArguments().size() == 1);
-						init = callExpr->getArguments()[0];
-					}
-				}
 				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
 				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
 						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, builder.refVar(invInitExpr), true)
@@ -317,10 +318,23 @@ public:
 				// in the case we replace the loop iterator with a temporary variable,
 				// we have to assign the final value of the iterator to the old variable
 				// so we don't change the semantics of the code
-				core::LiteralPtr&& refAssign = convFact.mgr.basic.getRefAssign();
+				core::TypePtr iterType = (inductionVar->getType()->getNodeType() == core::NT_RefType) ?
+						core::static_pointer_cast<const core::RefType>(inductionVar->getType())->getElementType() :
+						inductionVar->getType();
 
-				// inductionVar = COND()? ---> FIXME!
-				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(), refAssign, inductionVar, loopAnalysis.getCondExpr() ));
+				core::ExpressionPtr&& cond = convFact.tryDeref(loopAnalysis.getCondExpr());
+				core::ExpressionPtr&& step = convFact.tryDeref(loopAnalysis.getIncrExpr());
+
+				core::FunctionTypePtr&& ceilTy =
+						builder.functionType(toVector<core::TypePtr>(convFact.mgr.basic.getDouble()), convFact.mgr.basic.getDouble());
+
+				core::ExpressionPtr&& finalVal = init +
+						builder.castExpr(iterType, (builder.callExpr( convFact.mgr.basic.getDouble(), builder.literal(ceilTy, "ceil"),
+								builder.castExpr(convFact.mgr.basic.getDouble(), (cond - init) / step)))
+							* step);
+
+				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(),
+						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal ));
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {

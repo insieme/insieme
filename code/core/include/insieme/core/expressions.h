@@ -101,7 +101,13 @@ public:
 
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
+
 };
+
+ExpressionPtr operator+(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+ExpressionPtr operator-(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+ExpressionPtr operator/(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+ExpressionPtr operator*(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
 
 /**
  * Literal:
