@@ -38,7 +38,7 @@ void init(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		for(int i = 0; i < 50; i += 1) {
-			(((*((*var_4).a))[((unsigned int)((i)))]) = (i));
+			((((*((*var_4).a))[((unsigned int)((i)))])) = (i));
 		};
 	}
 }
@@ -73,7 +73,7 @@ int sum(void* _capture) {
 	{
 		int res = 0;
 		for(int i = 0; i < 50; i += 1) {
-			((res) = ((res)+((*((*var_7).a))[((unsigned int)((i)))])));
+			((res) = ((res)+(((*((*var_7).a))[((unsigned int)((i)))]))));
 		};
 		return (res);;
 	}

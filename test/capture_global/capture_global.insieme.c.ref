@@ -41,8 +41,8 @@ int inc(void* _capture, int step) {
 	struct __insieme_globals* var_5 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*var_5).count) = (((*var_5).count)+step));
-		return ((*var_5).count);;
+		((((*var_5).count)) = ((((*var_5).count))+step));
+		return (((*var_5).count));;
 	}
 }
 
@@ -53,8 +53,8 @@ int dec(void* _capture, int step) {
 	struct __insieme_globals* var_8 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*var_8).count) = (((*var_8).count)+step));
-		return ((*var_8).count);;
+		((((*var_8).count)) = ((((*var_8).count))+step));
+		return (((*var_8).count));;
 	}
 }
 
@@ -83,9 +83,9 @@ int reset(void* _capture) {
 	struct __insieme_globals* var_10 = ((struct __insieme_funType_type_3*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		(((*var_10).count) = 0);
-		(((*var_10).reset_count) = (((*var_10).reset_count)+1));
-		return ((*var_10).count);;
+		((((*var_10).count)) = 0);
+		((((*var_10).reset_count)) = ((((*var_10).reset_count))+1));
+		return (((*var_10).count));;
 	}
 }
 

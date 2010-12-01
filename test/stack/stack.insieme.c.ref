@@ -25,8 +25,8 @@ struct stack {
 // start code fragment :: Definition of newStack //
 struct stack* newStack() {
 	{
-		struct stack* res = (*(malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack)))));
-		((((res)[0]).top) = ((struct item*)(null)));
+		struct stack* res = (malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack))));
+		((((((res)[0])).top)) = ((struct item*)(null)));
 		return (res);;
 	}
 }
@@ -38,10 +38,10 @@ int printf(char*, ...);
 // start code fragment :: Definition of push //
 void push(struct stack* stack, int value) {
 	{
-		struct item* element = (*(malloc(sizeof(struct item)*(sizeof(struct item)/sizeof(struct item)))));
-		((((element)[0]).value) = value);
-		((((element)[0]).next) = ((stack[0]).top));
-		(((stack[0]).top) = (element));
+		struct item* element = (malloc(sizeof(struct item)*(sizeof(struct item)/sizeof(struct item))));
+		((((((element)[0])).value)) = value);
+		((((((element)[0])).next)) = ((((stack[0])).top)));
+		(((((stack[0])).top)) = (element));
 	}
 }
 
@@ -52,12 +52,12 @@ double ceil(double);
 // start code fragment :: Definition of pop //
 int pop(struct stack* stack) {
 	{
-		if((!((bool)(((stack[0]).top))))) {
+		if((!((bool)(((((stack[0])).top)))))) {
 			return (((int)(0))-1);;
 		};
-		struct item* tmp = ((stack[0]).top);
-		int res = (((tmp)[0]).value);
-		(((stack[0]).top) = (((tmp)[0]).next));
+		struct item* tmp = ((((stack[0])).top));
+		int res = (((((tmp)[0])).value));
+		(((((stack[0])).top)) = (((((tmp)[0])).next)));
 		( free(tmp));
 		return (res);;
 	}
@@ -69,9 +69,9 @@ void dumpStack(struct stack* stack) {
 	{
 		struct stack* var_17 = stack;
 		{
-			while((((var_17)[0]).top)) {
-				struct item* tmp = (((var_17)[0]).top);
-				((((var_17)[0]).top) = (((tmp)[0]).next));
+			while(((bool)((((((var_17)[0])).top))))) {
+				struct item* tmp = (((((var_17)[0])).top));
+				((((((var_17)[0])).top)) = (((((tmp)[0])).next)));
 				( free(tmp));
 			};
 			( free(var_17));

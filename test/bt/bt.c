@@ -87,11 +87,10 @@ c      Root node reads input file (if it exists) else takes
 c      defaults from parameters
 c-------------------------------------------------------------------*/
 
-  printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version"
-	 " - BT Benchmark\n\n");
+  printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - BT Benchmark\n\n");
 
   fp = fopen("inputbt.data", "r");
-  if ((int)fp != (int)NULL) {
+  if (fp) {
     printf(" Reading from input file inputbt.data");
     fscanf(fp, "%d", &niter);
     while (fgetc(fp) != '\n');

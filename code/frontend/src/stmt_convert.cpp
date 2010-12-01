@@ -515,6 +515,13 @@ public:
 			condExpr = convFact.convertExpr( cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
+
+		condExpr = convFact.tryDeref(condExpr);
+		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
+			// add cast to bool FIXME
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+		}
+
 		core::StatementPtr&& irNode = builder.whileStmt(condExpr, body);
 
 		// handle eventual OpenMP pragmas attached to the Clang node
