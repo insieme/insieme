@@ -345,9 +345,9 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
 		return convertInitializerList( listExpr, type );
 
-	core::ExpressionPtr&& retExpr = convertExpr( expr );
+	core::ExpressionPtr&& retExpr = tryDeref( convertExpr( expr ) );
 
-	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
+	if(type->getNodeType() == core::NT_RefType)
 		retExpr = builder.refVar( retExpr );
 	return retExpr;
 }

@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 			printf("idx=%d", (((int)(0))-(idx)));
 		};
 		{
-			int idx = &a;
+			int idx = (a);
 			while((((var_1).N)>0)) {
 				{
 					printf("idx=%d", (a));

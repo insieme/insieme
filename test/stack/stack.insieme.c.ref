@@ -25,7 +25,7 @@ struct stack {
 // start code fragment :: Definition of newStack //
 struct stack* newStack() {
 	{
-		struct stack* res = (malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack))));
+		struct stack* res = (*(malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack)))));
 		((((res)[0]).top) = ((struct item*)(null)));
 		return (res);;
 	}
@@ -38,7 +38,7 @@ int printf(char*, ...);
 // start code fragment :: Definition of push //
 void push(struct stack* stack, int value) {
 	{
-		struct item* element = (malloc(sizeof(struct item)*(sizeof(struct item)/sizeof(struct item))));
+		struct item* element = (*(malloc(sizeof(struct item)*(sizeof(struct item)/sizeof(struct item)))));
 		((((element)[0]).value) = value);
 		((((element)[0]).next) = ((stack[0]).top));
 		(((stack[0]).top) = (element));
