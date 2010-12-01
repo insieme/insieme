@@ -700,7 +700,19 @@ public:
 				exprTy = convFact.mgr.basic.getBool();
 		}
 		assert(opFunc);
-		core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
+
+		core::ExpressionPtr vecOp;
+		if(lhs->getType()->getNodeType() == core::NT_VectorType) {
+		    core::TypePtr elemTy = dynamic_pointer_cast<const core::VectorType>(lhs->getType())->getElementType();
+		    elemTy = (elemTy->getNodeType() == core::NT_RefType ?
+                core::static_pointer_cast<const core::RefType>(elemTy)->getElementType() :
+                lhs->getType());
+
+		    vecOp = convFact.mgr.basic.getOperator(elemTy, op);
+		}
+        core::ExpressionPtr&& retExpr = lhs->getType()->getNodeType() == core::NT_VectorType ?
+            convFact.builder.callExpr( exprTy, opFunc, lhs, rhs, vecOp ) : // create a callExpr with 3 arguments for pointwise vector operations
+		    convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
