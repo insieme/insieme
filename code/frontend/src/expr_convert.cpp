@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
+#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 
@@ -406,7 +407,19 @@ public:
 				//------------------------------------------------
 				// free(): check whether this is a call to the free() function
 				if(funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
-					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), Visit(callExpr->getArg(0)) );
+					// in the case the free uses an input parameter
+					core::ExpressionPtr&& arg = Visit(callExpr->getArg(0));
+					DeclRefExpr* ref = utils::skipSugar<DeclRefExpr>(callExpr->getArg(0));
+					if(ref && isa<ParmVarDecl>(ref->getDecl())) {
+						core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>( arg );
+						assert(parmVar);
+						auto fit = ctx.needRef.find(parmVar);
+						if(fit == ctx.needRef.end()) {
+							fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
+						}
+						arg = fit->second;
+					}
+					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), arg );
 				}
 			}
 

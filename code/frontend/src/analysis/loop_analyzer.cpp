@@ -41,6 +41,8 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
+#include "insieme/frontend/utils/clang_utils.h"
+
 #include <clang/AST/Expr.h>
 #include <clang/AST/Stmt.h>
 #include <clang/AST/StmtVisitor.h>
@@ -171,9 +173,8 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		throw LoopNormalizationError();
 
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
-		assert(isa<const DeclRefExpr>(binOp->getLHS()));
-		const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
-		assert(lhs->getDecl() == loopHelper.inductionVar);
+		DeclRefExpr* lhs = utils::skipSugar<DeclRefExpr>(binOp->getLHS());
+		assert(lhs && lhs->getDecl() == loopHelper.inductionVar);
 		core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
 		switch(binOp->getOpcode()) {
 		case BO_LT:

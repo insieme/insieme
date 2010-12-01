@@ -64,12 +64,15 @@ int pop(struct stack* stack) {
 // start code fragment :: Definition of dumpStack //
 void dumpStack(struct stack* stack) {
 	{
-		while(((stack[0]).top)) {
-			struct item* tmp = ((stack[0]).top);
-			(((stack[0]).top) = (((*tmp)[0]).next));
-			( free(*tmp));
+		struct stack* var_17 = stack;
+		{
+			while((((var_17)[0]).top)) {
+				struct item* tmp = (((var_17)[0]).top);
+				((((var_17)[0]).top) = (((*tmp)[0]).next));
+				( free(*tmp));
+			};
+			( free(var_17));
 		};
-		( free(*stack));
 	}
 }
 

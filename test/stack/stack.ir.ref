@@ -37,12 +37,15 @@ fun(){
             v1 := 5;
         };
         fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
-            while(v15[0].top) {
-                decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = v15[0].top;
-                v15[0].top := v16[0].next;
-                 del(v16);
+            decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v17 =  var(v15);
+            {
+                while(v17[0].top) {
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = v17[0].top;
+                    v17[0].top := v16[0].next;
+                     del(v16);
+                };
+                 del(v17);
             };
-             del(v15);
         }(v2);
         return 0;
     }
@@ -89,12 +92,15 @@ fun(){
             (v1 := 5);
         };
         fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
-            while(( *(v15[0])).top) {
-                decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = ( *(v15[0])).top;
-                (( *(v15[0])).top := ( *( *(( *v16)[0])).next));
-                ( del(v16));
+            decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v17 = ( var(v15));
+            {
+                while(( *(( *v17)[0])).top) {
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = ( *(( *v17)[0])).top;
+                    (( *(( *v17)[0])).top := ( *( *(( *v16)[0])).next));
+                    ( del(v16));
+                };
+                ( del(v17));
             };
-            ( del(v15));
         }(( *v2));
         return 0;
     }

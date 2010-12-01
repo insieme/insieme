@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 	int* dest_array = malloc(sizeof(src_array));
 	memcpy(dest_array, src_array, sizeof(src_array));
 	
-	for(unsigned long idx=0; idx<sizeof(src_array)/sizeof(int); idx++) {
+	for(int idx=0; idx<sizeof(src_array)/sizeof(int); idx++) {
 		printf("%d, ", dest_array[idx]);
 	}
 	printf("\n");
