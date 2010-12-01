@@ -734,7 +734,7 @@ public:
                         builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntDiv(), toVector<core::ExpressionPtr>(
                             SUBSCRIPT(kd.globalRange, i, builder),  SUBSCRIPT(kd.localRange, i, builder) )));
                 }
-
+                std::cout << "F6\n";
                 //declare and initialize start vector and increment vector fo parallel loops
  //               core::DeclarationStmtPtr startVecDecl = builder.declarationStmt(nullVec, )
 
@@ -743,15 +743,15 @@ public:
                         builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
                         BASIC.getVectorPointwise(), kd.globalRange, kd.localRange, BASIC.getUnsignedIntDiv()));
                 newBodyStmts.push_back(groupRdecl);
-
+                std::cout << "F2\n";
                 //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
                 newBodyStmts.push_back(globalPar);
-
+                std::cout << "F1\n";
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
-
+                std::cout << "F7\n";
                 // get address spaces of variables in body
-                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
+//                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
                 newFunc->addAnnotation(funcAnnotation);
