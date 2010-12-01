@@ -175,11 +175,11 @@ void for_stmt_test() {
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ for(decl ref<int<4>> v3 = ( var(0)) .. 100 : 1) { (v2 := ( *v3)); }; (v1 := (0+(ceil(((100-0)/1))*1)));}"
+	"{ for(decl ref<int<4>> v3 = ( var(0)) .. 100 : 1) { (v2 := ( *v3)); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ for(decl ref<int<4>> v3 = ( var(( *v2))) .. 100 : 6) { (v2 := ( *v3)); }; (v1 := (( *v2)+(ceil(((100-( *v2))/6))*6)));}"
+	"{ for(decl ref<int<4>> v3 = ( var(( *v2))) .. 100 : 6) { (v2 := ( *v3)); }; (v1 := (( *v2)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v2)))/CAST<real<8>>(6))))*6)));}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \

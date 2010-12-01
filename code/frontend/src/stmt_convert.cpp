@@ -297,7 +297,7 @@ public:
 				// invert init value
 				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
 				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
-						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, builder.refVar(invInitExpr), true)
+						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, invInitExpr, true)
 				);
 
 				// invert the sign of the loop index in body of the loop
@@ -328,10 +328,12 @@ public:
 				core::FunctionTypePtr&& ceilTy =
 						builder.functionType(toVector<core::TypePtr>(convFact.mgr.basic.getDouble()), convFact.mgr.basic.getDouble());
 
-				core::ExpressionPtr&& finalVal = init +
-						builder.castExpr(iterType, (builder.callExpr( convFact.mgr.basic.getDouble(), builder.literal(ceilTy, "ceil"),
-								builder.castExpr(convFact.mgr.basic.getDouble(), (cond - init) / step)))
-							* step);
+				core::ExpressionPtr&& tmp = builder.castExpr(convFact.mgr.basic.getDouble(), cond - init);
+
+				core::ExpressionPtr&& finalVal = init + builder.castExpr(iterType,
+						builder.callExpr( convFact.mgr.basic.getDouble(), builder.literal(ceilTy, "ceil"),
+								tmp / builder.castExpr(convFact.mgr.basic.getDouble(), step)
+						)) * step;
 
 				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(),
 						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal ));
