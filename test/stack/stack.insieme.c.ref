@@ -22,18 +22,12 @@ struct stack {
     struct item* top;
 };
 
-// start code fragment :: Prototype for external function: array.create.1D //
-<?>'elem</?>* array.create.1D(<?>'elem</?>, unsigned long);
-
-// start code fragment :: Prototype for external function: undefined //
-<?>'a</?> undefined([[unhandled_simple_type: type<'a>]]);
-
 // start code fragment :: Definition of newStack //
 struct stack* newStack() {
 	{
-		struct stack** res = memcpy(malloc(sizeof(<?>'elem</?>*)), &((<?>'elem</?>*)array.create.1D(memcpy(alloca(sizeof(<?>'a</?>)), &((<?>'a</?>)undefined(struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>)), sizeof(<?>'a</?>)), (sizeof(struct stack)/sizeof(struct stack)))), sizeof(<?>'elem</?>*));
-		((((*res)[0]).top) = ((struct item*)(null)));
-		return (*res);;
+		struct stack* res = (malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack))));
+		((((res)[0]).top) = ((struct item*)(null)));
+		return (res);;
 	}
 }
 
@@ -44,10 +38,10 @@ int printf(char*, ...);
 // start code fragment :: Definition of push //
 void push(struct stack* stack, int value) {
 	{
-		struct item** element = memcpy(malloc(sizeof(<?>'elem</?>*)), &((<?>'elem</?>*)array.create.1D(memcpy(alloca(sizeof(<?>'a</?>)), &((<?>'a</?>)undefined(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})), sizeof(<?>'a</?>)), (sizeof(struct item)/sizeof(struct item)))), sizeof(<?>'elem</?>*));
-		((((*element)[0]).value) = value);
-		((((*element)[0]).next) = ((stack[0]).top));
-		(((stack[0]).top) = (*element));
+		struct item* element = (malloc(sizeof(struct item)*(sizeof(struct item)/sizeof(struct item))));
+		((((element)[0]).value) = value);
+		((((element)[0]).next) = ((stack[0]).top));
+		(((stack[0]).top) = (element));
 	}
 }
 
@@ -58,10 +52,10 @@ int pop(struct stack* stack) {
 		if((!((bool)(((stack[0]).top))))) {
 			return (((int)(0))-1);;
 		};
-		struct item** tmp = ((stack[0]).top);
-		int* res = (((*tmp)[0]).value);
+		struct item* tmp = ((stack[0]).top);
+		int res = (((*tmp)[0]).value);
 		(((stack[0]).top) = (((*tmp)[0]).next));
-		( free(tmp));
+		( free(*tmp));
 		return (*res);;
 	}
 }
@@ -71,11 +65,11 @@ int pop(struct stack* stack) {
 void dumpStack(struct stack* stack) {
 	{
 		while(((stack[0]).top)) {
-			struct item** tmp = ((stack[0]).top);
+			struct item* tmp = ((stack[0]).top);
 			(((stack[0]).top) = (((*tmp)[0]).next));
-			( free(tmp));
+			( free(*tmp));
 		};
-		( free(stack));
+		( free(*stack));
 	}
 }
 

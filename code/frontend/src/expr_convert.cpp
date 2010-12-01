@@ -323,8 +323,8 @@ public:
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
 		// if the subexpression is an array or a vector, remove all the C implicit casts
-		if( dynamic_pointer_cast<const core::ArrayType>(nonRefExpr->getType()) ||
-			dynamic_pointer_cast<const core::VectorType>(nonRefExpr->getType()) )
+		if( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
+			nonRefExpr->getType()->getNodeType() == core::NT_VectorType )
 			return subExpr;
 
 		// Mallocs/Allocs are replaced with ref.new expression
