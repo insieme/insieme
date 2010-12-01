@@ -268,7 +268,7 @@ namespace {
 	};
 
 	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, ASTBuilder::CaptureInits& captures,
-			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr> passAsArguments) {
+			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
 		visitAllInterruptable(StatementAddress(root), ldv);
 
@@ -279,6 +279,9 @@ namespace {
 				captures[var] = p;
 			replacements[p] = var;
 		});
+
+		// replace arguments with mapped variables
+		for_each(passAsArguments, [&](VariablePtr& v) { v = static_pointer_cast<const Variable>(replacements[v]); });
 
 		return replaceAll(manager, root, replacements, preservePtrAnnotationsWhenModified);
 	}
@@ -291,7 +294,7 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root,
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, 
 		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
-	return build.lambdaExpr(newStmt, captures);
+	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
 CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
@@ -302,7 +305,7 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root
 	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, 
 		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
-	return build.lambdaExpr(root->getType(), body, captures);
+	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
 }
 
 } // end namespace transform

@@ -140,7 +140,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case UO_PostInc:
 		case UO_PreDec:
 		case UO_PostDec:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getInt1());
+			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getInt4());
 			return;
 		default:
 			assert(false && "UnaryOperator different from post/pre inc/dec (++/--) not supported in loop increment expression");

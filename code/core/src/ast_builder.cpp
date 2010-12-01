@@ -46,6 +46,8 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace core {
 
@@ -104,15 +106,23 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
-			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
+			castExpr(subExpr->getType(), uintLit(0)), subExpr);
 }
 
-CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) {
+CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
+	auto vType = dynamic_pointer_cast<const VectorType>(vec->getType());
+	assert(vType && "Tried vector subscript operation on non-vector expression");
+	return callExpr(vType->getElementType(), manager.basic.getVectorSubscript(), vec, index);
+}
+CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
+	// vectorSubscript(vec, uintLit(index));
+}
+
+CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
 	return compoundStmt(toVector(s1, s2));
 }
-CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) {
+CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const {
 	return compoundStmt(toVector(s1, s2, s3));
-
 }
 
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
@@ -194,11 +204,19 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	auto loopvar = decl->getVariable();
 	auto forBody = initialFor->getBody();
 
+	// modify body to take vector iteration variable
 	auto pforLambdaParam = variable(vectorType(loopvar->getType(), IntTypeParam::getConcreteIntParam(1)));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, loopvar, 
 		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(1))));
 	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
-	return pfor(lambda, decl->getInitialization(), initialFor->getEnd(), initialFor->getStep());
+	auto initExp = decl->getInitialization();
+	// workaround for init expressions containing ref.new or ref.var -- TODO remove once fixed in frontend
+	if(auto callExpPtr = dynamic_pointer_cast<const CallExpr>(initExp)) {
+		if(manager.basic.isRefNew(callExpPtr->getFunctionExpr()) || manager.basic.isRefVar(callExpPtr->getFunctionExpr())) 
+			initExp = dynamic_pointer_cast<const Expression>(callExpPtr->getArgument(0));
+	}
+	// ------ end workaround
+	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
 }
 
 

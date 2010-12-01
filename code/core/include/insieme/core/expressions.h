@@ -101,7 +101,13 @@ public:
 
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
+
 };
+
+ExpressionPtr operator+(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+ExpressionPtr operator-(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+ExpressionPtr operator/(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+ExpressionPtr operator*(const ExpressionPtr& lhs, const ExpressionPtr& rhs);
 
 /**
  * Literal:
@@ -685,6 +691,7 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
+	const ExpressionPtr& getArgument(size_t pos) const { return arguments[pos]; }
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
 	// TODO: re-add with proper type inferencing of return type
