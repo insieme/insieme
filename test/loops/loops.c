@@ -23,4 +23,10 @@ int main(int argc, char* argv[]) {
 		printf("idx=%d", a);
 	}
 	
+	for(a=1;a<15;a+=3) {
+		printf("a=%d\n", a);
+	}
+	
+	printf("a=%d\n", a);
+	
 }

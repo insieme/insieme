@@ -221,6 +221,21 @@ core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, c
 class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
+
+	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
+		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
+		if(ref && isa<const ParmVarDecl>(ref->getDecl())) {
+			core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>( convFact.convertExpr(ref) );
+			assert(parmVar);
+			auto fit = ctx.wrapRefMap.find(parmVar);
+			if(fit == ctx.wrapRefMap.end()) {
+				fit = ctx.wrapRefMap.insert( std::make_pair(parmVar, convFact.builder.variable(convFact.builder.refType(parmVar->getType()))) ).first;
+			}
+			return fit->second;
+		}
+		return convFact.convertExpr(expr);
+	}
+
 public:
 
 	// CallGraph for functions, used to resolved eventual recursive functions
@@ -408,18 +423,7 @@ public:
 				// free(): check whether this is a call to the free() function
 				if(funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
 					// in the case the free uses an input parameter
-					core::ExpressionPtr&& arg = Visit(callExpr->getArg(0));
-					DeclRefExpr* ref = utils::skipSugar<DeclRefExpr>(callExpr->getArg(0));
-					if(ref && isa<ParmVarDecl>(ref->getDecl())) {
-						core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>( arg );
-						assert(parmVar);
-						auto fit = ctx.needRef.find(parmVar);
-						if(fit == ctx.needRef.end()) {
-							fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
-						}
-						arg = fit->second;
-					}
-					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), arg );
+					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), wrapVariable(callExpr->getArg(0)) );
 				}
 			}
 
@@ -680,17 +684,7 @@ public:
 			// poor C codes assign value to function parameters, this is not allowed here as input parameters
 			// are of non REF type. What we need to do is introduce a declaration for these variables
 			// and use the created variable on the stack instead of the input parameters
-			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(binOp->getLHS());
-			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
-				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(lhs);
-				assert(parmVar);
-				// look up the needRef map to see if we already introduced a declaration for this variable
-				auto fit = ctx.needRef.find(parmVar);
-				if(fit == ctx.needRef.end()) {
-					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
-				}
-				lhs = fit->second;
-			}
+			lhs = wrapVariable(binOp->getLHS());
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
@@ -788,19 +782,7 @@ public:
 			// We need to be carefull paramvars are not dereferenced and the address passed around. If this happens
 			// we have to declare a variable holding the memory location for that value and replace every use of
 			// the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
-			DeclRefExpr* ref = dyn_cast<DeclRefExpr>(unOp->getSubExpr());
-			if(ref && isa<ParmVarDecl>(ref->getDecl())) {
-				core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>(subExpr);
-				assert(parmVar);
-				// look up the needRef map to see if we already introduced a declaration for this variable
-				auto fit = ctx.needRef.find(parmVar);
-				if(fit == ctx.needRef.end()) {
-					fit = ctx.needRef.insert( std::make_pair(parmVar, builder.variable(builder.refType(parmVar->getType()))) ).first;
-				}
-				// we make it a vector FIXME
-				subExpr = fit->second;
-			}
-			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>(subExpr) );
+			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>(wrapVariable(unOp->getSubExpr())) );
 			break;
 		}
 		// *a
@@ -1179,19 +1161,18 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	vector<core::StatementPtr> decls;
 	std::for_each(params.begin(), params.end(),
 		[ &decls, &body, this ] (core::VariablePtr currParam) {
-			auto fit = this->ctx.needRef.find(currParam);
-			if(fit != this->ctx.needRef.end()) {
-				decls.push_back( this->builder.declarationStmt(fit->second,
-					this->builder.refVar( fit->first ) // ref.var
-				));
-				// replace this parameter in the body
-				// example:
+			auto fit = this->ctx.wrapRefMap.find(currParam);
+			if(fit != this->ctx.wrapRefMap.end()) {
+				decls.push_back( this->builder.declarationStmt(fit->second,	this->builder.refVar( fit->first ) ));
+				// replace this parameter in the body, example:
+				//
 				// int f(int a) {
 				//    for (...) {
 				//	     x = a; <- if all the occurencies of a will not be replaced the semantics of the code will not be preserved
 				//	     a = i;
 				//    }
 				// }
+				//
 				// as the variable can olny appear in the RHS of expression, we have to sobstitute it with
 				// its dereference
 				body = core::dynamic_pointer_cast<const core::Statement>(

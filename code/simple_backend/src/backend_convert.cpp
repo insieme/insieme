@@ -270,13 +270,10 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		case NT_Variable:
 			info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
 			break;
-		case NT_CallExpr: {
-
-			// mark as a stack variable only if created using ref.var => otherwise always a pointer (conservative)
+		default:
+			// default is a stack variable
 			info.location = VariableManager::STACK;
 			break;
-		}
-		default: ;// nothing
 		}
 	}
 	varManager.addInfo(var, info);
