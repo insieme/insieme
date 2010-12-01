@@ -36,9 +36,13 @@
 
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_node.h"
+
+#include "insieme/core/transform/node_mapper_utils.h"
+
 #include "insieme/c_info/naming.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
+
 
 namespace insieme {
 namespace frontend {
@@ -240,7 +244,7 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
 }
 
 
-class KernelMapper : public core::NodeMapping {
+class KernelMapper : public core::transform::CachedNodeMapping {
     const core::ASTBuilder& builder;
 
     // Vectors to store local variables
@@ -271,7 +275,7 @@ public:
     KernelMapper(core::ASTBuilder& astBuilder, KernelData& data)
     : builder(astBuilder), kd(data) { };
 
-    const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
+    const core::NodePtr resolveElement(const core::NodePtr& element) {
 //std::cout << "\t * found " << element->toString() << std::endl;
 
         if(core::dynamic_pointer_cast<const core::LambdaExpr>(element)){
@@ -468,7 +472,7 @@ public:
 
 */
 
-class OclMapper : public core::NodeMapping {
+class OclMapper : public core::transform::CachedNodeMapping {
     KernelMapper kernelMapper;
     const core::ASTBuilder& builder;
 //    const core::Substitution::Mapping& mapping;
@@ -642,15 +646,15 @@ public:
         : kernelMapper(astBuilder, kd), builder(astBuilder),
           kd(astBuilder){ };
 
-    const core::NodePtr mapElement(unsigned, const core::NodePtr& element) {
+    const core::NodePtr resolveElement(const core::NodePtr& element) {
         // quick check - stop recursion at variables
         if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
-
-        // check if we are at a function node
-        if(core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)){
+        if(element->getNodeType() == core::NT_LambdaExpr) {
+        	// check if we are at a function node
+        	const core::LambdaExprPtr& func = static_pointer_cast<const core::LambdaExpr>(element);
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
 
