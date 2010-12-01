@@ -339,9 +339,16 @@ private:
     }
 
     template <typename T>
-    void appendToVector(std::vector<T>& outVec, std::vector<T*>& inVec) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back(*(*I));
+    void appendToVectorOrdered(std::vector<T>& outVec, std::vector<T>& conVec, std::vector<T>& gloVec, std::vector<T>& locVec, std::vector<T>& priVec,
+            std::vector<OCL_ADDRESS_SPACE>& order) {
+        size_t con = 0, glo = 0, loc = 0, pri = 0;
+        for(auto I = order.begin(), E = order.end(); I != E; I++) {
+            switch (*I) {
+            case CONSTANT: outVec.push_back(conVec.at(con++)); break;
+            case GLOBAL: outVec.push_back(gloVec.at(glo++)); break;
+            case LOCAL: outVec.push_back(locVec.at(loc++)); break;
+            case PRIVATE: outVec.push_back(priVec.at(pri++)); break;
+            }
         }
     }
 
@@ -549,7 +556,7 @@ public:
 
             core::Lambda::ParamList params = func->getParameterList();
 
-            std::vector<core::VariablePtr*> orderedArgs;
+            std::vector<OCL_ADDRESS_SPACE> argsOrder;
 
             // store memory spaces of arguments
             for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
@@ -562,22 +569,22 @@ public:
                             switch(asa->getAddressSpace()) {
                             case ocl::AddressSpaceAnnotation::GLOBAL: {
                                 globalArgs.push_back(var);
-                                orderedArgs.push_back(&globalArgs.back());
+                                argsOrder.push_back(GLOBAL);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::CONSTANT: {
                                 constantArgs.push_back(var);
-                                orderedArgs.push_back(&constantArgs.back());
+                                argsOrder.push_back(CONSTANT);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::LOCAL: {
                                 localArgs.push_back(var);
-                                orderedArgs.push_back(&localArgs.back());
+                                argsOrder.push_back(LOCAL);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::PRIVATE: {
                                 privateArgs.push_back(var);
-                                orderedArgs.push_back(&privateArgs.back());
+                                argsOrder.push_back(PRIVATE);
                                 break;
                             }
                             default:
@@ -589,7 +596,7 @@ public:
                 else {
                     // arguments without address space modifiers are private per default
                     privateArgs.push_back(var);
-                    orderedArgs.push_back(&privateArgs.back());
+                    argsOrder.push_back(PRIVATE);
                 }
             }
 
@@ -721,7 +728,12 @@ public:
 
                 // construct updated param list
                 core::Lambda::ParamList newParams;
-                appendToVector(newParams, orderedArgs);
+/*                appendToVector(newParams, globalArgs);
+                appendToVector(newParams, constantArgs);
+                appendToVector(newParams, localArgs);
+                appendToVector(newParams, privateArgs);*/
+                appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
+
                 newParams.push_back(kd.globalRange); // add global range to parameters
                 newParams.push_back(kd.localRange); // add local range to parameters
 
