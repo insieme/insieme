@@ -106,7 +106,7 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
-			castExpr(subExpr->getType(), uintLit(0)), subExpr);
+			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
 }
 
 CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
@@ -115,7 +115,7 @@ CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const Expressi
 	return callExpr(vType->getElementType(), manager.basic.getVectorSubscript(), vec, index);
 }
 //CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
-	// vectorSubscript(vec, uintLit(index));
+//	auto lit = uintLit(index);
 //	vectorSubscript(vec, lit);
 //}
 
@@ -192,6 +192,11 @@ CaptureInitExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const State
 CallExprPtr ASTBuilder::getThreadGroup(ExpressionPtr level) const {
     if(!level) level = uintLit(0);
     return callExpr(manager.basic.getGetThreadGroup(), level);
+}
+
+CallExprPtr ASTBuilder::barrier(ExpressionPtr threadgroup) const {
+	if(!threadgroup) threadgroup = getThreadGroup();
+	return callExpr(manager.basic.getBarrier(), threadgroup);
 }
 
 CallExprPtr ASTBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {

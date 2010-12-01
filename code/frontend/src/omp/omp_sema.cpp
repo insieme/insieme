@@ -110,12 +110,13 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	auto& basic = nodeMan.basic;
 	StatementList replacements;
 	auto pfor = build.pfor(forStmt);
+	replacements.push_back(pfor);
 
 	if(!forP->hasNoWait()) {
-
+		replacements.push_back(build.barrier());
 	}
 	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
-	return pfor;
+	return build.compoundStmt(replacements);
 }
 
 } // namespace omp
