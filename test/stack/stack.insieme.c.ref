@@ -91,13 +91,13 @@ int main() {
 				printf("Pushing %d\n", (var_9));
 				push((stack), (var_9));
 			};
-			((i) = (0+((int)((ceil(((double)(((10-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
 		};
 		{
 			for(int var_14 = 0; var_14 < 5; var_14 += 1) {
 				printf("Poping  %d\n", pop((stack)));
 			};
-			((i) = (0+((int)((ceil(((double)(((5-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
 		dumpStack((stack));
 		return 0;;

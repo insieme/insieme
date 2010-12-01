@@ -108,8 +108,12 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	assert(forStmt && "OpenMP for attached to non-for statement");
 
 	auto& basic = nodeMan.basic;
+	StatementList replacements;
 	auto pfor = build.pfor(forStmt);
 
+	if(!forP->hasNoWait()) {
+
+	}
 	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
 	return pfor;
 }

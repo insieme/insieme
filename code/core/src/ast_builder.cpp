@@ -106,7 +106,7 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
-			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
+			castExpr(subExpr->getType(), uintLit(0)), subExpr);
 }
 
 CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
@@ -115,7 +115,7 @@ CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const Expressi
 	return callExpr(vType->getElementType(), manager.basic.getVectorSubscript(), vec, index);
 }
 //CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
-//	auto lit = uintLit(index);
+	// vectorSubscript(vec, uintLit(index));
 //	vectorSubscript(vec, lit);
 //}
 

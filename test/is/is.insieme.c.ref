@@ -136,14 +136,14 @@ double randlc(void* _capture, double* X, double* A) {
 					(((*var_26).R23) = (0.50*((*var_26).R23)));
 					(((*var_26).T23) = (2.0*((*var_26).T23)));
 				};
-				((i) = (1+((int)((ceil(((double)((((23+1)-1)/1))))*1)))));
+				((i) = (1+(((int)(ceil((((double)(((23+1)-1)))/((double)(1))))))*1)));
 			};
 			{
 				for(int var_39 = 1; var_39 < (46+1); var_39 += 1) {
 					(((*var_26).R46) = (0.50*((*var_26).R46)));
 					(((*var_26).T46) = (2.0*((*var_26).T46)));
 				};
-				((i) = (1+((int)((ceil(((double)((((46+1)-1)/1))))*1)))));
+				((i) = (1+(((int)(ceil((((double)(((46+1)-1)))/((double)(1))))))*1)));
 			};
 			(((*var_26).KS) = 1);
 		};
@@ -190,7 +190,7 @@ void create_seq(void* _capture, double seed, double a) {
 					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
 					(((*((*var_17).key_array))[((unsigned int)((var_41)))]) = ((int)((((double)((k)))*(x)))));
 				};
-				((i) = (0+((int)((ceil(((double)((((1<<25)-0)/1))))*1)))));
+				((i) = (0+(((int)(ceil((((double)(((1<<25)-0)))/((double)(1))))))*1)));
 			};
 		};
 	}
@@ -220,40 +220,40 @@ void rank(void* _capture, int iteration) {
 				for(int var_55 = 0; var_55 < 5; var_55 += 1) {
 					(((*((*var_44).partial_verify_vals))[((unsigned int)((var_55)))]) = ((*((*var_44).key_array))[((unsigned int)(((*((*var_44).test_index_array))[((unsigned int)((var_55)))])))]));
 				};
-				((i) = (0+((int)((ceil(((double)(((5-0)/1))))*1)))));
+				((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 			};
 			{
 				for(int var_56 = 0; var_56 < (1<<21); var_56 += 1) {
 					(((*((*var_44).key_buff1))[((unsigned int)((var_56)))]) = 0);
 				};
-				((i) = (0+((int)((ceil(((double)((((1<<21)-0)/1))))*1)))));
+				((i) = (0+(((int)(ceil((((double)(((1<<21)-0)))/((double)(1))))))*1)));
 			};
 		};
 		{
 			for(int var_57 = 0; var_57 < (1<<21); var_57 += 1) {
 				((prv_buff1[((unsigned int)((var_57)))]) = 0);
 			};
-			((i) = (0+((int)((ceil(((double)((((1<<21)-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)(((1<<21)-0)))/((double)(1))))))*1)));
 		};
 		{
 			for(int var_58 = 0; var_58 < (1<<25); var_58 += 1) {
 				(((*((*var_44).key_buff2))[((unsigned int)((var_58)))]) = ((*((*var_44).key_array))[((unsigned int)((var_58)))]));
 				((prv_buff1[((unsigned int)(((*((*var_44).key_buff2))[((unsigned int)((var_58)))])))])++);
 			};
-			((i) = (0+((int)((ceil(((double)((((1<<25)-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)(((1<<25)-0)))/((double)(1))))))*1)));
 		};
 		{
 			for(int var_59 = 0; var_59 < ((1<<21)-1); var_59 += 1) {
 				((prv_buff1[((unsigned int)(((var_59)+1)))]) = ((prv_buff1[((unsigned int)(((var_59)+1)))])+(prv_buff1[((unsigned int)((var_59)))])));
 			};
-			((i) = (0+((int)((ceil(((double)(((((1<<21)-1)-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)((((1<<21)-1)-0)))/((double)(1))))))*1)));
 		};
 		{
 			{
 				for(int var_60 = 0; var_60 < (1<<21); var_60 += 1) {
 					(((*((*var_44).key_buff1))[((unsigned int)((var_60)))]) = (((*((*var_44).key_buff1))[((unsigned int)((var_60)))])+(prv_buff1[((unsigned int)((var_60)))])));
 				};
-				((i) = (0+((int)((ceil(((double)((((1<<21)-0)/1))))*1)))));
+				((i) = (0+(((int)(ceil((((double)(((1<<21)-0)))/((double)(1))))))*1)));
 			};
 		};
 		{
@@ -336,7 +336,7 @@ void rank(void* _capture, int iteration) {
 						};
 					};
 				};
-				((i) = (0+((int)((ceil(((double)(((5-0)/1))))*1)))));
+				((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 			};
 			if((iteration==10)) {
 				(((*var_44).key_buff_ptr_global) = (*((*var_44).key_buff1)));
@@ -514,14 +514,14 @@ void full_verify(void* _capture) {
 			for(int var_89 = 0; var_89 < (1<<25); var_89 += 1) {
 				(((*((*var_83).key_array))[((unsigned int)((--(((*var_83).key_buff_ptr_global)[((unsigned int)(((*((*var_83).key_buff2))[((unsigned int)((var_89)))])))]))))]) = ((*((*var_83).key_buff2))[((unsigned int)((var_89)))]));
 			};
-			((i) = (0+((int)((ceil(((double)((((1<<25)-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)(((1<<25)-0)))/((double)(1))))))*1)));
 		};
 		((j) = 0);
 		{
 			for(int var_90 = 1; var_90 < (1<<25); var_90 += 1) if((((*((*var_83).key_array))[((unsigned int)(((var_90)-1)))])>((*((*var_83).key_array))[((unsigned int)((var_90)))]))) {
 				(j++);
 			};
-			((i) = (1+((int)((ceil(((double)((((1<<25)-1)/1))))*1)))));
+			((i) = (1+(((int)(ceil((((double)(((1<<25)-1)))/((double)(1))))))*1)));
 		};
 		if(((j)!=0)) {
 			printf("Full_verify: number of keys out of sort: %d\n", (j));
@@ -634,7 +634,7 @@ int main(int argc, char** argv) {
 					}; break;
 				};
 			};
-			((i) = (0+((int)((ceil(((double)(((5-0)/1))))*1)))));
+			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
 		{};
 		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n", 0);
@@ -655,7 +655,7 @@ int main(int argc, char** argv) {
 				};
 				call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), (var_74));
 			};
-			((iteration) = (1+((int)((ceil(((double)((((10+1)-1)/1))))*1)))));
+			((iteration) = (1+(((int)(ceil((((double)(((10+1)-1)))/((double)(1))))))*1)));
 		};
 		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_stop, 0, &var_1}))), 0);
 		((timecounter) = call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&timer_read, 0, &var_1}))), 0));

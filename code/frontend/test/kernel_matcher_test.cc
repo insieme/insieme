@@ -365,7 +365,7 @@ TEST(KernelMatcherTest, CheckBuildinVector) {
     {
         clang::Type* t = types.at(i);
 
-        if(t->isVectorType() && t->hasIntegerRepresentation())
+        if(t->isExtVectorType() && t->hasIntegerRepresentation())
         {
 
             clang::ExtVectorType* evt = (clang::ExtVectorType*)t;

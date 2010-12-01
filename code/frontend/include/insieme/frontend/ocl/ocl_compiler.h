@@ -81,9 +81,10 @@ public:
     core::VariablePtr numGroups; bool numGroupsUsed;
     core::VariablePtr localRange; bool localRangeUsed;
     // loop variables
+/* not needed any more
     core::VariablePtr groupId; bool groupIdUsed;
     core::VariablePtr localId; bool localIdUsed;
-
+*/
     core::CallExprPtr vecAccess(core::VariablePtr& vec, core::ExpressionPtr& idx) {
         return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(),
                 toVector<core::ExpressionPtr>(vec, idx) );
@@ -95,13 +96,10 @@ public:
 
     //default constructor
     KernelData(core::ASTBuilder& astBuilder) :
-        builder(astBuilder), globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)),
-        groupId(get3DvecVar(astBuilder)), localId(get3DvecVar(astBuilder)){
+        builder(astBuilder), globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)) {
         globalRangeUsed = false;
         numGroupsUsed = false;
         localRangeUsed = false;
-        groupIdUsed = false;
-        localIdUsed = false;
     };
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables

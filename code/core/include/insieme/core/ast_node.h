@@ -41,6 +41,7 @@
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/instance_manager.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/set_utils.h"
 
 #include "insieme/core/annotation.h"
 #include "insieme/core/ast_pointer.h"
@@ -67,6 +68,19 @@ template<typename T> class Address;
 	#include "insieme/core/ast_nodes.def"
 
 #undef NODE
+
+/**
+ * Typedefs for some widely used base type collections.
+ */
+typedef std::vector<NodePtr> NodeList;
+typedef std::vector<StatementPtr> StatementList;
+typedef std::vector<ExpressionPtr> ExpressionList;
+typedef std::vector<TypePtr> TypeList;
+
+typedef utils::set::PointerSet<NodePtr> NodeSet;
+typedef utils::set::PointerSet<StatementPtr> StatementSet;
+typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
+typedef utils::set::PointerSet<TypePtr> TypeSet;
 
 /**
  * Defines an enumeration containing an entry for every node type. This
