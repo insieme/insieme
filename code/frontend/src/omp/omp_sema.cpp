@@ -107,7 +107,6 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
 	assert(forStmt && "OpenMP for attached to non-for statement");
 
-	auto& basic = nodeMan.basic;
 	StatementList replacements;
 	auto pfor = build.pfor(forStmt);
 	replacements.push_back(pfor);
