@@ -38,7 +38,7 @@
 FLAG("help,h", 				"help", 				Help, 			false, 	"produce help message")
 FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
-FLAG("check-sema,S",		"check-sema", 			CheckSema, 		true, 	"run semantics check on the generated IR")
+FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check on the generated IR")
 FLAG("omp-sema",			"omp-sema", 			OMPSema, 		false,	"apply OMP semantics in frontend")
 
 //For debug:

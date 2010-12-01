@@ -296,9 +296,7 @@ public:
 			if(loopAnalysis.isInverted()) {
 				// invert init value
 				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
-				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
-						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, invInitExpr, true)
-				);
+				declStmt = builder.declarationStmt( declStmt->getVariable(), builder.refVar(invInitExpr) );
 
 				// invert the sign of the loop index in body of the loop
 				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
