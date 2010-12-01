@@ -112,19 +112,18 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
     }
 
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
-/*      Defualt value anyway....
- *      if(lit->getValue() == "0u") {
-            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+      if(lit->getValue() == "0u") {
+            //if lit is 0 CLK_LOCAL_MEM_FENCE,
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
-        }*/
+        }
         if(lit->getValue() == "1u"){
-            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+            //if lit is 1 CLK_GLOBAL_MEM_FENCE
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
 
     // TODO show warning
-// return CLK_LOCAL_MEM_FENCE barrier if the argument has unexpected type
+    assert(false && "OpenCL barrier has unexpected argument. Has to be 0u or 1u");
     return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
@@ -339,6 +338,13 @@ private:
         }
     }
 
+    template <typename T>
+    void appendToVector(std::vector<T>& outVec, std::vector<T*>& inVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            outVec.push_back(*(*I));
+        }
+    }
+
     // function to calculate the product of all elements in a vector
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
@@ -543,6 +549,8 @@ public:
 
             core::Lambda::ParamList params = func->getParameterList();
 
+            std::vector<core::VariablePtr*> orderedArgs;
+
             // store memory spaces of arguments
             for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
                 core::VariablePtr var = *pi;
@@ -554,18 +562,22 @@ public:
                             switch(asa->getAddressSpace()) {
                             case ocl::AddressSpaceAnnotation::GLOBAL: {
                                 globalArgs.push_back(var);
+                                orderedArgs.push_back(&globalArgs.back());
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::CONSTANT: {
                                 constantArgs.push_back(var);
+                                orderedArgs.push_back(&constantArgs.back());
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::LOCAL: {
                                 localArgs.push_back(var);
+                                orderedArgs.push_back(&localArgs.back());
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::PRIVATE: {
                                 privateArgs.push_back(var);
+                                orderedArgs.push_back(&privateArgs.back());
                                 break;
                             }
                             default:
@@ -577,6 +589,7 @@ public:
                 else {
                     // arguments without address space modifiers are private per default
                     privateArgs.push_back(var);
+                    orderedArgs.push_back(&privateArgs.back());
                 }
             }
 
@@ -708,10 +721,7 @@ public:
 
                 // construct updated param list
                 core::Lambda::ParamList newParams;
-                appendToVector(newParams, constantArgs);
-                appendToVector(newParams, globalArgs);
-                appendToVector(newParams, localArgs);
-                appendToVector(newParams, privateArgs);
+                appendToVector(newParams, orderedArgs);
                 newParams.push_back(kd.globalRange); // add global range to parameters
                 newParams.push_back(kd.localRange); // add local range to parameters
 

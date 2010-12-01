@@ -394,7 +394,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		                //TODO check why this fails:
 		                //assert(!definition->getInit() && "OpenCL local variables cannot have an initialization expression");
 		                zeroInit = true;
-		                std::cout << "init with zeros\n";
 		            }
 		        }
 		    }

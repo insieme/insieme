@@ -66,7 +66,10 @@
 #define __kernel __attribute__((annotate("__kernel")))
 #define kernel __attribute__((annotate("__kernel")))
 
-//define build-in vecto types
+//define built-in data types
+#define uint unsigned int
+
+//define built-in vector types
 #define ivec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v; typedef __attribute__((ext_vector_type(v))) unsigned T u##T##v;
 #define fvec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v;
 
@@ -100,7 +103,6 @@ fvec(float,3)
 fvec(float,4)
 fvec(float,8)
 fvec(float,16)
-
 
 //define build-in functions
 unsigned int get_global_id(unsigned int dmindx);
