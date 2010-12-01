@@ -123,7 +123,7 @@ public:
 
 	// Vectors
 	CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
-	CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
+	//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
 
 	// Compound Statements
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;

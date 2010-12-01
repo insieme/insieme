@@ -106,17 +106,18 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
-			castExpr(subExpr->getType(), uintLit(0), subExpr);
+			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
 }
 
 CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
 	auto vType = dynamic_pointer_cast<const VectorType>(vec->getType());
 	assert(vType && "Tried vector subscript operation on non-vector expression");
-	return callExpr(vType->getElementType(), manager.basic.getVectorSubscript(), vec, index));
+	return callExpr(vType->getElementType(), manager.basic.getVectorSubscript(), vec, index);
 }
-CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
-	vectorSubscript(vec, uintLit(index));
-}
+//CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
+//	auto lit = uintLit(index);
+//	vectorSubscript(vec, lit);
+//}
 
 CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
 	return compoundStmt(toVector(s1, s2));
