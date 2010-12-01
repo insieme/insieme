@@ -50,101 +50,6 @@ namespace ocl {
 
 namespace {
 
-/* does not work at all
-class OclVisitor : public core::ASTVisitor<core::ProgramPtr> {
-private:
-    const core::ASTBuilder& builder;
-    core::ProgramPtr& program;
-
-public:
-
-    OclVisitor(core::ASTBuilder& astBuilder, core::ProgramPtr program) : builder(astBuilder), program(program){ }
-
-    core::ProgramPtr visitLambdaExpr(const core::LambdaExprPtr& func) {
-        auto funcAnnotation = func.getAnnotation(ocl::BaseAnnotation::KEY);
-        if(funcAnnotation) {
-
-            bool isKernelFunction;
-            bool workGroupSizeDefined = false;
-            size_t wgs[3];
-            ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getListBegin();
-            for(ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getListBegin(), E = funcAnnotation->getListEnd();
-                I != E; ++I) {
-                ocl::AnnotationPtr annot = (*I);
-
-                if(ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<ocl::WorkGroupSizeAnnotation>(annot)) {
-                    workGroupSizeDefined = true;
-                    wgs[0] = wgsap->getXdim();
-                    assert(wgs[0] > 0 && "Work group Size x-dimension has to be greater than 0.");
-                    wgs[1] = wgsap->getYdim();
-                    assert(wgs[1] > 0 && "Work group Size y-dimension has to be greater than 0.");
-                    wgs[2] = wgsap->getZdim();
-                    assert(wgs[2] > 0 && "Work group Size z-dimension has to be greater than 0.");
-                }
-
-                if(ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::KernelFctAnnotation>(annot)) {
-                    isKernelFunction = kf->isKernelFct();
-                }
-
-            }
-            if(!isKernelFunction)
-                return program;
-
-            // remove
-            const core::LambdaExpr kernel = *func;
-
-            core::LambdaExpr::ParamList params = kernel.getParams();
-
-            // add vector<uint<4>,3> globalRange and localRange to parameters
-            // params.push_back
-
-            const core::StatementPtr& body = kernel.getBody();
-            // remove
-            const core::Statement& bodydummy = *kernel.getBody();
-            const core::Node::ChildList& children = bodydummy.getChildList();
-
-            std::for_each(children.begin(), children.end(),
-                    [&builder] (const core::NodePtr& curr) {
-                //look for ocl buildin functions and translate them to IR statements
-
-                }
-            );
-
-            //add three parallel statements for the localRange
-            core::JobExprPtr localZjob = builder.jobExpr(body);
-
-            core::LambdaExprPtr newFunc = builder.lambdaExpr(kernel.getType(), params, localZjob);
-
-            core::NodePtr newProgram = core::transform::replaceNode(builder, program, func, newFunc);
-
-            std::cout << "replaced -" << newProgram->toString() << "-\n";
-
-
-
-            if(core::ProgramPtr np = dynamic_pointer_cast<const core::Program>(newProgram)) {
-            std::cout << " do it\n";
-                //if replaced function was an entry point, update entry points
-                core::Program::EntryPointSet entryList = program->getEntryPoints();
-
-                for(std::unordered_set<core::ExpressionPtr>::iterator it = entryList.begin(), end = entryList.end();
-                    it != end; it ++) {
-                    if(*it == func) {
-                        np = core::Program::remEntryPoint(*builder.getNodeManager(), np, func);
-                        np = core::Program::addEntryPoint(*builder.getNodeManager(), np, newFunc);
-                    }
-                }
-                program = np;
-                return np;
-          } else {
-               assert(false && "OclCompiler corrupted program");
-          }
-
-        }
-        return program;
-    }
-};
-*/
-
 void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
 
     if(globalRangeUsed)
@@ -155,15 +60,6 @@ void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL
 
     if(localRangeUsed || scope != OCL_LOCAL_PAR)
         CAPTURE(captureList, localRange, cTypes);
-
-    if(groupIdUsed && scope != OCL_GLOBAL_JOB && scope != OCL_GLOBAL_PAR)
-        CAPTURE(captureList, groupId, cTypes);
-
-//the local ID is never captured at the moment since it is the argument of the innermost pfor function
-/*    if(localIdUsed && scope == OCL_LOCAL_PAR) {
-        CAPTURE(captureList, localId, cTypes);
-    }*/
-
 }
 
 void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE scope) {
@@ -176,12 +72,6 @@ void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE s
 
      if(localRangeUsed || scope != OCL_LOCAL_PAR)
          SHARE(sharedList, localRange);
-
-     if(groupIdUsed && scope != OCL_GLOBAL_JOB)
-         SHARE(sharedList, groupId);
-
-     if(localIdUsed && scope == OCL_LOCAL_PAR)
-         SHARE(sharedList, localId);
 }
 
 core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionPtr idx) {
@@ -202,19 +92,14 @@ core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionP
 core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL level, core::ExpressionPtr idx){
     switch(level) {
     case OPL_GLOBAL :
-        groupIdUsed = true;
-        localIdUsed = true;
         localRangeUsed = true;
-        //calculate localId + (localRange * groupId)
-        return builder.callExpr(BASIC.getUnsignedIntAdd(), vecAccess(localId, idx),
-                builder.callExpr(BASIC.getUnsignedIntMul(), vecAccess(localRange, idx), vecAccess(groupId, idx)));
+        return builder.callExpr(BASIC.getUnsignedIntAdd(), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx),
+                builder.callExpr(BASIC.getUnsignedIntMul(), vecAccess(localRange, idx), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx)));
     case OPL_GROUP :
-        groupIdUsed = true;
-        return vecAccess(groupId, idx);
+        return builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx);
     //case OPL_LOCAL :
     default:
-        localIdUsed = true;
-        return vecAccess(localId, idx);
+        return builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx);
     }
 }
 
@@ -431,46 +316,6 @@ public:
         privateVars.clear();
     }
 };
-/*
-class VariableMapping : public std::vector<std::pair<core::VariablePtr, core::VariablePtr >> {
-public:
-    // add variables to the mapping
-    void add(std::vector<core::VariablePtr>& Vars) {
-        for_each(Vars.begin(), Vars.end(), [&] (core::VariablePtr v) {
-            this->push_back(std::make_pair(v,v));
-        });
-    }
-    void add(std::vector<core::DeclarationStmtPtr>& Vars) {
-        for_each(Vars.begin(), Vars.end(), [&] (core::DeclarationStmtPtr v) {
-            this->push_back(std::make_pair(v->getVariable(),v->getVariable()));
-        });
-    }
-
-    // look for the mapping of a specific root
-    const core::VariablePtr& map(const core::VariablePtr& root) {
-        for(auto I = this->begin(), E = this->end(); I != E; ++I) {
-           if((*I).first == root) {
-               return (*I).second;
-           }
-        }
-        return root;
-    }
-
-    // Adjust mapping
-    bool remap(const core::VariablePtr& oldTarget, const core::VariablePtr& newTarget) {
-        for(auto I = this->begin(), E = this->end(); I != E; ++I) {
-           if((*I).second == oldTarget) {
-               std::cout << "if " << newTarget->getId() << std::endl;
-               (*I).second = newTarget;
-               return true;
-           }
-        }
-        return false;
-    }
-
-};
-
-*/
 
 class OclMapper : public core::transform::CachedNodeMapping {
     KernelMapper kernelMapper;
@@ -783,15 +628,15 @@ public:
                 core::JobExpr::GuardedStmts noGuardedStatementsNeeded;
 
 // Bottom up generation/composition of constructs
-
+/*
                 // build expression to be used as body of local pfor loop
                 core::Lambda::ParamList localIdAsAVector = toVector(kd.localId);
                 core::ExpressionPtr localPforFun = genLocalCie(newBody, localIdAsAVector, OCL_LOCAL_PAR);
 
                 core::CallExprPtr localPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.localRange, localPforFun));
-
+*/
                 // build expression to be used as body of local job
-                core::ExpressionPtr localParFct = genLocalCie(localPfor, core::Lambda::ParamList(), OCL_LOCAL_JOB);
+                core::ExpressionPtr localParFct = genLocalCie(/*localPfor*/newBody, core::Lambda::ParamList(), OCL_LOCAL_JOB);
 
                 core::JobExpr::LocalDecls localJobShared;
 
@@ -820,15 +665,15 @@ public:
 
                 core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(),
                         builder.getNodeManager().basic.getParallel(), expr);
-
+/*
                 // create global pfor loop body
                 core::Lambda::ParamList groupIdAsAVector = toVector(kd.groupId);
                 core::ExpressionPtr globalPforFun = genLocalCie(localPar, groupIdAsAVector, OCL_GLOBAL_PAR);
 
                 core::CallExprPtr globalPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.numGroups, globalPforFun));
-
+*/
                 std::vector<core::StatementPtr> gobalBodyStmts;
-                gobalBodyStmts.push_back(globalPfor);
+                gobalBodyStmts.push_back(/*globalPfor*/localPar);
                 expr.clear();
                 gobalBodyStmts.push_back(builder.callExpr(BASIC.getMergeAll(), expr));
                 core::CompoundStmtPtr globalParBody = builder.compoundStmt(gobalBodyStmts);
