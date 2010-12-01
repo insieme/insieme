@@ -685,6 +685,7 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
+	const ExpressionPtr& getArgument(size_t pos) const { return arguments[pos]; }
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
 	// TODO: re-add with proper type inferencing of return type
