@@ -214,7 +214,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );
-	if( !(varTy.isConstQualified() || isa<const clang::ParmVarDecl>(varDecl) || type->getNodeType() == core::NT_VectorType) ) {
+	if( !(varTy.isConstQualified() || isa<const clang::ParmVarDecl>(varDecl) ||
+	        (type->getNodeType() == core::NT_VectorType && !varTy.getTypePtr()->isExtVectorType()) )) {
 		// add a ref in the case of variables which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
