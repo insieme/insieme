@@ -570,7 +570,7 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = memcpy(malloc(sizeof(struct __insieme_globals)), &((struct __insieme_globals)((struct __insieme_globals){(((int)(0))-1),
+		struct __insieme_globals var_1 = ((struct __insieme_globals){(((int)(0))-1),
 			calloc(sizeof(double[64]), 1),
 			calloc(sizeof(double[64]), 1),
 			null,
@@ -596,7 +596,7 @@ int main(int argc, char** argv) {
 			0.0,
 			0.0,
 			0.0
-		})), sizeof(struct __insieme_globals));
+		});
 		int i = 0;
 		int iteration = 0;
 		int itemp = 0;

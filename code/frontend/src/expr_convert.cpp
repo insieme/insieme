@@ -1211,9 +1211,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
 		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar,
-			builder.callExpr(ctx.globalVar->getType(), mgr.basic.getRefNew(), ctx.globalStruct.second ))
-		);
+		stmts.push_back( builder.declarationStmt(ctx.globalVar, builder.refVar( ctx.globalStruct.second )) );
 		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
 		body = builder.compoundStmt(stmts);
 	}

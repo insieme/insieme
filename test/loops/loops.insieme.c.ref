@@ -22,8 +22,8 @@ double ceil(double);
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = memcpy(malloc(sizeof(struct __insieme_globals)), &((struct __insieme_globals)((struct __insieme_globals){10
-		})), sizeof(struct __insieme_globals));
+		struct __insieme_globals var_1 = ((struct __insieme_globals){10
+		});
 		int a = 10;
 		for(int idx = 0; idx < (a); idx += 1) {
 			printf("idx=%d", (idx));
