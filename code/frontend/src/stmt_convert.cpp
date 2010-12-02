@@ -537,6 +537,48 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							DO STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	StmtWrapper VisitDoStmt(DoStmt* doStmt) {
+		START_LOG_STMT_CONVERSION(doStmt);
+		const core::ASTBuilder& builder = convFact.builder;
+		StmtWrapper retStmt;
+
+		VLOG(2) << "{ DoStmt }";
+		core::StatementPtr&& body = tryAggregateStmts( builder, Visit( doStmt->getBody() ) );
+		assert(body && "Couldn't convert body of the WhileStmt");
+
+		const Expr* cond = doStmt->getCond();
+		assert(cond && "DoStmt with no condition.");
+		core::ExpressionPtr&& condExpr = convFact.tryDeref( convFact.convertExpr( cond ) );
+		assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
+
+		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
+			// add cast to bool FIXME
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+		}
+
+		StatementList stmts;
+		if(core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body)) {
+			std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
+		}
+		stmts.push_back(builder.whileStmt(condExpr, body));
+
+		core::StatementPtr&& irNode = builder.compoundStmt(stmts);
+
+		// handle eventual OpenMP pragmas attached to the Clang node
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, doStmt, convFact);
+
+		// adding the WhileStmt to the list of returned stmts
+		retStmt.push_back( annotatedNode );
+		retStmt = tryAggregateStmts(builder, retStmt);
+
+		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
+		// otherwise we introduce an outer CompoundStmt
+		return retStmt;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							SWITCH STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitSwitchStmt(SwitchStmt* switchStmt) {
