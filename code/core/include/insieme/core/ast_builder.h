@@ -123,7 +123,7 @@ public:
 
 	// Vectors
 	CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
-	CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
+	//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
 
 	// Compound Statements
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;
@@ -151,6 +151,10 @@ public:
 
 	// Direct call expression of getThreadGroup
 	CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
+	CallExprPtr getThreadId(ExpressionPtr level = ExpressionPtr()) const;
+
+	// Direct call expression of barrier
+	CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;
 
 	// Direct call expression of pfor
 	CallExprPtr pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step = ExpressionPtr()) const;

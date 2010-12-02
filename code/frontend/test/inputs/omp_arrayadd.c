@@ -34,46 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <stdio.h>
+#include <assert.h>
 
-#include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
+#define A_SIZE 64
 
-#include "insieme/utils/logging.h"
-
-namespace insieme {
-namespace frontend {
-namespace omp {
-
-
-class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
-
-	core::NodeManager& nodeMan;
-	core::ASTBuilder build;
-
-	core::ProgramPtr replacement;
-
-	bool visitNode(const core::NodeAddress& node);
-	bool visitCallExpr(const core::CallExprAddress& callExp);
-	bool visitMarkerStmt(const core::MarkerStmtAddress& mark);
-
-	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
-	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
-
-public:
-	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }
-
-	core::ProgramPtr getReplacement() { return replacement; }
-};
-
-
-/** Applies OMP semantics to given code fragment.
- ** */
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);
-
-
-} // namespace omp
-} // namespace frontend
-} // namespace insieme
+int main() {
+	
+	int a[A_SIZE];
+	int b[A_SIZE];
+	int c[A_SIZE];
+	for(unsigned i = 0; i<A_SIZE; ++i) {
+		a[i] = i;
+		b[i] = A_SIZE-i;
+		c[i] = 0;
+	}
+	
+	#pragma omp parallel
+	{
+		printf("Hello from thread %d!\n", omp_get_thread_num());
+		#pragma omp for
+		for(unsigned i=0; i<A_SIZE; ++i) {
+			c[i] = a[i] + b[i];
+		}
+	}
+	
+	for(unsigned i = 0; i<A_SIZE; ++i) {
+		assert(c[i] == A_SIZE);
+	}
+}

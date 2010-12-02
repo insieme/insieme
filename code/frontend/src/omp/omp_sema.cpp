@@ -64,6 +64,19 @@ bool SemaVisitor::visitNode(const NodeAddress& node) {
 	return true; // default behaviour: continue visiting
 }
 
+
+bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
+	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp->getFunctionExpr())) {
+		auto funName = litFunExp->getValueAs<string>();
+		if(funName == "omp_get_thread_num") {
+			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, callExp, build.getThreadId(), true));
+			return false;
+		}
+	}
+	return true;
+}
+
+
 bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 	const StatementAddress stmt = static_address_cast<const Statement>(mark.getAddressOfChild(0));
 	//LOG(INFO) << "marker on: \n" << *stmt;
@@ -76,6 +89,15 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 				newNode = handleParallel(stmt, parAnn);
 			} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
 				newNode = handleFor(stmt, forAnn);
+			} else if(auto barrierAnn = std::dynamic_pointer_cast<Barrier>(subAnn)) {
+				auto parent = mark.getParentNodeAddress();
+				auto surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
+				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
+				StatementList replacements;
+				replacements.push_back(build.barrier());
+				replacements.push_back(mark->getSubStatement());
+				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements, true));
+				return;
 			}
 			else assert(0 && "Unhandled OMP annotation.");
 			//LOG(INFO) << "Pre replace: " << *mark.getRootNode();
@@ -107,11 +129,15 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 	ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
 	assert(forStmt && "OpenMP for attached to non-for statement");
 
-	auto& basic = nodeMan.basic;
+	StatementList replacements;
 	auto pfor = build.pfor(forStmt);
+	replacements.push_back(pfor);
 
+	if(!forP->hasNoWait()) {
+		replacements.push_back(build.barrier());
+	}
 	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
-	return pfor;
+	return build.compoundStmt(replacements);
 }
 
 } // namespace omp

@@ -83,6 +83,35 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	}, preservePtrAnnotationsWhenModified);
 }
 
+NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index, 
+		bool preservePtrAnnotationsWhenModified) {
+	// use generic manipulation function
+	return manipulate(manager, target, [index, &statements](vector<StatementPtr>& list){
+		// limit index and insert element
+		unsigned pos = min((unsigned)(list.size()), index);
+		list.insert(list.begin() + pos, statements.cbegin(), statements.cend());
+	}, preservePtrAnnotationsWhenModified);
+}
+
+NodePtr insertBefore(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, 
+		const StatementPtr& beforeStatement, bool preservePtrAnnotationsWhenModified) {
+	// find position of beforeStatement
+	auto statements = target->getStatements();
+	auto targetloc = std::find(statements.cbegin(), statements.cend(), beforeStatement);
+	assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
+	return insert(manager, target, statement, targetloc-statements.cbegin(), preservePtrAnnotationsWhenModified);
+}
+
+NodePtr insertAfter(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, 
+		const StatementPtr& afterStatement, bool preservePtrAnnotationsWhenModified) {
+	// find position of afterStatement
+	auto statements = target->getStatements();
+	auto targetloc = std::find(statements.cbegin(), statements.cend(), afterStatement);
+	assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
+	return insert(manager, target, statement, targetloc-statements.cbegin()+1, preservePtrAnnotationsWhenModified);
+}
+
+
 NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, bool preservePtrAnnotationsWhenModified) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index](vector<StatementPtr>& list){
@@ -98,6 +127,17 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 		// remove element
 		assert( index < list.size() && "Index out of range!");
 		list[index] = replacement;
+	}, preservePtrAnnotationsWhenModified);
+}
+
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementList& replacements, 
+		bool preservePtrAnnotationsWhenModified) {
+	// use generic manipulation function
+	return manipulate(manager, target, [index, &replacements](vector<StatementPtr>& list){
+		// remove element
+		assert( index < list.size() && "Index out of range!");
+		list.erase(list.begin() + index);
+		list.insert(list.begin() + index, replacements.cbegin(), replacements.cend());
 	}, preservePtrAnnotationsWhenModified);
 }
 
