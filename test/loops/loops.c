@@ -3,6 +3,18 @@
 
 int N = 10;
 
+int func(int k) {
+	
+	for(k; k<10; k++) {
+		printf("k=%d\n", k);
+	}
+	
+	for(k=10; k>=0; k--) {
+		printf("k=%d\n", k);
+	}
+	
+}
+
 int main(int argc, char* argv[]) {
 	
 	int a = 10;
@@ -28,5 +40,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	printf("a=%d\n", a);
+	
+	func(a);
 	
 }
