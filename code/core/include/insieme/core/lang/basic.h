@@ -39,6 +39,7 @@
 #include <string>
 
 #include "insieme/core/int_type_param.h"
+#include <boost/utility.hpp>
 
 namespace insieme {
 namespace core {
@@ -58,7 +59,7 @@ typedef Pointer<const Statement> StatementPtr;
 
 namespace lang {
 
-class BasicGenerator {
+class BasicGenerator : boost::noncopyable {
 	mutable NodeManager& nm;
 	struct BasicGeneratorImpl;
 	mutable BasicGeneratorImpl* pimpl;

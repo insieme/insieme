@@ -140,16 +140,16 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 printf("%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d\n", varlist.pack((v46, v47.nx[v46], v47.ny[v46], v47.nz[v46], v43[0], v44[0], v45[0], v47.is1, v47.is2, v47.is3, v47.ie1, v47.ie2, v47.ie3)));
             } else { };
         }([v18], [v19], [v20], v1.lt);
-        v10 :=  new(array.create.1D( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)), v1.lt+1*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)));
+        v10 := array.create.1D( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)), v1.lt+1*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>));
         {
             for(decl ref<int<4>> v54 =  var(0-v1.lt) .. 0-1+1 : 1) {
-                v10[0-v54] :=  new(array.create.1D( var(undefined(array<ref<array<ref<real<8>>,1>>,1>)), v1.m3[0-v54]*sizeof(array<ref<array<ref<real<8>>,1>>,1>)/sizeof(array<ref<array<ref<real<8>>,1>>,1>)));
+                v10[0-v54] := array.create.1D( var(undefined(array<ref<array<ref<real<8>>,1>>,1>)), v1.m3[0-v54]*sizeof(array<ref<array<ref<real<8>>,1>>,1>)/sizeof(array<ref<array<ref<real<8>>,1>>,1>));
                 {
                     for(decl ref<int<4>> v53 =  var(0) .. v1.m3[0-v54] : 1) {
-                        v10[0-v54][v53] :=  new(array.create.1D( var(undefined(array<ref<real<8>>,1>)), v1.m2[0-v54]*sizeof(array<ref<real<8>>,1>)/sizeof(array<ref<real<8>>,1>)));
+                        v10[0-v54][v53] := array.create.1D( var(undefined(array<ref<real<8>>,1>)), v1.m2[0-v54]*sizeof(array<ref<real<8>>,1>)/sizeof(array<ref<real<8>>,1>));
                         {
                             for(decl ref<int<4>> v52 =  var(0) .. v1.m2[0-v54] : 1) {
-                                v10[0-v54][v53][v52] :=  new(array.create.1D( var(undefined(real<8>)), v1.m1[0-v54]*sizeof(real<8>)/sizeof(real<8>)));
+                                v10[0-v54][v53][v52] := array.create.1D( var(undefined(real<8>)), v1.m1[0-v54]*sizeof(real<8>)/sizeof(real<8>));
                             };
                             v25 := 0+ceil(v1.m2[0-v54]-0/1)*1;
                         };
@@ -159,29 +159,29 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
             v26 := v1.lt+ceil(0-1+1-v1.lt/1)*1;
         };
-        v11 :=  new(array.create.1D( var(undefined(array<ref<array<ref<real<8>>,1>>,1>)), v1.m3[v1.lt]*sizeof(array<ref<array<ref<real<8>>,1>>,1>)/sizeof(array<ref<array<ref<real<8>>,1>>,1>)));
+        v11 := array.create.1D( var(undefined(array<ref<array<ref<real<8>>,1>>,1>)), v1.m3[v1.lt]*sizeof(array<ref<array<ref<real<8>>,1>>,1>)/sizeof(array<ref<array<ref<real<8>>,1>>,1>));
         {
             for(decl ref<int<4>> v56 =  var(0) .. v1.m3[v1.lt] : 1) {
-                v11[v56] :=  new(array.create.1D( var(undefined(array<ref<real<8>>,1>)), v1.m2[v1.lt]*sizeof(array<ref<real<8>>,1>)/sizeof(array<ref<real<8>>,1>)));
+                v11[v56] := array.create.1D( var(undefined(array<ref<real<8>>,1>)), v1.m2[v1.lt]*sizeof(array<ref<real<8>>,1>)/sizeof(array<ref<real<8>>,1>));
                 {
                     for(decl ref<int<4>> v55 =  var(0) .. v1.m2[v1.lt] : 1) {
-                        v11[v56][v55] :=  new(array.create.1D( var(undefined(real<8>)), v1.m1[v1.lt]*sizeof(real<8>)/sizeof(real<8>)));
+                        v11[v56][v55] := array.create.1D( var(undefined(real<8>)), v1.m1[v1.lt]*sizeof(real<8>)/sizeof(real<8>));
                     };
                     v25 := 0+ceil(v1.m2[v1.lt]-0/1)*1;
                 };
             };
             v4 := 0+ceil(v1.m3[v1.lt]-0/1)*1;
         };
-        v12 :=  new(array.create.1D( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)), v1.lt+1*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)));
+        v12 := array.create.1D( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)), v1.lt+1*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>));
         {
             for(decl ref<int<4>> v59 =  var(0-v1.lt) .. 0-1+1 : 1) {
-                v12[0-v59] :=  new(array.create.1D( var(undefined(array<ref<array<ref<real<8>>,1>>,1>)), v1.m3[0-v59]*sizeof(array<ref<array<ref<real<8>>,1>>,1>)/sizeof(array<ref<array<ref<real<8>>,1>>,1>)));
+                v12[0-v59] := array.create.1D( var(undefined(array<ref<array<ref<real<8>>,1>>,1>)), v1.m3[0-v59]*sizeof(array<ref<array<ref<real<8>>,1>>,1>)/sizeof(array<ref<array<ref<real<8>>,1>>,1>));
                 {
                     for(decl ref<int<4>> v58 =  var(0) .. v1.m3[0-v59] : 1) {
-                        v12[0-v59][v58] :=  new(array.create.1D( var(undefined(array<ref<real<8>>,1>)), v1.m2[0-v59]*sizeof(array<ref<real<8>>,1>)/sizeof(array<ref<real<8>>,1>)));
+                        v12[0-v59][v58] := array.create.1D( var(undefined(array<ref<real<8>>,1>)), v1.m2[0-v59]*sizeof(array<ref<real<8>>,1>)/sizeof(array<ref<real<8>>,1>));
                         {
                             for(decl ref<int<4>> v57 =  var(0) .. v1.m2[0-v59] : 1) {
-                                v12[0-v59][v58][v57] :=  new(array.create.1D( var(undefined(real<8>)), v1.m1[0-v59]*sizeof(real<8>)/sizeof(real<8>)));
+                                v12[0-v59][v58][v57] := array.create.1D( var(undefined(real<8>)), v1.m1[0-v59]*sizeof(real<8>)/sizeof(real<8>));
                             };
                             v25 := 0+ceil(v1.m2[0-v59]-0/1)*1;
                         };
@@ -5194,16 +5194,16 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 printf("%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d\n", varlist.pack((v46, ( *(( *( *v47).nx)[CAST<uint<4>>(v46)])), ( *(( *( *v47).ny)[CAST<uint<4>>(v46)])), ( *(( *( *v47).nz)[CAST<uint<4>>(v46)])), ( *(v43[0])), ( *(v44[0])), ( *(v45[0])), ( *( *v47).is1), ( *( *v47).is2), ( *( *v47).is3), ( *( *v47).ie1), ( *( *v47).ie2), ( *( *v47).ie3))));
             } else { };
         }([v18], [v19], [v20], ( *( *v1).lt));
-        (v10 := ( *( new(array.create.1D(( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))), ((CAST<uint<8>>((( *( *v1).lt)+1))*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)))))));
+        (v10 := array.create.1D(( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))), ((CAST<uint<8>>((( *( *v1).lt)+1))*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))));
         {
             for(decl ref<int<4>> v54 = ( var((CAST<int<4>>(0)-( *( *v1).lt)))) .. ((CAST<int<4>>(0)-1)+1) : 1) {
-                ((( *v10)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]) := ( *( new(array.create.1D(( var(undefined(array<ref<array<ref<real<8>>,1>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m3)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])))*sizeof(array<ref<array<ref<real<8>>,1>>,1>))/sizeof(array<ref<array<ref<real<8>>,1>>,1>)))))));
+                ((( *v10)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]) := array.create.1D(( var(undefined(array<ref<array<ref<real<8>>,1>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m3)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])))*sizeof(array<ref<array<ref<real<8>>,1>>,1>))/sizeof(array<ref<array<ref<real<8>>,1>>,1>))));
                 {
                     for(decl ref<int<4>> v53 = ( var(0)) .. ( *(( *( *v1).m3)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])) : 1) {
-                        ((( *(( *v10)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]))[CAST<uint<4>>(( *v53))]) := ( *( new(array.create.1D(( var(undefined(array<ref<real<8>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])))*sizeof(array<ref<real<8>>,1>))/sizeof(array<ref<real<8>>,1>)))))));
+                        ((( *(( *v10)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]))[CAST<uint<4>>(( *v53))]) := array.create.1D(( var(undefined(array<ref<real<8>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])))*sizeof(array<ref<real<8>>,1>))/sizeof(array<ref<real<8>>,1>))));
                         {
                             for(decl ref<int<4>> v52 = ( var(0)) .. ( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])) : 1) {
-                                ((( *(( *(( *v10)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]))[CAST<uint<4>>(( *v53))]))[CAST<uint<4>>(( *v52))]) := ( *( new(array.create.1D(( var(undefined(real<8>))), ((CAST<uint<8>>(( *(( *( *v1).m1)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])))*sizeof(real<8>))/sizeof(real<8>)))))));
+                                ((( *(( *(( *v10)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]))[CAST<uint<4>>(( *v53))]))[CAST<uint<4>>(( *v52))]) := array.create.1D(( var(undefined(real<8>))), ((CAST<uint<8>>(( *(( *( *v1).m1)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))])))*sizeof(real<8>))/sizeof(real<8>))));
                             };
                             (v25 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v54)))]))-0))/CAST<real<8>>(1))))*1)));
                         };
@@ -5213,29 +5213,29 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
             (v26 := (( *( *v1).lt)+(CAST<int<4>>(ceil((CAST<real<8>>((((CAST<int<4>>(0)-1)+1)-( *( *v1).lt)))/CAST<real<8>>(1))))*1)));
         };
-        (v11 := ( *( new(array.create.1D(( var(undefined(array<ref<array<ref<real<8>>,1>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m3)[CAST<uint<4>>(( *( *v1).lt))])))*sizeof(array<ref<array<ref<real<8>>,1>>,1>))/sizeof(array<ref<array<ref<real<8>>,1>>,1>)))))));
+        (v11 := array.create.1D(( var(undefined(array<ref<array<ref<real<8>>,1>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m3)[CAST<uint<4>>(( *( *v1).lt))])))*sizeof(array<ref<array<ref<real<8>>,1>>,1>))/sizeof(array<ref<array<ref<real<8>>,1>>,1>))));
         {
             for(decl ref<int<4>> v56 = ( var(0)) .. ( *(( *( *v1).m3)[CAST<uint<4>>(( *( *v1).lt))])) : 1) {
-                ((( *v11)[CAST<uint<4>>(( *v56))]) := ( *( new(array.create.1D(( var(undefined(array<ref<real<8>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m2)[CAST<uint<4>>(( *( *v1).lt))])))*sizeof(array<ref<real<8>>,1>))/sizeof(array<ref<real<8>>,1>)))))));
+                ((( *v11)[CAST<uint<4>>(( *v56))]) := array.create.1D(( var(undefined(array<ref<real<8>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m2)[CAST<uint<4>>(( *( *v1).lt))])))*sizeof(array<ref<real<8>>,1>))/sizeof(array<ref<real<8>>,1>))));
                 {
                     for(decl ref<int<4>> v55 = ( var(0)) .. ( *(( *( *v1).m2)[CAST<uint<4>>(( *( *v1).lt))])) : 1) {
-                        ((( *(( *v11)[CAST<uint<4>>(( *v56))]))[CAST<uint<4>>(( *v55))]) := ( *( new(array.create.1D(( var(undefined(real<8>))), ((CAST<uint<8>>(( *(( *( *v1).m1)[CAST<uint<4>>(( *( *v1).lt))])))*sizeof(real<8>))/sizeof(real<8>)))))));
+                        ((( *(( *v11)[CAST<uint<4>>(( *v56))]))[CAST<uint<4>>(( *v55))]) := array.create.1D(( var(undefined(real<8>))), ((CAST<uint<8>>(( *(( *( *v1).m1)[CAST<uint<4>>(( *( *v1).lt))])))*sizeof(real<8>))/sizeof(real<8>))));
                     };
                     (v25 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((( *(( *( *v1).m2)[CAST<uint<4>>(( *( *v1).lt))]))-0))/CAST<real<8>>(1))))*1)));
                 };
             };
             (v4 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((( *(( *( *v1).m3)[CAST<uint<4>>(( *( *v1).lt))]))-0))/CAST<real<8>>(1))))*1)));
         };
-        (v12 := ( *( new(array.create.1D(( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))), ((CAST<uint<8>>((( *( *v1).lt)+1))*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>)))))));
+        (v12 := array.create.1D(( var(undefined(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))), ((CAST<uint<8>>((( *( *v1).lt)+1))*sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))/sizeof(array<ref<array<ref<array<ref<real<8>>,1>>,1>>,1>))));
         {
             for(decl ref<int<4>> v59 = ( var((CAST<int<4>>(0)-( *( *v1).lt)))) .. ((CAST<int<4>>(0)-1)+1) : 1) {
-                ((( *v12)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]) := ( *( new(array.create.1D(( var(undefined(array<ref<array<ref<real<8>>,1>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m3)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])))*sizeof(array<ref<array<ref<real<8>>,1>>,1>))/sizeof(array<ref<array<ref<real<8>>,1>>,1>)))))));
+                ((( *v12)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]) := array.create.1D(( var(undefined(array<ref<array<ref<real<8>>,1>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m3)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])))*sizeof(array<ref<array<ref<real<8>>,1>>,1>))/sizeof(array<ref<array<ref<real<8>>,1>>,1>))));
                 {
                     for(decl ref<int<4>> v58 = ( var(0)) .. ( *(( *( *v1).m3)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])) : 1) {
-                        ((( *(( *v12)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]))[CAST<uint<4>>(( *v58))]) := ( *( new(array.create.1D(( var(undefined(array<ref<real<8>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])))*sizeof(array<ref<real<8>>,1>))/sizeof(array<ref<real<8>>,1>)))))));
+                        ((( *(( *v12)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]))[CAST<uint<4>>(( *v58))]) := array.create.1D(( var(undefined(array<ref<real<8>>,1>))), ((CAST<uint<8>>(( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])))*sizeof(array<ref<real<8>>,1>))/sizeof(array<ref<real<8>>,1>))));
                         {
                             for(decl ref<int<4>> v57 = ( var(0)) .. ( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])) : 1) {
-                                ((( *(( *(( *v12)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]))[CAST<uint<4>>(( *v58))]))[CAST<uint<4>>(( *v57))]) := ( *( new(array.create.1D(( var(undefined(real<8>))), ((CAST<uint<8>>(( *(( *( *v1).m1)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])))*sizeof(real<8>))/sizeof(real<8>)))))));
+                                ((( *(( *(( *v12)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]))[CAST<uint<4>>(( *v58))]))[CAST<uint<4>>(( *v57))]) := array.create.1D(( var(undefined(real<8>))), ((CAST<uint<8>>(( *(( *( *v1).m1)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))])))*sizeof(real<8>))/sizeof(real<8>))));
                             };
                             (v25 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((( *(( *( *v1).m2)[CAST<uint<4>>((CAST<int<4>>(0)-( *v59)))]))-0))/CAST<real<8>>(1))))*1)));
                         };

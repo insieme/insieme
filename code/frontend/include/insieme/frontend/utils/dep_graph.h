@@ -45,12 +45,14 @@ class FunctionDecl;
 class Type;
 }
 
+namespace std {
+std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl);
+std::ostream& operator<<(std::ostream& out, const clang::Type* type);
+}
+
 namespace insieme {
 namespace frontend {
 namespace utils {
-
-std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl);
-std::ostream& operator<<(std::ostream& out, const clang::Type* type);
 
 /**
  * Utility class used to build the dependencies between types and functions.
@@ -89,7 +91,7 @@ public:
 	 * Finds the node inside the graph and returns the vertex id used to identify this node
 	 */
 	std::pair<bool,VertexTy> find(const T& type) const {
-		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, NodeTy>::const_type&& node = get(NodeTy(), graph);
 
 		typename boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
 		boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph);
@@ -109,13 +111,13 @@ public:
 		}
 
 		// this node is not inside the graph, we have to add it
-		VertexTy v = boost::add_vertex(graph);
+		VertexTy&& v = boost::add_vertex(graph);
 		if(parent) {
 			// we have to add an edge between this node and the parent
 			boost::add_edge(*parent, v, graph);
 		}
 		dirtyFlag = true;
-		typename boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, NodeTy>::type&& node = get(NodeTy(), graph);
 		boost::put(node, v, type);
 		Handle(type, v);
 

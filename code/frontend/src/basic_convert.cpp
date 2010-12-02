@@ -347,6 +347,10 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
+	if(core::analysis::isCallOf(retExpr, mgr.basic.getArrayCreate1D())) {
+		retExpr = builder.callExpr(builder.refType(retExpr->getType()), mgr.basic.getRefNew(), retExpr);
+	}
+
 	if (core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
 		core::analysis::isCallOf(retExpr, mgr.basic.getRefNew()) ) {
 
