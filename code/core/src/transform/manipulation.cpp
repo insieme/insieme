@@ -83,6 +83,25 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	}, preservePtrAnnotationsWhenModified);
 }
 
+NodePtr insertBefore(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, 
+		const StatementPtr& beforeStatement, bool preservePtrAnnotationsWhenModified) {
+	// find position of beforeStatement
+	auto statements = target->getStatements();
+	auto targetloc = std::find(statements.cbegin(), statements.cend(), beforeStatement);
+	assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
+	return insert(manager, target, statement, targetloc-statements.cbegin(), preservePtrAnnotationsWhenModified);
+}
+
+NodePtr insertAfter(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, 
+		const StatementPtr& afterStatement, bool preservePtrAnnotationsWhenModified) {
+	// find position of afterStatement
+	auto statements = target->getStatements();
+	auto targetloc = std::find(statements.cbegin(), statements.cend(), afterStatement);
+	assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
+	return insert(manager, target, statement, targetloc-statements.cbegin()+1, preservePtrAnnotationsWhenModified);
+}
+
+
 NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, bool preservePtrAnnotationsWhenModified) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index](vector<StatementPtr>& list){

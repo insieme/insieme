@@ -59,7 +59,42 @@ namespace transform {
  * 				and returned.
  * @return the root node of the modified AST tree (according to the root of the address)
  */
-NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, unsigned index, bool preservePtrAnnotationsWhenModified = false);
+NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, unsigned index, 
+	bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function to insert a statement within a compound statement block.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement within which the element should be inserted
+ * @param statement the statement to be inserted
+ * @param beforeStatement the existing statement before which the new statement should be inserted
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr insertBefore(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, const StatementPtr& beforeStatement, 
+	bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function to insert a statement within a compound statement block.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement within which the element should be inserted
+ * @param statement the statement to be inserted
+ * @param afterStatement the existing statement after which the new statement should be inserted
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr insertAfter(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, const StatementPtr& afterStatement, 
+	bool preservePtrAnnotationsWhenModified = false);
 
 /**
  * A utility function to remove a statement from a compound statement block.
@@ -106,7 +141,8 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
  * 				and returned.
  * @return the root node of the modified AST tree (according to the root of the address)
  */
-NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, bool preservePtrAnnotationsWhenModified = false);
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, 
+	bool preservePtrAnnotationsWhenModified = false);
 
 ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call);
 

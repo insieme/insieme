@@ -97,6 +97,65 @@ TEST(Manipulation, Insert) {
 	EXPECT_EQ("{{{A; B; C; X;};};}", toString(*res));
 }
 
+TEST(Manipulation, InsertBefore) {
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	vector<StatementPtr> stmts;
+	auto aLit = builder.literal(builder.genericType("X"), "A");
+	stmts.push_back(aLit);
+	auto bLit = builder.literal(builder.genericType("X"), "B");
+	stmts.push_back(bLit);
+	auto cLit = builder.literal(builder.genericType("X"), "C");
+	stmts.push_back(cLit);
+	CompoundStmtPtr compound = builder.compoundStmt(stmts);
+
+	EXPECT_EQ("{A; B; C;}", toString(*compound));
+
+	StatementPtr stmt = builder.literal(builder.genericType("X"), "X");
+
+	NodePtr res;
+	CompoundStmtAddress target(compound);
+	res = transform::insertBefore(manager, target, stmt, aLit);
+	EXPECT_EQ("{X; A; B; C;}", toString(*res));
+
+	res = transform::insertBefore(manager, target, stmt, bLit);
+	EXPECT_EQ("{A; X; B; C;}", toString(*res));
+
+	res = transform::insertBefore(manager, target, stmt, cLit);
+	EXPECT_EQ("{A; B; X; C;}", toString(*res));
+}
+
+
+TEST(Manipulation, InsertAfter) {
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	vector<StatementPtr> stmts;
+	auto aLit = builder.literal(builder.genericType("X"), "A");
+	stmts.push_back(aLit);
+	auto bLit = builder.literal(builder.genericType("X"), "B");
+	stmts.push_back(bLit);
+	auto cLit = builder.literal(builder.genericType("X"), "C");
+	stmts.push_back(cLit);
+	CompoundStmtPtr compound = builder.compoundStmt(stmts);
+
+	EXPECT_EQ("{A; B; C;}", toString(*compound));
+
+	StatementPtr stmt = builder.literal(builder.genericType("X"), "X");
+
+	NodePtr res;
+	CompoundStmtAddress target(compound);
+	res = transform::insertAfter(manager, target, stmt, aLit);
+	EXPECT_EQ("{A; X; B; C;}", toString(*res));
+
+	res = transform::insertAfter(manager, target, stmt, bLit);
+	EXPECT_EQ("{A; B; X; C;}", toString(*res));
+
+	res = transform::insertAfter(manager, target, stmt, cLit);
+	EXPECT_EQ("{A; B; C; X;}", toString(*res));
+}
+
 TEST(Manipulation, Remove) {
 	NodeManager manager;
 	ASTBuilder builder(manager);
