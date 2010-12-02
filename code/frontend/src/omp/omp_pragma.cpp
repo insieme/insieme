@@ -352,7 +352,7 @@ VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, co
 		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
 		assert(refVarIdent && "Clause not containing a DeclRefExpr");
 
-		core::VariablePtr varExpr = core::dynamic_pointer_cast<const core::Variable>( fact.convertExpr( refVarIdent ) );
+		core::ExpressionPtr&& varExpr = fact.convertExpr( refVarIdent );
 		assert(varExpr && "Conversion to Insieme node failed!");
 		varList->push_back( varExpr );
 	}

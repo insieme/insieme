@@ -375,7 +375,7 @@ public:
 			return retExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !type->getNodeType() != core::NT_RefType) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
