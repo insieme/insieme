@@ -874,6 +874,7 @@ public:
 			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME
 		}
 
+		// Dereference eventual references
 		if (retTy->getNodeType() == core::NT_RefType) {
 			retTy= core::static_pointer_cast<const core::RefType>(retTy)->getElementType();
 		}
