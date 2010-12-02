@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <fstream>
 
+#define MIN_CONTEXT 40
 
 #include "insieme/core/ast_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
@@ -106,9 +107,15 @@ int main(int argc, char** argv) {
 				for_each(errors, [](const Message& cur) {
 					LOG(INFO) << cur << std::endl;
 					NodeAddress address = cur.getAddress();
-					NodePtr context = address.getParentNode(min((unsigned)1, address.getDepth()-1));
-					LOG(INFO) << "\t Context: " <<
-							insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3);
+					stringstream ss;
+					unsigned contextSize = 1;
+					do {
+						ss.str(""); 
+						ss.clear();
+						NodePtr context = address.getParentNode(min((unsigned)contextSize, address.getDepth()-contextSize));
+						ss << insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+					} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+					LOG(INFO) << "\t Context: " << ss.str();
 				});
 				timer.stop();
 				LOG(INFO) << timer;
