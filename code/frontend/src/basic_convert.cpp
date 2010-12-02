@@ -345,10 +345,6 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
 		return convertInitializerList( listExpr, type );
 
-
-
-
-
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
 	if (core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
@@ -356,7 +352,6 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 		return retExpr;
 	}
-
 
 	if(retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
 		return builder.refVar( tryDeref(retExpr) );
