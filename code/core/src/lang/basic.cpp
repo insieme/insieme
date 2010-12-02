@@ -179,8 +179,6 @@ LiteralPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator
 	    return (*this).getLiteral(string("vector.pointwise"));
 	}
 
-	DLOG(ERROR) << type;
-	DLOG(ERROR) << op;
 	assert(false && "Required combination of operator and type not declared");
 }
 

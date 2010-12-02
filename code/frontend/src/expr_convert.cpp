@@ -144,10 +144,9 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 				assert(elemType->getNodeType() == core::NT_RefType);
 				elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
 
-				return builder.callExpr(builder.refType(type), builder.getBasicGenerator().getRefNew(),
-						builder.callExpr(type, builder.getBasicGenerator().getArrayCreate1D(),
+				return builder.callExpr(type, builder.getBasicGenerator().getArrayCreate1D(),
 						builder.refVar(builder.callExpr(elemType, builder.getBasicGenerator().getUndefined(),
-							builder.getBasicGenerator().getTypeLiteral(elemType))), size));
+							builder.getBasicGenerator().getTypeLiteral(elemType))), size);
 			}
 		}
 	}

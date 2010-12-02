@@ -1409,16 +1409,16 @@ int main(int argc, char** argv) {
 		};
 		((((var_1).lb)) = 1);
 		call__insieme_funType_type_7(((struct __insieme_funType_type_7*)(&((struct __insieme_funType_type_8){&setup, 0, &var_1}))), &n1, &n2, &n3, (((var_1).lt)));
-		((u) = (*(malloc(sizeof(double***)*((((unsigned long)(((((var_1).lt))+1)))*sizeof(double***))/sizeof(double***))))));
+		((u) = (malloc(sizeof(double***)*((((unsigned long)(((((var_1).lt))+1)))*sizeof(double***))/sizeof(double***)))));
 		{
 			for(int var_54 = (((int)(0))-(((var_1).lt))); var_54 < ((((int)(0))-1)+1); var_54 += 1) {
-				((((u)[((unsigned int)((((int)(0))-(var_54))))])) = (*(malloc(sizeof(double**)*((((unsigned long)((((*((var_1).m3))[((unsigned int)((((int)(0))-(var_54))))]))))*sizeof(double**))/sizeof(double**))))));
+				((((u)[((unsigned int)((((int)(0))-(var_54))))])) = (malloc(sizeof(double**)*((((unsigned long)((((*((var_1).m3))[((unsigned int)((((int)(0))-(var_54))))]))))*sizeof(double**))/sizeof(double**)))));
 				{
 					for(int var_53 = 0; var_53 < (((*((var_1).m3))[((unsigned int)((((int)(0))-(var_54))))])); var_53 += 1) {
-						((((((u)[((unsigned int)((((int)(0))-(var_54))))]))[((unsigned int)((var_53)))])) = (*(malloc(sizeof(double*)*((((unsigned long)((((*((var_1).m2))[((unsigned int)((((int)(0))-(var_54))))]))))*sizeof(double*))/sizeof(double*))))));
+						((((((u)[((unsigned int)((((int)(0))-(var_54))))]))[((unsigned int)((var_53)))])) = (malloc(sizeof(double*)*((((unsigned long)((((*((var_1).m2))[((unsigned int)((((int)(0))-(var_54))))]))))*sizeof(double*))/sizeof(double*)))));
 						{
 							for(int var_52 = 0; var_52 < (((*((var_1).m2))[((unsigned int)((((int)(0))-(var_54))))])); var_52 += 1) {
-								((((((((u)[((unsigned int)((((int)(0))-(var_54))))]))[((unsigned int)((var_53)))]))[((unsigned int)((var_52)))])) = (*(malloc(sizeof(double)*((((unsigned long)((((*((var_1).m1))[((unsigned int)((((int)(0))-(var_54))))]))))*sizeof(double))/sizeof(double))))));
+								((((((((u)[((unsigned int)((((int)(0))-(var_54))))]))[((unsigned int)((var_53)))]))[((unsigned int)((var_52)))])) = (malloc(sizeof(double)*((((unsigned long)((((*((var_1).m1))[((unsigned int)((((int)(0))-(var_54))))]))))*sizeof(double))/sizeof(double)))));
 							};
 							((j) = (0+(((int)(ceil((((double)(((((*((var_1).m2))[((unsigned int)((((int)(0))-(var_54))))]))-0)))/((double)(1))))))*1)));
 						};
@@ -1428,29 +1428,29 @@ int main(int argc, char** argv) {
 			};
 			((l) = ((((var_1).lt))+(((int)(ceil((((double)((((((int)(0))-1)+1)-(((var_1).lt)))))/((double)(1))))))*1)));
 		};
-		((v) = (*(malloc(sizeof(double**)*((((unsigned long)((((*((var_1).m3))[((unsigned int)((((var_1).lt))))]))))*sizeof(double**))/sizeof(double**))))));
+		((v) = (malloc(sizeof(double**)*((((unsigned long)((((*((var_1).m3))[((unsigned int)((((var_1).lt))))]))))*sizeof(double**))/sizeof(double**)))));
 		{
 			for(int var_56 = 0; var_56 < (((*((var_1).m3))[((unsigned int)((((var_1).lt))))])); var_56 += 1) {
-				((((v)[((unsigned int)((var_56)))])) = (*(malloc(sizeof(double*)*((((unsigned long)((((*((var_1).m2))[((unsigned int)((((var_1).lt))))]))))*sizeof(double*))/sizeof(double*))))));
+				((((v)[((unsigned int)((var_56)))])) = (malloc(sizeof(double*)*((((unsigned long)((((*((var_1).m2))[((unsigned int)((((var_1).lt))))]))))*sizeof(double*))/sizeof(double*)))));
 				{
 					for(int var_55 = 0; var_55 < (((*((var_1).m2))[((unsigned int)((((var_1).lt))))])); var_55 += 1) {
-						((((((v)[((unsigned int)((var_56)))]))[((unsigned int)((var_55)))])) = (*(malloc(sizeof(double)*((((unsigned long)((((*((var_1).m1))[((unsigned int)((((var_1).lt))))]))))*sizeof(double))/sizeof(double))))));
+						((((((v)[((unsigned int)((var_56)))]))[((unsigned int)((var_55)))])) = (malloc(sizeof(double)*((((unsigned long)((((*((var_1).m1))[((unsigned int)((((var_1).lt))))]))))*sizeof(double))/sizeof(double)))));
 					};
 					((j) = (0+(((int)(ceil((((double)(((((*((var_1).m2))[((unsigned int)((((var_1).lt))))]))-0)))/((double)(1))))))*1)));
 				};
 			};
 			((k) = (0+(((int)(ceil((((double)(((((*((var_1).m3))[((unsigned int)((((var_1).lt))))]))-0)))/((double)(1))))))*1)));
 		};
-		((r) = (*(malloc(sizeof(double***)*((((unsigned long)(((((var_1).lt))+1)))*sizeof(double***))/sizeof(double***))))));
+		((r) = (malloc(sizeof(double***)*((((unsigned long)(((((var_1).lt))+1)))*sizeof(double***))/sizeof(double***)))));
 		{
 			for(int var_59 = (((int)(0))-(((var_1).lt))); var_59 < ((((int)(0))-1)+1); var_59 += 1) {
-				((((r)[((unsigned int)((((int)(0))-(var_59))))])) = (*(malloc(sizeof(double**)*((((unsigned long)((((*((var_1).m3))[((unsigned int)((((int)(0))-(var_59))))]))))*sizeof(double**))/sizeof(double**))))));
+				((((r)[((unsigned int)((((int)(0))-(var_59))))])) = (malloc(sizeof(double**)*((((unsigned long)((((*((var_1).m3))[((unsigned int)((((int)(0))-(var_59))))]))))*sizeof(double**))/sizeof(double**)))));
 				{
 					for(int var_58 = 0; var_58 < (((*((var_1).m3))[((unsigned int)((((int)(0))-(var_59))))])); var_58 += 1) {
-						((((((r)[((unsigned int)((((int)(0))-(var_59))))]))[((unsigned int)((var_58)))])) = (*(malloc(sizeof(double*)*((((unsigned long)((((*((var_1).m2))[((unsigned int)((((int)(0))-(var_59))))]))))*sizeof(double*))/sizeof(double*))))));
+						((((((r)[((unsigned int)((((int)(0))-(var_59))))]))[((unsigned int)((var_58)))])) = (malloc(sizeof(double*)*((((unsigned long)((((*((var_1).m2))[((unsigned int)((((int)(0))-(var_59))))]))))*sizeof(double*))/sizeof(double*)))));
 						{
 							for(int var_57 = 0; var_57 < (((*((var_1).m2))[((unsigned int)((((int)(0))-(var_59))))])); var_57 += 1) {
-								((((((((r)[((unsigned int)((((int)(0))-(var_59))))]))[((unsigned int)((var_58)))]))[((unsigned int)((var_57)))])) = (*(malloc(sizeof(double)*((((unsigned long)((((*((var_1).m1))[((unsigned int)((((int)(0))-(var_59))))]))))*sizeof(double))/sizeof(double))))));
+								((((((((r)[((unsigned int)((((int)(0))-(var_59))))]))[((unsigned int)((var_58)))]))[((unsigned int)((var_57)))])) = (malloc(sizeof(double)*((((unsigned long)((((*((var_1).m1))[((unsigned int)((((int)(0))-(var_59))))]))))*sizeof(double))/sizeof(double)))));
 							};
 							((j) = (0+(((int)(ceil((((double)(((((*((var_1).m2))[((unsigned int)((((int)(0))-(var_59))))]))-0)))/((double)(1))))))*1)));
 						};
