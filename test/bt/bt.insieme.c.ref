@@ -3207,7 +3207,7 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = memcpy(malloc(sizeof(struct __insieme_globals)), &((struct __insieme_globals)((struct __insieme_globals){calloc(sizeof(int[3]), 1),
+		struct __insieme_globals var_1 = ((struct __insieme_globals){calloc(sizeof(int[3]), 1),
 			0.0,
 			0.0,
 			0.0,
@@ -3325,7 +3325,7 @@ int main(int argc, char** argv) {
 			calloc(sizeof(double[64]), 1),
 			calloc(sizeof(double[64]), 1),
 			(((int)(0))-1)
-		})), sizeof(struct __insieme_globals));
+		});
 		int niter = 0;
 		int step = 0;
 		int n3 = 0;
