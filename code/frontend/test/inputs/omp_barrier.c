@@ -34,46 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
-
-#include "insieme/utils/logging.h"
-
-namespace insieme {
-namespace frontend {
-namespace omp {
-
-
-class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
-
-	core::NodeManager& nodeMan;
-	core::ASTBuilder build;
-
-	core::ProgramPtr replacement;
-
-	bool visitNode(const core::NodeAddress& node);
-	bool visitCallExpr(const core::CallExprAddress& callExp);
-	bool visitMarkerStmt(const core::MarkerStmtAddress& mark);
-
-	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
-	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
-
-public:
-	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }
-
-	core::ProgramPtr getReplacement() { return replacement; }
-};
-
-
-/** Applies OMP semantics to given code fragment.
- ** */
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);
-
-
-} // namespace omp
-} // namespace frontend
-} // namespace insieme
+int main() {
+	
+	int a = 666;
+	
+	#pragma omp parallel
+	{
+		int b;
+		printf("hell world #%d/%d\n", a, b);
+		#pragma omp barrier
+	}
+}
