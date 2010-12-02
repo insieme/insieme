@@ -291,6 +291,15 @@ public:
 			return res;
 		});
 	}
+	
+	/**
+	 * Obtains the Index of the addressed element within its parent's node list
+	 *
+	 * @return the index of the addressed node within the parent's node list
+	 */
+	unsigned getIndex() const {
+		 return path->back().first;
+	}
 
 	/**
 	 * Obtains the depth / length of this address. The depth corresponds to the number of nodes passed

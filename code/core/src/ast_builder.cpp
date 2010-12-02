@@ -193,6 +193,10 @@ CallExprPtr ASTBuilder::getThreadGroup(ExpressionPtr level) const {
     if(!level) level = uintLit(0);
     return callExpr(manager.basic.getGetThreadGroup(), level);
 }
+CallExprPtr ASTBuilder::getThreadId(ExpressionPtr level) const {
+	if(!level) level = uintLit(0);
+	return callExpr(manager.basic.getGetThreadId(), level);
+}
 
 CallExprPtr ASTBuilder::barrier(ExpressionPtr threadgroup) const {
 	if(!threadgroup) threadgroup = getThreadGroup();
