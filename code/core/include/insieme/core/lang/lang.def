@@ -84,6 +84,8 @@ TYPE(RealInf, "real<#inf>")
 TYPE(Float,   "real<4>")
 TYPE(Double,  "real<8>")
 
+GROUP(ScalarType, Int, Real)
+
 GROUP(BoolLiteral, True, False)
 
 TYPE(Bool, "bool")
