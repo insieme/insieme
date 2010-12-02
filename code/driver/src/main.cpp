@@ -142,12 +142,8 @@ int main(int argc, char** argv) {
 			}
 
 			// IR statistics
-			ASTStatistic&& stats = ASTStatistic::evaluate(program);
 			LOG(INFO) << "============================ IR Statistics ======================================";
-			LOG(INFO) << "Number of Shared Nodes: " << stats.getNumSharedNodes();
-			LOG(INFO) << "Number of Addressable Nodes: " << stats.getNumAddressableNodes();
-			LOG(INFO) << "Share Ratio: " << stats.getShareRatio();
-			LOG(INFO) << "Height of tree: " << stats.getHeight();
+			LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 			// Creates dot graph of the generated IR

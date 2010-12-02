@@ -95,6 +95,16 @@ enum NodeType {
 #undef CONCRETE
 
 /**
+ * A constant defining the number of node types.
+ */
+#define CONCRETE(name) +1
+enum { NUM_CONCRETE_NODE_TYPES = 0
+// the necessary information is obtained from the node-definition file
+#include "insieme/core/ast_nodes.def"
+};
+#undef CONCRETE
+
+/**
  * An enumeration covering the five basic node categories.
  */
 enum NodeCategory {

@@ -34,8 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ast_statistic.h"
+#include "insieme/core/ast_node.h"
 #include "insieme/core/ast_visitor.h"
+#include "insieme/core/ast_statistic.h"
+
+#include "insieme/utils/string_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
@@ -58,31 +62,99 @@ namespace {
 
 }
 
-ASTStatistic::ASTStatistic(unsigned numSharedNodes, unsigned numAddressableNodes, unsigned height)
-	: numSharedNodes(numSharedNodes), numAddressableNodes(numAddressableNodes), height(height) {};
+ASTStatistic::ASTStatistic() : numSharedNodes(0), numAddressableNodes(0), height(0) {
+	memset(nodeTypeInfo, 0, sizeof(NodeTypeInfo)*NUM_CONCRETE_NODE_TYPES);
+};
 
 ASTStatistic ASTStatistic::evaluate(const NodePtr& node) {
 
+	ASTStatistic res;
+
 	// count number of shared nodes ...
-	unsigned numNodes = 0;
-	visitAllOnce(node, makeLambdaPtrVisitor([&numNodes](const NodePtr&) {
-		numNodes++;
+	visitAllOnce(node, makeLambdaPtrVisitor([&res](const NodePtr& ptr) {
+		res.numSharedNodes++;
+		res.nodeTypeInfo[ptr->getNodeType()].numShared++;
 	}));
 
 	// ... and addressable nodes
-	unsigned numAddressableNodes = 0;
-	visitAll(node, makeLambdaPtrVisitor([&numAddressableNodes](const NodePtr&) {
-		numAddressableNodes++;
+	visitAll(node, makeLambdaPtrVisitor([&res](const NodePtr& ptr) {
+		res.numAddressableNodes++;
+		res.nodeTypeInfo[ptr->getNodeType()].numAddressable++;
 	}));
 
 	// ... and height (lightweight)
-	unsigned height = evalHeight(node);
+	res.height = evalHeight(node);
 
 	// build result
-	return ASTStatistic(numNodes, numAddressableNodes, height);
+	return res;
 }
 
 
 
 } // end namespace core
 } // end namespace insieme
+
+
+
+namespace std {
+
+namespace {
+
+struct NodeInfo {
+
+	const char* name;
+	unsigned num;
+	unsigned used;
+	float ratio;
+
+	NodeInfo(const char* name, unsigned num, unsigned used)
+		: name(name), num(num), used(used), ratio((num==0)?0.0:used/(float)num) { }
+
+	bool operator<(const NodeInfo& other) const {
+		return num < other.num;
+	}
+};
+
+}
+
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::ASTStatistic& statistics) {
+
+	// extract node info records
+	vector<NodeInfo> infos;
+
+	int numShared;
+	int numAddressable;
+
+	#define CONCRETE(name) \
+		numShared = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).numShared; \
+		numAddressable = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).numAddressable; \
+		if (numShared > 0) infos.push_back(NodeInfo(" " #name, numShared, numAddressable));
+
+	// the necessary information is obtained from the node-definition file
+	#include "insieme/core/ast_nodes.def"
+	#undef CONCRETE
+
+	// sort records
+	sort(infos.begin(), infos.end());
+
+
+	// print data
+	out << "                           --- General Information ---" << std::endl;
+	out << "                                Height of tree: " << statistics.getHeight() << std::endl;
+	out << std::endl;
+	out << "                           --- Node Sharing Infos ---" << std::endl;
+
+	// print data
+	out << format("%30s%10s%10s%12s", "NodeType", "Nodes", "Shared", "Ratio") << std::endl;
+	out << "        ---------------------------------------------------------------" << std::endl;
+	std::for_each(infos.rbegin(), infos.rend(), [&out](const NodeInfo& cur) {
+		out << format("%30s%10d%10d%12.1f", cur.name , cur.num, cur.used, cur.ratio) << std::endl;
+	});
+	out << "        ---------------------------------------------------------------" << std::endl;
+	out << format("%30s%10d%10d%12.1f", "Total", statistics.getNumSharedNodes(), statistics.getNumAddressableNodes(), statistics.getShareRatio()) << std::endl;
+	return out;
+}
+
+
+}

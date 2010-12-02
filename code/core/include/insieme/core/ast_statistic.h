@@ -41,7 +41,20 @@
 namespace insieme {
 namespace core {
 
+
 class ASTStatistic {
+
+public:
+
+	/**
+	 * A type definition for the information stored per node type.
+	 */
+	typedef struct {
+		unsigned numShared;
+		unsigned numAddressable;
+	} NodeTypeInfo;
+
+private:
 
 	/**
 	 * The number of nodes within an AST.
@@ -60,14 +73,14 @@ class ASTStatistic {
 	unsigned height;
 
 	/**
-	 * Creates a new instance of this class based on the given arguments.
-	 * The constructor is private and may only be used by a static factory method.
-	 *
-	 * @param numSharedNodes the number of nodes used within an AST
-	 * @param numAddressableNodes the total number of nodes when unfolding all shared nodes
-	 * @param height the height of the AST
+	 * The statistical information stored per node type.
 	 */
-	ASTStatistic(unsigned numSharedNodes, unsigned numAddressableNodes, unsigned height);
+	NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
+
+	/**
+	 * Creates a new instance of this class, initializing all values to 0.
+	 */
+	ASTStatistic();
 
 public:
 
@@ -117,8 +130,28 @@ public:
 		return numAddressableNodes/(float)numSharedNodes;
 	}
 
+	/**
+	 * Returns an array filled with the statistical data describing the
+	 * distribution of the various node types within the covered AST.
+	 *
+	 * @return the statistical data collected regarding the node types.
+	 */
+	const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
+		return nodeTypeInfo[nodeType];
+	}
+
 };
 
 
 } // end namespace core
 } // end namespace insieme
+
+
+namespace std {
+
+	/**
+	 * Allows AST statistics to be directly printed into output streams.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::ASTStatistic& statistics);
+
+}
