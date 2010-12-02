@@ -289,6 +289,41 @@ public:
    //             assert(body && "KenrnelMapper corrupted function body.");
 //        }
 
+        // translate casts from scalars to OpenCL vectors to vector init expressions
+        if(core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(element)) {
+            core::Node::ChildList childs = cast->getChildList();
+
+            if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(childs.at(0))){//childs.at(0)->getNodeType() == core::NT_VectorType) {
+/*                for_each(childs.begin(), childs.end(), [] (const core::NodePtr& curr) {
+                    std::cout << "child: " << curr << std::endl;
+                });
+*/
+                std::cout << "type:  " << cast->getType() << " " << childs.at(0)->getNodeType() << std::endl;
+                if(core::ExpressionPtr arg = core::dynamic_pointer_cast<const core::Expression>(childs.at(1))){
+// TODO check why we never get a ref here
+/*                    bool makeRef = true;
+                    core::RefTypePtr ref = dynamic_pointer_cast<const core::RefType>(arg);
+                    if(ref)
+                        arg = ref->getBaseType();
+
+                    if(arg->getNodeType() == core::NT_RefType)
+                        makeRef = false;
+
+                    if(makeRef)
+                        std::cout << "is no ref\n";
+                    else
+                        std::cout << "is already a ref\n";
+*/
+                    if(BASIC.isScalarType(arg->getType())) {
+
+//                        toVector<core::ExpressionPtr>(arg, core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(4)));
+                        return builder.callExpr(cast->getType(), BASIC.getVectorInitUniform(), toVector<core::ExpressionPtr>(builder.refVar(arg),
+                                BASIC.getIntTypeParamLiteral(vt->getSize())));
+                    }
+                }
+            }
+        }
+
         return element->substitute(builder.getNodeManager(), *this);
     }
 
@@ -728,10 +763,6 @@ public:
 
                 // construct updated param list
                 core::Lambda::ParamList newParams;
-/*                appendToVector(newParams, globalArgs);
-                appendToVector(newParams, constantArgs);
-                appendToVector(newParams, localArgs);
-                appendToVector(newParams, privateArgs);*/
                 appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
 
                 newParams.push_back(kd.globalRange); // add global range to parameters
@@ -746,7 +777,7 @@ public:
                         builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntDiv(), toVector<core::ExpressionPtr>(
                             SUBSCRIPT(kd.globalRange, i, builder),  SUBSCRIPT(kd.localRange, i, builder) )));
                 }
-                std::cout << "F6\n";
+
                 //declare and initialize start vector and increment vector fo parallel loops
  //               core::DeclarationStmtPtr startVecDecl = builder.declarationStmt(nullVec, )
 
@@ -755,13 +786,13 @@ public:
                         builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
                         BASIC.getVectorPointwise(), kd.globalRange, kd.localRange, BASIC.getUnsignedIntDiv()));
                 newBodyStmts.push_back(groupRdecl);
-                std::cout << "F2\n";
+
                 //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
                 newBodyStmts.push_back(globalPar);
-                std::cout << "F1\n";
+
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
-                std::cout << "F7\n";
+
                 // get address spaces of variables in body
 //                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
