@@ -495,6 +495,15 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							PREDEFINED EXPRESSION
+	//
+	// [C99 6.4.2.2] - A predefined identifier such as __func__.
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitPredefinedExpr(clang::PredefinedExpr* preExpr) {
+		return convFact.builder.getBasicGenerator().getNull(); // FIXME
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						SIZEOF ALIGNOF EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
@@ -865,10 +874,15 @@ public:
 			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME
 		}
 
+		// Dereference eventual references
+		if (retTy->getNodeType() == core::NT_RefType) {
+			retTy= core::static_pointer_cast<const core::RefType>(retTy)->getElementType();
+		}
+
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, convFact.mgr.basic.getIfThenElse(),
 				condExpr,	// Condition
-				convFact.createCallExpr( builder.returnStmt(trueExpr),  retTy), // True
-				convFact.createCallExpr( builder.returnStmt(falseExpr),  retTy) // False
+				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy), // True
+				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node
@@ -1197,7 +1211,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
 		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar, builder.refVar( ctx.globalStruct.second )) );
+		stmts.push_back( builder.declarationStmt(ctx.globalVar,
+			builder.callExpr(ctx.globalVar->getType(), mgr.basic.getRefNew(), ctx.globalStruct.second ))
+		);
 		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
 		body = builder.compoundStmt(stmts);
 	}

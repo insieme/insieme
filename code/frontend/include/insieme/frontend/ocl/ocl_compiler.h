@@ -72,6 +72,7 @@ namespace {
 
 enum OCL_SCOPE { OCL_LOCAL_PAR, OCL_LOCAL_JOB, OCL_GLOBAL_PAR, OCL_GLOBAL_JOB };
 enum OCL_PAR_LEVEL { OPL_GLOBAL, OPL_GROUP, OPL_LOCAL };
+enum OCL_ADDRESS_SPACE { CONSTANT, GLOBAL, LOCAL, PRIVATE };
 
 struct KernelData {
 public:
@@ -80,11 +81,7 @@ public:
     core::VariablePtr globalRange; bool globalRangeUsed;
     core::VariablePtr numGroups; bool numGroupsUsed;
     core::VariablePtr localRange; bool localRangeUsed;
-    // loop variables
-/* not needed any more
-    core::VariablePtr groupId; bool groupIdUsed;
-    core::VariablePtr localId; bool localIdUsed;
-*/
+
     core::CallExprPtr vecAccess(core::VariablePtr& vec, core::ExpressionPtr& idx) {
         return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(),
                 toVector<core::ExpressionPtr>(vec, idx) );
@@ -104,8 +101,6 @@ public:
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList types);
-    //TODO remove
-    void appendCaptures(std::vector<core::VariablePtr>& captureList, OCL_SCOPE scope, core::CaptureInitExpr::Values inits, core::TypeList types);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);

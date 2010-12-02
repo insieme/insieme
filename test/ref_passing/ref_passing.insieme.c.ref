@@ -11,7 +11,7 @@
 // start code fragment :: Definition of f //
 int f(int* a) {
 	{
-		return ((a[0])++);;
+		return (((a[0]))++);;
 	}
 }
 

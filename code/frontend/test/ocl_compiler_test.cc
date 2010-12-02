@@ -77,11 +77,12 @@ public:
 DLOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
             if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
 
+
                 const core::TypePtr& retTy = funcType->getReturnType();
 
                 //check return type
                 EXPECT_EQ("unit", retTy->getName());
-                EXPECT_GT(args.size(), static_cast<size_t>(2));
+                EXPECT_GE(args.size(), static_cast<size_t>(2));
                 core::TypePtr globalRange = args.at(args.size()-2);
                 EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
                 core::TypePtr localRange = args.back();
@@ -137,7 +138,7 @@ DLOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 
 TEST(OclCompilerTest, HelloCLTest) {
 	insieme::utils::InitLogger("ut_ocl_compiler_test", INFO, true);
-    CommandLineOptions::Verbosity = 2;
+    //CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::create(manager);
 
@@ -154,9 +155,8 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     LOG(INFO) << "Printing the IR: " << pp;
 
-    // FIXME
-//    OclTestVisitor otv;
-//    core::visitAll(program, otv);
+    OclTestVisitor otv;
+    core::visitAll(program, otv);
 
 
     LOG(INFO) << pp;

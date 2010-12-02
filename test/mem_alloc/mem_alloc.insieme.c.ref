@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 		int* dest_array = (malloc(sizeof(int)*((4*sizeof(int))/sizeof(int))));
 		memcpy((dest_array), src_array, (4*sizeof(int)));
 		for(int idx = 0; idx < ((4*sizeof(int))/sizeof(int)); idx += 1) {
-			printf("%d, ", ((dest_array)[((unsigned int)((idx)))]));
+			printf("%d, ", (((dest_array)[((unsigned int)((idx)))])));
 		};
 		printf("\n", 0);
 		( free(dest_array));

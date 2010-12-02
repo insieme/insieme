@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<N:ref<int<4>>>> v1 =  var(struct{N:= var(10)});
+        decl ref<struct<N:ref<int<4>>>> v1 =  new(struct{N:= var(10)});
         decl ref<int<4>> v4 =  var(10);
         for(decl ref<int<4>> v5 =  var(0) .. v4 : 1) {
             printf("idx=%d", varlist.pack((v5)));
@@ -14,7 +14,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             printf("idx=%d", varlist.pack((0-v7)));
         };
         {
-            decl ref<int<4>> v8 = v4;
+            decl ref<int<4>> v8 =  var(v4);
             while(v1.N>0) {
                 {
                     printf("idx=%d", varlist.pack((v4)));
@@ -38,7 +38,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<N:ref<int<4>>>> v1 = ( var(struct{N:=( var(10))}));
+        decl ref<struct<N:ref<int<4>>>> v1 = ( new(struct{N:=( var(10))}));
         decl ref<int<4>> v4 = ( var(10));
         for(decl ref<int<4>> v5 = ( var(0)) .. ( *v4) : 1) {
             printf("idx=%d", varlist.pack((( *v5))));
@@ -50,7 +50,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             printf("idx=%d", varlist.pack(((CAST<int<4>>(0)-( *v7)))));
         };
         {
-            decl ref<int<4>> v8 = v4;
+            decl ref<int<4>> v8 = ( var(( *v4)));
             while((( *( *v1).N)>0)) {
                 {
                     printf("idx=%d", varlist.pack((( *v4))));

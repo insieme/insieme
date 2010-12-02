@@ -296,9 +296,7 @@ public:
 			if(loopAnalysis.isInverted()) {
 				// invert init value
 				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
-				declStmt = dynamic_pointer_cast<const core::DeclarationStmt>(
-						core::transform::replaceAll(builder.getNodeManager(), declStmt, init, invInitExpr, true)
-				);
+				declStmt = builder.declarationStmt( declStmt->getVariable(), builder.refVar(invInitExpr) );
 
 				// invert the sign of the loop index in body of the loop
 				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
@@ -517,6 +515,13 @@ public:
 			condExpr = convFact.convertExpr( cond );
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
+
+		condExpr = convFact.tryDeref(condExpr);
+		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
+			// add cast to bool FIXME
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+		}
+
 		core::StatementPtr&& irNode = builder.whileStmt(condExpr, body);
 
 		// handle eventual OpenMP pragmas attached to the Clang node
@@ -730,6 +735,7 @@ public:
 
 	FORWARD_VISITOR_CALL(CastExpr)
 	FORWARD_VISITOR_CALL(ImplicitCastExpr)
+	FORWARD_VISITOR_CALL(PredefinedExpr)
 	FORWARD_VISITOR_CALL(DeclRefExpr)
 	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
 	FORWARD_VISITOR_CALL(CallExpr)

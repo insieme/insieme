@@ -27,8 +27,8 @@ fun(){
                     if(!v10[0].top) {
                         return 0-1;
                     } else { };
-                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v11 = v10[0].top;
-                    decl ref<int<4>> v12 = v11[0].value;
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v11 =  var(v10[0].top);
+                    decl ref<int<4>> v12 =  var(v11[0].value);
                     v10[0].top := v11[0].next;
                      del(v11);
                     return v12;
@@ -40,7 +40,7 @@ fun(){
             decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v17 =  var(v15);
             {
                 while(v17[0].top) {
-                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = v17[0].top;
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 =  var(v17[0].top);
                     v17[0].top := v16[0].next;
                      del(v16);
                 };
@@ -82,8 +82,8 @@ fun(){
                     if((!CAST<bool>(( *( *(v10[0])).top)))) {
                         return (CAST<int<4>>(0)-1);
                     } else { };
-                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v11 = ( *(v10[0])).top;
-                    decl ref<int<4>> v12 = ( *(( *v11)[0])).value;
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v11 = ( var(( *( *(v10[0])).top)));
+                    decl ref<int<4>> v12 = ( var(( *( *(( *v11)[0])).value)));
                     (( *(v10[0])).top := ( *( *(( *v11)[0])).next));
                     ( del(v11));
                     return ( *v12);
@@ -94,8 +94,8 @@ fun(){
         fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v15){
             decl ref<array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1>> v17 = ( var(v15));
             {
-                while(( *(( *v17)[0])).top) {
-                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = ( *(( *v17)[0])).top;
+                while(CAST<bool>(( *( *(( *v17)[0])).top))) {
+                    decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v16 = ( var(( *( *(( *v17)[0])).top)));
                     (( *(( *v17)[0])).top := ( *( *(( *v16)[0])).next));
                     ( del(v16));
                 };

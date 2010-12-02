@@ -112,19 +112,18 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
     }
 
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
-/*      Defualt value anyway....
- *      if(lit->getValue() == "0u") {
-            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+      if(lit->getValue() == "0u") {
+            //if lit is 0 CLK_LOCAL_MEM_FENCE,
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
-        }*/
+        }
         if(lit->getValue() == "1u"){
-            //if lit is 0 CLK_LOCAL_MEM_FENCE, if lit is 1 CLK_GLOBAL_MEM_FENCE
+            //if lit is 1 CLK_GLOBAL_MEM_FENCE
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
 
     // TODO show warning
-// return CLK_LOCAL_MEM_FENCE barrier if the argument has unexpected type
+    assert(false && "OpenCL barrier has unexpected argument. Has to be 0u or 1u");
     return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
@@ -339,6 +338,20 @@ private:
         }
     }
 
+    template <typename T>
+    void appendToVectorOrdered(std::vector<T>& outVec, std::vector<T>& conVec, std::vector<T>& gloVec, std::vector<T>& locVec, std::vector<T>& priVec,
+            std::vector<OCL_ADDRESS_SPACE>& order) {
+        size_t con = 0, glo = 0, loc = 0, pri = 0;
+        for(auto I = order.begin(), E = order.end(); I != E; I++) {
+            switch (*I) {
+            case CONSTANT: outVec.push_back(conVec.at(con++)); break;
+            case GLOBAL: outVec.push_back(gloVec.at(glo++)); break;
+            case LOCAL: outVec.push_back(locVec.at(loc++)); break;
+            case PRIVATE: outVec.push_back(priVec.at(pri++)); break;
+            }
+        }
+    }
+
     // function to calculate the product of all elements in a vector
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
@@ -543,6 +556,8 @@ public:
 
             core::Lambda::ParamList params = func->getParameterList();
 
+            std::vector<OCL_ADDRESS_SPACE> argsOrder;
+
             // store memory spaces of arguments
             for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
                 core::VariablePtr var = *pi;
@@ -554,18 +569,22 @@ public:
                             switch(asa->getAddressSpace()) {
                             case ocl::AddressSpaceAnnotation::GLOBAL: {
                                 globalArgs.push_back(var);
+                                argsOrder.push_back(GLOBAL);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::CONSTANT: {
                                 constantArgs.push_back(var);
+                                argsOrder.push_back(CONSTANT);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::LOCAL: {
                                 localArgs.push_back(var);
+                                argsOrder.push_back(LOCAL);
                                 break;
                             }
                             case ocl::AddressSpaceAnnotation::PRIVATE: {
                                 privateArgs.push_back(var);
+                                argsOrder.push_back(PRIVATE);
                                 break;
                             }
                             default:
@@ -577,6 +596,7 @@ public:
                 else {
                     // arguments without address space modifiers are private per default
                     privateArgs.push_back(var);
+                    argsOrder.push_back(PRIVATE);
                 }
             }
 
@@ -708,10 +728,12 @@ public:
 
                 // construct updated param list
                 core::Lambda::ParamList newParams;
+/*                appendToVector(newParams, globalArgs);
                 appendToVector(newParams, constantArgs);
-                appendToVector(newParams, globalArgs);
                 appendToVector(newParams, localArgs);
-                appendToVector(newParams, privateArgs);
+                appendToVector(newParams, privateArgs);*/
+                appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
+
                 newParams.push_back(kd.globalRange); // add global range to parameters
                 newParams.push_back(kd.localRange); // add local range to parameters
 
@@ -724,7 +746,7 @@ public:
                         builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntDiv(), toVector<core::ExpressionPtr>(
                             SUBSCRIPT(kd.globalRange, i, builder),  SUBSCRIPT(kd.localRange, i, builder) )));
                 }
-
+                std::cout << "F6\n";
                 //declare and initialize start vector and increment vector fo parallel loops
  //               core::DeclarationStmtPtr startVecDecl = builder.declarationStmt(nullVec, )
 
@@ -733,15 +755,15 @@ public:
                         builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
                         BASIC.getVectorPointwise(), kd.globalRange, kd.localRange, BASIC.getUnsignedIntDiv()));
                 newBodyStmts.push_back(groupRdecl);
-
+                std::cout << "F2\n";
                 //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
                 newBodyStmts.push_back(globalPar);
-
+                std::cout << "F1\n";
                 core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
-
+                std::cout << "F7\n";
                 // get address spaces of variables in body
-                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
+//                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
                 newFunc->addAnnotation(funcAnnotation);

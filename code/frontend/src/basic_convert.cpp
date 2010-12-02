@@ -347,8 +347,20 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
-	if(type->getNodeType() == core::NT_RefType && retExpr->getType()->getNodeType() != core::NT_RefType)
+	if (core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
+		core::analysis::isCallOf(retExpr, mgr.basic.getRefNew()) ) {
+
+		return retExpr;
+	}
+
+	if(retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
+		return builder.refVar( tryDeref(retExpr) );
+	}
+
+	if(type->getNodeType() == core::NT_RefType) {
 		retExpr = builder.refVar( retExpr );
+	}
+
 	return retExpr;
 }
 
@@ -394,7 +406,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		                //TODO check why this fails:
 		                //assert(!definition->getInit() && "OpenCL local variables cannot have an initialization expression");
 		                zeroInit = true;
-		                std::cout << "init with zeros\n";
 		            }
 		        }
 		    }
