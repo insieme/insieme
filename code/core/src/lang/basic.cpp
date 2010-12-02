@@ -64,7 +64,7 @@ struct GroupChecker<> {
 	}
 };
 
-struct BasicGenerator::BasicGeneratorImpl {
+struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	NodeManager &nm;
 	parse::IRParser parser;
 	ASTBuilder build;

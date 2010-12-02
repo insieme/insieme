@@ -41,9 +41,7 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/StmtVisitor.h>
 
-namespace insieme {
-namespace frontend {
-namespace utils {
+namespace std {
 
 std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl) {
 	return out << funcDecl->getNameAsString() << "(" << funcDecl->param_size() << ")";
@@ -54,6 +52,12 @@ std::ostream& operator<<(std::ostream& out, const clang::Type* type) {
 		return out << tagType->getDecl()->getNameAsString();
 	return out;
 }
+
+}
+
+namespace insieme {
+namespace frontend {
+namespace utils {
 
 template <>
 void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type, const DependencyGraph<const clang::Type*>::VertexTy& v) {
