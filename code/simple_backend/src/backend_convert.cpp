@@ -579,7 +579,14 @@ namespace detail {
 			}
 
 			if (isNew && core::analysis::isCallOf(initValue, basic.getVectorInitUniform())) {
-				const NodePtr& param = static_pointer_cast<const CallExpr>(initValue)->getArguments()[0];
+				NodePtr param = static_pointer_cast<const CallExpr>(initValue)->getArguments()[0];
+
+				// iterate through multiple vector init uniform calls
+				while (core::analysis::isCallOf(param, basic.getVectorInitUniform())) {
+					param = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
+				}
+
+				// innermost has to be a ref-var call with a literal 0
 				if (core::analysis::isCallOf(param, basic.getRefVar())) {
 					const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
 					if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
