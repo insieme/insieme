@@ -375,7 +375,7 @@ public:
 			return retExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !type->getNodeType() != core::NT_RefType) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
@@ -1211,9 +1211,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
 		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar,
-			builder.callExpr(ctx.globalVar->getType(), mgr.basic.getRefNew(), ctx.globalStruct.second ))
-		);
+		stmts.push_back( builder.declarationStmt(ctx.globalVar, builder.refVar( ctx.globalStruct.second )) );
 		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
 		body = builder.compoundStmt(stmts);
 	}

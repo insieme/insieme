@@ -28,6 +28,7 @@ def run_cmd(cmd):
 	elapsed = time.time() - start
 	sys.stderr.write(" [{0:.4f} secs]\n".format(elapsed) )
 	if pid.returncode == 0:
+		# print pid.communicate()[1]
 		return None;
 	return pid.communicate()[1]
 
@@ -146,6 +147,7 @@ def run_tests():
 	return (test_num, failed_test)
 
 def main():
+	os.system("ulimit -s unlimited")
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
 	if len(sys.argv) == 2:
 		# run the specified test only

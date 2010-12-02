@@ -2780,7 +2780,7 @@ void wtime(void* _capture, double* t) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		struct timeval tv;
-		gettimeofday(&tv, ((struct timezone*)(null)));
+		gettimeofday(&tv, null);
 		if(((((*var_404).sec))<0)) {
 			((((*var_404).sec)) = ((int)((((tv).tv_sec)))));
 		};
@@ -3207,7 +3207,7 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = memcpy(malloc(sizeof(struct __insieme_globals)), &((struct __insieme_globals)((struct __insieme_globals){calloc(sizeof(int[3]), 1),
+		struct __insieme_globals var_1 = ((struct __insieme_globals){calloc(sizeof(int[3]), 1),
 			0.0,
 			0.0,
 			0.0,
@@ -3234,7 +3234,7 @@ int main(int argc, char** argv) {
 			0.0,
 			0.0,
 			0.0,
-			memcpy(malloc(sizeof(double[13][5])), &((double[13][5]){}), sizeof(double[13][5])),
+			calloc(sizeof(double[13][5]), 1),
 			0.0,
 			0.0,
 			0.0,
@@ -3303,29 +3303,29 @@ int main(int argc, char** argv) {
 			0.0,
 			0.0,
 			0.0,
-			memcpy(malloc(sizeof(double[25][25][25])), &((double[25][25][25]){}), sizeof(double[25][25][25])),
-			memcpy(malloc(sizeof(double[25][25][25])), &((double[25][25][25]){}), sizeof(double[25][25][25])),
-			memcpy(malloc(sizeof(double[25][25][25])), &((double[25][25][25]){}), sizeof(double[25][25][25])),
-			memcpy(malloc(sizeof(double[25][25][25])), &((double[25][25][25]){}), sizeof(double[25][25][25])),
-			memcpy(malloc(sizeof(double[25][25][25])), &((double[25][25][25]){}), sizeof(double[25][25][25])),
-			memcpy(malloc(sizeof(double[25][25][25])), &((double[25][25][25]){}), sizeof(double[25][25][25])),
-			memcpy(malloc(sizeof(double[6][25][25][25])), &((double[6][25][25][25]){}), sizeof(double[6][25][25][25])),
-			memcpy(malloc(sizeof(double[5][25][25][25])), &((double[5][25][25][25]){}), sizeof(double[5][25][25][25])),
-			memcpy(malloc(sizeof(double[5][25][25][25])), &((double[5][25][25][25]){}), sizeof(double[5][25][25][25])),
-			memcpy(malloc(sizeof(double[5][5][3][25][25][25])), &((double[5][5][3][25][25][25]){}), sizeof(double[5][5][3][25][25][25])),
+			calloc(sizeof(double[25][25][25]), 1),
+			calloc(sizeof(double[25][25][25]), 1),
+			calloc(sizeof(double[25][25][25]), 1),
+			calloc(sizeof(double[25][25][25]), 1),
+			calloc(sizeof(double[25][25][25]), 1),
+			calloc(sizeof(double[25][25][25]), 1),
+			calloc(sizeof(double[6][25][25][25]), 1),
+			calloc(sizeof(double[5][25][25][25]), 1),
+			calloc(sizeof(double[5][25][25][25]), 1),
+			calloc(sizeof(double[5][5][3][25][25][25]), 1),
 			calloc(sizeof(double[24]), 1),
 			calloc(sizeof(double[24]), 1),
-			memcpy(malloc(sizeof(double[5][24])), &((double[5][24]){}), sizeof(double[5][24])),
-			memcpy(malloc(sizeof(double[5][24])), &((double[5][24]){}), sizeof(double[5][24])),
-			memcpy(malloc(sizeof(double[5][5][24][25][25])), &((double[5][5][24][25][25]){}), sizeof(double[5][5][24][25][25])),
-			memcpy(malloc(sizeof(double[5][5][24][25][25])), &((double[5][5][24][25][25]){}), sizeof(double[5][5][24][25][25])),
+			calloc(sizeof(double[5][24]), 1),
+			calloc(sizeof(double[5][24]), 1),
+			calloc(sizeof(double[5][5][24][25][25]), 1),
+			calloc(sizeof(double[5][5][24][25][25]), 1),
 			0.0,
 			0.0,
 			0.0,
 			calloc(sizeof(double[64]), 1),
 			calloc(sizeof(double[64]), 1),
 			(((int)(0))-1)
-		})), sizeof(struct __insieme_globals));
+		});
 		int niter = 0;
 		int step = 0;
 		int n3 = 0;

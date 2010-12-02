@@ -110,9 +110,10 @@ public:
 };
 
 /**
- * Holds a list of identifiers
+ * Holds a list of identifiers, because omp statements can refer to global (or static)
+ * variables the vector will hold both VariablePtr or MemebrExpressions.
  */
-typedef std::vector<core::VariablePtr> VarList;
+typedef std::vector<core::ExpressionPtr> VarList;
 typedef std::shared_ptr<VarList> VarListPtr;
 
 class Reduction {

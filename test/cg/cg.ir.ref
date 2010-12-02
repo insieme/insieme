@@ -1,0 +1,1491 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v1 =  var(struct{naa:= var(0), nzz:= var(0), firstrow:= var(0), lastrow:= var(0), firstcol:= var(0), lastcol:= var(0), colidx:= new(vector.initUniform( var(0), 637001)), rowstr:= new(vector.initUniform( var(0), 7002)), iv:= new(vector.initUniform( var(0), 14002)), arow:= new(vector.initUniform( var(0), 637001)), acol:= new(vector.initUniform( var(0), 637001)), v:= new(vector.initUniform( var(0.0), 7002)), aelt:= new(vector.initUniform( var(0.0), 637001)), a:= new(vector.initUniform( var(0.0), 637001)), x:= new(vector.initUniform( var(0.0), 7003)), z:= new(vector.initUniform( var(0.0), 7003)), p:= new(vector.initUniform( var(0.0), 7003)), q:= new(vector.initUniform( var(0.0), 7003)), r:= new(vector.initUniform( var(0.0), 7003)), w:= new(vector.initUniform( var(0.0), 7003)), amult:= var(0.0), tran:= var(0.0), d:= var(0.0), sum:= var(0.0), rho:= var(0.0), rho0:= var(0.0), alpha:= var(0.0), beta:= var(0.0), start:= new(vector.initUniform( var(0.0), 64)), elapsed:= new(vector.initUniform( var(0.0), 64)), sec:= var(0-1)});
+        decl ref<int<4>> v4 =  var(0);
+        decl ref<int<4>> v5 =  var(0);
+        decl ref<int<4>> v6 =  var(0);
+        decl ref<int<4>> v7 =  var(0);
+        decl ref<int<4>> v8 =  var(1);
+        decl ref<real<8>> v9 =  var(0.0);
+        decl ref<real<8>> v10 =  var(0.0);
+        decl ref<real<8>> v11 =  var(0.0);
+        decl ref<real<8>> v12 =  var(0.0);
+        decl ref<real<8>> v13 =  var(0.0);
+        decl ref<real<8>> v14 =  var(0.0);
+        decl ref<char> v15 =  var('\0');
+        decl ref<int<4>> v16 =  var(0);
+        decl ref<real<8>> v17 =  var(0.0);
+        decl ref<real<8>> v18 =  var(0.0);
+        v1.firstrow := 1;
+        v1.lastrow := 7000;
+        v1.firstcol := 1;
+        v1.lastcol := 7000;
+        if(7000==1400&&8==7&&15==15&&12.0==10.0) {
+            v15 := 'S';
+            v17 := 8.5971775078648;
+        } else if(7000==7000&&8==8&&15==15&&12.0==12.0) {
+            v15 := 'W';
+            v17 := 10.362595087124;
+        } else if(7000==14000&&8==11&&15==15&&12.0==20.0) {
+            v15 := 'A';
+            v17 := 17.130235054029;
+        } else if(7000==75000&&8==13&&15==75&&12.0==60.0) {
+            v15 := 'B';
+            v17 := 22.712745482631;
+        } else if(7000==150000&&8==15&&15==75&&12.0==110.0) {
+            v15 := 'C';
+            v17 := 28.973605592845;
+        } else {
+            v15 := 'U';
+        };
+        printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - CG Benchmark\n", varlist.pack(()));
+        printf(" Size: %10d\n", varlist.pack((7000)));
+        printf(" Iterations: %5d\n", varlist.pack((15)));
+        v1.naa := 7000;
+        v1.nzz := 7000*8+1*8+1+7000*8+2;
+        v1.tran := 314159265.0;
+        v1.amult := 1220703125.0;
+        v9 := fun(array<ref<real<8>>,1> v19, real<8> v20){
+            decl ref<real<8>> v21 =  var(0.0);
+            decl ref<real<8>> v22 =  var(0.0);
+            decl ref<real<8>> v23 =  var(0.0);
+            decl ref<real<8>> v24 =  var(0.0);
+            decl ref<real<8>> v25 =  var(0.0);
+            decl ref<real<8>> v26 =  var(0.0);
+            decl ref<real<8>> v27 =  var(0.0);
+            decl ref<real<8>> v28 =  var(0.0);
+            decl ref<real<8>> v29 =  var(0.0);
+            v21 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v20;
+            v25 := v21;
+            v26 := v20-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v25;
+            v21 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v19[0];
+            v27 := v21;
+            v28 := v19[0]-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v27;
+            v21 := v25*v28+v26*v27;
+            v22 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v21;
+            v29 := v21-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v22;
+            v23 := 2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v29+v26*v28;
+            v24 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v23;
+            v19[0] := v23-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v24;
+            return 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v19[0];
+        }([v1.tran], v1.amult);
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v48](int<4> v31, int<4> v32, array<ref<real<8>>,1> v33, array<ref<int<4>>,1> v34, array<ref<int<4>>,1> v35, int<4> v36, int<4> v37, int<4> v38, int<4> v39, int<4> v40, real<8> v41, array<ref<int<4>>,1> v42, array<ref<int<4>>,1> v43, array<ref<real<8>>,1> v44, array<ref<real<8>>,1> v45, array<ref<int<4>>,1> v46, real<8> v47){
+            decl ref<int<4>> v49 =  var(0);
+            decl ref<int<4>> v50 =  var(0);
+            decl ref<int<4>> v51 =  var(0);
+            decl ref<int<4>> v52 =  var(0);
+            decl ref<int<4>> v53 =  var(0);
+            decl ref<int<4>> v54 =  var(0);
+            decl ref<int<4>> v55 =  var(0);
+            decl ref<real<8>> v56 =  var(0.0);
+            decl ref<real<8>> v57 =  var(0.0);
+            decl ref<real<8>> v58 =  var(0.0);
+            decl ref<int<4>> v59 =  var(0);
+            v56 := 1.0;
+            v57 := pow(v41, 1.0/v31);
+            v50 := 0;
+            {
+                for(decl ref<int<4>> v60 =  var(1) .. v31+1 : 1) {
+                    v34[v31+v60] := 0;
+                };
+                v49 := 1+ceil(v31+1-1/1)*1;
+            };
+            {
+                for(decl ref<int<4>> v92 =  var(1) .. v31+1 : 1) {
+                    v55 := v36;
+                    [v48]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v67](int<4> v61, int<4> v62, array<ref<real<8>>,1> v63, array<ref<int<4>>,1> v64, array<ref<int<4>>,1> v65, array<ref<int<4>>,1> v66){
+                        decl ref<int<4>> v68 =  var(0);
+                        decl ref<int<4>> v69 =  var(0);
+                        decl ref<int<4>> v70 =  var(0);
+                        decl ref<int<4>> v71 =  var(0);
+                        decl ref<int<4>> v72 =  var(0);
+                        decl ref<real<8>> v73 =  var(0.0);
+                        decl ref<real<8>> v74 =  var(0.0);
+                        v70 := 0;
+                        v69 := 0;
+                        v68 := 1;
+                        {
+                            v68 := 2*v68;
+                            while(v68<v61) {
+                                v68 := 2*v68;
+                            };
+                        };
+                        while(v70<v62) {
+                            v73 := fun(array<ref<real<8>>,1> v19, real<8> v20){
+                                decl ref<real<8>> v21 =  var(0.0);
+                                decl ref<real<8>> v22 =  var(0.0);
+                                decl ref<real<8>> v23 =  var(0.0);
+                                decl ref<real<8>> v24 =  var(0.0);
+                                decl ref<real<8>> v25 =  var(0.0);
+                                decl ref<real<8>> v26 =  var(0.0);
+                                decl ref<real<8>> v27 =  var(0.0);
+                                decl ref<real<8>> v28 =  var(0.0);
+                                decl ref<real<8>> v29 =  var(0.0);
+                                v21 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v20;
+                                v25 := v21;
+                                v26 := v20-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v25;
+                                v21 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v19[0];
+                                v27 := v21;
+                                v28 := v19[0]-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v27;
+                                v21 := v25*v28+v26*v27;
+                                v22 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v21;
+                                v29 := v21-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v22;
+                                v23 := 2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v29+v26*v28;
+                                v24 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v23;
+                                v19[0] := v23-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v24;
+                                return 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v19[0];
+                            }([v67.tran], v67.amult);
+                            v74 := fun(array<ref<real<8>>,1> v19, real<8> v20){
+                                decl ref<real<8>> v21 =  var(0.0);
+                                decl ref<real<8>> v22 =  var(0.0);
+                                decl ref<real<8>> v23 =  var(0.0);
+                                decl ref<real<8>> v24 =  var(0.0);
+                                decl ref<real<8>> v25 =  var(0.0);
+                                decl ref<real<8>> v26 =  var(0.0);
+                                decl ref<real<8>> v27 =  var(0.0);
+                                decl ref<real<8>> v28 =  var(0.0);
+                                decl ref<real<8>> v29 =  var(0.0);
+                                v21 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v20;
+                                v25 := v21;
+                                v26 := v20-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v25;
+                                v21 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v19[0];
+                                v27 := v21;
+                                v28 := v19[0]-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v27;
+                                v21 := v25*v28+v26*v27;
+                                v22 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v21;
+                                v29 := v21-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v22;
+                                v23 := 2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v29+v26*v28;
+                                v24 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v23;
+                                v19[0] := v23-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v24;
+                                return 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v19[0];
+                            }([v67.tran], v67.amult);
+                            v72 := fun(real<8> v75, int<4> v76){
+                                return v76*v75;
+                            }(v74, v68)+1;
+                            if(v72>v61) continue else { };
+                            if(v66[v72]==0) {
+                                v66[v72] := 1;
+                                v69 := v69+1;
+                                v65[v69] := v72;
+                                v70 := v70+1;
+                                v63[v70] := v73;
+                                v64[v70] := v72;
+                            } else { };
+                        };
+                        {
+                            for(decl ref<int<4>> v78 =  var(1) .. v69+1 : 1) {
+                                v72 := v65[v78];
+                                v66[v72] := 0;
+                            };
+                            v71 := 1+ceil(v69+1-1/1)*1;
+                        };
+                    }(v31, v55, v45, v46, [v34[0]], [v34[v31]]);
+                    fun(int<4> v80, array<ref<real<8>>,1> v81, array<ref<int<4>>,1> v82, array<ref<int<4>>,1> v83, int<4> v84, real<8> v85){
+                        decl ref<int<4>> v86 =  var(0);
+                        decl ref<int<4>> v87 =  var(0);
+                        v87 := 0;
+                        {
+                            for(decl ref<int<4>> v88 =  var(1) .. v83[0]+1 : 1) {
+                                if(v82[v88]==v84) {
+                                    v81[v88] := v85;
+                                    v87 := 1;
+                                } else { };
+                            };
+                            v86 := 1+ceil(v83[0]+1-1/1)*1;
+                        };
+                        if(v87==0) {
+                            v83[0] := v83[0]+1;
+                            v81[v83[0]] := v85;
+                            v82[v83[0]] := v84;
+                        } else { };
+                    }(v31, v45, v46, [v55], v92, 0.5);
+                    {
+                        for(decl ref<int<4>> v91 =  var(1) .. v55+1 : 1) {
+                            v59 := v46[v91];
+                            if(v59>=v39&&v59<=v40) {
+                                v58 := v56*v45[v91];
+                                {
+                                    for(decl ref<int<4>> v90 =  var(1) .. v55+1 : 1) {
+                                        v54 := v46[v90];
+                                        if(v54>=v37&&v54<=v38) {
+                                            v50 := v50+1;
+                                            if(v50>v32) {
+                                                printf("Space for matrix elements exceeded in", varlist.pack(()));
+                                                printf("nnza, nzmax = %d, %d\n", varlist.pack((v50, v32)));
+                                                printf("iouter = %d\n", varlist.pack((v92)));
+                                                exit(1);
+                                            } else { };
+                                            v43[v50] := v59;
+                                            v42[v50] := v54;
+                                            v44[v50] := v45[v90]*v58;
+                                        } else { };
+                                    };
+                                    v53 := 1+ceil(v55+1-1/1)*1;
+                                };
+                            } else { };
+                        };
+                        v52 := 1+ceil(v55+1-1/1)*1;
+                    };
+                    v56 := v56*v57;
+                };
+                v51 := 1+ceil(v31+1-1/1)*1;
+            };
+            {
+                for(decl ref<int<4>> v93 =  var(v37) .. v38+1 : 1) {
+                    if(v93>=v39&&v93<=v40) {
+                        v51 := v31+v93;
+                        v50 := v50+1;
+                        if(v50>v32) {
+                            printf("Space for matrix elements exceeded in makea\n", varlist.pack(()));
+                            printf("nnza, nzmax = %d, %d\n", varlist.pack((v50, v32)));
+                            printf("iouter = %d\n", varlist.pack((v51)));
+                            exit(1);
+                        } else { };
+                        v43[v50] := v93;
+                        v42[v50] := v93;
+                        v44[v50] := v41-v47;
+                    } else { };
+                };
+                v49 := v37+ceil(v38+1-v37/1)*1;
+            };
+            fun(array<ref<real<8>>,1> v94, array<ref<int<4>>,1> v95, array<ref<int<4>>,1> v96, int<4> v97, array<ref<int<4>>,1> v98, array<ref<int<4>>,1> v99, array<ref<real<8>>,1> v100, int<4> v101, int<4> v102, array<ref<real<8>>,1> v103, array<ref<int<4>>,1> v104, array<ref<int<4>>,1> v105, int<4> v106){
+                decl ref<int<4>> v107 =  var(0);
+                decl ref<int<4>> v108 =  var(0);
+                decl ref<int<4>> v109 =  var(0);
+                decl ref<int<4>> v110 =  var(0);
+                decl ref<int<4>> v111 =  var(0);
+                decl ref<int<4>> v112 =  var(0);
+                decl ref<int<4>> v113 =  var(0);
+                decl ref<real<8>> v114 =  var(0.0);
+                v107 := v102-v101+1;
+                {
+                    for(decl ref<int<4>> v115 =  var(1) .. v97+1 : 1) {
+                        v96[v115] := 0;
+                        v104[v115] := 0;
+                    };
+                    v109 := 1+ceil(v97+1-1/1)*1;
+                };
+                v96[v97+1] := 0;
+                {
+                    for(decl ref<int<4>> v116 =  var(1) .. v106+1 : 1) {
+                        v109 := v98[v116]-v101+1+1;
+                        v96[v109] := v96[v109]+1;
+                    };
+                    v111 := 1+ceil(v106+1-1/1)*1;
+                };
+                v96[1] := 1;
+                {
+                    for(decl ref<int<4>> v117 =  var(2) .. v107+1+1 : 1) {
+                        v96[v117] := v96[v117]+v96[v117-1];
+                    };
+                    v109 := 2+ceil(v107+1+1-2/1)*1;
+                };
+                {
+                    for(decl ref<int<4>> v118 =  var(1) .. v106+1 : 1) {
+                        v109 := v98[v118]-v101+1;
+                        v112 := v96[v109];
+                        v94[v112] := v100[v118];
+                        v95[v112] := v99[v118];
+                        v96[v109] := v96[v109]+1;
+                    };
+                    v111 := 1+ceil(v106+1-1/1)*1;
+                };
+                {
+                    for(decl ref<int<4>> v119 =  var(0-v107) .. 0-1+1 : 1) {
+                        v96[0-v119+1] := v96[0-v119];
+                    };
+                    v109 := v107+ceil(0-1+1-v107/1)*1;
+                };
+                v96[1] := 1;
+                v111 := 0;
+                {
+                    for(decl ref<int<4>> v120 =  var(1) .. v97+1 : 1) {
+                        v103[v120] := 0.0;
+                        v104[v120] := 0;
+                    };
+                    v108 := 1+ceil(v97+1-1/1)*1;
+                };
+                v110 := v96[1];
+                {
+                    for(decl ref<int<4>> v123 =  var(1) .. v107+1 : 1) {
+                        v113 := 0;
+                        {
+                            for(decl ref<int<4>> v121 =  var(v110) .. v96[v123+1] : 1) {
+                                v108 := v95[v121];
+                                v103[v108] := v103[v108]+v94[v121];
+                                if(v104[v108]==0&&real.ne(v103[v108], 0.0)) {
+                                    v104[v108] := 1;
+                                    v113 := v113+1;
+                                    v105[v113] := v108;
+                                } else { };
+                            };
+                            v112 := v110+ceil(v96[v123+1]-v110/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v122 =  var(1) .. v113+1 : 1) {
+                                v108 := v105[v122];
+                                v104[v108] := 0;
+                                v114 := v103[v108];
+                                v103[v108] := 0.0;
+                                if(real.ne(v114, 0.0)) {
+                                    v111 := v111+1;
+                                    v94[v111] := v114;
+                                    v95[v111] := v108;
+                                } else { };
+                            };
+                            v112 := 1+ceil(v113+1-1/1)*1;
+                        };
+                        v110 := v96[v123+1];
+                        v96[v123+1] := v111+v96[1];
+                    };
+                    v109 := 1+ceil(v107+1-1/1)*1;
+                };
+            }(v33, v34, v35, v31, v42, v43, v44, v37, v38, v45, [v46[0]], [v46[v31]], v50);
+        }(v1.naa, v1.nzz, v1.a, v1.colidx, v1.rowstr, 8, v1.firstrow, v1.lastrow, v1.firstcol, v1.lastcol, 1.0e-1, v1.arow, v1.acol, v1.aelt, v1.v, v1.iv, 12.0);
+        {
+            {
+                for(decl ref<int<4>> v127 =  var(1) .. v1.lastrow-v1.firstrow+1+1 : 1) {
+                    {
+                        for(decl ref<int<4>> v126 =  var(v1.rowstr[v127]) .. v1.rowstr[v127+1] : 1) {
+                            v1.colidx[v126] := v1.colidx[v126]-v1.firstcol+1;
+                        };
+                        v6 := v1.rowstr[v127]+ceil(v1.rowstr[v127+1]-v1.rowstr[v127]/1)*1;
+                    };
+                };
+                v5 := 1+ceil(v1.lastrow-v1.firstrow+1+1-1/1)*1;
+            };
+            {
+                for(decl ref<int<4>> v128 =  var(1) .. 7000+1+1 : 1) {
+                    v1.x[v128] := 1.0;
+                };
+                v4 := 1+ceil(7000+1+1-1/1)*1;
+            };
+            v9 := 0.0;
+            {
+                for(decl ref<int<4>> v163 =  var(1) .. 1+1 : 1) {
+                    [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v139](array<ref<int<4>>,1> v129, array<ref<int<4>>,1> v130, array<ref<real<8>>,1> v131, array<ref<real<8>>,1> v132, array<ref<real<8>>,1> v133, array<ref<real<8>>,1> v134, array<ref<real<8>>,1> v135, array<ref<real<8>>,1> v136, array<ref<real<8>>,1> v137, array<ref<real<8>>,1> v138){
+                        decl ref<int<4>> v140 =  var(0);
+                        decl ref<int<4>> v141 =  var(0);
+                        decl ref<int<4>> v142 =  var(0);
+                        decl ref<int<4>> v143 =  var(0);
+                        decl ref<int<4>> v144 =  var(25);
+                        v139.rho := 0.0;
+                        {
+                            for(decl ref<int<4>> v145 =  var(1) .. v139.naa+1+1 : 1) {
+                                v135[v145] := 0.0;
+                                v132[v145] := 0.0;
+                                v136[v145] := v131[v145];
+                                v134[v145] := v136[v145];
+                                v137[v145] := 0.0;
+                            };
+                            v141 := 1+ceil(v139.naa+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v146 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                v139.rho := v139.rho+v131[v146]*v131[v146];
+                            };
+                            v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v155 =  var(1) .. v144+1 : 1) {
+                                {
+                                    v139.rho0 := v139.rho;
+                                    v139.d := 0.0;
+                                    v139.rho := 0.0;
+                                };
+                                {
+                                    for(decl ref<int<4>> v148 =  var(1) .. v139.lastrow-v139.firstrow+1+1 : 1) {
+                                        v139.sum := 0.0;
+                                        {
+                                            for(decl ref<int<4>> v147 =  var(v130[v148]) .. v130[v148+1] : 1) {
+                                                v139.sum := v139.sum+v133[v147]*v134[v129[v147]];
+                                            };
+                                            v142 := v130[v148]+ceil(v130[v148+1]-v130[v148]/1)*1;
+                                        };
+                                        v137[v148] := v139.sum;
+                                    };
+                                    v141 := 1+ceil(v139.lastrow-v139.firstrow+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v149 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v135[v149] := v137[v149];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v150 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v137[v150] := 0.0;
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v151 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v139.d := v139.d+v134[v151]*v135[v151];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                v139.alpha := v139.rho0/v139.d;
+                                {
+                                    for(decl ref<int<4>> v152 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v132[v152] := v132[v152]+v139.alpha*v134[v152];
+                                        v136[v152] := v136[v152]-v139.alpha*v135[v152];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v153 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v139.rho := v139.rho+v136[v153]*v136[v153];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                v139.beta := v139.rho/v139.rho0;
+                                {
+                                    for(decl ref<int<4>> v154 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v134[v154] := v136[v154]+v139.beta*v134[v154];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                            };
+                            v143 := 1+ceil(v144+1-1/1)*1;
+                        };
+                        v139.sum := 0.0;
+                        {
+                            for(decl ref<int<4>> v157 =  var(1) .. v139.lastrow-v139.firstrow+1+1 : 1) {
+                                v139.d := 0.0;
+                                {
+                                    for(decl ref<int<4>> v156 =  var(v130[v157]) .. v130[v157+1]-1+1 : 1) {
+                                        v139.d := v139.d+v133[v156]*v132[v129[v156]];
+                                    };
+                                    v142 := v130[v157]+ceil(v130[v157+1]-1+1-v130[v157]/1)*1;
+                                };
+                                v137[v157] := v139.d;
+                            };
+                            v141 := 1+ceil(v139.lastrow-v139.firstrow+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v158 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                v136[v158] := v137[v158];
+                            };
+                            v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v159 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                v139.d := v131[v159]-v136[v159];
+                                v139.sum := v139.sum+v139.d*v139.d;
+                            };
+                            v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                        };
+                        {
+                            v138[0] := sqrt(v139.sum);
+                        };
+                    }(v1.colidx, v1.rowstr, v1.x, v1.z, v1.a, v1.p, v1.q, v1.r, v1.w, [v10]);
+                    {
+                        v11 := 0.0;
+                        v12 := 0.0;
+                    };
+                    {
+                        for(decl ref<int<4>> v161 =  var(1) .. v1.lastcol-v1.firstcol+1+1 : 1) {
+                            v11 := v11+v1.x[v161]*v1.z[v161];
+                            v12 := v12+v1.z[v161]*v1.z[v161];
+                        };
+                        v5 := 1+ceil(v1.lastcol-v1.firstcol+1+1-1/1)*1;
+                    };
+                    v12 := 1.0/sqrt(v12);
+                    {
+                        for(decl ref<int<4>> v162 =  var(1) .. v1.lastcol-v1.firstcol+1+1 : 1) {
+                            v1.x[v162] := v12*v1.z[v162];
+                        };
+                        v5 := 1+ceil(v1.lastcol-v1.firstcol+1+1-1/1)*1;
+                    };
+                };
+                v7 := 1+ceil(1+1-1/1)*1;
+            };
+            {
+                for(decl ref<int<4>> v164 =  var(1) .. 7000+1+1 : 1) {
+                    v1.x[v164] := 1.0;
+                };
+                v4 := 1+ceil(7000+1+1-1/1)*1;
+            };
+            v9 := 0.0;
+        };
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v166](int<4> v165){
+            v166.elapsed[v165] := 0.0;
+        }(1);
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v169](int<4> v168){
+            v169.start[v168] := [v169]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v170](){
+                decl ref<real<8>> v171 =  var(0.0);
+                [v170]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v173](array<ref<real<8>>,1> v172){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v174 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
+                    gettimeofday([v174], null);
+                    if(v173.sec<0) v173.sec := v174.tv_sec else { };
+                    v172[0] := v174.tv_sec-v173.sec+1.0e-6*v174.tv_usec;
+                }([v171]);
+                return v171;
+            }();
+        }(1);
+        {
+            {
+                for(decl ref<int<4>> v180 =  var(1) .. 15+1 : 1) {
+                    [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v139](array<ref<int<4>>,1> v129, array<ref<int<4>>,1> v130, array<ref<real<8>>,1> v131, array<ref<real<8>>,1> v132, array<ref<real<8>>,1> v133, array<ref<real<8>>,1> v134, array<ref<real<8>>,1> v135, array<ref<real<8>>,1> v136, array<ref<real<8>>,1> v137, array<ref<real<8>>,1> v138){
+                        decl ref<int<4>> v140 =  var(0);
+                        decl ref<int<4>> v141 =  var(0);
+                        decl ref<int<4>> v142 =  var(0);
+                        decl ref<int<4>> v143 =  var(0);
+                        decl ref<int<4>> v144 =  var(25);
+                        v139.rho := 0.0;
+                        {
+                            for(decl ref<int<4>> v145 =  var(1) .. v139.naa+1+1 : 1) {
+                                v135[v145] := 0.0;
+                                v132[v145] := 0.0;
+                                v136[v145] := v131[v145];
+                                v134[v145] := v136[v145];
+                                v137[v145] := 0.0;
+                            };
+                            v141 := 1+ceil(v139.naa+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v146 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                v139.rho := v139.rho+v131[v146]*v131[v146];
+                            };
+                            v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v155 =  var(1) .. v144+1 : 1) {
+                                {
+                                    v139.rho0 := v139.rho;
+                                    v139.d := 0.0;
+                                    v139.rho := 0.0;
+                                };
+                                {
+                                    for(decl ref<int<4>> v148 =  var(1) .. v139.lastrow-v139.firstrow+1+1 : 1) {
+                                        v139.sum := 0.0;
+                                        {
+                                            for(decl ref<int<4>> v147 =  var(v130[v148]) .. v130[v148+1] : 1) {
+                                                v139.sum := v139.sum+v133[v147]*v134[v129[v147]];
+                                            };
+                                            v142 := v130[v148]+ceil(v130[v148+1]-v130[v148]/1)*1;
+                                        };
+                                        v137[v148] := v139.sum;
+                                    };
+                                    v141 := 1+ceil(v139.lastrow-v139.firstrow+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v149 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v135[v149] := v137[v149];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v150 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v137[v150] := 0.0;
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v151 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v139.d := v139.d+v134[v151]*v135[v151];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                v139.alpha := v139.rho0/v139.d;
+                                {
+                                    for(decl ref<int<4>> v152 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v132[v152] := v132[v152]+v139.alpha*v134[v152];
+                                        v136[v152] := v136[v152]-v139.alpha*v135[v152];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                {
+                                    for(decl ref<int<4>> v153 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v139.rho := v139.rho+v136[v153]*v136[v153];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                                v139.beta := v139.rho/v139.rho0;
+                                {
+                                    for(decl ref<int<4>> v154 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                        v134[v154] := v136[v154]+v139.beta*v134[v154];
+                                    };
+                                    v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                                };
+                            };
+                            v143 := 1+ceil(v144+1-1/1)*1;
+                        };
+                        v139.sum := 0.0;
+                        {
+                            for(decl ref<int<4>> v157 =  var(1) .. v139.lastrow-v139.firstrow+1+1 : 1) {
+                                v139.d := 0.0;
+                                {
+                                    for(decl ref<int<4>> v156 =  var(v130[v157]) .. v130[v157+1]-1+1 : 1) {
+                                        v139.d := v139.d+v133[v156]*v132[v129[v156]];
+                                    };
+                                    v142 := v130[v157]+ceil(v130[v157+1]-1+1-v130[v157]/1)*1;
+                                };
+                                v137[v157] := v139.d;
+                            };
+                            v141 := 1+ceil(v139.lastrow-v139.firstrow+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v158 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                v136[v158] := v137[v158];
+                            };
+                            v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                        };
+                        {
+                            for(decl ref<int<4>> v159 =  var(1) .. v139.lastcol-v139.firstcol+1+1 : 1) {
+                                v139.d := v131[v159]-v136[v159];
+                                v139.sum := v139.sum+v139.d*v139.d;
+                            };
+                            v141 := 1+ceil(v139.lastcol-v139.firstcol+1+1-1/1)*1;
+                        };
+                        {
+                            v138[0] := sqrt(v139.sum);
+                        };
+                    }(v1.colidx, v1.rowstr, v1.x, v1.z, v1.a, v1.p, v1.q, v1.r, v1.w, [v10]);
+                    {
+                        v11 := 0.0;
+                        v12 := 0.0;
+                    };
+                    {
+                        for(decl ref<int<4>> v178 =  var(1) .. v1.lastcol-v1.firstcol+1+1 : 1) {
+                            v11 := v11+v1.x[v178]*v1.z[v178];
+                            v12 := v12+v1.z[v178]*v1.z[v178];
+                        };
+                        v5 := 1+ceil(v1.lastcol-v1.firstcol+1+1-1/1)*1;
+                    };
+                    {
+                        v12 := 1.0/sqrt(v12);
+                        v9 := 12.0+1.0/v11;
+                    };
+                    {
+                        if(v180==1) {
+                            printf("   iteration           ||r||                 zeta\n", varlist.pack(()));
+                        } else { };
+                        printf("    %5d       %20.14e%20.13e\n", varlist.pack((v180, v10, v9)));
+                    };
+                    {
+                        for(decl ref<int<4>> v179 =  var(1) .. v1.lastcol-v1.firstcol+1+1 : 1) {
+                            v1.x[v179] := v12*v1.z[v179];
+                        };
+                        v5 := 1+ceil(v1.lastcol-v1.firstcol+1+1-1/1)*1;
+                    };
+                };
+                v7 := 1+ceil(15+1-1/1)*1;
+            };
+        };
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v182](int<4> v181){
+            decl ref<real<8>> v183 =  var(0.0);
+            decl ref<real<8>> v184 =  var(0.0);
+            v184 := [v182]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v170](){
+                decl ref<real<8>> v171 =  var(0.0);
+                [v170]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v173](array<ref<real<8>>,1> v172){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v174 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
+                    gettimeofday([v174], null);
+                    if(v173.sec<0) v173.sec := v174.tv_sec else { };
+                    v172[0] := v174.tv_sec-v173.sec+1.0e-6*v174.tv_usec;
+                }([v171]);
+                return v171;
+            }();
+            v183 := v184-v182.start[v181];
+            v182.elapsed[v181] := v182.elapsed[v181]+v183;
+        }(1);
+        v13 := [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v187](int<4> v186){
+            return v187.elapsed[v186];
+        }(1);
+        printf(" Benchmark completed\n", varlist.pack(()));
+        v18 := 1.0e-10;
+        if(int.ne(v15, 'U')) {
+            if(fabs(v9-v17)<=v18) {
+                v16 := 1;
+                printf(" VERIFICATION SUCCESSFUL\n", varlist.pack(()));
+                printf(" Zeta is    %20.12e\n", varlist.pack((v9)));
+                printf(" Error is   %20.12e\n", varlist.pack((v9-v17)));
+            } else {
+                v16 := 0;
+                printf(" VERIFICATION FAILED\n", varlist.pack(()));
+                printf(" Zeta                %20.12e\n", varlist.pack((v9)));
+                printf(" The correct zeta is %20.12e\n", varlist.pack((v17)));
+            };
+        } else {
+            v16 := 0;
+            printf(" Problem size unknown\n", varlist.pack(()));
+            printf(" NO VERIFICATION PERFORMED\n", varlist.pack(()));
+        };
+        if(real.ne(v13, 0.0)) {
+            v14 := 2.0*15*7000*3.0+8*8+1+25.0*5.0+8*8+1+3.0/v13/1000000.0;
+        } else {
+            v14 := 0.0;
+        };
+        fun(array<ref<char>,1> v189, char v190, int<4> v191, int<4> v192, int<4> v193, int<4> v194, int<4> v195, real<8> v196, real<8> v197, array<ref<char>,1> v198, int<4> v199, array<ref<char>,1> v200, array<ref<char>,1> v201, array<ref<char>,1> v202, array<ref<char>,1> v203, array<ref<char>,1> v204, array<ref<char>,1> v205, array<ref<char>,1> v206, array<ref<char>,1> v207, array<ref<char>,1> v208){
+            decl ref<array<ref<char>,1>> v209 =  var("1000");
+            printf("\n\n %s Benchmark Completed\n", varlist.pack((v189)));
+            printf(" Class           =                        %c\n", varlist.pack((v190)));
+            if(v192==0&&v193==0) printf(" Size            =             %12d\n", varlist.pack((v191))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v191, v192, v193)));
+            printf(" Iterations      =             %12d\n", varlist.pack((v194)));
+            printf(" Threads         =             %12d\n", varlist.pack((v195)));
+            printf(" Time in seconds =             %12.2f\n", varlist.pack((0.0)));
+            printf(" Mop/s total     =             %12.2f\n", varlist.pack((0.0)));
+            printf(" Operation type  = %24s\n", varlist.pack((v198)));
+            if(v199) printf(" Verification    =               SUCCESSFUL\n", varlist.pack(())) else printf(" Verification    =             UNSUCCESSFUL\n", varlist.pack(()));
+            printf(" Version         =             %12s\n", varlist.pack((v200)));
+            printf(" Compile date    =             %12s\n", varlist.pack((v201)));
+            printf("\n Compile options:\n", varlist.pack(()));
+            printf("    CC           = %s\n", varlist.pack((v202)));
+            printf("    CLINK        = %s\n", varlist.pack((v203)));
+            printf("    C_LIB        = %s\n", varlist.pack((v204)));
+            printf("    C_INC        = %s\n", varlist.pack((v205)));
+            printf("    CFLAGS       = %s\n", varlist.pack((v206)));
+            printf("    CLINKFLAGS   = %s\n", varlist.pack((v207)));
+            printf("    RAND         = %s\n", varlist.pack((v208)));
+        }("CG", v15, 7000, 0, 0, 15, v8, v13, v14, "          floating point", v16, "2.3", "02 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+        decl ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v1 = ( var(struct{naa:=( var(0)), nzz:=( var(0)), firstrow:=( var(0)), lastrow:=( var(0)), firstcol:=( var(0)), lastcol:=( var(0)), colidx:=( new(vector.initUniform(( var(0)), 637001))), rowstr:=( new(vector.initUniform(( var(0)), 7002))), iv:=( new(vector.initUniform(( var(0)), 14002))), arow:=( new(vector.initUniform(( var(0)), 637001))), acol:=( new(vector.initUniform(( var(0)), 637001))), v:=( new(vector.initUniform(( var(0.0)), 7002))), aelt:=( new(vector.initUniform(( var(0.0)), 637001))), a:=( new(vector.initUniform(( var(0.0)), 637001))), x:=( new(vector.initUniform(( var(0.0)), 7003))), z:=( new(vector.initUniform(( var(0.0)), 7003))), p:=( new(vector.initUniform(( var(0.0)), 7003))), q:=( new(vector.initUniform(( var(0.0)), 7003))), r:=( new(vector.initUniform(( var(0.0)), 7003))), w:=( new(vector.initUniform(( var(0.0)), 7003))), amult:=( var(0.0)), tran:=( var(0.0)), d:=( var(0.0)), sum:=( var(0.0)), rho:=( var(0.0)), rho0:=( var(0.0)), alpha:=( var(0.0)), beta:=( var(0.0)), start:=( new(vector.initUniform(( var(0.0)), 64))), elapsed:=( new(vector.initUniform(( var(0.0)), 64))), sec:=( var((CAST<int<4>>(0)-1)))}));
+        decl ref<int<4>> v4 = ( var(0));
+        decl ref<int<4>> v5 = ( var(0));
+        decl ref<int<4>> v6 = ( var(0));
+        decl ref<int<4>> v7 = ( var(0));
+        decl ref<int<4>> v8 = ( var(1));
+        decl ref<real<8>> v9 = ( var(0.0));
+        decl ref<real<8>> v10 = ( var(0.0));
+        decl ref<real<8>> v11 = ( var(0.0));
+        decl ref<real<8>> v12 = ( var(0.0));
+        decl ref<real<8>> v13 = ( var(0.0));
+        decl ref<real<8>> v14 = ( var(0.0));
+        decl ref<char> v15 = ( var('\0'));
+        decl ref<int<4>> v16 = ( var(0));
+        decl ref<real<8>> v17 = ( var(0.0));
+        decl ref<real<8>> v18 = ( var(0.0));
+        (( *v1).firstrow := 1);
+        (( *v1).lastrow := 7000);
+        (( *v1).firstcol := 1);
+        (( *v1).lastcol := 7000);
+        if(((((7000==1400)&&(8==7))&&(15==15))&&(12.0==10.0))) {
+            (v15 := CAST<char>('S'));
+            (v17 := 8.5971775078648);
+        } else if(((((7000==7000)&&(8==8))&&(15==15))&&(12.0==12.0))) {
+            (v15 := CAST<char>('W'));
+            (v17 := 10.362595087124);
+        } else if(((((7000==14000)&&(8==11))&&(15==15))&&(12.0==20.0))) {
+            (v15 := CAST<char>('A'));
+            (v17 := 17.130235054029);
+        } else if(((((7000==75000)&&(8==13))&&(15==75))&&(12.0==60.0))) {
+            (v15 := CAST<char>('B'));
+            (v17 := 22.712745482631);
+        } else if(((((7000==150000)&&(8==15))&&(15==75))&&(12.0==110.0))) {
+            (v15 := CAST<char>('C'));
+            (v17 := 28.973605592845);
+        } else {
+            (v15 := CAST<char>('U'));
+        };
+        printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - CG Benchmark\n", varlist.pack(()));
+        printf(" Size: %10d\n", varlist.pack((7000)));
+        printf(" Iterations: %5d\n", varlist.pack((15)));
+        (( *v1).naa := 7000);
+        (( *v1).nzz := (((7000*(8+1))*(8+1))+(7000*(8+2))));
+        (( *v1).tran := 314159265.0);
+        (( *v1).amult := 1220703125.0);
+        (v9 := fun(array<ref<real<8>>,1> v19, real<8> v20){
+            decl ref<real<8>> v21 = ( var(0.0));
+            decl ref<real<8>> v22 = ( var(0.0));
+            decl ref<real<8>> v23 = ( var(0.0));
+            decl ref<real<8>> v24 = ( var(0.0));
+            decl ref<real<8>> v25 = ( var(0.0));
+            decl ref<real<8>> v26 = ( var(0.0));
+            decl ref<real<8>> v27 = ( var(0.0));
+            decl ref<real<8>> v28 = ( var(0.0));
+            decl ref<real<8>> v29 = ( var(0.0));
+            (v21 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*v20));
+            (v25 := CAST<real<8>>(CAST<int<4>>(( *v21))));
+            (v26 := (v20-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v25))));
+            (v21 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *(v19[0]))));
+            (v27 := CAST<real<8>>(CAST<int<4>>(( *v21))));
+            (v28 := (( *(v19[0]))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v27))));
+            (v21 := ((( *v25)*( *v28))+(( *v26)*( *v27))));
+            (v22 := CAST<real<8>>(CAST<int<4>>((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *v21)))));
+            (v29 := (( *v21)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v22))));
+            (v23 := ((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v29))+(( *v26)*( *v28))));
+            (v24 := CAST<real<8>>(CAST<int<4>>(((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*( *v23)))));
+            ((v19[0]) := (( *v23)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*( *v24))));
+            return ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*( *(v19[0])));
+        }([( *v1).tran], ( *( *v1).amult)));
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v48](int<4> v31, int<4> v32, array<ref<real<8>>,1> v33, array<ref<int<4>>,1> v34, array<ref<int<4>>,1> v35, int<4> v36, int<4> v37, int<4> v38, int<4> v39, int<4> v40, real<8> v41, array<ref<int<4>>,1> v42, array<ref<int<4>>,1> v43, array<ref<real<8>>,1> v44, array<ref<real<8>>,1> v45, array<ref<int<4>>,1> v46, real<8> v47){
+            decl ref<int<4>> v49 = ( var(0));
+            decl ref<int<4>> v50 = ( var(0));
+            decl ref<int<4>> v51 = ( var(0));
+            decl ref<int<4>> v52 = ( var(0));
+            decl ref<int<4>> v53 = ( var(0));
+            decl ref<int<4>> v54 = ( var(0));
+            decl ref<int<4>> v55 = ( var(0));
+            decl ref<real<8>> v56 = ( var(0.0));
+            decl ref<real<8>> v57 = ( var(0.0));
+            decl ref<real<8>> v58 = ( var(0.0));
+            decl ref<int<4>> v59 = ( var(0));
+            (v56 := 1.0);
+            (v57 := pow(v41, (1.0/CAST<real<8>>(v31))));
+            (v50 := 0);
+            {
+                <m id=1>for(decl ref<int<4>> v60 = ( var(1)) .. (v31+1) : 1) {
+                    ((v34[CAST<uint<4>>((v31+( *v60)))]) := 0);
+                }</m>;
+                (v49 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v31+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+            {
+                for(decl ref<int<4>> v92 = ( var(1)) .. (v31+1) : 1) {
+                    (v55 := v36);
+                    [v48]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v67](int<4> v61, int<4> v62, array<ref<real<8>>,1> v63, array<ref<int<4>>,1> v64, array<ref<int<4>>,1> v65, array<ref<int<4>>,1> v66){
+                        decl ref<int<4>> v68 = ( var(0));
+                        decl ref<int<4>> v69 = ( var(0));
+                        decl ref<int<4>> v70 = ( var(0));
+                        decl ref<int<4>> v71 = ( var(0));
+                        decl ref<int<4>> v72 = ( var(0));
+                        decl ref<real<8>> v73 = ( var(0.0));
+                        decl ref<real<8>> v74 = ( var(0.0));
+                        (v70 := 0);
+                        (v69 := 0);
+                        (v68 := 1);
+                        {
+                            (v68 := (2*( *v68)));
+                            while((( *v68)<v61)) {
+                                (v68 := (2*( *v68)));
+                            };
+                        };
+                        while((( *v70)<v62)) {
+                            (v73 := fun(array<ref<real<8>>,1> v19, real<8> v20){
+                                decl ref<real<8>> v21 = ( var(0.0));
+                                decl ref<real<8>> v22 = ( var(0.0));
+                                decl ref<real<8>> v23 = ( var(0.0));
+                                decl ref<real<8>> v24 = ( var(0.0));
+                                decl ref<real<8>> v25 = ( var(0.0));
+                                decl ref<real<8>> v26 = ( var(0.0));
+                                decl ref<real<8>> v27 = ( var(0.0));
+                                decl ref<real<8>> v28 = ( var(0.0));
+                                decl ref<real<8>> v29 = ( var(0.0));
+                                (v21 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*v20));
+                                (v25 := CAST<real<8>>(CAST<int<4>>(( *v21))));
+                                (v26 := (v20-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v25))));
+                                (v21 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *(v19[0]))));
+                                (v27 := CAST<real<8>>(CAST<int<4>>(( *v21))));
+                                (v28 := (( *(v19[0]))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v27))));
+                                (v21 := ((( *v25)*( *v28))+(( *v26)*( *v27))));
+                                (v22 := CAST<real<8>>(CAST<int<4>>((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *v21)))));
+                                (v29 := (( *v21)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v22))));
+                                (v23 := ((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v29))+(( *v26)*( *v28))));
+                                (v24 := CAST<real<8>>(CAST<int<4>>(((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*( *v23)))));
+                                ((v19[0]) := (( *v23)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*( *v24))));
+                                return ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*( *(v19[0])));
+                            }([( *v67).tran], ( *( *v67).amult)));
+                            (v74 := fun(array<ref<real<8>>,1> v19, real<8> v20){
+                                decl ref<real<8>> v21 = ( var(0.0));
+                                decl ref<real<8>> v22 = ( var(0.0));
+                                decl ref<real<8>> v23 = ( var(0.0));
+                                decl ref<real<8>> v24 = ( var(0.0));
+                                decl ref<real<8>> v25 = ( var(0.0));
+                                decl ref<real<8>> v26 = ( var(0.0));
+                                decl ref<real<8>> v27 = ( var(0.0));
+                                decl ref<real<8>> v28 = ( var(0.0));
+                                decl ref<real<8>> v29 = ( var(0.0));
+                                (v21 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*v20));
+                                (v25 := CAST<real<8>>(CAST<int<4>>(( *v21))));
+                                (v26 := (v20-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v25))));
+                                (v21 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *(v19[0]))));
+                                (v27 := CAST<real<8>>(CAST<int<4>>(( *v21))));
+                                (v28 := (( *(v19[0]))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v27))));
+                                (v21 := ((( *v25)*( *v28))+(( *v26)*( *v27))));
+                                (v22 := CAST<real<8>>(CAST<int<4>>((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *v21)))));
+                                (v29 := (( *v21)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v22))));
+                                (v23 := ((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v29))+(( *v26)*( *v28))));
+                                (v24 := CAST<real<8>>(CAST<int<4>>(((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*( *v23)))));
+                                ((v19[0]) := (( *v23)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*( *v24))));
+                                return ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*( *(v19[0])));
+                            }([( *v67).tran], ( *( *v67).amult)));
+                            (v72 := (fun(real<8> v75, int<4> v76){
+                                return CAST<int<4>>((CAST<real<8>>(v76)*v75));
+                            }(( *v74), ( *v68))+1));
+                            if((( *v72)>v61)) continue else { };
+                            if((( *(v66[CAST<uint<4>>(( *v72))]))==0)) {
+                                ((v66[CAST<uint<4>>(( *v72))]) := 1);
+                                (v69 := (( *v69)+1));
+                                ((v65[CAST<uint<4>>(( *v69))]) := ( *v72));
+                                (v70 := (( *v70)+1));
+                                ((v63[CAST<uint<4>>(( *v70))]) := ( *v73));
+                                ((v64[CAST<uint<4>>(( *v70))]) := ( *v72));
+                            } else { };
+                        };
+                        {
+                            for(decl ref<int<4>> v78 = ( var(1)) .. (( *v69)+1) : 1) {
+                                (v72 := ( *(v65[CAST<uint<4>>(( *v78))])));
+                                ((v66[CAST<uint<4>>(( *v72))]) := 0);
+                            };
+                            (v71 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v69)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                    }(v31, ( *v55), v45, v46, [(v34[CAST<uint<4>>(0)])], [(v34[CAST<uint<4>>(v31)])]);
+                    fun(int<4> v80, array<ref<real<8>>,1> v81, array<ref<int<4>>,1> v82, array<ref<int<4>>,1> v83, int<4> v84, real<8> v85){
+                        decl ref<int<4>> v86 = ( var(0));
+                        decl ref<int<4>> v87 = ( var(0));
+                        (v87 := 0);
+                        {
+                            for(decl ref<int<4>> v88 = ( var(1)) .. (( *(v83[0]))+1) : 1) {
+                                if((( *(v82[CAST<uint<4>>(( *v88))]))==v84)) {
+                                    ((v81[CAST<uint<4>>(( *v88))]) := v85);
+                                    (v87 := 1);
+                                } else { };
+                            };
+                            (v86 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *(v83[0]))+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        if((( *v87)==0)) {
+                            ((v83[0]) := (( *(v83[0]))+1));
+                            ((v81[CAST<uint<4>>(( *(v83[0])))]) := v85);
+                            ((v82[CAST<uint<4>>(( *(v83[0])))]) := v84);
+                        } else { };
+                    }(v31, v45, v46, [v55], ( *v92), 0.5);
+                    {
+                        for(decl ref<int<4>> v91 = ( var(1)) .. (( *v55)+1) : 1) {
+                            (v59 := ( *(v46[CAST<uint<4>>(( *v91))])));
+                            if(((( *v59)>=v39)&&(( *v59)<=v40))) {
+                                (v58 := (( *v56)*( *(v45[CAST<uint<4>>(( *v91))]))));
+                                {
+                                    for(decl ref<int<4>> v90 = ( var(1)) .. (( *v55)+1) : 1) {
+                                        (v54 := ( *(v46[CAST<uint<4>>(( *v90))])));
+                                        if(((( *v54)>=v37)&&(( *v54)<=v38))) {
+                                            (v50 := (( *v50)+1));
+                                            if((( *v50)>v32)) {
+                                                printf("Space for matrix elements exceeded in", varlist.pack(()));
+                                                printf("nnza, nzmax = %d, %d\n", varlist.pack((( *v50), v32)));
+                                                printf("iouter = %d\n", varlist.pack((( *v92))));
+                                                exit(1);
+                                            } else { };
+                                            ((v43[CAST<uint<4>>(( *v50))]) := ( *v59));
+                                            ((v42[CAST<uint<4>>(( *v50))]) := ( *v54));
+                                            ((v44[CAST<uint<4>>(( *v50))]) := (( *(v45[CAST<uint<4>>(( *v90))]))*( *v58)));
+                                        } else { };
+                                    };
+                                    (v53 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v55)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                            } else { };
+                        };
+                        (v52 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v55)+1)-1))/CAST<real<8>>(1))))*1)));
+                    };
+                    (v56 := (( *v56)*( *v57)));
+                };
+                (v51 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v31+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+            {
+                for(decl ref<int<4>> v93 = ( var(v37)) .. (v38+1) : 1) {
+                    if(((( *v93)>=v39)&&(( *v93)<=v40))) {
+                        (v51 := (v31+( *v93)));
+                        (v50 := (( *v50)+1));
+                        if((( *v50)>v32)) {
+                            printf("Space for matrix elements exceeded in makea\n", varlist.pack(()));
+                            printf("nnza, nzmax = %d, %d\n", varlist.pack((( *v50), v32)));
+                            printf("iouter = %d\n", varlist.pack((( *v51))));
+                            exit(1);
+                        } else { };
+                        ((v43[CAST<uint<4>>(( *v50))]) := ( *v93));
+                        ((v42[CAST<uint<4>>(( *v50))]) := ( *v93));
+                        ((v44[CAST<uint<4>>(( *v50))]) := (v41-v47));
+                    } else { };
+                };
+                (v49 := (v37+(CAST<int<4>>(ceil((CAST<real<8>>(((v38+1)-v37))/CAST<real<8>>(1))))*1)));
+            };
+            fun(array<ref<real<8>>,1> v94, array<ref<int<4>>,1> v95, array<ref<int<4>>,1> v96, int<4> v97, array<ref<int<4>>,1> v98, array<ref<int<4>>,1> v99, array<ref<real<8>>,1> v100, int<4> v101, int<4> v102, array<ref<real<8>>,1> v103, array<ref<int<4>>,1> v104, array<ref<int<4>>,1> v105, int<4> v106){
+                decl ref<int<4>> v107 = ( var(0));
+                decl ref<int<4>> v108 = ( var(0));
+                decl ref<int<4>> v109 = ( var(0));
+                decl ref<int<4>> v110 = ( var(0));
+                decl ref<int<4>> v111 = ( var(0));
+                decl ref<int<4>> v112 = ( var(0));
+                decl ref<int<4>> v113 = ( var(0));
+                decl ref<real<8>> v114 = ( var(0.0));
+                (v107 := ((v102-v101)+1));
+                {
+                    <m id=2>for(decl ref<int<4>> v115 = ( var(1)) .. (v97+1) : 1) {
+                        ((v96[CAST<uint<4>>(( *v115))]) := 0);
+                        ((v104[CAST<uint<4>>(( *v115))]) := 0);
+                    }</m>;
+                    (v109 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v97+1)-1))/CAST<real<8>>(1))))*1)));
+                };
+                ((v96[CAST<uint<4>>((v97+1))]) := 0);
+                {
+                    for(decl ref<int<4>> v116 = ( var(1)) .. (v106+1) : 1) {
+                        (v109 := (((( *(v98[CAST<uint<4>>(( *v116))]))-v101)+1)+1));
+                        ((v96[CAST<uint<4>>(( *v109))]) := (( *(v96[CAST<uint<4>>(( *v109))]))+1));
+                    };
+                    (v111 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v106+1)-1))/CAST<real<8>>(1))))*1)));
+                };
+                ((v96[CAST<uint<4>>(1)]) := 1);
+                {
+                    for(decl ref<int<4>> v117 = ( var(2)) .. ((( *v107)+1)+1) : 1) {
+                        ((v96[CAST<uint<4>>(( *v117))]) := (( *(v96[CAST<uint<4>>(( *v117))]))+( *(v96[CAST<uint<4>>((( *v117)-1))]))));
+                    };
+                    (v109 := (2+(CAST<int<4>>(ceil((CAST<real<8>>((((( *v107)+1)+1)-2))/CAST<real<8>>(1))))*1)));
+                };
+                {
+                    for(decl ref<int<4>> v118 = ( var(1)) .. (v106+1) : 1) {
+                        (v109 := ((( *(v98[CAST<uint<4>>(( *v118))]))-v101)+1));
+                        (v112 := ( *(v96[CAST<uint<4>>(( *v109))])));
+                        ((v94[CAST<uint<4>>(( *v112))]) := ( *(v100[CAST<uint<4>>(( *v118))])));
+                        ((v95[CAST<uint<4>>(( *v112))]) := ( *(v99[CAST<uint<4>>(( *v118))])));
+                        ((v96[CAST<uint<4>>(( *v109))]) := (( *(v96[CAST<uint<4>>(( *v109))]))+1));
+                    };
+                    (v111 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v106+1)-1))/CAST<real<8>>(1))))*1)));
+                };
+                {
+                    for(decl ref<int<4>> v119 = ( var((CAST<int<4>>(0)-( *v107)))) .. ((CAST<int<4>>(0)-1)+1) : 1) {
+                        ((v96[CAST<uint<4>>(((CAST<int<4>>(0)-( *v119))+1))]) := ( *(v96[CAST<uint<4>>((CAST<int<4>>(0)-( *v119)))])));
+                    };
+                    (v109 := (( *v107)+(CAST<int<4>>(ceil((CAST<real<8>>((((CAST<int<4>>(0)-1)+1)-( *v107)))/CAST<real<8>>(1))))*1)));
+                };
+                ((v96[CAST<uint<4>>(1)]) := 1);
+                (v111 := 0);
+                {
+                    <m id=3>for(decl ref<int<4>> v120 = ( var(1)) .. (v97+1) : 1) {
+                        ((v103[CAST<uint<4>>(( *v120))]) := 0.0);
+                        ((v104[CAST<uint<4>>(( *v120))]) := 0);
+                    }</m>;
+                    (v108 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v97+1)-1))/CAST<real<8>>(1))))*1)));
+                };
+                (v110 := ( *(v96[CAST<uint<4>>(1)])));
+                {
+                    for(decl ref<int<4>> v123 = ( var(1)) .. (( *v107)+1) : 1) {
+                        (v113 := 0);
+                        {
+                            for(decl ref<int<4>> v121 = ( var(( *v110))) .. ( *(v96[CAST<uint<4>>((( *v123)+1))])) : 1) {
+                                (v108 := ( *(v95[CAST<uint<4>>(( *v121))])));
+                                ((v103[CAST<uint<4>>(( *v108))]) := (( *(v103[CAST<uint<4>>(( *v108))]))+( *(v94[CAST<uint<4>>(( *v121))]))));
+                                if(((( *(v104[CAST<uint<4>>(( *v108))]))==0)&&real.ne(( *(v103[CAST<uint<4>>(( *v108))])), 0.0))) {
+                                    ((v104[CAST<uint<4>>(( *v108))]) := 1);
+                                    (v113 := (( *v113)+1));
+                                    ((v105[CAST<uint<4>>(( *v113))]) := ( *v108));
+                                } else { };
+                            };
+                            (v112 := (( *v110)+(CAST<int<4>>(ceil((CAST<real<8>>((( *(v96[CAST<uint<4>>((( *v123)+1))]))-( *v110)))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            for(decl ref<int<4>> v122 = ( var(1)) .. (( *v113)+1) : 1) {
+                                (v108 := ( *(v105[CAST<uint<4>>(( *v122))])));
+                                ((v104[CAST<uint<4>>(( *v108))]) := 0);
+                                (v114 := ( *(v103[CAST<uint<4>>(( *v108))])));
+                                ((v103[CAST<uint<4>>(( *v108))]) := 0.0);
+                                if(real.ne(( *v114), 0.0)) {
+                                    (v111 := (( *v111)+1));
+                                    ((v94[CAST<uint<4>>(( *v111))]) := ( *v114));
+                                    ((v95[CAST<uint<4>>(( *v111))]) := ( *v108));
+                                } else { };
+                            };
+                            (v112 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v113)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        (v110 := ( *(v96[CAST<uint<4>>((( *v123)+1))])));
+                        ((v96[CAST<uint<4>>((( *v123)+1))]) := (( *v111)+( *(v96[CAST<uint<4>>(1)]))));
+                    };
+                    (v109 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v107)+1)-1))/CAST<real<8>>(1))))*1)));
+                };
+            }(v33, v34, v35, v31, v42, v43, v44, v37, v38, v45, [(v46[CAST<uint<4>>(0)])], [(v46[CAST<uint<4>>(v31)])], ( *v50));
+        }(( *( *v1).naa), ( *( *v1).nzz), ( *( *v1).a), ( *( *v1).colidx), ( *( *v1).rowstr), 8, ( *( *v1).firstrow), ( *( *v1).lastrow), ( *( *v1).firstcol), ( *( *v1).lastcol), 1.0e-1, ( *( *v1).arow), ( *( *v1).acol), ( *( *v1).aelt), ( *( *v1).v), ( *( *v1).iv), 12.0);
+        <m id=24>{
+            {
+                <m id=4>for(decl ref<int<4>> v127 = ( var(1)) .. (((( *( *v1).lastrow)-( *( *v1).firstrow))+1)+1) : 1) {
+                    {
+                        for(decl ref<int<4>> v126 = ( var(( *(( *( *v1).rowstr)[CAST<uint<4>>(( *v127))])))) .. ( *(( *( *v1).rowstr)[CAST<uint<4>>((( *v127)+1))])) : 1) {
+                            ((( *( *v1).colidx)[CAST<uint<4>>(( *v126))]) := ((( *(( *( *v1).colidx)[CAST<uint<4>>(( *v126))]))-( *( *v1).firstcol))+1));
+                        };
+                        (v6 := (( *(( *( *v1).rowstr)[CAST<uint<4>>(( *v127))]))+(CAST<int<4>>(ceil((CAST<real<8>>((( *(( *( *v1).rowstr)[CAST<uint<4>>((( *v127)+1))]))-( *(( *( *v1).rowstr)[CAST<uint<4>>(( *v127))]))))/CAST<real<8>>(1))))*1)));
+                    };
+                }</m>;
+                (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v1).lastrow)-( *( *v1).firstrow))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+            {
+                <m id=5>for(decl ref<int<4>> v128 = ( var(1)) .. ((7000+1)+1) : 1) {
+                    ((( *( *v1).x)[CAST<uint<4>>(( *v128))]) := 1.0);
+                }</m>;
+                (v4 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((((7000+1)+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+            <m id=1>(v9 := 0.0)</m>;
+            {
+                for(decl ref<int<4>> v163 = ( var(1)) .. (1+1) : 1) {
+                    [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v139](array<ref<int<4>>,1> v129, array<ref<int<4>>,1> v130, array<ref<real<8>>,1> v131, array<ref<real<8>>,1> v132, array<ref<real<8>>,1> v133, array<ref<real<8>>,1> v134, array<ref<real<8>>,1> v135, array<ref<real<8>>,1> v136, array<ref<real<8>>,1> v137, array<ref<real<8>>,1> v138){
+                        decl ref<int<4>> v140 = ( var(0));
+                        decl ref<int<4>> v141 = ( var(0));
+                        decl ref<int<4>> v142 = ( var(0));
+                        decl ref<int<4>> v143 = ( var(0));
+                        decl ref<int<4>> v144 = ( var(25));
+                        <m id=2>(( *v139).rho := 0.0)</m>;
+                        {
+                            <m id=6>for(decl ref<int<4>> v145 = ( var(1)) .. ((( *( *v139).naa)+1)+1) : 1) {
+                                ((v135[CAST<uint<4>>(( *v145))]) := 0.0);
+                                ((v132[CAST<uint<4>>(( *v145))]) := 0.0);
+                                ((v136[CAST<uint<4>>(( *v145))]) := ( *(v131[CAST<uint<4>>(( *v145))])));
+                                ((v134[CAST<uint<4>>(( *v145))]) := ( *(v136[CAST<uint<4>>(( *v145))])));
+                                ((v137[CAST<uint<4>>(( *v145))]) := 0.0);
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((((( *( *v139).naa)+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            <m id=7>for(decl ref<int<4>> v146 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                (( *v139).rho := (( *( *v139).rho)+(( *(v131[CAST<uint<4>>(( *v146))]))*( *(v131[CAST<uint<4>>(( *v146))])))));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            for(decl ref<int<4>> v155 = ( var(1)) .. (( *v144)+1) : 1) {
+                                <m id=8>{
+                                    (( *v139).rho0 := ( *( *v139).rho));
+                                    (( *v139).d := 0.0);
+                                    (( *v139).rho := 0.0);
+                                }</m>;
+                                {
+                                    <m id=9>for(decl ref<int<4>> v148 = ( var(1)) .. (((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1) : 1) {
+                                        (( *v139).sum := 0.0);
+                                        {
+                                            for(decl ref<int<4>> v147 = ( var(( *(v130[CAST<uint<4>>(( *v148))])))) .. ( *(v130[CAST<uint<4>>((( *v148)+1))])) : 1) {
+                                                (( *v139).sum := (( *( *v139).sum)+(( *(v133[CAST<uint<4>>(( *v147))]))*( *(v134[CAST<uint<4>>(( *(v129[CAST<uint<4>>(( *v147))])))])))));
+                                            };
+                                            (v142 := (( *(v130[CAST<uint<4>>(( *v148))]))+(CAST<int<4>>(ceil((CAST<real<8>>((( *(v130[CAST<uint<4>>((( *v148)+1))]))-( *(v130[CAST<uint<4>>(( *v148))]))))/CAST<real<8>>(1))))*1)));
+                                        };
+                                        ((v137[CAST<uint<4>>(( *v148))]) := ( *( *v139).sum));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=10>for(decl ref<int<4>> v149 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v135[CAST<uint<4>>(( *v149))]) := ( *(v137[CAST<uint<4>>(( *v149))])));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=11>for(decl ref<int<4>> v150 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v137[CAST<uint<4>>(( *v150))]) := 0.0);
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=12>for(decl ref<int<4>> v151 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        (( *v139).d := (( *( *v139).d)+(( *(v134[CAST<uint<4>>(( *v151))]))*( *(v135[CAST<uint<4>>(( *v151))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                <m id=3>(( *v139).alpha := (( *( *v139).rho0)/( *( *v139).d)))</m>;
+                                {
+                                    <m id=13>for(decl ref<int<4>> v152 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v132[CAST<uint<4>>(( *v152))]) := (( *(v132[CAST<uint<4>>(( *v152))]))+(( *( *v139).alpha)*( *(v134[CAST<uint<4>>(( *v152))])))));
+                                        ((v136[CAST<uint<4>>(( *v152))]) := (( *(v136[CAST<uint<4>>(( *v152))]))-(( *( *v139).alpha)*( *(v135[CAST<uint<4>>(( *v152))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=14>for(decl ref<int<4>> v153 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        (( *v139).rho := (( *( *v139).rho)+(( *(v136[CAST<uint<4>>(( *v153))]))*( *(v136[CAST<uint<4>>(( *v153))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                <m id=4>(( *v139).beta := (( *( *v139).rho)/( *( *v139).rho0)))</m>;
+                                {
+                                    <m id=15>for(decl ref<int<4>> v154 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v134[CAST<uint<4>>(( *v154))]) := (( *(v136[CAST<uint<4>>(( *v154))]))+(( *( *v139).beta)*( *(v134[CAST<uint<4>>(( *v154))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                            };
+                            (v143 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v144)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        <m id=5>(( *v139).sum := 0.0)</m>;
+                        {
+                            <m id=16>for(decl ref<int<4>> v157 = ( var(1)) .. (((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1) : 1) {
+                                (( *v139).d := 0.0);
+                                {
+                                    for(decl ref<int<4>> v156 = ( var(( *(v130[CAST<uint<4>>(( *v157))])))) .. ((( *(v130[CAST<uint<4>>((( *v157)+1))]))-1)+1) : 1) {
+                                        (( *v139).d := (( *( *v139).d)+(( *(v133[CAST<uint<4>>(( *v156))]))*( *(v132[CAST<uint<4>>(( *(v129[CAST<uint<4>>(( *v156))])))])))));
+                                    };
+                                    (v142 := (( *(v130[CAST<uint<4>>(( *v157))]))+(CAST<int<4>>(ceil((CAST<real<8>>((((( *(v130[CAST<uint<4>>((( *v157)+1))]))-1)+1)-( *(v130[CAST<uint<4>>(( *v157))]))))/CAST<real<8>>(1))))*1)));
+                                };
+                                ((v137[CAST<uint<4>>(( *v157))]) := ( *( *v139).d));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            <m id=17>for(decl ref<int<4>> v158 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                ((v136[CAST<uint<4>>(( *v158))]) := ( *(v137[CAST<uint<4>>(( *v158))])));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            <m id=18>for(decl ref<int<4>> v159 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                (( *v139).d := (( *(v131[CAST<uint<4>>(( *v159))]))-( *(v136[CAST<uint<4>>(( *v159))]))));
+                                (( *v139).sum := (( *( *v139).sum)+(( *( *v139).d)*( *( *v139).d))));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        <m id=19>{
+                            ((v138[0]) := sqrt(( *( *v139).sum)));
+                        }</m>;
+                    }(( *( *v1).colidx), ( *( *v1).rowstr), ( *( *v1).x), ( *( *v1).z), ( *( *v1).a), ( *( *v1).p), ( *( *v1).q), ( *( *v1).r), ( *( *v1).w), [v10]);
+                    <m id=20>{
+                        (v11 := 0.0);
+                        (v12 := 0.0);
+                    }</m>;
+                    {
+                        <m id=21>for(decl ref<int<4>> v161 = ( var(1)) .. (((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1) : 1) {
+                            (v11 := (( *v11)+(( *(( *( *v1).x)[CAST<uint<4>>(( *v161))]))*( *(( *( *v1).z)[CAST<uint<4>>(( *v161))])))));
+                            (v12 := (( *v12)+(( *(( *( *v1).z)[CAST<uint<4>>(( *v161))]))*( *(( *( *v1).z)[CAST<uint<4>>(( *v161))])))));
+                        }</m>;
+                        (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                    };
+                    <m id=6>(v12 := (1.0/sqrt(( *v12))))</m>;
+                    {
+                        <m id=22>for(decl ref<int<4>> v162 = ( var(1)) .. (((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1) : 1) {
+                            ((( *( *v1).x)[CAST<uint<4>>(( *v162))]) := (( *v12)*( *(( *( *v1).z)[CAST<uint<4>>(( *v162))]))));
+                        }</m>;
+                        (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                    };
+                };
+                (v7 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((1+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+            {
+                <m id=23>for(decl ref<int<4>> v164 = ( var(1)) .. ((7000+1)+1) : 1) {
+                    ((( *( *v1).x)[CAST<uint<4>>(( *v164))]) := 1.0);
+                }</m>;
+                (v4 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((((7000+1)+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+            <m id=7>(v9 := 0.0)</m>;
+        }</m>;
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v166](int<4> v165){
+            ((( *( *v166).elapsed)[CAST<uint<4>>(v165)]) := 0.0);
+        }(1);
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v169](int<4> v168){
+            ((( *( *v169).start)[CAST<uint<4>>(v168)]) := [v169]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v170](){
+                decl ref<real<8>> v171 = ( var(0.0));
+                [v170]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v173](array<ref<real<8>>,1> v172){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v174 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
+                    gettimeofday([v174], null);
+                    if((( *( *v173).sec)<0)) (( *v173).sec := CAST<int<4>>(( *( *v174).tv_sec))) else { };
+                    ((v172[0]) := (CAST<real<8>>((( *( *v174).tv_sec)-CAST<int<8>>(( *( *v173).sec))))+(1.0e-6*CAST<real<8>>(( *( *v174).tv_usec)))));
+                }([v171]);
+                return ( *v171);
+            }());
+        }(1);
+        <m id=30>{
+            {
+                for(decl ref<int<4>> v180 = ( var(1)) .. (15+1) : 1) {
+                    [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v139](array<ref<int<4>>,1> v129, array<ref<int<4>>,1> v130, array<ref<real<8>>,1> v131, array<ref<real<8>>,1> v132, array<ref<real<8>>,1> v133, array<ref<real<8>>,1> v134, array<ref<real<8>>,1> v135, array<ref<real<8>>,1> v136, array<ref<real<8>>,1> v137, array<ref<real<8>>,1> v138){
+                        decl ref<int<4>> v140 = ( var(0));
+                        decl ref<int<4>> v141 = ( var(0));
+                        decl ref<int<4>> v142 = ( var(0));
+                        decl ref<int<4>> v143 = ( var(0));
+                        decl ref<int<4>> v144 = ( var(25));
+                        <m id=2>(( *v139).rho := 0.0)</m>;
+                        {
+                            <m id=6>for(decl ref<int<4>> v145 = ( var(1)) .. ((( *( *v139).naa)+1)+1) : 1) {
+                                ((v135[CAST<uint<4>>(( *v145))]) := 0.0);
+                                ((v132[CAST<uint<4>>(( *v145))]) := 0.0);
+                                ((v136[CAST<uint<4>>(( *v145))]) := ( *(v131[CAST<uint<4>>(( *v145))])));
+                                ((v134[CAST<uint<4>>(( *v145))]) := ( *(v136[CAST<uint<4>>(( *v145))])));
+                                ((v137[CAST<uint<4>>(( *v145))]) := 0.0);
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((((( *( *v139).naa)+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            <m id=7>for(decl ref<int<4>> v146 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                (( *v139).rho := (( *( *v139).rho)+(( *(v131[CAST<uint<4>>(( *v146))]))*( *(v131[CAST<uint<4>>(( *v146))])))));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            for(decl ref<int<4>> v155 = ( var(1)) .. (( *v144)+1) : 1) {
+                                <m id=8>{
+                                    (( *v139).rho0 := ( *( *v139).rho));
+                                    (( *v139).d := 0.0);
+                                    (( *v139).rho := 0.0);
+                                }</m>;
+                                {
+                                    <m id=9>for(decl ref<int<4>> v148 = ( var(1)) .. (((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1) : 1) {
+                                        (( *v139).sum := 0.0);
+                                        {
+                                            for(decl ref<int<4>> v147 = ( var(( *(v130[CAST<uint<4>>(( *v148))])))) .. ( *(v130[CAST<uint<4>>((( *v148)+1))])) : 1) {
+                                                (( *v139).sum := (( *( *v139).sum)+(( *(v133[CAST<uint<4>>(( *v147))]))*( *(v134[CAST<uint<4>>(( *(v129[CAST<uint<4>>(( *v147))])))])))));
+                                            };
+                                            (v142 := (( *(v130[CAST<uint<4>>(( *v148))]))+(CAST<int<4>>(ceil((CAST<real<8>>((( *(v130[CAST<uint<4>>((( *v148)+1))]))-( *(v130[CAST<uint<4>>(( *v148))]))))/CAST<real<8>>(1))))*1)));
+                                        };
+                                        ((v137[CAST<uint<4>>(( *v148))]) := ( *( *v139).sum));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=10>for(decl ref<int<4>> v149 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v135[CAST<uint<4>>(( *v149))]) := ( *(v137[CAST<uint<4>>(( *v149))])));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=11>for(decl ref<int<4>> v150 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v137[CAST<uint<4>>(( *v150))]) := 0.0);
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=12>for(decl ref<int<4>> v151 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        (( *v139).d := (( *( *v139).d)+(( *(v134[CAST<uint<4>>(( *v151))]))*( *(v135[CAST<uint<4>>(( *v151))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                <m id=3>(( *v139).alpha := (( *( *v139).rho0)/( *( *v139).d)))</m>;
+                                {
+                                    <m id=13>for(decl ref<int<4>> v152 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v132[CAST<uint<4>>(( *v152))]) := (( *(v132[CAST<uint<4>>(( *v152))]))+(( *( *v139).alpha)*( *(v134[CAST<uint<4>>(( *v152))])))));
+                                        ((v136[CAST<uint<4>>(( *v152))]) := (( *(v136[CAST<uint<4>>(( *v152))]))-(( *( *v139).alpha)*( *(v135[CAST<uint<4>>(( *v152))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                {
+                                    <m id=14>for(decl ref<int<4>> v153 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        (( *v139).rho := (( *( *v139).rho)+(( *(v136[CAST<uint<4>>(( *v153))]))*( *(v136[CAST<uint<4>>(( *v153))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                                <m id=4>(( *v139).beta := (( *( *v139).rho)/( *( *v139).rho0)))</m>;
+                                {
+                                    <m id=15>for(decl ref<int<4>> v154 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                        ((v134[CAST<uint<4>>(( *v154))]) := (( *(v136[CAST<uint<4>>(( *v154))]))+(( *( *v139).beta)*( *(v134[CAST<uint<4>>(( *v154))])))));
+                                    }</m>;
+                                    (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                                };
+                            };
+                            (v143 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v144)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        <m id=5>(( *v139).sum := 0.0)</m>;
+                        {
+                            <m id=16>for(decl ref<int<4>> v157 = ( var(1)) .. (((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1) : 1) {
+                                (( *v139).d := 0.0);
+                                {
+                                    for(decl ref<int<4>> v156 = ( var(( *(v130[CAST<uint<4>>(( *v157))])))) .. ((( *(v130[CAST<uint<4>>((( *v157)+1))]))-1)+1) : 1) {
+                                        (( *v139).d := (( *( *v139).d)+(( *(v133[CAST<uint<4>>(( *v156))]))*( *(v132[CAST<uint<4>>(( *(v129[CAST<uint<4>>(( *v156))])))])))));
+                                    };
+                                    (v142 := (( *(v130[CAST<uint<4>>(( *v157))]))+(CAST<int<4>>(ceil((CAST<real<8>>((((( *(v130[CAST<uint<4>>((( *v157)+1))]))-1)+1)-( *(v130[CAST<uint<4>>(( *v157))]))))/CAST<real<8>>(1))))*1)));
+                                };
+                                ((v137[CAST<uint<4>>(( *v157))]) := ( *( *v139).d));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastrow)-( *( *v139).firstrow))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            <m id=17>for(decl ref<int<4>> v158 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                ((v136[CAST<uint<4>>(( *v158))]) := ( *(v137[CAST<uint<4>>(( *v158))])));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        {
+                            <m id=18>for(decl ref<int<4>> v159 = ( var(1)) .. (((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1) : 1) {
+                                (( *v139).d := (( *(v131[CAST<uint<4>>(( *v159))]))-( *(v136[CAST<uint<4>>(( *v159))]))));
+                                (( *v139).sum := (( *( *v139).sum)+(( *( *v139).d)*( *( *v139).d))));
+                            }</m>;
+                            (v141 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v139).lastcol)-( *( *v139).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                        };
+                        <m id=19>{
+                            ((v138[0]) := sqrt(( *( *v139).sum)));
+                        }</m>;
+                    }(( *( *v1).colidx), ( *( *v1).rowstr), ( *( *v1).x), ( *( *v1).z), ( *( *v1).a), ( *( *v1).p), ( *( *v1).q), ( *( *v1).r), ( *( *v1).w), [v10]);
+                    <m id=25>{
+                        (v11 := 0.0);
+                        (v12 := 0.0);
+                    }</m>;
+                    {
+                        <m id=26>for(decl ref<int<4>> v178 = ( var(1)) .. (((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1) : 1) {
+                            (v11 := (( *v11)+(( *(( *( *v1).x)[CAST<uint<4>>(( *v178))]))*( *(( *( *v1).z)[CAST<uint<4>>(( *v178))])))));
+                            (v12 := (( *v12)+(( *(( *( *v1).z)[CAST<uint<4>>(( *v178))]))*( *(( *( *v1).z)[CAST<uint<4>>(( *v178))])))));
+                        }</m>;
+                        (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                    };
+                    <m id=27>{
+                        (v12 := (1.0/sqrt(( *v12))));
+                        (v9 := (12.0+(1.0/( *v11))));
+                    }</m>;
+                    <m id=28>{
+                        if((( *v180)==1)) {
+                            printf("   iteration           ||r||                 zeta\n", varlist.pack(()));
+                        } else { };
+                        printf("    %5d       %20.14e%20.13e\n", varlist.pack((( *v180), ( *v10), ( *v9))));
+                    }</m>;
+                    {
+                        <m id=29>for(decl ref<int<4>> v179 = ( var(1)) .. (((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1) : 1) {
+                            ((( *( *v1).x)[CAST<uint<4>>(( *v179))]) := (( *v12)*( *(( *( *v1).z)[CAST<uint<4>>(( *v179))]))));
+                        }</m>;
+                        (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((((( *( *v1).lastcol)-( *( *v1).firstcol))+1)+1)-1))/CAST<real<8>>(1))))*1)));
+                    };
+                };
+                (v7 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((15+1)-1))/CAST<real<8>>(1))))*1)));
+            };
+        }</m>;
+        [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v182](int<4> v181){
+            decl ref<real<8>> v183 = ( var(0.0));
+            decl ref<real<8>> v184 = ( var(0.0));
+            (v184 := [v182]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v170](){
+                decl ref<real<8>> v171 = ( var(0.0));
+                [v170]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v173](array<ref<real<8>>,1> v172){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v174 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
+                    gettimeofday([v174], null);
+                    if((( *( *v173).sec)<0)) (( *v173).sec := CAST<int<4>>(( *( *v174).tv_sec))) else { };
+                    ((v172[0]) := (CAST<real<8>>((( *( *v174).tv_sec)-CAST<int<8>>(( *( *v173).sec))))+(1.0e-6*CAST<real<8>>(( *( *v174).tv_usec)))));
+                }([v171]);
+                return ( *v171);
+            }());
+            (v183 := (( *v184)-( *(( *( *v182).start)[CAST<uint<4>>(v181)]))));
+            ((( *( *v182).elapsed)[CAST<uint<4>>(v181)]) := (( *(( *( *v182).elapsed)[CAST<uint<4>>(v181)]))+( *v183)));
+        }(1);
+        (v13 := [v1]fun[ref<struct<naa:ref<int<4>>,nzz:ref<int<4>>,firstrow:ref<int<4>>,lastrow:ref<int<4>>,firstcol:ref<int<4>>,lastcol:ref<int<4>>,colidx:ref<vector<ref<int<4>>,637001>>,rowstr:ref<vector<ref<int<4>>,7002>>,iv:ref<vector<ref<int<4>>,14002>>,arow:ref<vector<ref<int<4>>,637001>>,acol:ref<vector<ref<int<4>>,637001>>,v:ref<vector<ref<real<8>>,7002>>,aelt:ref<vector<ref<real<8>>,637001>>,a:ref<vector<ref<real<8>>,637001>>,x:ref<vector<ref<real<8>>,7003>>,z:ref<vector<ref<real<8>>,7003>>,p:ref<vector<ref<real<8>>,7003>>,q:ref<vector<ref<real<8>>,7003>>,r:ref<vector<ref<real<8>>,7003>>,w:ref<vector<ref<real<8>>,7003>>,amult:ref<real<8>>,tran:ref<real<8>>,d:ref<real<8>>,sum:ref<real<8>>,rho:ref<real<8>>,rho0:ref<real<8>>,alpha:ref<real<8>>,beta:ref<real<8>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v187](int<4> v186){
+            return ( *(( *( *v187).elapsed)[CAST<uint<4>>(v186)]));
+        }(1));
+        printf(" Benchmark completed\n", varlist.pack(()));
+        (v18 := 1.0e-10);
+        if(int.ne(CAST<int<4>>(( *v15)), 'U')) {
+            if((fabs((( *v9)-( *v17)))<=( *v18))) {
+                (v16 := 1);
+                printf(" VERIFICATION SUCCESSFUL\n", varlist.pack(()));
+                printf(" Zeta is    %20.12e\n", varlist.pack((( *v9))));
+                printf(" Error is   %20.12e\n", varlist.pack(((( *v9)-( *v17)))));
+            } else {
+                (v16 := 0);
+                printf(" VERIFICATION FAILED\n", varlist.pack(()));
+                printf(" Zeta                %20.12e\n", varlist.pack((( *v9))));
+                printf(" The correct zeta is %20.12e\n", varlist.pack((( *v17))));
+            };
+        } else {
+            (v16 := 0);
+            printf(" Problem size unknown\n", varlist.pack(()));
+            printf(" NO VERIFICATION PERFORMED\n", varlist.pack(()));
+        };
+        if(real.ne(( *v13), 0.0)) {
+            (v14 := (((((2.0*CAST<real<8>>(15))*CAST<real<8>>(7000))*(((3.0+CAST<real<8>>((8*(8+1))))+(25.0*(5.0+CAST<real<8>>((8*(8+1))))))+3.0))/( *v13))/1000000.0));
+        } else {
+            (v14 := 0.0);
+        };
+        fun(array<ref<char>,1> v189, char v190, int<4> v191, int<4> v192, int<4> v193, int<4> v194, int<4> v195, real<8> v196, real<8> v197, array<ref<char>,1> v198, int<4> v199, array<ref<char>,1> v200, array<ref<char>,1> v201, array<ref<char>,1> v202, array<ref<char>,1> v203, array<ref<char>,1> v204, array<ref<char>,1> v205, array<ref<char>,1> v206, array<ref<char>,1> v207, array<ref<char>,1> v208){
+            decl ref<array<ref<char>,1>> v209 = ( var("1000"));
+            printf("\n\n %s Benchmark Completed\n", varlist.pack((v189)));
+            printf(" Class           =                        %c\n", varlist.pack((CAST<int<4>>(v190))));
+            if(((v192==0)&&(v193==0))) printf(" Size            =             %12d\n", varlist.pack((v191))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v191, v192, v193)));
+            printf(" Iterations      =             %12d\n", varlist.pack((v194)));
+            printf(" Threads         =             %12d\n", varlist.pack((v195)));
+            printf(" Time in seconds =             %12.2f\n", varlist.pack((0.0)));
+            printf(" Mop/s total     =             %12.2f\n", varlist.pack((0.0)));
+            printf(" Operation type  = %24s\n", varlist.pack((v198)));
+            if(CAST<bool>(v199)) printf(" Verification    =               SUCCESSFUL\n", varlist.pack(())) else printf(" Verification    =             UNSUCCESSFUL\n", varlist.pack(()));
+            printf(" Version         =             %12s\n", varlist.pack((v200)));
+            printf(" Compile date    =             %12s\n", varlist.pack((v201)));
+            printf("\n Compile options:\n", varlist.pack(()));
+            printf("    CC           = %s\n", varlist.pack((v202)));
+            printf("    CLINK        = %s\n", varlist.pack((v203)));
+            printf("    C_LIB        = %s\n", varlist.pack((v204)));
+            printf("    C_INC        = %s\n", varlist.pack((v205)));
+            printf("    CFLAGS       = %s\n", varlist.pack((v206)));
+            printf("    CLINKFLAGS   = %s\n", varlist.pack((v207)));
+            printf("    RAND         = %s\n", varlist.pack((v208)));
+        }("CG", ( *v15), 7000, 0, 0, 15, ( *v8), ( *v13), ( *v14), "          floating point", ( *v16), "2.3", "02 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
+    }
+

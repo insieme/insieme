@@ -29,7 +29,6 @@
   OpenMP C version: S. Satoh
   
 --------------------------------------------------------------------*/
-#include "npb-C.h"
 #include "npbparams.h"
 #include <stdlib.h>
 #include <stdio.h>

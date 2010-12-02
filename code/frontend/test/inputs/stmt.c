@@ -297,6 +297,10 @@ void while_stmt_test() {
 	#pragma test \
 	"while(int.ne(( *v1), 0)) { (v1 := (( *v1)-1));}"
 	while(it != 0) { it-=1; }
+
+	#pragma test \
+	"{ (v1 := (( *v1)+1)); while((( *v1)<10)) { (v1 := (( *v1)+1)); };}"
+	do{ it+=1; }while(it < 10);
 }
 
 #pragma test "recFun v1 { v1 = fun(int<4> v3){ return v2((v3-1)); }; v2 = fun(int<4> v4){ return v1((v4+1)); };}"

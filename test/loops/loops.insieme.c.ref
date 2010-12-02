@@ -19,11 +19,33 @@ int printf(char*, ...);
 // start code fragment :: Prototype for external function: ceil //
 double ceil(double);
 
+// start code fragment :: Definition of func //
+int func(int k) {
+	{
+		int var_11 = k;
+		{
+			{
+				for(int var_12 = (var_11); var_12 < 10; var_12 += 1) {
+					printf("k=%d\n", (var_12));
+				};
+				((var_11) = ((var_11)+(((int)(ceil((((double)((10-(var_11))))/((double)(1))))))*1)));
+			};
+			{
+				for(int var_13 = (((int)(0))-10); var_13 < ((((int)(0))-0)+1); var_13 += 1) {
+					printf("k=%d\n", (((int)(0))-(var_13)));
+				};
+				((var_11) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
+			};
+		};
+	}
+}
+
+
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = memcpy(malloc(sizeof(struct __insieme_globals)), &((struct __insieme_globals)((struct __insieme_globals){10
-		})), sizeof(struct __insieme_globals));
+		struct __insieme_globals var_1 = ((struct __insieme_globals){10
+		});
 		int a = 10;
 		for(int idx = 0; idx < (a); idx += 1) {
 			printf("idx=%d", (idx));
@@ -50,6 +72,7 @@ int main(int argc, char** argv) {
 			((a) = (1+(((int)(ceil((((double)((15-1)))/((double)(3))))))*3)));
 		};
 		printf("a=%d\n", (a));
+		func((a));
 	}
 }
 

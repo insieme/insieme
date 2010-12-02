@@ -93,7 +93,7 @@ LITERAL(False, "false", "bool")
 TYPE(Alpha, "'a")
 TYPE(RefAlpha, "ref<'a>")
 
-LITERAL(Null, "null", "ref<'a>")
+LITERAL(Null, "null", "array<ref<'a>,1>")
 TYPE(VarList, "var_list")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------
