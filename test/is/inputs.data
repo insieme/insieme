@@ -1,1 +1,1 @@
-c_print_results.c wtime.c c_timers.c is.c
+-I../#npb_commons/ ../#npb_commons/c_print_results.c ../#npb_commons/c_timers.c ../#npb_commons/wtime.c is.c
