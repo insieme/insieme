@@ -63,6 +63,23 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	bool preservePtrAnnotationsWhenModified = false);
 
 /**
+ * A utility function to insert a list of statements within a compound statement block.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement within which the element should be inserted
+ * @param statements the statements to be inserted
+ * @param index the index at which the element should be inserted (0 ... before current node 0)
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index, 
+	bool preservePtrAnnotationsWhenModified = false);
+
+/**
  * A utility function to insert a statement within a compound statement block.
  *
  * @param manager the manager used to create new nodes
@@ -142,6 +159,23 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
  * @return the root node of the modified AST tree (according to the root of the address)
  */
 NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, 
+	bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function replacing a statement within a compound statement block with a list of statements.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement which should be altered
+ * @param index the index of the statement to be replaced (counting starts with 0)
+ * @param replacements the statements to be inserted as a replacement
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementList& replacements, 
 	bool preservePtrAnnotationsWhenModified = false);
 
 ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call);
