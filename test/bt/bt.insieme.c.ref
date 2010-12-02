@@ -2780,7 +2780,7 @@ void wtime(void* _capture, double* t) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		struct timeval tv;
-		gettimeofday(&tv, ((struct timezone*)(null)));
+		gettimeofday(&tv, null);
 		if(((((*var_404).sec))<0)) {
 			((((*var_404).sec)) = ((int)((((tv).tv_sec)))));
 		};
