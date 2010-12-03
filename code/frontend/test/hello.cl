@@ -37,18 +37,21 @@
 #include "ocl_device.h"
 
 #pragma insieme mark
-__kernel __attribute__((reqd_work_group_size(1,2,3))) void hallo(/*__constant double con, __global float* dfb, __local short pa,  int i*/) {
-/*    float4 x = {0.0f, 0.1f, 0.2f, 5.3f};
-    __local float a = 0.0f;*/
-    __private short prvt = 3;
-    unsigned int p = prvt;
-/*    __local float4 b;// = {1.0f, 2.1f, 3.2f, 4.3f};
-//    int2 c;
-//    b = b + x;
-    b.s1 = dfb[0];
-*/
-    unsigned int k = get_group_id(0);
-    int e = get_group_id(1);
+__kernel void hello(__global double* g, __local float* l, int i) {
+    float2 x = (float2)0;
+    float2 y = {i, i+0.5};
+
+    int gid = get_global_id(0);
+    unsigned int lid = get_local_id(0);
+    l[lid] = g[gid];
+    l[2*lid] = g[gid+i];
 
     barrier(CLK_LOCAL_MEM_FENCE);
+    x.x = l[i];
+    x.y = l[lid+i];
+
+    x = x+y;
+
+    g[gid] = x.x * x.y;
 }
+

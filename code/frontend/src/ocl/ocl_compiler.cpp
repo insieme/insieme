@@ -93,13 +93,14 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL level, core::ExpressionPtr 
     switch(level) {
     case OPL_GLOBAL :
         localRangeUsed = true;
-        return builder.callExpr(BASIC.getUnsignedIntAdd(), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx),
-                builder.callExpr(BASIC.getUnsignedIntMul(), vecAccess(localRange, idx), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx)));
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx),
+            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(localRange, idx),
+                builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx)));
     case OPL_GROUP :
-        return builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx);
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId1D(), builder.uintLit(1), idx);
     //case OPL_LOCAL :
     default:
-        return builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx);
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId1D(), builder.uintLit(0), idx);
     }
 }
 
@@ -298,7 +299,7 @@ public:
                     std::cout << "child: " << curr << std::endl;
                 });
 */
-                std::cout << "type:  " << cast->getType() << " " << childs.at(0)->getNodeType() << std::endl;
+
                 if(core::ExpressionPtr arg = core::dynamic_pointer_cast<const core::Expression>(childs.at(1))){
 // TODO check why we never get a ref here
 /*                    bool makeRef = true;

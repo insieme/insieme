@@ -36,8 +36,9 @@
 
 //OpenCL definitions
 
+
 //OpenCL constants
-//TODO change to enums
+//TODO change to enums once they are supported
 //enum cl_mem_fence_flags {CLK_LOCAL_MEM_FENCE, CLK_GLOBAL_MEM_FENCE};
 #define CLK_LOCAL_MEM_FENCE 0u
 #define CLK_GLOBAL_MEM_FENCE 1u
@@ -114,5 +115,8 @@ unsigned int get_local_id(unsigned int dmindx);
 unsigned int get_local_size(unsigned int dmindx);
 
 void barrier(int flags); //TODO change to enum
+
+
+//#define float4(val) (float4)val
 
 
