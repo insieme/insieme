@@ -420,7 +420,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	cStr << "{";
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
-			DLOG(INFO) << "Unsupported vector initialization: " << toString(*cur);
+			DLOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		// print argument of ref.var
