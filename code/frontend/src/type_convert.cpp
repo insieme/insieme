@@ -55,8 +55,45 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
+namespace std {
+
+std::ostream& operator<<(std::ostream& out, const clang::Type* type) {
+	if(const clang::TagType* tagType = dyn_cast<const clang::TagType>(type))
+		return out << tagType->getDecl()->getNameAsString();
+	return out;
+}
+
+} // end std namespace
+
 namespace insieme {
 namespace frontend {
+
+namespace utils {
+
+template <>
+void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type, const DependencyGraph<const clang::Type*>::VertexTy& v) {
+	using namespace clang;
+
+	assert(isa<const TagType>(type));
+
+	const TagType* tagType = dyn_cast<const TagType>(type);
+	RecordDecl* tag = dyn_cast<RecordDecl>(tagType->getDecl());
+	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
+		const Type* fieldType = (*it)->getType().getTypePtr();
+		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
+			fieldType = ptrTy->getPointeeType().getTypePtr();
+		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
+			fieldType = refTy->getPointeeType().getTypePtr();
+
+		if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
+			assert(isa<RecordDecl>(tagTy->getDecl()));
+			addNode( tagTy, &v );
+		}
+	}
+}
+
+} // end utils namespace
+
 namespace conversion {
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

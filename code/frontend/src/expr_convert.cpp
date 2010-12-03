@@ -59,6 +59,14 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
+namespace std {
+
+std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl) {
+	return out << funcDecl->getNameAsString() << "(" << funcDecl->param_size() << ")";
+}
+
+} // end std namespace
+
 namespace {
 // Returns a string of the text within the source range of the input stream
 std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
@@ -157,6 +165,52 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 
 namespace insieme {
 namespace frontend {
+
+namespace utils {
+
+struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
+
+	typedef std::set<const clang::FunctionDecl*> CallGraph;
+	CallGraph callGraph;
+
+	CallExprVisitor() { }
+
+	CallGraph getCallGraph(const clang::FunctionDecl* func) {
+		assert(func->hasBody() && "Function in the dependency graph has no body");
+
+		Visit(func->getBody());
+		return callGraph;
+	}
+
+	void VisitCallExpr(clang::CallExpr* callExpr) {
+		const clang::FunctionDecl* def = NULL;
+		if(callExpr->getDirectCallee() && callExpr->getDirectCallee()->hasBody(def)) {
+			assert(def);
+			callGraph.insert(def);
+		}
+		VisitStmt(callExpr);
+	}
+
+	void VisitStmt(clang::Stmt* stmt) {
+		std::for_each(stmt->child_begin(), stmt->child_end(),
+			[ this ](clang::Stmt* curr) {
+				if(curr) this->Visit(curr);
+			});
+	}
+};
+
+template <>
+void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func, const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
+	CallExprVisitor callExprVis;
+	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
+
+	std::for_each(graph.begin(), graph.end(),
+			[ this, v ](const clang::FunctionDecl* currFunc) { assert(currFunc); this->addNode(currFunc, &v); }
+	);
+}
+
+}
+
 namespace conversion {
 
 #define START_LOG_EXPR_CONVERSION(expr) \
