@@ -110,9 +110,9 @@ CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
 	const string& name = literal->getValue();
 	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name);
 	CodeStream& cs = protoType->getCodeStream();
-	cs << cc.getTypeMan().getTypeName(protoType, type->getReturnType()) << " " << name << "(";
+	cs << cc.getTypeMan().getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 	cs << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
-		out << cc.getTypeMan().getTypeName(protoType, cur);
+		out << cc.getTypeMan().getTypeName(protoType, cur, true);
 	});
 	cs << ");\n";
 

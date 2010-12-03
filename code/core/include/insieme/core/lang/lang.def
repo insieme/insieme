@@ -105,7 +105,7 @@ TYPE(ThreadGroup, "threadgroup")
 
 // The Unit Type Constant ---------------------------------------------------------------------------------------------
 
-LITERAL(Unit, "unit", "unit")
+LITERAL(UnitConstant, "unit", "unit")
 
 // No Argument -> Unit Type -------------------------------------------------------------------------------------------
 

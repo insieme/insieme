@@ -376,9 +376,7 @@ void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
 
 void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 	TypePtr type = ptr->getType();
-	if (type->getNodeType() == NT_RefType &&
-		static_pointer_cast<const RefType>(type)->getElementType()->getNodeType() != NT_VectorType) {
-
+	if (type->getNodeType() == NT_RefType) {
 		cStr << "&";
 	}
 	cStr << "(";
