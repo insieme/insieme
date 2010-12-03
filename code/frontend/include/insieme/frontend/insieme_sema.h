@@ -73,6 +73,8 @@ public:
 	InsiemeSema (PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer, bool CompleteTranslationUnit = true,
 				 clang::CodeCompleteConsumer* CompletionConsumer = 0);
 	
+	~InsiemeSema();
+
 	void addPragma(PragmaPtr P);
 
 	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr);

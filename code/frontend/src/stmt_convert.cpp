@@ -832,8 +832,12 @@ public:
 	}
 };
 
-ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConverter(ConversionFactory& fact) {
+ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConvert(ConversionFactory& fact) {
 	return new ConversionFactory::ClangStmtConverter(fact);
+}
+
+void ConversionFactory::cleanStmtConvert(ClangStmtConverter* stmtConv) {
+	delete stmtConv;
 }
 
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
