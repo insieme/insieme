@@ -614,8 +614,12 @@ private:
 	}
 };
 
-ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConverter(ConversionFactory& fact) {
-	return new ClangTypeConverter(fact);
+ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact) {
+	return new ConversionFactory::ClangTypeConverter(fact);
+}
+
+void ConversionFactory::cleanTypeConvert(ClangTypeConverter* typeConv) {
+	delete typeConv;
 }
 
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) {

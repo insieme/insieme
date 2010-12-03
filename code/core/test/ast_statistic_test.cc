@@ -55,16 +55,16 @@ TEST(ASTStatistic, Basic) {
 
 	ASTStatistic stat = ASTStatistic::evaluate(typeA);
 
-	EXPECT_EQ((unsigned)5, stat.getNumAddressableNodes());
-	EXPECT_EQ((unsigned)4, stat.getNumSharedNodes());
-	EXPECT_EQ((unsigned)3, stat.getHeight());
-	EXPECT_EQ(5/(float)4, stat.getShareRatio());
+	EXPECT_EQ(static_cast<unsigned>(5), stat.getNumAddressableNodes());
+	EXPECT_EQ(static_cast<unsigned>(4), stat.getNumSharedNodes());
+	EXPECT_EQ(static_cast<unsigned>(3), stat.getHeight());
+	EXPECT_EQ(5/static_cast<float>(4), stat.getShareRatio());
 
-	EXPECT_EQ(0, stat.getNodeTypeInfo(NT_ArrayType).numShared);
-	EXPECT_EQ(0, stat.getNodeTypeInfo(NT_ArrayType).numAddressable);
+	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_ArrayType).numShared);
+	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_ArrayType).numAddressable);
 
-	EXPECT_EQ(4, stat.getNodeTypeInfo(NT_GenericType).numShared);
-	EXPECT_EQ(5, stat.getNodeTypeInfo(NT_GenericType).numAddressable);
+	EXPECT_EQ(static_cast<unsigned>(4), stat.getNodeTypeInfo(NT_GenericType).numShared);
+	EXPECT_EQ(static_cast<unsigned>(5), stat.getNodeTypeInfo(NT_GenericType).numAddressable);
 
 }
 

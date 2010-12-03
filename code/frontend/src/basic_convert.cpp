@@ -121,14 +121,23 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 	// cppcheck-suppress exceptNew
-	stmtConv( ConversionFactory::makeStmtConverter(*this) ),
+	stmtConv( ConversionFactory::makeStmtConvert(*this) ),
 	// cppcheck-suppress exceptNew
-	typeConv( ConversionFactory::makeTypeConverter(*this) ),
+	typeConv( ConversionFactory::makeTypeConvert(*this) ),
 	// cppcheck-suppress exceptNew
-	exprConv( ConversionFactory::makeExprConverter(*this) ),
+	exprConv( ConversionFactory::makeExprConvert(*this) ),
 	// cppcheck-suppress exceptNew
 	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
 
+
+ConversionFactory::~ConversionFactory() {
+	// dealloc StmtConverter
+	ConversionFactory::cleanStmtConvert(stmtConv);
+	// dealloc StmtConverter
+	ConversionFactory::cleanTypeConvert(typeConv);
+	// dealloc StmtConverter
+	ConversionFactory::cleanExprConvert(exprConv);
+}
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	// core::ExpressionPtr retExpr = expr;
