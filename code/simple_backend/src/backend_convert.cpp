@@ -36,8 +36,6 @@
 
 #include "insieme/simple_backend/backend_convert.h"
 
-#include <glog/logging.h>
-
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
