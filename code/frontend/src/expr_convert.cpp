@@ -183,9 +183,12 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 	}
 
 	void VisitCallExpr(clang::CallExpr* callExpr) {
-		const clang::FunctionDecl* def;
-		if(callExpr->getDirectCallee()->hasBody(def))
+		const clang::FunctionDecl* def = NULL;
+		if(callExpr->getDirectCallee() && callExpr->getDirectCallee()->hasBody(def)) {
+			assert(def);
 			callGraph.insert(def);
+		}
+		VisitStmt(callExpr);
 	}
 
 	void VisitStmt(clang::Stmt* stmt) {
@@ -202,7 +205,7 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
 	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
 
 	std::for_each(graph.begin(), graph.end(),
-			[ this, v ](const clang::FunctionDecl* currFunc) { this->addNode(currFunc, &v); }
+			[ this, v ](const clang::FunctionDecl* currFunc) { assert(currFunc); this->addNode(currFunc, &v); }
 	);
 }
 

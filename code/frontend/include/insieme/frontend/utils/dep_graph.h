@@ -91,14 +91,15 @@ public:
 	 * Finds the node inside the graph and returns the vertex id used to identify this node
 	 */
 	std::pair<bool,VertexTy> find(const T& type) const {
-		typename boost::property_map<NodeDepGraph, NodeTy>::const_type&& node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
 
 		typename boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
 		boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph);
-		auto fit = std::find_if(vertCurrIt, vertEndIt, [ &type, &node ] (const VertexTy& v) { return node[v] == type; });
-		if(fit != vertEndIt)
-			return std::make_pair(true,*fit);
-		return std::make_pair(false,0);
+		for(;vertCurrIt != vertEndIt; ++vertCurrIt) {
+			if(node[*vertCurrIt] == type)
+				return std::make_pair(true, *vertCurrIt);
+		}
+		return std::make_pair(false, 0);
 	}
 
 	VertexTy addNode(const T& type, const VertexTy* parent = NULL ) {
