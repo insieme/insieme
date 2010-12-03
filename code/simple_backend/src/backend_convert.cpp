@@ -530,7 +530,11 @@ namespace detail {
 
 			// form call expression
 			CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
-			return core::transform::tryInline(manager, call);
+
+std::cout << "\nInlining: " << toString(*call) << std::endl;
+std::cout << "Result:     " << toString(*core::transform::tryInlineToExpr(manager, call)) << std::endl;
+
+			return core::transform::tryInlineToExpr(manager, call);
 		}
 
 		void handleIncOperand(ConvertVisitor& visitor, const NodePtr& target) {
