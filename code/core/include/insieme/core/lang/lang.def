@@ -103,6 +103,10 @@ TYPE(VarList, "var_list")
 TYPE(Job, "job")
 TYPE(ThreadGroup, "threadgroup")
 
+// The Unit Type Constant ---------------------------------------------------------------------------------------------
+
+LITERAL(Unit, "unit", "unit")
+
 // No Argument -> Unit Type -------------------------------------------------------------------------------------------
 
 TYPE(NoArgsOpType, "() -> unit")
