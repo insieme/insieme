@@ -420,6 +420,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	cStr << "{";
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
+			DLOG << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		// print argument of ref.var
@@ -530,10 +531,6 @@ namespace detail {
 
 			// form call expression
 			CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
-
-std::cout << "\nInlining: " << toString(*call) << std::endl;
-std::cout << "Result:     " << toString(*core::transform::tryInlineToExpr(manager, call)) << std::endl;
-
 			return core::transform::tryInlineToExpr(manager, call);
 		}
 
