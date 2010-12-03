@@ -178,8 +178,17 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementList& replacements, 
 	bool preservePtrAnnotationsWhenModified = false);
 
-ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call);
 
+/**
+ * Tries to inline the given function call into an expression. Hence, the result will be an equivalent
+ * expression not calling another function. However, if the constrain to transform the call into an
+ * equivalent expression is not satisfiable, the given call expression is returned.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param call the call expression to be inlined
+ * @return the inlined expression
+ */
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
 
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a capture init expression.

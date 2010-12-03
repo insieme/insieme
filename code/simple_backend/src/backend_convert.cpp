@@ -36,11 +36,11 @@
 
 #include "insieme/simple_backend/backend_convert.h"
 
-#include <glog/logging.h>
-
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -420,6 +420,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	cStr << "{";
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
+			DLOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		// print argument of ref.var
@@ -530,7 +531,7 @@ namespace detail {
 
 			// form call expression
 			CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
-			return core::transform::tryInline(manager, call);
+			return core::transform::tryInlineToExpr(manager, call);
 		}
 
 		void handleIncOperand(ConvertVisitor& visitor, const NodePtr& target) {

@@ -291,7 +291,7 @@ c---------------------------------------------------------------------*/
     verified = FALSE;
     verify_value = 0.0;
 
-    printf(" Initialization time: %15.3f seconds\n", tinit);
+    printf(" Initialization time: %15.3f seconds\n", 0.0 /*tinit*/);
     printf(" Benchmark completed\n");
 
     if (Class != 'U') {

@@ -118,17 +118,8 @@ string TypeManager::formatParamter(CodePtr& context, const TypePtr& paramType, c
 			// mixed mode ... just finish counting and use stars
 			while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
 				refCount++;
-				type = static_pointer_cast<const RefType>(type);
-				NodeType newKind = type->getNodeType();
-
-				if (kind == NT_VectorType && newKind == NT_RefType) {
-					type = static_pointer_cast<const VectorType>(type)->getElementType();
-					newKind = type->getNodeType();
-				} else if (kind == NT_ArrayType && newKind == NT_RefType) {
-					type = static_pointer_cast<const ArrayType>(type)->getElementType();
-					newKind = type->getNodeType();
-				}
-				kind = newKind;
+				type = static_pointer_cast<const SingleElementType>(type)->getElementType();
+				kind = type->getNodeType();
 			}
 
 			// sum up references

@@ -205,7 +205,7 @@ namespace {
 }
 
 
-ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call) {
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 
 	// Step 1 - get capture init and lambda expression
 	ExpressionPtr target = call->getFunctionExpr();
@@ -270,7 +270,7 @@ ExpressionPtr tryInline(NodeManager& manager, const CallExprPtr& call) {
 
 	// Step 4 - substitute variables within body
 	InlineSubstituter substituter(replacements);
-	ExpressionPtr res = static_pointer_cast<const Expression>(body->substitute(manager, substituter));
+	ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, body));
 
 	// check result
 	if (substituter.wasSuccessful()) {

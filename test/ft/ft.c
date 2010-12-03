@@ -350,8 +350,7 @@ c-------------------------------------------------------------------*/
 
     int ierr, i, j, fstatus;
       
-    printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version"
-	   " - FT Benchmark\n\n");
+    printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - FT Benchmark\n\n");
 
     niter = NITER_DEFAULT;
 
