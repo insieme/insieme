@@ -130,4 +130,5 @@ TEST(StmtConversion, FileTest) {
 			}
 		}
 	}
+	ShutdownGoogleLogging();
 }
