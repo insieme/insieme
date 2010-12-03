@@ -844,7 +844,11 @@ public:
 			// We need to be carefull paramvars are not dereferenced and the address passed around. If this happens
 			// we have to declare a variable holding the memory location for that value and replace every use of
 			// the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
-			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>(wrapVariable(unOp->getSubExpr())) );
+			core::ExpressionPtr&& expr = wrapVariable(unOp->getSubExpr());
+//			if(expr->getType()->getNodeType() == core::NT_RefType) {
+//				expr = builder.refVar( builder.deref(expr) );
+//			}
+			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>( expr ) );
 			break;
 		}
 		// *a
