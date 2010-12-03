@@ -1010,7 +1010,8 @@ public:
         }
 
         core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, exprTy); // FIXME! are you sure the type is exprTy? and not ref<rexprTy>?
+        // The type of the indes is always uint<4>
+        core::ExpressionPtr&& idx = convFact.builder.literal(pos, convFact.builder.getNodeManager().basic.getUInt4());
         // if the type of the vector is a refType, we deref it
         base = convFact.tryDeref(base);
 
