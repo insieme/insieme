@@ -36,7 +36,7 @@
 
 #include "insieme/simple_backend/backend_convert.h"
 
-#include <glog/logging.h>
+#include "insieme/utils/logging.h"
 
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
@@ -420,7 +420,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	cStr << "{";
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
-			DLOG << "Unsupported vector initialization: " << toString(*cur);
+			DLOG(INFO) << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		// print argument of ref.var
