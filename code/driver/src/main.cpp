@@ -48,8 +48,8 @@
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/rewrite.h"
 
-#include "insieme/opencl_backend/opencl_convert.h"
-#include "insieme/opencl_backend/opencl_checker.h"
+// #include "insieme/opencl_backend/opencl_convert.h"
+// #include "insieme/opencl_backend/opencl_checker.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
 		}
 
 		if (CommandLineOptions::OpenCL) {
-			LOG(INFO) << "Converting to OpenCL ... ";
+			/*LOG(INFO) << "Converting to OpenCL ... ";
 
 			insieme::opencl_backend::OpenCLChecker oc;
 			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "CHECKED" : "WRONG");
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 			insieme::opencl_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
 			// TODO write to output file
-			std::cout << converted;
+			std::cout << converted;*/
 		} else {
 			insieme::utils::Timer timer("Simple.Backend");
 

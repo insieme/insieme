@@ -157,6 +157,10 @@ struct Program::ProgramImpl {
 
 Program::Program(core::NodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(mgr) ) { }
 
+Program::~Program() {
+	delete pimpl;
+}
+
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);

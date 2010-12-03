@@ -119,6 +119,7 @@ InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang
 				isInsideFunctionDef(false) { }
 	//TODO: Visual Studios 2010 fix - please recheck (clang::Sema::Sema -> clang::Sema and include header)
 
+InsiemeSema::~InsiemeSema() { delete pimpl; }
 
 /*
  * The function search for the character c in the input stream backwards.

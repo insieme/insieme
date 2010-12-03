@@ -1078,8 +1078,12 @@ public:
 	}
 };
 
-ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConverter(ConversionFactory& fact) {
+ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConvert(ConversionFactory& fact) {
 	return new ClangExprConverter(fact);
+}
+
+void ConversionFactory::cleanExprConvert(ConversionFactory::ClangExprConverter* exprConv) {
+	delete exprConv;
 }
 
 core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
