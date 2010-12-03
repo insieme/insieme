@@ -221,7 +221,7 @@ if (NOT MEMORY_CHECK_SETUP)
 				add_test(NAME valgrind_${case_name} 
 					COMMAND valgrind
 						--leak-check=full
-						--show-reachable=yes
+						--show-reachable=no
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
@@ -239,7 +239,7 @@ if (NOT MEMORY_CHECK_SETUP)
 				add_custom_target(valgrind_${case_name} 
 					COMMAND valgrind
 						--leak-check=full
-						--show-reachable=yes
+						--show-reachable=no
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
