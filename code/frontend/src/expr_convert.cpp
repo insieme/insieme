@@ -47,6 +47,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -1112,6 +1113,9 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 			const clang::Expr* subExpr = initList->getInit(i);
 			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy, false);
 			// If the type is a refType we have to add a VAR.REF operation
+			if (!core::analysis::isCallOf(convExpr, mgr.basic.getRefVar())) {
+				convExpr = builder.refVar(convExpr);
+			}
 			elements.push_back( convExpr );
 		}
 		retExpr = builder.vectorExpr(elements);

@@ -418,6 +418,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 
 	// test whether all expressions are calls to ref.var ...
 	cStr << "{";
+	int i=0;
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
 			DLOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
@@ -425,7 +426,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 		}
 		// print argument of ref.var
 		this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
-		if(cur != ptr->getExpressions().back()) cStr << ", ";
+		if((++i)!=ptr->getExpressions().size()) cStr << ", ";
 	});
 	cStr << "}";
 

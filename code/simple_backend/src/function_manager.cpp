@@ -54,7 +54,7 @@ namespace {
 		}
 
 		// format parameter using type manager
-		return out << typeManager.formatParamter(context, param->getType(), nameGenerator.getVarName(param));
+		return out << typeManager.formatParamter(context, param->getType(), nameGenerator.getVarName(param), true);
 	}
 
 	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, ConversionContext& cc) {
