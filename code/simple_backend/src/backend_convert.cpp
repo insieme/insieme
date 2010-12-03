@@ -42,6 +42,8 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace simple_backend {
 	
