@@ -28,7 +28,7 @@ def run_cmd(cmd):
 	elapsed = time.time() - start
 	sys.stderr.write(" [{0:.4f} secs]\n".format(elapsed) )
 	if pid.returncode == 0:
-		# print pid.communicate()[1]
+		print pid.communicate()[1]
 		return None;
 	return pid.communicate()[1]
 

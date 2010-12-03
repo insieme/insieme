@@ -65,27 +65,6 @@ bool Expression::equals(const Node& stmt) const {
 	return (*type == *rhs.type) && equalsExpr(rhs);
 }
 
-ExpressionPtr makeOperation(const ExpressionPtr& lhs, const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op) {
-	NodeManager& mgr = lhs->getNodeManager();
-	return CallExpr::get(mgr, lhs->getType(), mgr.basic.getOperator(lhs->getType(), op), toVector<ExpressionPtr>(lhs, rhs));
-}
-
-ExpressionPtr insieme::core::operator+(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
-	return makeOperation(lhs, rhs, lang::BasicGenerator::Add);
-}
-
-ExpressionPtr insieme::core::operator-(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
-	return makeOperation(lhs, rhs, lang::BasicGenerator::Sub);
-}
-
-ExpressionPtr insieme::core::operator/(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
-	return makeOperation(lhs, rhs, lang::BasicGenerator::Div);
-}
-
-ExpressionPtr insieme::core::operator*(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
-	return makeOperation(lhs, rhs, lang::BasicGenerator::Mul);
-}
-
 // ------------------------------------- Literal ---------------------------------
 
 static std::size_t hashLiteral(const TypePtr& type, const string& value) {

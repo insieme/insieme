@@ -81,6 +81,11 @@ core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const Stat
 	return builder.compoundStmt(stmtVect);
 }
 
+core::ExpressionPtr makeOperation(const core::ASTBuilder& builder, const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs,
+		const core::lang::BasicGenerator::Operator& op) {
+	return builder.callExpr(lhs->getType(), builder.getBasicGenerator().getOperator(lhs->getType(), op), toVector<core::ExpressionPtr>(lhs, rhs));
+}
+
 }
 
 namespace insieme {
@@ -312,21 +317,16 @@ public:
 			}
 
 			if(loopAnalysis.isInverted()) {
-				VLOG(2) << "Inverting loop";
 				// invert init value
 				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
 				declStmt = builder.declarationStmt( declStmt->getVariable(), builder.refVar(invInitExpr) );
-				DLOG(INFO) << *declStmt;
-				DLOG(INFO) << *declStmt->getVariable()->getType();
 				assert(declStmt->getVariable()->getType()->getNodeType() == core::NT_RefType);
 
 				// invert the sign of the loop index in body of the loop
 				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
-				VLOG(2) << "done";
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
 						inductionVar, true);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-				VLOG(2) << "done";
 			}
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
@@ -350,12 +350,29 @@ public:
 				core::FunctionTypePtr&& ceilTy =
 						builder.functionType(toVector<core::TypePtr>(convFact.mgr.basic.getDouble()), convFact.mgr.basic.getDouble());
 
-				core::ExpressionPtr&& tmp = builder.castExpr(convFact.mgr.basic.getDouble(), cond - init);
-
-				core::ExpressionPtr&& finalVal = init + builder.castExpr(iterType,
-						builder.callExpr( convFact.mgr.basic.getDouble(), builder.literal(ceilTy, "ceil"),
-								tmp / builder.castExpr(convFact.mgr.basic.getDouble(), step)
-						)) * step;
+				core::ExpressionPtr&& finalVal =
+					makeOperation(builder,
+						init, // init +
+						makeOperation(builder,
+							builder.castExpr(iterType, // ( cast )
+								builder.callExpr(
+									convFact.mgr.basic.getDouble(),
+									builder.literal(ceilTy, "ceil"), // ceil()
+									makeOperation( // (cond-init)/step
+										builder,
+										builder.castExpr(convFact.mgr.basic.getDouble(),
+											makeOperation(builder, cond, init, core::lang::BasicGenerator::Sub) // cond - init
+										),
+										builder.castExpr(convFact.mgr.basic.getDouble(), step),
+										core::lang::BasicGenerator::Div
+									)
+								)
+							),
+							step,
+							core::lang::BasicGenerator::Mul
+						),
+						core::lang::BasicGenerator::Add
+					);
 
 				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(),
 						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal ));

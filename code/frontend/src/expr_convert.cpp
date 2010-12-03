@@ -161,7 +161,7 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 	return core::ExpressionPtr();
 }
 
-}
+} // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
@@ -764,7 +764,16 @@ public:
 
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
+
+			// Handle pointer arithmetics
 			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+
+			if(DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS())) {
+				if( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) ) {
+					assert(false && "Pointer arithmetic not yet supported");
+				}
+			}
+
 			if(isLogical)
 				exprTy = convFact.mgr.basic.getBool();
 		}
