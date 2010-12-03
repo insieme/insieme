@@ -49,7 +49,11 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	target_link_libraries(ut_${case_name} ${llvm_LIBs})
-
-	add_unit_test(${case_name} off)
+	
+	if(${case_name} EQUAL "dep_graph_test")
+		add_unit_test(${case_name} on)
+	else()
+	 	add_unit_test(${case_name} off)
+	endif()
 endforeach(case_file)
 
