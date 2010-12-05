@@ -81,7 +81,7 @@ class Program: public boost::noncopyable {
 
 	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang headers
 	class ProgramImpl;
-	typedef std::auto_ptr<ProgramImpl> ProgramImplPtr;
+	typedef ProgramImpl* ProgramImplPtr;
 	ProgramImplPtr pimpl;
 
 	// Reference to the NodeManager used to convert the translation units into IR code
@@ -96,7 +96,7 @@ public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 
 	Program(insieme::core::NodeManager& mgr);
-
+	~Program();
 	/**
 	 * Add a single file to the program
 	 */

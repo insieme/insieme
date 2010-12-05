@@ -46,8 +46,6 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/utils/logging.h"
-
 namespace insieme {
 namespace core {
 
@@ -220,12 +218,6 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(1))));
 	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
 	auto initExp = decl->getInitialization();
-	// workaround for init expressions containing ref.new or ref.var -- TODO remove once fixed in frontend
-	if(auto callExpPtr = dynamic_pointer_cast<const CallExpr>(initExp)) {
-		if(manager.basic.isRefNew(callExpPtr->getFunctionExpr()) || manager.basic.isRefVar(callExpPtr->getFunctionExpr())) 
-			initExp = dynamic_pointer_cast<const Expression>(callExpPtr->getArgument(0));
-	}
-	// ------ end workaround
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
 }
 

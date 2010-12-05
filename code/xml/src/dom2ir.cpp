@@ -534,7 +534,7 @@ AnnotationPtr XmlConverter::domToIrAnnotation(const XmlElement& el) const {
 	if(fit != DomToIrConvertMap.end()) {
 		return (fit->second)(el);
 	}
-	DLOG(WARNING) << "Annotation \"" << type << "\" is not registered for Xml_Read!";
+	LOG(log::WARNING) << "Annotation \"" << type << "\" is not registered for Xml_Read!";
 	return AnnotationPtr();
 }
 

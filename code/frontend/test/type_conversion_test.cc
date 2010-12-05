@@ -53,7 +53,7 @@
 
 using namespace insieme;
 using namespace insieme::core;
-
+using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
 
 namespace fe = insieme::frontend;
@@ -68,8 +68,7 @@ namespace fe = insieme::frontend;
 
 TEST(TypeConversion, HandleBuildinType) {
 
-	insieme::utils::InitLogger("ut_type_conversion_test", INFO, true);
-	// CommandLineOptions::Verbosity = 1;
+	Logger::get(std::cerr, INFO, 0);
 
 	NodeManager manager;
 	fe::Program prog(manager);

@@ -91,7 +91,10 @@ public:
 	/**
 	 * the discard method is called when the Parser is no longer valid.
 	 */
-	static void discard() { currParser = NULL; }
+	static void discard() {
+		delete currParser;
+		currParser = NULL;
+	}
 
 	/**
 	 * Returns the current parser, if not initialized an assertion is thrown.

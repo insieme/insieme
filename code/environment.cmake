@@ -4,7 +4,6 @@
 
 # Configuration:
 #   $ENV{XERCES_HOME}           Both
-#   ${GLOG_HOME}                Windows
 #   $ENV{GLOG_HOME}             Linux
 #   LINKING_TYPE                Linux
 #   LLVM_HOME/$ENV{LLVM_HOME}   Both
@@ -36,13 +35,8 @@ if(MSVC)   # Windows Visual Studios
   # MSVC can compile insieme statical only
   set(LINKING_TYPE STATIC)
 
-  # ATM GLog needs non-static compile
-  #set(GLOG_STATIC_APPEND "_static")
-  set(GLOG_STATIC_APPEND "")
-
   # Therefore Boost needs to be linked statically
   set(Boost_USE_STATIC_LIBS ON)
-
 
 else(MSVC) # Linux or Cygwin/MinGW
 
@@ -58,20 +52,10 @@ endif(MSVC)
 
 # - boost
 find_package( Boost COMPONENTS program_options )
-# find_package( Boost COMPONENTS system )
-# find_package( Boost COMPONENTS filesystem )
+find_package( Boost COMPONENTS system )
+find_package( Boost COMPONENTS filesystem )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
-
-# - glog
-if(MSVC)
-	include_directories( ${GLOG_HOME}/src/windows )
-	set(glog_LIB ${GLOG_HOME}/$(Configuration)/libglog${GLOG_STATIC_APPEND}.lib)
-else()
-	include_directories( $ENV{GLOG_HOME}/include )
-	find_library(glog_LIB NAMES glog PATHS $ENV{GLOG_HOME}/lib)
-endif()
-
 
 # - xerces
 include_directories( $ENV{XERCES_HOME}/include )
@@ -133,8 +117,6 @@ foreach (name ${clang_LList})
     find_library(clang_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
     set(clang_LIBs ${clang_${name}_LIB} ${clang_LIBs})
 endforeach(name)
-
-
 
 # ------------------------------------------------------------- configuration for platforms
 
@@ -221,7 +203,7 @@ if (NOT MEMORY_CHECK_SETUP)
 				add_test(NAME valgrind_${case_name} 
 					COMMAND valgrind
 						--leak-check=full
-						--show-reachable=yes
+						--show-reachable=no
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
@@ -239,7 +221,7 @@ if (NOT MEMORY_CHECK_SETUP)
 				add_custom_target(valgrind_${case_name} 
 					COMMAND valgrind
 						--leak-check=full
-						--show-reachable=yes
+						--show-reachable=no
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}

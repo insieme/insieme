@@ -167,7 +167,12 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		// has to be set properly
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
 
-		core::RefTypePtr&& entryType = builder.refType( fact.convertType(it->first->getType().getTypePtr()) );
+		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
+//		if(type->getNodeType() == core::NT_VectorType) {
+//			type = builder.arrayType( builder.refType(type) );
+//		}
+
+		core::RefTypePtr&& entryType = builder.refType( type );
 		if(it->second) {
 			// the variable is defined as extern, so we don't have to allocate memory for it
 			// just refear to the memory location someone else has initialized

@@ -69,11 +69,13 @@ public:
 	struct Entry {
 		string lValueName;
 		string rValueName;
+		string declPattern;
+		string paramPattern;
 		CodePtr definition;
 
-		Entry() : lValueName(), rValueName(), definition() { }
-		Entry(const string& lName, const string& rName, const CodePtr& definition)
-			: lValueName(lName), rValueName(rName), definition(definition) { }
+		Entry() : lValueName(), rValueName(), declPattern(), paramPattern(), definition() { }
+		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodePtr& definition)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),  definition(definition) { }
 	};
 
 	/**
@@ -106,7 +108,7 @@ public:
 	TypeManager(NameGenerator& nameGenerator) : nameGenerator(nameGenerator) { }
 
 	/**
-	 * Obtains a type name for the given type. I case the type has been used before, the same
+	 * Obtains a type name for the given type. In case the type has been used before, the same
 	 * name as the last time will be returned. Otherwise a new name will be generated, the necessary
 	 * type definitions will be added, dependencies will be registered and the new name will
 	 * be returned.
@@ -117,6 +119,18 @@ public:
 	 * @return the token to be used within a C program to describe this type
 	 */
 	string getTypeName(const CodePtr& context, const core::TypePtr& type, bool decl = false);
+
+	/**
+	 * Obtains a entry maintained for the given type. In case the type has been used before, the same
+	 * entry as the last time will be returned. Otherwise a new entry will be resolved, the necessary
+	 * type definitions will be added, dependencies will be registered and the new entry will
+	 * be returned.
+	 *
+	 * @param context the code fragment using the given type
+	 * @param type the type to be resolved
+	 * @return the entry summarizing the information required for representing the given type within C
+	 */
+	const Entry getTypeEntry(const CodePtr& context, const core::TypePtr& type);
 
 	/**
 	 * Formats the a parameter with the given type and name within the given context. This might be used
@@ -153,6 +167,8 @@ private:
 	Entry resolveVectorType(const core::VectorTypePtr& ptr);
 	Entry resolveChannelType(const core::ChannelTypePtr& ptr);
 	Entry resolveRefType(const core::RefTypePtr& ptr);
+
+	Entry resolveRefOrVectorOrArrayType(const core::TypePtr& ptr);
 
 	Entry resolveRecType(const core::RecTypePtr& ptr);
 	void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);

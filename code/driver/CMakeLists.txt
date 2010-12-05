@@ -36,7 +36,6 @@ target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_
 
 # add boost_program_options library
 target_link_libraries( main ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries( main ${glog_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -48,7 +47,6 @@ foreach ( case_file ${test_cases})
 
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_frontend)
 	target_link_libraries(ut_${case_name} insieme_simple_backend)
@@ -57,6 +55,8 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} insieme_xml)	# FIXME
 	target_link_libraries(ut_${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+	target_link_libraries(ut_${case_name} ${Boost_SYSTEM_LIBRARY})
+	target_link_libraries(ut_${case_name} ${Boost_FILESYSTEM_LIBRARY})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 
 	add_unit_test(${case_name} off)

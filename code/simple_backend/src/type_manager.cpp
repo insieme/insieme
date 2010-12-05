@@ -48,127 +48,36 @@ namespace simple_backend {
 using namespace insieme::core;
 
 TypeManager::Entry toEntry(string name) {
-	return TypeManager::Entry(name, name, CodePtr());
+	return TypeManager::Entry(name, name, name + " %s", name + " %s", CodePtr());
 }
 
 string TypeManager::formatParamter(CodePtr& context, const TypePtr& paramType, const string& name, bool decl) {
 
-	// make local copy
-	TypePtr type = paramType;
+	// obtain type entry
+	const Entry& entry = getTypeEntry(context, paramType);
 
-	// special handling for nested arrays / vectors ...
-	NodeType kind = type->getNodeType();
-	RefTypePtr ref = dynamic_pointer_cast<const RefType>(type);
-	if (kind == NT_RefType || kind == NT_VectorType || kind == NT_ArrayType) {
-
-		// count pointers in front of arrays
-		int refCount = 0;
-		while(kind == NT_RefType) {
-			refCount++;
-			type = static_pointer_cast<const RefType>(type)->getElementType();
-			kind = type->getNodeType();
-		}
-
-		// reduce number of references if declaring a C array (implicit in C)
-		refCount -= (decl && kind != NT_VectorType)?1:0;
-
-		// count arrays
-		int arrayCount = 0;
-		while(kind == NT_ArrayType) {
-			ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
-			arrayCount += arrayType->getDimension().getValue();
-
-			type = arrayType->getElementType();
-			kind = type->getNodeType();
-
-			// discard embedded reference type
-			if (kind == NT_RefType) {
-				type = static_pointer_cast<const RefType>(type)->getElementType();
-				kind = type->getNodeType();
-			}
-		}
-
-		// count vectors
-		int vectorCount = 0;
-		string postfix = "";
-		while(kind == NT_VectorType) {
-			vectorCount++;
-
-			VectorTypePtr vectorType = static_pointer_cast<const VectorType>(type);
-			postfix = postfix + "[" + toString(vectorType->getSize()) + "]";
-
-			type = vectorType->getElementType();
-			kind = type->getNodeType();
-
-			// discard embedded reference type
-			if (kind == NT_RefType) {
-				type = static_pointer_cast<const RefType>(type)->getElementType();
-				kind = type->getNodeType();
-			}
-		}
-
-		// test whether there has been an array / vector nested ...
-		if (arrayCount + vectorCount == 0) {
-			// no special treatment required
-			return getTypeName(context, paramType, decl) + " " + name;
-		}
-
-		// check for a mixed node
-		if (kind == NT_ArrayType || kind == NT_RefType) {
-			// mixed mode ... just finish counting and use stars
-			while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
-				refCount++;
-				type = static_pointer_cast<const SingleElementType>(type)->getElementType();
-				kind = type->getNodeType();
-			}
-
-			// sum up references
-			refCount += arrayCount + vectorCount;
-
-			// make an assertion on the result
-			assert(refCount > 0 && "RefCount should be larger than 0!");
-
-			// build up type***...*** name;
-			string prefix = getTypeName(context, type, decl);
-			for (int i=0; i<refCount; i++) {
-				prefix += "*";
-			}
-			return prefix + " " + name;
-		}
-
-		// create type declaration
-		string prefix = getTypeName(context, type, decl);
-		if (vectorCount > 0 && (refCount + arrayCount) > 0) {
-			prefix += "(";
-		}
-		for (int i=0; i<refCount; i++) {
-			prefix += "*";
-		}
-		for (int i=0; i<arrayCount; i++) {
-			prefix += "*";
-		}
-		if (vectorCount > 0 && (refCount + arrayCount) > 0) {
-			postfix = ")" + postfix;
-		}
-		return prefix + " " + name + postfix;
-	}
-
-	// default case - simple case - type followed by name
-	return getTypeName(context, type, decl) + " " + name;
+	// format parameter
+	return format((decl)?entry.declPattern.c_str():entry.paramPattern.c_str(), name.c_str());
 }
 
+const TypeManager::Entry TypeManager::getTypeEntry(const CodePtr& context, const core::TypePtr& type) {
 
-string TypeManager::getTypeName(const CodePtr& context, const core::TypePtr& type, bool decl) {
-
-	TypeManager::Entry entry = resolveType(type);
+	// resolve given type
+	const TypeManager::Entry& entry = resolveType(type);
 
 	// => add code dependency to definition (if necessary)
 	if (entry.definition) {
 		context->addDependency(entry.definition);
 	}
 
-	// general debugging ...
-	//std::cout << "Mapping " << toString(*type) << " to " << ((decl)?entry.lValueName:entry.rValueName) << std::endl;
+	// return the obtained entry
+	return entry;
+}
+
+string TypeManager::getTypeName(const CodePtr& context, const core::TypePtr& type, bool decl) {
+
+	// obtain type entry
+	TypeManager::Entry entry = getTypeEntry(context, type);
 
 	// return C name of type
 	return (decl)?entry.lValueName:entry.rValueName;
@@ -271,7 +180,7 @@ TypeManager::Entry TypeManager::resolveFunctionType(const FunctionTypePtr& ptr) 
 
 	// assemble name and dependency
 	string typeName = entry.functorName + "*";
-	return TypeManager::Entry(typeName, typeName, entry.functorAndCaller);
+	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", entry.functorAndCaller);
 }
 
 TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::FunctionTypePtr& functionType) {
@@ -361,42 +270,146 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 		return toEntry("void*");
 	}
 
-	auto elemType = ptr->getElementType();
-	Entry elementDef = resolveType(elemType);
-	return Entry(elementDef.lValueName, elementDef.lValueName + "*", elementDef.definition);
-
+	return resolveRefOrVectorOrArrayType(ptr);
 }
 
 
 TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
-
-	// resolve element type
-	auto subDef = resolveType(ptr->getElementType());
-
-	string postfix = "[" + toString(ptr->getSize()) + "]";
-	return Entry(subDef.lValueName + postfix, subDef.rValueName + postfix, subDef.definition);
+	return resolveRefOrVectorOrArrayType(ptr);
 }
 
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
+	return resolveRefOrVectorOrArrayType(ptr);
+}
 
-	// test whether dimension is final
-	IntTypeParam dim = ptr->getDimension();
-	if (dim.getType() != IntTypeParam::CONCRETE) {
-		return toEntry("[[ Unsupported generic array types ]]");
+
+TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePtr& ptr) {
+
+	// make sure the passed type is correct
+	TypePtr type = ptr;
+	NodeType kind = ptr->getNodeType();
+	assert (kind == NT_RefType || kind == NT_ArrayType || kind == NT_VectorType);
+
+	// count pointers in front of arrays
+	int refCount = 0;
+	while(kind == NT_RefType) {
+		refCount++;
+		type = static_pointer_cast<const RefType>(type)->getElementType();
+		kind = type->getNodeType();
+	}
+
+	// count arrays
+	int arrayCount = 0;
+	while(kind == NT_ArrayType) {
+		ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
+
+		// check type of dimension
+		IntTypeParam dim = arrayType->getDimension();
+		if (dim.getType() != IntTypeParam::CONCRETE) {
+			return toEntry("[[ Unsupported generic array types ]]");
+		}
+		arrayCount += dim.getValue();
+
+		type = arrayType->getElementType();
+		kind = type->getNodeType();
+
+		// discard embedded reference type
+		if (kind == NT_RefType) {
+			type = static_pointer_cast<const RefType>(type)->getElementType();
+			kind = type->getNodeType();
+		}
+	}
+
+	// count vectors
+	int vectorCount = 0;
+	string postfix = "";
+	while(kind == NT_VectorType) {
+		vectorCount++;
+
+		VectorTypePtr vectorType = static_pointer_cast<const VectorType>(type);
+		postfix = postfix + "[" + toString(vectorType->getSize()) + "]";
+
+		type = vectorType->getElementType();
+		kind = type->getNodeType();
+
+		// discard embedded reference type
+		if (kind == NT_RefType) {
+			type = static_pointer_cast<const RefType>(type)->getElementType();
+			kind = type->getNodeType();
+		}
+	}
+
+	// check for a mixed node
+	if (kind == NT_ArrayType || kind == NT_RefType) {
+		// mixed mode ... just finish counting and use stars
+		while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
+			refCount++;
+			type = static_pointer_cast<const SingleElementType>(type)->getElementType();
+			kind = type->getNodeType();
+		}
+
+		// sum up references
+		refCount += arrayCount + vectorCount;
+
+		// reset array and vector counts (if mixed, everything is done via ref)
+		arrayCount = 0;
+		vectorCount = 0;
+
+		// make an assertion on the result
+		assert(refCount > 0 && "RefCount should be larger than 0!");
 	}
 
 
-	// resolve sub-type
-	TypePtr elementType = ptr->getElementType();
-	TypeManager::Entry subDef = resolveType(elementType);
-	string res = subDef.lValueName;
+	// reduce number of references if declaring a C array (implicit in C)
+//	refCount -= (decl && kind != NT_VectorType)?1:0;
 
-	int numStars = dim.getValue();
-	for (int i=0; i < numStars; i++) {
-		res += "*";
+	// reduce ref-count by 1 (since outermost is implicit in C) - except for pure vectors
+	refCount -= (ptr->getNodeType() != NT_VectorType)?1:0;
+
+	// create type declaration
+	Entry elementType = resolveType(type);
+	string prefix = elementType.lValueName;
+	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
+		prefix += "(";
+	}
+	for (int i=0; i<refCount; i++) {
+		prefix += "*";
+	}
+	for (int i=0; i<arrayCount; i++) {
+		prefix += "*";
+	}
+	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
+		postfix = ")" + postfix;
+	}
+	//return prefix + " " + name + postfix;
+	if (ptr->getNodeType() == NT_VectorType) {
+		// special treatement for C vectors
+		return Entry(
+				prefix + "" + postfix,
+				prefix + "" + postfix,
+				prefix + " %s" + postfix,
+				prefix + " %s" + postfix,
+				elementType.definition
+		);
 	}
 
-	return Entry(res, res, subDef.definition);
+	// handling non-C-vector types
+	if (vectorCount > 0 && refCount == 0 && arrayCount == 0) {
+		return Entry(
+				prefix + "" + postfix,
+				prefix + "(*)" + postfix,
+				prefix + " %s" + postfix,
+				prefix + "(* %s)" + postfix,
+				elementType.definition
+		);
+	}
+	return Entry(
+			prefix + "" + postfix,
+			prefix + "*" + postfix,
+			prefix + " %s" + postfix,
+			prefix + "* %s" + postfix,
+			elementType.definition
+	);
 }
 
 TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
@@ -416,7 +429,7 @@ TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTyp
 	out << "};\n";
 
 	string typeName = prefix + " " + name;
-	return TypeManager::Entry(typeName, typeName, cptr);
+	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", cptr);
 }
 
 TypeManager::Entry TypeManager::resolveUnionType(const UnionTypePtr& ptr) {
@@ -466,7 +479,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 		CodePtr prototype = std::make_shared<CodeFragment>("Prototype of " + name);
 		prototype->getCodeStream() << name << ";\n";
 
-		this->typeDefinitions.insert(std::make_pair(type, Entry(name, name, prototype)));
+		this->typeDefinitions.insert(std::make_pair(type, Entry(name, name, name + " %s", name + " %s", prototype)));
 
 		group->addDependency(prototype);
 	});

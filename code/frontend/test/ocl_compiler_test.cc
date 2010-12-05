@@ -58,7 +58,7 @@ namespace fe = insieme::frontend;
 namespace core = insieme::core;
 //using namespace insieme::c_info;
 using namespace insieme::utils::set;
-using namespace google;
+using namespace insieme::utils::log;
 
 namespace {
 class OclTestVisitor : public core::ASTVisitor<void> {
@@ -74,7 +74,7 @@ public:
 
             // kernel function has at least 2 arguments (localRange, globalRange)
             // TODO change to ocl annotation check
-DLOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
+LOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
             if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
 
 
@@ -88,7 +88,7 @@ DLOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation
                 core::TypePtr localRange = args.back();
                 EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
 
-DLOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
+LOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 
                 core::NodePtr node = func->getChildList()[0];
                 std::cout << "this is lambdaaaa  " << node->toString() << "\n";
@@ -137,7 +137,7 @@ DLOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	insieme::utils::InitLogger("ut_ocl_compiler_test", INFO, true);
+	Logger::get(std::cerr, INFO);
     //CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::create(manager);

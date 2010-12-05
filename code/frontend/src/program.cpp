@@ -157,6 +157,10 @@ struct Program::ProgramImpl {
 
 Program::Program(core::NodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(mgr) ) { }
 
+Program::~Program() {
+	delete pimpl;
+}
+
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
@@ -266,11 +270,11 @@ const core::ProgramPtr& Program::convert() {
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
-	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
+	LOG(utils::log::INFO) << "=== Adding Parallelism to sequential IR ===";
 	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
 	mProgram = addParallelism(mProgram, mMgr);
 	convertTimer.stop();
-	LOG(INFO) << convertTimer;
+	LOG(utils::log::INFO) << convertTimer;
 
 	return mProgram;
 }

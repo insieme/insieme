@@ -54,11 +54,11 @@ namespace core = insieme::core;
 using namespace insieme::c_info;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
-using namespace google;
+using namespace insieme::utils::log;
 
 TEST(DriverTest, HelloWorldTest) {
 
-	insieme::utils::InitLogger("DriverTest", INFO, true);
+	Logger::get(std::cerr, INFO);
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::create(manager);

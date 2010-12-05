@@ -46,6 +46,7 @@ namespace insieme {
 namespace simple_backend {
 	
 using namespace core;
+using namespace utils::log;
 
 ConversionContext::ConversionContext(const NodePtr& target)
 	 : typeMan(nameGen), funcMan(*this), nodeManager(target->getNodeManager()), basic(nodeManager.basic) { }
@@ -376,9 +377,7 @@ void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
 
 void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 	TypePtr type = ptr->getType();
-	if (type->getNodeType() == NT_RefType &&
-		static_pointer_cast<const RefType>(type)->getElementType()->getNodeType() != NT_VectorType) {
-
+	if (type->getNodeType() == NT_RefType) {
 		cStr << "&";
 	}
 	cStr << "(";
@@ -418,14 +417,15 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 
 	// test whether all expressions are calls to ref.var ...
 	cStr << "{";
+	int i=0;
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
-			DLOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
+			LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		// print argument of ref.var
 		this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
-		if(cur != ptr->getExpressions().back()) cStr << ", ";
+		if((++i)!=ptr->getExpressions().size()) cStr << ", ";
 	});
 	cStr << "}";
 
@@ -454,7 +454,7 @@ void ConvertVisitor::visitMarkerStmt(const MarkerStmtPtr& ptr) {
 const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
 	auto pos = variableMap.find(variable);
 	if(pos == variableMap.end())
-		DLOG(INFO) << "v" << variable->getId();
+		LOG(INFO) << "v" << variable->getId();
 	assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
 	return (*pos).second;
 }

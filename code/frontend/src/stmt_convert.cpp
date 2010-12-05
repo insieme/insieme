@@ -101,18 +101,18 @@ namespace conversion {
 
 #define START_LOG_STMT_CONVERSION(stmt) \
 	assert(convFact.currTU); \
-	DVLOG(1) << "\n****************************************************************************************\n" \
+	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
 			 << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang statement:\n" \
+		VLOG(2) << "Dump of clang statement:\n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
 	}
 
 #define END_LOG_STMT_CONVERSION(stmt) \
-	DVLOG(1) << "Converted 'statement' into IR stmt: "; \
-	DVLOG(1) << "\t" << *stmt;
+	VLOG(1) << "Converted 'statement' into IR stmt: "; \
+	VLOG(1) << "\t" << *stmt;
 
 
 //#############################################################################
@@ -276,7 +276,7 @@ public:
 
 				// we have to define a new induction variable for the loop and replace every
 				// instance in the loop with the new variable
-				DVLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
+				VLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
 						<< " with variable: v" << newIndVar->getId();
 
 				// Initialize the value of the new induction variable with the value of the old one
@@ -832,8 +832,12 @@ public:
 	}
 };
 
-ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConverter(ConversionFactory& fact) {
+ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConvert(ConversionFactory& fact) {
 	return new ConversionFactory::ClangStmtConverter(fact);
+}
+
+void ConversionFactory::cleanStmtConvert(ClangStmtConverter* stmtConv) {
+	delete stmtConv;
 }
 
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {

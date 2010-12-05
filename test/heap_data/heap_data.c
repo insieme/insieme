@@ -1,9 +1,10 @@
 
-#define N 50
+#define N 10
 
 extern int printf(char*, ...);
 
 int a[N];
+char(* b)[N];
 
 void init() {
 	for (int i=0; i<N; i++) {
@@ -20,6 +21,7 @@ int sum() {
 }
 
 int main(int argc, char* argv[]) {
+	b = argv;
 	init();
 	printf("sum=%d\n", sum());
 }

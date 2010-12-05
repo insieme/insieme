@@ -77,9 +77,9 @@ public:
 		stringstream ss;
 		ss << uri << ":" << loc->getLineNumber () << ":" << loc->getColumnNumber () << " " << msg;
 		if(warn)
-			LOG(WARNING) << ss.str();
+			LOG(log::WARNING) << ss.str();
 		else
-			LOG(ERROR) << ss.str();
+			LOG(log::ERROR) << ss.str();
 
 
 		XMLString::release (&uri);
@@ -274,7 +274,7 @@ void XmlUtil::convertXmlToDom(const string& fileName, const bool validate) {
 		
 		if (validate) {
 			if (!parser->loadGrammar ((XML_SCHEMA_DIR + "schema.xsd").c_str(), Grammar::SchemaGrammarType, true)) {
-				LOG(ERROR) << "ERROR: Unable to load schema.xsd";
+				LOG(log::ERROR) << "ERROR: Unable to load schema.xsd";
 				return;
 			}
 			if (eh.failed ()) {
@@ -286,7 +286,7 @@ void XmlUtil::convertXmlToDom(const string& fileName, const bool validate) {
 		if (eh.failed ()) {
 			doc->release();
 			doc = NULL;
-			LOG(ERROR) << "problem during parsing of XML file" << endl;
+			LOG(log::ERROR) << "problem during parsing of XML file" << endl;
 			return;
 		}
 	}

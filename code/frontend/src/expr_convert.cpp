@@ -47,6 +47,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -215,18 +216,18 @@ namespace conversion {
 
 #define START_LOG_EXPR_CONVERSION(expr) \
 	assert(convFact.currTU && "Translation unit not correctly set"); \
-	DVLOG(1) << "\n****************************************************************************************\n" \
+	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
 			 << "-> at location: (" << utils::location(expr->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang expression: \n" \
+		VLOG(2) << "Dump of clang expression: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		expr->dump(); \
 	}
 
 #define END_LOG_EXPR_CONVERSION(expr) \
-	DVLOG(1) << "Converted into IR expression: "; \
-	DVLOG(1) << "\t" << *expr;
+	VLOG(1) << "Converted into IR expression: "; \
+	VLOG(1) << "\t" << *expr;
 
 
 // creates a function call from a list of expressions,
@@ -1077,8 +1078,12 @@ public:
 	}
 };
 
-ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConverter(ConversionFactory& fact) {
+ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConvert(ConversionFactory& fact) {
 	return new ClangExprConverter(fact);
+}
+
+void ConversionFactory::cleanExprConvert(ConversionFactory::ClangExprConverter* exprConv) {
+	delete exprConv;
 }
 
 core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
@@ -1112,6 +1117,9 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 			const clang::Expr* subExpr = initList->getInit(i);
 			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy, false);
 			// If the type is a refType we have to add a VAR.REF operation
+			if (!core::analysis::isCallOf(convExpr, mgr.basic.getRefVar())) {
+				convExpr = builder.refVar(convExpr);
+			}
 			elements.push_back( convExpr );
 		}
 		retExpr = builder.vectorExpr(elements);
@@ -1143,10 +1151,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// the function is not extern, a lambdaExpr has to be created
 	assert(funcDecl->hasBody() && "Function has no body!");
 	assert(currTU);
-	DVLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
+	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 
-	DVLOG(1) << "#----------------------------------------------------------------------------------#";
-	DVLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
+	VLOG(1) << "#----------------------------------------------------------------------------------#";
+	VLOG(1) << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl
 			 << "-> at location: (" << utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager()) << "): " << std::endl
 			 << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
 			 << "\tEmpty map: "    << ctx.recVarExprMap.size();
@@ -1164,11 +1172,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	if( !components.empty() ) {
 		// we are dealing with a recursive type
-		DVLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
-				 << "Number of components in the cycle: " << components.size();
+		VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
+				<< "Number of components in the cycle: " << components.size();
 		std::for_each(components.begin(), components.end(),
 			[ ] (std::set<const FunctionDecl*>::value_type c) {
-				DVLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+				VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
 			}
 		);
 
@@ -1205,10 +1213,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			);
 		}
 		if( VLOG_IS_ON(2) ) {
-			DVLOG(2) << "MAP: ";
+			VLOG(2) << "MAP: ";
 			std::for_each(ctx.recVarExprMap.begin(), ctx.recVarExprMap.end(),
 				[] (ConversionContext::RecVarExprMap::value_type c) {
-					DVLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "]";
+					VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "]";
 				}
 			);
 		}

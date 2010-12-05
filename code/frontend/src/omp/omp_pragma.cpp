@@ -48,8 +48,6 @@
 #include <clang/AST/Stmt.h>
 #include <clang/AST/Expr.h>
 
-#include <iostream>
-
 using namespace std;
 
 namespace {
@@ -315,12 +313,12 @@ OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceL
 	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
 
 	if(VLOG_IS_ON(2)) {
-		DVLOG(2) << "~~~PRAGMA~~~" << std::endl;
+		VLOG(2) << "~~~PRAGMA~~~" << std::endl;
 		for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
-			DVLOG(2) << "KEYWORD: " << i->first << ":" << std::endl;
+			VLOG(2) << "KEYWORD: " << i->first << ":" << std::endl;
 			for(ValueList::const_iterator i2=i->second.begin(), e2=i->second.end(); i2!=e2; ++i2)
-				DVLOG(2) << (*i2)->toStr() << ", ";
-			DVLOG(2) << std::endl;
+				VLOG(2) << (*i2)->toStr() << ", ";
+			VLOG(2) << std::endl;
 		}
 	}
 }
