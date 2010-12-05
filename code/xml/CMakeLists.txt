@@ -30,7 +30,6 @@ add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} 
 # add dependencies
 add_dependencies( insieme_xml insieme_core insieme_utils )
 target_link_libraries(insieme_xml ${XERCES_LIBRARIES})
-target_link_libraries(insieme_xml ${glog_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -46,7 +45,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_utils)
 	target_link_libraries(ut_${case_name} insieme_xml)
-	target_link_libraries(ut_${case_name} ${glog_LIB})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	target_link_libraries(ut_${case_name} ${XERCES_LIBRARIES})
 	

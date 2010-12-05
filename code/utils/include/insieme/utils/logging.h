@@ -37,7 +37,15 @@
 #pragma once
 
 #include <iostream>
+
 #include <boost/iostreams/stream.hpp>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+#include <boost/any.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread.hpp>
+
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/cmd_line_utils.h"
@@ -48,50 +56,216 @@ namespace log {
 
 namespace io = boost::iostreams;
 
+/**
+ * Temporary object used to wrap the log stream. This object is responsible to
+ * collect logs and flush the stream once the object is deallocated.
+ *
+ * A lock is used to mantain exclusivity of logs, in case of multi-threaded application
+ * the logger guarantees mutual exclusion between threads using the stream.
+ */
 struct Writer {
 	std::ostream& logStream;
+	boost::recursive_mutex& mutex;
+	boost::recursive_mutex::scoped_lock* lock;
 
-	Writer(std::ostream& out) : logStream( out ) {}
+	Writer(std::ostream& out, boost::recursive_mutex& mutex) : logStream( out ), mutex( mutex ) {
+		lock = new boost::recursive_mutex::scoped_lock(mutex);
+	}
+
+	// Creates a copy from an existing writer. When a logger is requested
+	// a temporary object is created. Also a new lock is created.
+	Writer(const Writer& other) : logStream( other.logStream ), mutex( other.mutex ) {
+		lock = new boost::recursive_mutex::scoped_lock(mutex);
+	}
 
 	~Writer() {
+		// Append a new line at the end of this log sequence
 		logStream << std::endl;
 		logStream.flush();
+		assert(lock);
+		delete lock; // unlock this lock
 	}
 };
 
 enum Level { DEBUG, INFO, WARNING, ERROR, FATAL };
 
-class Logger {
+// Because the file name cannot be use as a template parameters
+// we keep a list of objects representing the context of the logger
+typedef std::vector<boost::any> Ctx;
 
+enum TimeFormat { FULL, TIME, DATE };
+
+// Prints the current time
+template <TimeFormat format>
+struct TimeSpec;
+
+template <>
+struct TimeSpec<FULL> {
+	static void format(std::ostream& out, const Ctx& ctx) {
+		out << boost::posix_time::second_clock::local_time();
+	}
+};
+
+template <>
+struct TimeSpec<TIME> {
+	static void format(std::ostream& out, const Ctx& ctx) {
+		out << boost::posix_time::second_clock::local_time().time_of_day();
+	}
+};
+
+template <>
+struct TimeSpec<DATE> {
+	static void format(std::ostream& out, const Ctx& ctx) {
+		out << boost::posix_time::second_clock::local_time().date();
+	}
+};
+
+/**
+ * Prints the level at which the log was taken.
+ */
+template <const Level L>
+struct LevelSpec {
+
+	static std::string levelToStr(const Level& level) {
+		switch(level) {
+		case DEBUG:		return "DEBUG";
+		case INFO:		return "INFO ";
+		case WARNING:	return "WARN ";
+		case ERROR:		return "ERROR";
+		case FATAL:		return "FATAL";
+		default:
+			assert(false);
+		}
+	}
+
+	static void format(std::ostream& out, const Ctx& ctx) {
+		out << levelToStr(L);
+	}
+};
+
+/**
+ * Prints out the name of the file which is issuing the log.
+ * Because it's not possible to transfer string literals via
+ * template parameters, the value is read from the ctx object
+ */
+struct FileNameSpec {
+	static void format(std::ostream& out, const Ctx& ctx) {
+		// Cut out the entire path and prints the file name
+		out << boost::filesystem::path( boost::any_cast<const char *>(ctx[0]) ).leaf();
+	}
+};
+
+/**
+ * Report the line number which is passed as template parameter
+ */
+template <unsigned Line>
+struct LineSpec {
+	static void format(std::ostream& out, const Ctx& ctx) { out << Line; }
+};
+
+/**
+ * The formater takes several specifiers, in any order and compose them
+ * printing the values to the log stream, a specifier could be one of the
+ * previous classes or a formatter itself. The values are separated by a
+ * separator character.
+ */
+template <char Separator, class ...Formats>
+class Formatter;
+
+/**
+ * This specialization of the Formatter deals with the situation
+ * where only 1 element is on the specifier list.
+ */
+template <char Separator, class Spec>
+struct Formatter<Separator, Spec> {
+
+	static void format(std::ostream& out, const Ctx& ctx) {
+		Spec::format(out, ctx);
+	}
+};
+
+/**
+ * This specialization of the Formatter deals with the general
+ * case, it use template recursion to produce the list of
+ * specifiers in the given order.
+ */
+template <char Separator, class Head, class ...Tail>
+struct Formatter<Separator, Head, Tail...> {
+
+	static void format(std::ostream& out, const Ctx& ctx) {
+		Head::format(out, ctx);
+		out << Separator;
+		Formatter<Separator, Tail...>::format(out, ctx);
+	}
+};
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							LOGGER
+//-----------------------------------------------------------
+// Logger is the main logging class, the active logger is a
+// singleton and once the output stream, level and verbosity
+// is initialized, cannot be changed.
+//
+//
+class Logger {
+	// null logger is used to dump logs which do not match the
+	// current level.
 	io::stream<io::null_sink> 	m_null_logger;
-	Writer 						m_logger;
-	Writer						m_empty_logger;
+	// mutex which is shared among all the instances of writer,
+	// guarantee that different threads writing into the logger
+	// do not overlap
+	boost::recursive_mutex		mutex;
+
+	// reference to the output stream
+	std::ostream&				out;
 	Level 						m_level;
 	unsigned short				m_verbosity;
 
 	Logger(std::ostream& out, const Level& level, unsigned short verbosity) :
-		m_null_logger(io::null_sink()), m_logger(out), m_empty_logger(m_null_logger), m_level(level), m_verbosity(verbosity) { }
+		m_null_logger(io::null_sink()),
+		out(out),
+		m_level(level),
+		m_verbosity(verbosity) { }
 
 public:
-
-	static Logger& get(std::ostream& out=std::cout, const Level& level=DEBUG, unsigned short verbosity=CommandLineOptions::Verbosity) {
+	/**
+	 * Returns a reference to the current logger. The first time the method is
+	 * called, the logger is initialized with the values provided as arguments.
+	 *
+	 * Sequent calls to this method with different input parameters has no
+	 * effect on the underlying logger, the same logger is always returned.
+	 */
+	static Logger& get(std::ostream& out = std::cout, const Level& level = INFO,
+			unsigned short verbosity = CommandLineOptions::Verbosity) {
 		static Logger logger(out, level, verbosity);
 		return logger;
 	}
 
 	// Level getters/setters
 	const Level& level() const { return m_level; }
-	Level& level() { return m_level; }
-
 	const unsigned short& verbosity() const { return m_verbosity; }
-	unsigned short& verbosity() { return m_verbosity; }
 
-	Writer getActiveStream() { return m_logger; }
+	/**
+	 * Returns a writer to the active stream.
+	 */
+	template <class Formatter>
+	Writer getActiveStream(const Ctx& ctx) {
+		Writer currStream( out, mutex );
+		Formatter::format(currStream.logStream, ctx);
+		return currStream;
+	}
 
-	Writer getStream(const Level& level) {
-		if(level <= m_level)
-			return m_logger;
-		return m_empty_logger;
+	/**
+	 * Returns the stream which match the level @level.
+	 */
+	template <class Formatter>
+	Writer getStream(const Level& level, const Ctx& ctx) {
+		if(level <= m_level) {
+			Writer currStream(out, mutex);
+			Formatter::format(currStream.logStream, ctx);
+			return currStream;
+		}
+		return Writer( m_null_logger, mutex );
 	}
 
 };
@@ -100,16 +274,21 @@ public:
 } // End utils namespace
 } // End insieme namespace
 
-#define LOG_PREFIX(Level) ": [" << boost::filesystem::path(__FILE__).leaf() << ":" << __LINE__ << "] "
+using namespace insieme::utils::log;
 
-#define LOG(Level) 	if(insieme::utils::log::Logger::get().level() > Level) ; \
-					else (insieme::utils::log::Logger::get().getActiveStream().logStream << #Level << LOG_PREFIX(Level))
+// Build the context used by the formatter
+#define MAKE_CONTEXT			Ctx({ boost::any((const char*)__FILE__) })
 
-#define VLOG(VerbosityLevel) if(VerbosityLevel > insieme::utils::log::Logger::get().verbosity()) ; \
-							 else (insieme::utils::log::Logger::get().getActiveStream().logStream << "VLOG:" << \
-									 VerbosityLevel << LOG_PREFIX(insieme::utils::log::Logger::get().level()))
+// Creates the object used to format the output of the logger.
+#define MAKE_FORMAT(LEVEL) 		Formatter<' ', LevelSpec<LEVEL>, TimeSpec<TIME>, Formatter<':', FileNameSpec, LineSpec<__LINE__>>>
 
-#define VLOG_IS_ON(VerbosityLevel)	(VerbosityLevel <= insieme::utils::log::Logger::get().verbosity())
+#define LOG( LEVEL ) 			if(Logger::get().level() > LEVEL) ; \
+								else (Logger::get().getActiveStream<MAKE_FORMAT(LEVEL)>( MAKE_CONTEXT ).logStream << "] ")
 
-#define LOG_STREAM(Level) (insieme::utils::log::Logger::get().getStream(Level).logStream)
+#define VLOG(VerbLevel)			if(VerbLevel > Logger::get().verbosity()) ; \
+							 	else (Logger::get().getActiveStream<MAKE_FORMAT(DEBUG)>( MAKE_CONTEXT ).logStream << "] ")
+
+#define VLOG_IS_ON(VerbLevel)	(VerbLevel <= Logger::get().verbosity())
+
+#define LOG_STREAM(LEVEL) 		(Logger::get().getStream<MAKE_FORMAT(LEVEL)>(LEVEL, MAKE_CONTEXT).logStream)
 
