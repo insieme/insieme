@@ -110,8 +110,24 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	if(mFact.ctx.globalStruct.first)
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 
+	core::ExpressionPtr&& expr = core::dynamic_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
+	
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
+	
+	// also a marker node is allowed if it contains a lambda expr
+	if(!lambdaExpr){
+	   lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
+	   
+	   if(lambdaExpr)
+    	   assert(dynamic_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr &&
+    	       "Conversion of function returned a marker expression which does not contain a lambda espression");
+	   
+    }
+	
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
+	
+	
+	
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
 
 	return mProgram;
