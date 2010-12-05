@@ -67,6 +67,8 @@
 #include "insieme/xml/xml_utils.h"
 
 using namespace std;
+using namespace insieme::utils::log;
+
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace xml = insieme::xml;
@@ -74,7 +76,7 @@ namespace xml = insieme::xml;
 int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
-	insieme::utils::InitLogger(argv[0], INFO, true);
+	Logger::get(std::cerr, DEBUG);
 
 	LOG(INFO) << "Insieme compiler";
 
@@ -152,7 +154,7 @@ int main(int argc, char** argv) {
 				std::fstream dotFile(CommandLineOptions::ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
 				insieme::driver::printDotGraph(program, errors, dotFile);
 				timer.stop();
-				DLOG(INFO) << timer;
+				LOG(INFO) << timer;
 			}
 
 			// XML dump
@@ -224,6 +226,5 @@ int main(int argc, char** argv) {
 		cerr << "Error while parsing input file: " << e.what() << endl;
 	}
 
-	ShutdownGoogleLogging();
 }
 

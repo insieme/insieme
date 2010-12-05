@@ -168,9 +168,9 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
 
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
-		if(type->getNodeType() == core::NT_VectorType) {
-			type = builder.arrayType( builder.refType(type) );
-		}
+//		if(type->getNodeType() == core::NT_VectorType) {
+//			type = builder.arrayType( builder.refType(type) );
+//		}
 
 		core::RefTypePtr&& entryType = builder.refType( type );
 		if(it->second) {

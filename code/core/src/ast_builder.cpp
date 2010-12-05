@@ -46,8 +46,6 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/utils/logging.h"
-
 namespace insieme {
 namespace core {
 

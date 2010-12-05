@@ -58,6 +58,7 @@
 #include "clang/Index/Program.h"
 
 using namespace insieme::core;
+using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
 using namespace clang;
 
@@ -91,8 +92,7 @@ std::string getPrettyPrinted(const NodePtr& node) {
 
 TEST(StmtConversion, FileTest) {
 
-	insieme::utils::InitLogger("ut_stmt_conversion_test", INFO, true);
-	CommandLineOptions::Verbosity = 0;
+	Logger::get(std::cerr, INFO, 0);
 
 	NodeManager manager;
 	fe::Program prog(manager);
@@ -130,5 +130,4 @@ TEST(StmtConversion, FileTest) {
 			}
 		}
 	}
-	ShutdownGoogleLogging();
 }

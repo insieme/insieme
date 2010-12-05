@@ -270,11 +270,11 @@ const core::ProgramPtr& Program::convert() {
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
-	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
+	LOG(utils::log::INFO) << "=== Adding Parallelism to sequential IR ===";
 	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
 	mProgram = addParallelism(mProgram, mMgr);
 	convertTimer.stop();
-	LOG(INFO) << convertTimer;
+	LOG(utils::log::INFO) << convertTimer;
 
 	return mProgram;
 }

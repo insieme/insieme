@@ -42,7 +42,6 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/set_utils.h"
-#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {

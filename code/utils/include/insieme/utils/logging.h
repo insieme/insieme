@@ -37,51 +37,79 @@
 #pragma once
 
 #include <iostream>
+#include <boost/iostreams/stream.hpp>
+#include <boost/filesystem.hpp>
 
-//FIXME: which define for Visual Studio?
-#ifdef WIN32
-#  define GOOGLE_GLOG_DLL_DECL
-#  pragma warning(push)
-#  pragma warning(disable:4244)
-#endif
-
-//FIXME: InstallFailureSignalHandler had to be deactivated (Visual Studio 2010 link fix)
-#include <glog/logging.h>
-
-#ifdef WIN32
-#  pragma warning(pop)
-#endif
-
-#include "cmd_line_utils.h"
-
-using namespace google;
-
-// we remove the Google Log DVLOG and VLOG macro
-#undef VLOG
-#undef DVLOG
-#undef VLOG_IS_ON
-
-#ifndef WIN32
-#define VLOG(level) 		LOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
-#define DVLOG(level) 		DLOG_IF(INFO, (level) <= CommandLineOptions::Verbosity)
-#define VLOG_IS_ON(level) 	( (level) <= CommandLineOptions::Verbosity )
-#else
-#define VLOG(level)   std::cout  << "\n"
-#define DVLOG(level)  std::cout  << "\n"
-#undef LOG
-#undef DLOG
-#define LOG(x) std::cout << "\n"
-#define DLOG(x) std::cout << "\n"
-#define VLOG_IS_ON(level) false
-#endif
-
-
-
+#include "insieme/utils/cmd_line_utils.h"
 
 namespace insieme {
 namespace utils {
+namespace log {
 
-void InitLogger(const char* progName, google::LogSeverity level, bool enableFailureHandler);
+namespace io = boost::iostreams;
 
+struct Writer {
+	std::ostream& logStream;
+
+	Writer(std::ostream& out) : logStream( out ) {}
+
+	~Writer() {
+		logStream << std::endl;
+		logStream.flush();
+	}
+};
+
+enum Level { DEBUG, INFO, WARNING, ERROR, FATAL };
+
+class Logger {
+
+	io::stream<io::null_sink> 	m_null_logger;
+	Writer 						m_logger;
+	Writer						m_empty_logger;
+	Level 						m_level;
+	unsigned short				m_verbosity;
+
+	Logger(std::ostream& out, const Level& level, unsigned short verbosity) :
+		m_null_logger(io::null_sink()), m_logger(out), m_empty_logger(m_null_logger), m_level(level), m_verbosity(verbosity) { }
+
+public:
+
+	static Logger& get(std::ostream& out=std::cout, const Level& level=DEBUG, unsigned short verbosity=CommandLineOptions::Verbosity) {
+		static Logger logger(out, level, verbosity);
+		return logger;
+	}
+
+	// Level getters/setters
+	const Level& level() const { return m_level; }
+	Level& level() { return m_level; }
+
+	const unsigned short& verbosity() const { return m_verbosity; }
+	unsigned short& verbosity() { return m_verbosity; }
+
+	Writer getActiveStream() { return m_logger; }
+
+	Writer getStream(const Level& level) {
+		if(level <= m_level)
+			return m_logger;
+		return m_empty_logger;
+	}
+
+};
+
+} // End log namespace
 } // End utils namespace
 } // End insieme namespace
+
+#define LOG_PREFIX(Level) ": [" << boost::filesystem::path(__FILE__).leaf() << ":" << __LINE__ << "] "
+
+#define LOG(Level) 	if(insieme::utils::log::Logger::get().level() > Level) ; \
+					else (insieme::utils::log::Logger::get().getActiveStream().logStream << #Level << LOG_PREFIX(Level))
+
+#define VLOG(VerbosityLevel) if(VerbosityLevel > insieme::utils::log::Logger::get().verbosity()) ; \
+							 else (insieme::utils::log::Logger::get().getActiveStream().logStream << "VLOG:" << \
+									 VerbosityLevel << LOG_PREFIX(insieme::utils::log::Logger::get().level()))
+
+#define VLOG_IS_ON(VerbosityLevel)	(VerbosityLevel <= insieme::utils::log::Logger::get().verbosity())
+
+#define LOG_STREAM(Level) (insieme::utils::log::Logger::get().getStream(Level).logStream)
+

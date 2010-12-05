@@ -105,7 +105,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalFuncMap.clear();
 	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
-	DVLOG(1) << globColl;
+	VLOG(1) << globColl;
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
 	if(mFact.ctx.globalStruct.first)
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
@@ -155,24 +155,23 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
     if(!varDecl->hasAttrs())
     	return core::AnnotationPtr();
 
-	const AttrVec attrVec = varDecl->getAttrs();
 	std::ostringstream ss;
 	ocl::BaseAnnotation::AnnotationList declAnnotation;
 	try {
-	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+	for(AttrVec::const_iterator I = varDecl->attr_begin(), E = varDecl->attr_end(); I != E; ++I) {
 		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-			std::string sr = attr->getAnnotation().str();
+			std::string&& sr = attr->getAnnotation().str();
 
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
-				DVLOG(2) << "           OpenCL address space __private";
+				VLOG(2) << "           OpenCL address space __private";
 				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE ));
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
-				DVLOG(2) << "           OpenCL address space __local";
+				VLOG(2) << "           OpenCL address space __local";
 				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL ));
 				continue;
 			}
@@ -183,7 +182,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			if(sr == "__global") {
 				// keywords global and local are only allowed for parameters
 				if(isa<const clang::ParmVarDecl>(varDecl)) {
-					DVLOG(2) << "           OpenCL address space __global";
+					VLOG(2) << "           OpenCL address space __global";
 					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL ));
 					continue;
 				}
@@ -194,7 +193,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			//check if the declaration has attribute __constant
 			if(sr == "__constant") {
 				if(isa<const clang::ParmVarDecl>(varDecl)) {
-					DVLOG(2) << "           OpenCL address space __constant";
+					VLOG(2) << "           OpenCL address space __constant";
 					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));
 					continue;
 				}
@@ -380,11 +379,11 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 
 	// logging
-	DVLOG(1) << "\n****************************************************************************************\n"
+	VLOG(1) << "\n****************************************************************************************\n"
 			 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
 			 << "-> at location: (" << utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang VarDecl: \n"
+		VLOG(2) << "Dump of clang VarDecl: \n"
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		varDecl->dump();
 	}
@@ -439,8 +438,8 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 	}
 	// logging
-	DVLOG(1) << "Converted into IR stmt: ";
-	DVLOG(1) << "\t" << *retStmt;
+	VLOG(1) << "Converted into IR stmt: ";
+	VLOG(1) << "\t" << *retStmt;
 	return retStmt;
 }
 
@@ -449,20 +448,18 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 	//check Attributes of the function definition
 	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 	if(funcDecl->hasAttrs()) {
-		const clang::AttrVec attrVec = funcDecl->getAttrs();
-
-		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+		for(AttrVec::const_iterator I = funcDecl->attr_begin(), E = funcDecl->attr_end(); I != E; ++I) {
+			if(const AnnotateAttr* attr = dyn_cast<const AnnotateAttr>(*I)) {
 				//get annotate string
 				llvm::StringRef sr = attr->getAnnotation();
 
 				//check if it is an OpenCL kernel function
 				if(sr == "__kernel") {
-					DVLOG(1) << "is OpenCL kernel function";
+					VLOG(1) << "is OpenCL kernel function";
 					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
 				}
 			}
-			else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+			else if(const ReqdWorkGroupSizeAttr* attr = dyn_cast<const ReqdWorkGroupSizeAttr>(*I)) {
 				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
 						attr->getXDim(), attr->getYDim(), attr->getZDim())
 				);

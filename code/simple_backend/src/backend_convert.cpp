@@ -46,6 +46,7 @@ namespace insieme {
 namespace simple_backend {
 	
 using namespace core;
+using namespace utils::log;
 
 ConversionContext::ConversionContext(const NodePtr& target)
 	 : typeMan(nameGen), funcMan(*this), nodeManager(target->getNodeManager()), basic(nodeManager.basic) { }
@@ -419,7 +420,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	int i=0;
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
 		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
-			DLOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
+			LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
 		// print argument of ref.var
@@ -453,7 +454,7 @@ void ConvertVisitor::visitMarkerStmt(const MarkerStmtPtr& ptr) {
 const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
 	auto pos = variableMap.find(variable);
 	if(pos == variableMap.end())
-		DLOG(INFO) << "v" << variable->getId();
+		LOG(INFO) << "v" << variable->getId();
 	assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
 	return (*pos).second;
 }

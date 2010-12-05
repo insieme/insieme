@@ -39,19 +39,6 @@
 namespace insieme {
 namespace utils {
 
-void InitLogger(const char* progName, google::LogSeverity level, bool enableFailureHandler) {
-	// Configure the logger
-	InitGoogleLogging(progName);
-
-	//FIXME: InstallFailureSignalHandler does not link in Visual Studios
-	if(enableFailureHandler)
-		InstallFailureSignalHandler();
-
-	// force logging to stderr
-	LogToStderr();
-	// Set severity level
-	SetStderrLogging(level);
-}
 
 } // End utils namespace
 } // End insieme namespace

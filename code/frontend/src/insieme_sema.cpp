@@ -50,6 +50,7 @@
 using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::utils;
+using namespace insieme::utils::log;
 
 typedef std::list<PragmaPtr> PendingPragmaList;
 
@@ -133,7 +134,7 @@ const char* strbchr(const char* stream, char c) {
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr) {
-	DVLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+	VLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
 
 	/*
 	 * when pragmas are just after the beginning of a compound stmt, example:
@@ -249,7 +250,7 @@ void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, co
 clang::StmtResult
 InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal,
 		clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
-	DVLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
+	VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret = Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
 
 	IfStmt* ifStmt = static_cast<IfStmt*>( ret.get() );
@@ -273,7 +274,7 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 clang::StmtResult
 InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First, clang::Sema::FullExprArg Second,
 		clang::Decl* SecondVar, clang::Sema::FullExprArg Third, clang::SourceLocation RParenLoc, clang::Stmt* Body) {
-	DVLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
+	VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
 
 	ForStmt* forStmt = (ForStmt*) ret.get();
@@ -298,7 +299,7 @@ clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, cla
 }
 
 clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body) {
-	DVLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
+	VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
 	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, clang::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
 
@@ -351,7 +352,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //}
 
 clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D) {
-	DVLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
+	VLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
 
 	clang::Decl* ret = Sema::ActOnDeclarator(S, D);
 	if (isInsideFunctionDef)
@@ -377,7 +378,7 @@ clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D)
 }
 
 void InsiemeSema::ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc) {
-	DVLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
+	VLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
 
 	Sema::ActOnTagFinishDefinition(S, TagDecl, RBraceLoc);
 	PragmaList matched;
@@ -403,9 +404,9 @@ void InsiemeSema::dump() {
 //Visual Studios 2010 fix: Release mode (without debug) evaluates DLOG(INFO) to "(void) 0"
 #ifndef NDEBUG
 	if(VLOG_IS_ON(2)) {
-		DVLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
+		VLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 		for (PragmaList::iterator I = pimpl->pragma_list.begin(), E = pimpl->pragma_list.end(); I != E; ++I)
-			(*I)->dump(DLOG(INFO), SourceMgr);
+			(*I)->dump(LOG_STREAM(INFO), SourceMgr);
 	}
 #endif
 }
