@@ -23,8 +23,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
         };
         {
-            for(decl ref<int<4>> v9 =  var(1) .. 15 : 3) {
-                printf("a=%d\n", varlist.pack((v9)));
+            for(decl ref<int<4>> v16 =  var(1) .. 15 : 3) {
+                printf("a=%d\n", varlist.pack((v16)));
             };
             v4 := 1+ceil(15-1/3)*3;
         };
@@ -76,8 +76,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
         };
         {
-            for(decl ref<int<4>> v9 = ( var(1)) .. 15 : 3) {
-                printf("a=%d\n", varlist.pack((( *v9))));
+            for(decl ref<int<4>> v16 = ( var(1)) .. 15 : 3) {
+                printf("a=%d\n", varlist.pack((( *v16))));
             };
             (v4 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((15-1))/CAST<real<8>>(3))))*3)));
         };

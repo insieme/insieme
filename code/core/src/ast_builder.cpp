@@ -102,6 +102,10 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefVar(), subExpr);
 }
 
+CallExprPtr ASTBuilder::refNew(const ExpressionPtr& subExpr) const {
+	return callExpr(refType(subExpr->getType()), manager.basic.getRefNew(), subExpr);
+}
+
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
 			castExpr(subExpr->getType(), literal("0", manager.basic.getInt4())), subExpr);
@@ -215,7 +219,7 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	// modify body to take vector iteration variable
 	auto pforLambdaParam = variable(vectorType(loopvar->getType(), IntTypeParam::getConcreteIntParam(1)));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, loopvar, 
-		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(1))));
+		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(0))));
 	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
 	auto initExp = decl->getInitialization();
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());

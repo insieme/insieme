@@ -152,13 +152,16 @@ TEST(Manipulation, InsertBefore) {
 
 	NodePtr res;
 	CompoundStmtAddress target(compound);
-	res = transform::insertBefore(manager, target, stmt, aLit);
+	auto childAddr = static_address_cast<const Statement>(target.getAddressOfChild(0));
+	res = transform::insertBefore(manager, childAddr, stmt);
 	EXPECT_EQ("{X; A; B; C;}", toString(*res));
 
-	res = transform::insertBefore(manager, target, stmt, bLit);
+	childAddr = static_address_cast<const Statement>(target.getAddressOfChild(1));
+	res = transform::insertBefore(manager, childAddr, stmt);
 	EXPECT_EQ("{A; X; B; C;}", toString(*res));
 
-	res = transform::insertBefore(manager, target, stmt, cLit);
+	childAddr = static_address_cast<const Statement>(target.getAddressOfChild(2));
+	res = transform::insertBefore(manager, childAddr, stmt);
 	EXPECT_EQ("{A; B; X; C;}", toString(*res));
 }
 
@@ -182,13 +185,16 @@ TEST(Manipulation, InsertAfter) {
 
 	NodePtr res;
 	CompoundStmtAddress target(compound);
-	res = transform::insertAfter(manager, target, stmt, aLit);
+	auto childAddr = static_address_cast<const Statement>(target.getAddressOfChild(0));
+	res = transform::insertAfter(manager, childAddr, stmt);
 	EXPECT_EQ("{A; X; B; C;}", toString(*res));
 
-	res = transform::insertAfter(manager, target, stmt, bLit);
+	childAddr = static_address_cast<const Statement>(target.getAddressOfChild(1));
+	res = transform::insertAfter(manager, childAddr, stmt);
 	EXPECT_EQ("{A; B; X; C;}", toString(*res));
 
-	res = transform::insertAfter(manager, target, stmt, cLit);
+	childAddr = static_address_cast<const Statement>(target.getAddressOfChild(2));
+	res = transform::insertAfter(manager, childAddr, stmt);
 	EXPECT_EQ("{A; B; C; X;}", toString(*res));
 }
 

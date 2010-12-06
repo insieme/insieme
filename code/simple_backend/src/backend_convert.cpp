@@ -39,6 +39,7 @@
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/logging.h"
 
@@ -453,8 +454,9 @@ void ConvertVisitor::visitMarkerStmt(const MarkerStmtPtr& ptr) {
 
 const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
 	auto pos = variableMap.find(variable);
-	if(pos == variableMap.end())
+	if(pos == variableMap.end()) {
 		LOG(INFO) << "v" << variable->getId();
+	}
 	assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
 	return (*pos).second;
 }
@@ -651,20 +653,34 @@ namespace detail {
 
 		ADD_FORMATTER(basic.getArrayCreate1D(), {
 
-				// ensure array is randomly initialized
-				assert(core::analysis::isCallOf(ARG(0), basic.getRefVar()) && "Non-ref initalization of arrays not supported yet!" );
-				ExpressionPtr initValue = static_pointer_cast<const CallExpr>(ARG(0))->getArguments()[0];
-				assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
+				// test whether the size is fixed to 1
+				if (ARG(1)->getNodeType() == NT_Literal && static_pointer_cast<const Literal>(ARG(1))->getValue() == "1") {
+					// special handling of arrays with a single element
+					ASTBuilder builder(call->getNodeManager());
+					NodePtr init = ARG(0);
+					if (core::analysis::isCallOf(init, basic.getRefVar())) {
+						init = builder.refNew(static_pointer_cast<const CallExpr>(init)->getArguments()[0]);
+						visitor.visit(init);
+					} else {
+						visitor.visit(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
+					}
 
-				// all arrays are allocated on the HEAP
-				OUT("malloc(");
-				OUT("sizeof(");
-				TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
-				OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
-				OUT(")*");
-				VISIT_ARG(1);
-				OUT(")");
+				} else {
 
+					// ensure array is randomly initialized
+					assert(core::analysis::isCallOf(ARG(0), basic.getRefVar()) && "Non-ref initalization of arrays not supported yet!" );
+					ExpressionPtr initValue = static_pointer_cast<const CallExpr>(ARG(0))->getArguments()[0];
+					assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
+
+					// all arrays are allocated on the HEAP
+					OUT("malloc(");
+					OUT("sizeof(");
+					TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
+					OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
+					OUT(")*");
+					VISIT_ARG(1);
+					OUT(")");
+				}
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArraySubscript1D(), false, {

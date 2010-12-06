@@ -202,7 +202,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	CodeStream& out = functorAndCaller->getCodeStream();
 
 	auto elementPrinter = [&](std::ostream& out, const TypePtr& cur) {
-		out << getTypeName(functorAndCaller, cur);
+		out << getTypeName(functorAndCaller, cur, true);
 	};
 
 	// A) add abstract functor definition
@@ -213,7 +213,7 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	out << "    " << getTypeName(functorAndCaller, functionType->getReturnType()) << "(*fun)(" << "void*";
 	auto arguments = functionType->getArgumentTypes();
 	if (!arguments.empty()) {
-		out << "," << join(",", arguments, elementPrinter);
+		out << ", " << join(", ", arguments, elementPrinter);
 	}
 	out << ");\n";
 	// add field for size of concrete type
@@ -241,14 +241,14 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 		out << " " << callerName << "(struct " << name << "* lambda";
 		int i = 0;
 		if (!arguments.empty()) {
-			out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-				out << formatParamter(functorAndCaller, cur, format("p%d", ++i));
+			out << ", " << join(", ", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+				out << formatParamter(functorAndCaller, cur, format("p%d", ++i), true);
 			});
 		}
 		out << ") { return lambda->fun(lambda";
 		i = 0;
 		if (!arguments.empty()) {
-			out << "," << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << ", " << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
 				out << format("p%d", ++i);
 			});
 		}
@@ -279,6 +279,14 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 }
 
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
+	auto& basic = ptr->getNodeManager().basic;
+
+	// special handling for void* type (array<ref<'a>>)
+	if(ptr->getNodeType() == NT_ArrayType && basic.isRefAlpha(static_pointer_cast<const ArrayType>(ptr)->getElementType())) {
+		return toEntry("void*");
+	}
+
+
 	return resolveRefOrVectorOrArrayType(ptr);
 }
 

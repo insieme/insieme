@@ -253,11 +253,13 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 		auto fit = ctx.derefMap.find(ident);
 		if(fit != ctx.derefMap.end()) {
 			// there is an array wrapping this filed, add a [0] operation
-			core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(retExpr->getType());
-			assert(subTy);
+			// the type is array<ref<vector<'a>>
+			core::SingleElementTypePtr subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
+			retExpr = builder.deref(retExpr);
+			subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
 
 			return builder.callExpr( subTy->getElementType(),
-					builder.getBasicGenerator().getArraySubscript1D(), builder.deref(retExpr), builder.literal("0", mgr.basic.getUInt4()) );
+					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
 		}
 		return retExpr;
 	}
@@ -330,19 +332,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	assert(unionTy); // silent compiler warning
 	}
 
-    //----------------  INTIALIZE VECTORS ---------------------------------
-//    const Type* elemTy = NULL;
-//    size_t arraySize = 0;
-//    if ( ty->isExtVectorType() ) {
-//    	const TypedefType* typedefType = dyn_cast<const TypedefType>(ty);
-//        assert(typedefType && "ExtVectorType has unexpected class");
-//        const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
-//        assert(vecTy && "ExtVectorType has unexpected class");
-//
-//        elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
-//		arraySize = vecTy->getNumElements();
-//    }
-
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
@@ -375,8 +364,9 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	} else if (!expr)
 		return defaultInitVal(type);
 
-	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
+	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
 		return convertInitializerList( listExpr, type );
+	}
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
