@@ -196,7 +196,7 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 			if(it->first->getInit()) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
 				initExpr = fact.convertInitExpr(it->first->getInit(), entryType->getElementType(), false);
-				if(addPtr) {
+				if(addPtr && !fact.getASTBuilder().getBasicGenerator().isNullPtr(entryType->getElementType())) {
 					initExpr = fact.getASTBuilder().callExpr(entryType, fact.getASTBuilder().getBasicGenerator().getArrayCreate1D(),
 							fact.getASTBuilder().refVar(initExpr),
 							fact.getASTBuilder().literal("1", fact.getASTBuilder().getBasicGenerator().getInt4()));

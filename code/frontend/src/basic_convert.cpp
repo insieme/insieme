@@ -285,7 +285,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	if( *type == *mgr.basic.getAlpha() ) {
+	if( mgr.basic.isRefAlpha(type) || mgr.basic.isNullPtr(type)) {
 		return mgr.basic.getNull();
 	}
 	// handle integers initialization

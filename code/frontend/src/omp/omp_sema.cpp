@@ -95,13 +95,13 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 			} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
 				newNode = handleFor(stmt, forAnn);
 			} else if(auto barrierAnn = std::dynamic_pointer_cast<Barrier>(subAnn)) {
-				auto parent = mark.getParentNodeAddress();
-				auto surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
-				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
-				StatementList replacements;
-				replacements.push_back(build.barrier());
-				replacements.push_back(mark->getSubStatement());
-				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements, true));
+//				auto parent = mark.getParentNodeAddress();
+//				CompoundStmtPtr&& surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
+//				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
+//				StatementList replacements;
+//				replacements.push_back(build.barrier());
+//				replacements.push_back(mark->getSubStatement());
+//				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements, true));
 				return;
 			}
 			else assert(0 && "Unhandled OMP annotation.");
