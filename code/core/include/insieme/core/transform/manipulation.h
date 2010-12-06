@@ -80,38 +80,72 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	bool preservePtrAnnotationsWhenModified = false);
 
 /**
- * A utility function to insert a statement within a compound statement block.
+ * A utility function to insert a statement before another statement.
+ * If the target statement is contained within a compound statement the supplied statement will be inserted,
+ * otherwise a new compound statement will be generated
  *
  * @param manager the manager used to create new nodes
- * @param target the compound statement within which the element should be inserted
+ * @param target The statement before which the new statement should be inserted
  * @param statement the statement to be inserted
- * @param beforeStatement the existing statement before which the new statement should be inserted
  * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
  * 				get a copy of the annotations of the original node by default, this feature is disabled
  * 				and it should be used with care. In case on of the resulting nodes is already present
  * 				within the manager, the present node and its version of the annotations will be preserved
  * 				and returned.
- * @return the root node of the modified AST tree (according to the root of the address)
+ * @return the root node of the modified AST tree (according to the root of the target address)
  */
-NodePtr insertBefore(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, const StatementPtr& beforeStatement, 
-	bool preservePtrAnnotationsWhenModified = false);
+NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified = false);
 
 /**
- * A utility function to insert a statement within a compound statement block.
+ * A utility function to insert a list of statements before another statement.
+ * If the target statement is contained within a compound statement the supplied statements will be inserted,
+ * otherwise a new compound statement will be generated
  *
  * @param manager the manager used to create new nodes
- * @param target the compound statement within which the element should be inserted
- * @param statement the statement to be inserted
- * @param afterStatement the existing statement after which the new statement should be inserted
+ * @param target The statement before which the new statement should be inserted
+ * @param statements the statements to be inserted
  * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
  * 				get a copy of the annotations of the original node by default, this feature is disabled
  * 				and it should be used with care. In case on of the resulting nodes is already present
  * 				within the manager, the present node and its version of the annotations will be preserved
  * 				and returned.
- * @return the root node of the modified AST tree (according to the root of the address)
+ * @return the root node of the modified AST tree (according to the root of the target address)
  */
-NodePtr insertAfter(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, const StatementPtr& afterStatement, 
-	bool preservePtrAnnotationsWhenModified = false);
+NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function to insert a statement after another statement.
+ * If the target statement is contained within a compound statement the supplied statement will be inserted,
+ * otherwise a new compound statement will be generated
+ *
+ * @param manager the manager used to create new nodes
+ * @param target The statement after which the new statement should be inserted
+ * @param statement the statement to be inserted
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the target address)
+ */
+NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified = false);
+
+/**
+ * A utility function to insert a list of statements after another statement.
+ * If the target statement is contained within a compound statement the supplied statements will be inserted,
+ * otherwise a new compound statement will be generated
+ *
+ * @param manager the manager used to create new nodes
+ * @param target The statement before which the new statement should be inserted
+ * @param statements the statements to be inserted
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ * @return the root node of the modified AST tree (according to the root of the target address)
+ */
+NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified = false);
 
 /**
  * A utility function to remove a statement from a compound statement block.
@@ -215,6 +249,9 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root,
  ** */
 CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified = false,
 	std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
+
+LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize, 
+	bool preservePtrAnnotationsWhenModified = false);
 
 } // end namespace transform
 } // end namespace core

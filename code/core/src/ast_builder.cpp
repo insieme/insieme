@@ -215,7 +215,7 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	// modify body to take vector iteration variable
 	auto pforLambdaParam = variable(vectorType(loopvar->getType(), IntTypeParam::getConcreteIntParam(1)));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, loopvar, 
-		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(1))));
+		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(0))));
 	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
 	auto initExp = decl->getInitialization();
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
