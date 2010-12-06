@@ -10,19 +10,19 @@ fun(){
             return v3;
         }();
         {
-            for(decl ref<int<4>> v9 =  var(0) .. 10 : 1) {
-                printf("Pushing %d\n", varlist.pack((v9)));
+            for(decl ref<int<4>> v20 =  var(0) .. 10 : 1) {
+                printf("Pushing %d\n", varlist.pack((v20)));
                 fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v5, int<4> v6){
                     decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v7 =  new(array.create.1D( var(undefined(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})), sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})/sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})));
                     v7[0].value := v6;
                     v7[0].next := v5[0].top;
                     v5[0].top := v7;
-                }(v2, v9);
+                }(v2, v20);
             };
             v1 := 0+ceil(10-0/1)*1;
         };
         {
-            for(decl ref<int<4>> v14 =  var(0) .. 5 : 1) {
+            for(decl ref<int<4>> v21 =  var(0) .. 5 : 1) {
                 printf("Poping  %d\n", varlist.pack((fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v10){
                     if(!v10[0].top) {
                         return 0-1;
@@ -65,19 +65,19 @@ fun(){
             return ( *v3);
         }());
         {
-            for(decl ref<int<4>> v9 = ( var(0)) .. 10 : 1) {
-                printf("Pushing %d\n", varlist.pack((( *v9))));
+            for(decl ref<int<4>> v20 = ( var(0)) .. 10 : 1) {
+                printf("Pushing %d\n", varlist.pack((( *v20))));
                 fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v5, int<4> v6){
                     decl ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>> v7 = ( new(array.create.1D(( var(undefined(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}))), (sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})/sizeof(rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>})))));
                     (( *(( *v7)[0])).value := v6);
                     (( *(( *v7)[0])).next := ( *( *(v5[0])).top));
                     (( *(v5[0])).top := ( *v7));
-                }(( *v2), ( *v9));
+                }(( *v2), ( *v20));
             };
             (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((10-0))/CAST<real<8>>(1))))*1)));
         };
         {
-            for(decl ref<int<4>> v14 = ( var(0)) .. 5 : 1) {
+            for(decl ref<int<4>> v21 = ( var(0)) .. 5 : 1) {
                 printf("Poping  %d\n", varlist.pack((fun(array<ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>,1> v10){
                     if((!CAST<bool>(( *( *(v10[0])).top)))) {
                         return (CAST<int<4>>(0)-1);

@@ -364,8 +364,9 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	} else if (!expr)
 		return defaultInitVal(type);
 
-	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
+	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
 		return convertInitializerList( listExpr, type );
+	}
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 

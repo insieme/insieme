@@ -23,7 +23,7 @@ struct stack {
 };
 
 // start code fragment :: Definition of newStack //
-struct stack* newStack() {
+struct stack** newStack() {
 	{
 		struct stack* res = (malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack))));
 		((((((res)[0])).top)) = null);
@@ -87,14 +87,14 @@ int main() {
 		struct stack* stack;
 		((stack) = newStack());
 		{
-			for(int var_9 = 0; var_9 < 10; var_9 += 1) {
-				printf("Pushing %d\n", (var_9));
-				push((stack), (var_9));
+			for(int var_20 = 0; var_20 < 10; var_20 += 1) {
+				printf("Pushing %d\n", (var_20));
+				push((stack), (var_20));
 			};
 			((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
 		};
 		{
-			for(int var_14 = 0; var_14 < 5; var_14 += 1) {
+			for(int var_21 = 0; var_21 < 5; var_21 += 1) {
 				printf("Poping  %d\n", pop((stack)));
 			};
 			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
