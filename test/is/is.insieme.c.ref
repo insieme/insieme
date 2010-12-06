@@ -578,7 +578,7 @@ int main(int argc, char** argv) {
 			0.0,
 			0.0,
 			0.0,
-			(memcpy(malloc(sizeof(int)), &((int)0), sizeof(int))),
+			null,
 			0,
 			(calloc(sizeof(int[1048576]), 1)),
 			(calloc(sizeof(int[1048576]), 1)),
