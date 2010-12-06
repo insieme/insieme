@@ -34,37 +34,60 @@
  * regarding third party software licenses.
  */
 
+#include <vector>
+#include <iostream>
+#include <memory>
+
+#include <gtest/gtest.h>
+
 #include "insieme/opencl_backend/opencl_convert.h"
 
-namespace insieme {
-namespace backend {
-namespace ocl {
+#include "insieme/core/program.h"
+#include "insieme/core/ast_builder.h"
 
-using namespace core;
+#include "insieme/utils/set_utils.h"
+
+#include "insieme/c_info/naming.h"
+
+using namespace insieme::core;
+using namespace insieme::core::lang;
+using namespace insieme::c_info;
+using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
+using namespace insieme::backend::ocl;
 
-OclConvertVisitor::OclConvertVisitor(OclConversionContext& conversionContext) : ConvertVisitor(conversionContext) { }
+ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
-void OclConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
-	// just print strange literal
-	cStr << ptr->getValue() << "_OK";
+	BasicGenerator typeGen(build.getNodeManager());
+
+	TypeList printfArgType = toVector<TypePtr>(build.refType(typeGen.getChar()), typeGen.getVarList());
+	TypePtr unitType = typeGen.getUnit();
+	TypePtr printfType = build.functionType(printfArgType, unitType);
+
+	auto printfDefinition = build.literal("printf", printfType);
+
+	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
+
+	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
+	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
+	auto mainBody = build.compoundStmt(invocation);
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
+
+	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
+
+	return build.createProgram(
+		toSet<Program::EntryPointSet>(mainLambda)
+	);
 }
 
+TEST(OpenCLBackend, Basic) {
 
-OclConversionContext::OclConversionContext(const NodePtr& target) : ConversionContext(target){ }
-	
-ConvertedCode OclConversionContext::convert(const core::ProgramPtr& prog) {
-	ConvertedCode converted(prog);
-	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
-		OclConvertVisitor oclConvVisitor(*this);
-		oclConvVisitor.visit(ep);
-		CodePtr ptr = oclConvVisitor.getCode();
-		ptr->setDummy(true);
-		converted.insert(std::make_pair(ep, ptr));
-	});
-	return converted;
+	ASTBuilder build;
+	ProgramPtr prog = setupSampleProgram(build);
+
+	OclConversionContext cc(prog);
+
+	std::cout << "Start OpenCL visit\n";
+	auto converted = cc.convert(prog);
+	std::cout << "Converted code:\n" << converted;
 }
-
-} // namespace ocl
-} // namespace backend
-} // namespace insieme

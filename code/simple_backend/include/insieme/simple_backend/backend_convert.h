@@ -234,8 +234,11 @@ class ConvertVisitor : public ASTVisitor<> {
 	NameGenerator& nameGen;
 	VariableManager& varManager;
 	CodePtr defCodePtr;
-	CodeStream& cStr;
 	
+protected:
+	CodeStream& cStr;
+
+private:	
 	/**
 	 * The table handling operator specific formatting rules.
 	 */

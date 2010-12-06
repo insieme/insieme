@@ -707,7 +707,7 @@ XmlElementPtr XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::D
 	if(fit != IrToDomConvertMap.end()) {
 		return (fit->second)(ann, doc);
 	}
-	DLOG(WARNING) << "Annotation \"" << type << "\" is not registred for Xml_write!";
+	LOG(log::WARNING) << "Annotation \"" << type << "\" is not registred for Xml_write!";
 	return shared_ptr<XmlElement>();
 }
 

@@ -48,8 +48,8 @@
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/rewrite.h"
 
-#include "insieme/opencl_backend/opencl_convert.h"
-#include "insieme/opencl_backend/opencl_checker.h"
+// #include "insieme/opencl_backend/opencl_convert.h"
+// #include "insieme/opencl_backend/opencl_checker.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -67,6 +67,8 @@
 #include "insieme/xml/xml_utils.h"
 
 using namespace std;
+using namespace insieme::utils::log;
+
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace xml = insieme::xml;
@@ -74,7 +76,7 @@ namespace xml = insieme::xml;
 int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
-	insieme::utils::InitLogger(argv[0], INFO, true);
+	Logger::get(std::cerr, DEBUG);
 
 	LOG(INFO) << "Insieme compiler";
 
@@ -152,7 +154,7 @@ int main(int argc, char** argv) {
 				std::fstream dotFile(CommandLineOptions::ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
 				insieme::driver::printDotGraph(program, errors, dotFile);
 				timer.stop();
-				DLOG(INFO) << timer;
+				LOG(INFO) << timer;
 			}
 
 			// XML dump
@@ -195,7 +197,7 @@ int main(int argc, char** argv) {
 		}
 
 		if (CommandLineOptions::OpenCL) {
-			LOG(INFO) << "Converting to OpenCL ... ";
+			/*LOG(INFO) << "Converting to OpenCL ... ";
 
 			insieme::opencl_backend::OpenCLChecker oc;
 			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "CHECKED" : "WRONG");
@@ -203,7 +205,7 @@ int main(int argc, char** argv) {
 			insieme::opencl_backend::ConversionContext cc;
 			auto converted = cc.convert(program);
 			// TODO write to output file
-			std::cout << converted;
+			std::cout << converted;*/
 		} else {
 			insieme::utils::Timer timer("Simple.Backend");
 
@@ -224,6 +226,5 @@ int main(int argc, char** argv) {
 		cerr << "Error while parsing input file: " << e.what() << endl;
 	}
 
-	ShutdownGoogleLogging();
 }
 

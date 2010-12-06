@@ -44,7 +44,7 @@
 #include "insieme/simple_backend/backend_convert.h"
 
 namespace {
-
+using namespace insieme::utils::log;
 using namespace insieme::backend;
 
 // Applies modification hints to the target file.
@@ -184,18 +184,18 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 	// Rewrite the original files with the new modifications
 	CodeModificationList::const_iterator it = list.begin();
 	while(it != list.end()) {
-		DVLOG(1) << "==== Rewriting compilation unit: " << it->getFileName() << " =================";
+		VLOG(1) << "==== Rewriting compilation unit: " << it->getFileName() << " =================";
 		rewriterFile(it, list.end());
 	}
 
-	DVLOG(1) << "==== Writing insieme file : " << insiemeFileName << " =================";
+	VLOG(1) << "==== Writing insieme file : " << insiemeFileName << " =================";
 	// Write the insieme file contaning the insieme handled code
 	insieme::simple_backend::ConversionContext convCtx(program);
 	auto converted = convCtx.convert(program);
 	std::fstream outFile(insiemeFileName.c_str(), std::fstream::out | std::fstream::trunc);
 	outFile << converted;
 
-	DVLOG(1) << "Write back completed!";
+	VLOG(1) << "Write back completed!";
 }
 
 } // end backend namespace

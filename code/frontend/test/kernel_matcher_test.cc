@@ -173,25 +173,25 @@ const Attr* parseAttribute(const Attr* attr)
     switch(attr->getKind()){
     case attr::Kind::Annotate:
     {
-        const clang::AnnotateAttr* aa = (const AnnotateAttr*)attr;
-        llvm::StringRef sr = aa->getAnnotation();
+        const clang::AnnotateAttr* aa = cast<const AnnotateAttr>(attr);
+        llvm::StringRef&& sr = aa->getAnnotation();
         std::cout << "annotation: " << sr.str() << std::endl;
         return aa;
     }
     case attr::Kind::ReqdWorkGroupSize:
     {
-        const ReqdWorkGroupSizeAttr* rwgsa = (const ReqdWorkGroupSizeAttr*)attr;
+        const ReqdWorkGroupSizeAttr* rwgsa = cast<const ReqdWorkGroupSizeAttr>(attr);
         std::cout << "ReqdWorkGroupSize: "  << rwgsa->getXDim() << rwgsa->getYDim() << rwgsa->getZDim() << std::endl;
         return rwgsa;
     }
     case attr::Kind::Packed:
     {
         std::cout << "Packed" << std::endl;
-        return (const PackedAttr*)attr;
+        return cast<const PackedAttr>(attr);
     }
     case attr::Kind::Aligned:
     {
-        const AlignedAttr* aa = (const AlignedAttr*)attr;
+        const AlignedAttr* aa = cast<const AlignedAttr>(attr);
         // std::cout << "Aligned: "  << aa->getAlignment() << std::endl;
         return aa;
     }
@@ -437,30 +437,26 @@ TEST(KernelMatcherTest, ReadAttributes) {
     clang::DeclContext* declRef = clang::TranslationUnitDecl::castToDeclContext(ctx.getTranslationUnitDecl());
 
     for(clang::DeclContext::decl_iterator I = declRef->decls_begin(), E = declRef->decls_end(); I != E; ++I) {
-        if(isa<clang::FunctionDecl> (*I)) {
+        if( clang::FunctionDecl* func_decl = dyn_cast<clang::FunctionDecl>(*I)) {
             //continue; // skip non function declarations
 
-            // Top-level Function declaration
-            clang::FunctionDecl* func_decl = dyn_cast<clang::FunctionDecl>(*I);
-
-            //parse only the kernlel function kfct
-            if(!func_decl->getName().equals(llvm::StringRef("kfct")))
-                continue;
+			//parse only the kernlel function kfct
+			if(func_decl->getName() != "kfct")
+				continue;
 
             //Function declaration should have RequiredWorkGroupSize(1,2,3) and annotate("__kernel") attribute
             EXPECT_TRUE(func_decl->hasAttrs());
             if(func_decl->hasAttrs()) {
-                const clang::AttrVec attrVec = func_decl->getAttrs();
+                const clang::AttrVec& attrVec = func_decl->getAttrs();
                 EXPECT_EQ(static_cast<unsigned>(2), attrVec.size());
                 Attr* attr = attrVec[0];
 //                std::cout << kindStr[attr->getKind()] << std::endl;
 //                parseAttribute(attr);
                 EXPECT_EQ(attr::Kind::ReqdWorkGroupSize, attr->getKind());
-                if(attr->getKind() == attr::Kind::ReqdWorkGroupSize)
-                {
-                    EXPECT_EQ(static_cast<unsigned>(1), ((const ReqdWorkGroupSizeAttr*)attr)->getXDim());
-                    EXPECT_EQ(static_cast<unsigned>(2), ((const ReqdWorkGroupSizeAttr*)attr)->getYDim());
-                    EXPECT_EQ(static_cast<unsigned>(3), ((const ReqdWorkGroupSizeAttr*)attr)->getZDim());
+                if(const ReqdWorkGroupSizeAttr* reqAttr = dyn_cast<const ReqdWorkGroupSizeAttr>(attr)) {
+                    EXPECT_EQ(static_cast<unsigned>(1), reqAttr->getXDim());
+                    EXPECT_EQ(static_cast<unsigned>(2), reqAttr->getYDim());
+                    EXPECT_EQ(static_cast<unsigned>(3), reqAttr->getZDim());
                 }
 
                 //get annotate string

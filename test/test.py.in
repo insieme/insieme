@@ -35,9 +35,9 @@ def run_cmd(cmd):
 def check_for_error(test_case, ret):
     if ret is not None:
         sys.stderr.write(bcolors.FAIL + '@ {0}: [FAILED]'.format(test_case) + bcolors.ENDC + '\n')
-        sys.stderr.write(bcolors.FAIL + "@------------------ start cause --------------------\n" + bcolors.ENDC)
+        sys.stderr.write(bcolors.FAIL + "@------------------ start cause --------------------" + bcolors.ENDC + "\n")
         sys.stderr.write(ret)
-        sys.stderr.write(bcolors.FAIL + "@------------------- end cause ---------------------\n\n" + bcolors.ENDC)
+        sys.stderr.write(bcolors.FAIL + "@------------------- end cause ---------------------" + bcolors.ENDC + "\n\n")
         return True
     return False
     
@@ -74,13 +74,13 @@ def run_test(test_case_name, test_num):
 
 	if not os.path.exists(refIr):
 	  shutil.copyfile(testIr, refIr)
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 	sys.stderr.write(" * Comparing generated IR...            ")
 	if not check_diff(test_case_name, refIr, testIr):
 		os.chdir("../")
 		return 1
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 	if not os.path.exists(refC):
 	  shutil.copyfile(testC, refC)
@@ -89,7 +89,7 @@ def run_test(test_case_name, test_num):
 	if not check_diff(test_case_name, refC, testC):
 		os.chdir("../")
 		return 1
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 	# file containing the output of the reference program
 	ref_out = "ref.out"
@@ -108,7 +108,7 @@ def run_test(test_case_name, test_num):
 	if check_for_error(test_case_name, ret):
 		os.chdir("../")
 		return 1
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 	sys.stderr.write(" * Running input program...             ")
 	start = time.time()
@@ -124,11 +124,11 @@ def run_test(test_case_name, test_num):
 	if not check_diff(test_case_name, ref_out, test_out):
 		os.chdir("../")
 		return 1
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success.\n" + bcolors.ENDC)
+	sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
 
 	map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
 
-	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]\n" + bcolors.ENDC)
+	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 	os.chdir("../")
 	return 0
 

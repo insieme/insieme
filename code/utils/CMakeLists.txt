@@ -18,7 +18,6 @@ include_directories(include)
 # build the utils library
 add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_incs} )
 target_link_libraries(insieme_utils ${Boost_LIBRARIES})
-target_link_libraries(insieme_utils ${glog_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)

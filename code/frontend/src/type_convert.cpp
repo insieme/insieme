@@ -103,17 +103,17 @@ namespace conversion {
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 #define START_LOG_TYPE_CONVERSION(type) \
-	DVLOG(1) << "\n****************************************************************************************\n" \
+	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting type [class: '" << (type)->getTypeClassName() << "']"; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang type: \n" \
+		VLOG(2) << "Dump of clang type: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		type->dump(); \
 	}
 
 #define END_LOG_TYPE_CONVERSION(type) \
-	DVLOG(1) << "Converted 'type' into IR type: "; \
-	DVLOG(1) << "\t" << *type;
+	VLOG(1) << "Converted 'type' into IR type: "; \
+	VLOG(1) << "\t" << *type;
 
 
 //#############################################################################
@@ -614,8 +614,12 @@ private:
 	}
 };
 
-ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConverter(ConversionFactory& fact) {
-	return new ClangTypeConverter(fact);
+ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact) {
+	return new ConversionFactory::ClangTypeConverter(fact);
+}
+
+void ConversionFactory::cleanTypeConvert(ClangTypeConverter* typeConv) {
+	delete typeConv;
 }
 
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) {

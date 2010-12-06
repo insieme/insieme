@@ -81,6 +81,11 @@ core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const Stat
 	return builder.compoundStmt(stmtVect);
 }
 
+core::ExpressionPtr makeOperation(const core::ASTBuilder& builder, const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs,
+		const core::lang::BasicGenerator::Operator& op) {
+	return builder.callExpr(lhs->getType(), builder.getBasicGenerator().getOperator(lhs->getType(), op), toVector<core::ExpressionPtr>(lhs, rhs));
+}
+
 }
 
 namespace insieme {
@@ -96,18 +101,18 @@ namespace conversion {
 
 #define START_LOG_STMT_CONVERSION(stmt) \
 	assert(convFact.currTU); \
-	DVLOG(1) << "\n****************************************************************************************\n" \
+	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
 			 << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang statement:\n" \
+		VLOG(2) << "Dump of clang statement:\n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
 		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
 	}
 
 #define END_LOG_STMT_CONVERSION(stmt) \
-	DVLOG(1) << "Converted 'statement' into IR stmt: "; \
-	DVLOG(1) << "\t" << *stmt;
+	VLOG(1) << "Converted 'statement' into IR stmt: "; \
+	VLOG(1) << "\t" << *stmt;
 
 
 //#############################################################################
@@ -271,7 +276,7 @@ public:
 
 				// we have to define a new induction variable for the loop and replace every
 				// instance in the loop with the new variable
-				DVLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
+				VLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
 						<< " with variable: v" << newIndVar->getId();
 
 				// Initialize the value of the new induction variable with the value of the old one
@@ -312,21 +317,16 @@ public:
 			}
 
 			if(loopAnalysis.isInverted()) {
-				VLOG(2) << "Inverting loop";
 				// invert init value
 				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
 				declStmt = builder.declarationStmt( declStmt->getVariable(), builder.refVar(invInitExpr) );
-				DLOG(INFO) << *declStmt;
-				DLOG(INFO) << *declStmt->getVariable()->getType();
 				assert(declStmt->getVariable()->getType()->getNodeType() == core::NT_RefType);
 
 				// invert the sign of the loop index in body of the loop
 				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
-				VLOG(2) << "done";
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
 						inductionVar, true);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-				VLOG(2) << "done";
 			}
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
@@ -350,12 +350,29 @@ public:
 				core::FunctionTypePtr&& ceilTy =
 						builder.functionType(toVector<core::TypePtr>(convFact.mgr.basic.getDouble()), convFact.mgr.basic.getDouble());
 
-				core::ExpressionPtr&& tmp = builder.castExpr(convFact.mgr.basic.getDouble(), cond - init);
-
-				core::ExpressionPtr&& finalVal = init + builder.castExpr(iterType,
-						builder.callExpr( convFact.mgr.basic.getDouble(), builder.literal(ceilTy, "ceil"),
-								tmp / builder.castExpr(convFact.mgr.basic.getDouble(), step)
-						)) * step;
+				core::ExpressionPtr&& finalVal =
+					makeOperation(builder,
+						init, // init +
+						makeOperation(builder,
+							builder.castExpr(iterType, // ( cast )
+								builder.callExpr(
+									convFact.mgr.basic.getDouble(),
+									builder.literal(ceilTy, "ceil"), // ceil()
+									makeOperation( // (cond-init)/step
+										builder,
+										builder.castExpr(convFact.mgr.basic.getDouble(),
+											makeOperation(builder, cond, init, core::lang::BasicGenerator::Sub) // cond - init
+										),
+										builder.castExpr(convFact.mgr.basic.getDouble(), step),
+										core::lang::BasicGenerator::Div
+									)
+								)
+							),
+							step,
+							core::lang::BasicGenerator::Mul
+						),
+						core::lang::BasicGenerator::Add
+					);
 
 				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(),
 						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal ));
@@ -815,8 +832,12 @@ public:
 	}
 };
 
-ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConverter(ConversionFactory& fact) {
+ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConvert(ConversionFactory& fact) {
 	return new ConversionFactory::ClangStmtConverter(fact);
+}
+
+void ConversionFactory::cleanStmtConvert(ClangStmtConverter* stmtConv) {
+	delete stmtConv;
 }
 
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {

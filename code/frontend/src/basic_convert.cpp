@@ -105,13 +105,29 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalFuncMap.clear();
 	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
-	DVLOG(1) << globColl;
+	VLOG(1) << globColl;
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
 	if(mFact.ctx.globalStruct.first)
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 
+	core::ExpressionPtr&& expr = core::dynamic_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
+	
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
+	
+	// also a marker node is allowed if it contains a lambda expr
+	if(!lambdaExpr){
+	   lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
+	   
+	   if(lambdaExpr)
+    	   assert(dynamic_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr &&
+    	       "Conversion of function returned a marker expression which does not contain a lambda espression");
+	   
+    }
+	
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
+	
+	
+	
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
 
 	return mProgram;
@@ -121,14 +137,23 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 	// cppcheck-suppress exceptNew
-	stmtConv( ConversionFactory::makeStmtConverter(*this) ),
+	stmtConv( ConversionFactory::makeStmtConvert(*this) ),
 	// cppcheck-suppress exceptNew
-	typeConv( ConversionFactory::makeTypeConverter(*this) ),
+	typeConv( ConversionFactory::makeTypeConvert(*this) ),
 	// cppcheck-suppress exceptNew
-	exprConv( ConversionFactory::makeExprConverter(*this) ),
+	exprConv( ConversionFactory::makeExprConvert(*this) ),
 	// cppcheck-suppress exceptNew
 	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
 
+
+ConversionFactory::~ConversionFactory() {
+	// dealloc StmtConverter
+	ConversionFactory::cleanStmtConvert(stmtConv);
+	// dealloc StmtConverter
+	ConversionFactory::cleanTypeConvert(typeConv);
+	// dealloc StmtConverter
+	ConversionFactory::cleanExprConvert(exprConv);
+}
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	// core::ExpressionPtr retExpr = expr;
@@ -146,24 +171,23 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
     if(!varDecl->hasAttrs())
     	return core::AnnotationPtr();
 
-	const AttrVec attrVec = varDecl->getAttrs();
 	std::ostringstream ss;
 	ocl::BaseAnnotation::AnnotationList declAnnotation;
 	try {
-	for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+	for(AttrVec::const_iterator I = varDecl->attr_begin(), E = varDecl->attr_end(); I != E; ++I) {
 		if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
-			std::string sr = attr->getAnnotation().str();
+			std::string&& sr = attr->getAnnotation().str();
 
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
-				DVLOG(2) << "           OpenCL address space __private";
+				VLOG(2) << "           OpenCL address space __private";
 				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE ));
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
-				DVLOG(2) << "           OpenCL address space __local";
+				VLOG(2) << "           OpenCL address space __local";
 				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL ));
 				continue;
 			}
@@ -174,7 +198,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			if(sr == "__global") {
 				// keywords global and local are only allowed for parameters
 				if(isa<const clang::ParmVarDecl>(varDecl)) {
-					DVLOG(2) << "           OpenCL address space __global";
+					VLOG(2) << "           OpenCL address space __global";
 					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL ));
 					continue;
 				}
@@ -185,7 +209,7 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			//check if the declaration has attribute __constant
 			if(sr == "__constant") {
 				if(isa<const clang::ParmVarDecl>(varDecl)) {
-					DVLOG(2) << "           OpenCL address space __constant";
+					VLOG(2) << "           OpenCL address space __constant";
 					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));
 					continue;
 				}
@@ -224,7 +248,18 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	if(varDecl->hasGlobalStorage()) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
-		return builder.memberAccessExpr(tryDeref(ctx.globalVar), core::Identifier(varDecl->getNameAsString()));
+		core::Identifier ident(varDecl->getNameAsString());
+		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(tryDeref(ctx.globalVar), ident);
+		auto fit = ctx.derefMap.find(ident);
+		if(fit != ctx.derefMap.end()) {
+			// there is an array wrapping this filed, add a [0] operation
+			core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(retExpr->getType());
+			assert(subTy);
+
+			return builder.callExpr( subTy->getElementType(),
+					builder.getBasicGenerator().getArraySubscript1D(), builder.deref(retExpr), builder.literal("0", mgr.basic.getUInt4()) );
+		}
+		return retExpr;
 	}
 
 	// variable is not in the map, create a new var and add it
@@ -371,11 +406,11 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 
 	// logging
-	DVLOG(1) << "\n****************************************************************************************\n"
+	VLOG(1) << "\n****************************************************************************************\n"
 			 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
 			 << "-> at location: (" << utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
 	if( VLOG_IS_ON(2) ) { \
-		DVLOG(2) << "Dump of clang VarDecl: \n"
+		VLOG(2) << "Dump of clang VarDecl: \n"
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		varDecl->dump();
 	}
@@ -430,8 +465,8 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 	}
 	// logging
-	DVLOG(1) << "Converted into IR stmt: ";
-	DVLOG(1) << "\t" << *retStmt;
+	VLOG(1) << "Converted into IR stmt: ";
+	VLOG(1) << "\t" << *retStmt;
 	return retStmt;
 }
 
@@ -440,20 +475,18 @@ void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, c
 	//check Attributes of the function definition
 	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 	if(funcDecl->hasAttrs()) {
-		const clang::AttrVec attrVec = funcDecl->getAttrs();
-
-		for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-			if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+		for(AttrVec::const_iterator I = funcDecl->attr_begin(), E = funcDecl->attr_end(); I != E; ++I) {
+			if(const AnnotateAttr* attr = dyn_cast<const AnnotateAttr>(*I)) {
 				//get annotate string
 				llvm::StringRef sr = attr->getAnnotation();
 
 				//check if it is an OpenCL kernel function
 				if(sr == "__kernel") {
-					DVLOG(1) << "is OpenCL kernel function";
+					VLOG(1) << "is OpenCL kernel function";
 					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
 				}
 			}
-			else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+			else if(const ReqdWorkGroupSizeAttr* attr = dyn_cast<const ReqdWorkGroupSizeAttr>(*I)) {
 				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
 						attr->getXDim(), attr->getYDim(), attr->getZDim())
 				);

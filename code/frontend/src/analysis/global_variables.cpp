@@ -166,14 +166,21 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		// in the case we have to resolve the initial value the current translation unit
 		// has to be set properly
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
+		core::Identifier ident(it->first->getNameAsString());
 
-		core::RefTypePtr&& entryType = builder.refType( fact.convertType(it->first->getType().getTypePtr()) );
+		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
+		if(type->getNodeType() == core::NT_VectorType) {
+			type = builder.arrayType( builder.refType(type) );
+			fact.addDerefField(ident);
+		}
+
+		core::RefTypePtr&& entryType = builder.refType( type );
 		if(it->second) {
 			// the variable is defined as extern, so we don't have to allocate memory for it
 			// just refear to the memory location someone else has initialized
 			entryType = builder.refType( entryType );
 		}
-		core::Identifier ident(it->first->getNameAsString());
+
 		// add type to the global struct
 		entries.push_back( core::StructType::Entry( ident, entryType ) );
 		// add initialization

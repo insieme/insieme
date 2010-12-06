@@ -144,6 +144,8 @@ class ConversionFactory : public boost::noncopyable {
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
+		std::set<insieme::core::Identifier> derefMap;
+
 		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
 
@@ -154,24 +156,30 @@ class ConversionFactory : public boost::noncopyable {
 	 */
 	class ClangStmtConverter;
 	// Instantiates the statement converter
-	static ClangStmtConverter* makeStmtConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangStmtConverter> stmtConv; // PIMPL pattern
+	static ClangStmtConverter* makeStmtConvert(ConversionFactory& fact);
+	// clean the memory
+	static void cleanStmtConvert(ClangStmtConverter* stmtConv);
+	ClangStmtConverter* stmtConv; // PIMPL pattern
 
 	/**
 	 * Converts a Clang types into an IR types.
 	 */
 	class ClangTypeConverter;
 	// Instantiates the type converter
-	static ClangTypeConverter* makeTypeConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangTypeConverter> typeConv; // PIMPL pattern
+	static ClangTypeConverter* makeTypeConvert(ConversionFactory& fact);
+	// clean the memory
+	static void cleanTypeConvert(ClangTypeConverter* typeConv);
+	ClangTypeConverter* typeConv; // PIMPL pattern
 
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
 	class ClangExprConverter;
 	// Instantiates the expression converter
-	static ClangExprConverter* makeExprConverter(ConversionFactory& fact);
-	std::auto_ptr<ClangExprConverter> exprConv; // PIMPL pattern
+	static ClangExprConverter* makeExprConvert(ConversionFactory& fact);
+	// clean the memory
+	static void cleanExprConvert(ClangExprConverter* exprConv);
+	ClangExprConverter* exprConv; // PIMPL pattern
 
 	core::NodeManager& 			mgr;
 	const core::ASTBuilder  	builder;
@@ -209,6 +217,7 @@ class ConversionFactory : public boost::noncopyable {
 	friend class ASTConverter;
 public:
 	ConversionFactory(core::NodeManager& mgr, Program& program);
+	~ConversionFactory();
 
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::NodeManager& 	getNodeManager() const { return mgr; }
@@ -232,6 +241,8 @@ public:
 	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
 	const Program& getProgram() const { return program; }
+
+	void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
 
 };
 

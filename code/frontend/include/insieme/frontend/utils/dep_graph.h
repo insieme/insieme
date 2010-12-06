@@ -61,25 +61,24 @@ namespace utils {
 template <class T>
 class DependencyGraph {
 
-	struct NodeTy {
-		typedef boost::vertex_property_tag kind;
+	struct NodeProperty {
+		T node;
 	};
 
 	template <class NodeTy>
 	class label_writer {
 	public:
-		label_writer(NodeTy node) : node(node) { }
+		label_writer(NodeTy& node) : node(node) { }
 
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
 			out << "[label=\"" << node[v] << "\"]";
 		}
 	private:
-		NodeTy node;
+		NodeTy& node;
 	};
 
 public:
-	typedef boost::property<NodeTy, T> NodeProperty;
 	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty> NodeDepGraph;
 
 	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor 	VertexTy;
@@ -91,7 +90,7 @@ public:
 	 * Finds the node inside the graph and returns the vertex id used to identify this node
 	 */
 	std::pair<bool,VertexTy> find(const T& type) const {
-		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::const_type node = get(&NodeProperty::node, graph);
 
 		typename boost::graph_traits<NodeDepGraph>::vertex_iterator vertCurrIt, vertEndIt;
 		boost::tie(vertCurrIt, vertEndIt) = boost::vertices(graph);
@@ -118,7 +117,7 @@ public:
 			boost::add_edge(*parent, v, graph);
 		}
 		dirtyFlag = true;
-		typename boost::property_map<NodeDepGraph, NodeTy>::type&& node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::type&& node = get(&NodeProperty::node, graph);
 		boost::put(node, v, type);
 		Handle(type, v);
 
@@ -137,7 +136,7 @@ public:
 
 		// We return a set of Types which are connected with the input type t
 		std::set<T> ret;
-		typename boost::property_map<NodeDepGraph, NodeTy>::type node = get(NodeTy(), graph);
+		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::type node = get(&NodeProperty::node, graph);
 		for (std::vector<size_t>::size_type i = 0, e = strongComponents.size(); i != e; ++i)
 			// we have check if the two nodes are in the same component
 			if((i != v && strongComponents[i] == strongComponents[v]) || (i == v && boost::edge(v, v, graph).second)) {
@@ -150,8 +149,12 @@ public:
 	}
 
 	void print(std::ostream& out) const {
-		typename boost::property_map<NodeDepGraph, NodeTy>::const_type node = get(NodeTy(), graph);
-		boost::write_graphviz(out, graph, label_writer<typename boost::property_map<NodeDepGraph, NodeTy>::const_type>(node));
+		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::const_type&& node = get(&NodeProperty::node, graph);
+		boost::write_graphviz(out, graph, label_writer<typename boost::property_map<NodeDepGraph, T NodeProperty::*>::const_type>(node));
+	}
+
+	~DependencyGraph() {
+	   graph.clear();
 	}
 
 private:

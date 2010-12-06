@@ -37,7 +37,10 @@
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
+
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/logging.h"
+
 #include "insieme/core/lang/basic.h"
 
 namespace insieme {
@@ -45,6 +48,8 @@ namespace frontend {
 namespace omp {
 
 using namespace core;
+using namespace utils::log;
+
 namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
