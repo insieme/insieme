@@ -547,9 +547,11 @@ public:
         }
 
         if(element->getNodeType() == core::NT_MarkerExpr) {
+            std::cout << "------------------------found the marker\n";
         	// check if we are at a function node
             if(const core::LambdaExprPtr& func = dynamic_pointer_cast<const core::LambdaExpr>(
         	        static_pointer_cast<const core::MarkerExpr>(element)->getSubExpression())) {
+
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
 
@@ -558,8 +560,9 @@ public:
 
             // TODO: annotations on pointers are no longer supported!
             // Code has been changed to read annotations form nodes => if wrong, please fix it
-            auto cName = element->getAnnotation(c_info::CNameAnnotation::KEY);
+            auto cName = func->getAnnotation(c_info::CNameAnnotation::KEY);
             auto funcAnnotation = element->getAnnotation(ocl::BaseAnnotation::KEY);
+                std::cout << "------------------------found the annot\n";
             if(funcAnnotation) {
 
                 size_t wgs[3];
@@ -799,9 +802,11 @@ public:
 //                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
+
                 newFunc->addAnnotation(funcAnnotation);
-                // put cname annotation to the new function
-                newFunc->addAnnotation(cName);
+                // put cname annotation to the new function if it was there before
+                if(cName)
+                    newFunc->addAnnotation(cName);
 
                 return newFunc;
             }
