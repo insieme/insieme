@@ -349,11 +349,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal, mgr.basic.getIntTypeParamLiteral(vecTy->getSize()));
     }
     // handle arrays initialization
-    if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
-    	// FIXME
-    	assert(vecTy); // silent compiler warning
-    	// initialization for arrays is missing, returning NULL!
-    	return mgr.basic.getNull();
+    if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
+    	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
+		return builder.callExpr(arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getInt4()));
     }
     assert(false && "Default initialization type not defined");
 }
