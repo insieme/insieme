@@ -93,22 +93,59 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	}, preservePtrAnnotationsWhenModified);
 }
 
-NodePtr insertBefore(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, 
-		const StatementPtr& beforeStatement, bool preservePtrAnnotationsWhenModified) {
-	// find position of beforeStatement
-	auto statements = target->getStatements();
-	auto targetloc = std::find(statements.cbegin(), statements.cend(), beforeStatement);
-	assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
-	return insert(manager, target, statement, targetloc-statements.cbegin(), preservePtrAnnotationsWhenModified);
+
+NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified) {
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	if(compoundParent) {
+//		auto statements = compoundParent->getStatements();
+//		auto targetloc = std::find(statements.cbegin(), statements.cend(), target);
+//		assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
+//		return insert(manager, compoundParent, statement, targetloc-statements.cbegin(), preservePtrAnnotationsWhenModified);
+		return insert(manager, compoundParent, statement, target.getIndex(), preservePtrAnnotationsWhenModified);
+	} else {
+		ASTBuilder build(manager);
+		auto newCompound = build.compoundStmt(statement, target.getAddressedNode());
+		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+	}
 }
 
-NodePtr insertAfter(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, 
-		const StatementPtr& afterStatement, bool preservePtrAnnotationsWhenModified) {
-	// find position of afterStatement
-	auto statements = target->getStatements();
-	auto targetloc = std::find(statements.cbegin(), statements.cend(), afterStatement);
-	assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
-	return insert(manager, target, statement, targetloc-statements.cbegin()+1, preservePtrAnnotationsWhenModified);
+NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified) {
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	if(compoundParent) {
+		return insert(manager, compoundParent, statements, target.getIndex(), preservePtrAnnotationsWhenModified);
+	} else {
+		ASTBuilder build(manager);
+		StatementList allStatements;
+		allStatements.insert(allStatements.begin(), statements.cbegin(), statements.cend());
+		allStatements.push_back(target.getAddressedNode());
+		auto newCompound = build.compoundStmt(allStatements);
+		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+	}
+}
+
+NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified) {
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	if(compoundParent) {
+		return insert(manager, compoundParent, statement, target.getIndex()+1, preservePtrAnnotationsWhenModified);
+	} else {
+		ASTBuilder build(manager);
+		auto newCompound = build.compoundStmt(target.getAddressedNode(), statement);
+		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+	}
+}
+
+NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified) {
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	if(compoundParent) {
+		return insert(manager, compoundParent, statements, target.getIndex()+1, preservePtrAnnotationsWhenModified);
+	} else {
+		ASTBuilder build(manager);
+		StatementList allStatements;
+		allStatements.push_back(target.getAddressedNode());
+		allStatements.insert(allStatements.end(), statements.cbegin(), statements.cend());
+		auto newCompound = build.compoundStmt(allStatements);
+		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+	}
 }
 
 
@@ -346,6 +383,22 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root
 		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
 	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
+}
+
+LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize, 
+		bool preservePtrAnnotationsWhenModified) {
+	
+	auto body = root->getBody();
+
+	ASTBuilder build(manager);
+	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	for_each(varsToPrivatize, [&](VariablePtr p) {
+		auto var = build.variable(p->getType());
+		replacements[p] = var;
+	});
+	auto newBody = replaceAll(manager, body, replacements, preservePtrAnnotationsWhenModified);
+
+	return dynamic_pointer_cast<const LambdaExpr>(newBody);
 }
 
 } // end namespace transform
