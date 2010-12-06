@@ -257,7 +257,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 			assert(subTy);
 
 			return builder.callExpr( subTy->getElementType(),
-					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
+					builder.getBasicGenerator().getArraySubscript1D(), builder.deref(retExpr), builder.literal("0", mgr.basic.getUInt4()) );
 		}
 		return retExpr;
 	}
