@@ -144,6 +144,8 @@ class ConversionFactory : public boost::noncopyable {
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
+		std::set<insieme::core::Identifier> derefMap;
+
 		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
 
@@ -237,6 +239,8 @@ public:
 	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
 	const Program& getProgram() const { return program; }
+
+	void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
 
 };
 

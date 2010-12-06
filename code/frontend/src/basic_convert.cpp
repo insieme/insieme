@@ -248,7 +248,18 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	if(varDecl->hasGlobalStorage()) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
-		return builder.memberAccessExpr(tryDeref(ctx.globalVar), core::Identifier(varDecl->getNameAsString()));
+		core::Identifier ident(varDecl->getNameAsString());
+		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(tryDeref(ctx.globalVar), ident);
+		auto fit = ctx.derefMap.find(ident);
+		if(fit != ctx.derefMap.end()) {
+			// there is an array wrapping this filed, add a [0] operation
+			core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(retExpr->getType());
+			assert(subTy);
+
+			return builder.callExpr( subTy->getElementType(),
+					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
+		}
+		return retExpr;
 	}
 
 	// variable is not in the map, create a new var and add it
