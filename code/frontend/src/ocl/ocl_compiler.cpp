@@ -93,13 +93,14 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL level, core::ExpressionPtr 
     switch(level) {
     case OPL_GLOBAL :
         localRangeUsed = true;
-        return builder.callExpr(BASIC.getUnsignedIntAdd(), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx),
-                builder.callExpr(BASIC.getUnsignedIntMul(), vecAccess(localRange, idx), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx)));
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx),
+            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(localRange, idx),
+                builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx)));
     case OPL_GROUP :
-        return builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(1), idx);
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId1D(), builder.uintLit(1), idx);
     //case OPL_LOCAL :
     default:
-        return builder.callExpr(BASIC.getGetThreadId1D(), builder.uintLit(0), idx);
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId1D(), builder.uintLit(0), idx);
     }
 }
 
@@ -298,7 +299,7 @@ public:
                     std::cout << "child: " << curr << std::endl;
                 });
 */
-                std::cout << "type:  " << cast->getType() << " " << childs.at(0)->getNodeType() << std::endl;
+
                 if(core::ExpressionPtr arg = core::dynamic_pointer_cast<const core::Expression>(childs.at(1))){
 // TODO check why we never get a ref here
 /*                    bool makeRef = true;
@@ -545,9 +546,12 @@ public:
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
-        if(element->getNodeType() == core::NT_LambdaExpr) {
+        if(element->getNodeType() == core::NT_MarkerExpr) {
+            std::cout << "------------------------found the marker\n";
         	// check if we are at a function node
-        	const core::LambdaExprPtr& func = static_pointer_cast<const core::LambdaExpr>(element);
+            if(const core::LambdaExprPtr& func = dynamic_pointer_cast<const core::LambdaExpr>(
+        	        static_pointer_cast<const core::MarkerExpr>(element)->getSubExpression())) {
+
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
 
@@ -556,8 +560,9 @@ public:
 
             // TODO: annotations on pointers are no longer supported!
             // Code has been changed to read annotations form nodes => if wrong, please fix it
-            auto cName = element->getAnnotation(c_info::CNameAnnotation::KEY);
+            auto cName = func->getAnnotation(c_info::CNameAnnotation::KEY);
             auto funcAnnotation = element->getAnnotation(ocl::BaseAnnotation::KEY);
+                std::cout << "------------------------found the annot\n";
             if(funcAnnotation) {
 
                 size_t wgs[3];
@@ -797,9 +802,11 @@ public:
 //                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                 // put opencl annotation to the new function for eventual future use
+
                 newFunc->addAnnotation(funcAnnotation);
-                // put cname annotation to the new function
-                newFunc->addAnnotation(cName);
+                // put cname annotation to the new function if it was there before
+                if(cName)
+                    newFunc->addAnnotation(cName);
 
                 return newFunc;
             }
@@ -822,7 +829,7 @@ public:
 /*            core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params, localZjob);
 
             return newFunc;*/
-        }
+        }}
 
         return element->substitute(builder.getNodeManager(), *this);
     }

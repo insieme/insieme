@@ -458,54 +458,70 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	return retStmt;
 }
 
-void ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
-	// ---------------------- Add annotations to this function ------------------------------
-	//check Attributes of the function definition
-	ocl::BaseAnnotation::AnnotationList kernelAnnotation;
-	if(funcDecl->hasAttrs()) {
-		for(AttrVec::const_iterator I = funcDecl->attr_begin(), E = funcDecl->attr_end(); I != E; ++I) {
-			if(const AnnotateAttr* attr = dyn_cast<const AnnotateAttr>(*I)) {
-				//get annotate string
-				llvm::StringRef sr = attr->getAnnotation();
+core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
+    // ---------------------- Add annotations to this function ------------------------------
+    //check Attributes of the function definition
+    ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
-				//check if it is an OpenCL kernel function
-				if(sr == "__kernel") {
-					VLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
-				}
-			}
-			else if(const ReqdWorkGroupSizeAttr* attr = dyn_cast<const ReqdWorkGroupSizeAttr>(*I)) {
-				kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
-						attr->getXDim(), attr->getYDim(), attr->getZDim())
-				);
-			}
-		}
-	}
-	// --------------------------------- OPENCL ---------------------------------------------
-	// if OpenCL related annotations have been found, create OclBaseAnnotation and
-	// add it to the funciton's attribute
-	if(!kernelAnnotation.empty())
-		node->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+    //TODO remove
+    if(node->hasAnnotation(c_info::CNameAnnotation::KEY))
+        return node;
 
-	// --------------------------------- C NAME ----------------------------------------------
-	// annotate with the C name of the function
-	node->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+    if(funcDecl->hasAttrs()) {
+        const clang::AttrVec attrVec = funcDecl->getAttrs();
 
-	// ----------------------- SourceLocation Annotation -------------------------------------
-	// for each entry function being converted we register the location where it was originally
-	// defined in the C program
-	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(funcDecl->getLocStart(), funcDecl->getLocEnd());
-	PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
-	if(fit != pragmaMap.getDeclarationMap().end()) {
-		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
-		loc.first = fit->second->getStartLocation();
-	}
+        for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+            if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
+                //get annotate string
+                llvm::StringRef sr = attr->getAnnotation();
 
-	assert(currTU && "Translation unit not correctly set");
-	node->addAnnotation( std::make_shared<c_info::CLocAnnotation>(
-		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
-		convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
-	);
+                //check if it is an OpenCL kernel function
+                if(sr == "__kernel") {
+                    VLOG(1) << "is OpenCL kernel function";
+                    kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
+                }
+            }
+            else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+                kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
+                        attr->getXDim(), attr->getYDim(), attr->getZDim()) );
+            }
+        }
+    }
+    // --------------------------------- C NAME ----------------------------------------------
+    // annotate with the C name of the function
+    node->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+
+    // ----------------------- SourceLocation Annotation -------------------------------------
+    // for each entry function being converted we register the location where it was originally
+    // defined in the C program
+    std::pair<SourceLocation, SourceLocation> loc = std::make_pair(funcDecl->getLocStart(), funcDecl->getLocEnd());
+    PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
+    if(fit != pragmaMap.getDeclarationMap().end()) {
+        // the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+        loc.first = fit->second->getStartLocation();
+    }
+
+    assert(currTU && "Translation unit not correctly set");
+    node->addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+        convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
+        convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
+    );
+
+    // --------------------------------- OPENCL ---------------------------------------------
+    // if OpenCL related annotations have been found, create OclBaseAnnotation and
+    // add it to the funciton's attribute
+    if(!kernelAnnotation.empty()) {
+        // kreate new marker node
+        core::MarkerExprPtr&& marker = builder.markerExpr(node);
+
+        core::AnnotationPtr&& annot = std::make_shared<ocl::BaseAnnotation>(kernelAnnotation);
+
+        marker->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+
+        return marker;
+    }
+
+    return node;
 }
 
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
