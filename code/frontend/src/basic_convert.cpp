@@ -514,8 +514,6 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
         // kreate new marker node
         core::MarkerExprPtr&& marker = builder.markerExpr(node);
 
-        core::AnnotationPtr&& annot = std::make_shared<ocl::BaseAnnotation>(kernelAnnotation);
-
         marker->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
 
         return marker;
