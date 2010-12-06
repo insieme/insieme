@@ -392,14 +392,14 @@ public:
 		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
+		// Mallocs/Allocs are replaced with ref.new expression
+		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
+			return retExpr;
+
 		// if the subexpression is an array or a vector, remove all the C implicit casts
 		if( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
 			nonRefExpr->getType()->getNodeType() == core::NT_VectorType )
 			return subExpr;
-
-		// Mallocs/Allocs are replaced with ref.new expression
-		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
-			return retExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
@@ -419,7 +419,7 @@ public:
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
 		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
 		// replaced with a null literal
-		if(*type == *convFact.builder.getNodeManager().basic.getRefAlpha() &&
+		if(convFact.builder.getBasicGenerator().isNullPtr(type) &&
 				*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
 			return convFact.builder.getNodeManager().basic.getNull();
 		}
