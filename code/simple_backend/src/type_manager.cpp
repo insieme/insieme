@@ -266,6 +266,11 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
 	// special handling for void* type
+	if (ArrayTypePtr arrayType = dynamic_pointer_cast<const ArrayType>(ptr->getElementType())) {
+		if (basic.isRefAlpha(arrayType->getElementType())) {
+			return toEntry("void*");
+		}
+	}
 	if(basic.isRefAlpha(ptr)) {
 		return toEntry("void*");
 	}
