@@ -166,11 +166,15 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		// in the case we have to resolve the initial value the current translation unit
 		// has to be set properly
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
+		core::Identifier ident(it->first->getNameAsString());
 
+		bool addPtr = false;
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
-//		if(type->getNodeType() == core::NT_VectorType) {
-//			type = builder.arrayType( builder.refType(type) );
-//		}
+		if(type->getNodeType() == core::NT_VectorType) {
+			type = builder.arrayType( builder.refType(type) );
+			fact.addDerefField(ident);
+			addPtr = true;
+		}
 
 		core::RefTypePtr&& entryType = builder.refType( type );
 		if(it->second) {
@@ -178,7 +182,7 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 			// just refear to the memory location someone else has initialized
 			entryType = builder.refType( entryType );
 		}
-		core::Identifier ident(it->first->getNameAsString());
+
 		// add type to the global struct
 		entries.push_back( core::StructType::Entry( ident, entryType ) );
 		// add initialization
@@ -192,6 +196,11 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 			if(it->first->getInit()) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
 				initExpr = fact.convertInitExpr(it->first->getInit(), entryType->getElementType(), false);
+				if(addPtr) {
+					initExpr = fact.getASTBuilder().callExpr(entryType, fact.getASTBuilder().getBasicGenerator().getArrayCreate1D(),
+							fact.getASTBuilder().refVar(initExpr),
+							fact.getASTBuilder().literal("1", fact.getASTBuilder().getBasicGenerator().getInt4()));
+				}
 			} else {
 				initExpr = fact.defaultInitVal(entryType->getElementType());
 			}

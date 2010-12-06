@@ -66,8 +66,8 @@ int main(int argc, char** argv) {
 			};
 		};
 		{
-			for(int var_9 = 1; var_9 < 15; var_9 += 3) {
-				printf("a=%d\n", (var_9));
+			for(int var_16 = 1; var_16 < 15; var_16 += 3) {
+				printf("a=%d\n", (var_16));
 			};
 			((a) = (1+(((int)(ceil((((double)((15-1)))/((double)(3))))))*3)));
 		};

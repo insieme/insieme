@@ -248,7 +248,20 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	if(varDecl->hasGlobalStorage()) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
-		return builder.memberAccessExpr(tryDeref(ctx.globalVar), core::Identifier(varDecl->getNameAsString()));
+		core::Identifier ident(varDecl->getNameAsString());
+		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(tryDeref(ctx.globalVar), ident);
+		auto fit = ctx.derefMap.find(ident);
+		if(fit != ctx.derefMap.end()) {
+			// there is an array wrapping this filed, add a [0] operation
+			// the type is array<ref<vector<'a>>
+			core::SingleElementTypePtr subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
+			retExpr = builder.deref(retExpr);
+			subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
+
+			return builder.callExpr( subTy->getElementType(),
+					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
+		}
+		return retExpr;
 	}
 
 	// variable is not in the map, create a new var and add it
@@ -319,30 +332,15 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	assert(unionTy); // silent compiler warning
 	}
 
-    //----------------  INTIALIZE VECTORS ---------------------------------
-//    const Type* elemTy = NULL;
-//    size_t arraySize = 0;
-//    if ( ty->isExtVectorType() ) {
-//    	const TypedefType* typedefType = dyn_cast<const TypedefType>(ty);
-//        assert(typedefType && "ExtVectorType has unexpected class");
-//        const ExtVectorType* vecTy = dyn_cast<const ExtVectorType>( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
-//        assert(vecTy && "ExtVectorType has unexpected class");
-//
-//        elemTy = vecTy->getElementType()->getUnqualifiedDesugaredType();
-//		arraySize = vecTy->getNumElements();
-//    }
-
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal, mgr.basic.getIntTypeParamLiteral(vecTy->getSize()));
     }
     // handle arrays initialization
-    if ( core::ArrayTypePtr&& vecTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
-    	// FIXME
-    	assert(vecTy); // silent compiler warning
-    	// initialization for arrays is missing, returning NULL!
-    	return mgr.basic.getNull();
+    if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
+    	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
+		return builder.callExpr(arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getInt4()));
     }
     assert(false && "Default initialization type not defined");
 }
@@ -366,8 +364,9 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	} else if (!expr)
 		return defaultInitVal(type);
 
-	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ))
+	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
 		return convertInitializerList( listExpr, type );
+	}
 
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 

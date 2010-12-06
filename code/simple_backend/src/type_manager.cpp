@@ -279,6 +279,14 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 }
 
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
+	auto& basic = ptr->getNodeManager().basic;
+
+	// special handling for void* type (array<ref<'a>>)
+	if(ptr->getNodeType() == NT_ArrayType && basic.isRefAlpha(static_pointer_cast<const ArrayType>(ptr)->getElementType())) {
+		return toEntry("void*");
+	}
+
+
 	return resolveRefOrVectorOrArrayType(ptr);
 }
 

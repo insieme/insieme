@@ -583,11 +583,9 @@ public:
 
 		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
 		// ~~~~~ Handling of special cases ~~~~~~~
-		// void* -> ref<'a>
+		// void* -> array<ref<'a>>
 		if(*subTy == *convFact.mgr.basic.getUnit()) {
-			subTy = convFact.mgr.basic.getRefAlpha();
-			END_LOG_TYPE_CONVERSION( subTy );
-			return subTy;
+			subTy = convFact.mgr.basic.getAlpha();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr&& retTy = convFact.builder.arrayType( convFact.builder.refType(subTy) );
