@@ -659,6 +659,7 @@ namespace detail {
 					ASTBuilder builder(call->getNodeManager());
 					NodePtr init = ARG(0);
 					if (core::analysis::isCallOf(init, basic.getRefVar())) {
+						init = builder.refNew(static_pointer_cast<const CallExpr>(init)->getArguments()[0]);
 						visitor.visit(init);
 					} else {
 						visitor.visit(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
