@@ -201,8 +201,10 @@ class ConversionFactory : public boost::noncopyable {
 
 	/**
 	 * Attach annotations to a C function of the input program.
+	 *
+	 * returns the a MarkerExprPtr if a marker node has to be added and the passed node else
 	 */
-	void attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
 
 	friend class ASTConverter;
 public:

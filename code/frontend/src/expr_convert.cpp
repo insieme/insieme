@@ -1292,10 +1292,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
 		// attach name annotation to the lambda
 		retLambdaExpr->getLambda()->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+		/*
 		attachFuncAnnotations(retLambdaExpr, funcDecl);
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
-		return retLambdaExpr;
+		return retLambdaExpr;*/
+		//TODO check correctness of change
+        // Adding the lambda function to the list of converted functions
+        ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
+
+        return attachFuncAnnotations(retLambdaExpr, funcDecl);
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
@@ -1364,11 +1370,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
 			ctx.lambdaExprCache.insert( std::make_pair(fd, func) );
 
-			this->attachFuncAnnotations(func, fd);
+			func = this->attachFuncAnnotations(func, fd);
 		}
 	);
-	attachFuncAnnotations(retLambdaExpr, funcDecl);
-	return retLambdaExpr;
+	return attachFuncAnnotations(retLambdaExpr, funcDecl);
+//	return retLambdaExpr;
 }
 
 } // End conversion namespace

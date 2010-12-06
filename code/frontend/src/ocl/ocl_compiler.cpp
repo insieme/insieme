@@ -546,9 +546,10 @@ public:
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
-        if(element->getNodeType() == core::NT_LambdaExpr) {
+        if(element->getNodeType() == core::NT_MarkerExpr) {
         	// check if we are at a function node
-        	const core::LambdaExprPtr& func = static_pointer_cast<const core::LambdaExpr>(element);
+            if(const core::LambdaExprPtr& func = dynamic_pointer_cast<const core::LambdaExpr>(
+        	        static_pointer_cast<const core::MarkerExpr>(element)->getSubExpression())) {
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
 
@@ -823,7 +824,7 @@ public:
 /*            core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params, localZjob);
 
             return newFunc;*/
-        }
+        }}
 
         return element->substitute(builder.getNodeManager(), *this);
     }
