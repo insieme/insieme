@@ -46,8 +46,6 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread.hpp>
 
-#include <boost/filesystem.hpp>
-
 #include "insieme/utils/cmd_line_utils.h"
 
 namespace insieme {
@@ -151,7 +149,13 @@ struct LevelSpec {
 struct FileNameSpec {
 	static void format(std::ostream& out, const Ctx& ctx) {
 		// Cut out the entire path and prints the file name
-		out << boost::filesystem::path( boost::any_cast<const char *>(ctx[0]) ).leaf();
+		std::string file_name(boost::any_cast<const char *>(ctx[0]));
+		size_t pos = file_name.find_last_of('/');
+		if(pos == std::string::npos) {
+			out << file_name;
+		} else {
+			out << file_name.substr(pos+1);
+		}
 	}
 };
 
