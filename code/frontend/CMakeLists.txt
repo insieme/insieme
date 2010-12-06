@@ -51,6 +51,8 @@ foreach ( case_file ${test_cases})
 	
 	if(${case_name} STREQUAL "kernel_matcher_test")
 		add_unit_test(${case_name} off)
+	else(${case_name} STREQUAL "ocl_compiler_test")
+		add_unit_test(${case_name} off)
 	else()
 		add_unit_test(${case_name})
 	endif()
