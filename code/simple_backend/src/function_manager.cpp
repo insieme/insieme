@@ -262,7 +262,7 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	cs << ")";
 
 
-	// ad function body
+	// add function body
 	cs << " {" << CodeStream::indR << "\n";
 
 	ConvertVisitor visitor(cc, function);

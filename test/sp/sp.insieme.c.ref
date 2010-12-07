@@ -160,12 +160,12 @@ struct FILE {
     unsigned short _cur_column;
     char _vtable_offset;
     char _shortbuf[1];
-    <?>'a</?>* _lock;
+    void* _lock;
     long _offset;
-    <?>'a</?>* __pad1;
-    <?>'a</?>* __pad2;
-    <?>'a</?>* __pad3;
-    <?>'a</?>* __pad4;
+    void* __pad1;
+    void* __pad2;
+    void* __pad3;
+    void* __pad4;
     unsigned long __pad5;
     int _mode;
     char _unused2[20];
@@ -419,17 +419,17 @@ double ceil(double);
 // start code fragment :: Definitions for function type: __insieme_funType_type_6 //
 // Abstract prototype for lambdas of type __insieme_funType_type_6
 struct __insieme_funType_type_6 { 
-    void(*fun)(void*,double,double,double,double**);
+    void(*fun)(void*, double, double, double, double*);
     const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_6
-void call__insieme_funType_type_6(struct __insieme_funType_type_6* lambda,double p1,double p2,double p3,double** p4) { return lambda->fun(lambda,p1,p2,p3,p4); }
+void call__insieme_funType_type_6(struct __insieme_funType_type_6* lambda, double p1, double p2, double p3, double* p4) { return lambda->fun(lambda, p1,p2,p3,p4); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_7 //
 // Abstract prototype for lambdas of type __insieme_funType_type_7
 struct __insieme_funType_type_7 { 
-    void(*fun)(void*,double,double,double,double**);
+    void(*fun)(void*, double, double, double, double*);
     const size_t size;
     struct __insieme_globals* p0;
 };
@@ -2993,17 +2993,17 @@ void adi(void* _capture) {
 // start code fragment :: Definitions for function type: __insieme_funType_type_27 //
 // Abstract prototype for lambdas of type __insieme_funType_type_27
 struct __insieme_funType_type_27 { 
-    void(*fun)(void*,int);
+    void(*fun)(void*, int);
     const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_27
-void call__insieme_funType_type_27(struct __insieme_funType_type_27* lambda,int p1) { return lambda->fun(lambda,p1); }
+void call__insieme_funType_type_27(struct __insieme_funType_type_27* lambda, int p1) { return lambda->fun(lambda, p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_28 //
 // Abstract prototype for lambdas of type __insieme_funType_type_28
 struct __insieme_funType_type_28 { 
-    void(*fun)(void*,int);
+    void(*fun)(void*, int);
     const size_t size;
     struct __insieme_globals* p0;
 };
@@ -3022,17 +3022,17 @@ void timer_clear(void* _capture, int n) {
 // start code fragment :: Definitions for function type: __insieme_funType_type_29 //
 // Abstract prototype for lambdas of type __insieme_funType_type_29
 struct __insieme_funType_type_29 { 
-    void(*fun)(void*,double**);
+    void(*fun)(void*, double*);
     const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_29
-void call__insieme_funType_type_29(struct __insieme_funType_type_29* lambda,double** p1) { return lambda->fun(lambda,p1); }
+void call__insieme_funType_type_29(struct __insieme_funType_type_29* lambda, double* p1) { return lambda->fun(lambda, p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_30 //
 // Abstract prototype for lambdas of type __insieme_funType_type_30
 struct __insieme_funType_type_30 { 
-    void(*fun)(void*,double**);
+    void(*fun)(void*, double*);
     const size_t size;
     struct __insieme_globals* p0;
 };
@@ -3059,7 +3059,7 @@ void wtime(void* _capture, double* t) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		struct timeval tv;
-		gettimeofday(&tv, ((<?>'a</?>**)(0)));
+		gettimeofday(&tv, null);
 		if(((((*var_641).sec))<0)) {
 			((((*var_641).sec)) = ((int)((((tv).tv_sec)))));
 		};
@@ -3110,17 +3110,17 @@ void timer_stop(void* _capture, int n) {
 // start code fragment :: Definitions for function type: __insieme_funType_type_31 //
 // Abstract prototype for lambdas of type __insieme_funType_type_31
 struct __insieme_funType_type_31 { 
-    double(*fun)(void*,int);
+    double(*fun)(void*, int);
     const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_31
-double call__insieme_funType_type_31(struct __insieme_funType_type_31* lambda,int p1) { return lambda->fun(lambda,p1); }
+double call__insieme_funType_type_31(struct __insieme_funType_type_31* lambda, int p1) { return lambda->fun(lambda, p1); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_32 //
 // Abstract prototype for lambdas of type __insieme_funType_type_32
 struct __insieme_funType_type_32 { 
-    double(*fun)(void*,int);
+    double(*fun)(void*, int);
     const size_t size;
     struct __insieme_globals* p0;
 };
@@ -3139,17 +3139,17 @@ double timer_read(void* _capture, int n) {
 // start code fragment :: Definitions for function type: __insieme_funType_type_33 //
 // Abstract prototype for lambdas of type __insieme_funType_type_33
 struct __insieme_funType_type_33 { 
-    void(*fun)(void*,int,char**,int**);
+    void(*fun)(void*, int, char*, int*);
     const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_33
-void call__insieme_funType_type_33(struct __insieme_funType_type_33* lambda,int p1,char** p2,int** p3) { return lambda->fun(lambda,p1,p2,p3); }
+void call__insieme_funType_type_33(struct __insieme_funType_type_33* lambda, int p1, char* p2, int* p3) { return lambda->fun(lambda, p1,p2,p3); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_34 //
 // Abstract prototype for lambdas of type __insieme_funType_type_34
 struct __insieme_funType_type_34 { 
-    void(*fun)(void*,int,char**,int**);
+    void(*fun)(void*, int, char*, int*);
     const size_t size;
     struct __insieme_globals* p0;
 };
@@ -3486,7 +3486,7 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){(memcpy(alloca(sizeof(int[3])), &((int[3]){}), sizeof(int[3]))),
+		struct __insieme_globals var_1 = ((struct __insieme_globals){(calloc(sizeof(int[3]), 1)),
 			0.0,
 			0.0,
 			0.0,
@@ -3513,7 +3513,7 @@ int main(int argc, char** argv) {
 			0.0,
 			0.0,
 			0.0,
-			(memcpy(alloca(sizeof(double[13][5])), &((double[13][5]){}), sizeof(double[13][5]))),
+			(calloc(sizeof(double[13][5]), 1)),
 			0.0,
 			0.0,
 			0.0,
@@ -3583,28 +3583,28 @@ int main(int argc, char** argv) {
 			0.0,
 			0.0,
 			0.0,
-			(memcpy(alloca(sizeof(double[5][37][37][37])), &((double[5][37][37][37]){}), sizeof(double[5][37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[37][37][37])), &((double[37][37][37]){}), sizeof(double[37][37][37]))),
-			(memcpy(alloca(sizeof(double[5][37][37][37])), &((double[5][37][37][37]){}), sizeof(double[5][37][37][37]))),
-			(memcpy(alloca(sizeof(double[5][37][37][37])), &((double[5][37][37][37]){}), sizeof(double[5][37][37][37]))),
-			(memcpy(alloca(sizeof(double[15][37][37][37])), &((double[15][37][37][37]){}), sizeof(double[15][37][37][37]))),
-			(memcpy(alloca(sizeof(double[36])), &((double[36]){}), sizeof(double[36]))),
-			(memcpy(alloca(sizeof(double[36])), &((double[36]){}), sizeof(double[36]))),
-			(memcpy(alloca(sizeof(double[36])), &((double[36]){}), sizeof(double[36]))),
-			(memcpy(alloca(sizeof(double[36])), &((double[36]){}), sizeof(double[36]))),
-			(memcpy(alloca(sizeof(double[36])), &((double[36]){}), sizeof(double[36]))),
-			(memcpy(alloca(sizeof(double[36])), &((double[36]){}), sizeof(double[36]))),
-			(memcpy(alloca(sizeof(double[5][36])), &((double[5][36]){}), sizeof(double[5][36]))),
-			(memcpy(alloca(sizeof(double[5][36])), &((double[5][36]){}), sizeof(double[5][36]))),
-			(memcpy(alloca(sizeof(double[64])), &((double[64]){}), sizeof(double[64]))),
-			(memcpy(alloca(sizeof(double[64])), &((double[64]){}), sizeof(double[64]))),
+			(calloc(sizeof(double[5][37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[37][37][37]), 1)),
+			(calloc(sizeof(double[5][37][37][37]), 1)),
+			(calloc(sizeof(double[5][37][37][37]), 1)),
+			(calloc(sizeof(double[15][37][37][37]), 1)),
+			(calloc(sizeof(double[36]), 1)),
+			(calloc(sizeof(double[36]), 1)),
+			(calloc(sizeof(double[36]), 1)),
+			(calloc(sizeof(double[36]), 1)),
+			(calloc(sizeof(double[36]), 1)),
+			(calloc(sizeof(double[36]), 1)),
+			(calloc(sizeof(double[5][36]), 1)),
+			(calloc(sizeof(double[5][36]), 1)),
+			(calloc(sizeof(double[64]), 1)),
+			(calloc(sizeof(double[64]), 1)),
 			(((int)(0))-1)
 		});
 		int niter = 0;

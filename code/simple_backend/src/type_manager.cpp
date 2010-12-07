@@ -266,6 +266,11 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
 	// special handling for void* type
+	if (ArrayTypePtr arrayType = dynamic_pointer_cast<const ArrayType>(ptr->getElementType())) {
+		if (basic.isRefAlpha(arrayType->getElementType())) {
+			return toEntry("void*");
+		}
+	}
 	if(basic.isRefAlpha(ptr)) {
 		return toEntry("void*");
 	}
@@ -275,6 +280,24 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 
 
 TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
+
+	// handle simple vector of pointers
+	if (ptr->getElementType()->getNodeType() == NT_ArrayType) {
+		const Entry& elementType = resolveType(ptr->getElementType());
+		string prefix = elementType.rValueName;
+		string postfix = "[" + toString(ptr->getSize()) + "]";
+
+		// return entry
+		return Entry(
+				prefix + "" + postfix,
+				prefix + "" + postfix,
+				prefix + " %s" + postfix,
+				prefix + " %s" + postfix,
+				elementType.definition
+		);
+	}
+
+	// default handling
 	return resolveRefOrVectorOrArrayType(ptr);
 }
 
@@ -282,10 +305,9 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
 	// special handling for void* type (array<ref<'a>>)
-	if(ptr->getNodeType() == NT_ArrayType && basic.isRefAlpha(static_pointer_cast<const ArrayType>(ptr)->getElementType())) {
+	if(basic.isRefAlpha(ptr->getElementType())) {
 		return toEntry("void*");
 	}
-
 
 	return resolveRefOrVectorOrArrayType(ptr);
 }
@@ -390,7 +412,7 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 		postfix = ")" + postfix;
 	}
 	//return prefix + " " + name + postfix;
-	if (ptr->getNodeType() == NT_VectorType) {
+	if (ptr->getNodeType() == NT_VectorType || ptr->getNodeType() == NT_ArrayType) {
 		// special treatement for C vectors
 		return Entry(
 				prefix + "" + postfix,

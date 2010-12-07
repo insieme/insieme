@@ -23,7 +23,7 @@ struct stack {
 };
 
 // start code fragment :: Definition of newStack //
-struct stack** newStack() {
+struct stack* newStack() {
 	{
 		struct stack* res = (malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack))));
 		((((((res)[0])).top)) = null);

@@ -49,6 +49,7 @@
 #include "insieme/core/program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/type_utils.h"
 
 #include "insieme/c_info/naming.h"
 #include "insieme/c_info/location.h"
@@ -285,7 +286,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	if( mgr.basic.isRefAlpha(type) || mgr.basic.isNullPtr(type)) {
+	if( mgr.basic.isRefAlpha(type) ) {
 		return mgr.basic.getNull();
 	}
 	// handle integers initialization
@@ -305,6 +306,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle refs initialization
     if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
         // initialize pointer/reference types with the null value
+    	const core::NodeType& nodeTy = refTy->getElementType()->getNodeType();
+    	if(nodeTy == core::NT_ArrayType || nodeTy == core::NT_VectorType || nodeTy == core::NT_StructType)
+    		return builder.refNew( defaultInitVal(refTy->getElementType()) );
     	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
@@ -318,14 +322,15 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
-    	core::StructExpr::Members members;
-    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
-    	std::for_each(entries.begin(), entries.end(),
-    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
-    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
-    		}
-    	);
-    	return builder.structExpr(structTy, members);
+//    	core::StructExpr::Members members;
+//    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
+//    	std::for_each(entries.begin(), entries.end(),
+//    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
+//    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
+//    		}
+//    	);
+    	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
+    	//return builder.structExpr(structTy, members);
     }
     if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
 		// todo
@@ -339,6 +344,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     // handle arrays initialization
     if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
+    	if(arrTy->getElementType()->getNodeType() == core::NT_RefType) {
+    		const core::RefTypePtr& ref = core::static_pointer_cast<const core::RefType>(arrTy->getElementType());
+    		if(ref->getElementType()->getNodeType() != core::NT_VectorType) {
+    			return mgr.basic.getNull();
+    		}
+    	}
     	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
 		return builder.callExpr(arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getInt4()));
     }

@@ -1,0 +1,1599 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: type_declaration___insieme_globals //
+struct __insieme_globals { 
+    int(* nx)[12];
+    int(* ny)[12];
+    int(* nz)[12];
+    char Class;
+    int(* debug_vec)[8];
+    int(* m1)[12];
+    int(* m2)[12];
+    int(* m3)[12];
+    int lt;
+    int lb;
+    int is1;
+    int is2;
+    int is3;
+    int ie1;
+    int ie2;
+    int ie3;
+    double s;
+    double(* start)[64];
+    double(* elapsed)[64];
+    int sec;
+};
+
+// start code fragment :: Prototype of struct FILE //
+struct FILE;
+
+// start code fragment :: Prototype of struct __insieme_userdefined_rec_type_type_0 //
+struct __insieme_userdefined_rec_type_type_0;
+
+// start code fragment :: type_declaration_FILE //
+struct FILE { 
+    int _flags;
+    char* _IO_read_ptr;
+    char* _IO_read_end;
+    char* _IO_read_base;
+    char* _IO_write_base;
+    char* _IO_write_ptr;
+    char* _IO_write_end;
+    char* _IO_buf_base;
+    char* _IO_buf_end;
+    char* _IO_save_base;
+    char* _IO_backup_base;
+    char* _IO_save_end;
+    struct __insieme_userdefined_rec_type_type_0* _markers;
+    struct FILE* _chain;
+    int _fileno;
+    int _flags2;
+    long _old_offset;
+    unsigned short _cur_column;
+    char _vtable_offset;
+    char _shortbuf[1];
+    void* _lock;
+    long _offset;
+    void* __pad1;
+    void* __pad2;
+    void* __pad3;
+    void* __pad4;
+    unsigned long __pad5;
+    int _mode;
+    char _unused2[20];
+};
+
+// start code fragment :: type_declaration___insieme_userdefined_rec_type_type_0 //
+struct __insieme_userdefined_rec_type_type_0 { 
+    struct __insieme_userdefined_rec_type_type_0* _next;
+    struct FILE* _sbuf;
+    int _pos;
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
+// Abstract prototype for lambdas of type __insieme_funType_type_1
+struct __insieme_funType_type_1 { 
+    void(*fun)(void*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_1
+void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda, int p1) { return lambda->fun(lambda, p1); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_2 //
+// Abstract prototype for lambdas of type __insieme_funType_type_2
+struct __insieme_funType_type_2 { 
+    void(*fun)(void*, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of timer_clear //
+void timer_clear(void* _capture, int n) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_29 = ((struct __insieme_funType_type_2*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		((((((((*var_29).elapsed))[0]))[((unsigned int)(n))])) = 0.0);
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_3 //
+// Abstract prototype for lambdas of type __insieme_funType_type_3
+struct __insieme_funType_type_3 { 
+    double(*fun)(void*);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_3
+double call__insieme_funType_type_3(struct __insieme_funType_type_3* lambda) { return lambda->fun(lambda); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_4 //
+// Abstract prototype for lambdas of type __insieme_funType_type_4
+struct __insieme_funType_type_4 { 
+    double(*fun)(void*);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_5 //
+// Abstract prototype for lambdas of type __insieme_funType_type_5
+struct __insieme_funType_type_5 { 
+    void(*fun)(void*, double*);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_5
+void call__insieme_funType_type_5(struct __insieme_funType_type_5* lambda, double* p1) { return lambda->fun(lambda, p1); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_6 //
+// Abstract prototype for lambdas of type __insieme_funType_type_6
+struct __insieme_funType_type_6 { 
+    void(*fun)(void*, double*);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: type_declaration_timeval //
+struct timeval { 
+    long tv_sec;
+    long tv_usec;
+};
+
+// start code fragment :: type_declaration_timezone //
+struct timezone { 
+    int tz_minuteswest;
+    int tz_dsttime;
+};
+
+// start code fragment :: Prototype for external function: gettimeofday //
+int gettimeofday(struct timeval*, struct timezone*);
+
+// start code fragment :: Definition of wtime //
+void wtime(void* _capture, double* t) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_36 = ((struct __insieme_funType_type_6*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		struct timeval tv;
+		gettimeofday(&tv, null);
+		if(((((*var_36).sec))<0)) {
+			((((*var_36).sec)) = ((int)((((tv).tv_sec)))));
+		};
+		(((t[0])) = (((double)(((((tv).tv_sec))-((long)((((*var_36).sec)))))))+(1.0e-6*((double)((((tv).tv_usec)))))));
+	}
+}
+
+
+// start code fragment :: Definition of elapsed_time //
+double elapsed_time(void* _capture) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_33 = ((struct __insieme_funType_type_4*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		double t = 0.0;
+		call__insieme_funType_type_5(((struct __insieme_funType_type_5*)(&((struct __insieme_funType_type_6){&wtime, 0, var_33}))), &t);
+		return (t);;
+	}
+}
+
+
+// start code fragment :: Definition of timer_start //
+void timer_start(void* _capture, int n) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_32 = ((struct __insieme_funType_type_2*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		((((((((*var_32).start))[0]))[((unsigned int)(n))])) = call__insieme_funType_type_3(((struct __insieme_funType_type_3*)(&((struct __insieme_funType_type_4){&elapsed_time, 0, var_32})))));
+	}
+}
+
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Prototype for external function: fopen //
+struct FILE* fopen(char*, char*);
+
+// start code fragment :: Prototype for external function: fscanf //
+int fscanf(struct FILE*, char*, ...);
+
+// start code fragment :: Prototype for external function: fgetc //
+int fgetc(struct FILE*);
+
+// start code fragment :: Prototype for external function: ceil //
+double ceil(double);
+
+// start code fragment :: Prototype for external function: fclose //
+int fclose(struct FILE*);
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_7 //
+// Abstract prototype for lambdas of type __insieme_funType_type_7
+struct __insieme_funType_type_7 { 
+    void(*fun)(void*, int*, int*, int*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_7
+void call__insieme_funType_type_7(struct __insieme_funType_type_7* lambda, int* p1, int* p2, int* p3, int p4) { return lambda->fun(lambda, p1,p2,p3,p4); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_8 //
+// Abstract prototype for lambdas of type __insieme_funType_type_8
+struct __insieme_funType_type_8 { 
+    void(*fun)(void*, int*, int*, int*, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of setup //
+void setup(void* _capture, int* n1, int* n2, int* n3, int lt) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_47 = ((struct __insieme_funType_type_8*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int k = 0;
+		{
+			for(int var_49 = (((int)(0))-(lt-1)); var_49 < ((((int)(0))-1)+1); var_49 += 1) {
+				((((((((*var_47).nx))[0]))[((unsigned int)((((int)(0))-(var_49))))])) = ((((((((*var_47).nx))[0]))[((unsigned int)(((((int)(0))-(var_49))+1)))]))/2));
+				((((((((*var_47).ny))[0]))[((unsigned int)((((int)(0))-(var_49))))])) = ((((((((*var_47).ny))[0]))[((unsigned int)(((((int)(0))-(var_49))+1)))]))/2));
+				((((((((*var_47).nz))[0]))[((unsigned int)((((int)(0))-(var_49))))])) = ((((((((*var_47).nz))[0]))[((unsigned int)(((((int)(0))-(var_49))+1)))]))/2));
+			};
+			((k) = ((lt-1)+(((int)(ceil((((double)((((((int)(0))-1)+1)-(lt-1))))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_50 = 1; var_50 < (lt+1); var_50 += 1) {
+				((((((((*var_47).m1))[0]))[((unsigned int)((var_50)))])) = ((((((((*var_47).nx))[0]))[((unsigned int)((var_50)))]))+2));
+				((((((((*var_47).m2))[0]))[((unsigned int)((var_50)))])) = ((((((((*var_47).nz))[0]))[((unsigned int)((var_50)))]))+2));
+				((((((((*var_47).m3))[0]))[((unsigned int)((var_50)))])) = ((((((((*var_47).ny))[0]))[((unsigned int)((var_50)))]))+2));
+			};
+			((k) = (1+(((int)(ceil((((double)(((lt+1)-1)))/((double)(1))))))*1)));
+		};
+		((((*var_47).is1)) = 1);
+		((((*var_47).ie1)) = (((((((*var_47).nx))[0]))[((unsigned int)(lt))])));
+		(((n1[0])) = ((((((((*var_47).nx))[0]))[((unsigned int)(lt))]))+2));
+		((((*var_47).is2)) = 1);
+		((((*var_47).ie2)) = (((((((*var_47).ny))[0]))[((unsigned int)(lt))])));
+		(((n2[0])) = ((((((((*var_47).ny))[0]))[((unsigned int)(lt))]))+2));
+		((((*var_47).is3)) = 1);
+		((((*var_47).ie3)) = (((((((*var_47).nz))[0]))[((unsigned int)(lt))])));
+		(((n3[0])) = ((((((((*var_47).nz))[0]))[((unsigned int)(lt))]))+2));
+		if(((((((((*var_47).debug_vec))[0]))[((unsigned int)(1))]))>=1)) {
+			printf(" in setup, \n", 0);
+			printf("  lt  nx  ny  nz  n1  n2  n3 is1 is2 is3 ie1 ie2 ie3\n", 0);
+			printf("%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d%4d\n", lt, (((((((*var_47).nx))[0]))[((unsigned int)(lt))])), (((((((*var_47).ny))[0]))[((unsigned int)(lt))])), (((((((*var_47).nz))[0]))[((unsigned int)(lt))])), ((n1[0])), ((n2[0])), ((n3[0])), (((*var_47).is1)), (((*var_47).is2)), (((*var_47).is3)), (((*var_47).ie1)), (((*var_47).ie2)), (((*var_47).ie3)));
+		};
+	}
+}
+
+
+// start code fragment :: Definition of zero3 //
+void zero3(double*** z, int n1, int n2, int n3) {
+	{
+		int i1 = 0;
+		int i2 = 0;
+		int i3 = 0;
+		{
+			for(int var_69 = 0; var_69 < n3; var_69 += 1) {
+				{
+					for(int var_68 = 0; var_68 < n2; var_68 += 1) {
+						{
+							for(int var_67 = 0; var_67 < n1; var_67 += 1) {
+								(((((((z[((unsigned int)((var_69)))]))[((unsigned int)((var_68)))]))[((unsigned int)((var_67)))])) = 0.0);
+							};
+							((i1) = (0+(((int)(ceil((((double)((n1-0)))/((double)(1))))))*1)));
+						};
+					};
+					((i2) = (0+(((int)(ceil((((double)((n2-0)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (0+(((int)(ceil((((double)((n3-0)))/((double)(1))))))*1)));
+		};
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_9 //
+// Abstract prototype for lambdas of type __insieme_funType_type_9
+struct __insieme_funType_type_9 { 
+    void(*fun)(void*, double***, int, int, int, int, int, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_9
+void call__insieme_funType_type_9(struct __insieme_funType_type_9* lambda, double*** p1, int p2, int p3, int p4, int p5, int p6, int p7) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6,p7); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_10 //
+// Abstract prototype for lambdas of type __insieme_funType_type_10
+struct __insieme_funType_type_10 { 
+    void(*fun)(void*, double***, int, int, int, int, int, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of randlc //
+double randlc(double* x, double a) {
+	{
+		double t1 = 0.0;
+		double t2 = 0.0;
+		double t3 = 0.0;
+		double t4 = 0.0;
+		double a1 = 0.0;
+		double a2 = 0.0;
+		double x1 = 0.0;
+		double x2 = 0.0;
+		double z = 0.0;
+		((t1) = (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*a));
+		((a1) = ((double)(((int)((t1))))));
+		((a2) = (a-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(a1))));
+		((t1) = (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((x[0]))));
+		((x1) = ((double)(((int)((t1))))));
+		((x2) = (((x[0]))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(x1))));
+		((t1) = (((a1)*(x2))+((a2)*(x1))));
+		((t2) = ((double)(((int)((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*(t1)))))));
+		((z) = ((t1)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(t2))));
+		((t3) = ((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(z))+((a2)*(x2))));
+		((t4) = ((double)(((int)(((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(t3)))))));
+		(((x[0])) = ((t3)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*(t4))));
+		return ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*((x[0])));;
+	}
+}
+
+
+// start code fragment :: Definition of power //
+double power(double a, int n) {
+	{
+		double aj = 0.0;
+		int nj = 0;
+		double rdummy = 0.0;
+		double power = 0.0;
+		((power) = 1.0);
+		((nj) = n);
+		((aj) = a);
+		while(((nj)!=0)) {
+			if((((nj)%2)==1)) {
+				((rdummy) = randlc(&power, (aj)));
+			};
+			((rdummy) = randlc(&aj, (aj)));
+			((nj) = ((nj)/2));
+		};
+		return (power);;
+	}
+}
+
+
+// start code fragment :: Prototype for external function: pow //
+double pow(double, double);
+
+// start code fragment :: Definition of vranlc //
+void vranlc(int n, double* x_seed, double a, double* y) {
+	{
+		int i = 0;
+		double x = 0.0;
+		double t1 = 0.0;
+		double t2 = 0.0;
+		double t3 = 0.0;
+		double t4 = 0.0;
+		double a1 = 0.0;
+		double a2 = 0.0;
+		double x1 = 0.0;
+		double x2 = 0.0;
+		double z = 0.0;
+		((t1) = (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*a));
+		((a1) = ((double)(((int)((t1))))));
+		((a2) = (a-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(a1))));
+		((x) = ((x_seed[0])));
+		{
+			for(int var_137 = 1; var_137 < (n+1); var_137 += 1) {
+				((t1) = (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*(x)));
+				((x1) = ((double)(((int)((t1))))));
+				((x2) = ((x)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(x1))));
+				((t1) = (((a1)*(x2))+((a2)*(x1))));
+				((t2) = ((double)(((int)((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*(t1)))))));
+				((z) = ((t1)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(t2))));
+				((t3) = ((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(z))+((a2)*(x2))));
+				((t4) = ((double)(((int)(((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(t3)))))));
+				((x) = ((t3)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*(t4))));
+				(((y[((unsigned int)((var_137)))])) = ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(x)));
+			};
+			((i) = (1+(((int)(ceil((((double)(((n+1)-1)))/((double)(1))))))*1)));
+		};
+		(((x_seed[0])) = (x));
+	}
+}
+
+
+// start code fragment :: Definition of bubble //
+int bubble(double(* ten)[2], int(* j1)[2], int(* j2)[2], int(* j3)[2], int m, int ind) {
+	{
+		double temp = 0.0;
+		int i = 0;
+		int j_temp = 0;
+		if((ind==1)) {
+			{
+				for(int var_151 = 0; var_151 < (m-1); var_151 += 1) {
+					if((((((ten[((unsigned int)((var_151)))]))[((unsigned int)(ind))]))>((((ten[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])))) {
+						((temp) = ((((ten[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])));
+						(((((ten[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])) = ((((ten[((unsigned int)((var_151)))]))[((unsigned int)(ind))])));
+						(((((ten[((unsigned int)((var_151)))]))[((unsigned int)(ind))])) = (temp));
+						((j_temp) = ((((j1[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])));
+						(((((j1[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])) = ((((j1[((unsigned int)((var_151)))]))[((unsigned int)(ind))])));
+						(((((j1[((unsigned int)((var_151)))]))[((unsigned int)(ind))])) = (j_temp));
+						((j_temp) = ((((j2[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])));
+						(((((j2[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])) = ((((j2[((unsigned int)((var_151)))]))[((unsigned int)(ind))])));
+						(((((j2[((unsigned int)((var_151)))]))[((unsigned int)(ind))])) = (j_temp));
+						((j_temp) = ((((j3[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])));
+						(((((j3[((unsigned int)(((var_151)+1)))]))[((unsigned int)(ind))])) = ((((j3[((unsigned int)((var_151)))]))[((unsigned int)(ind))])));
+						(((((j3[((unsigned int)((var_151)))]))[((unsigned int)(ind))])) = (j_temp));
+					} else {
+						return 0;;
+					};
+				};
+				((i) = (0+(((int)(ceil((((double)(((m-1)-0)))/((double)(1))))))*1)));
+			};
+		} else {
+			{
+				for(int var_152 = 0; var_152 < (m-1); var_152 += 1) {
+					if((((((ten[((unsigned int)((var_152)))]))[((unsigned int)(ind))]))<((((ten[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])))) {
+						((temp) = ((((ten[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])));
+						(((((ten[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])) = ((((ten[((unsigned int)((var_152)))]))[((unsigned int)(ind))])));
+						(((((ten[((unsigned int)((var_152)))]))[((unsigned int)(ind))])) = (temp));
+						((j_temp) = ((((j1[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])));
+						(((((j1[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])) = ((((j1[((unsigned int)((var_152)))]))[((unsigned int)(ind))])));
+						(((((j1[((unsigned int)((var_152)))]))[((unsigned int)(ind))])) = (j_temp));
+						((j_temp) = ((((j2[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])));
+						(((((j2[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])) = ((((j2[((unsigned int)((var_152)))]))[((unsigned int)(ind))])));
+						(((((j2[((unsigned int)((var_152)))]))[((unsigned int)(ind))])) = (j_temp));
+						((j_temp) = ((((j3[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])));
+						(((((j3[((unsigned int)(((var_152)+1)))]))[((unsigned int)(ind))])) = ((((j3[((unsigned int)((var_152)))]))[((unsigned int)(ind))])));
+						(((((j3[((unsigned int)((var_152)))]))[((unsigned int)(ind))])) = (j_temp));
+					} else {
+						return 0;;
+					};
+				};
+				((i) = (0+(((int)(ceil((((double)(((m-1)-0)))/((double)(1))))))*1)));
+			};
+		};
+		return 1;;
+	}
+}
+
+
+// start code fragment :: Definition of comm3 //
+void comm3(double*** u, int n1, int n2, int n3, int kk) {
+	{
+		int i1 = 0;
+		int i2 = 0;
+		int i3 = 0;
+		{
+			for(int var_172 = 1; var_172 < (n3-1); var_172 += 1) {
+				{
+					for(int var_171 = 1; var_171 < (n2-1); var_171 += 1) {
+						(((((((u[((unsigned int)((var_172)))]))[((unsigned int)((var_171)))]))[((unsigned int)((n1-1)))])) = ((((((u[((unsigned int)((var_172)))]))[((unsigned int)((var_171)))]))[((unsigned int)(1))])));
+						(((((((u[((unsigned int)((var_172)))]))[((unsigned int)((var_171)))]))[((unsigned int)(0))])) = ((((((u[((unsigned int)((var_172)))]))[((unsigned int)((var_171)))]))[((unsigned int)((n1-2)))])));
+					};
+					((i2) = (1+(((int)(ceil((((double)(((n2-1)-1)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (1+(((int)(ceil((((double)(((n3-1)-1)))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_174 = 1; var_174 < (n3-1); var_174 += 1) {
+				{
+					for(int var_173 = 0; var_173 < n1; var_173 += 1) {
+						(((((((u[((unsigned int)((var_174)))]))[((unsigned int)((n2-1)))]))[((unsigned int)((var_173)))])) = ((((((u[((unsigned int)((var_174)))]))[((unsigned int)(1))]))[((unsigned int)((var_173)))])));
+						(((((((u[((unsigned int)((var_174)))]))[((unsigned int)(0))]))[((unsigned int)((var_173)))])) = ((((((u[((unsigned int)((var_174)))]))[((unsigned int)((n2-2)))]))[((unsigned int)((var_173)))])));
+					};
+					((i1) = (0+(((int)(ceil((((double)((n1-0)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (1+(((int)(ceil((((double)(((n3-1)-1)))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_176 = 0; var_176 < n2; var_176 += 1) {
+				{
+					for(int var_175 = 0; var_175 < n1; var_175 += 1) {
+						(((((((u[((unsigned int)((n3-1)))]))[((unsigned int)((var_176)))]))[((unsigned int)((var_175)))])) = ((((((u[((unsigned int)(1))]))[((unsigned int)((var_176)))]))[((unsigned int)((var_175)))])));
+						(((((((u[((unsigned int)(0))]))[((unsigned int)((var_176)))]))[((unsigned int)((var_175)))])) = ((((((u[((unsigned int)((n3-2)))]))[((unsigned int)((var_176)))]))[((unsigned int)((var_175)))])));
+					};
+					((i1) = (0+(((int)(ceil((((double)((n1-0)))/((double)(1))))))*1)));
+				};
+			};
+			((i2) = (0+(((int)(ceil((((double)((n2-0)))/((double)(1))))))*1)));
+		};
+	}
+}
+
+
+// start code fragment :: Definition of zran3 //
+void zran3(void* _capture, double*** z, int n1, int n2, int n3, int nx, int ny, int k) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_78 = ((struct __insieme_funType_type_10*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int i0 = 0;
+		int m0 = 0;
+		int m1 = 0;
+		int i1 = 0;
+		int i2 = 0;
+		int i3 = 0;
+		int d1 = 0;
+		int e1 = 0;
+		int e2 = 0;
+		int e3 = 0;
+		double xx = 0.0;
+		double x0 = 0.0;
+		double x1 = 0.0;
+		double a1 = 0.0;
+		double a2 = 0.0;
+		double ai = 0.0;
+		double ten[10][2];
+		double best = 0.0;
+		int i = 0;
+		int j1[10][2];
+		int j2[10][2];
+		int j3[10][2];
+		int jg[4][10][2];
+		double rdummy = 0.0;
+		((a1) = power(pow(5.0, ((double)(13))), nx));
+		((a2) = power(pow(5.0, ((double)(13))), (nx*ny)));
+		{
+			zero3(z, n1, n2, n3);
+		};
+		((i) = (((((*var_78).is1))-1)+(nx*(((((*var_78).is2))-1)+(ny*((((*var_78).is3))-1))))));
+		((ai) = power(pow(5.0, ((double)(13))), (i)));
+		((d1) = (((((*var_78).ie1))-(((*var_78).is1)))+1));
+		((e1) = (((((*var_78).ie1))-(((*var_78).is1)))+2));
+		((e2) = (((((*var_78).ie2))-(((*var_78).is2)))+2));
+		((e3) = (((((*var_78).ie3))-(((*var_78).is3)))+2));
+		((x0) = 314159265.e0);
+		((rdummy) = randlc(&x0, (ai)));
+		{
+			for(int var_140 = 1; var_140 < (e3); var_140 += 1) {
+				((x1) = (x0));
+				{
+					for(int var_139 = 1; var_139 < (e2); var_139 += 1) {
+						((xx) = (x1));
+						vranlc((d1), &xx, pow(5.0, ((double)(13))), &(((((z[((unsigned int)((var_140)))]))[((unsigned int)((var_139)))]))[((unsigned int)(0))]));
+						((rdummy) = randlc(&x1, (a1)));
+					};
+					((i2) = (1+(((int)(ceil((((double)(((e2)-1)))/((double)(1))))))*1)));
+				};
+				((rdummy) = randlc(&x0, (a2)));
+			};
+			((i3) = (1+(((int)(ceil((((double)(((e3)-1)))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_141 = 0; var_141 < 10; var_141 += 1) {
+				(((ten[((unsigned int)((var_141)))][((unsigned int)(1))])) = 0.0);
+				(((j1[((unsigned int)((var_141)))][((unsigned int)(1))])) = 0);
+				(((j2[((unsigned int)((var_141)))][((unsigned int)(1))])) = 0);
+				(((j3[((unsigned int)((var_141)))][((unsigned int)(1))])) = 0);
+				(((ten[((unsigned int)((var_141)))][((unsigned int)(0))])) = 1.0);
+				(((j1[((unsigned int)((var_141)))][((unsigned int)(0))])) = 0);
+				(((j2[((unsigned int)((var_141)))][((unsigned int)(0))])) = 0);
+				(((j3[((unsigned int)((var_141)))][((unsigned int)(0))])) = 0);
+			};
+			((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_156 = 1; var_156 < (n3-1); var_156 += 1) {
+				{
+					for(int var_155 = 1; var_155 < (n2-1); var_155 += 1) {
+						{
+							for(int var_154 = 1; var_154 < (n1-1); var_154 += 1) {
+								if((((((((z[((unsigned int)((var_156)))]))[((unsigned int)((var_155)))]))[((unsigned int)((var_154)))]))>((ten[((unsigned int)(0))][((unsigned int)(1))])))) {
+									(((ten[((unsigned int)(0))][((unsigned int)(1))])) = ((((((z[((unsigned int)((var_156)))]))[((unsigned int)((var_155)))]))[((unsigned int)((var_154)))])));
+									(((j1[((unsigned int)(0))][((unsigned int)(1))])) = (var_154));
+									(((j2[((unsigned int)(0))][((unsigned int)(1))])) = (var_155));
+									(((j3[((unsigned int)(0))][((unsigned int)(1))])) = (var_156));
+									bubble(ten, j1, j2, j3, 10, 1);
+								};
+								if((((((((z[((unsigned int)((var_156)))]))[((unsigned int)((var_155)))]))[((unsigned int)((var_154)))]))<((ten[((unsigned int)(0))][((unsigned int)(0))])))) {
+									(((ten[((unsigned int)(0))][((unsigned int)(0))])) = ((((((z[((unsigned int)((var_156)))]))[((unsigned int)((var_155)))]))[((unsigned int)((var_154)))])));
+									(((j1[((unsigned int)(0))][((unsigned int)(0))])) = (var_154));
+									(((j2[((unsigned int)(0))][((unsigned int)(0))])) = (var_155));
+									(((j3[((unsigned int)(0))][((unsigned int)(0))])) = (var_156));
+									bubble(ten, j1, j2, j3, 10, 0);
+								};
+							};
+							((i1) = (1+(((int)(ceil((((double)(((n1-1)-1)))/((double)(1))))))*1)));
+						};
+					};
+					((i2) = (1+(((int)(ceil((((double)(((n2-1)-1)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (1+(((int)(ceil((((double)(((n3-1)-1)))/((double)(1))))))*1)));
+		};
+		((i1) = (10-1));
+		((i0) = (10-1));
+		{
+			for(int var_157 = (((int)(0))-(10-1)); var_157 < ((((int)(0))-0)+1); var_157 += 1) {
+				((best) = ((((((z[((unsigned int)(((j3[((unsigned int)((i1)))][((unsigned int)(1))]))))]))[((unsigned int)(((j2[((unsigned int)((i1)))][((unsigned int)(1))]))))]))[((unsigned int)(((j1[((unsigned int)((i1)))][((unsigned int)(1))]))))])));
+				if(((best)==((((((z[((unsigned int)(((j3[((unsigned int)((i1)))][((unsigned int)(1))]))))]))[((unsigned int)(((j2[((unsigned int)((i1)))][((unsigned int)(1))]))))]))[((unsigned int)(((j1[((unsigned int)((i1)))][((unsigned int)(1))]))))])))) {
+					(((jg[((unsigned int)(0))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = 0);
+					(((jg[((unsigned int)(1))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = (((((*var_78).is1))-1)+((j1[((unsigned int)((i1)))][((unsigned int)(1))]))));
+					(((jg[((unsigned int)(2))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = (((((*var_78).is2))-1)+((j2[((unsigned int)((i1)))][((unsigned int)(1))]))));
+					(((jg[((unsigned int)(3))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = (((((*var_78).is3))-1)+((j3[((unsigned int)((i1)))][((unsigned int)(1))]))));
+					((i1) = ((i1)-1));
+				} else {
+					(((jg[((unsigned int)(0))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = 0);
+					(((jg[((unsigned int)(1))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = 0);
+					(((jg[((unsigned int)(2))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = 0);
+					(((jg[((unsigned int)(3))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = 0);
+				};
+				(((ten[((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(1))])) = (best));
+				((best) = ((((((z[((unsigned int)(((j3[((unsigned int)((i0)))][((unsigned int)(0))]))))]))[((unsigned int)(((j2[((unsigned int)((i0)))][((unsigned int)(0))]))))]))[((unsigned int)(((j1[((unsigned int)((i0)))][((unsigned int)(0))]))))])));
+				if(((best)==((((((z[((unsigned int)(((j3[((unsigned int)((i0)))][((unsigned int)(0))]))))]))[((unsigned int)(((j2[((unsigned int)((i0)))][((unsigned int)(0))]))))]))[((unsigned int)(((j1[((unsigned int)((i0)))][((unsigned int)(0))]))))])))) {
+					(((jg[((unsigned int)(0))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = 0);
+					(((jg[((unsigned int)(1))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = (((((*var_78).is1))-1)+((j1[((unsigned int)((i0)))][((unsigned int)(0))]))));
+					(((jg[((unsigned int)(2))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = (((((*var_78).is2))-1)+((j2[((unsigned int)((i0)))][((unsigned int)(0))]))));
+					(((jg[((unsigned int)(3))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = (((((*var_78).is3))-1)+((j3[((unsigned int)((i0)))][((unsigned int)(0))]))));
+					((i0) = ((i0)-1));
+				} else {
+					(((jg[((unsigned int)(0))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = 0);
+					(((jg[((unsigned int)(1))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = 0);
+					(((jg[((unsigned int)(2))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = 0);
+					(((jg[((unsigned int)(3))][((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = 0);
+				};
+				(((ten[((unsigned int)((((int)(0))-(var_157))))][((unsigned int)(0))])) = (best));
+			};
+			((i) = ((10-1)+(((int)(ceil((((double)((((((int)(0))-0)+1)-(10-1))))/((double)(1))))))*1)));
+		};
+		((m1) = ((i1)+1));
+		((m0) = ((i0)+1));
+		{
+			for(int var_160 = 0; var_160 < n3; var_160 += 1) {
+				{
+					for(int var_159 = 0; var_159 < n2; var_159 += 1) {
+						{
+							for(int var_158 = 0; var_158 < n1; var_158 += 1) {
+								(((((((z[((unsigned int)((var_160)))]))[((unsigned int)((var_159)))]))[((unsigned int)((var_158)))])) = 0.0);
+							};
+							((i1) = (0+(((int)(ceil((((double)((n1-0)))/((double)(1))))))*1)));
+						};
+					};
+					((i2) = (0+(((int)(ceil((((double)((n2-0)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (0+(((int)(ceil((((double)((n3-0)))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_161 = (((int)(0))-(10-1)); var_161 < ((((int)(0))-(m0))+1); var_161 += 1) {
+				(((((((z[((unsigned int)(((j3[((unsigned int)((((int)(0))-(var_161))))][((unsigned int)(0))]))))]))[((unsigned int)(((j2[((unsigned int)((((int)(0))-(var_161))))][((unsigned int)(0))]))))]))[((unsigned int)(((j1[((unsigned int)((((int)(0))-(var_161))))][((unsigned int)(0))]))))])) = (((double)(0))-1.0));
+			};
+			((i) = ((10-1)+(((int)(ceil((((double)((((((int)(0))-(m0))+1)-(10-1))))/((double)(1))))))*1)));
+		};
+		{
+			for(int var_162 = (((int)(0))-(10-1)); var_162 < ((((int)(0))-(m1))+1); var_162 += 1) {
+				(((((((z[((unsigned int)(((j3[((unsigned int)((((int)(0))-(var_162))))][((unsigned int)(1))]))))]))[((unsigned int)(((j2[((unsigned int)((((int)(0))-(var_162))))][((unsigned int)(1))]))))]))[((unsigned int)(((j1[((unsigned int)((((int)(0))-(var_162))))][((unsigned int)(1))]))))])) = 1.0);
+			};
+			((i) = ((10-1)+(((int)(ceil((((double)((((((int)(0))-(m1))+1)-(10-1))))/((double)(1))))))*1)));
+		};
+		comm3(z, n1, n2, n3, k);
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_11 //
+// Abstract prototype for lambdas of type __insieme_funType_type_11
+struct __insieme_funType_type_11 { 
+    void(*fun)(void*, double***, int, int, int, double*, double*, int, int, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_11
+void call__insieme_funType_type_11(struct __insieme_funType_type_11* lambda, double*** p1, int p2, int p3, int p4, double* p5, double* p6, int p7, int p8, int p9) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6,p7,p8,p9); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_12 //
+// Abstract prototype for lambdas of type __insieme_funType_type_12
+struct __insieme_funType_type_12 { 
+    void(*fun)(void*, double***, int, int, int, double*, double*, int, int, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Prototype for external function: fabs //
+double fabs(double);
+
+// start code fragment :: Prototype for external function: sqrt //
+double sqrt(double);
+
+// start code fragment :: Definition of norm2u3 //
+void norm2u3(void* _capture, double*** r, int n1, int n2, int n3, double* rnm2, double* rnmu, int nx, int ny, int nz) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_188 = ((struct __insieme_funType_type_12*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		double tmp = 0.0;
+		int i3 = 0;
+		int i2 = 0;
+		int i1 = 0;
+		int n = 0;
+		double p_s = 0.0;
+		double p_a = 0.0;
+		((n) = ((nx*ny)*nz));
+		{
+			for(int var_198 = 1; var_198 < (n3-1); var_198 += 1) {
+				{
+					for(int var_197 = 1; var_197 < (n2-1); var_197 += 1) {
+						{
+							for(int var_196 = 1; var_196 < (n1-1); var_196 += 1) {
+								((p_s) = ((p_s)+(((((((r[((unsigned int)((var_198)))]))[((unsigned int)((var_197)))]))[((unsigned int)((var_196)))]))*((((((r[((unsigned int)((var_198)))]))[((unsigned int)((var_197)))]))[((unsigned int)((var_196)))])))));
+								((tmp) = fabs(((((((r[((unsigned int)((var_198)))]))[((unsigned int)((var_197)))]))[((unsigned int)((var_196)))]))));
+								if(((tmp)>(p_a))) {
+									((p_a) = (tmp));
+								};
+							};
+							((i1) = (1+(((int)(ceil((((double)(((n1-1)-1)))/((double)(1))))))*1)));
+						};
+					};
+					((i2) = (1+(((int)(ceil((((double)(((n2-1)-1)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (1+(((int)(ceil((((double)(((n3-1)-1)))/((double)(1))))))*1)));
+		};
+		{
+			((((*var_188).s)) = ((((*var_188).s))+(p_s)));
+			if(((p_a)>((rnmu[0])))) {
+				(((rnmu[0])) = (p_a));
+			};
+		};
+		{
+			(((rnm2[0])) = sqrt(((((*var_188).s))/((double)((n))))));
+			((((*var_188).s)) = 0.0);
+		};
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_13 //
+// Abstract prototype for lambdas of type __insieme_funType_type_13
+struct __insieme_funType_type_13 { 
+    void(*fun)(void*, double***, double***, double***, int, int, int, double*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_13
+void call__insieme_funType_type_13(struct __insieme_funType_type_13* lambda, double*** p1, double*** p2, double*** p3, int p4, int p5, int p6, double* p7, int p8) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6,p7,p8); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_14 //
+// Abstract prototype for lambdas of type __insieme_funType_type_14
+struct __insieme_funType_type_14 { 
+    void(*fun)(void*, double***, double***, double***, int, int, int, double*, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_15 //
+// Abstract prototype for lambdas of type __insieme_funType_type_15
+struct __insieme_funType_type_15 { 
+    void(*fun)(void*, double***, int, int, int, char*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_15
+void call__insieme_funType_type_15(struct __insieme_funType_type_15* lambda, double*** p1, int p2, int p3, int p4, char* p5, int p6) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_16 //
+// Abstract prototype for lambdas of type __insieme_funType_type_16
+struct __insieme_funType_type_16 { 
+    void(*fun)(void*, double***, int, int, int, char*, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of rep_nrm //
+void rep_nrm(void* _capture, double*** u, int n1, int n2, int n3, char* title, int kk) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_224 = ((struct __insieme_funType_type_16*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		double rnm2 = 0.0;
+		double rnmu = 0.0;
+		call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&norm2u3, 0, var_224}))), u, n1, n2, n3, &rnm2, &rnmu, (((((((*var_224).nx))[0]))[((unsigned int)(kk))])), (((((((*var_224).ny))[0]))[((unsigned int)(kk))])), (((((((*var_224).nz))[0]))[((unsigned int)(kk))])));
+		printf(" Level%2d in %8s: norms =%21.14e%21.14e\n", kk, title, (rnm2), (rnmu));
+	}
+}
+
+
+// start code fragment :: Definition of showall //
+void showall(double*** z, int n1, int n2, int n3) {
+	{
+		int i1 = 0;
+		int i2 = 0;
+		int i3 = 0;
+		int m1 = 0;
+		int m2 = 0;
+		int m3 = 0;
+		((m1) = (((n1<18))?(n1):(18)));
+		((m2) = (((n2<14))?(n2):(14)));
+		((m3) = (((n3<18))?(n3):(18)));
+		printf("\n", 0);{
+			for(int var_249 = 0; var_249 < (m3); var_249 += 1) {
+				{
+					for(int var_248 = 0; var_248 < (m1); var_248 += 1) {
+						{
+							for(int var_247 = 0; var_247 < (m2); var_247 += 1) {
+								printf("%6.3f", ((((((z[((unsigned int)((var_249)))]))[((unsigned int)((var_247)))]))[((unsigned int)((var_248)))])));
+							};
+							((i2) = (0+(((int)(ceil((((double)(((m2)-0)))/((double)(1))))))*1)));
+						};
+						printf("\n", 0);
+					};
+					((i1) = (0+(((int)(ceil((((double)(((m1)-0)))/((double)(1))))))*1)));
+				};
+				printf(" - - - - - - - \n", 0);
+			};
+			((i3) = (0+(((int)(ceil((((double)(((m3)-0)))/((double)(1))))))*1)));
+		};
+		printf("\n", 0);
+	}
+}
+
+
+// start code fragment :: Definition of resid //
+void resid(void* _capture, double*** u, double*** v, double*** r, int n1, int n2, int n3, double* a, int k) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_208 = ((struct __insieme_funType_type_14*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int i3 = 0;
+		int i2 = 0;
+		int i1 = 0;
+		double u1[1037];
+		double u2[1037];
+		{
+			for(int var_217 = 1; var_217 < (n3-1); var_217 += 1) {
+				{
+					for(int var_216 = 1; var_216 < (n2-1); var_216 += 1) {
+						{
+							for(int var_214 = 0; var_214 < n1; var_214 += 1) {
+								(((u1[((unsigned int)((var_214)))])) = (((((((((u[((unsigned int)((var_217)))]))[((unsigned int)(((var_216)-1)))]))[((unsigned int)((var_214)))]))+((((((u[((unsigned int)((var_217)))]))[((unsigned int)(((var_216)+1)))]))[((unsigned int)((var_214)))])))+((((((u[((unsigned int)(((var_217)-1)))]))[((unsigned int)((var_216)))]))[((unsigned int)((var_214)))])))+((((((u[((unsigned int)(((var_217)+1)))]))[((unsigned int)((var_216)))]))[((unsigned int)((var_214)))]))));
+								(((u2[((unsigned int)((var_214)))])) = (((((((((u[((unsigned int)(((var_217)-1)))]))[((unsigned int)(((var_216)-1)))]))[((unsigned int)((var_214)))]))+((((((u[((unsigned int)(((var_217)-1)))]))[((unsigned int)(((var_216)+1)))]))[((unsigned int)((var_214)))])))+((((((u[((unsigned int)(((var_217)+1)))]))[((unsigned int)(((var_216)-1)))]))[((unsigned int)((var_214)))])))+((((((u[((unsigned int)(((var_217)+1)))]))[((unsigned int)(((var_216)+1)))]))[((unsigned int)((var_214)))]))));
+							};
+							((i1) = (0+(((int)(ceil((((double)((n1-0)))/((double)(1))))))*1)));
+						};
+						{
+							for(int var_215 = 1; var_215 < (n1-1); var_215 += 1) {
+								(((((((r[((unsigned int)((var_217)))]))[((unsigned int)((var_216)))]))[((unsigned int)((var_215)))])) = (((((((((v[((unsigned int)((var_217)))]))[((unsigned int)((var_216)))]))[((unsigned int)((var_215)))]))-(((a[((unsigned int)(0))]))*((((((u[((unsigned int)((var_217)))]))[((unsigned int)((var_216)))]))[((unsigned int)((var_215)))]))))-(((a[((unsigned int)(2))]))*((((u2[((unsigned int)((var_215)))]))+((u1[((unsigned int)(((var_215)-1)))])))+((u1[((unsigned int)(((var_215)+1)))])))))-(((a[((unsigned int)(3))]))*(((u2[((unsigned int)(((var_215)-1)))]))+((u2[((unsigned int)(((var_215)+1)))]))))));
+							};
+							((i1) = (1+(((int)(ceil((((double)(((n1-1)-1)))/((double)(1))))))*1)));
+						};
+					};
+					((i2) = (1+(((int)(ceil((((double)(((n2-1)-1)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (1+(((int)(ceil((((double)(((n3-1)-1)))/((double)(1))))))*1)));
+		};
+		comm3(r, n1, n2, n3, k);
+		if(((((((((*var_208).debug_vec))[0]))[((unsigned int)(0))]))>=1)) {
+			call__insieme_funType_type_15(((struct __insieme_funType_type_15*)(&((struct __insieme_funType_type_16){&rep_nrm, 0, var_208}))), r, n1, n2, n3, "   resid", k);
+		};
+		if(((((((((*var_208).debug_vec))[0]))[((unsigned int)(2))]))>=k)) {
+			showall(r, n1, n2, n3);
+		};
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_17 //
+// Abstract prototype for lambdas of type __insieme_funType_type_17
+struct __insieme_funType_type_17 { 
+    void(*fun)(void*, double****, double***, double****, double*, double*, int, int, int, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_17
+void call__insieme_funType_type_17(struct __insieme_funType_type_17* lambda, double**** p1, double*** p2, double**** p3, double* p4, double* p5, int p6, int p7, int p8, int p9) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6,p7,p8,p9); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_18 //
+// Abstract prototype for lambdas of type __insieme_funType_type_18
+struct __insieme_funType_type_18 { 
+    void(*fun)(void*, double****, double***, double****, double*, double*, int, int, int, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_19 //
+// Abstract prototype for lambdas of type __insieme_funType_type_19
+struct __insieme_funType_type_19 { 
+    void(*fun)(void*, double***, int, int, int, double***, int, int, int, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_19
+void call__insieme_funType_type_19(struct __insieme_funType_type_19* lambda, double*** p1, int p2, int p3, int p4, double*** p5, int p6, int p7, int p8, int p9) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6,p7,p8,p9); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_20 //
+// Abstract prototype for lambdas of type __insieme_funType_type_20
+struct __insieme_funType_type_20 { 
+    void(*fun)(void*, double***, int, int, int, double***, int, int, int, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of rprj3 //
+void rprj3(void* _capture, double*** r, int m1k, int m2k, int m3k, double*** s, int m1j, int m2j, int m3j, int k) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_272 = ((struct __insieme_funType_type_20*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int j3 = 0;
+		int j2 = 0;
+		int j1 = 0;
+		int i3 = 0;
+		int i2 = 0;
+		int i1 = 0;
+		int d1 = 0;
+		int d2 = 0;
+		int d3 = 0;
+		double x1[1037];
+		double y1[1037];
+		double x2 = 0.0;
+		double y2 = 0.0;
+		if((m1k==3)) {
+			((d1) = 2);
+		} else {
+			((d1) = 1);
+		};
+		if((m2k==3)) {
+			((d2) = 2);
+		} else {
+			((d2) = 1);
+		};
+		if((m3k==3)) {
+			((d3) = 2);
+		} else {
+			((d3) = 1);
+		};
+		{
+			for(int var_289 = 1; var_289 < (m3j-1); var_289 += 1) {
+				((i3) = ((2*(var_289))-(d3)));
+				{
+					for(int var_288 = 1; var_288 < (m2j-1); var_288 += 1) {
+						((i2) = ((2*(var_288))-(d2)));
+						{
+							for(int var_286 = 1; var_286 < m1j; var_286 += 1) {
+								((i1) = ((2*(var_286))-(d1)));
+								(((x1[((unsigned int)((i1)))])) = (((((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)((i2)))]))[((unsigned int)((i1)))]))+((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)(((i2)+2)))]))[((unsigned int)((i1)))])))+((((((r[((unsigned int)((i3)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)((i1)))])))+((((((r[((unsigned int)(((i3)+2)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)((i1)))]))));
+								(((y1[((unsigned int)((i1)))])) = (((((((((r[((unsigned int)((i3)))]))[((unsigned int)((i2)))]))[((unsigned int)((i1)))]))+((((((r[((unsigned int)(((i3)+2)))]))[((unsigned int)((i2)))]))[((unsigned int)((i1)))])))+((((((r[((unsigned int)((i3)))]))[((unsigned int)(((i2)+2)))]))[((unsigned int)((i1)))])))+((((((r[((unsigned int)(((i3)+2)))]))[((unsigned int)(((i2)+2)))]))[((unsigned int)((i1)))]))));
+							};
+							((j1) = (1+(((int)(ceil((((double)((m1j-1)))/((double)(1))))))*1)));
+						};
+						{
+							for(int var_287 = 1; var_287 < (m1j-1); var_287 += 1) {
+								((i1) = ((2*(var_287))-(d1)));
+								((y2) = (((((((((r[((unsigned int)((i3)))]))[((unsigned int)((i2)))]))[((unsigned int)(((i1)+1)))]))+((((((r[((unsigned int)(((i3)+2)))]))[((unsigned int)((i2)))]))[((unsigned int)(((i1)+1)))])))+((((((r[((unsigned int)((i3)))]))[((unsigned int)(((i2)+2)))]))[((unsigned int)(((i1)+1)))])))+((((((r[((unsigned int)(((i3)+2)))]))[((unsigned int)(((i2)+2)))]))[((unsigned int)(((i1)+1)))]))));
+								((x2) = (((((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)((i2)))]))[((unsigned int)(((i1)+1)))]))+((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)(((i2)+2)))]))[((unsigned int)(((i1)+1)))])))+((((((r[((unsigned int)((i3)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)(((i1)+1)))])))+((((((r[((unsigned int)(((i3)+2)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)(((i1)+1)))]))));
+								(((((((s[((unsigned int)((var_289)))]))[((unsigned int)((var_288)))]))[((unsigned int)((var_287)))])) = ((((0.5*((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)(((i1)+1)))])))+(0.25*((((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)((i1)))]))+((((((r[((unsigned int)(((i3)+1)))]))[((unsigned int)(((i2)+1)))]))[((unsigned int)(((i1)+2)))])))+(x2))))+(0.125*((((x1[((unsigned int)((i1)))]))+((x1[((unsigned int)(((i1)+2)))])))+(y2))))+(0.0625*(((y1[((unsigned int)((i1)))]))+((y1[((unsigned int)(((i1)+2)))]))))));
+							};
+							((j1) = (1+(((int)(ceil((((double)(((m1j-1)-1)))/((double)(1))))))*1)));
+						};
+					};
+					((j2) = (1+(((int)(ceil((((double)(((m2j-1)-1)))/((double)(1))))))*1)));
+				};
+			};
+			((j3) = (1+(((int)(ceil((((double)(((m3j-1)-1)))/((double)(1))))))*1)));
+		};
+		comm3(s, m1j, m2j, m3j, (k-1));
+		if(((((((((*var_272).debug_vec))[0]))[((unsigned int)(0))]))>=1)) {
+			call__insieme_funType_type_15(((struct __insieme_funType_type_15*)(&((struct __insieme_funType_type_16){&rep_nrm, 0, var_272}))), s, m1j, m2j, m3j, "   rprj3", (k-1));
+		};
+		if(((((((((*var_272).debug_vec))[0]))[((unsigned int)(4))]))>=k)) {
+			showall(s, m1j, m2j, m3j);
+		};
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_21 //
+// Abstract prototype for lambdas of type __insieme_funType_type_21
+struct __insieme_funType_type_21 { 
+    void(*fun)(void*, double***, double***, int, int, int, double*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_21
+void call__insieme_funType_type_21(struct __insieme_funType_type_21* lambda, double*** p1, double*** p2, int p3, int p4, int p5, double* p6, int p7) { return lambda->fun(lambda, p1,p2,p3,p4,p5,p6,p7); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_22 //
+// Abstract prototype for lambdas of type __insieme_funType_type_22
+struct __insieme_funType_type_22 { 
+    void(*fun)(void*, double***, double***, int, int, int, double*, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of psinv //
+void psinv(void* _capture, double*** r, double*** u, int n1, int n2, int n3, double* c, int k) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_300 = ((struct __insieme_funType_type_22*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int i3 = 0;
+		int i2 = 0;
+		int i1 = 0;
+		double r1[1037];
+		double r2[1037];
+		{
+			for(int var_309 = 1; var_309 < (n3-1); var_309 += 1) {
+				{
+					for(int var_308 = 1; var_308 < (n2-1); var_308 += 1) {
+						{
+							for(int var_306 = 0; var_306 < n1; var_306 += 1) {
+								(((r1[((unsigned int)((var_306)))])) = (((((((((r[((unsigned int)((var_309)))]))[((unsigned int)(((var_308)-1)))]))[((unsigned int)((var_306)))]))+((((((r[((unsigned int)((var_309)))]))[((unsigned int)(((var_308)+1)))]))[((unsigned int)((var_306)))])))+((((((r[((unsigned int)(((var_309)-1)))]))[((unsigned int)((var_308)))]))[((unsigned int)((var_306)))])))+((((((r[((unsigned int)(((var_309)+1)))]))[((unsigned int)((var_308)))]))[((unsigned int)((var_306)))]))));
+								(((r2[((unsigned int)((var_306)))])) = (((((((((r[((unsigned int)(((var_309)-1)))]))[((unsigned int)(((var_308)-1)))]))[((unsigned int)((var_306)))]))+((((((r[((unsigned int)(((var_309)-1)))]))[((unsigned int)(((var_308)+1)))]))[((unsigned int)((var_306)))])))+((((((r[((unsigned int)(((var_309)+1)))]))[((unsigned int)(((var_308)-1)))]))[((unsigned int)((var_306)))])))+((((((r[((unsigned int)(((var_309)+1)))]))[((unsigned int)(((var_308)+1)))]))[((unsigned int)((var_306)))]))));
+							};
+							((i1) = (0+(((int)(ceil((((double)((n1-0)))/((double)(1))))))*1)));
+						};
+						{
+							for(int var_307 = 1; var_307 < (n1-1); var_307 += 1) {
+								(((((((u[((unsigned int)((var_309)))]))[((unsigned int)((var_308)))]))[((unsigned int)((var_307)))])) = (((((((((u[((unsigned int)((var_309)))]))[((unsigned int)((var_308)))]))[((unsigned int)((var_307)))]))+(((c[((unsigned int)(0))]))*((((((r[((unsigned int)((var_309)))]))[((unsigned int)((var_308)))]))[((unsigned int)((var_307)))]))))+(((c[((unsigned int)(1))]))*((((((((r[((unsigned int)((var_309)))]))[((unsigned int)((var_308)))]))[((unsigned int)(((var_307)-1)))]))+((((((r[((unsigned int)((var_309)))]))[((unsigned int)((var_308)))]))[((unsigned int)(((var_307)+1)))])))+((r1[((unsigned int)((var_307)))])))))+(((c[((unsigned int)(2))]))*((((r2[((unsigned int)((var_307)))]))+((r1[((unsigned int)(((var_307)-1)))])))+((r1[((unsigned int)(((var_307)+1)))]))))));
+							};
+							((i1) = (1+(((int)(ceil((((double)(((n1-1)-1)))/((double)(1))))))*1)));
+						};
+					};
+					((i2) = (1+(((int)(ceil((((double)(((n2-1)-1)))/((double)(1))))))*1)));
+				};
+			};
+			((i3) = (1+(((int)(ceil((((double)(((n3-1)-1)))/((double)(1))))))*1)));
+		};
+		comm3(u, n1, n2, n3, k);
+		if(((((((((*var_300).debug_vec))[0]))[((unsigned int)(0))]))>=1)) {
+			call__insieme_funType_type_15(((struct __insieme_funType_type_15*)(&((struct __insieme_funType_type_16){&rep_nrm, 0, var_300}))), u, n1, n2, n3, "   psinv", k);
+		};
+		if(((((((((*var_300).debug_vec))[0]))[((unsigned int)(3))]))>=k)) {
+			showall(u, n1, n2, n3);
+		};
+	}
+}
+
+
+// start code fragment :: Definition of interp //
+void interp(void* _capture, double*** z, int mm1, int mm2, int mm3, double*** u, int n1, int n2, int n3, int k) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_320 = ((struct __insieme_funType_type_20*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int i3 = 0;
+		int i2 = 0;
+		int i1 = 0;
+		int d1 = 0;
+		int d2 = 0;
+		int d3 = 0;
+		int t1 = 0;
+		int t2 = 0;
+		int t3 = 0;
+		double z1[1037];
+		double z2[1037];
+		double z3[1037];
+		if((((n1!=3)&&(n2!=3))&&(n3!=3))) {
+			{
+				for(int var_339 = 0; var_339 < (mm3-1); var_339 += 1) {
+					{
+						for(int var_338 = 0; var_338 < (mm2-1); var_338 += 1) {
+							{
+								for(int var_333 = 0; var_333 < mm1; var_333 += 1) {
+									(((z1[((unsigned int)((var_333)))])) = (((((((z[((unsigned int)((var_339)))]))[((unsigned int)(((var_338)+1)))]))[((unsigned int)((var_333)))]))+((((((z[((unsigned int)((var_339)))]))[((unsigned int)((var_338)))]))[((unsigned int)((var_333)))]))));
+									(((z2[((unsigned int)((var_333)))])) = (((((((z[((unsigned int)(((var_339)+1)))]))[((unsigned int)((var_338)))]))[((unsigned int)((var_333)))]))+((((((z[((unsigned int)((var_339)))]))[((unsigned int)((var_338)))]))[((unsigned int)((var_333)))]))));
+									(((z3[((unsigned int)((var_333)))])) = ((((((((z[((unsigned int)(((var_339)+1)))]))[((unsigned int)(((var_338)+1)))]))[((unsigned int)((var_333)))]))+((((((z[((unsigned int)(((var_339)+1)))]))[((unsigned int)((var_338)))]))[((unsigned int)((var_333)))])))+((z1[((unsigned int)((var_333)))]))));
+								};
+								((i1) = (0+(((int)(ceil((((double)((mm1-0)))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_334 = 0; var_334 < (mm1-1); var_334 += 1) {
+									(((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)((2*(var_334))))])) = (((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)((2*(var_334))))]))+((((((z[((unsigned int)((var_339)))]))[((unsigned int)((var_338)))]))[((unsigned int)((var_334)))]))));
+									(((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)(((2*(var_334))+1)))])) = (((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)(((2*(var_334))+1)))]))+(0.5*(((((((z[((unsigned int)((var_339)))]))[((unsigned int)((var_338)))]))[((unsigned int)(((var_334)+1)))]))+((((((z[((unsigned int)((var_339)))]))[((unsigned int)((var_338)))]))[((unsigned int)((var_334)))]))))));
+								};
+								((i1) = (0+(((int)(ceil((((double)(((mm1-1)-0)))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_335 = 0; var_335 < (mm1-1); var_335 += 1) {
+									(((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)((2*(var_335))))])) = (((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)((2*(var_335))))]))+(0.5*((z1[((unsigned int)((var_335)))])))));
+									(((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)(((2*(var_335))+1)))])) = (((((((u[((unsigned int)((2*(var_339))))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)(((2*(var_335))+1)))]))+(0.25*(((z1[((unsigned int)((var_335)))]))+((z1[((unsigned int)(((var_335)+1)))]))))));
+								};
+								((i1) = (0+(((int)(ceil((((double)(((mm1-1)-0)))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_336 = 0; var_336 < (mm1-1); var_336 += 1) {
+									(((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)((2*(var_336))))])) = (((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)((2*(var_336))))]))+(0.5*((z2[((unsigned int)((var_336)))])))));
+									(((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)(((2*(var_336))+1)))])) = (((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)((2*(var_338))))]))[((unsigned int)(((2*(var_336))+1)))]))+(0.25*(((z2[((unsigned int)((var_336)))]))+((z2[((unsigned int)(((var_336)+1)))]))))));
+								};
+								((i1) = (0+(((int)(ceil((((double)(((mm1-1)-0)))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_337 = 0; var_337 < (mm1-1); var_337 += 1) {
+									(((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)((2*(var_337))))])) = (((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)((2*(var_337))))]))+(0.25*((z3[((unsigned int)((var_337)))])))));
+									(((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)(((2*(var_337))+1)))])) = (((((((u[((unsigned int)(((2*(var_339))+1)))]))[((unsigned int)(((2*(var_338))+1)))]))[((unsigned int)(((2*(var_337))+1)))]))+(0.125*(((z3[((unsigned int)((var_337)))]))+((z3[((unsigned int)(((var_337)+1)))]))))));
+								};
+								((i1) = (0+(((int)(ceil((((double)(((mm1-1)-0)))/((double)(1))))))*1)));
+							};
+						};
+						((i2) = (0+(((int)(ceil((((double)(((mm2-1)-0)))/((double)(1))))))*1)));
+					};
+				};
+				((i3) = (0+(((int)(ceil((((double)(((mm3-1)-0)))/((double)(1))))))*1)));
+			};
+		} else {
+			if((n1==3)) {
+				((d1) = 2);
+				((t1) = 1);
+			} else {
+				((d1) = 1);
+				((t1) = 0);
+			};
+			if((n2==3)) {
+				((d2) = 2);
+				((t2) = 1);
+			} else {
+				((d2) = 1);
+				((t2) = 0);
+			};
+			if((n3==3)) {
+				((d3) = 2);
+				((t3) = 1);
+			} else {
+				((d3) = 1);
+				((t3) = 0);
+			};
+			{
+				for(int var_346 = (d3); var_346 < ((mm3-1)+1); var_346 += 1) {
+					{
+						for(int var_342 = (d2); var_342 < ((mm2-1)+1); var_342 += 1) {
+							{
+								for(int var_340 = (d1); var_340 < ((mm1-1)+1); var_340 += 1) {
+									(((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_342))-(d2))-1)))]))[((unsigned int)((((2*(var_340))-(d1))-1)))])) = (((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_342))-(d2))-1)))]))[((unsigned int)((((2*(var_340))-(d1))-1)))]))+((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)(((var_342)-1)))]))[((unsigned int)(((var_340)-1)))]))));
+								};
+								((i1) = ((d1)+(((int)(ceil((((double)((((mm1-1)+1)-(d1))))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_341 = 1; var_341 < ((mm1-1)+1); var_341 += 1) {
+									(((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_342))-(d2))-1)))]))[((unsigned int)((((2*(var_341))-(t1))-1)))])) = (((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_342))-(d2))-1)))]))[((unsigned int)((((2*(var_341))-(t1))-1)))]))+(0.5*(((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)(((var_342)-1)))]))[((unsigned int)((var_341)))]))+((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)(((var_342)-1)))]))[((unsigned int)(((var_341)-1)))]))))));
+								};
+								((i1) = (1+(((int)(ceil((((double)((((mm1-1)+1)-1)))/((double)(1))))))*1)));
+							};
+						};
+						((i2) = ((d2)+(((int)(ceil((((double)((((mm2-1)+1)-(d2))))/((double)(1))))))*1)));
+					};
+					{
+						for(int var_345 = 1; var_345 < ((mm2-1)+1); var_345 += 1) {
+							{
+								for(int var_343 = (d1); var_343 < ((mm1-1)+1); var_343 += 1) {
+									(((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_345))-(t2))-1)))]))[((unsigned int)((((2*(var_343))-(d1))-1)))])) = (((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_345))-(t2))-1)))]))[((unsigned int)((((2*(var_343))-(d1))-1)))]))+(0.5*(((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)((var_345)))]))[((unsigned int)(((var_343)-1)))]))+((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)(((var_345)-1)))]))[((unsigned int)(((var_343)-1)))]))))));
+								};
+								((i1) = ((d1)+(((int)(ceil((((double)((((mm1-1)+1)-(d1))))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_344 = 1; var_344 < ((mm1-1)+1); var_344 += 1) {
+									(((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_345))-(t2))-1)))]))[((unsigned int)((((2*(var_344))-(t1))-1)))])) = (((((((u[((unsigned int)((((2*(var_346))-(d3))-1)))]))[((unsigned int)((((2*(var_345))-(t2))-1)))]))[((unsigned int)((((2*(var_344))-(t1))-1)))]))+(0.25*(((((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)((var_345)))]))[((unsigned int)((var_344)))]))+((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)(((var_345)-1)))]))[((unsigned int)((var_344)))])))+((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)((var_345)))]))[((unsigned int)(((var_344)-1)))])))+((((((z[((unsigned int)(((var_346)-1)))]))[((unsigned int)(((var_345)-1)))]))[((unsigned int)(((var_344)-1)))]))))));
+								};
+								((i1) = (1+(((int)(ceil((((double)((((mm1-1)+1)-1)))/((double)(1))))))*1)));
+							};
+						};
+						((i2) = (1+(((int)(ceil((((double)((((mm2-1)+1)-1)))/((double)(1))))))*1)));
+					};
+				};
+				((i3) = ((d3)+(((int)(ceil((((double)((((mm3-1)+1)-(d3))))/((double)(1))))))*1)));
+			};
+			{
+				for(int var_353 = 1; var_353 < ((mm3-1)+1); var_353 += 1) {
+					{
+						for(int var_349 = (d2); var_349 < ((mm2-1)+1); var_349 += 1) {
+							{
+								for(int var_347 = (d1); var_347 < ((mm1-1)+1); var_347 += 1) {
+									(((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_349))-(d2))-1)))]))[((unsigned int)((((2*(var_347))-(d1))-1)))])) = (((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_349))-(d2))-1)))]))[((unsigned int)((((2*(var_347))-(d1))-1)))]))+(0.5*(((((((z[((unsigned int)((var_353)))]))[((unsigned int)(((var_349)-1)))]))[((unsigned int)(((var_347)-1)))]))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)(((var_349)-1)))]))[((unsigned int)(((var_347)-1)))]))))));
+								};
+								((i1) = ((d1)+(((int)(ceil((((double)((((mm1-1)+1)-(d1))))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_348 = 1; var_348 < ((mm1-1)+1); var_348 += 1) {
+									(((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_349))-(d2))-1)))]))[((unsigned int)((((2*(var_348))-(t1))-1)))])) = (((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_349))-(d2))-1)))]))[((unsigned int)((((2*(var_348))-(t1))-1)))]))+(0.25*(((((((((z[((unsigned int)((var_353)))]))[((unsigned int)(((var_349)-1)))]))[((unsigned int)((var_348)))]))+((((((z[((unsigned int)((var_353)))]))[((unsigned int)(((var_349)-1)))]))[((unsigned int)(((var_348)-1)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)(((var_349)-1)))]))[((unsigned int)((var_348)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)(((var_349)-1)))]))[((unsigned int)(((var_348)-1)))]))))));
+								};
+								((i1) = (1+(((int)(ceil((((double)((((mm1-1)+1)-1)))/((double)(1))))))*1)));
+							};
+						};
+						((i2) = ((d2)+(((int)(ceil((((double)((((mm2-1)+1)-(d2))))/((double)(1))))))*1)));
+					};
+					{
+						for(int var_352 = 1; var_352 < ((mm2-1)+1); var_352 += 1) {
+							{
+								for(int var_350 = (d1); var_350 < ((mm1-1)+1); var_350 += 1) {
+									(((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_352))-(t2))-1)))]))[((unsigned int)((((2*(var_350))-(d1))-1)))])) = (((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_352))-(t2))-1)))]))[((unsigned int)((((2*(var_350))-(d1))-1)))]))+(0.25*(((((((((z[((unsigned int)((var_353)))]))[((unsigned int)((var_352)))]))[((unsigned int)(((var_350)-1)))]))+((((((z[((unsigned int)((var_353)))]))[((unsigned int)(((var_352)-1)))]))[((unsigned int)(((var_350)-1)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)((var_352)))]))[((unsigned int)(((var_350)-1)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)(((var_352)-1)))]))[((unsigned int)(((var_350)-1)))]))))));
+								};
+								((i1) = ((d1)+(((int)(ceil((((double)((((mm1-1)+1)-(d1))))/((double)(1))))))*1)));
+							};
+							{
+								for(int var_351 = 1; var_351 < ((mm1-1)+1); var_351 += 1) {
+									(((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_352))-(t2))-1)))]))[((unsigned int)((((2*(var_351))-(t1))-1)))])) = (((((((u[((unsigned int)((((2*(var_353))-(t3))-1)))]))[((unsigned int)((((2*(var_352))-(t2))-1)))]))[((unsigned int)((((2*(var_351))-(t1))-1)))]))+(0.125*(((((((((((((z[((unsigned int)((var_353)))]))[((unsigned int)((var_352)))]))[((unsigned int)((var_351)))]))+((((((z[((unsigned int)((var_353)))]))[((unsigned int)(((var_352)-1)))]))[((unsigned int)((var_351)))])))+((((((z[((unsigned int)((var_353)))]))[((unsigned int)((var_352)))]))[((unsigned int)(((var_351)-1)))])))+((((((z[((unsigned int)((var_353)))]))[((unsigned int)(((var_352)-1)))]))[((unsigned int)(((var_351)-1)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)((var_352)))]))[((unsigned int)((var_351)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)(((var_352)-1)))]))[((unsigned int)((var_351)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)((var_352)))]))[((unsigned int)(((var_351)-1)))])))+((((((z[((unsigned int)(((var_353)-1)))]))[((unsigned int)(((var_352)-1)))]))[((unsigned int)(((var_351)-1)))]))))));
+								};
+								((i1) = (1+(((int)(ceil((((double)((((mm1-1)+1)-1)))/((double)(1))))))*1)));
+							};
+						};
+						((i2) = (1+(((int)(ceil((((double)((((mm2-1)+1)-1)))/((double)(1))))))*1)));
+					};
+				};
+				((i3) = (1+(((int)(ceil((((double)((((mm3-1)+1)-1)))/((double)(1))))))*1)));
+			};
+		};
+		{
+			if(((((((((*var_320).debug_vec))[0]))[((unsigned int)(0))]))>=1)) {
+				call__insieme_funType_type_15(((struct __insieme_funType_type_15*)(&((struct __insieme_funType_type_16){&rep_nrm, 0, var_320}))), z, mm1, mm2, mm3, "z: inter", (k-1));
+				call__insieme_funType_type_15(((struct __insieme_funType_type_15*)(&((struct __insieme_funType_type_16){&rep_nrm, 0, var_320}))), u, n1, n2, n3, "u: inter", k);
+			};
+			if(((((((((*var_320).debug_vec))[0]))[((unsigned int)(5))]))>=k)) {
+				showall(z, mm1, mm2, mm3);
+				showall(u, n1, n2, n3);
+			};
+		};
+	}
+}
+
+
+// start code fragment :: Definition of mg3P //
+void mg3P(void* _capture, double**** u, double*** v, double**** r, double* a, double* c, int n1, int n2, int n3, int k) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_261 = ((struct __insieme_funType_type_18*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		int var_291 = k;
+		{
+			int j = 0;
+			{
+				for(int var_292 = (((int)(0))-(((*var_261).lt))); var_292 < ((((int)(0))-((((*var_261).lb))+1))+1); var_292 += 1) {
+					((j) = ((((int)(0))-(var_292))-1));
+					call__insieme_funType_type_19(((struct __insieme_funType_type_19*)(&((struct __insieme_funType_type_20){&rprj3, 0, var_261}))), ((r[((unsigned int)((((int)(0))-(var_292))))])), (((((((*var_261).m1))[0]))[((unsigned int)((((int)(0))-(var_292))))])), (((((((*var_261).m2))[0]))[((unsigned int)((((int)(0))-(var_292))))])), (((((((*var_261).m3))[0]))[((unsigned int)((((int)(0))-(var_292))))])), ((r[((unsigned int)((j)))])), (((((((*var_261).m1))[0]))[((unsigned int)((j)))])), (((((((*var_261).m2))[0]))[((unsigned int)((j)))])), (((((((*var_261).m3))[0]))[((unsigned int)((j)))])), (((int)(0))-(var_292)));
+				};
+				((var_291) = ((((*var_261).lt))+(((int)(ceil((((double)((((((int)(0))-((((*var_261).lb))+1))+1)-(((*var_261).lt)))))/((double)(1))))))*1)));
+			};
+			((var_291) = (((*var_261).lb)));
+			zero3(((u[((unsigned int)((var_291)))])), (((((((*var_261).m1))[0]))[((unsigned int)((var_291)))])), (((((((*var_261).m2))[0]))[((unsigned int)((var_291)))])), (((((((*var_261).m3))[0]))[((unsigned int)((var_291)))])));
+			call__insieme_funType_type_21(((struct __insieme_funType_type_21*)(&((struct __insieme_funType_type_22){&psinv, 0, var_261}))), ((r[((unsigned int)((var_291)))])), ((u[((unsigned int)((var_291)))])), (((((((*var_261).m1))[0]))[((unsigned int)((var_291)))])), (((((((*var_261).m2))[0]))[((unsigned int)((var_291)))])), (((((((*var_261).m3))[0]))[((unsigned int)((var_291)))])), c, (var_291));
+			{
+				for(int var_355 = ((((*var_261).lb))+1); var_355 < (((((*var_261).lt))-1)+1); var_355 += 1) {
+					((j) = ((var_355)-1));
+					zero3(((u[((unsigned int)((var_355)))])), (((((((*var_261).m1))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m2))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m3))[0]))[((unsigned int)((var_355)))])));
+					call__insieme_funType_type_19(((struct __insieme_funType_type_19*)(&((struct __insieme_funType_type_20){&interp, 0, var_261}))), ((u[((unsigned int)((j)))])), (((((((*var_261).m1))[0]))[((unsigned int)((j)))])), (((((((*var_261).m2))[0]))[((unsigned int)((j)))])), (((((((*var_261).m3))[0]))[((unsigned int)((j)))])), ((u[((unsigned int)((var_355)))])), (((((((*var_261).m1))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m2))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m3))[0]))[((unsigned int)((var_355)))])), (var_355));
+					call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&resid, 0, var_261}))), ((u[((unsigned int)((var_355)))])), ((r[((unsigned int)((var_355)))])), ((r[((unsigned int)((var_355)))])), (((((((*var_261).m1))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m2))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m3))[0]))[((unsigned int)((var_355)))])), a, (var_355));
+					call__insieme_funType_type_21(((struct __insieme_funType_type_21*)(&((struct __insieme_funType_type_22){&psinv, 0, var_261}))), ((r[((unsigned int)((var_355)))])), ((u[((unsigned int)((var_355)))])), (((((((*var_261).m1))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m2))[0]))[((unsigned int)((var_355)))])), (((((((*var_261).m3))[0]))[((unsigned int)((var_355)))])), c, (var_355));
+				};
+				((var_291) = (((((*var_261).lb))+1)+(((int)(ceil((((double)(((((((*var_261).lt))-1)+1)-((((*var_261).lb))+1))))/((double)(1))))))*1)));
+			};
+			((j) = ((((*var_261).lt))-1));
+			((var_291) = (((*var_261).lt)));
+			call__insieme_funType_type_19(((struct __insieme_funType_type_19*)(&((struct __insieme_funType_type_20){&interp, 0, var_261}))), ((u[((unsigned int)((j)))])), (((((((*var_261).m1))[0]))[((unsigned int)((j)))])), (((((((*var_261).m2))[0]))[((unsigned int)((j)))])), (((((((*var_261).m3))[0]))[((unsigned int)((j)))])), ((u[((unsigned int)((((*var_261).lt))))])), n1, n2, n3, (var_291));
+			call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&resid, 0, var_261}))), ((u[((unsigned int)((((*var_261).lt))))])), v, ((r[((unsigned int)((((*var_261).lt))))])), n1, n2, n3, a, (var_291));
+			call__insieme_funType_type_21(((struct __insieme_funType_type_21*)(&((struct __insieme_funType_type_22){&psinv, 0, var_261}))), ((r[((unsigned int)((((*var_261).lt))))])), ((u[((unsigned int)((((*var_261).lt))))])), n1, n2, n3, c, (var_291));
+		};
+	}
+}
+
+
+// start code fragment :: Definition of timer_stop //
+void timer_stop(void* _capture, int n) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_358 = ((struct __insieme_funType_type_2*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		double t = 0.0;
+		double now = 0.0;
+		((now) = call__insieme_funType_type_3(((struct __insieme_funType_type_3*)(&((struct __insieme_funType_type_4){&elapsed_time, 0, var_358})))));
+		((t) = ((now)-(((((((*var_358).start))[0]))[((unsigned int)(n))]))));
+		((((((((*var_358).elapsed))[0]))[((unsigned int)(n))])) = ((((((((*var_358).elapsed))[0]))[((unsigned int)(n))]))+(t)));
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_23 //
+// Abstract prototype for lambdas of type __insieme_funType_type_23
+struct __insieme_funType_type_23 { 
+    double(*fun)(void*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_23
+double call__insieme_funType_type_23(struct __insieme_funType_type_23* lambda, int p1) { return lambda->fun(lambda, p1); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_24 //
+// Abstract prototype for lambdas of type __insieme_funType_type_24
+struct __insieme_funType_type_24 { 
+    double(*fun)(void*, int);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of timer_read //
+double timer_read(void* _capture, int n) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_364 = ((struct __insieme_funType_type_24*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		return (((((((*var_364).elapsed))[0]))[((unsigned int)(n))]));;
+	}
+}
+
+
+// start code fragment :: Definition of c_print_results //
+void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, char* optype, int passed_verification, char* npbversion, char* compiletime, char* cc, char* clink, char* c_lib, char* c_inc, char* cflags, char* clinkflags, char* rand) {
+	{
+		char* evalue = "1000";
+		printf("\n\n %s Benchmark Completed\n", name);
+		printf(" Class           =                        %c\n", ((int)(class)));
+		if(((n2==0)&&(n3==0))) {
+			printf(" Size            =             %12d\n", n1);
+		} else {
+			printf(" Size            =              %3dx%3dx%3d\n", n1, n2, n3);
+		};
+		printf(" Iterations      =             %12d\n", niter);
+		printf(" Threads         =             %12d\n", nthreads);
+		printf(" Time in seconds =             %12.2f\n", 0.0);
+		printf(" Mop/s total     =             %12.2f\n", 0.0);
+		printf(" Operation type  = %24s\n", optype);
+		if(((bool)(passed_verification))) {
+			printf(" Verification    =               SUCCESSFUL\n", 0);
+		} else {
+			printf(" Verification    =             UNSUCCESSFUL\n", 0);
+		};
+		printf(" Version         =             %12s\n", npbversion);
+		printf(" Compile date    =             %12s\n", compiletime);
+		printf("\n Compile options:\n", 0);
+		printf("    CC           = %s\n", cc);
+		printf("    CLINK        = %s\n", clink);
+		printf("    C_LIB        = %s\n", c_lib);
+		printf("    C_INC        = %s\n", c_inc);
+		printf("    CFLAGS       = %s\n", cflags);
+		printf("    CLINKFLAGS   = %s\n", clinkflags);
+		printf("    RAND         = %s\n", rand);
+	}
+}
+
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		struct __insieme_globals var_1 = ((struct __insieme_globals){(calloc(sizeof(int[12]), 1)),
+			(calloc(sizeof(int[12]), 1)),
+			(calloc(sizeof(int[12]), 1)),
+			'\0',
+			(calloc(sizeof(int[8]), 1)),
+			(calloc(sizeof(int[12]), 1)),
+			(calloc(sizeof(int[12]), 1)),
+			(calloc(sizeof(int[12]), 1)),
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0.0,
+			(calloc(sizeof(double[64]), 1)),
+			(calloc(sizeof(double[64]), 1)),
+			(((int)(0))-1)
+		});
+		int k = 0;
+		int it = 0;
+		double t = 0.0;
+		double tinit = 0.0;
+		double mflops = 0.0;
+		int nthreads = 1;
+		double**** u;
+		double*** v;
+		double**** r;
+		double a[4];
+		double c[4];
+		double rnm2 = 0.0;
+		double rnmu = 0.0;
+		double epsilon = 1.0e-8;
+		int n1 = 0;
+		int n2 = 0;
+		int n3 = 0;
+		int nit = 0;
+		double verify_value = 0.0;
+		int verified = 0;
+		int i = 0;
+		int j = 0;
+		int l = 0;
+		struct FILE* fp;
+		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&timer_clear, 0, &var_1}))), 1);
+		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&timer_clear, 0, &var_1}))), 2);
+		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&timer_start, 0, &var_1}))), 2);
+		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - MG Benchmark\n\n", 0);
+		((fp) = fopen("mg.input", "r"));
+		if(((bool)((fp)))) {
+			printf(" Reading from input file mg.input\n", 0);
+			fscanf((fp), "%d", &((var_1).lt));
+			while((fgetc((fp))!='\n')) {};
+			fscanf((fp), "%d%d%d", &((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]), &((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))]), &((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))]));
+			while((fgetc((fp))!='\n')) {};
+			fscanf((fp), "%d", &nit);
+			while((fgetc((fp))!='\n')) {};
+			{
+				for(int var_390 = 0; var_390 < (7+1); var_390 += 1) {
+					fscanf((fp), "%d", &((((((var_1).debug_vec))[0]))[((unsigned int)((var_390)))]));
+				};
+				((i) = (0+(((int)(ceil((((double)(((7+1)-0)))/((double)(1))))))*1)));
+			};
+			fclose((fp));
+		} else {
+			printf(" No input file. Using compiled defaults\n", 0);
+			((((var_1).lt)) = 6);
+			((nit) = 40);
+			((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])) = 64);
+			((((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])) = 64);
+			((((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])) = 64);
+			{
+				for(int var_391 = 0; var_391 < (7+1); var_391 += 1) {
+					((((((((var_1).debug_vec))[0]))[((unsigned int)((var_391)))])) = 0);
+				};
+				((i) = (0+(((int)(ceil((((double)(((7+1)-0)))/((double)(1))))))*1)));
+			};
+		};
+		if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))!=(((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])))||((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))!=(((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))]))))) {
+			((((var_1).Class)) = ((char)('U')));
+		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==32)&&((nit)==4))) {
+			((((var_1).Class)) = ((char)('S')));
+		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==64)&&((nit)==40))) {
+			((((var_1).Class)) = ((char)('W')));
+		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==256)&&((nit)==20))) {
+			((((var_1).Class)) = ((char)('B')));
+		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==512)&&((nit)==20))) {
+			((((var_1).Class)) = ((char)('C')));
+		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==256)&&((nit)==4))) {
+			((((var_1).Class)) = ((char)('A')));
+		} else {
+			((((var_1).Class)) = ((char)('U')));
+		};
+		(((a[((unsigned int)(0))])) = ((((double)(0))-8.0)/3.0));
+		(((a[((unsigned int)(1))])) = 0.0);
+		(((a[((unsigned int)(2))])) = (1.0/6.0));
+		(((a[((unsigned int)(3))])) = (1.0/12.0));
+		if((((((int)((((var_1).Class))))=='A')||(((int)((((var_1).Class))))=='S'))||(((int)((((var_1).Class))))=='W'))) {
+			(((c[((unsigned int)(0))])) = ((((double)(0))-3.0)/8.0));
+			(((c[((unsigned int)(1))])) = (1.0/32.0));
+			(((c[((unsigned int)(2))])) = ((((double)(0))-1.0)/64.0));
+			(((c[((unsigned int)(3))])) = 0.0);
+		} else {
+			(((c[((unsigned int)(0))])) = ((((double)(0))-3.0)/17.0));
+			(((c[((unsigned int)(1))])) = (1.0/33.0));
+			(((c[((unsigned int)(2))])) = ((((double)(0))-1.0)/61.0));
+			(((c[((unsigned int)(3))])) = 0.0);
+		};
+		((((var_1).lb)) = 1);
+		call__insieme_funType_type_7(((struct __insieme_funType_type_7*)(&((struct __insieme_funType_type_8){&setup, 0, &var_1}))), &n1, &n2, &n3, (((var_1).lt)));
+		((u) = (malloc(sizeof(double***)*((((unsigned long)(((((var_1).lt))+1)))*sizeof(double***))/sizeof(double***)))));
+		{
+			for(int var_394 = (((int)(0))-(((var_1).lt))); var_394 < ((((int)(0))-1)+1); var_394 += 1) {
+				((((u)[((unsigned int)((((int)(0))-(var_394))))])) = (malloc(sizeof(double**)*((((unsigned long)((((((((var_1).m3))[0]))[((unsigned int)((((int)(0))-(var_394))))]))))*sizeof(double**))/sizeof(double**)))));
+				{
+					for(int var_393 = 0; var_393 < (((((((var_1).m3))[0]))[((unsigned int)((((int)(0))-(var_394))))])); var_393 += 1) {
+						((((((u)[((unsigned int)((((int)(0))-(var_394))))]))[((unsigned int)((var_393)))])) = (malloc(sizeof(double*)*((((unsigned long)((((((((var_1).m2))[0]))[((unsigned int)((((int)(0))-(var_394))))]))))*sizeof(double*))/sizeof(double*)))));
+						{
+							for(int var_392 = 0; var_392 < (((((((var_1).m2))[0]))[((unsigned int)((((int)(0))-(var_394))))])); var_392 += 1) {
+								((((((((u)[((unsigned int)((((int)(0))-(var_394))))]))[((unsigned int)((var_393)))]))[((unsigned int)((var_392)))])) = (malloc(sizeof(double)*((((unsigned long)((((((((var_1).m1))[0]))[((unsigned int)((((int)(0))-(var_394))))]))))*sizeof(double))/sizeof(double)))));
+							};
+							((j) = (0+(((int)(ceil((((double)(((((((((var_1).m2))[0]))[((unsigned int)((((int)(0))-(var_394))))]))-0)))/((double)(1))))))*1)));
+						};
+					};
+					((k) = (0+(((int)(ceil((((double)(((((((((var_1).m3))[0]))[((unsigned int)((((int)(0))-(var_394))))]))-0)))/((double)(1))))))*1)));
+				};
+			};
+			((l) = ((((var_1).lt))+(((int)(ceil((((double)((((((int)(0))-1)+1)-(((var_1).lt)))))/((double)(1))))))*1)));
+		};
+		((v) = (malloc(sizeof(double**)*((((unsigned long)((((((((var_1).m3))[0]))[((unsigned int)((((var_1).lt))))]))))*sizeof(double**))/sizeof(double**)))));
+		{
+			for(int var_396 = 0; var_396 < (((((((var_1).m3))[0]))[((unsigned int)((((var_1).lt))))])); var_396 += 1) {
+				((((v)[((unsigned int)((var_396)))])) = (malloc(sizeof(double*)*((((unsigned long)((((((((var_1).m2))[0]))[((unsigned int)((((var_1).lt))))]))))*sizeof(double*))/sizeof(double*)))));
+				{
+					for(int var_395 = 0; var_395 < (((((((var_1).m2))[0]))[((unsigned int)((((var_1).lt))))])); var_395 += 1) {
+						((((((v)[((unsigned int)((var_396)))]))[((unsigned int)((var_395)))])) = (malloc(sizeof(double)*((((unsigned long)((((((((var_1).m1))[0]))[((unsigned int)((((var_1).lt))))]))))*sizeof(double))/sizeof(double)))));
+					};
+					((j) = (0+(((int)(ceil((((double)(((((((((var_1).m2))[0]))[((unsigned int)((((var_1).lt))))]))-0)))/((double)(1))))))*1)));
+				};
+			};
+			((k) = (0+(((int)(ceil((((double)(((((((((var_1).m3))[0]))[((unsigned int)((((var_1).lt))))]))-0)))/((double)(1))))))*1)));
+		};
+		((r) = (malloc(sizeof(double***)*((((unsigned long)(((((var_1).lt))+1)))*sizeof(double***))/sizeof(double***)))));
+		{
+			for(int var_399 = (((int)(0))-(((var_1).lt))); var_399 < ((((int)(0))-1)+1); var_399 += 1) {
+				((((r)[((unsigned int)((((int)(0))-(var_399))))])) = (malloc(sizeof(double**)*((((unsigned long)((((((((var_1).m3))[0]))[((unsigned int)((((int)(0))-(var_399))))]))))*sizeof(double**))/sizeof(double**)))));
+				{
+					for(int var_398 = 0; var_398 < (((((((var_1).m3))[0]))[((unsigned int)((((int)(0))-(var_399))))])); var_398 += 1) {
+						((((((r)[((unsigned int)((((int)(0))-(var_399))))]))[((unsigned int)((var_398)))])) = (malloc(sizeof(double*)*((((unsigned long)((((((((var_1).m2))[0]))[((unsigned int)((((int)(0))-(var_399))))]))))*sizeof(double*))/sizeof(double*)))));
+						{
+							for(int var_397 = 0; var_397 < (((((((var_1).m2))[0]))[((unsigned int)((((int)(0))-(var_399))))])); var_397 += 1) {
+								((((((((r)[((unsigned int)((((int)(0))-(var_399))))]))[((unsigned int)((var_398)))]))[((unsigned int)((var_397)))])) = (malloc(sizeof(double)*((((unsigned long)((((((((var_1).m1))[0]))[((unsigned int)((((int)(0))-(var_399))))]))))*sizeof(double))/sizeof(double)))));
+							};
+							((j) = (0+(((int)(ceil((((double)(((((((((var_1).m2))[0]))[((unsigned int)((((int)(0))-(var_399))))]))-0)))/((double)(1))))))*1)));
+						};
+					};
+					((k) = (0+(((int)(ceil((((double)(((((((((var_1).m3))[0]))[((unsigned int)((((int)(0))-(var_399))))]))-0)))/((double)(1))))))*1)));
+				};
+			};
+			((l) = ((((var_1).lt))+(((int)(ceil((((double)((((((int)(0))-1)+1)-(((var_1).lt)))))/((double)(1))))))*1)));
+		};
+		{
+			zero3((((u)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3));
+		};
+		call__insieme_funType_type_9(((struct __insieme_funType_type_9*)(&((struct __insieme_funType_type_10){&zran3, 0, &var_1}))), (v), (n1), (n2), (n3), (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((var_1).lt)));
+		{
+			call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&norm2u3, 0, &var_1}))), (v), (n1), (n2), (n3), &rnm2, &rnmu, (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])));
+			{
+				printf(" Size: %3dx%3dx%3d (class %1c)\n", (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])), ((int)((((var_1).Class)))));
+				printf(" Iterations: %3d\n", (nit));
+			};
+			call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&resid, 0, &var_1}))), (((u)[((unsigned int)((((var_1).lt))))])), (v), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), a, (((var_1).lt)));
+			call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&norm2u3, 0, &var_1}))), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), &rnm2, &rnmu, (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])));
+			call__insieme_funType_type_17(((struct __insieme_funType_type_17*)(&((struct __insieme_funType_type_18){&mg3P, 0, &var_1}))), (u), (v), (r), a, c, (n1), (n2), (n3), (((var_1).lt)));
+			call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&resid, 0, &var_1}))), (((u)[((unsigned int)((((var_1).lt))))])), (v), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), a, (((var_1).lt)));
+			call__insieme_funType_type_7(((struct __insieme_funType_type_7*)(&((struct __insieme_funType_type_8){&setup, 0, &var_1}))), &n1, &n2, &n3, (((var_1).lt)));
+			zero3((((u)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3));
+		};
+		call__insieme_funType_type_9(((struct __insieme_funType_type_9*)(&((struct __insieme_funType_type_10){&zran3, 0, &var_1}))), (v), (n1), (n2), (n3), (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((var_1).lt)));
+		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&timer_stop, 0, &var_1}))), 2);
+		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&timer_start, 0, &var_1}))), 1);
+		{
+			call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&resid, 0, &var_1}))), (((u)[((unsigned int)((((var_1).lt))))])), (v), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), a, (((var_1).lt)));
+			call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&norm2u3, 0, &var_1}))), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), &rnm2, &rnmu, (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])));{
+				for(int var_400 = 1; var_400 < ((nit)+1); var_400 += 1) {
+					call__insieme_funType_type_17(((struct __insieme_funType_type_17*)(&((struct __insieme_funType_type_18){&mg3P, 0, &var_1}))), (u), (v), (r), a, c, (n1), (n2), (n3), (((var_1).lt)));
+					call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&resid, 0, &var_1}))), (((u)[((unsigned int)((((var_1).lt))))])), (v), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), a, (((var_1).lt)));
+				};
+				((it) = (1+(((int)(ceil((((double)((((nit)+1)-1)))/((double)(1))))))*1)));
+			};
+			call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&norm2u3, 0, &var_1}))), (((r)[((unsigned int)((((var_1).lt))))])), (n1), (n2), (n3), &rnm2, &rnmu, (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])));
+		};
+		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&timer_stop, 0, &var_1}))), 1);
+		((t) = call__insieme_funType_type_23(((struct __insieme_funType_type_23*)(&((struct __insieme_funType_type_24){&timer_read, 0, &var_1}))), 1));
+		((tinit) = call__insieme_funType_type_23(((struct __insieme_funType_type_23*)(&((struct __insieme_funType_type_24){&timer_read, 0, &var_1}))), 2));
+		((verified) = 0);
+		((verify_value) = 0.0);
+		printf(" Initialization time: %15.3f seconds\n", 0.0);
+		printf(" Benchmark completed\n", 0);
+		if((((int)((((var_1).Class))))!='U')) {
+			if((((int)((((var_1).Class))))=='S')) {
+				((verify_value) = 0.530770700573e-04);
+			} else if((((int)((((var_1).Class))))=='W')) {
+				((verify_value) = 0.250391406439e-17);
+			} else if((((int)((((var_1).Class))))=='A')) {
+				((verify_value) = 0.2433365309e-5);
+			} else if((((int)((((var_1).Class))))=='B')) {
+				((verify_value) = 0.180056440132e-5);
+			} else if((((int)((((var_1).Class))))=='C')) {
+				((verify_value) = 0.570674826298e-06);
+			};
+			if((fabs(((rnm2)-(verify_value)))<=(epsilon))) {
+				((verified) = 1);
+				printf(" VERIFICATION SUCCESSFUL\n", 0);
+				printf(" L2 Norm is %20.12e\n", (rnm2));
+				printf(" Error is   %20.12e\n", ((rnm2)-(verify_value)));
+			} else {
+				((verified) = 0);
+				printf(" VERIFICATION FAILED\n", 0);
+				printf(" L2 Norm is             %20.12e\n", (rnm2));
+				printf(" The correct L2 Norm is %20.12e\n", (verify_value));
+			};
+		} else {
+			((verified) = 0);
+			printf(" Problem size unknown\n", 0);
+			printf(" NO VERIFICATION PERFORMED\n", 0);
+		};
+		if(((t)!=0.0)) {
+			int nn = (((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))*(((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])))*(((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])));
+			((mflops) = ((((58.*((double)((nit))))*((double)((nn))))*1.0e-6)/(t)));
+		} else {
+			((mflops) = 0.0);
+		};
+		c_print_results("MG", (((var_1).Class)), (((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])), (((((((var_1).nz))[0]))[((unsigned int)((((var_1).lt))))])), (nit), (nthreads), (t), (mflops), "          floating point", (verified), "2.3", "02 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
+	}
+}
+
