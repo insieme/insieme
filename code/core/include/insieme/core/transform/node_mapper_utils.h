@@ -105,8 +105,8 @@ class ChildListMapping : public NodeMapping {
 
 public:
 
-	ChildListMapping(const NodePtr& node, NodeMapping& mapping)
-		: children(mapping.map(0, node->getChildList())), different(!equals(children, node->getChildList())) {}
+	ChildListMapping(const Node::ChildList& list, NodeMapping& mapping)
+		: children(mapping.map(0, list)), different(!equals(children, list)) {}
 
 	/**
 	 * Determines whether this mapping would cause any modification when being applied

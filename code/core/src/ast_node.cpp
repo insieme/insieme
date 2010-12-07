@@ -35,6 +35,7 @@
  */
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -51,7 +52,7 @@ IntTypeParam NodeMapping::mapParam(const IntTypeParam& param) {
 }
 
 vector<IntTypeParam> NodeMapping::mapParam(const vector<IntTypeParam>& list) {
-	return transform(list, [&](const IntTypeParam& cur) {
+	return ::transform(list, [&](const IntTypeParam& cur) {
 		return this->mapParam(cur);
 	});
 }
@@ -64,8 +65,15 @@ const Node::ChildList& Node::getChildList() const {
 }
 
 NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper) const {
+
+	// use child list mapper to check for changes
+	transform::ChildListMapping listMapper(getChildList(), mapper);
+	if (!listMapper.isDifferent()) {
+		return NodePtr(this);
+	}
+
 	// create a version having everything substituted
-	Node* node = createCopyUsing(mapper);
+	Node* node = createCopyUsing(listMapper);
 
 	// obtain element within the manager
 	NodePtr res = manager.get(node);
