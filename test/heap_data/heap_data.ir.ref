@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<a:ref<array<ref<vector<ref<int<4>>,10>>,1>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v1 =  var(struct{a:= var(array.create.1D( var(vector.initUniform( var(0), 10)), 1)), b:= var(array.create.1D( var(vector.initUniform( var('\0'), 10)), 1))});
+        decl ref<struct<a:ref<array<ref<vector<ref<int<4>>,10>>,1>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v1 =  var(struct{a:= var(array.create.1D( new(vector.initUniform( var(0), 10)), 1)), b:= var(array.create.1D( new(vector.initUniform( var('\0'), 10)), 1))});
         v1.b := v3;
         [v1]fun[ref<struct<a:ref<array<ref<vector<ref<int<4>>,10>>,1>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v4](){
             for(decl ref<int<4>> v5 =  var(0) .. 10 : 1) {
@@ -25,7 +25,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<a:ref<array<ref<vector<ref<int<4>>,10>>,1>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v1 = ( var(struct{a:=( var(array.create.1D(( var(vector.initUniform(( var(0)), 10))), 1))), b:=( var(array.create.1D(( var(vector.initUniform(( var('\0')), 10))), 1)))}));
+        decl ref<struct<a:ref<array<ref<vector<ref<int<4>>,10>>,1>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v1 = ( var(struct{a:=( var(array.create.1D(( new(vector.initUniform(( var(0)), 10))), 1))), b:=( var(array.create.1D(( new(vector.initUniform(( var('\0')), 10))), 1)))}));
         (( *v1).b := v3);
         [v1]fun[ref<struct<a:ref<array<ref<vector<ref<int<4>>,10>>,1>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v4](){
             for(decl ref<int<4>> v5 = ( var(0)) .. 10 : 1) {
