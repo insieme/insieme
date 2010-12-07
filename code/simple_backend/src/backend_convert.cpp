@@ -590,7 +590,7 @@ namespace detail {
 				}
 
 				// innermost has to be a ref-var call with a literal 0
-				if (core::analysis::isCallOf(param, basic.getRefVar())) {
+				if (core::analysis::isCallOf(param, basic.getRefVar()) || core::analysis::isCallOf(param, basic.getRefNew())) {
 					const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
 					if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
 						string value = literal->getValue();
@@ -598,6 +598,10 @@ namespace detail {
 							cStr << "calloc(sizeof(" << typeName << "), 1)";
 							return;
 						}
+					}
+					if (core::analysis::isCallOf(refVar, basic.getInitZero())) {
+						cStr << "calloc(sizeof(" << typeName << "), 1)";
+						return;
 					}
 				}
 			}
@@ -661,6 +665,8 @@ namespace detail {
 					NodePtr init = ARG(0);
 					if (core::analysis::isCallOf(init, basic.getRefVar())) {
 						init = builder.refNew(static_pointer_cast<const CallExpr>(init)->getArguments()[0]);
+						visitor.visit(init);
+					} else if (core::analysis::isCallOf(init, basic.getRefNew())) {
 						visitor.visit(init);
 					} else {
 						visitor.visit(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
