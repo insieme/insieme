@@ -175,8 +175,8 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 			fact.addDerefField(ident);
 			addPtr = true;
 		}
-
 		core::RefTypePtr&& entryType = builder.refType( type );
+
 		if(it->second) {
 			// the variable is defined as extern, so we don't have to allocate memory for it
 			// just refear to the memory location someone else has initialized

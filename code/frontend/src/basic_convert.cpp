@@ -306,6 +306,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle refs initialization
     if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
         // initialize pointer/reference types with the null value
+    	const core::NodeType& nodeTy = refTy->getElementType()->getNodeType();
+    	if(nodeTy == core::NT_ArrayType || nodeTy == core::NT_VectorType || nodeTy == core::NT_StructType)
+    		return builder.refNew( defaultInitVal(refTy->getElementType()) );
     	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
