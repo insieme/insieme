@@ -74,7 +74,9 @@ public:
 
             // kernel function has at least 2 arguments (localRange, globalRange)
             // TODO change to ocl annotation check
-LOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
+//LOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
+//            EXPECT_TRUE(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY));
+
             if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
 
 
@@ -88,10 +90,10 @@ LOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation:
                 core::TypePtr localRange = args.back();
                 EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
 
-LOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
+//LOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 
                 core::NodePtr node = func->getChildList()[0];
-                std::cout << "this is lambdaaaa  " << node->toString() << "\n";
+//                std::cout << "this is lambdaaaa  " << node->toString() << "\n";
 
                 if(core::CompoundStmtPtr body = core::dynamic_pointer_cast<const core::CompoundStmt>(func->getChildList().back())){
 
@@ -117,7 +119,7 @@ LOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
     }
 
     void visitJobExpr(const core::JobExprPtr& job) {
-        std::cout << ": get a job!\n";
+//        std::cout << ": get a job!\n";
 
         core::JobExpr j = *job;
 
@@ -164,7 +166,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     auto errors = core::check(program, insieme::core::checks::getFullCheck());
     std::sort(errors.begin(), errors.end());
     for_each(errors, [](const core::Message& cur) {
-        std::cout << cur << std::endl;
+        LOG(INFO) << cur << std::endl;
 /*        core::NodeAddress address = cur.getAddress();
         core::NodePtr context = address.getParentNode(address.getDepth()-1);
         std::cout << "\t Context: " <<
