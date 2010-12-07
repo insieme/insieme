@@ -40,8 +40,9 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma_handler.h"
-//#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
+#include "insieme/utils/logging.h"
+
 #include "clang/AST/ASTContext.h"
 
 //#include <iostream>
@@ -175,29 +176,29 @@ const Attr* parseAttribute(const Attr* attr)
     {
         const clang::AnnotateAttr* aa = cast<const AnnotateAttr>(attr);
         llvm::StringRef&& sr = aa->getAnnotation();
-        std::cout << "annotation: " << sr.str() << std::endl;
+        LOG(INFO) << "annotation: " << sr.str() << std::endl;
         return aa;
     }
     case attr::Kind::ReqdWorkGroupSize:
     {
         const ReqdWorkGroupSizeAttr* rwgsa = cast<const ReqdWorkGroupSizeAttr>(attr);
-        std::cout << "ReqdWorkGroupSize: "  << rwgsa->getXDim() << rwgsa->getYDim() << rwgsa->getZDim() << std::endl;
+        LOG(INFO) << "ReqdWorkGroupSize: "  << rwgsa->getXDim() << rwgsa->getYDim() << rwgsa->getZDim() << std::endl;
         return rwgsa;
     }
     case attr::Kind::Packed:
     {
-        std::cout << "Packed" << std::endl;
+        LOG(INFO) << "Packed" << std::endl;
         return cast<const PackedAttr>(attr);
     }
     case attr::Kind::Aligned:
     {
         const AlignedAttr* aa = cast<const AlignedAttr>(attr);
-        // std::cout << "Aligned: "  << aa->getAlignment() << std::endl;
+//        LOG(INFO) << "Aligned: "  << aa->getAlignment() << std::endl;
         return aa;
     }
     default:
     {
-        std::cout << "Not implemented: " << kindStr[attr->getKind()] << std::endl;
+//        std::cout << "Not implemented: " << kindStr[attr->getKind()] << std::endl;
         return attr;
     }
     }
@@ -208,12 +209,12 @@ void checkForAttrs(clang::Decl* decl)
     if(decl->hasAttrs())
     {
         decl->dump();
-        fprintf(stderr, " has an attribute\n");
+//        fprintf(stderr, " has an attribute\n");
 //        parseAttribute(decl->getAttrs());
     }
     else {
         decl->dump();
-        fprintf(stderr, " has no attribute\n");
+//        fprintf(stderr, " has no attribute\n");
     }
 }
 
