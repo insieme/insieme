@@ -99,6 +99,62 @@ int main(int argc, char** argv) {
 			convertTimer.stop();
 			LOG(INFO) << convertTimer;
 
+
+			// perform some performance benchmarks
+			if (CommandLineOptions::BenchmarkCore) {
+
+				// Benchmark pointer-based visitor
+				insieme::utils::Timer visitPtrTime("Benchmark.IterateAll.Pointer ");
+				int count = 0;
+				core::visitAll(program, core::makeLambdaPtrVisitor([&](const NodePtr& cur) {
+					count++;
+				}));
+				visitPtrTime.stop();
+				LOG(INFO) << visitPtrTime;
+				LOG(INFO) << "Number of nodes: " << count;
+
+				// Benchmark address based visitor
+				insieme::utils::Timer visitAddrTime("Benchmark.IterateAll.Address ");
+				count = 0;
+				core::visitAll(core::ProgramAddress(program), core::makeLambdaAddressVisitor([&](const NodeAddress& cur) {
+					count++;
+				}));
+				visitAddrTime.stop();
+				LOG(INFO) << visitAddrTime;
+				LOG(INFO) << "Number of nodes: " << count;
+
+				// Benchmark empty-substitution operation
+				insieme::utils::Timer substitutionTime("Benchmark.NodeSubstitution ");
+				count = 0;
+				NodeMapping* h;
+				auto mapper = makeLambdaMapper([&](unsigned, const NodePtr& cur)->NodePtr {
+					count++;
+					return cur->substitute(manager, *h);
+				});
+				h = &mapper;
+				mapper.map(0,program);
+				substitutionTime.stop();
+				LOG(INFO) << substitutionTime;
+				LOG(INFO) << "Number of modifications: " << count;
+
+				// Benchmark empty-substitution operation (non-types only)
+				insieme::utils::Timer substitutionTime2("Benchmark.NodeSubstitution.Non-Types ");
+				count = 0;
+				NodeMapping* h2;
+				auto mapper2 = makeLambdaMapper([&](unsigned, const NodePtr& cur)->NodePtr {
+					if (cur->getNodeCategory() == NC_Type) {
+						return cur;
+					}
+					count++;
+					return cur->substitute(manager, *h2);
+				});
+				h2 = &mapper2;
+				mapper2.map(0,program);
+				substitutionTime2.stop();
+				LOG(INFO) << substitutionTime2;
+				LOG(INFO) << "Number of modifications: " << count;
+			}
+
 			// perform checks
 			MessageList errors;
 			auto checker = [&]() {

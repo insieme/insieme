@@ -42,7 +42,8 @@ FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check
 FLAG("omp-sema",			"omp-sema", 			OMPSema, 		false,	"apply OMP semantics in frontend")
 
 //For debug:
-FLAG("opencl,OCL", "opencl", OpenCL, false, "produces code by OpenCL backend (debug)")
+FLAG("opencl,OCL", 			"opencl", 				OpenCL, false, "produces code by OpenCL backend (debug)")
+FLAG("benchmark-core,B", 	"benchmark-core", 		BenchmarkCore, false, "runs some standard-core operations on the IR representation")
 
 //OPTION(opt_name, opt_id, var_name, var_type, var_help)
 OPTION("input-file", 		"input-file", 			InputFiles, std::vector<std::string>, 	"input file(s)")

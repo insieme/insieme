@@ -86,6 +86,49 @@ public:
 };
 
 
+/**
+ * A utility class mapping a child list of a node using some other node mapping. After
+ * mapping all children, it verifies whether any modification has been applied.
+ */
+class ChildListMapping : public NodeMapping {
+
+	/**
+	 * The mapped list of children.
+	 */
+	vector<NodePtr> children;
+
+	/**
+	 * A flag indicating whether there has been any difference between the original
+	 * and the mapped list of children.
+	 */
+	bool different;
+
+public:
+
+	ChildListMapping(const NodePtr& node, NodeMapping& mapping)
+		: children(mapping.map(0, node->getChildList())), different(!equals(children, node->getChildList())) {}
+
+	/**
+	 * Determines whether this mapping would cause any modification when being applied
+	 * to the child list it has been constructed for.
+	 */
+	bool isDifferent() const {
+		return different;
+	}
+
+	/**
+	 * Performs the actual mapping of a child node. The resulting node is identical to the
+	 * node returned by the mapping passed to the constructor of this class.
+	 *
+	 * @param index the index of the child node to be mapped
+	 * @param ptr the child to be mapped.
+	 * @return the mapped child node.
+	 */
+	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+		return children[index];
+	}
+};
+
 
 } // end namespace transform
 } // end namespace core
