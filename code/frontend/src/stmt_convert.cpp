@@ -376,6 +376,7 @@ public:
 
 				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(),
 						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal ));
+
 			}
 
 		} catch(const analysis::LoopNormalizationError& e) {

@@ -147,12 +147,11 @@ def run_tests():
 	return (test_num, failed_test)
 
 def main():
-	os.system("ulimit -s unlimited")
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
-	if len(sys.argv) == 2:
-		# run the specified test only
+	if len(sys.argv) > 1:
+		# run the specified tests only
 		executed = 1
-		failed = run_test(sys.argv[1], executed)
+		failed = sum( map(lambda x: run_test(x, executed), sys.argv[1:]) )
 	else:
 		(executed, failed) = run_tests()
 	# print summary

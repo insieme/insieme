@@ -146,10 +146,11 @@ struct LevelSpec {
  * Because it's not possible to transfer string literals via
  * template parameters, the value is read from the ctx object
  */
+template <unsigned Pos>
 struct FileNameSpec {
 	static void format(std::ostream& out, const Ctx& ctx) {
 		// Cut out the entire path and prints the file name
-		std::string file_name(boost::any_cast<const char *>(ctx[0]));
+		std::string file_name(boost::any_cast<const char *>(ctx[Pos]));
 		size_t pos = file_name.find_last_of('/');
 		if(pos == std::string::npos) {
 			out << file_name;
@@ -284,7 +285,7 @@ using namespace insieme::utils::log;
 #define MAKE_CONTEXT			Ctx({ boost::any((const char*)__FILE__) })
 
 // Creates the object used to format the output of the logger.
-#define MAKE_FORMAT(LEVEL) 		Formatter<' ', LevelSpec<LEVEL>, TimeSpec<TIME>, Formatter<':', FileNameSpec, LineSpec<__LINE__>>>
+#define MAKE_FORMAT(LEVEL) 		Formatter<' ', LevelSpec<LEVEL>, Formatter<':', FileNameSpec<0>, LineSpec<__LINE__>>>
 
 #define LOG( LEVEL ) 			if(Logger::get().level() > LEVEL) ; \
 								else (Logger::get().getActiveStream<MAKE_FORMAT(LEVEL)>( MAKE_CONTEXT ).logStream << "] ")
