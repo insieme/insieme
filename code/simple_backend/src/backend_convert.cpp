@@ -594,7 +594,7 @@ namespace detail {
 					const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
 					if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
 						string value = literal->getValue();
-						if (value == "0" || value == "0.0" || value == "\0") {
+						if (basic.isInitZero(literal) || value == "0" || value == "0.0" || value == "\0") {
 							cStr << "calloc(sizeof(" << typeName << "), 1)";
 							return;
 						}
