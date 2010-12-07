@@ -1,0 +1,43 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Prototype for external function: printf //
+int printf(char*, ...);
+
+// start code fragment :: Prototype of even //
+int even(unsigned int);
+
+// start code fragment :: Prototype of odd //
+int odd(unsigned int);
+
+// start code fragment :: Definition of even //
+int even(unsigned int x) {
+	{
+		return (((x==((unsigned int)(0))))?(1):(odd((x-((unsigned int)(1))))));;
+	}
+}
+
+
+// start code fragment :: Definition of odd //
+int odd(unsigned int x) {
+	{
+		return (((x==((unsigned int)(0))))?(0):(even((x-((unsigned int)(1))))));;
+	}
+}
+
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		printf("even(%d)?: %s\n", 12, ((((bool)(even(((unsigned int)(12))))))?("true"):("false")));
+		printf("odd(%d)?: %s\n", 12, ((((bool)(odd(((unsigned int)(12))))))?("true"):("false")));
+	}
+}
+

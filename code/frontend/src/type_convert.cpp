@@ -126,7 +126,7 @@ class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConvert
 
 	utils::DependencyGraph<const clang::Type*> typeGraph;
 public:
-	ClangTypeConverter(ConversionFactory& fact): convFact( fact ) { }
+	ClangTypeConverter(ConversionFactory& fact, Program& program): convFact( fact ), typeGraph(&program.getClangIndexer()) { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
@@ -612,8 +612,8 @@ private:
 	}
 };
 
-ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact) {
-	return new ConversionFactory::ClangTypeConverter(fact);
+ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact, Program& program) {
+	return new ConversionFactory::ClangTypeConverter(fact, program);
 }
 
 void ConversionFactory::cleanTypeConvert(ClangTypeConverter* typeConv) {

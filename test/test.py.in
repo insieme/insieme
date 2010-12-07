@@ -45,9 +45,9 @@ def check_diff(test_case_name, ref, test):
     ret = run_cmd("diff {0} {1}".format(ref, test))
     return not check_for_error(test_case_name, ret)
 
-def run_test(test_case_name, test_num): 
+def run_test_case(test_case_name): 
 	sys.stderr.write("#-----------------------------------------------------\n")
-	sys.stderr.write("# {0}: {1}\n".format(test_num, test_case_name))
+	sys.stderr.write("# {0}\n".format(test_case_name))
 
 	# name of the file contaning the reference IR for the current test
 	refIr   = test_case_name + '.ir.ref'
@@ -132,34 +132,27 @@ def run_test(test_case_name, test_num):
 	os.chdir("../")
 	return 0
 
-def run_tests():
-	failed_test = 0
-	test_num = 0
-	for (_,dirs,_) in os.walk("."):
-	    for test_case_name in dirs:
-	        # test cases whose directory name starts with a '#' are skipped
-	        if test_case_name.startswith("#"):
-	            continue # SKIP
-	        failed_test += run_test(test_case_name, test_num)
-	        test_num += 1
-	        
-	# return the number of executed test case and number of failed ones
-	return (test_num, failed_test)
-
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
+	tests = []
 	if len(sys.argv) > 1:
 		# run the specified tests only
-		executed = 1
-		failed = sum( map(lambda x: run_test(x, executed), sys.argv[1:]) )
+		tests = sys.argv[1:]
+	elif os.path.exists('./test.cfg'):
+		# read test cases from test.cfg file
+		tests = [test_case for test_case in open('test.cfg').read().split('\n') if not test_case.startswith('#')]
 	else:
-		(executed, failed) = run_tests()
+		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
+		tests.sort() # sort the test cases by name
+			
+	failed = sum( map(lambda x: run_test_case(x), tests) )
+	
 	# print summary
 	sys.stderr.write("###############################\n")
 	sys.stderr.write("#          Summary            #\n")
 	sys.stderr.write("#-----------------------------#\n")
-	sys.stderr.write("# Total number of tests: {0:4} #\n".format(executed))
-	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(executed - failed))
+	sys.stderr.write("# Total number of tests: {0:4} #\n".format( len(tests) ))
+	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(tests) - failed))
 	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(failed))
 	sys.stderr.write("###############################\n")
 	

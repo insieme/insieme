@@ -171,10 +171,11 @@ namespace utils {
 
 struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
+	clang::idx::Indexer& indexer;
 	typedef std::set<const clang::FunctionDecl*> CallGraph;
 	CallGraph callGraph;
 
-	CallExprVisitor() { }
+	CallExprVisitor(clang::idx::Indexer& indexer): indexer(indexer) { }
 
 	CallGraph getCallGraph(const clang::FunctionDecl* func) {
 		assert(func->hasBody() && "Function in the dependency graph has no body");
@@ -184,10 +185,23 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 	}
 
 	void VisitCallExpr(clang::CallExpr* callExpr) {
-		const clang::FunctionDecl* def = NULL;
-		if(callExpr->getDirectCallee() && callExpr->getDirectCallee()->hasBody(def)) {
-			assert(def);
-			callGraph.insert(def);
+		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee())) {
+			LOG(DEBUG) << "FUNC_CALL " << funcDecl->getNameAsString();
+			const clang::FunctionDecl* def = NULL;
+			// this will find function definitions if they are declared in  the same translation unit (also defined as static)
+			if( !funcDecl->hasBody(def) ) {
+				// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
+				// use the clang indexer to lookup the definition for this function declarations
+				clang::idx::Entity funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
+				std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = indexer.getDefinitionFor(funcEntity);
+				if(ret.first) {
+					def = ret.first;
+				}
+			}
+
+			if(def) {
+				callGraph.insert(def);
+			}
 		}
 		VisitStmt(callExpr);
 	}
@@ -202,7 +216,8 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
 template <>
 void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func, const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
-	CallExprVisitor callExprVis;
+	assert(indexer);
+	CallExprVisitor callExprVis(*indexer);
 	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
 
 	std::for_each(graph.begin(), graph.end(),
@@ -295,7 +310,8 @@ public:
 	// CallGraph for functions, used to resolved eventual recursive functions
 	utils::DependencyGraph<const clang::FunctionDecl*> funcDepGraph;
 
-	ClangExprConverter(ConversionFactory& convFact): convFact(convFact), ctx(convFact.ctx) { }
+	ClangExprConverter(ConversionFactory& convFact, Program& program): convFact(convFact), ctx(convFact.ctx),
+			funcDepGraph(&program.getClangIndexer()) { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
@@ -461,7 +477,7 @@ public:
 			if( !funcDecl->hasBody(definition) ) {
 				// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 				// use the clang indexer to lookup the definition for this function declarations
-				clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, const_cast<clang::idx::Program&>(convFact.program.getClangProgram()));
+				clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, convFact.program.getClangProgram());
 				std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = convFact.program.getClangIndexer().getDefinitionFor(funcEntity);
 				if(ret.first) {
 					definition = ret.first;
@@ -1078,8 +1094,8 @@ public:
 	}
 };
 
-ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConvert(ConversionFactory& fact) {
-	return new ClangExprConverter(fact);
+ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConvert(ConversionFactory& fact, Program& program) {
+	return new ClangExprConverter(fact, program);
 }
 
 void ConversionFactory::cleanExprConvert(ConversionFactory::ClangExprConverter* exprConv) {
@@ -1357,8 +1373,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 			// flag is true
 			this->ctx.recVarExprMap.erase(fd);
+
+
+			// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
+			// use the clang indexer to lookup the definition for this function declarations
+			clang::idx::Entity&& funcEntity = clang::idx::Entity::get(const_cast<FunctionDecl*>(fd), this->program.getClangProgram());
+			std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = this->program.getClangIndexer().getDefinitionFor(funcEntity);
+			const TranslationUnit* oldTU = this->currTU;
+			if(ret.first) {
+				fd = ret.first;
+				assert(ret.second);
+				this->currTU = &Program::getTranslationUnit(ret.second);
+			}
+
 			core::LambdaPtr&& lambda = core::dynamic_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
 			assert(lambda && "Resolution of sub recursive lambda yield a wrong result");
+			this->currTU = oldTU;
 			// attach name annotation to the lambda
 			lambda->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
 			definitions.insert( std::make_pair(this->ctx.currVar, lambda) );

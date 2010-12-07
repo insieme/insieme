@@ -96,8 +96,7 @@ namespace frontend {
 namespace conversion {
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
-	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(
-			const_cast<FunctionDecl*>(funcDecl), const_cast<clang::idx::Program&>( mProg.getClangProgram() ));
+	clang::idx::Entity&& funcEntity = clang::idx::Entity::get( const_cast<FunctionDecl*>(funcDecl), mProg.getClangProgram() );
 	std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = mProg.getClangIndexer().getDefinitionFor(funcEntity);
 	assert(ret.first && ret.second);
 
@@ -107,13 +106,13 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
 	VLOG(1) << globColl;
+
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
 	if(mFact.ctx.globalStruct.first)
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 
-	core::ExpressionPtr&& expr = core::dynamic_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
-	
-	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
+	const core::ExpressionPtr& expr = core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
+	core::ExpressionPtr lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
 	
 	// also a marker node is allowed if it contains a lambda expr
 	if(!lambdaExpr){
@@ -127,8 +126,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
 	
-	
-	
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
 
 	return mProgram;
@@ -140,9 +137,9 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 	// cppcheck-suppress exceptNew
 	stmtConv( ConversionFactory::makeStmtConvert(*this) ),
 	// cppcheck-suppress exceptNew
-	typeConv( ConversionFactory::makeTypeConvert(*this) ),
+	typeConv( ConversionFactory::makeTypeConvert(*this, prog ) ),
 	// cppcheck-suppress exceptNew
-	exprConv( ConversionFactory::makeExprConvert(*this) ),
+	exprConv( ConversionFactory::makeExprConvert(*this, prog ) ),
 	// cppcheck-suppress exceptNew
 	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
 
@@ -312,14 +309,15 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
-    if ( *type == *mgr.basic.getString() ) {
+    if ( mgr.basic.isString(type) ) {
         return builder.literal("", type);
     }
     // handle booleans initialization
-    if ( *type == *mgr.basic.getBool() ) {
+    if ( mgr.basic.isBool(type) ) {
         // boolean values are initialized to false
         return builder.literal("false", mgr.basic.getBool());
     }
+
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
 //    	core::StructExpr::Members members;
@@ -332,9 +330,10 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
     	//return builder.structExpr(structTy, members);
     }
+
+    // Handle unions initialization
     if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
-		// todo
-    	assert(unionTy); // silent compiler warning
+    	assert(unionTy); // TODO: for now silent compiler warning
 	}
 
     // handle vectors initialization
@@ -342,6 +341,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal, mgr.basic.getIntTypeParamLiteral(vecTy->getSize()));
     }
+
     // handle arrays initialization
     if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(type) ) {
     	if(arrTy->getElementType()->getNodeType() == core::NT_RefType) {
@@ -353,6 +353,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
 		return builder.callExpr(arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getInt4()));
     }
+
     assert(false && "Default initialization type not defined");
 }
 
@@ -364,8 +365,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	}
 
 	// if no init expression is provided => use undefined for given set of types
-	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType
-			  || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
+	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
 		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 		    // FIXME add zero initialization of references if needed
 			const core::TypePtr& res = refTy->getElementType();
@@ -387,7 +387,6 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 
 	if (core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
 		core::analysis::isCallOf(retExpr, mgr.basic.getRefNew()) ) {
-
 		return retExpr;
 	}
 
@@ -435,10 +434,10 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
         // check for annotations which would lead to a zero init annotation
 		if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
-		    auto declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
+		    auto&& declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
 		    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
 		            I < declarationAnnotation->getAnnotationListEnd(); ++I) {
-		        if(ocl::AddressSpaceAnnotationPtr as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
+		        if(ocl::AddressSpaceAnnotationPtr&& as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
 		            if(ocl::AddressSpaceAnnotation::addressSpace::LOCAL == as->getAddressSpace() ||
 		                    ocl::AddressSpaceAnnotation::addressSpace::PRIVATE == as->getAddressSpace()) {
 		                //TODO check why this fails:

@@ -43,12 +43,18 @@
 namespace clang {
 class FunctionDecl;
 class Type;
-}
+
+namespace idx {
+class Indexer;
+class Program;
+} // end idx namespace
+
+} // end clang namespace
 
 namespace std {
 std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl);
 std::ostream& operator<<(std::ostream& out, const clang::Type* type);
-}
+} // end std namespace
 
 namespace insieme {
 namespace frontend {
@@ -84,7 +90,7 @@ public:
 	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor 	VertexTy;
 	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor 	EdgeTy;
 
-	DependencyGraph(): dirtyFlag(true), numComponents(0) { }
+	DependencyGraph(clang::idx::Indexer* indexer = NULL): indexer(indexer), dirtyFlag(true), numComponents(0) { }
 
 	/**
 	 * Finds the node inside the graph and returns the vertex id used to identify this node
@@ -171,6 +177,8 @@ private:
 	}
 
 	void Handle(T type, const VertexTy& v);
+
+	clang::idx::Indexer* indexer;
 
 	NodeDepGraph graph;
 	bool dirtyFlag;

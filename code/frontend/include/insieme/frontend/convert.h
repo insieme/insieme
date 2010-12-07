@@ -166,7 +166,7 @@ class ConversionFactory : public boost::noncopyable {
 	 */
 	class ClangTypeConverter;
 	// Instantiates the type converter
-	static ClangTypeConverter* makeTypeConvert(ConversionFactory& fact);
+	static ClangTypeConverter* makeTypeConvert(ConversionFactory& fact, Program& program);
 	// clean the memory
 	static void cleanTypeConvert(ClangTypeConverter* typeConv);
 	ClangTypeConverter* typeConv; // PIMPL pattern
@@ -176,7 +176,7 @@ class ConversionFactory : public boost::noncopyable {
 	 */
 	class ClangExprConverter;
 	// Instantiates the expression converter
-	static ClangExprConverter* makeExprConvert(ConversionFactory& fact);
+	static ClangExprConverter* makeExprConvert(ConversionFactory& fact, Program& program);
 	// clean the memory
 	static void cleanExprConvert(ClangExprConverter* exprConv);
 	ClangExprConverter* exprConv; // PIMPL pattern
