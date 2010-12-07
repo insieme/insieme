@@ -166,7 +166,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     auto errors = core::check(program, insieme::core::checks::getFullCheck());
     std::sort(errors.begin(), errors.end());
     for_each(errors, [](const core::Message& cur) {
-        LOG(INFO) << cur << std::endl;
+        std::cout << cur << std::endl;
 /*        core::NodeAddress address = cur.getAddress();
         core::NodePtr context = address.getParentNode(address.getDepth()-1);
         std::cout << "\t Context: " <<
