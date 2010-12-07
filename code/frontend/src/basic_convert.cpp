@@ -322,14 +322,15 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
-    	core::StructExpr::Members members;
-    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
-    	std::for_each(entries.begin(), entries.end(),
-    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
-    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
-    		}
-    	);
-    	return builder.structExpr(structTy, members);
+//    	core::StructExpr::Members members;
+//    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
+//    	std::for_each(entries.begin(), entries.end(),
+//    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
+//    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
+//    		}
+//    	);
+    	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
+    	//return builder.structExpr(structTy, members);
     }
     if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type) ) {
 		// todo
