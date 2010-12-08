@@ -52,6 +52,12 @@ IntTypeParam NodeMapping::mapParam(const IntTypeParam& param) {
 }
 
 vector<IntTypeParam> NodeMapping::mapParam(const vector<IntTypeParam>& list) {
+	// check whether there are manipulations
+	if (!manipulatesIntTypeParameter) {
+		return list;
+	}
+
+	// apply transformation
 	return ::transform(list, [&](const IntTypeParam& cur) {
 		return this->mapParam(cur);
 	});
