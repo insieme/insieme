@@ -192,13 +192,19 @@ namespace detail {
 				return true;
 			}
 
+			// quick-check hash
+			if (hash != other.hash) {
+				return false;
+			}
+
+			// compare root nodes
+			if (!parent && !other.parent) {
+				// compare associated pointer
+				return *ptr == *other.ptr;
+			}
+
 			// compare the rest (cheap stuff first)
-			return
-					(hash == other.hash) &&
-					(depth == other.depth) &&
-					(index == other.index) &&
-					(*ptr == *other.ptr) &&
-					(*parent == *other.parent);
+			return	(index == other.index) && (*parent == *other.parent);
 		}
 
 		/**
