@@ -151,8 +151,8 @@ OPERATOR(Ge,	">=")
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, LAnd, "bool.and", "(bool,bool) -> bool")
-OPERATION(Bool, LOr,  "bool.or",  "(bool,bool) -> bool")
+OPERATION(Bool, LAnd, "bool.and", "(bool,() -> bool) -> bool")
+OPERATION(Bool, LOr,  "bool.or",  "(bool,() -> bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")

@@ -790,24 +790,35 @@ public:
 		default:
 			assert(false && "Operator not supported");
 		}
-
-		// build a callExpr with the 2 arguments
 		rhs = convFact.tryDeref(rhs);
+
+		// Operators && and || introduce short circuit operations,
+		// this has to be directly supported in the IR.
+		if( baseOp == BO_LAnd || baseOp == BO_LOr ) {
+			if(!convFact.mgr.basic.isBool(lhs->getType()))
+				lhs = builder.castExpr(convFact.mgr.basic.getBool(), lhs);
+			if(!convFact.mgr.basic.isBool(rhs->getType()))
+				rhs = builder.castExpr(convFact.mgr.basic.getBool(), rhs);
+			// lazy evaluation of RHS
+			exprTy = convFact.mgr.basic.getBool();
+			rhs = convFact.createCallExpr(builder.returnStmt(rhs), convFact.mgr.basic.getBool());
+		}
 
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
 
-			// Handle pointer arithmetics
+			// Handle pointers arithmetic
+			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
 
 			if(DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS())) {
-				if( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) ) {
+				if( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 					assert(false && "Pointer arithmetic not yet supported");
-				}
 			}
 
-			if(isLogical)
+			if(isLogical) {
 				exprTy = convFact.mgr.basic.getBool();
+			}
 		}
 		assert(opFunc);
 
