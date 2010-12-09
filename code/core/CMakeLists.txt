@@ -24,7 +24,7 @@ execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby build
 add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
 
 # add dependencies
-add_dependencies( insieme_core insieme_utils)
+add_dependencies(insieme_core insieme_utils)
 
 # enable tests for this project
 find_package(GTest REQUIRED)

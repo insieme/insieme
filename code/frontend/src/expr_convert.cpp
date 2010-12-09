@@ -230,7 +230,7 @@ public:
 template <>
 void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func, const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
 	// This is potentially dangerous
-	FunctionDepenencyGraph& funcDepGraph = static_cast<FunctionDepenencyGraph&>(this);
+	FunctionDepenencyGraph& funcDepGraph = static_cast<FunctionDepenencyGraph&>(*this);
 
 	CallExprVisitor callExprVis(funcDepGraph.getIndexer());
 	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);

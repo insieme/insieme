@@ -24,10 +24,10 @@ include_directories(
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
-target_link_libraries(insieme_frontend insieme_core ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
 
 # add dependencies
 add_dependencies( insieme_frontend insieme_core insieme_utils insieme_c_info )
+target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
