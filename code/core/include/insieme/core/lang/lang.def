@@ -320,11 +320,10 @@ LITERAL(MergeAll, "mergeAll", "() -> unit")
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
 LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vector<int<#a>,#b>, (vector<int<#a>,#b>)->'a)->unit")
 
-GROUP(ThreadOp, GetThreadGroup, GetThreadId, GetThreadId1D)
+GROUP(ThreadOp, GetThreadGroup, GetThreadId)
 
 LITERAL(GetThreadGroup, "getThreadgroup", "(uint<#a>) -> threadgroup")
-LITERAL(GetThreadId, "getThreadid", "(uint<#a>) -> vector<uint<#b>, 'ndim>")
-LITERAL(GetThreadId1D, "getThreadid1D", "(uint<#a>, uint<#b>) -> uint<#c>")
+LITERAL(GetThreadId, "getThreadid", "(uint<#a>) -> uint<#b>")
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
 // TODO herbert
