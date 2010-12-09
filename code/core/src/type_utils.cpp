@@ -59,7 +59,8 @@ class SubstitutionMapper : public NodeMapping {
 public:
 
 	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-		: manager(manager), mapping(substitution.getMapping()), paramMapping(substitution.getIntTypeParamMapping()) {};
+		: NodeMapping(!substitution.getIntTypeParamMapping().empty()), manager(manager),
+		  mapping(substitution.getMapping()), paramMapping(substitution.getIntTypeParamMapping()) {};
 
 	const NodePtr mapElement(unsigned, const NodePtr& element) {
 		// quick check - only variables are substituted
@@ -439,7 +440,7 @@ namespace {
 
 	public:
 
-		TypeVariableReplacer(NodeManager& manager) : varCounter((unsigned)0), paramCounter((unsigned)0), manager(manager) { }
+		TypeVariableReplacer(NodeManager& manager) : NodeMapping(true), varCounter((unsigned)0), paramCounter((unsigned)0), manager(manager) { }
 
 		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 			// only handle type variables

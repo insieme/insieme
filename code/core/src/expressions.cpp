@@ -499,7 +499,6 @@ CallExpr::CallExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr
 		  functionExpr(isolate(functionExpr)), arguments(isolate(arguments)) { }
 
 CallExpr* CallExpr::createCopyUsing(NodeMapping& mapper) const {
-	NodePtr parent(this);
 	return new CallExpr(
 			mapper.map(0, type),
 			mapper.map(1, functionExpr),

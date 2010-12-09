@@ -86,6 +86,65 @@ public:
 };
 
 
+/**
+ * A utility class mapping a child list of a node using some other node mapping. After
+ * mapping all children, it verifies whether any modification has been applied.
+ */
+class ChildListMapping : public NodeMapping {
+
+	/**
+	 * The mapped list of children.
+	 */
+	vector<NodePtr> children;
+
+	/**
+	 * A flag indicating whether there has been any difference between the original
+	 * and the mapped list of children.
+	 */
+	bool different;
+
+	/**
+	 * The node mapping to be wrapped.
+	 */
+	NodeMapping& mapping;
+
+public:
+
+	ChildListMapping(const Node::ChildList& list, NodeMapping& mapping)
+		: NodeMapping(mapping.isManipulatingIntTypeParameter()), children(mapping.map(0, list)),
+		  different(mapping.isManipulatingIntTypeParameter() || !equals(children, list)), mapping(mapping) {}
+
+	/**
+	 * Determines whether this mapping would cause any modification when being applied
+	 * to the child list it has been constructed for.
+	 */
+	bool isDifferent() const {
+		return different;
+	}
+
+	/**
+	 * Performs the actual mapping of a child node. The resulting node is identical to the
+	 * node returned by the mapping passed to the constructor of this class.
+	 *
+	 * @param index the index of the child node to be mapped
+	 * @param ptr the child to be mapped.
+	 * @return the mapped child node.
+	 */
+	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+		return children[index];
+	}
+
+	/**
+	 * Forwards int type parameter mappings to the wrapped sub-mapping.
+	 *
+	 * @param param the int type parameter to be mapped
+	 * @return the mapped int type parameter
+	 */
+	virtual IntTypeParam mapParam(const IntTypeParam& param) {
+		return mapping.mapParam(param);
+	}
+};
+
 
 } // end namespace transform
 } // end namespace core
