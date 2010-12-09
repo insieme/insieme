@@ -214,10 +214,25 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 	}
 };
 
+/**
+ * In order for DepGraph to build the dependency graph for functions the clang indexer is needed,
+ * FunctionDependencyGraph adds the indexer to member functions of DependencyGraph
+ */
+class FunctionDepenencyGraph : public DependencyGraph<const clang::FunctionDecl*> {
+	clang::idx::Indexer& idx;
+
+public:
+	FunctionDepenencyGraph(clang::idx::Indexer& idx) : DependencyGraph<const clang::FunctionDecl*>(), idx(idx) { }
+
+	clang::idx::Indexer& getIndexer() const { return idx; }
+};
+
 template <>
 void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func, const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
-	assert(indexer);
-	CallExprVisitor callExprVis(*indexer);
+	// This is potentially dangerous
+	FunctionDepenencyGraph& funcDepGraph = static_cast<FunctionDepenencyGraph&>(this);
+
+	CallExprVisitor callExprVis(funcDepGraph.getIndexer());
 	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
 
 	std::for_each(graph.begin(), graph.end(),
@@ -308,10 +323,10 @@ class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConvert
 public:
 
 	// CallGraph for functions, used to resolved eventual recursive functions
-	utils::DependencyGraph<const clang::FunctionDecl*> funcDepGraph;
+	utils::FunctionDepenencyGraph funcDepGraph;
 
 	ClangExprConverter(ConversionFactory& convFact, Program& program): convFact(convFact), ctx(convFact.ctx),
-			funcDepGraph(&program.getClangIndexer()) { }
+			funcDepGraph(program.getClangIndexer()) { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
