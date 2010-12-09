@@ -202,7 +202,7 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 
 	OptionalMessageList res;
 	TypePtr switchType = address->getSwitchExpr()->getType();
-	if (!manager.basic.isSignedInt(switchType)) {
+	if (!manager.basic.isInt(switchType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_SWITCH_EXPR,
 						format("Invalid type of switch expression - expected: integral type, actual: %s",

@@ -99,6 +99,15 @@ public:
         localRangeUsed = false;
     };
 
+    // calculates the 1D index for the 0th dimension
+    core::CallExprPtr calcIdidx0(core::LiteralPtr& level, core::VariablePtr& boundaries);
+
+    // calculates the 1D index for the 1st dimension
+    core::CallExprPtr calcIdidx1(core::LiteralPtr& level, core::VariablePtr& boundaries);
+
+    // calculates the 1D index for the 2nd dimension
+    core::CallExprPtr calcIdidx2(core::LiteralPtr& level, core::VariablePtr& boundaries);
+
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList types);
 

@@ -10,28 +10,28 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         decl ref<real<8>> v8 =  var(0.0);
         decl ref<real<8>> v9 =  var(0.0);
         {
-            for(decl ref<int<4>> v116 =  var(0) .. 5 : 1) {
-                decl int<4> v115 = 'W';
-                switch(v115) {
+            for(decl ref<int<4>> v124 =  var(0) .. 5 : 1) {
+                decl int<4> v123 = 'W';
+                switch(v123) {
                     case 'S': {
-                        v1.test_index_array[0][v116] := v1.S_test_index_array[0][v116];
-                        v1.test_rank_array[0][v116] := v1.S_test_rank_array[0][v116];
+                        v1.test_index_array[0][v124] := v1.S_test_index_array[0][v124];
+                        v1.test_rank_array[0][v124] := v1.S_test_rank_array[0][v124];
                     }
                     case 'A': {
-                        v1.test_index_array[0][v116] := v1.A_test_index_array[0][v116];
-                        v1.test_rank_array[0][v116] := v1.A_test_rank_array[0][v116];
+                        v1.test_index_array[0][v124] := v1.A_test_index_array[0][v124];
+                        v1.test_rank_array[0][v124] := v1.A_test_rank_array[0][v124];
                     }
                     case 'W': {
-                        v1.test_index_array[0][v116] := v1.W_test_index_array[0][v116];
-                        v1.test_rank_array[0][v116] := v1.W_test_rank_array[0][v116];
+                        v1.test_index_array[0][v124] := v1.W_test_index_array[0][v124];
+                        v1.test_rank_array[0][v124] := v1.W_test_rank_array[0][v124];
                     }
                     case 'B': {
-                        v1.test_index_array[0][v116] := v1.B_test_index_array[0][v116];
-                        v1.test_rank_array[0][v116] := v1.B_test_rank_array[0][v116];
+                        v1.test_index_array[0][v124] := v1.B_test_index_array[0][v124];
+                        v1.test_rank_array[0][v124] := v1.B_test_rank_array[0][v124];
                     }
                     case 'C': {
-                        v1.test_index_array[0][v116] := v1.C_test_index_array[0][v116];
-                        v1.test_rank_array[0][v116] := v1.C_test_rank_array[0][v116];
+                        v1.test_index_array[0][v124] := v1.C_test_index_array[0][v124];
+                        v1.test_rank_array[0][v124] := v1.C_test_rank_array[0][v124];
                     }
                     default: { }
                 };
@@ -322,54 +322,54 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
             {
                 {
-                    for(decl ref<int<4>> v62 =  var(0) .. 5 : 1) {
-                        v47 := v44.partial_verify_vals[0][v62];
-                        if(0<=v47&&v47<=int.lshift(1, 20)-1) {
+                    for(decl ref<int<4>> v68 =  var(0) .. 5 : 1) {
+                        v47 := v44.partial_verify_vals[0][v68];
+                        if(0<=v47&&[v47]fun[ref<int<4>> v66]()return v66<=int.lshift(1, 20)-1) {
                             decl int<4> v61 = 'W';
                             switch(v61) {
-                                case 'S': if(v62<=2) {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                case 'S': if(v68<=2) {
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 } else {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 }
-                                case 'W': if(v62<2) {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43-2)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                case 'W': if(v68<2) {
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43-2)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 } else {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 }
-                                case 'A': if(v62<=2) {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43-1)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                case 'A': if(v68<=2) {
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43-1)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 } else {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43-1)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43-1)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 }
-                                case 'B': if(v62==1||v62==2||v62==4) {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                case 'B': if(v68==1||[v68]fun[ref<int<4>> v62]()return v62==2||[v68]fun[ref<int<4>> v64]()return v64==4) {
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 } else {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 }
-                                case 'C': if(v62<=2) {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                case 'C': if(v68<=2) {
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 } else {
-                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                    if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                     } else int.postInc(v44.passed_verification);
                                 }
                                 default: { }
@@ -383,21 +383,21 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         }(1);
         v1.passed_verification := 0;
         if('W'!='S') printf("\n   iteration\n", varlist.pack(())) else { };
-        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v65](int<4> v64){
-            v65.start[0][v64] := [v65]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v66](){
-                decl ref<real<8>> v67 =  var(0.0);
-                [v66]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v69](array<ref<real<8>>,1> v68){
-                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v70 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
-                    gettimeofday([v70], null);
-                    if(v69.sec<0) v69.sec := v70.tv_sec else { };
-                    v68[0] := v70.tv_sec-v69.sec+1.0e-6*v70.tv_usec;
-                }([v67]);
-                return v67;
+        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v71](int<4> v70){
+            v71.start[0][v70] := [v71]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v72](){
+                decl ref<real<8>> v73 =  var(0.0);
+                [v72]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v75](array<ref<real<8>>,1> v74){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v76 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
+                    gettimeofday([v76], null);
+                    if(v75.sec<0) v75.sec := v76.tv_sec else { };
+                    v74[0] := v76.tv_sec-v75.sec+1.0e-6*v76.tv_usec;
+                }([v73]);
+                return v73;
             }();
         }(0);
         {
-            for(decl ref<int<4>> v117 =  var(1) .. 10+1 : 1) {
-                if('W'!='S') printf("        %d\n", varlist.pack((v117))) else { };
+            for(decl ref<int<4>> v125 =  var(1) .. 10+1 : 1) {
+                if('W'!='S') printf("        %d\n", varlist.pack((v125))) else { };
                 [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v44](int<4> v43){
                     decl ref<int<4>> v45 =  var(0);
                     decl ref<int<4>> v46 =  var(0);
@@ -454,54 +454,54 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     };
                     {
                         {
-                            for(decl ref<int<4>> v62 =  var(0) .. 5 : 1) {
-                                v47 := v44.partial_verify_vals[0][v62];
-                                if(0<=v47&&v47<=int.lshift(1, 20)-1) {
+                            for(decl ref<int<4>> v68 =  var(0) .. 5 : 1) {
+                                v47 := v44.partial_verify_vals[0][v68];
+                                if(0<=v47&&[v47]fun[ref<int<4>> v66]()return v66<=int.lshift(1, 20)-1) {
                                     decl int<4> v61 = 'W';
                                     switch(v61) {
-                                        case 'S': if(v62<=2) {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                        case 'S': if(v68<=2) {
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         } else {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         }
-                                        case 'W': if(v62<2) {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43-2)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                        case 'W': if(v68<2) {
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43-2)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         } else {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         }
-                                        case 'A': if(v62<=2) {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43-1)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                        case 'A': if(v68<=2) {
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43-1)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         } else {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43-1)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43-1)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         }
-                                        case 'B': if(v62==1||v62==2||v62==4) {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                        case 'B': if(v68==1||[v68]fun[ref<int<4>> v62]()return v62==2||[v68]fun[ref<int<4>> v64]()return v64==4) {
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         } else {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         }
-                                        case 'C': if(v62<=2) {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]+v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                        case 'C': if(v68<=2) {
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]+v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         } else {
-                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v62]-v43)) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v62)));
+                                            if(int.ne(v44.key_buff1[0][v47-1], v44.test_rank_array[0][v68]-v43)) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, v68)));
                                             } else int.postInc(v44.passed_verification);
                                         }
                                         default: { }
@@ -512,74 +512,74 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         };
                         if(v43==10) v44.key_buff_ptr_global := v44.key_buff1[0] else { };
                     };
-                }(v117);
+                }(v125);
             };
             v5 := 1+ceil(10+1-1/1)*1;
         };
-        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v76](int<4> v75){
-            decl ref<real<8>> v77 =  var(0.0);
-            decl ref<real<8>> v78 =  var(0.0);
-            v78 := [v76]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v66](){
-                decl ref<real<8>> v67 =  var(0.0);
-                [v66]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v69](array<ref<real<8>>,1> v68){
-                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v70 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
-                    gettimeofday([v70], null);
-                    if(v69.sec<0) v69.sec := v70.tv_sec else { };
-                    v68[0] := v70.tv_sec-v69.sec+1.0e-6*v70.tv_usec;
-                }([v67]);
-                return v67;
+        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v82](int<4> v81){
+            decl ref<real<8>> v83 =  var(0.0);
+            decl ref<real<8>> v84 =  var(0.0);
+            v84 := [v82]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v72](){
+                decl ref<real<8>> v73 =  var(0.0);
+                [v72]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v75](array<ref<real<8>>,1> v74){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v76 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
+                    gettimeofday([v76], null);
+                    if(v75.sec<0) v75.sec := v76.tv_sec else { };
+                    v74[0] := v76.tv_sec-v75.sec+1.0e-6*v76.tv_usec;
+                }([v73]);
+                return v73;
             }();
-            v77 := v78-v76.start[0][v75];
-            v76.elapsed[0][v75] := v76.elapsed[0][v75]+v77;
+            v83 := v84-v82.start[0][v81];
+            v82.elapsed[0][v81] := v82.elapsed[0][v81]+v83;
         }(0);
-        v8 := [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v81](int<4> v80){
-            return v81.elapsed[0][v80];
+        v8 := [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v87](int<4> v86){
+            return v87.elapsed[0][v86];
         }(0);
-        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v83](){
-            decl ref<int<4>> v84 =  var(0);
-            decl ref<int<4>> v85 =  var(0);
-            decl ref<int<4>> v86 =  var(0);
-            decl ref<int<4>> v87 =  var(0);
-            decl ref<int<4>> v88 =  var(0);
+        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v89](){
+            decl ref<int<4>> v90 =  var(0);
+            decl ref<int<4>> v91 =  var(0);
+            decl ref<int<4>> v92 =  var(0);
+            decl ref<int<4>> v93 =  var(0);
+            decl ref<int<4>> v94 =  var(0);
             {
-                for(decl ref<int<4>> v89 =  var(0) .. int.lshift(1, 20) : 1) 
-                    v83.key_array[0][int.preDec(v83.key_buff_ptr_global[v83.key_buff2[0][v89]])] := v83.key_buff2[0][v89]
+                for(decl ref<int<4>> v95 =  var(0) .. int.lshift(1, 20) : 1) 
+                    v89.key_array[0][int.preDec(v89.key_buff_ptr_global[v89.key_buff2[0][v95]])] := v89.key_buff2[0][v95]
                 ;
-                v84 := 0+ceil(int.lshift(1, 20)-0/1)*1;
+                v90 := 0+ceil(int.lshift(1, 20)-0/1)*1;
             };
-            v85 := 0;
+            v91 := 0;
             {
-                for(decl ref<int<4>> v90 =  var(1) .. int.lshift(1, 20) : 1) 
-                    if(v83.key_array[0][v90-1]>v83.key_array[0][v90]) int.postInc(v85) else { }
+                for(decl ref<int<4>> v96 =  var(1) .. int.lshift(1, 20) : 1) 
+                    if(v89.key_array[0][v96-1]>v89.key_array[0][v96]) int.postInc(v91) else { }
                 ;
-                v84 := 1+ceil(int.lshift(1, 20)-1/1)*1;
+                v90 := 1+ceil(int.lshift(1, 20)-1/1)*1;
             };
-            if(int.ne(v85, 0)) {
-                printf("Full_verify: number of keys out of sort: %d\n", varlist.pack((v85)));
-            } else int.postInc(v83.passed_verification);
+            if(int.ne(v91, 0)) {
+                printf("Full_verify: number of keys out of sort: %d\n", varlist.pack((v91)));
+            } else int.postInc(v89.passed_verification);
         }();
         if(int.ne(v1.passed_verification, 5*10+1)) v1.passed_verification := 0 else { };
-        fun(array<ref<char>,1> v92, char v93, int<4> v94, int<4> v95, int<4> v96, int<4> v97, int<4> v98, real<8> v99, real<8> v100, array<ref<char>,1> v101, int<4> v102, array<ref<char>,1> v103, array<ref<char>,1> v104, array<ref<char>,1> v105, array<ref<char>,1> v106, array<ref<char>,1> v107, array<ref<char>,1> v108, array<ref<char>,1> v109, array<ref<char>,1> v110, array<ref<char>,1> v111){
-            decl ref<array<ref<char>,1>> v112 =  var("1000");
-            printf("\n\n %s Benchmark Completed\n", varlist.pack((v92)));
-            printf(" Class           =                        %c\n", varlist.pack((v93)));
-            if(v95==0&&v96==0) printf(" Size            =             %12d\n", varlist.pack((v94))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v94, v95, v96)));
-            printf(" Iterations      =             %12d\n", varlist.pack((v97)));
-            printf(" Threads         =             %12d\n", varlist.pack((v98)));
+        fun(array<ref<char>,1> v98, char v99, int<4> v100, int<4> v101, int<4> v102, int<4> v103, int<4> v104, real<8> v105, real<8> v106, array<ref<char>,1> v107, int<4> v108, array<ref<char>,1> v109, array<ref<char>,1> v110, array<ref<char>,1> v111, array<ref<char>,1> v112, array<ref<char>,1> v113, array<ref<char>,1> v114, array<ref<char>,1> v115, array<ref<char>,1> v116, array<ref<char>,1> v117){
+            decl ref<array<ref<char>,1>> v118 =  var("1000");
+            printf("\n\n %s Benchmark Completed\n", varlist.pack((v98)));
+            printf(" Class           =                        %c\n", varlist.pack((v99)));
+            if(v101==0&&[v102]fun[int<4> v119]()return v119==0) printf(" Size            =             %12d\n", varlist.pack((v100))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v100, v101, v102)));
+            printf(" Iterations      =             %12d\n", varlist.pack((v103)));
+            printf(" Threads         =             %12d\n", varlist.pack((v104)));
             printf(" Time in seconds =             %12.2f\n", varlist.pack((0.0)));
             printf(" Mop/s total     =             %12.2f\n", varlist.pack((0.0)));
-            printf(" Operation type  = %24s\n", varlist.pack((v101)));
-            if(v102) printf(" Verification    =               SUCCESSFUL\n", varlist.pack(())) else printf(" Verification    =             UNSUCCESSFUL\n", varlist.pack(()));
-            printf(" Version         =             %12s\n", varlist.pack((v103)));
-            printf(" Compile date    =             %12s\n", varlist.pack((v104)));
+            printf(" Operation type  = %24s\n", varlist.pack((v107)));
+            if(v108) printf(" Verification    =               SUCCESSFUL\n", varlist.pack(())) else printf(" Verification    =             UNSUCCESSFUL\n", varlist.pack(()));
+            printf(" Version         =             %12s\n", varlist.pack((v109)));
+            printf(" Compile date    =             %12s\n", varlist.pack((v110)));
             printf("\n Compile options:\n", varlist.pack(()));
-            printf("    CC           = %s\n", varlist.pack((v105)));
-            printf("    CLINK        = %s\n", varlist.pack((v106)));
-            printf("    C_LIB        = %s\n", varlist.pack((v107)));
-            printf("    C_INC        = %s\n", varlist.pack((v108)));
-            printf("    CFLAGS       = %s\n", varlist.pack((v109)));
-            printf("    CLINKFLAGS   = %s\n", varlist.pack((v110)));
-            printf("    RAND         = %s\n", varlist.pack((v111)));
+            printf("    CC           = %s\n", varlist.pack((v111)));
+            printf("    CLINK        = %s\n", varlist.pack((v112)));
+            printf("    C_LIB        = %s\n", varlist.pack((v113)));
+            printf("    C_INC        = %s\n", varlist.pack((v114)));
+            printf("    CFLAGS       = %s\n", varlist.pack((v115)));
+            printf("    CLINKFLAGS   = %s\n", varlist.pack((v116)));
+            printf("    RAND         = %s\n", varlist.pack((v117)));
         }("IS", 'W', int.lshift(1, 20), 0, 0, 10, v7, v8, 10*int.lshift(1, 20)/v8/1000000., "keys ranked", v1.passed_verification, "2.3", "02 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randlc");
     }
 
@@ -598,28 +598,28 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         decl ref<real<8>> v8 = ( var(0.0));
         decl ref<real<8>> v9 = ( var(0.0));
         {
-            for(decl ref<int<4>> v116 = ( var(0)) .. 5 : 1) {
-                decl int<4> v115 = CAST<int<4>>('W');
-                switch(v115) {
+            for(decl ref<int<4>> v124 = ( var(0)) .. 5 : 1) {
+                decl int<4> v123 = CAST<int<4>>('W');
+                switch(v123) {
                     case 'S': {
-                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).S_test_index_array)[0]))[CAST<uint<4>>(( *v116))])));
-                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).S_test_rank_array)[0]))[CAST<uint<4>>(( *v116))])));
+                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).S_test_index_array)[0]))[CAST<uint<4>>(( *v124))])));
+                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).S_test_rank_array)[0]))[CAST<uint<4>>(( *v124))])));
                     }
                     case 'A': {
-                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).A_test_index_array)[0]))[CAST<uint<4>>(( *v116))])));
-                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).A_test_rank_array)[0]))[CAST<uint<4>>(( *v116))])));
+                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).A_test_index_array)[0]))[CAST<uint<4>>(( *v124))])));
+                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).A_test_rank_array)[0]))[CAST<uint<4>>(( *v124))])));
                     }
                     case 'W': {
-                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).W_test_index_array)[0]))[CAST<uint<4>>(( *v116))])));
-                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).W_test_rank_array)[0]))[CAST<uint<4>>(( *v116))])));
+                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).W_test_index_array)[0]))[CAST<uint<4>>(( *v124))])));
+                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).W_test_rank_array)[0]))[CAST<uint<4>>(( *v124))])));
                     }
                     case 'B': {
-                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).B_test_index_array)[0]))[CAST<uint<4>>(( *v116))])));
-                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).B_test_rank_array)[0]))[CAST<uint<4>>(( *v116))])));
+                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).B_test_index_array)[0]))[CAST<uint<4>>(( *v124))])));
+                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).B_test_rank_array)[0]))[CAST<uint<4>>(( *v124))])));
                     }
                     case 'C': {
-                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).C_test_index_array)[0]))[CAST<uint<4>>(( *v116))])));
-                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v116))]) := ( *(( *(( *( *v1).C_test_rank_array)[0]))[CAST<uint<4>>(( *v116))])));
+                        ((( *(( *( *v1).test_index_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).C_test_index_array)[0]))[CAST<uint<4>>(( *v124))])));
+                        ((( *(( *( *v1).test_rank_array)[0]))[CAST<uint<4>>(( *v124))]) := ( *(( *(( *( *v1).C_test_rank_array)[0]))[CAST<uint<4>>(( *v124))])));
                     }
                     default: { }
                 };
@@ -910,54 +910,54 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             }</m>;
             <m id=5>{
                 {
-                    for(decl ref<int<4>> v62 = ( var(0)) .. 5 : 1) {
-                        (v47 := ( *(( *(( *( *v44).partial_verify_vals)[0]))[CAST<uint<4>>(( *v62))])));
-                        if(((0<=( *v47))&&(( *v47)<=(int.lshift(1, 20)-1)))) {
+                    for(decl ref<int<4>> v68 = ( var(0)) .. 5 : 1) {
+                        (v47 := ( *(( *(( *( *v44).partial_verify_vals)[0]))[CAST<uint<4>>(( *v68))])));
+                        if(((0<=( *v47))&&[v47]fun[ref<int<4>> v66]()return (( *v66)<=(int.lshift(1, 20)-1)))) {
                             decl int<4> v61 = CAST<int<4>>('W');
                             switch(v61) {
-                                case 'S': if((( *v62)<=2)) {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                case 'S': if((( *v68)<=2)) {
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 } else {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 }
-                                case 'W': if((( *v62)<2)) {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+(v43-2)))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                case 'W': if((( *v68)<2)) {
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+(v43-2)))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 } else {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 }
-                                case 'A': if((( *v62)<=2)) {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+(v43-1)))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                case 'A': if((( *v68)<=2)) {
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+(v43-1)))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 } else {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-(v43-1)))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-(v43-1)))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 }
-                                case 'B': if((((( *v62)==1)||(( *v62)==2))||(( *v62)==4))) {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                case 'B': if((((( *v68)==1)||[v68]fun[ref<int<4>> v62]()return (( *v62)==2))||[v68]fun[ref<int<4>> v64]()return (( *v64)==4))) {
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 } else {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 }
-                                case 'C': if((( *v62)<=2)) {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                case 'C': if((( *v68)<=2)) {
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 } else {
-                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                    if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                        printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                     } else int.postInc(( *v44).passed_verification);
                                 }
                                 default: { }
@@ -971,21 +971,21 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         }(1)</m>;
         (( *v1).passed_verification := 0);
         if(('W'!='S')) printf("\n   iteration\n", varlist.pack(())) else { };
-        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v65](int<4> v64){
-            ((( *(( *( *v65).start)[0]))[CAST<uint<4>>(v64)]) := [v65]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v66](){
-                decl ref<real<8>> v67 = ( var(0.0));
-                [v66]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v69](array<ref<real<8>>,1> v68){
-                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v70 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
-                    gettimeofday([v70], null);
-                    if((( *( *v69).sec)<0)) (( *v69).sec := CAST<int<4>>(( *( *v70).tv_sec))) else { };
-                    ((v68[0]) := (CAST<real<8>>((( *( *v70).tv_sec)-CAST<int<8>>(( *( *v69).sec))))+(1.0e-6*CAST<real<8>>(( *( *v70).tv_usec)))));
-                }([v67]);
-                return ( *v67);
+        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v71](int<4> v70){
+            ((( *(( *( *v71).start)[0]))[CAST<uint<4>>(v70)]) := [v71]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v72](){
+                decl ref<real<8>> v73 = ( var(0.0));
+                [v72]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v75](array<ref<real<8>>,1> v74){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v76 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
+                    gettimeofday([v76], null);
+                    if((( *( *v75).sec)<0)) (( *v75).sec := CAST<int<4>>(( *( *v76).tv_sec))) else { };
+                    ((v74[0]) := (CAST<real<8>>((( *( *v76).tv_sec)-CAST<int<8>>(( *( *v75).sec))))+(1.0e-6*CAST<real<8>>(( *( *v76).tv_usec)))));
+                }([v73]);
+                return ( *v73);
             }());
         }(0);
         {
-            <m id=9>for(decl ref<int<4>> v117 = ( var(1)) .. (10+1) : 1) {
-                <m id=8>if(('W'!='S')) printf("        %d\n", varlist.pack((( *v117)))) else { }</m>;
+            <m id=9>for(decl ref<int<4>> v125 = ( var(1)) .. (10+1) : 1) {
+                <m id=8>if(('W'!='S')) printf("        %d\n", varlist.pack((( *v125)))) else { }</m>;
                 [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v44](int<4> v43){
                     decl ref<int<4>> v45 = ( var(0));
                     decl ref<int<4>> v46 = ( var(0));
@@ -1042,54 +1042,54 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     }</m>;
                     <m id=5>{
                         {
-                            for(decl ref<int<4>> v62 = ( var(0)) .. 5 : 1) {
-                                (v47 := ( *(( *(( *( *v44).partial_verify_vals)[0]))[CAST<uint<4>>(( *v62))])));
-                                if(((0<=( *v47))&&(( *v47)<=(int.lshift(1, 20)-1)))) {
+                            for(decl ref<int<4>> v68 = ( var(0)) .. 5 : 1) {
+                                (v47 := ( *(( *(( *( *v44).partial_verify_vals)[0]))[CAST<uint<4>>(( *v68))])));
+                                if(((0<=( *v47))&&[v47]fun[ref<int<4>> v66]()return (( *v66)<=(int.lshift(1, 20)-1)))) {
                                     decl int<4> v61 = CAST<int<4>>('W');
                                     switch(v61) {
-                                        case 'S': if((( *v62)<=2)) {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                        case 'S': if((( *v68)<=2)) {
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         } else {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         }
-                                        case 'W': if((( *v62)<2)) {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+(v43-2)))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                        case 'W': if((( *v68)<2)) {
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+(v43-2)))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         } else {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         }
-                                        case 'A': if((( *v62)<=2)) {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+(v43-1)))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                        case 'A': if((( *v68)<=2)) {
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+(v43-1)))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         } else {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-(v43-1)))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-(v43-1)))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         }
-                                        case 'B': if((((( *v62)==1)||(( *v62)==2))||(( *v62)==4))) {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                        case 'B': if((((( *v68)==1)||[v68]fun[ref<int<4>> v62]()return (( *v62)==2))||[v68]fun[ref<int<4>> v64]()return (( *v64)==4))) {
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         } else {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         }
-                                        case 'C': if((( *v62)<=2)) {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))+v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                        case 'C': if((( *v68)<=2)) {
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))+v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         } else {
-                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v62))]))-v43))) {
-                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v62))));
+                                            if(int.ne(( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>((( *v47)-1))])), (( *(( *(( *( *v44).test_rank_array)[0]))[CAST<uint<4>>(( *v68))]))-v43))) {
+                                                printf("Failed partial verification: iteration %d, test key %d\n", varlist.pack((v43, ( *v68))));
                                             } else int.postInc(( *v44).passed_verification);
                                         }
                                         default: { }
@@ -1100,74 +1100,74 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         };
                         if((v43==10)) (( *v44).key_buff_ptr_global := ( *(( *( *v44).key_buff1)[0]))) else { };
                     }</m>;
-                }(( *v117));
+                }(( *v125));
             }</m>;
             (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((10+1)-1))/CAST<real<8>>(1))))*1)));
         };
-        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v76](int<4> v75){
-            decl ref<real<8>> v77 = ( var(0.0));
-            decl ref<real<8>> v78 = ( var(0.0));
-            (v78 := [v76]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v66](){
-                decl ref<real<8>> v67 = ( var(0.0));
-                [v66]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v69](array<ref<real<8>>,1> v68){
-                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v70 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
-                    gettimeofday([v70], null);
-                    if((( *( *v69).sec)<0)) (( *v69).sec := CAST<int<4>>(( *( *v70).tv_sec))) else { };
-                    ((v68[0]) := (CAST<real<8>>((( *( *v70).tv_sec)-CAST<int<8>>(( *( *v69).sec))))+(1.0e-6*CAST<real<8>>(( *( *v70).tv_usec)))));
-                }([v67]);
-                return ( *v67);
+        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v82](int<4> v81){
+            decl ref<real<8>> v83 = ( var(0.0));
+            decl ref<real<8>> v84 = ( var(0.0));
+            (v84 := [v82]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v72](){
+                decl ref<real<8>> v73 = ( var(0.0));
+                [v72]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v75](array<ref<real<8>>,1> v74){
+                    decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v76 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
+                    gettimeofday([v76], null);
+                    if((( *( *v75).sec)<0)) (( *v75).sec := CAST<int<4>>(( *( *v76).tv_sec))) else { };
+                    ((v74[0]) := (CAST<real<8>>((( *( *v76).tv_sec)-CAST<int<8>>(( *( *v75).sec))))+(1.0e-6*CAST<real<8>>(( *( *v76).tv_usec)))));
+                }([v73]);
+                return ( *v73);
             }());
-            (v77 := (( *v78)-( *(( *(( *( *v76).start)[0]))[CAST<uint<4>>(v75)]))));
-            ((( *(( *( *v76).elapsed)[0]))[CAST<uint<4>>(v75)]) := (( *(( *(( *( *v76).elapsed)[0]))[CAST<uint<4>>(v75)]))+( *v77)));
+            (v83 := (( *v84)-( *(( *(( *( *v82).start)[0]))[CAST<uint<4>>(v81)]))));
+            ((( *(( *( *v82).elapsed)[0]))[CAST<uint<4>>(v81)]) := (( *(( *(( *( *v82).elapsed)[0]))[CAST<uint<4>>(v81)]))+( *v83)));
         }(0);
-        (v8 := CAST<real<8>>([v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v81](int<4> v80){
-            return ( *(( *(( *( *v81).elapsed)[0]))[CAST<uint<4>>(v80)]));
+        (v8 := CAST<real<8>>([v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v87](int<4> v86){
+            return ( *(( *(( *( *v87).elapsed)[0]))[CAST<uint<4>>(v86)]));
         }(0)));
-        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v83](){
-            decl ref<int<4>> v84 = ( var(0));
-            decl ref<int<4>> v85 = ( var(0));
-            decl ref<int<4>> v86 = ( var(0));
-            decl ref<int<4>> v87 = ( var(0));
-            decl ref<int<4>> v88 = ( var(0));
+        [v1]fun[ref<struct<start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>,KS:ref<int<4>>,R23:ref<real<8>>,R46:ref<real<8>>,T23:ref<real<8>>,T46:ref<real<8>>,key_buff_ptr_global:ref<array<ref<int<4>>,1>>,passed_verification:ref<int<4>>,key_array:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff1:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,key_buff2:ref<array<ref<vector<ref<int<4>>,1048576>>,1>>,partial_verify_vals:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,S_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,W_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,A_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,B_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_index_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>,C_test_rank_array:ref<array<ref<vector<ref<int<4>>,5>>,1>>>> v89](){
+            decl ref<int<4>> v90 = ( var(0));
+            decl ref<int<4>> v91 = ( var(0));
+            decl ref<int<4>> v92 = ( var(0));
+            decl ref<int<4>> v93 = ( var(0));
+            decl ref<int<4>> v94 = ( var(0));
             {
-                for(decl ref<int<4>> v89 = ( var(0)) .. int.lshift(1, 20) : 1) 
-                    ((( *(( *( *v83).key_array)[0]))[CAST<uint<4>>(int.preDec((( *( *v83).key_buff_ptr_global)[CAST<uint<4>>(( *(( *(( *( *v83).key_buff2)[0]))[CAST<uint<4>>(( *v89))])))])))]) := ( *(( *(( *( *v83).key_buff2)[0]))[CAST<uint<4>>(( *v89))])))
+                for(decl ref<int<4>> v95 = ( var(0)) .. int.lshift(1, 20) : 1) 
+                    ((( *(( *( *v89).key_array)[0]))[CAST<uint<4>>(int.preDec((( *( *v89).key_buff_ptr_global)[CAST<uint<4>>(( *(( *(( *( *v89).key_buff2)[0]))[CAST<uint<4>>(( *v95))])))])))]) := ( *(( *(( *( *v89).key_buff2)[0]))[CAST<uint<4>>(( *v95))])))
                 ;
-                (v84 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
+                (v90 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
             };
-            (v85 := 0);
+            (v91 := 0);
             {
-                for(decl ref<int<4>> v90 = ( var(1)) .. int.lshift(1, 20) : 1) 
-                    if((( *(( *(( *( *v83).key_array)[0]))[CAST<uint<4>>((( *v90)-1))]))>( *(( *(( *( *v83).key_array)[0]))[CAST<uint<4>>(( *v90))])))) int.postInc(v85) else { }
+                for(decl ref<int<4>> v96 = ( var(1)) .. int.lshift(1, 20) : 1) 
+                    if((( *(( *(( *( *v89).key_array)[0]))[CAST<uint<4>>((( *v96)-1))]))>( *(( *(( *( *v89).key_array)[0]))[CAST<uint<4>>(( *v96))])))) int.postInc(v91) else { }
                 ;
-                (v84 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-1))/CAST<real<8>>(1))))*1)));
+                (v90 := (1+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-1))/CAST<real<8>>(1))))*1)));
             };
-            if(int.ne(( *v85), 0)) {
-                printf("Full_verify: number of keys out of sort: %d\n", varlist.pack((( *v85))));
-            } else int.postInc(( *v83).passed_verification);
+            if(int.ne(( *v91), 0)) {
+                printf("Full_verify: number of keys out of sort: %d\n", varlist.pack((( *v91))));
+            } else int.postInc(( *v89).passed_verification);
         }();
         if(int.ne(( *( *v1).passed_verification), ((5*10)+1))) (( *v1).passed_verification := 0) else { };
-        fun(array<ref<char>,1> v92, char v93, int<4> v94, int<4> v95, int<4> v96, int<4> v97, int<4> v98, real<8> v99, real<8> v100, array<ref<char>,1> v101, int<4> v102, array<ref<char>,1> v103, array<ref<char>,1> v104, array<ref<char>,1> v105, array<ref<char>,1> v106, array<ref<char>,1> v107, array<ref<char>,1> v108, array<ref<char>,1> v109, array<ref<char>,1> v110, array<ref<char>,1> v111){
-            decl ref<array<ref<char>,1>> v112 = ( var("1000"));
-            printf("\n\n %s Benchmark Completed\n", varlist.pack((v92)));
-            printf(" Class           =                        %c\n", varlist.pack((CAST<int<4>>(v93))));
-            if(((v95==0)&&(v96==0))) printf(" Size            =             %12d\n", varlist.pack((v94))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v94, v95, v96)));
-            printf(" Iterations      =             %12d\n", varlist.pack((v97)));
-            printf(" Threads         =             %12d\n", varlist.pack((v98)));
+        fun(array<ref<char>,1> v98, char v99, int<4> v100, int<4> v101, int<4> v102, int<4> v103, int<4> v104, real<8> v105, real<8> v106, array<ref<char>,1> v107, int<4> v108, array<ref<char>,1> v109, array<ref<char>,1> v110, array<ref<char>,1> v111, array<ref<char>,1> v112, array<ref<char>,1> v113, array<ref<char>,1> v114, array<ref<char>,1> v115, array<ref<char>,1> v116, array<ref<char>,1> v117){
+            decl ref<array<ref<char>,1>> v118 = ( var("1000"));
+            printf("\n\n %s Benchmark Completed\n", varlist.pack((v98)));
+            printf(" Class           =                        %c\n", varlist.pack((CAST<int<4>>(v99))));
+            if(((v101==0)&&[v102]fun[int<4> v119]()return (v119==0))) printf(" Size            =             %12d\n", varlist.pack((v100))) else printf(" Size            =              %3dx%3dx%3d\n", varlist.pack((v100, v101, v102)));
+            printf(" Iterations      =             %12d\n", varlist.pack((v103)));
+            printf(" Threads         =             %12d\n", varlist.pack((v104)));
             printf(" Time in seconds =             %12.2f\n", varlist.pack((0.0)));
             printf(" Mop/s total     =             %12.2f\n", varlist.pack((0.0)));
-            printf(" Operation type  = %24s\n", varlist.pack((v101)));
-            if(CAST<bool>(v102)) printf(" Verification    =               SUCCESSFUL\n", varlist.pack(())) else printf(" Verification    =             UNSUCCESSFUL\n", varlist.pack(()));
-            printf(" Version         =             %12s\n", varlist.pack((v103)));
-            printf(" Compile date    =             %12s\n", varlist.pack((v104)));
+            printf(" Operation type  = %24s\n", varlist.pack((v107)));
+            if(CAST<bool>(v108)) printf(" Verification    =               SUCCESSFUL\n", varlist.pack(())) else printf(" Verification    =             UNSUCCESSFUL\n", varlist.pack(()));
+            printf(" Version         =             %12s\n", varlist.pack((v109)));
+            printf(" Compile date    =             %12s\n", varlist.pack((v110)));
             printf("\n Compile options:\n", varlist.pack(()));
-            printf("    CC           = %s\n", varlist.pack((v105)));
-            printf("    CLINK        = %s\n", varlist.pack((v106)));
-            printf("    C_LIB        = %s\n", varlist.pack((v107)));
-            printf("    C_INC        = %s\n", varlist.pack((v108)));
-            printf("    CFLAGS       = %s\n", varlist.pack((v109)));
-            printf("    CLINKFLAGS   = %s\n", varlist.pack((v110)));
-            printf("    RAND         = %s\n", varlist.pack((v111)));
+            printf("    CC           = %s\n", varlist.pack((v111)));
+            printf("    CLINK        = %s\n", varlist.pack((v112)));
+            printf("    C_LIB        = %s\n", varlist.pack((v113)));
+            printf("    C_INC        = %s\n", varlist.pack((v114)));
+            printf("    CFLAGS       = %s\n", varlist.pack((v115)));
+            printf("    CLINKFLAGS   = %s\n", varlist.pack((v116)));
+            printf("    RAND         = %s\n", varlist.pack((v117)));
         }("IS", 'W', int.lshift(1, 20), 0, 0, 10, ( *v7), ( *v8), ((CAST<real<8>>((10*int.lshift(1, 20)))/( *v8))/1000000.), "keys ranked", ( *( *v1).passed_verification), "2.3", "02 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randlc");
     }
 

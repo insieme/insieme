@@ -230,9 +230,8 @@ namespace {
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
  */
 core::ProgramPtr addParallelism(const core::ProgramPtr& prog, core::NodeManager& mgr) {
-//    ocl::Compiler oclCompiler(prog, mgr);
-//    return oclCompiler.lookForOclAnnotations();
-	return prog;
+    ocl::Compiler oclCompiler(prog, mgr);
+    return oclCompiler.lookForOclAnnotations();
 }
 
 } // end anonymous namespace

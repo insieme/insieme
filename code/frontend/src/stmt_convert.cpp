@@ -161,8 +161,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
-		assert(retStmt->getRetValue() && "ReturnStmt has an empty expression");
-		core::ExpressionPtr&& retExpr = convFact.convertExpr( retStmt->getRetValue() );
+		core::ExpressionPtr retExpr;
+		if(Expr* expr = retStmt->getRetValue())
+			retExpr = convFact.convertExpr( expr );
+		else
+			retExpr = convFact.builder.getBasicGenerator().getUnitConstant();
 
 		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.tryDeref(retExpr) );
 		// handle eventual OpenMP pragmas attached to the Clang node
