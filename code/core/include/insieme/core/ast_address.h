@@ -59,47 +59,187 @@ typedef Address<const Node> NodeAddress;
 template<typename T> class Pointer;
 typedef Pointer<const Node> NodePtr;
 
-// TODO: encapsulate path in an actual object
-
 /**
- * The type used to describe one step among the path addressing a node within the AST.
- * The pair represents the index of the child to followed within the upper level and a pointer
- * to the node reached by the this step.
- *
- * NOTE: The pointer only represents a 'cached' value and might as well be obtained by traversing
- * the prefix of the path each time a node on the path has to be resolved.
- * Due to this pointer, nodes on the path can be obtained with O(1).
+ * A forward declaration of the node type used for realizing paths.
  */
-typedef std::pair<std::size_t, NodePtr> PathEntry;
+namespace detail {
+	class PathElement;
+}
+
+// TODO: merge this with the address
 
 /**
  * The type used to represent the path of a node to be addressed.
  */
-typedef std::vector<PathEntry> Path;
+class Path {
 
-/**
- * The path is maintained via a shared pointer. This way, the rather large vector (which is
- * also expensive to be copied) can be shared among all node addresses created by copying or
- * assigning one instance to another. Since this class is immutable, sharing the path does
- * not result in unexpected side effects.
- */
-typedef std::shared_ptr<Path> SharedPath;
+	/**
+	 * The last element of the path represented by this class. The elements
+	 * are linked bottom up and the root element is marked by referencing null as its
+	 * parent.
+	 */
+	const detail::PathElement* element;
 
-/**
- * Computes a hash code for the given path.
- *
- * @param path the path to be hashed
- * @return the resulting hash code
- */
-std::size_t hashPath(const Path& path);
+	/**
+	 * A private constructor to create a path based on a path element.
+	 *
+	 * @param element the element this path is pointing to
+	 */
+	Path(const detail::PathElement* element);
 
-/**
- * Converts the given single node to a path.
- *
- * @param node the node the new path should consist of
- * @return a path consisting of this node only
- */
-Path toPath(const NodePtr& node);
+public:
+
+	/**
+	 * A default constructor for this class.
+	 */
+	Path() : element(NULL) { };
+
+	/**
+	 * A constructor creating a path consisting of a single node (the root node).
+	 *
+	 * @param node the node the new path should consist of
+	 */
+	Path(const NodePtr& node);
+
+	/**
+	 * A copy constructor
+	 */
+	Path(const Path& other);
+
+	/**
+	 * A move constructor for this paths.
+	 */
+	Path(Path&& other);
+
+	/**
+	 * A destructor for paths.
+	 */
+	~Path();
+
+	/**
+	 * Obtains the node addressed by this path.
+	 *
+	 * @return a reference to the node addressed by this path
+	 */
+	const NodePtr& getAddressedNode() const;
+
+	/**
+	 * Obtains the path element referencing the root node of this path.
+	 * @return a pointer to the requested path element
+	 */
+	const NodePtr& getRootNode() const;
+
+	/**
+	 * Obtains the parent on the given level of this path.
+	 *
+	 * @param level if set to 0, it will be this node. If set to 1, it will be
+	 * 				the immediate parent, 2 the parents parent and so forth. Must not
+	 * 				be larger or equal the depth of this node.
+	 * @return a pointer to the requested path element
+	 */
+	const NodePtr& getParentNode(unsigned level = 1) const;
+
+	/**
+	 * Obtains the a path consisting of the root node only.
+	 *
+	 * @return the requested path
+	 */
+	Path getPathToRoot() const;
+
+	/**
+	 * Obtains a path ending at the given parent node.
+	 *
+	 * @param level if set to 0, it will be this node. If set to 1, it will be
+	 * 				the immediate parent, 2 the parents parent and so forth. Must not
+	 * 				be larger or equal the depth of this node.
+	 * @return the requested path
+	 */
+	Path getPathToParent(unsigned level = 1) const;
+
+	/**
+	 * Obtains a path extending this path by a node referencing the given child.
+	 *
+	 * @param index the index of the next step
+	 * @return the extended path, ending at the given child node
+	 */
+	Path extendForChild(unsigned index) const;
+
+	/**
+	 * Obtains the index of the addressed node within the parents child list.
+	 */
+	std::size_t getIndex() const;
+
+	/**
+	 * The length of this path.
+	 */
+	std::size_t getLength() const;
+
+	/**
+	 * Verifies whether this path is valid. A path is invalid if either it is empty or
+	 * for one of the steps along the path, the referenced element is not corresponding to the
+	 * indexed child within the child list.
+	 */
+	bool isValid() const;
+
+	/**
+	 * Computes a hash value for this path.
+	 */
+	std::size_t hash() const;
+
+	/**
+	 * The copy assignment operator.
+	 */
+	Path& operator=(const Path& source);
+
+	/**
+	 * The move assignment operator.
+	 */
+	Path& operator=(Path&& source);
+
+	/**
+	 * The equals operator for paths. To paths are considered equal
+	 * if they describe the same sequence of nodes, starting from the root, going
+	 * to the addressed leaf.
+	 *
+	 * @param other the path to be compared with.
+	 */
+	bool operator==(const Path& other) const;
+
+	/**
+	 * The not-equal operator for paths. This is simply the negation of the equals
+	 * operator.
+	 *
+	 * @param other the path to be compared with.
+	 */
+	bool operator!=(const Path& other) const {
+		return !(*this == other);
+	}
+
+	/**
+	 * A comparison operator for two paths. Paths will be ordered lexicographical.
+	 */
+	bool operator<(const Path& other) const;
+
+	/**
+	 * A pointer-like conversion to a boolean.
+	 */
+	operator bool() const {
+		return element;
+	}
+
+	/**
+	 * Prints a string-representation of this instance to the given stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return a reference to the given stream
+	 */
+	std::ostream& printTo(std::ostream& out) const;
+
+	/**
+	 * Computes the hash code for a single-step path only consisting of the given node.
+	 */
+	static std::size_t hashSingleStepPath(const NodePtr& node);
+};
 
 // forward declaration
 struct StaticAddressCast;
@@ -133,10 +273,8 @@ private:
 
 	/**
 	 * The path used to identify the node referenced by this address.
-	 * The pointer stored within this vector are describing the sequence of edges to be followed
-	 * for reaching the corresponding node.
 	 */
-	SharedPath path;
+	Path path;
 
 public:
 
@@ -145,8 +283,7 @@ public:
 	 */
 	template<typename B>
 	explicit Address(const Pointer<B>& root, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
-		: utils::HashableImmutableData<Address<T>>(hashPath(toPath(root))),
-		  path(std::make_shared<Path>(toPath(root))) {}
+		: utils::HashableImmutableData<Address<T>>(Path::hashSingleStepPath(root)), path(root) {}
 
 	/**
 	 * A constructor creating a node address based on a path through an AST.
@@ -154,19 +291,17 @@ public:
 	 * @param path the path to the node to be addressed.
 	 */
 	Address(const Path& path = Path())
-		: utils::HashableImmutableData<Address<T>>(hashPath(path)),
-		  path(std::make_shared<Path>(path)) {}
+		: utils::HashableImmutableData<Address<T>>(path.hash()), path(path) {}
 
 	/**
-	 * A extendes version of the copy constructor allowing to copy from addresses pointing
+	 * A extended version of the copy constructor allowing to copy from addresses pointing
 	 * to related types.
 	 *
 	 * @param from the element to be copied
 	 */
 	template<typename B>
 	Address(const Address<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
-		: utils::HashableImmutableData<Address<T>>(from.hash()),
-		  path(from.getSharedPath()) {}
+		: utils::HashableImmutableData<Address<T>>(from.hash()), path(from.getPath()) {}
 
 	/**
 	 * Obtains a pointer to the root node this address is starting from.
@@ -177,9 +312,9 @@ public:
 	 * @return a pointer to the root node.
 	 */
 	NodePtr getRootNode() const {
-		assert(!path->empty() && "Invalid node address!");
+		assert(path && "Invalid node address!");
 		// root = the pointer assigned to the first path element
-		return (*path)[0].second;
+		return path.getRootNode();
 	}
 
 	/**
@@ -191,9 +326,7 @@ public:
 	 * @return the requested address
 	 */
 	NodePtr getParentNode(unsigned level=1) const {
-		std::size_t size = path->size();
-		assert(size > level && "Invalid parent node level!");
-		return (*path)[size - level - 1].second;
+		return path.getParentNode(level);
 	}
 
 	/**
@@ -205,9 +338,8 @@ public:
 	 * @return a pointer to the addressed node.
 	 */
 	Pointer<const T> getAddressedNode() const {
-		assert(!path->empty() && "Invalid node address!");
-		assert(dynamic_pointer_cast<const T>((*path)[path->size() - 1].second) && "Illegal Node-Pointer cast!");
-		return static_pointer_cast<const T>((*path)[path->size() - 1].second);
+		assert(path && "Invalid node address!");
+		return static_pointer_cast<const T>(path.getParentNode(0));
 	}
 
 	/**
@@ -216,7 +348,7 @@ public:
 	 *
 	 * @return the (relative) address of the root node
 	 */
-	NodeAddress getRootNodeAddress() const {
+	NodeAddress getRootAddress() const {
 		return NodeAddress(getRootNode());
 	}
 
@@ -228,21 +360,15 @@ public:
 	 * @param level the number of levels to go up (0=same node, 1=parent, 2=grandparents ...)
 	 * @return the requested address
 	 */
-	NodeAddress getParentNodeAddress(unsigned level=1) const {
-		assert(path->size() > level && "Invalid parent node level!");
+	NodeAddress getParentAddress(unsigned level=1) const {
 
 		// check whether an actual parent is requested
 		if (level == 0) {
 			return *this;
 		}
 
-		// check whether root node is requested
-		if (path->size() == level + 1) {
-			return getRootNodeAddress();
-		}
-
-		// create modified path
-		return NodeAddress(Path(path->begin(), path->end()-level));
+		// create address based on modified path
+		return NodeAddress(path.getPathToParent(level));
 	}
 
 	/**
@@ -253,16 +379,8 @@ public:
 	 * @return the address of the child node
 	 */
 	NodeAddress getAddressOfChild(unsigned index) const {
-
-		// verify that it is really a child
-		assert((getAddressedNode()->getChildList().size() > index) && "Given node index is not a child!");
-
-		NodePtr child = getAddressedNode()->getChildList()[index];
-
 		// extend path by child element
-		Path newPath(*path);
-		newPath.push_back(std::make_pair(index, child));
-		return NodeAddress(newPath);
+		return NodeAddress(path.extendForChild(index));
 	}
 
 	/**
@@ -273,23 +391,8 @@ public:
 	 * @return true if it is a valid path, false otherwise
 	 */
 	bool isValid() const {
-		// check whether path is not empty
-		if (path->empty()) {
-			return false;
-		}
-
-		// check parent-child relation
-		PathEntry parent = *(*path).begin();
-		return all((*path).begin()+1, (*path).end(), [&parent](const PathEntry& cur) -> bool {
-
-			bool res =
-					cur.second && // pointer must be not NULL
-					parent.second->getChildList().size() > cur.first && // index must be valid
-					parent.second->getChildList()[cur.first] == cur.second; // pointer must be correct
-
-			parent = cur;
-			return res;
-		});
+		// check whether path is not null
+		return path.isValid();
 	}
 	
 	/**
@@ -298,17 +401,17 @@ public:
 	 * @return the index of the addressed node within the parent's node list
 	 */
 	unsigned getIndex() const {
-		 return path->back().first;
+		 return path.getIndex();
 	}
 
 	/**
 	 * Obtains the depth / length of this address. The depth corresponds to the number of nodes passed
 	 * between the root node and the addressed node.
 	 *
-	 * @return the depth of the addressed nodes within the AST
+	 * @return the depth of the addressed nodes within the IR DAG
 	 */
 	unsigned getDepth() const {
-		return path->size();
+		return path.getLength();
 	}
 
 	/**
@@ -317,13 +420,6 @@ public:
 	 * @return a constant reference to the internally maintained path.
 	 */
 	const Path& getPath() const {
-		return *(path);
-	}
-
-	/**
-	 * Obtains a reference to the internally shared path.
-	 */
-	const SharedPath& getSharedPath() const {
 		return path;
 	}
 
@@ -359,24 +455,8 @@ public:
 	 */
 	template<typename S>
 	bool operator<(const Address<S>& other) const {
-		// get size of paths
-		std::size_t sizeA = path->size();
-		std::size_t sizeB = other.path->size();
-
-		// compare common prefix
-		int length = std::min(sizeA, sizeB);
-		Path& pathA = *path;
-		Path& pathB = (*other.path);
-		for(int i=0; i<length; i++) {
-			std::size_t a = pathA[i].first;
-			std::size_t b = pathB[i].first;
-			if (a != b) {
-				return a < b;
-			}
-		}
-
-		// longer is bigger
-		return sizeA < sizeB;
+		// use the path comparison operation
+		return path < other.path;
 	}
 
 protected:
@@ -389,10 +469,8 @@ protected:
 	 * @return true if equivalent, false otherwise.
 	 */
 	virtual bool equals(const Address<T>& other) const {
-		// just compare paths (identity, hash values and others stuff has already been checked by super class)
-		return ::equals(*path, other.getPath(), [](const PathEntry& a, const PathEntry& b) {
-			return a.first == b.first;
-		});
+		// simply compare the paths
+		return path == other.path;
 	}
 
 };
@@ -405,14 +483,14 @@ protected:
  * @param src the pointer to be down-casted
  * @return the down-casted address pointing to the same location
  */
-template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynamic_address_cast(Address<T>& src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<Address<B>* >(&src));
-	}
-	// return an invalid address (default constructed)
-	return Address<B>();
-}
+//template<typename B, typename T>
+//inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynamic_address_cast(Address<T>& src) {
+//	if (dynamic_cast<B*>(&(*src))) {
+//		return *(reinterpret_cast<Address<B>* >(&src));
+//	}
+//	// return an invalid address (default constructed)
+//	return Address<B>();
+//}
 
 /**
  * Allows to dynamically down-cast between addresses pointing to related types.
@@ -476,14 +554,22 @@ struct AddressChildFactory {
 } // end namespace insieme
 
 /**
+ * Allows path elements to be printed to an output stream.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element);
+
+/**
+ * Allows paths to be printed to a an output stream.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path);
+
+/**
  * Allows node addresses to be printed to a stream (especially useful during debugging and
  * within test cases where equals expects values to be printable).
  */
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
-	return out << join("-", node.getPath(), [](std::ostream& out, const insieme::core::PathEntry& cur) {
-		out << cur.first;
-	});
+	return out << node.getPath();
 }
 
 

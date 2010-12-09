@@ -308,23 +308,29 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 	NodePtr res = replacement;
 
 	// process the path bottom up => replace one node after another
-	const Path& path = toReplace.getPath();
-	unsigned lastPos = path[path.size()-1].first;
-	std::for_each(path.rbegin()+1, path.rend(), [&](const PathEntry& cur) {
+	Path path = toReplace.getPath();
+
+	// replace bottom up
+	unsigned lastPos = path.getIndex();
+	while (path.getLength() > 1) {
+		// go to parent
+		path = path.getPathToParent();
+
 		// conduct replace operation
 		auto mapper = NodeAddressReplacer(lastPos, res);
-		res = cur.second->substitute(manager, mapper);
+		const NodePtr& cur = path.getAddressedNode();
+		res = cur->substitute(manager, mapper);
 
 		// restore annotations
 		if (preservePtrAnnotationsWhenModified) {
 			// copy annotations ...
 			// TODO: determine whether annotations should be merged or overridden
-			res->setAnnotations(cur.second->getAnnotations());
+			res->setAnnotations(cur->getAnnotations());
 		}
 
 		// update last-pos
-		lastPos = cur.first;
-	});
+		lastPos = path.getIndex();
+	}
 
 	// done
 	return res;

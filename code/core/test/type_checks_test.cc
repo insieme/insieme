@@ -109,17 +109,17 @@ TEST(CallExprTypeCheck, Basic) {
 	expr = builder.callExpr(type, unaryFun, toVector<ExpressionPtr>(y));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x,y));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,y));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
 	// invalid argument types
 	TypePtr concreteType2 = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(2)));
@@ -134,24 +134,24 @@ TEST(CallExprTypeCheck, Basic) {
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,z));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
 
 	// => not unifyable arguments
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,w));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
 
 	// => wrong number of arguments
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(x,y,z));
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(unaryFun), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 }
 
 

@@ -61,9 +61,8 @@ TEST(NodeAddressTest, Basic) {
 
 	EXPECT_EQ(root, addrRoot.getAddressedNode());
 	EXPECT_EQ(root, addrRoot.getRootNode());
-	EXPECT_EQ(addrRoot, addrRoot.getParentNodeAddress(0));
+	EXPECT_EQ(addrRoot, addrRoot.getParentAddress(0));
 
-	EXPECT_EQ(toString(toVector(PathEntry(0, root))), toString(addrRoot.getPath()));
 	EXPECT_EQ("0", toString(addrRoot));
 
 	// go to node R-A
@@ -74,12 +73,11 @@ TEST(NodeAddressTest, Basic) {
 
 	EXPECT_EQ(typeA, addrA.getAddressedNode());
 	EXPECT_EQ(root, addrA.getRootNode());
-	EXPECT_EQ(addrA, addrA.getParentNodeAddress(0));
-	EXPECT_EQ(addrRoot, addrA.getParentNodeAddress(1));
+	EXPECT_EQ(addrA, addrA.getParentAddress(0));
+	EXPECT_EQ(addrRoot, addrA.getParentAddress(1));
 	EXPECT_EQ(typeA, addrA.getParentNode(0));
 	EXPECT_EQ(root,  addrA.getParentNode(1));
 
-	EXPECT_EQ(toString(toVector(PathEntry(0,root), PathEntry(0,typeA))), toString(addrA.getPath()));
 	EXPECT_EQ("0-0", toString(addrA));
 
 	// go to child R-A-2
@@ -91,15 +89,29 @@ TEST(NodeAddressTest, Basic) {
 
 	EXPECT_EQ(type2, addrA2.getAddressedNode());
 	EXPECT_EQ(root, addrA2.getRootNode());
-	EXPECT_EQ(addrA2, addrA2.getParentNodeAddress(0));
-	EXPECT_EQ(addrA, addrA2.getParentNodeAddress(1));
-	EXPECT_EQ(addrRoot, addrA2.getParentNodeAddress(2));
+	EXPECT_EQ(addrA2, addrA2.getParentAddress(0));
+	EXPECT_EQ(addrA, addrA2.getParentAddress(1));
+	EXPECT_EQ(addrRoot, addrA2.getParentAddress(2));
 	EXPECT_EQ(type2, addrA2.getParentNode(0));
 	EXPECT_EQ(typeA, addrA2.getParentNode(1));
 	EXPECT_EQ(root,  addrA2.getParentNode(2));
 
-	EXPECT_EQ(toString(toVector(PathEntry(0,root), PathEntry(0,typeA), PathEntry(1,type2))), toString(addrA2.getPath()));
 	EXPECT_EQ("0-0-1", toString(addrA2));
+
+	EXPECT_EQ(addrA2, NodeAddress(Path(root).extendForChild(0).extendForChild(1)));
+	EXPECT_NE(addrA2, NodeAddress(Path(root).extendForChild(0).extendForChild(0)));
+}
+
+TEST(NodeAddressTest, HashSinglePath) {
+
+	ASTBuilder builder;
+
+	TypePtr type = builder.genericType("A");
+
+	TypeAddress adr(type);
+
+	EXPECT_EQ(adr.hash(), adr.getPath().hash());
+
 }
 
 
@@ -115,9 +127,9 @@ TEST(NodeAddressTest, EqualityTest) {
 	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
 	// start with root node R
-	NodeAddress ABD1(toVector(PathEntry(-1,typeA), PathEntry(0,typeB), PathEntry(0,typeD)));
-	NodeAddress ABD2(toVector(PathEntry(-1,typeA), PathEntry(0,typeB), PathEntry(0,typeD)));
-	NodeAddress ACD(toVector(PathEntry(-1,typeA), PathEntry(1,typeC), PathEntry(0,typeD)));
+	NodeAddress ABD1(Path(typeA).extendForChild(0).extendForChild(0));
+	NodeAddress ABD2(Path(typeA).extendForChild(0).extendForChild(0));
+	NodeAddress ACD(Path(typeA).extendForChild(1).extendForChild(0));
 
 	EXPECT_EQ(ABD1, ABD2);
 	EXPECT_NE(ABD1, ACD);

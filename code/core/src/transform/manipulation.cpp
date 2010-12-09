@@ -95,7 +95,7 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 
 
 NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified) {
-	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
 //		auto statements = compoundParent->getStatements();
 //		auto targetloc = std::find(statements.cbegin(), statements.cend(), target);
@@ -110,7 +110,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 }
 
 NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified) {
-	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
 		return insert(manager, compoundParent, statements, target.getIndex(), preservePtrAnnotationsWhenModified);
 	} else {
@@ -124,7 +124,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 }
 
 NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified) {
-	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
 		return insert(manager, compoundParent, statement, target.getIndex()+1, preservePtrAnnotationsWhenModified);
 	} else {
@@ -135,7 +135,7 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 }
 
 NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified) {
-	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentNodeAddress());
+	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
 		return insert(manager, compoundParent, statements, target.getIndex()+1, preservePtrAnnotationsWhenModified);
 	} else {
