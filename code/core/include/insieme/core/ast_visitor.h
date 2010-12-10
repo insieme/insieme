@@ -318,7 +318,8 @@ public:
 		bool interrupted = false;
 
 		// create and run the actual visitor visiting the node using a lambda
-		auto innerVisitor = makeLambdaVisitor<Ptr>([&interrupted, this](const Ptr<const Node>& cur) {
+		ASTVisitor<bool, Ptr>* inner;
+		auto innerVisitor = makeLambdaVisitor<Ptr>([&, this](const Ptr<const Node>& cur)->bool {
 			// visit current (in case of a pre-order)
 			if (this->preorder) {
 				interrupted = interrupted || !this->subVisitor.visit(cur);
@@ -327,14 +328,20 @@ public:
 			// recursively visit all sub-nodes
 			const Node::ChildList& children = cur->getChildList();
 			for(std::size_t i=0; i<children.size(); i++) {
-				interrupted = interrupted || this->visit(this->childFactory(cur, i));
+				interrupted = interrupted || inner->visit(this->childFactory(cur, i));
 			}
 
 			// visit current (in case of a post-order)
 			if (!this->preorder) {
 				interrupted = interrupted || !this->subVisitor.visit(cur);
 			}
+
+			// return interruption state
+			return interrupted;
 		});
+
+		// close recursive cycle
+		inner = &innerVisitor;
 
 		// trigger inner visitor
 		innerVisitor.visit(node);
@@ -655,15 +662,13 @@ inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bo
  */
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor, bool preorder = true) {
-	auto tmp = makeRecursiveInterruptableVisitor(visitor, preorder);
-	return tmp.visit(root);
+	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor, bool preorder = true) {
-	auto tmp = makeRecursiveInterruptableVisitor(visitor, preorder);
-	return tmp.visit(root);
+	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 /**
