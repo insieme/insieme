@@ -217,6 +217,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::ASTBuilder::CaptureInits capture;
     switch(opl) {
     case OPL_GLOBAL :
+std::cout << "-----------------ACCESS GLOBAL ID -----------------------\n";
         localRangeUsed = true;
         numGroupsUsed = true;
         capture[bfgo] = numGroups;
@@ -287,7 +288,7 @@ private:
 public:
 
 
-    KernelMapper(core::ASTBuilder& astBuilder, KernelData& data)
+    KernelMapper(const core::ASTBuilder& astBuilder, KernelData& data)
     : builder(astBuilder), kd(data) { };
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
@@ -451,7 +452,6 @@ public:
 };
 
 class OclMapper : public core::transform::CachedNodeMapping {
-    KernelMapper kernelMapper;
     const core::ASTBuilder& builder;
 
     // vectors to store Arguments
@@ -459,9 +459,6 @@ class OclMapper : public core::transform::CachedNodeMapping {
     std::vector<core::VariablePtr> globalArgs;
     std::vector<core::VariablePtr> localArgs;
     std::vector<core::VariablePtr> privateArgs;
-
-    // struct holding information about the kernel function's body
-    KernelData kd;
 
 private:
     template <typename T>
@@ -571,7 +568,7 @@ private:
 
 
     // TODO make body ref
-    core::ExpressionPtr genLocalCie(core::StatementPtr body, core::Lambda::ParamList params, OCL_SCOPE scope) {
+    core::ExpressionPtr genLocalCie(core::StatementPtr body, core::Lambda::ParamList params, OCL_SCOPE scope, KernelMapper kernelMapper, KernelData kd) {
         // capture all arguments
         core::ASTBuilder::CaptureInits localFunCaptures;
         core::TypeList localFunCtypes;
@@ -634,8 +631,8 @@ private:
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
-        : kernelMapper(astBuilder, kd), builder(astBuilder),
-          kd(astBuilder){ };
+        :  builder(astBuilder)
+          { };
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
         // quick check - stop recursion at variables
@@ -686,7 +683,7 @@ public:
                 if(!isKernelFunction) {
                     return element->substitute(builder.getNodeManager(), *this);
                 }
-
+std::cout << "THA KERNEL\n";
 
                 core::Lambda::ParamList params = func->getParameterList();
 
@@ -743,6 +740,12 @@ public:
     //            params.push_back(globalRange);
     //            params.push_back(localRange);
 
+
+                // struct holding information about the kernel function's body
+                KernelData kd(builder);
+                KernelMapper kernelMapper(builder, kd);
+
+
                 // update the type of the function
                 core::FunctionTypePtr newFuncType;
                 if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
@@ -790,7 +793,7 @@ public:
                     core::CallExprPtr localPfor = builder.callExpr(builder.getNodeManager().basic.getPFor(), gen3dPforArgs(kd.localRange, localPforFun));
     */
                     // build expression to be used as body of local job
-                    core::ExpressionPtr localParFct = genLocalCie(/*localPfor*/newBody, core::Lambda::ParamList(), OCL_LOCAL_JOB);
+                    core::ExpressionPtr localParFct = genLocalCie(/*localPfor*/newBody, core::Lambda::ParamList(), OCL_LOCAL_JOB, kernelMapper, kd);
 
                     core::JobExpr::LocalDecls localJobShared;
 
@@ -834,7 +837,7 @@ public:
 
 
                     // build expression to be used as body of global job
-                    core::ExpressionPtr globalParFct = genLocalCie(globalParBody, core::Lambda::ParamList(), OCL_GLOBAL_JOB);
+                    core::ExpressionPtr globalParFct = genLocalCie(globalParBody, core::Lambda::ParamList(), OCL_GLOBAL_JOB, kernelMapper, kd);
 
                     // catch all arguments which are shared in global range
                     core::JobExpr::LocalDecls globalJobShared;
