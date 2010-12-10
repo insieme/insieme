@@ -749,8 +749,8 @@ namespace detail {
 		ADD_FORMATTER(basic.getSignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); VISIT_ARG(0); });
 
-		ADD_FORMATTER(basic.getBoolLAnd(), { VISIT_ARG(0); OUT("&&"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLOr(), { VISIT_ARG(0); OUT("||"); VISIT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolLAnd(), { VISIT_ARG(0); OUT("&&"); visitor.visit(evalLazy(ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLOr(), { VISIT_ARG(0); OUT("||"); visitor.visit(evalLazy(ARG(1))); });
 		ADD_FORMATTER(basic.getBoolNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); VISIT_ARG(0); });
