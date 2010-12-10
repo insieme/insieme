@@ -197,51 +197,6 @@ void create_seq(void* _capture, double seed, double a) {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_6 //
-// Abstract prototype for lambdas of type __insieme_funType_type_6
-struct __insieme_funType_type_6 { 
-    bool(*fun)(void*);
-    const size_t size;
-};
-
-// Type safe function for invoking lambdas of type __insieme_funType_type_6
-bool call__insieme_funType_type_6(struct __insieme_funType_type_6* lambda) { return lambda->fun(lambda); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_7 //
-// Abstract prototype for lambdas of type __insieme_funType_type_7
-struct __insieme_funType_type_7 { 
-    bool(*fun)(void*);
-    const size_t size;
-    int* p0;
-};
-
-// start code fragment :: Definition of __insieme_supp_8 //
-bool __insieme_supp_8(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	int* var_66 = ((struct __insieme_funType_type_7*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	return ((*var_66)<=((1<<20)-1));
-}
-
-
-// start code fragment :: Definition of __insieme_supp_9 //
-bool __insieme_supp_9(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	int* var_62 = ((struct __insieme_funType_type_7*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	return ((*var_62)==2);
-}
-
-
-// start code fragment :: Definition of __insieme_supp_10 //
-bool __insieme_supp_10(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	int* var_64 = ((struct __insieme_funType_type_7*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	return ((*var_64)==4);
-}
-
-
 // start code fragment :: Definition of rank //
 void rank(void* _capture, int iteration) {
 	// --------- Captured Stuff - Begin -------------
@@ -305,7 +260,7 @@ void rank(void* _capture, int iteration) {
 			{
 				for(int var_68 = 0; var_68 < 5; var_68 += 1) {
 					((k) = (((((((*var_44).partial_verify_vals))[0]))[((unsigned int)((var_68)))])));
-					if(((0<=(k))&&((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&__insieme_supp_8, 0, &k}))))) {
+					if(((0<=(k))&&((k)<=((1<<20)-1)))) {
 						int var_61 = ((int)('W'));
 						switch(var_61) {
 						case 'S':
@@ -351,7 +306,7 @@ void rank(void* _capture, int iteration) {
 								};
 							}; break;
 						case 'B':
-							if(((((var_68)==1)||((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&__insieme_supp_9, 0, &var_68}))))||((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&__insieme_supp_10, 0, &var_68}))))) {
+							if(((((var_68)==1)||((var_68)==2))||((var_68)==4))) {
 								if(((((((((*var_44).key_buff1))[0]))[((unsigned int)(((k)-1)))]))!=((((((((*var_44).test_rank_array))[0]))[((unsigned int)((var_68)))]))+iteration))) {
 									printf("Failed partial verification: iteration %d, test key %d\n", iteration, (var_68));
 								} else {
@@ -391,37 +346,37 @@ void rank(void* _capture, int iteration) {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_11 //
-// Abstract prototype for lambdas of type __insieme_funType_type_11
-struct __insieme_funType_type_11 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_6 //
+// Abstract prototype for lambdas of type __insieme_funType_type_6
+struct __insieme_funType_type_6 { 
     double(*fun)(void*);
     const size_t size;
 };
 
-// Type safe function for invoking lambdas of type __insieme_funType_type_11
-double call__insieme_funType_type_11(struct __insieme_funType_type_11* lambda) { return lambda->fun(lambda); }
+// Type safe function for invoking lambdas of type __insieme_funType_type_6
+double call__insieme_funType_type_6(struct __insieme_funType_type_6* lambda) { return lambda->fun(lambda); }
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_12 //
-// Abstract prototype for lambdas of type __insieme_funType_type_12
-struct __insieme_funType_type_12 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_7 //
+// Abstract prototype for lambdas of type __insieme_funType_type_7
+struct __insieme_funType_type_7 { 
     double(*fun)(void*);
     const size_t size;
     struct __insieme_globals* p0;
 };
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_13 //
-// Abstract prototype for lambdas of type __insieme_funType_type_13
-struct __insieme_funType_type_13 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_8 //
+// Abstract prototype for lambdas of type __insieme_funType_type_8
+struct __insieme_funType_type_8 { 
     void(*fun)(void*, double*);
     const size_t size;
 };
 
-// Type safe function for invoking lambdas of type __insieme_funType_type_13
-void call__insieme_funType_type_13(struct __insieme_funType_type_13* lambda, double* p1) { return lambda->fun(lambda, p1); }
+// Type safe function for invoking lambdas of type __insieme_funType_type_8
+void call__insieme_funType_type_8(struct __insieme_funType_type_8* lambda, double* p1) { return lambda->fun(lambda, p1); }
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_14 //
-// Abstract prototype for lambdas of type __insieme_funType_type_14
-struct __insieme_funType_type_14 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_9 //
+// Abstract prototype for lambdas of type __insieme_funType_type_9
+struct __insieme_funType_type_9 { 
     void(*fun)(void*, double*);
     const size_t size;
     struct __insieme_globals* p0;
@@ -445,7 +400,7 @@ int gettimeofday(struct timeval*, struct timezone*);
 // start code fragment :: Definition of wtime //
 void wtime(void* _capture, double* t) {
 	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_75 = ((struct __insieme_funType_type_14*)_capture)->p0;
+	struct __insieme_globals* var_75 = ((struct __insieme_funType_type_9*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
 		struct timeval tv;
@@ -461,11 +416,11 @@ void wtime(void* _capture, double* t) {
 // start code fragment :: Definition of elapsed_time //
 double elapsed_time(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_72 = ((struct __insieme_funType_type_12*)_capture)->p0;
+	struct __insieme_globals* var_72 = ((struct __insieme_funType_type_7*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
 		double t = 0.0;
-		call__insieme_funType_type_13(((struct __insieme_funType_type_13*)(&((struct __insieme_funType_type_14){&wtime, 0, var_72}))), &t);
+		call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&wtime, 0, var_72}))), &t);
 		return (t);;
 	}
 }
@@ -477,7 +432,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_71 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((((*var_71).start))[0]))[((unsigned int)(n))])) = call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&elapsed_time, 0, var_71})))));
+		((((((((*var_71).start))[0]))[((unsigned int)(n))])) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_71})))));
 	}
 }
 
@@ -490,26 +445,26 @@ void timer_stop(void* _capture, int n) {
 	{
 		double t = 0.0;
 		double now = 0.0;
-		((now) = call__insieme_funType_type_11(((struct __insieme_funType_type_11*)(&((struct __insieme_funType_type_12){&elapsed_time, 0, var_82})))));
+		((now) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_82})))));
 		((t) = ((now)-(((((((*var_82).start))[0]))[((unsigned int)(n))]))));
 		((((((((*var_82).elapsed))[0]))[((unsigned int)(n))])) = ((((((((*var_82).elapsed))[0]))[((unsigned int)(n))]))+(t)));
 	}
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_15 //
-// Abstract prototype for lambdas of type __insieme_funType_type_15
-struct __insieme_funType_type_15 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_10 //
+// Abstract prototype for lambdas of type __insieme_funType_type_10
+struct __insieme_funType_type_10 { 
     double(*fun)(void*, int);
     const size_t size;
 };
 
-// Type safe function for invoking lambdas of type __insieme_funType_type_15
-double call__insieme_funType_type_15(struct __insieme_funType_type_15* lambda, int p1) { return lambda->fun(lambda, p1); }
+// Type safe function for invoking lambdas of type __insieme_funType_type_10
+double call__insieme_funType_type_10(struct __insieme_funType_type_10* lambda, int p1) { return lambda->fun(lambda, p1); }
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_16 //
-// Abstract prototype for lambdas of type __insieme_funType_type_16
-struct __insieme_funType_type_16 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_11 //
+// Abstract prototype for lambdas of type __insieme_funType_type_11
+struct __insieme_funType_type_11 { 
     double(*fun)(void*, int);
     const size_t size;
     struct __insieme_globals* p0;
@@ -518,7 +473,7 @@ struct __insieme_funType_type_16 {
 // start code fragment :: Definition of timer_read //
 double timer_read(void* _capture, int n) {
 	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_87 = ((struct __insieme_funType_type_16*)_capture)->p0;
+	struct __insieme_globals* var_87 = ((struct __insieme_funType_type_11*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
 		return (((((((*var_87).elapsed))[0]))[((unsigned int)(n))]));;
@@ -526,19 +481,19 @@ double timer_read(void* _capture, int n) {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_17 //
-// Abstract prototype for lambdas of type __insieme_funType_type_17
-struct __insieme_funType_type_17 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_12 //
+// Abstract prototype for lambdas of type __insieme_funType_type_12
+struct __insieme_funType_type_12 { 
     void(*fun)(void*);
     const size_t size;
 };
 
-// Type safe function for invoking lambdas of type __insieme_funType_type_17
-void call__insieme_funType_type_17(struct __insieme_funType_type_17* lambda) { return lambda->fun(lambda); }
+// Type safe function for invoking lambdas of type __insieme_funType_type_12
+void call__insieme_funType_type_12(struct __insieme_funType_type_12* lambda) { return lambda->fun(lambda); }
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_18 //
-// Abstract prototype for lambdas of type __insieme_funType_type_18
-struct __insieme_funType_type_18 { 
+// start code fragment :: Definitions for function type: __insieme_funType_type_13 //
+// Abstract prototype for lambdas of type __insieme_funType_type_13
+struct __insieme_funType_type_13 { 
     void(*fun)(void*);
     const size_t size;
     struct __insieme_globals* p0;
@@ -547,7 +502,7 @@ struct __insieme_funType_type_18 {
 // start code fragment :: Definition of full_verify //
 void full_verify(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_89 = ((struct __insieme_funType_type_18*)_capture)->p0;
+	struct __insieme_globals* var_89 = ((struct __insieme_funType_type_13*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
 		int i = 0;
@@ -577,30 +532,13 @@ void full_verify(void* _capture) {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_19 //
-// Abstract prototype for lambdas of type __insieme_funType_type_19
-struct __insieme_funType_type_19 { 
-    bool(*fun)(void*);
-    const size_t size;
-    int p0;
-};
-
-// start code fragment :: Definition of __insieme_supp_20 //
-bool __insieme_supp_20(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	int var_119 = ((struct __insieme_funType_type_19*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	return (var_119==0);
-}
-
-
 // start code fragment :: Definition of c_print_results //
 void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, char* optype, int passed_verification, char* npbversion, char* compiletime, char* cc, char* clink, char* c_lib, char* c_inc, char* cflags, char* clinkflags, char* rand) {
 	{
 		char* evalue = "1000";
 		printf("\n\n %s Benchmark Completed\n", name);
 		printf(" Class           =                        %c\n", ((int)(class)));
-		if(((n2==0)&&((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_19){&__insieme_supp_20, 0, n3}))))) {
+		if(((n2==0)&&(n3==0))) {
 			printf(" Size            =             %12d\n", n1);
 		} else {
 			printf(" Size            =              %3dx%3dx%3d\n", n1, n2, n3);
@@ -720,8 +658,8 @@ int main(int argc, char** argv) {
 			((iteration) = (1+(((int)(ceil((((double)(((10+1)-1)))/((double)(1))))))*1)));
 		};
 		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_stop, 0, &var_1}))), 0);
-		((timecounter) = ((double)(call__insieme_funType_type_15(((struct __insieme_funType_type_15*)(&((struct __insieme_funType_type_16){&timer_read, 0, &var_1}))), 0))));
-		call__insieme_funType_type_17(((struct __insieme_funType_type_17*)(&((struct __insieme_funType_type_18){&full_verify, 0, &var_1}))));
+		((timecounter) = ((double)(call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&timer_read, 0, &var_1}))), 0))));
+		call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&full_verify, 0, &var_1}))));
 		if(((((var_1).passed_verification))!=((5*10)+1))) {
 			((((var_1).passed_verification)) = 0);
 		};
