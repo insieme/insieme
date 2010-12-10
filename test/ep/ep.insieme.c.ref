@@ -333,30 +333,13 @@ bool __insieme_supp_14(void* _capture) {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_15 //
-// Abstract prototype for lambdas of type __insieme_funType_type_15
-struct __insieme_funType_type_15 { 
-    bool(*fun)(void*);
-    const size_t size;
-    int p0;
-};
-
-// start code fragment :: Definition of __insieme_supp_16 //
-bool __insieme_supp_16(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	int var_145 = ((struct __insieme_funType_type_15*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	return (var_145==0);
-}
-
-
 // start code fragment :: Definition of c_print_results //
 void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, char* optype, int passed_verification, char* npbversion, char* compiletime, char* cc, char* clink, char* c_lib, char* c_inc, char* cflags, char* clinkflags, char* rand) {
 	{
 		char* evalue = "1000";
 		printf("\n\n %s Benchmark Completed\n", name);
 		printf(" Class           =                        %c\n", ((int)(class)));
-		if(((n2==0)&&((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_15){&__insieme_supp_16, 0, n3}))))) {
+		if(((n2==0)&&(n3==0))) {
 			printf(" Size            =             %12d\n", n1);
 		} else {
 			printf(" Size            =              %3dx%3dx%3d\n", n1, n2, n3);
@@ -561,23 +544,23 @@ int main(int argc, char** argv) {
 		((tm) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&timer_read, 0, &var_1}))), 1));
 		((nit) = 0);
 		if((25==24)) {
-			if(((fabs((((sx)-(((double)(0))-3.247834652034740e3))/(sx)))<=1.0e-8)&&((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_10, 0, &sy}))))) {
+			if(((fabs((((sx)-(((double)(0))-3.247834652034740e3))/(sx)))<=1.0e-8)&&call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_10, 0, &sy})))))) {
 				((verified) = 1);
 			};
 		} else if((25==25)) {
-			if(((fabs((((sx)-(((double)(0))-2.863319731645753e3))/(sx)))<=1.0e-8)&&((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_11, 0, &sy}))))) {
+			if(((fabs((((sx)-(((double)(0))-2.863319731645753e3))/(sx)))<=1.0e-8)&&call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_11, 0, &sy})))))) {
 				((verified) = 1);
 			};
 		} else if((25==28)) {
-			if(((fabs((((sx)-(((double)(0))-4.295875165629892e3))/(sx)))<=1.0e-8)&&((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_12, 0, &sy}))))) {
+			if(((fabs((((sx)-(((double)(0))-4.295875165629892e3))/(sx)))<=1.0e-8)&&call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_12, 0, &sy})))))) {
 				((verified) = 1);
 			};
 		} else if((25==30)) {
-			if(((fabs((((sx)-4.033815542441498e4)/(sx)))<=1.0e-8)&&((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_13, 0, &sy}))))) {
+			if(((fabs((((sx)-4.033815542441498e4)/(sx)))<=1.0e-8)&&call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_13, 0, &sy})))))) {
 				((verified) = 1);
 			};
 		} else if((25==32)) {
-			if(((fabs((((sx)-4.764367927995374e4)/(sx)))<=1.0e-8)&&((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_14, 0, &sy}))))) {
+			if(((fabs((((sx)-4.764367927995374e4)/(sx)))<=1.0e-8)&&call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&__insieme_supp_14, 0, &sy})))))) {
 				((verified) = 1);
 			};
 		};

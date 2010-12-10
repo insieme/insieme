@@ -27,37 +27,10 @@ struct Person getPerson() {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_0 //
-// Abstract prototype for lambdas of type __insieme_funType_type_0
-struct __insieme_funType_type_0 { 
-    bool(*fun)(void*);
-    const size_t size;
-};
-
-// Type safe function for invoking lambdas of type __insieme_funType_type_0
-bool call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) { return lambda->fun(lambda); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
-// Abstract prototype for lambdas of type __insieme_funType_type_1
-struct __insieme_funType_type_1 { 
-    bool(*fun)(void*);
-    const size_t size;
-    struct Person p0;
-};
-
-// start code fragment :: Definition of __insieme_supp_2 //
-bool __insieme_supp_2(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	struct Person var_7 = ((struct __insieme_funType_type_1*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	return (((var_7.age))<((unsigned int)(20)));
-}
-
-
 // start code fragment :: Definition of isTeenager //
 int isTeenager(struct Person person) {
 	{
-		return ((((person.age))>=((unsigned int)(10)))&&((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&__insieme_supp_2, 0, person}))));;
+		return ((((person.age))>=((unsigned int)(10)))&&(((person.age))<((unsigned int)(20))));;
 	}
 }
 
