@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <boost/pool/singleton_pool.hpp>
+
 #include "insieme/core/ast_address.h"
 
 #include "insieme/utils/hash_utils.h"
@@ -42,6 +44,7 @@ namespace insieme {
 namespace core {
 
 namespace detail {
+
 
 	/**
 	 * One element / step within a IR Address path.
@@ -101,14 +104,18 @@ namespace detail {
 			if (parent) parent->incRefCount();
 		};
 
+	private:
+
 		/**
-		 * A destructor for path elements.
+		 * A private destructor for path elements. Having this one private effectively prevents instances on
+		 * the stack and people to invoke delete on heap allocated instances.
 		 */
 		~PathElement() {
 			// reduce reference counter in parent node
 			if (parent) parent->decRefCount();
 		}
 
+	public:
 
 		/**
 		 * Obtains the path element referencing the root node of this path.
@@ -154,6 +161,7 @@ namespace detail {
 			assert(refCount > 0);
 			int res = --refCount;
 			if (refCount == 0) {
+				// commit suicide
 				delete this;
 			}
 			return res;
@@ -176,7 +184,7 @@ namespace detail {
 		 */
 		static std::size_t computeHash(const NodePtr& ptr, std::size_t index, const PathElement* const parent) {
 			std::size_t seed = boost::hash_value(index);
-			boost::hash_combine(seed, ptr);
+			boost::hash_combine(seed, *ptr);
 			boost::hash_combine(seed, ((parent)?parent->hash:0));
 			return seed;
 		}
@@ -234,7 +242,59 @@ namespace detail {
 			return *parent < *other.parent || (*parent == *other.parent && index < other.index);
 
 		}
+
+//
+// TODO: re-evaluate the pool support for those small objects => it was slower the last time
+//
+//		void* operator new(std::size_t size);
+//
+//		void operator delete(void* raw, std::size_t size);
+
 	};
+//
+//	/**
+//	 * A dummy type to make the element type pool unique.
+//	 */
+//	struct PathElementPoolTag {};
+//
+//	/**
+//	 * Define the pool to be used for path element memory allocation.
+//	 */
+//	typedef boost::singleton_pool<PathElementPoolTag, sizeof(PathElement)> PathElementPool;
+//
+//
+//	void* PathElement::operator new(std::size_t size) {
+//
+//		// check size for proper input ...
+//		if (size != sizeof(PathElement)) {
+//			// ... otherwise let the default implementation handle it
+//			return ::operator new(size);
+//		}
+//
+//		// allocate element within pool
+//		void* res = PathElementPool::malloc();
+//		if (res) {
+//			return res;
+//		}
+//
+//		// not successful => let default implementation deal with it
+//		return ::operator new(size);
+//	}
+//
+//	void PathElement::operator delete(void* raw, std::size_t size) {
+//
+//		// check size and membership
+//		//if (size != sizeof(PathElement) || !PathElementPool::is_from(raw)) {
+//		if (size != sizeof(PathElement)) {
+//			// default is doing the job
+//			::operator delete(raw);
+//			return;
+//		}
+//
+//		// remove element from pool
+//		PathElementPool::free(raw);
+//
+//	}
 
 }
 
