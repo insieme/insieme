@@ -76,7 +76,7 @@ enum OCL_ADDRESS_SPACE { CONSTANT, GLOBAL, LOCAL, PRIVATE };
 
 struct KernelData {
 public:
-    core::ASTBuilder& builder;
+    const core::ASTBuilder& builder;
     // loop bounds
     core::VariablePtr globalRange; bool globalRangeUsed;
     core::VariablePtr numGroups; bool numGroupsUsed;
@@ -87,12 +87,12 @@ public:
                 toVector<core::ExpressionPtr>(vec, idx) );
     }
 
-    static core::VariablePtr get3DvecVar(core::ASTBuilder& builder) {
+    static core::VariablePtr get3DvecVar(const core::ASTBuilder& builder) {
         return builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
     }
 
     //default constructor
-    KernelData(core::ASTBuilder& astBuilder) :
+    KernelData(const core::ASTBuilder& astBuilder) :
         builder(astBuilder), globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)) {
         globalRangeUsed = false;
         numGroupsUsed = false;
