@@ -655,13 +655,15 @@ inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bo
  */
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor, bool preorder = true) {
-	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
+	auto tmp = makeRecursiveInterruptableVisitor(visitor, preorder);
+	return tmp.visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor, bool preorder = true) {
-	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
+	auto tmp = makeRecursiveInterruptableVisitor(visitor, preorder);
+	return tmp.visit(root);
 }
 
 /**
