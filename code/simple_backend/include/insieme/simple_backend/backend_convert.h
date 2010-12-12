@@ -53,9 +53,10 @@
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/functional_utils.h"
 
+#include "insieme/simple_backend/simple_backend.h"
 #include "insieme/simple_backend/code_management.h"
 #include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/name_generator.h"
+#include "insieme/simple_backend/name_manager.h"
 #include "insieme/simple_backend/function_manager.h"
 
 namespace insieme {
@@ -65,8 +66,142 @@ using namespace core;
 
 
 // TODO more sane dependency handling / move forward declaration
-class ConversionContext;
+class StmtConverter;
+class VariableManager;
 
+
+/**
+ * A map from Entry points to Code sections returned by ConversionContext::convert.
+ * Can be printed to any output stream
+ */
+class ConvertedCode : public TargetCode {
+
+	/**
+	 * A map of code fragments this converted code is consisting of.
+	 */
+	utils::map::PointerMap<ExpressionPtr, CodePtr> codeFragments;
+
+public:
+
+	/**
+	 * A constructor for this class.
+	 */
+	ConvertedCode(const ProgramPtr& source) : TargetCode(source) { }
+
+	/**
+	 * This method allows to print the result to an output stream.
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	/**
+	 * Adds a code fragment to the internally maintained list of fragments.
+	 *
+	 * @param source the source for this particular fragment
+	 * @param fragment the the target code fragment to be stored
+	 */
+	void addFragment(const ExpressionPtr& source, CodePtr& fragment);
+
+};
+
+/**
+ * Stores the persistent state objects required to perform a simple_backend conversion.
+ * This includes a NameGenerator, a FunctionManager and a TypeManager.
+ */
+class Converter {
+
+	// A list of managers required for the conversion process
+
+	StmtConverter* stmtConverter;
+	NameManager* nameManager;
+	TypeManager* typeManager;
+	VariableManager* variableManager;
+	FunctionManager* functionManager;
+	NodeManager* nodeManager;
+
+public:
+
+	/**
+	 * A default constructor for this converter. All internal managers will be set to null.
+	 */
+	Converter() {}
+
+	/**
+	 * A constructor allowing the explicit creation of a converter of this type. The given manager are used for
+	 * the actual conversion.
+	 *
+	 * @param stmtConverter the actual converter implementation handling statements and expressions
+	 * @param nameManager the manager used to pick and maintain names for the generated constructs (types, functions, variables, ...)
+	 * @param typeManager the manager controlling the generation of types
+	 * @param varManager the manager used for managing the scope of variables
+	 * @param funcMan the function manager handling the creation of closures and their invocation
+	 * @param nodeManager the node manager to be used for creating and maintaining intermediate IR nodes
+	 */
+	Converter(StmtConverter& stmtConverter, NameManager& nameManager, TypeManager& typeManager, VariableManager& varManager, FunctionManager& funcMan, NodeManager& nodeManager)
+		: stmtConverter(&stmtConverter), nameManager(&nameManager), typeManager(&typeManager), variableManager(&varManager), functionManager(&funcMan), nodeManager(&nodeManager) { }
+
+
+	TargetCodePtr convert(const core::ProgramPtr& prog);
+
+	StmtConverter& getStmtConverter() {
+		assert(stmtConverter);
+		return *stmtConverter;
+	}
+
+	void setStmtConverter(StmtConverter* converter) {
+		stmtConverter = converter;
+	}
+
+	NameManager& getNameManager() {
+		assert(nameManager);
+		return *nameManager;
+	}
+
+	void setNameManager(NameManager* manager) {
+		nameManager = manager;
+	}
+
+	TypeManager& getTypeManager() {
+		assert(typeManager);
+		return *typeManager;
+	}
+
+	void setTypeManager(TypeManager* manager) {
+		typeManager = manager;
+	}
+
+	VariableManager& getVariableManager() {
+		assert(variableManager);
+		return *variableManager;
+	}
+
+	void setVariableManager(VariableManager* manager) {
+		variableManager = manager;
+	}
+
+	FunctionManager& getFunctionManager() {
+		assert(functionManager);
+		return *functionManager;
+	}
+
+	void setFunctionManager(FunctionManager* manager) {
+		functionManager = manager;
+	}
+
+	NodeManager& getNodeManager() {
+		assert(nodeManager);
+		return *nodeManager;
+	}
+
+	void setNodeManager(NodeManager* manager) {
+		nodeManager = manager;
+	}
+
+	const lang::BasicGenerator& getLangBasic() {
+		assert(nodeManager);
+		return nodeManager->basic;
+	}
+
+};
 
 class VariableManager {
 
@@ -99,51 +234,7 @@ public:
 
 };
 
-/** A map from Entry points to Code sections returned by ConversionContext::convert.
- ** Can be printed to any output stream
- ** */
-class ConvertedCode : public std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> { 
-	ProgramPtr fromProg;
-public:
-	ConvertedCode(const ProgramPtr& fromProg) : std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>>(), 
-		fromProg(fromProg) { }
-	const ProgramPtr& getProgram() const;
-};
 
-
-/** Stores the persistent state objects required to perform a simple_backend conversion.
- ** This includes a NameGenerator, a FunctionManager and a TypeManager.
- ** */
-class ConversionContext {
-	NameGenerator nameGen;
-	TypeManager typeMan;
-	VariableManager varManager;
-	FunctionManager funcMan;
-	NodeManager& nodeManager;
-
-public:
-
-	// a lang basic code generator reference
-	const lang::BasicGenerator& basic;
-
-	// The following may produce warnings, but the use of the this pointer in this case is well specified
-	// (the base class initializers do not dereference it)
-	ConversionContext(const NodePtr& target);
-	
-	//typedef std::unordered_map<ExpressionPtr, CodePtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> ConvertedCode;
-
-	NameGenerator& getNameGen() { return nameGen; }
-	TypeManager& getTypeMan() { return typeMan; }
-	FunctionManager& getFuncMan() { return funcMan; }
-
-	ConvertedCode convert(const core::ProgramPtr& prog);
-
-	NodeManager& getNodeManager() { return nodeManager; }
-	VariableManager& getVariableManager() { return varManager; }
-};
-
-// a forward declaration of the convert visitor
-class ConvertVisitor;
 
 namespace detail {
 
@@ -158,10 +249,10 @@ namespace detail {
 		 * Performs the actual code formating. This method is pure abstract and
 		 * has to be implemented within sub-classes.
 		 *
-		 * @param visitor the visitor and its context using this formatter
+		 * @param converter the converter and its context using this formatter
 		 * @param call the call expression to be handled
 		 */
-		virtual void format(ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) =0;
+		virtual void format(StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) =0;
 
 	};
 
@@ -198,11 +289,11 @@ namespace detail {
 		/**
 		 * Conducts the actual formatting of the given call expression.
 		 *
-		 * @param visitor the visitor and its context using this formatter
+		 * @param converter the converter and its context using this formatter
 		 * @param call the call expression to be handled
 		 */
-		virtual void format(ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) {
-			lambda(visitor, cStr, call);
+		virtual void format(StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) {
+			lambda(converter, cStr, call);
 		}
 	};
 
@@ -229,43 +320,84 @@ namespace detail {
 
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
  ** */
-class ConvertVisitor : public ASTVisitor<> {
-	ConversionContext& cc;
-	NameGenerator& nameGen;
-	VariableManager& varManager;
+class StmtConverter : private ASTVisitor<> {
+
+	/**
+	 * A reference to the central container maintaining all the instances of the required manager.
+	 */
+	Converter& cc;
+
+	/**
+	 * A pointer to the code fragment currently produced by this converter.
+	 */
 	CodePtr defCodePtr;
-	
-protected:
-	CodeStream& cStr;
 
 private:	
+
 	/**
 	 * The table handling operator specific formatting rules.
 	 */
 	detail::FormatTable formats;
 
-	template<typename Functor>
-	void runWithCodeStream(CodeStream& cs, Functor f) {
-		CodeStream& oldCodeStream = cStr;
-		cStr = cs;
-		f();
-		cs = oldCodeStream;
-	}
+//	template<typename Functor>
+//	void runWithCodeStream(CodeStream& cs, Functor f) {
+//		CodeStream& oldCodeStream = cStr;
+//		cStr = cs;
+//		f();
+//		cs = oldCodeStream;
+//	}
 
 public:
-	ConvertVisitor(ConversionContext& conversionContext) : cc(conversionContext), nameGen(cc.getNameGen()),
-		varManager(cc.getVariableManager()), defCodePtr(std::make_shared<CodeFragment>()), cStr(defCodePtr->getCodeStream()),
-		formats(detail::initFormatTable(cc.basic)) { };
-	ConvertVisitor(ConversionContext& conversionContext, const CodePtr& cptr) : cc(conversionContext), nameGen(cc.getNameGen()),
-		varManager(cc.getVariableManager()), defCodePtr(cptr), cStr(defCodePtr->getCodeStream()),
-		formats(detail::initFormatTable(cc.basic)) { };
 
-	CodePtr getCode() { return defCodePtr; }
+	StmtConverter(Converter& context) : cc(context), formats(detail::initFormatTable(context.getLangBasic())) { };
 
-	ConversionContext& getConversionContext() { return cc; }
+	CodePtr getCode() const {
+		return defCodePtr;
+	}
+
+	CodeStream& getCodeStream() const {
+		return defCodePtr->getCodeStream();
+	}
+
+	Converter& getConversionContext() const {
+		return cc;
+	}
+
+	/**
+	 * Instructs this statement convert to process the given IR node and append
+	 * the results to the given code fragment.
+	 *
+	 * @param node the node to be processes
+	 * @param fragment the code fragment the code should be appended to
+	 */
+	void convert(const NodePtr& node, CodePtr& fragment) {
+		// replace target-code fragment
+		CodePtr current = defCodePtr;
+		defCodePtr = fragment;
+
+		// process subtree
+		visit(node);
+
+		// reset to old code fragment
+		defCodePtr = current;
+	}
+
+	/**
+	 * Converts the given node and writes the result into the current code fragment.
+	 *
+	 * @param node the node to be processes
+	 */
+	void convert(const NodePtr& node) {
+		assert(defCodePtr);
+
+		// process node
+		visit(node);
+	}
+
+private:
 
 	void visitNode(const NodePtr& node) {
-		cStr << "<?>" << toString(*node) << "</?>";
+		getCodeStream() << "<?>" << toString(*node) << "</?>";
 	}
 
 	void visitProgram(const ProgramPtr&) {
@@ -275,13 +407,13 @@ public:
 	////////////////////////////////////////////////////////////////////////// Statements
 
 	void visitBreakStmt(const BreakStmtPtr&) {
-		cStr << "break";
+		getCodeStream() << "break";
 	}
 
 	void visitCompoundStmt(const CompoundStmtPtr& ptr);
 
 	void visitContinueStmt(const ContinueStmtPtr&) {
-		cStr << "continue";
+		getCodeStream() << "continue";
 	}
 
 	void visitDeclarationStmt(const DeclarationStmtPtr& ptr);
@@ -339,14 +471,14 @@ public:
 
 	void visitMarkerStmt(const MarkerStmtPtr& ptr);
 
-public:
-
 	void visitStructExpr(const StructExprPtr& ptr);
 
 	void visitUnionExpr(const UnionExprPtr& ptr);
 
 	void visitTupleExpr(const TupleExprPtr& ptr) {
+		// TODO: replace this with a C99 solution
 		// TODO check when to use ref()/cref()
+		CodeStream& cStr = getCodeStream();
 		cStr << "std::make_tuple(";
 		auto exps = ptr->getExpressions();
 		if(exps.size() > 0) {
@@ -367,7 +499,6 @@ public:
 
 };
 
+
 } // namespace simple_backend
 } // namespace insieme
-
-std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code);

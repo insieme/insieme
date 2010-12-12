@@ -44,7 +44,7 @@ namespace simple_backend {
 namespace {
 
 	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param,
-			VariableManager& varManager, TypeManager& typeManager, NameGenerator& nameGenerator) {
+			VariableManager& varManager, TypeManager& typeManager, NameManager& nameManager) {
 
 		// register ref-based variable within the variable manager
 		if (param->getType()->getNodeType() == NT_RefType) {
@@ -54,11 +54,11 @@ namespace {
 		}
 
 		// format parameter using type manager
-		return out << typeManager.formatParamter(context, param->getType(), nameGenerator.getVarName(param), true);
+		return out << typeManager.formatParamter(context, param->getType(), nameManager.getVarName(param), true);
 	}
 
-	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, ConversionContext& cc) {
-		return printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeMan(), cc.getNameGen());
+	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, Converter& cc) {
+		return printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeManager(), cc.getNameManager());
 	}
 
 	string getSignatureOf(const CodePtr& context, const FunctionTypePtr& funType, const string& name, TypeManager& typeManager) {
@@ -110,9 +110,10 @@ CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
 	const string& name = literal->getValue();
 	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name);
 	CodeStream& cs = protoType->getCodeStream();
-	cs << cc.getTypeMan().getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
+	TypeManager& typeManager = cc.getTypeManager();
+	cs << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 	cs << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
-		out << cc.getTypeMan().getTypeName(protoType, cur, true);
+		out << typeManager.getTypeName(protoType, cur, true);
 	});
 	cs << ");\n";
 
@@ -164,7 +165,7 @@ string FunctionManager::getFunctionName(const CodePtr& context, const core::Lamb
 	context->addDependency(prototype);
 
 	// add function name to stream
-	return cc.getNameGen().getName(lambda->getLambda());
+	return cc.getNameManager().getName(lambda->getLambda());
 }
 
 
@@ -179,8 +180,8 @@ CodePtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) {
 	// TODO special handling of non-recursive functions
 
 	// prepare some manager
-	TypeManager& typeManager = cc.getTypeMan();
-	NameGenerator& nameManager = cc.getNameGen();
+	TypeManager& typeManager = cc.getTypeManager();
+	NameManager& nameManager = cc.getNameManager();
 	NodeManager& manager = cc.getNodeManager();
 
 	// create dummy code group depending on all prototypes and functions
@@ -233,8 +234,8 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 
 	// provide some manager
 	VariableManager& varManager = cc.getVariableManager();
-	TypeManager& typeManager = cc.getTypeMan();
-	NameGenerator& nameManager = cc.getNameGen();
+	TypeManager& typeManager = cc.getTypeManager();
+	NameManager& nameManager = cc.getNameManager();
 
 	// get name
 	string name = nameManager.getName(lambda);
@@ -265,8 +266,6 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	// add function body
 	cs << " {" << CodeStream::indR << "\n";
 
-	ConvertVisitor visitor(cc, function);
-
 	if (lambda->isCapturing()) {
 		// extract capture list
 		cs << "// --------- Captured Stuff - Begin -------------\n";
@@ -291,7 +290,8 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	}
 
 	// generate the function body
-	visitor.visit(lambda->getBody());
+	cc.getStmtConverter().convert(lambda->getBody(), function);
+
 	cs << CodeStream::indL << "\n}\n";
 	cs << "\n";
 

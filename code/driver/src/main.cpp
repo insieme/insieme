@@ -45,7 +45,7 @@
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/simple_backend/backend_convert.h"
+#include "insieme/simple_backend/simple_backend.h"
 #include "insieme/simple_backend/rewrite.h"
 
 // #include "insieme/opencl_backend/opencl_convert.h"
@@ -266,13 +266,13 @@ int main(int argc, char** argv) {
 			insieme::utils::Timer timer("Simple.Backend");
 
 			LOG(INFO) << "========================== Converting to C++ ================================";
-			insieme::simple_backend::ConversionContext cc(program);
-			auto converted = cc.convert(program);
 
 			if(!CommandLineOptions::Output.empty()) {
 				insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
-			} else
-				LOG(INFO) << converted;
+			} else {
+				auto converted = insieme::simple_backend::convert(program);
+				LOG(INFO) << *converted;
+			}
 
 			timer.stop();
 			LOG(INFO) << timer;

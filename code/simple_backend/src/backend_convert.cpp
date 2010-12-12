@@ -49,29 +49,61 @@ namespace simple_backend {
 using namespace core;
 using namespace utils::log;
 
-ConversionContext::ConversionContext(const NodePtr& target)
-	 : typeMan(nameGen), funcMan(*this), nodeManager(target->getNodeManager()), basic(nodeManager.basic) { }
 
+void ConvertedCode::addFragment(const ExpressionPtr& source, CodePtr& fragment) {
+	codeFragments.insert(std::make_pair(source, fragment));
+}
 
-ConvertedCode ConversionContext::convert(const core::ProgramPtr& prog) {
-	ConvertedCode converted(prog);
-	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
-		ConvertVisitor convVisitor(*this);
-		convVisitor.visit(ep);
-		CodePtr ptr = convVisitor.getCode();
-		ptr->setDummy(true);
-		converted.insert(std::make_pair(ep, ptr));
+std::ostream& ConvertedCode::printTo(std::ostream& out) const {
+
+	// print some general header information ...
+	out << "// --- Generated Inspire Code ---\n";
+	out << "#include <alloca.h>\n";
+	out << "#include <stddef.h>\n";
+	out << "#include <stdlib.h>\n";
+
+	// add some macro definitions
+	out << "#define bool int\n";
+	out << "#define true 1\n";
+	out << "#define false 0\n";
+	out << "#define null 0\n";
+
+	// add code for entry points
+	for_each(getSource()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
+		out << "// --- Entry Point ---\n";
+		assert(this->codeFragments.find(ep) != this->codeFragments.end());
+		::operator<<(out, this->codeFragments.find(ep)->second);
 	});
-	return converted;
+	return out;
 }
 
 
-void ConvertVisitor::visitLambdaExpr(const LambdaExprPtr& ptr) {
-	FunctionManager& funManager = cc.getFuncMan();
-	cStr << funManager.getFunctionName(defCodePtr, ptr);
+TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
+	ConvertedCode* converted = new ConvertedCode(prog);
+	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
+
+		// create a fresh code fragment
+		CodePtr fragment = std::make_shared<CodeFragment>();
+
+		// convert code
+		getStmtConverter().convert(ep, fragment);
+
+		// register fragment
+		fragment->setDummy(true);
+		converted->addFragment(ep, fragment);
+	});
+	return TargetCodePtr(converted);
 }
 
-void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
+
+void StmtConverter::visitLambdaExpr(const LambdaExprPtr& ptr) {
+	FunctionManager& funManager = cc.getFunctionManager();
+	getCodeStream() << funManager.getFunctionName(defCodePtr, ptr);
+}
+
+void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	//DLOG(INFO) << "CALLEXPR - " << ptr->getFunctionExpr() << ". prev cStr: \n" << cStr.getString();
 	const std::vector<ExpressionPtr>& args = ptr->getArguments();
 	auto funExp = ptr->getFunctionExpr();
@@ -93,24 +125,24 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			cStr << ")";
 
 			return;
-		} if(cc.basic.isVarlistPack(funExp)) {
+		} if(cc.getLangBasic().isVarlistPack(funExp)) {
 			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
 				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
 					// print elements of the tuple directly ...
-					functionalJoin([&]{ this->cStr << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
+					functionalJoin([&]{ this->getCodeStream() << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
 
 					// in case there is no argument => print 0
 					if (arguments->getExpressions().empty()) {
-						this->cStr << "0";
+						this->getCodeStream() << "0";
 					}
 
 					return;
 				}
 			}
 
-			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			//DLOG(INFO) << cStr.getString();
 			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
 			return;
@@ -140,9 +172,9 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 	switch(funExp->getNodeType()) {
 
 		case NT_Literal: {
-			cStr << cc.getFuncMan().getFunctionName(defCodePtr, static_pointer_cast<const Literal>(funExp));
+			cStr << cc.getFunctionManager().getFunctionName(defCodePtr, static_pointer_cast<const Literal>(funExp));
 			cStr << "(";
-			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			cStr << ")";
 			return;
 		}
@@ -155,7 +187,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			visit(funExp);
 			if (!args.empty()) {
 				cStr << ", ";
-				functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+				functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			}
 			cStr << ")";
 			return;
@@ -165,7 +197,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 		case NT_CaptureInitExpr:
 		{
 
-			TypeManager::FunctionTypeEntry details = cc.getTypeMan().getFunctionTypeDetails(funType);
+			TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
 			defCodePtr->addDependency(details.functorAndCaller);
 
 			cStr << details.callerName;
@@ -173,7 +205,7 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 			visit(funExp);
 			if (!args.empty()) {
 				cStr << ", ";
-				functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+				functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			}
 			cStr << ")";
 			return;
@@ -181,9 +213,9 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 		case NT_LambdaExpr: {
 			// function (without capture list) is directly provided => simply invoke
-			cStr << cc.getFuncMan().getFunctionName(defCodePtr, static_pointer_cast<const LambdaExpr>(funExp));
+			cStr << cc.getFunctionManager().getFunctionName(defCodePtr, static_pointer_cast<const LambdaExpr>(funExp));
 			cStr << "(";
-			functionalJoin([&]{ this->cStr << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
 			cStr << ")";
 			return;
 		}
@@ -194,19 +226,20 @@ void ConvertVisitor::visitCallExpr(const CallExprPtr& ptr) {
 
 }
 
-void ConvertVisitor::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
+void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 
 	// resolve resulting type of expression
 	FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
-	TypeManager::FunctionTypeEntry resDetails = cc.getTypeMan().getFunctionTypeDetails(resType);
+	TypeManager::FunctionTypeEntry resDetails = cc.getTypeManager().getFunctionTypeDetails(resType);
 	defCodePtr->addDependency(resDetails.functorAndCaller);
 
 	// resolve type of sub-expression
 	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
-	TypeManager::FunctionTypeEntry details = cc.getTypeMan().getFunctionTypeDetails(funType);
+	TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
 	defCodePtr->addDependency(details.functorAndCaller);
 
 	// create surrounding cast
+	CodeStream& cStr = getCodeStream();
 	cStr << "((" << resDetails.functorName << "*)";
 
 	// create struct including values
@@ -229,10 +262,11 @@ void ConvertVisitor::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 	cStr << "})))";
 }
 
-void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
+void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	auto var = ptr->getVariable();
 
 	// investigate initialization to determine whether variable is a pointer / skalar
+	VariableManager& varManager = cc.getVariableManager();
 	VariableManager::VariableInfo info;
 	info.location = VariableManager::NONE;
 	if (var->getType()->getNodeType() == NT_RefType) {
@@ -252,24 +286,25 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 
 	// standard handling
-	cStr << cc.getTypeMan().formatParamter(defCodePtr, var->getType(), nameGen.getVarName(var), true);
+	CodeStream& cStr = getCodeStream();
+	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), cc.getNameManager().getVarName(var), true);
 	//cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), true) << " " << nameGen.getVarName(var);
 
 	// check whether there is an initialization
 	const ExpressionPtr& init = ptr->getInitialization();
-	if (core::analysis::isCallOf(init, cc.basic.getUndefined())) {
+	if (core::analysis::isCallOf(init, cc.getLangBasic().getUndefined())) {
 		return;
 	}
 
 	// test whether it is a variable initialization using an undefined value
-	if (core::analysis::isCallOf(init, cc.basic.getRefVar()) &&
-		core::analysis::isCallOf(static_pointer_cast<const CallExpr>(init)->getArguments()[0], cc.basic.getUndefined())) {
+	if (core::analysis::isCallOf(init, cc.getLangBasic().getRefVar()) &&
+		core::analysis::isCallOf(static_pointer_cast<const CallExpr>(init)->getArguments()[0], cc.getLangBasic().getUndefined())) {
 		return;
 	}
 
 	// generate initializer expression
 	cStr << " = ";
-	if (core::analysis::isCallOf(ptr->getInitialization(), cc.basic.getRefVar())) {
+	if (core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefVar())) {
 		// in case it is allocated on a stack, skip ref.var
 		CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 		visit(call->getArguments()[0]);
@@ -278,13 +313,14 @@ void ConvertVisitor::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	}
 }
 
-void ConvertVisitor::visitLiteral(const LiteralPtr& ptr) {
+void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
 	// just print literal
-	cStr << ptr->getValue();
+	getCodeStream() << ptr->getValue();
 }
 
-void ConvertVisitor::visitReturnStmt(const ReturnStmtPtr& ptr)
-{
+void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	cStr << "return ";
 	visit(ptr->getReturnExpr());
 	cStr << ";";
@@ -301,10 +337,13 @@ namespace {
 
 }
 
-void ConvertVisitor::visitForStmt(const ForStmtPtr& ptr) {
+void StmtConverter::visitForStmt(const ForStmtPtr& ptr) {
 	auto decl = ptr->getDeclaration();
 	auto var = decl->getVariable();
-	string ident = cc.getNameGen().getVarName(var);
+
+	CodeStream& cStr = getCodeStream();
+
+	string ident = cc.getNameManager().getVarName(var);
 	cStr << "for(";
 	visit(decl);
 	cStr << "; " << ident << " < ";
@@ -315,39 +354,47 @@ void ConvertVisitor::visitForStmt(const ForStmtPtr& ptr) {
 	visit(wrapBody(ptr->getBody()));
 }
 
-void ConvertVisitor::visitIfStmt(const IfStmtPtr& ptr) {
+void StmtConverter::visitIfStmt(const IfStmtPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	cStr << "if(";
 	visit(ptr->getCondition());
 	cStr << ") ";
 	visit(wrapBody(ptr->getThenBody()));
-	if (!cc.basic.isNoOp(ptr->getElseBody())) {
+	if (!cc.getLangBasic().isNoOp(ptr->getElseBody())) {
 		cStr << " else ";
 		visit(wrapBody(ptr->getElseBody()));
 	}
 }
 
-void ConvertVisitor::visitWhileStmt(const WhileStmtPtr& ptr) {
+void StmtConverter::visitWhileStmt(const WhileStmtPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	cStr << "while(";
 	visit(ptr->getCondition());
 	cStr << ") ";
 	visit(wrapBody(ptr->getBody()));
 }
 
-void ConvertVisitor::visitSwitchStmt(const SwitchStmtPtr& ptr) {
-		cStr << "switch(";
-		visit(ptr->getSwitchExpr());
-		cStr << ") {\n";
-		for_each(ptr->getCases(), [&](const SwitchStmt::Case& curCase) { // GCC sucks
-			this->cStr << "case ";
-			this->visit(curCase.first);
-			this->cStr << ":" << CodeStream::indR << "\n";
-			this->visit(curCase.second);
-			this->cStr << "; break;" << CodeStream::indL << "\n";
-		});
-		cStr << "}";
-	}
+void StmtConverter::visitSwitchStmt(const SwitchStmtPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
 
-void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
+	cStr << "switch(";
+	visit(ptr->getSwitchExpr());
+	cStr << ") {\n";
+	for_each(ptr->getCases(), [&](const SwitchStmt::Case& curCase) { // GCC sucks
+		cStr << "case ";
+		this->visit(curCase.first);
+		cStr << ":" << CodeStream::indR << "\n";
+		this->visit(curCase.second);
+		cStr << "; break;" << CodeStream::indL << "\n";
+	});
+	cStr << "}";
+}
+
+void StmtConverter::visitCompoundStmt(const CompoundStmtPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	if(ptr->getStatements().size() > 0) {
 		cStr << "{" << CodeStream::indR << "\n";
 		for_each(ptr->getChildList(), [&](const NodePtr& cur) {
@@ -361,22 +408,28 @@ void ConvertVisitor::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 	}
 }
 
-void ConvertVisitor::visitCastExpr(const CastExprPtr& ptr) {
-	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType()) << ")(";
+void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
+	cStr << "((" << cc.getTypeManager().getTypeName(defCodePtr, ptr->getType()) << ")(";
 	visit(ptr->getSubExpression());
 	cStr << "))";
 }
 
-void ConvertVisitor::visitVariable(const VariablePtr& ptr) {
+void StmtConverter::visitVariable(const VariablePtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	if (ptr->getType()->getNodeType() == NT_RefType
 			&& cc.getVariableManager().getInfo(ptr).location == VariableManager::STACK) {
 
 		cStr << "&";
 	}
-	cStr << nameGen.getVarName(ptr);
+	cStr << cc.getNameManager().getVarName(ptr);
 }
 
-void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
+void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
 	TypePtr type = ptr->getType();
 	if (type->getNodeType() == NT_RefType) {
 		cStr << "&";
@@ -386,12 +439,14 @@ void ConvertVisitor::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
 	cStr << "." << ptr->getMemberName() << ")";
 }
 
-void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
-	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
+void StmtConverter::visitStructExpr(const StructExprPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
+	cStr << "((" << cc.getTypeManager().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
 	cStr << CodeStream::indR;
 	for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
 		// skip ref.var if present
-		if (core::analysis::isCallOf(cur.second, cc.basic.getRefVar())) {
+		if (core::analysis::isCallOf(cur.second, cc.getLangBasic().getRefVar())) {
 			this->visit(static_pointer_cast<const CallExpr>(cur.second)->getArguments()[0]);
 		} else {
 			this->visit(cur.second);
@@ -402,13 +457,16 @@ void ConvertVisitor::visitStructExpr(const StructExprPtr& ptr) {
 	cStr << "})";
 }
 
-void ConvertVisitor::visitUnionExpr(const UnionExprPtr& ptr) {
-	cStr << "((" << cc.getTypeMan().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
+void StmtConverter::visitUnionExpr(const UnionExprPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+
+	cStr << "((" << cc.getTypeManager().getTypeName(defCodePtr, ptr->getType(), true) <<"){";
 	visit(ptr->getMember());
 	cStr << "})";
 }
 
-void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
+void StmtConverter::visitVectorExpr(const VectorExprPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
 
 	// handle single-element initializations
 	if (ptr->getExpressions().size() == 1) {
@@ -420,7 +478,7 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 	cStr << "{";
 	int i=0;
 	for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
-		if (!core::analysis::isCallOf(cur, cc.basic.getRefVar())) {
+		if (!core::analysis::isCallOf(cur, cc.getLangBasic().getRefVar())) {
 			LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
 			assert(false && "Vector initialization not supported for the given values!");
 		}
@@ -429,21 +487,14 @@ void ConvertVisitor::visitVectorExpr(const VectorExprPtr& ptr) {
 		if((++i)!=ptr->getExpressions().size()) cStr << ", ";
 	});
 	cStr << "}";
-
-
-//	cStr << "&{";
-//	cStr << join(", ", ptr->getExpressions(), [&, this](std::ostream&, const ExpressionPtr& cur) {
-//		this->visit(cur);
-//	});
-//	cStr << "}";
 }
 
-void ConvertVisitor::visitMarkerExpr(const MarkerExprPtr& ptr) {
+void StmtConverter::visitMarkerExpr(const MarkerExprPtr& ptr) {
 	// just ignore
 	visit(ptr->getSubExpression());
 }
 
-void ConvertVisitor::visitMarkerStmt(const MarkerStmtPtr& ptr) {
+void StmtConverter::visitMarkerStmt(const MarkerStmtPtr& ptr) {
 	// just ignore
 	visit(ptr->getSubStatement());
 }
@@ -481,11 +532,6 @@ bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
 
 
 
-const ProgramPtr& ConvertedCode::getProgram() const {
-	return fromProg;
-}
-
-
 
 
 namespace detail {
@@ -510,14 +556,14 @@ namespace detail {
 		/**
 		 * A utility function visiting the n-th argument of a call expression.
 		 *
-		 * @param visitor the visitor to be used for the actual visiting
+		 * @param converter the converter to be used for the actual conversion
 		 * @param call the expression from which the argument should be extracted
 		 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
 		 */
-		void visitArgument(ConvertVisitor& visitor, const CallExprPtr& call, unsigned n) {
+		void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
 			NodePtr argument = getArgument(call, n);
 			if (argument) {
-				visitor.visit(argument);
+				converter.convert(argument);
 			}
 		}
 
@@ -536,36 +582,36 @@ namespace detail {
 			return core::transform::tryInlineToExpr(manager, call);
 		}
 
-		void handleIncOperand(ConvertVisitor& visitor, const NodePtr& target) {
+		void handleIncOperand(StmtConverter& converter, const NodePtr& target) {
 
 			assert(dynamic_pointer_cast<const Expression>(target) && "Operator must be an expression.");
 
 			// check whether a deref is required
-			CodeStream& stream = visitor.getCode()->getCodeStream();
+			CodeStream& stream = converter.getCodeStream();
 			stream << "(*";
-			visitor.visit(target);
+			converter.convert(target);
 			stream << ")";
 		}
 
-		void handleRefConstructor(ConvertVisitor& visitor, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
+		void handleRefConstructor(StmtConverter& converter, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
 
 			// check input parameters
 			assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
 
 			// quick check for arrays => extra handling
-			const core::lang::BasicGenerator& basic = visitor.getConversionContext().basic;
+			const core::lang::BasicGenerator& basic = converter.getConversionContext().getLangBasic();
 			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
 			    core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
 
 				// vector creation is sufficient
-				visitor.visit(initValue);
+				converter.convert(initValue);
 				return;
 			}
 
 
 			// extract type
 			TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
-			string typeName = visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true);
+			string typeName = converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), type, true);
 
 			// use stack or heap allocator
 			string allocator = (isNew)?"malloc":"alloca";
@@ -615,7 +661,7 @@ namespace detail {
 			cStr << ")), &((";
 			cStr << typeName;
 			cStr << ")";
-			visitor.visit(initValue);
+			converter.convert(initValue);
 			cStr << "), sizeof(";
 			cStr << typeName;
 			cStr << "))";
@@ -630,9 +676,9 @@ namespace detail {
 
 		#define OUT(Literal) cStr << Literal
 		#define ARG(N) getArgument(call, N)
-		#define VISIT_ARG(N) visitArgument(visitor, call, N)
+		#define VISIT_ARG(N) visitArgument(converter, call, N)
 		#define ADD_FORMATTER_DETAIL(Literal, Brackets, FORMAT) \
-					res.insert(std::make_pair(Literal->getValue(), make_formatter([&basic](ConvertVisitor& visitor, CodeStream& cStr, const CallExprPtr& call) { \
+					res.insert(std::make_pair(Literal->getValue(), make_formatter([&basic](StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) { \
 						if (Brackets) OUT("("); \
 						FORMAT \
 						if (Brackets) OUT(")"); \
@@ -642,17 +688,17 @@ namespace detail {
 					ADD_FORMATTER_DETAIL(Literal, true, FORMAT)
 
 		ADD_FORMATTER(basic.getRefAssign(), {
-				NodeManager& manager = visitor.getConversionContext().getNodeManager();
+				NodeManager& manager = converter.getConversionContext().getNodeManager();
 				ExpressionPtr target = static_pointer_cast<const Expression>(ARG(0));
 				TypePtr valueType = static_pointer_cast<const RefType>(target->getType())->getElementType();
-				visitor.visit(CallExpr::get(manager, valueType, basic.getRefDeref(), toVector<ExpressionPtr>(target)));
+				converter.convert(CallExpr::get(manager, valueType, basic.getRefDeref(), toVector<ExpressionPtr>(target)));
 				OUT(" = ");
 				VISIT_ARG(1);
 		});
 
 
-		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(visitor, cStr, ARG(0), false); });
-		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(visitor, cStr, ARG(0), true); });
+		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(converter, cStr, ARG(0), false); });
+		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(converter, cStr, ARG(0), true); });
 
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free(*"); VISIT_ARG(0); OUT(")"); });
 
@@ -665,11 +711,11 @@ namespace detail {
 					NodePtr init = ARG(0);
 					if (core::analysis::isCallOf(init, basic.getRefVar())) {
 						init = builder.refNew(static_pointer_cast<const CallExpr>(init)->getArguments()[0]);
-						visitor.visit(init);
+						converter.convert(init);
 					} else if (core::analysis::isCallOf(init, basic.getRefNew())) {
-						visitor.visit(init);
+						converter.convert(init);
 					} else {
-						visitor.visit(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
+						converter.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
 					}
 
 				} else {
@@ -683,7 +729,7 @@ namespace detail {
 					OUT("malloc(");
 					OUT("sizeof(");
 					TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
-					OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), type, true));
+					OUT(converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), type, true));
 					OUT(")*");
 					VISIT_ARG(1);
 					OUT(")");
@@ -724,10 +770,10 @@ namespace detail {
 		ADD_FORMATTER(basic.getUnsignedIntLShift(), { VISIT_ARG(0); OUT("<<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntRShift(), { VISIT_ARG(0); OUT(">>"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getUnsignedIntPreInc(), { OUT("++"); handleIncOperand(visitor, ARG(0)); });
-		ADD_FORMATTER(basic.getUnsignedIntPostInc(), { handleIncOperand(visitor, ARG(0)); OUT("++"); });
-		ADD_FORMATTER(basic.getUnsignedIntPreDec(), { OUT("--"); handleIncOperand(visitor, ARG(0)); });
-		ADD_FORMATTER(basic.getUnsignedIntPostDec(), { handleIncOperand(visitor, ARG(0)); OUT("--"); });
+		ADD_FORMATTER(basic.getUnsignedIntPreInc(), { OUT("++"); handleIncOperand(converter, ARG(0)); });
+		ADD_FORMATTER(basic.getUnsignedIntPostInc(), { handleIncOperand(converter, ARG(0)); OUT("++"); });
+		ADD_FORMATTER(basic.getUnsignedIntPreDec(), { OUT("--"); handleIncOperand(converter, ARG(0)); });
+		ADD_FORMATTER(basic.getUnsignedIntPostDec(), { handleIncOperand(converter, ARG(0)); OUT("--"); });
 
 
 		ADD_FORMATTER(basic.getSignedIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
@@ -739,18 +785,18 @@ namespace detail {
 		ADD_FORMATTER(basic.getSignedIntLShift(), { VISIT_ARG(0); OUT("<<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntRShift(), { VISIT_ARG(0); OUT(">>"); VISIT_ARG(1); });
 
-		ADD_FORMATTER(basic.getSignedIntPreInc(), { OUT("++"); handleIncOperand(visitor, ARG(0)); });
-		ADD_FORMATTER(basic.getSignedIntPostInc(), { handleIncOperand(visitor, ARG(0)); OUT("++"); });
-		ADD_FORMATTER(basic.getSignedIntPreDec(), { OUT("--"); handleIncOperand(visitor, ARG(0)); });
-		ADD_FORMATTER(basic.getSignedIntPostDec(), { handleIncOperand(visitor, ARG(0)); OUT("--"); });
+		ADD_FORMATTER(basic.getSignedIntPreInc(), { OUT("++"); handleIncOperand(converter, ARG(0)); });
+		ADD_FORMATTER(basic.getSignedIntPostInc(), { handleIncOperand(converter, ARG(0)); OUT("++"); });
+		ADD_FORMATTER(basic.getSignedIntPreDec(), { OUT("--"); handleIncOperand(converter, ARG(0)); });
+		ADD_FORMATTER(basic.getSignedIntPostDec(), { handleIncOperand(converter, ARG(0)); OUT("--"); });
 
 		ADD_FORMATTER(basic.getSignedIntAnd(), { VISIT_ARG(0); OUT("&"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntOr(), { VISIT_ARG(0); OUT("|"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); VISIT_ARG(0); });
 
-		ADD_FORMATTER(basic.getBoolLAnd(), { VISIT_ARG(0); OUT("&&"); visitor.visit(evalLazy(ARG(1))); });
-		ADD_FORMATTER(basic.getBoolLOr(), { VISIT_ARG(0); OUT("||"); visitor.visit(evalLazy(ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLAnd(), { VISIT_ARG(0); OUT("&&"); converter.convert(evalLazy(ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLOr(), { VISIT_ARG(0); OUT("||"); converter.convert(evalLazy(ARG(1))); });
 		ADD_FORMATTER(basic.getBoolNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); VISIT_ARG(0); });
@@ -790,9 +836,9 @@ namespace detail {
 
 		ADD_FORMATTER(basic.getIfThenElse(), {
 				OUT("("); VISIT_ARG(0); OUT(")?(");
-				visitor.visit(evalLazy(ARG(1)));
+				converter.convert(evalLazy(ARG(1)));
 				OUT("):(");
-				visitor.visit(evalLazy(ARG(2)));
+				converter.convert(evalLazy(ARG(2)));
 				OUT(")");
 		});
 
@@ -803,7 +849,7 @@ namespace detail {
 				);
 				assert(type && "Illegal argument to sizeof operator");
 				TypePtr target = type->getTypeParameter()[0];
-				OUT(visitor.getConversionContext().getTypeMan().getTypeName(visitor.getCode(), target, true));
+				OUT(converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), target, true));
 				OUT(")");
 		});
 
@@ -825,20 +871,3 @@ namespace detail {
 }
 }
 
-std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::ConvertedCode& code) {
-	out << "// --- Generated Inspire Code ---\n";
-	out << "#include <alloca.h>\n";
-	out << "#include <stddef.h>\n";
-	out << "#include <stdlib.h>\n";
-	//out << "#include <string.h>\n";
-	out << "#define bool int\n";
-	out << "#define true 1\n";
-	out << "#define false 0\n";
-	out << "#define null 0\n";
-
-	for_each(code.getProgram()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
-		out << "// --- Entry Point ---\n";
-		out << (*code.find(ep)).second;
-	});
-	return out;
-}

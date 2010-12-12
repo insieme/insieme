@@ -34,51 +34,49 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/opencl_backend/opencl_convert.h"
+#pragma once
+
+#include <unordered_map>
+
+#include "insieme/core/ast_node.h"
+
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl {
-
-using namespace insieme::core;
-using namespace insieme::simple_backend;
+namespace simple_backend {
 
 
-TargetCodePtr convert(const ProgramPtr& source) {
+/**
+ * Generates unique names for anonymous IR nodes when required.
+ * Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
+ * for the same node in different circumstances. Names will, however, stay the same for unchanged
+ * programs over multiple runs of the compiler.
+ */
+class NameManager {
 
-	// create and set up the converter
-	Converter converter;
+	/**
+	 * A counter used to generate individual names.
+	 */
+	unsigned long num;
 
-	// Prepare managers
-	NodeManager& nodeManager = source->getNodeManager();
-	converter.setNodeManager(&nodeManager);
+	/**
+	 * The internal cache used to maintain mapped names.
+	 */
+	utils::map::PointerMap<core::NodePtr, string> nameMap;
 
-	OclStmtConvert stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
+public:
 
-	NameManager nameManager;
-	converter.setNameManager(&nameManager);
+	/**
+	 * The default constructor for a new name manager.
+	 */
+	NameManager() : num(0) { }
 
-	TypeManager typeManager(nameManager);
-	converter.setTypeManager(&typeManager);
+	string getName(const core::NodePtr& ptr, const string& fragment = "");
 
-	VariableManager variableManager;
-	converter.setVariableManager(&variableManager);
+	void setName(const core::NodePtr& ptr, const string& name);
 
-	FunctionManager functionManager(converter);
-	converter.setFunctionManager(&functionManager);
+	string getVarName(const core::VariablePtr& var);
+};
 
-	// conduct conversion
-	return converter.convert(source);
-}
-
-OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
-
-void OclStmtConvert::visitLiteral(const LiteralPtr& ptr) {
-	// just print strange literal
-	getCodeStream() << ptr->getValue() << "_OK";
-}
-
-} // namespace ocl
-} // namespace backend
-} // namespace insieme
+} // end: namespace simple_backend
+} // end: namespace insieme

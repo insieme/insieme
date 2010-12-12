@@ -43,7 +43,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/functional_utils.h"
 
-#include "insieme/simple_backend/name_generator.h"
+#include "insieme/simple_backend/name_manager.h"
 #include "insieme/simple_backend/code_management.h"
 
 #include "insieme/utils/map_utils.h"
@@ -59,7 +59,7 @@ class TypeManager {
 	/**
 	 * The name generator used for deriving fresh type names.
 	 */
-	NameGenerator& nameGenerator;
+	NameManager& nameGenerator;
 
 public:
 
@@ -105,7 +105,7 @@ private:
 
 public:
 
-	TypeManager(NameGenerator& nameGenerator) : nameGenerator(nameGenerator) { }
+	TypeManager(NameManager& nameGenerator) : nameGenerator(nameGenerator) { }
 
 	/**
 	 * Obtains a type name for the given type. In case the type has been used before, the same

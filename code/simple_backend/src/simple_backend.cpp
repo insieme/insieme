@@ -34,36 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/simple_backend/simple_backend.h"
 
-#include <unordered_map>
-
-#include "insieme/core/ast_node.h"
-
+#include "insieme/simple_backend/backend_convert.h"
 
 namespace insieme {
 namespace simple_backend {
 
+TargetCodePtr convert(const ProgramPtr& source) {
 
-/** Generates unique names for anonymous AST nodes when required.
- ** Uses a simple counting system. Not thread safe, and won't necessarily generate the same name
- ** for the same node in different circumstances. Names will, however, stay the same for unchanged
- ** programs over multiple runs of the compiler.
- ** */
-class NameGenerator {
-	unsigned long num;
+	// create and set up the converter
+	Converter converter;
 
-	std::unordered_map<core::NodePtr, string, hash_target<core::NodePtr>, equal_target<core::NodePtr>> nameMap;
+	// Prepare managers
+	NodeManager& nodeManager = source->getNodeManager();
+	converter.setNodeManager(&nodeManager);
 
-public:
-	NameGenerator() : num(0) { }
+	StmtConverter stmtConverter(converter);
+	converter.setStmtConverter(&stmtConverter);
 
-	string getName(const core::NodePtr& ptr, const string& fragment = "");
+	NameManager nameManager;
+	converter.setNameManager(&nameManager);
 
-	void setName(const core::NodePtr& ptr, const string& name);
+	TypeManager typeManager(nameManager);
+	converter.setTypeManager(&typeManager);
 
-	string getVarName(const core::VariablePtr& var);
-};
+	VariableManager variableManager;
+	converter.setVariableManager(&variableManager);
 
-} // end: namespace simple_backend
-} // end: namespace insieme
+	FunctionManager functionManager(converter);
+	converter.setFunctionManager(&functionManager);
+
+	// conduct conversion
+	return converter.convert(source);
+}
+
+
+} // end namespace simple_backend
+} // end namespace insieme
+
+std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::TargetCode& code) {
+	return code.printTo(out);
+}
