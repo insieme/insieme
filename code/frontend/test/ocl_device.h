@@ -105,6 +105,14 @@ fvec(float,4)
 fvec(float,8)
 fvec(float,16)
 
+//#ifdef cl_khr_fp64
+fvec(double,2)
+fvec(double,3)
+fvec(double,4)
+fvec(double,8)
+fvec(double,16)
+//#endif
+
 //define build-in functions
 unsigned int get_global_id(unsigned int dmindx);
 unsigned int get_global_size(unsigned int dmindx);
@@ -116,7 +124,177 @@ unsigned int get_local_size(unsigned int dmindx);
 
 void barrier(int flags); //TODO change to enum
 
+//half workaround
+#ifdef cl_khr_fp16
+#define half float
+#endif
 
-//#define float4(val) (float4)val
+// math functions
+#ifdef cl_khr_fp64
+#define dtypefun(fct) double __attribute__((overloadable)) fct(double); double2 __attribute__((overloadable)) fct(double2);
+    double3 __attribute__((overloadable)) fct(double3); double4 __attribute__((overloadable)) fct(double4); \
+    double8 __attribute__((overloadable)) fct(double8); double16 __attribute__((overloadable)) fct(double16);
+
+#define dtypefun2(fct) double __attribute__((overloadable)) fct(double, double); double2 __attribute__((overloadable)) fct(double2, double2); \
+	double3 __attribute__((overloadable)) fct(double3, double3); double4 __attribute__((overloadable)) fct(double4, double4); \
+	double8 __attribute__((overloadable)) fct(double8, double8); double16 __attribute__((overloadable)) fct(double16, double16);
+
+#define dtypefun3(fct) double __attribute__((overloadable)) fct(double, double, double); double2 __attribute__((overloadable)) fct(double2, double2, double2); \
+	double3 __attribute__((overloadable)) fct(double3, double3, double3); double4 __attribute__((overloadable)) fct(double4, double4, double4); \
+	double8 __attribute__((overloadable)) fct(double8, double8, double8); double16 __attribute__((overloadable)) fct(double16, double16, double16);
+
+#define dtypefuni(fct) double __attribute__((overloadable)) fct(double, int); double2 __attribute__((overloadable)) fct(double2, int2); \
+	double3 __attribute__((overloadable)) fct(double3, int3); double4 __attribute__((overloadable)) fct(double4, int4); \
+	double8 __attribute__((overloadable)) fct(double8, int8); double16 __attribute__((overloadable)) fct(double16, int16);
+
+#define dtypefunptr(fct) double __attribute__((overloadable)) fct(double, double*); double2 __attribute__((overloadable)) fct(double2, double2*); \
+	double3 __attribute__((overloadable)) fct(double3, double3*); double4 __attribute__((overloadable)) fct(double4, double4*); \
+	double8 __attribute__((overloadable)) fct(double8, double8*); double16 __attribute__((overloadable)) fct(double16, double16*);
+
+#define dtypefuniptr(fct) double __attribute__((overloadable)) fct(double, int*); double2 __attribute__((overloadable)) fct(double2, int2*); \
+	double3 __attribute__((overloadable)) fct(double3, int3*); double4 __attribute__((overloadable)) fct(double4, int4*); \
+	double8 __attribute__((overloadable)) fct(double8, int8*); double16 __attribute__((overloadable)) fct(double16, int16*);
+
+#define dtypefun2iptr(fct) double __attribute__((overloadable)) fct(double, double, int*); double2 __attribute__((overloadable)) fct(double2, double2, int2*); \
+	double3 __attribute__((overloadable)) fct(double3, double3, int3*); double4 __attribute__((overloadable)) fct(double4, double4, int4*); \
+	double8 __attribute__((overloadable)) fct(double8, double8, int8*); double16 __attribute__((overloadable)) fct(double16, double16, int16*);
+
+#define dtypefundbl(fct) double __attribute__((overloadable)) fct(double, double); double2 __attribute__((overloadable)) fct(double2, double); \
+	double3 __attribute__((overloadable)) fct(double3, double); double4 __attribute__((overloadable)) fct(double4, double); \
+	double8 __attribute__((overloadable)) fct(double8, double); double16 __attribute__((overloadable)) fct(double16, double);
+
+#else
+#define dtypefun(fct)
+#define dtypefun2(fct)
+#define dtypefun3(fct)
+#define dtypefuni(fct)
+#define dtypefunptr(fct)
+#define dtypefuniptr(fct)
+#define dtypefun2iptr(fct)
+#define dtypefundbl(fct)
+#endif
+
+#define genfun(fct) float __attribute__((overloadable)) fct(float); float2 __attribute__((overloadable)) fct(float2);  \
+	float3 __attribute__((overloadable)) fct(float3); float4 __attribute__((overloadable)) fct(float4); \
+	float8 __attribute__((overloadable)) fct(float8); float16 __attribute__((overloadable)) fct(float16); dtypefun(fct);
+
+#define genfun2(fct) float __attribute__((overloadable)) fct(float, float); float2 __attribute__((overloadable)) fct(float2, float2); \
+	float3 __attribute__((overloadable)) fct(float3, float3); float4 __attribute__((overloadable)) fct(float4, float4); \
+	float8 __attribute__((overloadable)) fct(float8, float8); float16 __attribute__((overloadable)) fct(float16, float16); dtypefun2(fct)
+
+#define genfun3(fct) float __attribute__((overloadable)) fct(float, float, float); float2 __attribute__((overloadable)) fct(float2, float2, float2); \
+	float3 __attribute__((overloadable)) fct(float3, float3, float3); float4 __attribute__((overloadable)) fct(float4, float4, float4); \
+	float8 __attribute__((overloadable)) fct(float8, float8, float8); float16 __attribute__((overloadable)) fct(float16, float16, float16); dtypefun3(fct)
+
+#define genfuni(fct) float __attribute__((overloadable)) fct(float, int); float2 __attribute__((overloadable)) fct(float2, int2); \
+	float3 __attribute__((overloadable)) fct(float3, int3); float4 __attribute__((overloadable)) fct(float4, int4); \
+	float8 __attribute__((overloadable)) fct(float8, int8); float16 __attribute__((overloadable)) fct(float16, int16); dtypefuni(fct)
+
+#define genfunptr(fct) float __attribute__((overloadable)) fct(float, float*); float2 __attribute__((overloadable)) fct(float2, float2*); \
+	float3 __attribute__((overloadable)) fct(float3, float3*); float4 __attribute__((overloadable)) fct(float4, float4*); \
+	float8 __attribute__((overloadable)) fct(float8, float8*); float16 __attribute__((overloadable)) fct(float16, float16*); dtypefunptr(fct)
+
+#define genfuniptr(fct) float __attribute__((overloadable)) fct(float, int*); float2 __attribute__((overloadable)) fct(float2, int2*); \
+	float3 __attribute__((overloadable)) fct(float3, int3*); float4 __attribute__((overloadable)) fct(float4, int4*); \
+	float8 __attribute__((overloadable)) fct(float8, int8*); float16 __attribute__((overloadable)) fct(float16, int16*); dtypefuniptr(fct)
+
+#define genfun2iptr(fct) float __attribute__((overloadable)) fct(float, float, int*); float2 __attribute__((overloadable)) fct(float2, float2, int2*); \
+	float3 __attribute__((overloadable)) fct(float3, float3, int3*); float4 __attribute__((overloadable)) fct(float4, float4, int4*); \
+	float8 __attribute__((overloadable)) fct(float8, float8, int8*); float16 __attribute__((overloadable)) fct(float16, float16, int16*); dtypefun2iptr(fct)
+
+#define genfunflt(fct) float __attribute__((overloadable)) fct(float, float); float2 __attribute__((overloadable)) fct(float2, float); \
+	float3 __attribute__((overloadable)) fct(float3, float); float4 __attribute__((overloadable)) fct(float4, float); \
+	float8 __attribute__((overloadable)) fct(float8, float); float16 __attribute__((overloadable)) fct(float16, float); dtypefundbl(fct)
+
+#define genfun_native(fct) float __attribute__((overloadable)) native_##fct(float); float2 __attribute__((overloadable)) native_##fct(float2); \
+	float3 __attribute__((overloadable)) native_##fct(float3); float4 __attribute__((overloadable)) native_##fct(float4); \
+	float8 __attribute__((overloadable)) native_##fct(float8); float16 __attribute__((overloadable)) native_##fct(float16); genfun(fct)
+
+#define genfun2_native(fct) float __attribute__((overloadable)) native_##fct(float, float); float2 __attribute__((overloadable)) native_##fct(float2, float2); \
+	float3 __attribute__((overloadable)) native_##fct(float3, float3); float4 __attribute__((overloadable)) native_##fct(float4, float4); \
+	float8 __attribute__((overloadable)) native_##fct(float8, float8); float16 __attribute__((overloadable)) native_##fct(float16, float16); genfun2(fct)
 
 
+
+genfun(acos)
+genfun(acosh)
+genfun(acospi)
+genfun(asin)
+genfun(asinh)
+genfun(asinpi)
+genfun(atan)
+genfun2(atan2)
+genfun(atanh)
+genfun(atanpi)
+genfun2(atan2pi)
+genfun(cbrt)
+genfun(ceil)
+genfun2(copysign)
+genfun_native(cos)
+genfun(cosh)
+genfun(cospi)
+genfun(erfc)
+genfun(erf)
+genfun_native(exp)
+genfun_native(exp2)
+genfun_native(exp10)
+genfun(expm1)
+genfun(fabs)
+genfun2(fdim)
+genfun(floor)
+genfun3(fma)
+genfun2(fmax) genfunflt(fmax)
+genfun2(fmin) genfunflt(fmin)
+genfun2(fmod)
+genfunptr(fract)
+genfuniptr(frexp)
+genfun2(hypot)
+genfun(ilogb)
+genfuni(ldexp)
+genfun(lgamma)
+genfuniptr(lgamma_r)
+genfun_native(log)
+genfun_native(log2)
+genfun_native(log10)
+genfun(log1p)
+genfun(logb)
+genfun3(mad)
+genfun2(maxmag)
+genfun2(minmag)
+genfunptr(modf)
+genfun2(nextafter)
+genfun2(pow)
+genfuni(pown)
+genfun2_native(powr)
+genfun2(remainder)
+genfun2iptr(remquo)
+genfun(rint)
+genfuni(rootn)
+genfun(round)
+genfun_native(rsqrt)
+genfun_native(sin)
+genfunptr(sincos)
+genfun(sinh)
+genfun(sinpi)
+genfun_native(sqrt)
+genfun_native(tan)
+genfun(tanh)
+genfun(tanpi)
+genfun(tgamma)
+genfun(trunc)
+
+float __attribute__((overloadable)) ldexp(float, int); float2 __attribute__((overloadable)) ldexp(float2, int2); \
+    float3 __attribute__((overloadable)) ldexp(float3, int3); float4 __attribute__((overloadable)) ldexp(float4, int4); \
+    float8 __attribute__((overloadable)) ldexp(float8, int8); float16 __attribute__((overloadable)) ldexp(float16, int16);
+#ifdef cl_khr_fp64
+double __attribute__((overloadable)) ldexp(double, int); double2 __attribute__((overloadable)) ldexp(double2, int2); \
+    double3 __attribute__((overloadable)) ldexp(double3, int3); double4 __attribute__((overloadable)) ldexp(double4, int4); \
+    double8 __attribute__((overloadable)) ldexp(double8, int8); double16 __attribute__((overloadable)) ldexp(double16, int16);
+#endif
+
+float __attribute__((overloadable)) nan(uint); float2 __attribute__((overloadable)) nan(uint2); float3 __attribute__((overloadable)) nan(uint3);
+    float4 __attribute__((overloadable)) nan(uint4); float8 __attribute__((overloadable)) nan(uint8); float16 __attribute__((overloadable)) nan(uint16);
+
+float __attribute__((overloadable)) native_divide(float, float); float2 __attribute__((overloadable)) native_divide(float2, float2); \
+    float3 __attribute__((overloadable)) native_divide(float3, float3); float4 __attribute__((overloadable)) native_divide(float4, float4); \
+    float8 __attribute__((overloadable)) native_divide(float8, float8); float16 __attribute__((overloadable)) native_divide(float16, float16);
