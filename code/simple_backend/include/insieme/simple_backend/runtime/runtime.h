@@ -38,16 +38,19 @@
 
 #pragma once
 
-typedef struct _job {
-	unsigned structSize;
-	unsigned min, max;
-	void (*fun)(void*);
-} Job;
+struct _job;
 
 typedef struct _jobArgs {
 	unsigned index, size;
-	Job* context;
+	struct _job* context;
 } JobArgs;
+
+typedef struct _job {
+	unsigned structSize;
+	unsigned min, max;
+	void (*fun)(JobArgs*);
+} Job;
+
 
 typedef struct _pforRange {
 	long long start, end, step;
