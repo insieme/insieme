@@ -43,3 +43,24 @@ foreach ( case_file ${test_cases})
 	
 	add_unit_test(${case_name})
 endforeach(case_file)
+
+
+# ------------------------------------------------------------------------------------------------------------------
+
+#
+# Builds the insieme simple backend runtime
+#
+project(insieme_simple_backend_runtime C)
+
+include(../environment.cmake)
+
+# Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
+file(GLOB_RECURSE insieme_simple_backend_runtime_srcs 	src/runtime/*.c )
+file(GLOB_RECURSE insieme_simple_backend_runtime_incs 	include/*.h )
+
+# list all include paths
+
+# Build the runtime library
+add_library(insieme_simple_backend_runtime ${LINKING_TYPE} ${insieme_simple_backend_runtime_srcs} ${insieme_simple_backend_runtime_incs} )
+
+
