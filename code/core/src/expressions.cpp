@@ -364,42 +364,46 @@ UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, cons
 
 // ------------------------------------- JobExpr ---------------------------------
 
-size_t hashJobExpr(const StatementPtr& defaultStmt, const JobExpr::GuardedStmts& guardedStmts, const JobExpr::LocalDecls& localDecls) {
-	size_t seed = HASHVAL_JOBEXPR;
-	boost::hash_combine(seed, defaultStmt);
-	hashPtrRange(seed, localDecls);
-	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&seed](const JobExpr::GuardedStmt& s){
-		boost::hash_combine(seed, s.first);
-		boost::hash_combine(seed, s.second);
-	});
-	return seed;
+namespace {
+
+	size_t hashJobExpr(const ExpressionPtr& range, const StatementPtr& defaultStmt, const JobExpr::GuardedStmts& guardedStmts, const JobExpr::LocalDecls& localDecls) {
+		size_t seed = HASHVAL_JOBEXPR;
+		boost::hash_combine(seed, defaultStmt);
+		hashPtrRange(seed, localDecls);
+		std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&seed](const JobExpr::GuardedStmt& s){
+			boost::hash_combine(seed, s.first);
+			boost::hash_combine(seed, s.second);
+		});
+		return seed;
+	}
+
+	const JobExpr::GuardedStmts& isolateGuardedStmts(const JobExpr::GuardedStmts& stmts) {
+		JobExpr::GuardedStmts localGuardedStmts;
+		for_each(stmts, [](const JobExpr::GuardedStmt& stmt) {
+				isolate(stmt.first);
+				isolate(stmt.second);
+		});
+		return stmts;
+	}
+
+	const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, unsigned offset, const JobExpr::GuardedStmts& stmts) {
+		JobExpr::GuardedStmts localGuardedStmts;
+		std::transform(stmts.cbegin(), stmts.cend(), back_inserter(localGuardedStmts),
+			[&localGuardedStmts, &mapper, &offset](const JobExpr::GuardedStmt& stmt)->JobExpr::GuardedStmt {
+				JobExpr::GuardedStmt res = JobExpr::GuardedStmt(
+						mapper.map(offset, stmt.first),
+						mapper.map(offset+1, stmt.second)
+				);
+				offset+=2;
+				return res;
+		});
+		return localGuardedStmts;
+	}
+
 }
 
-const JobExpr::GuardedStmts& isolateGuardedStmts(const JobExpr::GuardedStmts& stmts) {
-	JobExpr::GuardedStmts localGuardedStmts;
-	for_each(stmts, [](const JobExpr::GuardedStmt& stmt) {
-			isolate(stmt.first);
-			isolate(stmt.second);
-	});
-	return stmts;
-}
-
-const JobExpr::GuardedStmts copyGuardedStmtsUsing(NodeMapping& mapper, unsigned offset, const JobExpr::GuardedStmts& stmts) {
-	JobExpr::GuardedStmts localGuardedStmts;
-	std::transform(stmts.cbegin(), stmts.cend(), back_inserter(localGuardedStmts),
-		[&localGuardedStmts, &mapper, &offset](const JobExpr::GuardedStmt& stmt)->JobExpr::GuardedStmt {
-			JobExpr::GuardedStmt res = JobExpr::GuardedStmt(
-					mapper.map(offset, stmt.first),
-					mapper.map(offset+1, stmt.second)
-			);
-			offset+=2;
-			return res;
-	});
-	return localGuardedStmts;
-}
-
-JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
-	: Expression(NT_JobExpr, type, ::hashJobExpr(defaultStmt, guardedStmts, localDecls)),
+JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
+	: Expression(NT_JobExpr, type, ::hashJobExpr(range, defaultStmt, guardedStmts, localDecls)), threadNumRange(range),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 	// TODO: use ordinary type checks for this section ...
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
@@ -432,7 +436,8 @@ JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& defaultStmt, const Gu
 
 JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new JobExpr(
-			mapper.map(0, type),
+			mapper.map(-1, type),
+			mapper.map(0, threadNumRange),
 			mapper.map(1 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
 			copyGuardedStmtsUsing(mapper, 1 + localDecls.size(), guardedStmts),
 			mapper.map(1, localDecls));
@@ -440,7 +445,7 @@ JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 
 Node::OptionChildList JobExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	res->push_back(type);
+	res->push_back(threadNumRange);
 	std::copy(localDecls.cbegin(), localDecls.cend(), back_inserter(*res));
 	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&res](const GuardedStmt& cur) {
 		res->push_back(cur.first);
@@ -453,7 +458,9 @@ Node::OptionChildList JobExpr::getChildNodes() const {
 bool JobExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const JobExpr& rhs = static_cast<const JobExpr&>(expr);
-	return *defaultStmt == *rhs.defaultStmt &&
+	return
+		*defaultStmt == *rhs.defaultStmt &&
+		*threadNumRange == *rhs.threadNumRange &&
 		::equals(localDecls, rhs.localDecls, equal_target<DeclarationStmtPtr>()) &&
 		::equals(guardedStmts, rhs.guardedStmts, [](const GuardedStmt& l, const GuardedStmt& r) {
 			return *l.first == *r.first && *l.second == *r.second; } );
@@ -469,8 +476,13 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
+	CallExprPtr range = CallExpr::get(manager, manager.basic.getJobRange(), manager.basic.getCreateUnboundRange(), ExpressionList());
+	return get(manager, range, defaultStmt, guardedStmts, localDecls);
+}
+
+JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
 	auto type = manager.basic.getJob();
-	return manager.get(JobExpr(type, defaultStmt, guardedStmts, localDecls));
+	return manager.get(JobExpr(type, threadNumRange, defaultStmt, guardedStmts, localDecls));
 }
 
 // ------------------------------------- CallExpr ---------------------------------
