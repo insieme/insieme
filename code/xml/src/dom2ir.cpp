@@ -385,7 +385,9 @@ public:
 		
 		ExpressionPtr&& defaultStmt = createNode<Expression>(elem, "defaultStatement", "expressionPtr");
 		
-		return createIrNode<JobExpr>(elem, defaultStmt, guardedStmts, localDecls);
+		ExpressionPtr&& threadNum = createNode<Expression>(elem, "threadNumRange", "expressionPtr");
+		
+		return createIrNode<JobExpr>(elem, threadNum, defaultStmt, guardedStmts, localDecls);
 	}
 
 	NodePtr handle_lambdaDefinition(const XmlElement& elem) {

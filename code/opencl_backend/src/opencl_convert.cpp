@@ -76,7 +76,7 @@ OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::S
 
 void OclStmtConvert::visitLiteral(const LiteralPtr& ptr) {
 	// just print strange literal
-	getCodeStream() << ptr->getValue() << "_OK";
+	getCodeStream() << ptr->getValue() << "_OK_BLAH";
 }
 
 } // namespace ocl
