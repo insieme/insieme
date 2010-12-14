@@ -768,7 +768,7 @@ public:
 
                    std::vector<core::ExpressionPtr> expr;
 
-                    core::JobExpr::GuardedStmts noGuardedStatementsNeeded;
+                   core::JobExpr::GuardedStmts noGuardedStatementsNeeded;
 
     // generation/composition of constructs
 
@@ -786,18 +786,19 @@ public:
                     kd.appendShared(localJobShared, OCL_LOCAL_JOB);
                     // TODO catch global variables
 
-
-                    core::JobExprPtr localJob = builder.jobExpr(localParFct, noGuardedStatementsNeeded, localJobShared);
-
-                    expr.clear();
-                    //construct vector of arguments for local parallel
-//                    expr.push_back(builder.literal("1", builder.getNodeManager().basic.getUInt4()));
-
                     // calculate localRange[0] * localRange[1] * localRange[2] to use as maximum number of threads
                     core::ExpressionPtr localRangeProduct = vecProduct(kd.localRange, 3);
 
-                    expr.push_back(localRangeProduct);
-                    expr.push_back(localRangeProduct); // min and max threads are equal
+                    // min and max number of threads is equal
+                    core::CallExprPtr localThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), localRangeProduct, localRangeProduct);
+
+                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localParFct, noGuardedStatementsNeeded, localJobShared);
+
+                    expr.clear();
+                    //construct vector of arguments for local parallel
+
+//                    expr.push_back(localRangeProduct);
+//                    expr.push_back(localRangeProduct); // min and max threads are equal
 
                     expr.push_back(localJob);
 
@@ -824,17 +825,17 @@ public:
                     kd.appendShared(globalJobShared, OCL_GLOBAL_JOB);
                     // TODO catch global variables
 
+                    // calculate groupRange[0] * groupRange[1] * groupRange[2] to use as maximum number of threads
+                    core::ExpressionPtr globalRangeProduct = vecProduct(kd.numGroups, 3);
 
-                    core::JobExprPtr globalJob = builder.jobExpr(globalParFct, noGuardedStatementsNeeded, globalJobShared);
+                    // min and max number of threads is equal
+                    core::CallExprPtr globalThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), globalRangeProduct, globalRangeProduct);
+
+                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalParFct, noGuardedStatementsNeeded, globalJobShared);
 
                     expr.clear();
                     //construct vector of arguments for local parallel
 //                    expr.push_back(builder.literal("1", builder.getNodeManager().basic.getUInt4()));
-
-                    // calculate groupRange[0] * groupRange[1] * groupRange[2] to use as maximum number of threads
-                    core::ExpressionPtr globalRangeProduct = vecProduct(kd.numGroups, 3);
-                    expr.push_back(globalRangeProduct);
-                    expr.push_back(globalRangeProduct); // min and max number of threads are equal
 
                     expr.push_back(globalJob);
 
