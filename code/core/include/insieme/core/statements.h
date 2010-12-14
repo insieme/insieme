@@ -151,11 +151,6 @@ public:
 
 
 class CompoundStmt: public Statement {
-	const vector<StatementPtr> statements;
-
-public:
-	CompoundStmt(const vector<StatementPtr>& stmts);
-private:
 	virtual CompoundStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
@@ -163,6 +158,10 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 
 public:
+	typedef vector<StatementPtr> StatementList;
+
+	CompoundStmt(const StatementList& stmts);
+
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const StatementPtr& operator[](unsigned index) const;
@@ -171,6 +170,9 @@ public:
 	static CompoundStmtPtr get(NodeManager& manager);
 	static CompoundStmtPtr get(NodeManager& manager, const StatementPtr& stmt);
 	static CompoundStmtPtr get(NodeManager& manager, const vector<StatementPtr>& stmts);
+
+private:
+	const StatementList statements;
 };
 
 

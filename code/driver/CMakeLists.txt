@@ -32,7 +32,8 @@ add_executable( main ${insieme_driver_srcs} )
 add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
 
 # register linked libraries
-target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_opencl_backend insieme_c_info insieme_xml )
+target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_transform insieme_simple_backend 
+							insieme_opencl_backend insieme_c_info insieme_xml )
 
 # add boost_program_options library
 target_link_libraries( main ${Boost_PROGRAM_OPTIONS_LIBRARY})
