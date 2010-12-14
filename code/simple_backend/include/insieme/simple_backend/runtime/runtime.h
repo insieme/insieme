@@ -38,33 +38,35 @@
 
 #pragma once
 
-struct _job;
+struct _isbr_job;
+struct _isbr_threadGroupImpl;
 
-typedef struct _jobArgs {
+typedef struct _isbr_threadGroupImpl* isbr_ThreadGroup;
+
+typedef struct _isbr_jobArgs {
 	unsigned index, size;
-	struct _job* context;
-} JobArgs;
+	struct _isbr_job* context;
+	isbr_ThreadGroup group;
+} isbr_JobArgs;
 
-typedef struct _job {
+typedef struct _isbr_job {
 	unsigned structSize;
 	unsigned min, max;
-	void (*fun)(JobArgs*);
-} Job;
+	void (*fun)(isbr_JobArgs*);
+} isbr_Job;
 
-
-typedef struct _pforRange {
+typedef struct _isbr_pforRange {
 	long long start, end, step;
-} PForRange;
+} isbr_PForRange;
 
-typedef unsigned ThreadGroup;
 
-ThreadGroup parallel(Job*);
+isbr_ThreadGroup isbr_parallel(isbr_Job*);
 
-void merge(ThreadGroup group);
-void barrier(ThreadGroup group);
+void isbr_merge(isbr_ThreadGroup group);
+void isbr_barrier(isbr_ThreadGroup group);
 
-unsigned getThreadId(unsigned level);
-unsigned getGroupSize(unsigned level);
-ThreadGroup getThreadGroup(unsigned level);
+unsigned isbr_getThreadId(unsigned level);
+unsigned isbr_getGroupSize(unsigned level);
+isbr_ThreadGroup isbr_getThreadGroup(unsigned level);
 
-void pfor(ThreadGroup group, PForRange range, void (*fun)(PForRange range));
+void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PForRange range));

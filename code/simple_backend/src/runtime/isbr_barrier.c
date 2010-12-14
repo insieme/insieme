@@ -36,29 +36,32 @@
 
 #include "insieme/simple_backend/runtime/isbr_barrier.h"
 
+#include <assert.h>
+#define PTHREADCHECK(_test) assert(_test==0)
+
 int isbr_barrier_init(isbr_barrier_t *barrier, int needed) {
     barrier->needed = needed;
-    barrier->called = 0;
-    pthread_mutex_init(&barrier->mutex,NULL);
-    pthread_cond_init(&barrier->cond,NULL);
+	barrier->called = 0;
+	PTHREADCHECK(pthread_mutex_init(&barrier->mutex, NULL));
+	PTHREADCHECK(pthread_cond_init(&barrier->cond, NULL));
     return 0;
 }
 
 int isbr_barrier_destroy(isbr_barrier_t *barrier) {
-    pthread_mutex_destroy(&barrier->mutex);
-    pthread_cond_destroy(&barrier->cond);
+    PTHREADCHECK(pthread_mutex_destroy(&barrier->mutex));
+    PTHREADCHECK(pthread_cond_destroy(&barrier->cond));
     return 0;
 }
 
 int isbr_barrier_wait(isbr_barrier_t *barrier) {
-    pthread_mutex_lock(&barrier->mutex);
+	PTHREADCHECK(pthread_mutex_lock(&barrier->mutex));
     barrier->called++;
     if(barrier->called == barrier->needed) {
-        barrier->called = 0;
-        pthread_cond_broadcast(&barrier->cond);
-    } else {
-        pthread_cond_wait(&barrier->cond, &barrier->mutex);
+		barrier->called = 0;
+        PTHREADCHECK(pthread_cond_broadcast(&barrier->cond));
+	} else {
+        PTHREADCHECK(pthread_cond_wait(&barrier->cond, &barrier->mutex));
     }
-    pthread_mutex_unlock(&barrier->mutex);
+    PTHREADCHECK(pthread_mutex_unlock(&barrier->mutex));
     return 0;
 }
