@@ -72,13 +72,7 @@ public:
         if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
             const core::TypeList& args = funcType->getArgumentTypes();
 
-            // kernel function has at least 2 arguments (localRange, globalRange)
-            // TODO change to ocl annotation check
-//LOG(INFO) << "ocl annotations: " << func->hasAnnotation(fe::ocl::BaseAnnotation::KEY);
-//            EXPECT_TRUE(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY));
-
             if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
-
 
                 const core::TypePtr& retTy = funcType->getReturnType();
 
@@ -113,7 +107,7 @@ public:
                         EXPECT_EQ(core::NodeType::NT_CallExpr, (*parallelFunctionCall)->getNodeType());
                 }
             }
-        }else {
+       } else {
             assert(funcType && "Function has unexpected type");
         }
     }
@@ -121,12 +115,9 @@ public:
     void visitJobExpr(const core::JobExprPtr& job) {
 //        std::cout << ": get a job!\n";
 
-        core::JobExpr j = *job;
-
-        core::JobExpr::ChildList childs = j.getChildList();
-
-        //at least the local and global range has to be captured
-        EXPECT_LE(static_cast<unsigned>(3), childs.size());
+        core::JobExpr::ChildList childs = job->getChildList();
+        //at least the local and global range has to be captured as well as the type and the  range
+        EXPECT_LE(static_cast<unsigned>(4), childs.size());
 /*
         for(auto I = childs.begin(), E= childs.end(); I != E; ++I) {
             std::cout << "job's child: ";
@@ -140,7 +131,7 @@ public:
 
 TEST(OclCompilerTest, HelloCLTest) {
 	Logger::get(std::cerr, INFO);
-    //CommandLineOptions::Verbosity = 2;
+    CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::create(manager);
 
@@ -161,17 +152,17 @@ TEST(OclCompilerTest, HelloCLTest) {
     core::visitAll(program, otv);
 
 
-    LOG(INFO) << pp;
+//    LOG(INFO) << pp;
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck());
+    std::cout << "doll\n";
     std::sort(errors.begin(), errors.end());
     for_each(errors, [](const core::Message& cur) {
-        std::cout << cur << std::endl;
+        LOG(INFO) << cur << std::endl;
 /*        core::NodeAddress address = cur.getAddress();
         core::NodePtr context = address.getParentNode(address.getDepth()-1);
         std::cout << "\t Context: " <<
                 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
 */
     });
-
 }
