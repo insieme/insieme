@@ -336,9 +336,8 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->
 
 TYPE(JobRange, "JobRange")
 
-LITERAL(CreateUnboundRange, "createRange",    "()->JobRange")						// no constrains
-LITERAL(CreateBoundRange,   "createRange",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
-LITERAL(CreateMinRange,     "createMinRange", "(uint<#8>)->JobRange")				// lower bound only
+LITERAL(CreateMinRange,     "Range",    "(uint<#8>)->JobRange")					// lower boundery only
+LITERAL(CreateBoundRange,   "Range",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
 
 
 // --------------------------------------------------------------------------------------------------------------------

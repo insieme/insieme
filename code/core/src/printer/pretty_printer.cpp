@@ -44,6 +44,7 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/core/ast_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -486,6 +487,9 @@ namespace {
 		PRINT(JobExpr, {
 				// prints the job expression quite similar to a switch expression
 				out << "job";
+				out << "(";
+				this->visit(node->getThreadNumRange());
+				out << ")";
 				if (!node->getLocalDecls().empty()) {
 					out << "[" << ::join(", ", node->getLocalDecls(), [&](std::ostream&, const DeclarationStmtPtr& cur) {
 						this->visit(cur);
@@ -726,6 +730,9 @@ namespace {
 		ADD_FORMATTER(basic.getRealGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
+
+		ADD_FORMATTER(basic.getCreateMinRange(), { OUT("["); PRINT_ARG(0); OUT("-inf]"); });
+		ADD_FORMATTER(basic.getCreateBoundRange(), { OUT("["); PRINT_ARG(0); OUT("-"); PRINT_ARG(1); OUT("]"); });
 
 		#undef ADD_FORMATTER
 		#undef OUT
