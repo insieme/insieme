@@ -34,14 +34,25 @@
  * regarding third party software licenses.
  */
 
+#pragma OPENCL EXTENSION cl_khr_fp64: enable
+
 #include "ocl_device.h"
 
 #pragma insieme mark
-__kernel void hello(__global uchar4 * restrict output, float time, const unsigned int rowstride) {
-	unsigned int i, j;
+__kernel void hello(__global double* g, __local float* l, int i) {
+    double2 x = (double2)0;
+    float2 y = {i, i+0.5};
 
-	  i = get_local_id(0);
-	  //j = get_global_id(1);
+    int gid = get_global_id(0);
+    unsigned int lid = get_local_id(0);
+    l[lid] = g[gid];
+    l[2*lid] = g[gid+i];
 
+    barrier(CLK_LOCAL_MEM_FENCE);
+    x.x = l[i];
+    x.y = l[lid+i];
+
+    x = x+y;
+
+    g[gid] = x.x * x.y;
 }
-
