@@ -41,7 +41,7 @@
 
 #include "insieme/simple_backend/code_management.h"
 #include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/name_generator.h"
+#include "insieme/simple_backend/name_manager.h"
 
 #include "insieme/utils/map_utils.h"
 
@@ -50,7 +50,7 @@ namespace simple_backend {
 
 using namespace insieme::core;
 
-class ConversionContext;
+class Converter;
 
 
 class FunctionManager {
@@ -58,7 +58,7 @@ class FunctionManager {
 	/**
 	 * The conversion context this manager is part of.
 	 */
-	ConversionContext& cc;
+	Converter& cc;
 
 	/**
 	 * A map linking lambda nodes to prototype declarations within the program code.
@@ -83,7 +83,7 @@ class FunctionManager {
 
 public:
 
-	FunctionManager(ConversionContext& conversionContext) : cc(conversionContext) { }
+	FunctionManager(Converter& conversionContext) : cc(conversionContext) { }
 
 	/**
 	 * Appends the name of the external function to the given context.

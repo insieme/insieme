@@ -73,18 +73,11 @@ TEST(DriverTest, HelloWorldTest) {
 
 	LOG(INFO) << "Converting IR to C...";
 
-	ConversionContext cc(program);
-	auto converted = cc.convert(program);
-
-	std::ostringstream ss;
-	for_each(program->getEntryPoints(), [&converted, &ss](const ExpressionPtr& ep) {
-		ss << converted[ep] << std::endl;
-	});
-
-	LOG(INFO) << "Printing converted code: " << ss.str();
+	auto converted = insieme::simple_backend::convert(program);
+	LOG(INFO) << "Printing converted code: " << *converted;
 
 	std::ofstream out( std::string(SRC_DIR) + "/hello_world.insieme.c" );
-	out << ss.str();
+	out << *converted;
 	out.close();
 
 	LOG(INFO) << "Wrote source to " << SRC_DIR << "/hello_world.insieme.c" << std::endl;

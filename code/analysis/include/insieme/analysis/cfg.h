@@ -131,7 +131,10 @@ class CFG {
 
 	friend std::ostream& std::operator<<(std::ostream& out, const CFG& cfg);
 public:
-	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty, EdgeProperty> NodeDepGraph;
+	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty, EdgeProperty> 	ControlFlowGraph;
+
+	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::CFGElement CFG::NodeProperty::*>::type NodePropertyMap;
+	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::CFGEdge CFG::EdgeProperty::*>::type 	EdgePropertyMap;
 
 	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor 	VertexTy;
 	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor 	EdgeTy;
@@ -140,7 +143,7 @@ public:
 
 	VertexTy addCFGNode(const cfg::CFGElement& block) {
 		VertexTy&& v = boost::add_vertex(graph);
-		typename boost::property_map<CFG::NodeDepGraph, cfg::CFGElement CFG::NodeProperty::*>::type&& node = get(&NodeProperty::node, graph);
+		NodePropertyMap&& node = get(&NodeProperty::node, graph);
 		boost::put(node, v, block);
 		return v;
 	}

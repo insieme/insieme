@@ -149,12 +149,23 @@ endif()
 # enable C++0x support within gcc (if supported)
 if (CMAKE_COMPILER_IS_GNUCXX)
 
+	# add general flags
 	add_definitions( -fshow-column )
+	add_definitions( -Wall )
 
+	# add flags for debug mode
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+
+	# ENABLE PROFILING
+	# add_definitions( -pg )
+	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
+
+
+	# check for -std=c++0x
 	include(CheckCXXCompilerFlag)
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
 	if(CXX0X_Support)
-		add_definitions( -std=c++0x )
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	else()
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
@@ -163,18 +174,6 @@ endif()
 # enable warnings
 if(MSVC) 
 	add_definitions( /W4 )
-endif()
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-	add_definitions( -Wall )
-endif()
-
-# Add debug symbols
-if (CMAKE_COMPILER_IS_GNUCXX)
-	add_definitions( -g )
-	# ENABLE PROFILING
-	# add_definitions( -pg )
-	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 endif()
 
 # --------------------------------------------------------- Valgrind / GTest testiong suite

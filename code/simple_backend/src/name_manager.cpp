@@ -48,7 +48,7 @@ namespace simple_backend {
 
 using namespace insieme::core;
 
-string NameGenerator::getName( const NodePtr& ptr, const string& fragment) {
+string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 
 	// test whether a name has already been picked
 	auto it = nameMap.find(ptr);
@@ -94,12 +94,12 @@ string NameGenerator::getName( const NodePtr& ptr, const string& fragment) {
 	return getName(ptr, fragment);
 }
 
-void NameGenerator::setName(const core::NodePtr& ptr, const string& name) {
+void NameManager::setName(const core::NodePtr& ptr, const string& name) {
 	auto res = nameMap.insert(make_pair(ptr, name));
 	assert(res.second && "Tried to alter name after first assignment!");
 }
 
-string NameGenerator::getVarName(const VariablePtr& var) {
+string NameManager::getVarName(const VariablePtr& var) {
 	return getName(var);
 }
 

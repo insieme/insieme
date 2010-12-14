@@ -34,51 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/opencl_backend/opencl_convert.h"
+// Insieme simple runtime
 
-namespace insieme {
-namespace backend {
-namespace ocl {
+#pragma once
 
-using namespace insieme::core;
-using namespace insieme::simple_backend;
+struct _job;
+
+typedef struct _jobArgs {
+	unsigned index, size;
+	struct _job* context;
+} JobArgs;
+
+typedef struct _job {
+	unsigned structSize;
+	unsigned min, max;
+	void (*fun)(JobArgs*);
+} Job;
 
 
-TargetCodePtr convert(const ProgramPtr& source) {
+typedef struct _pforRange {
+	long long start, end, step;
+} PForRange;
 
-	// create and set up the converter
-	Converter converter;
+typedef unsigned ThreadGroup;
 
-	// Prepare managers
-	NodeManager& nodeManager = source->getNodeManager();
-	converter.setNodeManager(&nodeManager);
+ThreadGroup parallel(Job*);
 
-	OclStmtConvert stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
+void merge(ThreadGroup group);
+void barrier(ThreadGroup group);
 
-	NameManager nameManager;
-	converter.setNameManager(&nameManager);
+unsigned getThreadId(unsigned level);
+unsigned getGroupSize(unsigned level);
+ThreadGroup getThreadGroup(unsigned level);
 
-	TypeManager typeManager(nameManager);
-	converter.setTypeManager(&typeManager);
-
-	VariableManager variableManager;
-	converter.setVariableManager(&variableManager);
-
-	FunctionManager functionManager(converter);
-	converter.setFunctionManager(&functionManager);
-
-	// conduct conversion
-	return converter.convert(source);
-}
-
-OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
-
-void OclStmtConvert::visitLiteral(const LiteralPtr& ptr) {
-	// just print strange literal
-	getCodeStream() << ptr->getValue() << "_OK";
-}
-
-} // namespace ocl
-} // namespace backend
-} // namespace insieme
+void pfor(ThreadGroup group, PForRange range, void (*fun)(PForRange range));

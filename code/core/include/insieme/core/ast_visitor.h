@@ -69,6 +69,9 @@ class ASTVisitor {
 
 public:
 
+	/**
+	 * A member type describing the return type of this visitor.
+	 */
 	typedef ReturnType return_type;
 
 	/**

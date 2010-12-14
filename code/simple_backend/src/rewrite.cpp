@@ -35,13 +35,13 @@
  */
 
 #include "insieme/simple_backend/rewrite.h"
-#include "insieme/utils/logging.h"
 
 #include <algorithm>
 #include <fstream>
 #include <limits>
 
-#include "insieme/simple_backend/backend_convert.h"
+#include "insieme/simple_backend/simple_backend.h"
+#include "insieme/utils/logging.h"
 
 namespace {
 using namespace insieme::utils::log;
@@ -190,10 +190,9 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 
 	VLOG(1) << "==== Writing insieme file : " << insiemeFileName << " =================";
 	// Write the insieme file contaning the insieme handled code
-	insieme::simple_backend::ConversionContext convCtx(program);
-	auto converted = convCtx.convert(program);
+	auto converted = insieme::simple_backend::convert(program);
 	std::fstream outFile(insiemeFileName.c_str(), std::fstream::out | std::fstream::trunc);
-	outFile << converted;
+	outFile << *converted;
 
 	VLOG(1) << "Write back completed!";
 }

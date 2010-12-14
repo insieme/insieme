@@ -85,9 +85,7 @@ TEST(OpenCLBackend, Basic) {
 	ASTBuilder build;
 	ProgramPtr prog = setupSampleProgram(build);
 
-	OclConversionContext cc(prog);
-
 	std::cout << "Start OpenCL visit\n";
-	auto converted = cc.convert(prog);
-	std::cout << "Converted code:\n" << converted;
+	auto converted = insieme::backend::ocl::convert(prog);
+	std::cout << "Converted code:\n" << *converted;
 }

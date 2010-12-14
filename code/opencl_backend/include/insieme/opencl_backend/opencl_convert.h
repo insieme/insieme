@@ -35,24 +35,20 @@
  */
 
 #pragma once
+
 #include "insieme/simple_backend/backend_convert.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl {
 
-using namespace core;
-using namespace insieme::simple_backend;
-class OclConversionContext : public ConversionContext {
-public:
-	OclConversionContext(const NodePtr& target);
-	ConvertedCode convert(const ProgramPtr& prog);
-};
+simple_backend::TargetCodePtr convert(const core::ProgramPtr& source);
 
-class OclConvertVisitor : public ConvertVisitor {
+
+class OclStmtConvert : public simple_backend::StmtConverter {
 public:
-	OclConvertVisitor(OclConversionContext& conversionContext);
-	void visitLiteral(const LiteralPtr& ptr);
+	OclStmtConvert(simple_backend::Converter& conversionContext);
+	void visitLiteral(const core::LiteralPtr& ptr);
 };
 
 } // namespace ocl

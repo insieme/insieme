@@ -34,51 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/opencl_backend/opencl_convert.h"
+/**
+ * The Insieme simple_backend runtime system implementation.
+ */
 
-namespace insieme {
-namespace backend {
-namespace ocl {
-
-using namespace insieme::core;
-using namespace insieme::simple_backend;
+#include "insieme/simple_backend/runtime/runtime.h"
 
 
-TargetCodePtr convert(const ProgramPtr& source) {
-
-	// create and set up the converter
-	Converter converter;
-
-	// Prepare managers
-	NodeManager& nodeManager = source->getNodeManager();
-	converter.setNodeManager(&nodeManager);
-
-	OclStmtConvert stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
-
-	NameManager nameManager;
-	converter.setNameManager(&nameManager);
-
-	TypeManager typeManager(nameManager);
-	converter.setTypeManager(&typeManager);
-
-	VariableManager variableManager;
-	converter.setVariableManager(&variableManager);
-
-	FunctionManager functionManager(converter);
-	converter.setFunctionManager(&functionManager);
-
-	// conduct conversion
-	return converter.convert(source);
+ThreadGroup parallel(Job* job) {
+	return -1;
 }
 
-OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
-
-void OclStmtConvert::visitLiteral(const LiteralPtr& ptr) {
-	// just print strange literal
-	getCodeStream() << ptr->getValue() << "_OK";
+void merge(ThreadGroup group) {
+	// TODO: implement
 }
 
-} // namespace ocl
-} // namespace backend
-} // namespace insieme
+void barrier(ThreadGroup group) {
+	// TODO: implement
+}
+
+unsigned getThreadId(unsigned level) {
+	// TODO: implement
+	return 0;
+}
+
+unsigned getGroupSize(unsigned level) {
+	// TODO: implement
+	return 1;
+}
+
+ThreadGroup getThreadGroup(unsigned level) {
+	return -1;
+}
+
+void pfor(ThreadGroup group, PForRange range, void (*fun)(PForRange range)) {
+	// TODO: implement
+	(*fun)(range);
+}
