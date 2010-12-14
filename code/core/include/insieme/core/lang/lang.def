@@ -309,24 +309,37 @@ LITERAL(IfThenElse, "ite", "(bool, () -> 'b, () -> 'b) -> 'b")
 
 GROUP(ParallelOp, Parallel, ParallelDetached)
 
-LITERAL(Parallel, "parallel", "(uint<#a>, uint<#b>, job) -> threadgroup")
-LITERAL(ParallelDetached, "parallel&", "(uint<#a>, uint<#b>, job) -> unit")
+LITERAL(Parallel, "parallel", "(job) -> threadgroup")
+LITERAL(ParallelDetached, "parallel&", "(job) -> unit")
 
 GROUP(MergeOp, Merge, MergeAll)
 
 LITERAL(Merge, "merge", "(threadgroup) -> unit")
 LITERAL(MergeAll, "mergeAll", "() -> unit")
 
-LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
-LITERAL(PFor, "pfor", "(threadgroup, vector<int<#a>,#b>, vector<int<#a>,#b>, vector<int<#a>,#b>, (vector<int<#a>,#b>)->'a)->unit")
 
 GROUP(ThreadOp, GetThreadGroup, GetThreadId)
 
-LITERAL(GetThreadGroup, "getThreadgroup", "(uint<#a>) -> threadgroup")
-LITERAL(GetThreadId, "getThreadid", "(uint<#a>) -> uint<#b>")
+LITERAL(GetThreadGroup, "getThreadGroup", "(uint<#a>) -> threadgroup")
+LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<8>")
+LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<8>")
+
+LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
+LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->unit")
+
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
 // TODO herbert
+
+
+// Range Handling ------------------------------------------------------------------------------------------------
+
+TYPE(JobRange, "JobRange")
+
+LITERAL(CreateUnboundRange, "createRange",    "()->JobRange")						// no constrains
+LITERAL(CreateBoundRange,   "createRange",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
+LITERAL(CreateMinRange,     "createMinRange", "(uint<#8>)->JobRange")				// lower bound only
+
 
 // --------------------------------------------------------------------------------------------------------------------
 

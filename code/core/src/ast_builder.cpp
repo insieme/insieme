@@ -191,6 +191,22 @@ CaptureInitExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const State
 	return captureInitExpr(lambda, values);
 }
 
+CallExprPtr ASTBuilder::getThreadNumRange() const {
+	return callExpr(manager.basic.getCreateUnboundRange());
+}
+
+CallExprPtr ASTBuilder::getThreadNumRange(unsigned min) const {
+	TypePtr type = manager.basic.getUInt8();
+	return callExpr(manager.basic.getCreateMinRange(), literal(type, toString(min)));
+}
+
+CallExprPtr ASTBuilder::getThreadNumRange(unsigned min, unsigned max) const {
+	TypePtr type = manager.basic.getUInt8();
+	return callExpr(manager.basic.getCreateBoundRange(), literal(type, toString(min)), literal(type, toString(max)));
+}
+
+
+
 CallExprPtr ASTBuilder::getThreadGroup(ExpressionPtr level) const {
     if(!level) level = uintLit(0);
     return callExpr(manager.basic.getGetThreadGroup(), level);

@@ -1,8 +1,9 @@
 import os, subprocess, shlex, sys, shutil, time
 
 INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
-CFLAGS = "--std=c99 -I."
-LDFLAGS = "-lm"
+CFLAGS = "--std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
+LDFLAGS_ORG = "-lm"
+LDFLAGS_RES = "-lm -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 CC = "gcc"
 
 class bcolors:
@@ -62,11 +63,15 @@ def run_test_case(test_case_name):
 	if os.path.exists(test_case_name + '/inputs.data'):
 		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
 
+	insiemeFlags = ''
+	if os.path.exists(test_case_name + '/insieme.flags'):
+		insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().split(',')])
+
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
-	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP}".format(
-						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC}) 
+	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP} {FLAGS}".format(
+						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 'FLAGS':insiemeFlags}) 
 					)
 	if check_for_error(test_case_name, ret):
 		os.chdir("../")
@@ -98,12 +103,12 @@ def run_test_case(test_case_name):
 
 	sys.stderr.write(" * Compiling C input...                 ")
 	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS}) 
+						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS_ORG}) 
 					)
 
 	sys.stderr.write(" * Compiling generated C output...      ")
 	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS})
+						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS_RES})
 					)
 	if check_for_error(test_case_name, ret):
 		os.chdir("../")
@@ -116,9 +121,12 @@ def run_test_case(test_case_name):
 	sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 	
 	sys.stderr.write(" * Running output program...            ")
+	ldPath = os.getenv("LD_LIBRARY_PATH", "");
+	os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 	start = time.time()
 	os.system("./test > {0}".format(test_out))
 	sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+	os.putenv("LD_LIBRARY_PATH", ldPath);
 
 	sys.stderr.write(" * Checking generated program output... ")
 	if not check_diff(test_case_name, ref_out, test_out):

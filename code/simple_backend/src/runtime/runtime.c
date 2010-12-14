@@ -34,6 +34,43 @@
  * regarding third party software licenses.
  */
 
+/**
+ * The Insieme simple_backend runtime system implementation.
+ */
+
+#include "insieme/simple_backend/runtime/runtime.h"
+
+
+ThreadGroup parallel(Job* job) {
+	return -1;
+}
+
+void merge(ThreadGroup group) {
+	// TODO: implement
+}
+
+void barrier(ThreadGroup group) {
+	// TODO: implement
+}
+
+unsigned getThreadId(unsigned level) {
+	// TODO: implement
+	return 0;
+}
+
+unsigned getGroupSize(unsigned level) {
+	// TODO: implement
+	return 1;
+}
+
+ThreadGroup getThreadGroup(unsigned level) {
+	return -1;
+}
+
+void pfor(ThreadGroup group, PForRange range, void (*fun)(PForRange range)) {
+	// TODO: implement
+	(*fun)(range);
+}
 #include <insieme/simple_backend/runtime/runtime.h>
 
 #include <pthreads/include/pthread.h>
