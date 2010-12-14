@@ -667,6 +667,9 @@ public:
 	const GuardedStmts& getGuardedStmts() const { return guardedStmts; }
 	const ExpressionPtr& getDefaultStmt() const { return defaultStmt; }
 
+	static JobExprPtr get(NodeManager& manager, const ExpressionPtr& defaultStmt,
+			const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
+
 	static JobExprPtr get(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
 };
