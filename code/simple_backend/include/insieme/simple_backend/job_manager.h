@@ -40,20 +40,34 @@
 #include "insieme/core/expressions.h"
 
 #include "insieme/simple_backend/code_management.h"
-#include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/name_manager.h"
 
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace simple_backend {
 
-using namespace insieme::core;
-
 class Converter;
 
+/**
+ * A simple class handling the creation of parallel jobs within the target code.
+ */
+class JobManager {
 
-class FunctionManager {
+	/**
+	 * A info struct maintaining all the information stored per job.
+	 */
+	struct JobInfo {
+		string structName;			// the name of the struct holding local variables
+		string funName;				// the name of the function to be executed
+		CodePtr structDefinition;	// the definition of the job struct
+		CodePtr jobFunction;		// the definition of the function computing the job
+
+		/**
+		 * A simple constructor for this type.
+		 */
+		JobInfo(const string& structName, const string& funName, CodePtr& structDef, CodePtr& funDef)
+			: structName(structName), funName(funName), structDefinition(structDef), jobFunction(funDef) { }
+	};
 
 	/**
 	 * The conversion context this manager is part of.
@@ -61,47 +75,32 @@ class FunctionManager {
 	Converter& cc;
 
 	/**
-	 * A map linking lambda nodes to prototype declarations within the program code.
+	 * A map linking jobs to their definitions within the resulting source code.
 	 */
-	utils::map::PointerMap<core::LambdaPtr, CodePtr> prototypes;
-
-	/**
-	 * A map linking Lambda expressions (recursive or non-recursive) to closure definitions and
-	 * functions.
-	 */
-	utils::map::PointerMap<core::LambdaPtr, CodePtr> functions;
-
-	/**
-	 * A map linking external function literals to their prototypes.
-	 */
-	utils::map::PointerMap<core::LiteralPtr, CodePtr> externalFunctions;
-
-	/**
-	 * A set accumulating all handled lambda definitions.
-	 */
-	utils::map::PointerMap<core::LambdaDefinitionPtr, CodePtr> functionGroup;
+	utils::map::PointerMap<core::JobExprPtr, JobInfo> jobs;
 
 public:
 
-	FunctionManager(Converter& conversionContext) : cc(conversionContext) { }
+	/**
+	 * Creates a new instance of a Job Manager.
+	 */
+	JobManager(Converter& conversionContext) : cc(conversionContext) { }
 
 	/**
-	 * Appends the name of the external function to the given context.
+	 * Requests this manager to add the code required for creating a Job instance at the current place
+	 * within the given context.
 	 *
-	 * @param context the code fragment the given external function call should be appended to.
-	 * @param external the literal representing the external function.
+	 * @param context the context this job should be created in
+	 * @param job the job to be created
 	 */
-	string getFunctionName(const CodePtr& context, const core::LiteralPtr& external);
-
-	string getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda);
+	void createJob(const CodePtr& context, const core::JobExprPtr& job);
 
 private:
 
-
-	CodePtr resolve(const LambdaDefinitionPtr& definition);
-	CodePtr resolve(const LambdaPtr& lambda);
-
-	CodePtr resolve(const LiteralPtr& literal);
+	/**
+	 * Resolves the given job expression and obtains the necessary information for creating a job.
+	 */
+	JobInfo resolveJob(const core::JobExprPtr& job);
 };
 
 

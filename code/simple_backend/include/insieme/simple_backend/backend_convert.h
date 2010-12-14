@@ -55,9 +55,10 @@
 
 #include "insieme/simple_backend/simple_backend.h"
 #include "insieme/simple_backend/code_management.h"
-#include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/name_manager.h"
+#include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/function_manager.h"
+#include "insieme/simple_backend/job_manager.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -111,11 +112,13 @@ class Converter {
 
 	// A list of managers required for the conversion process
 
+	// TODO: think about replacing pure pointer with shared pointer
 	StmtConverter* stmtConverter;
 	NameManager* nameManager;
 	TypeManager* typeManager;
 	VariableManager* variableManager;
 	FunctionManager* functionManager;
+	JobManager* jobManager;
 	NodeManager* nodeManager;
 
 public:
@@ -185,6 +188,15 @@ public:
 
 	void setFunctionManager(FunctionManager* manager) {
 		functionManager = manager;
+	}
+
+	JobManager& getJobManager() {
+		assert(jobManager);
+		return *jobManager;
+	}
+
+	void setJobManager(JobManager* manager) {
+		jobManager = manager;
 	}
 
 	NodeManager& getNodeManager() {
@@ -437,31 +449,7 @@ private:
 
 	void visitCastExpr(const CastExprPtr& ptr);
 
-	void visitJobExpr(const JobExprPtr& ptr) {
-		//// check if local decls exist, if so generate struct to hold them and populate it
-		//auto localDecls = ptr->getLocalDecls();
-		//if(localDecls.size() > 0) {
-		//	string structName = nameGen.getName(ptr, "jobLocalDecls");
-		//	string structVarName = structName + "__var";
-		//	CodePtr structCode = defCodePtr->addDependency(structName);
-		//	CodeStream& sCStr = structCode->getCodeStream();
-		//	// definition
-		//	sCStr << "struct " << structName << CodeStream::indR << " {\n";
-		//	// variable declaration
-		//	cStr << "struct " << structName << "* " << structVarName << " = new " << structName << ";";
-		//	for_each(localDecls, [&](const DeclarationStmtPtr& cur) {
-		//		auto varExp = cur->getVarExpression();
-		//		// generate definition
-		//		sCStr << this->printTypeName(varExp->getType()) << " " << varExp->getIdentifier().getName() << ";";
-		//		// populate entry
-		//		cStr << structVarName << "." << varExp->getIdentifier().getName() << " = ";
-		//		this->visit(cur->getInitialization());
-		//		cStr << ";";
-		//	});
-		//	sCStr << CodeStream::indL << "};";
-		//	// TODO finish job generation (when runtime lib available)
-		//}
-	}
+	void visitJobExpr(const JobExprPtr& ptr);
 
 	void visitLambdaExpr(const LambdaExprPtr& ptr);
 

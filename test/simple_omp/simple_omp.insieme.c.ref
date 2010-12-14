@@ -1,0 +1,44 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: struct for job __insieme_expr_0 //
+struct struct__insieme_expr_0 { 
+	unsigned structSize;
+	unsigned min, max;
+	void (*fun)(isbr_JobArgs*);
+};
+
+// start code fragment :: Prototype for external function: printf //
+void printf(char*, ...);
+
+// start code fragment :: Definition of __insieme_supp_1 //
+void __insieme_supp_1() {
+	{
+		printf("hello world\n", 0);
+	}
+}
+
+
+// start code fragment :: function for job __insieme_expr_0 //
+void fun__insieme_expr_0(isbr_JobArgs* args) {
+	// ----------- Unpacking local scope variables ----------
+	// ------------------ Processing Guards -----------------
+	// ------------------ Default processing -----------------
+	__insieme_supp_1();
+}
+
+// start code fragment :: Definition of main //
+int main() {
+	{
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct struct__insieme_expr_0)),&((struct struct__insieme_expr_0){sizeof(struct struct__insieme_expr_0),1,1<<20,&fun__insieme_expr_0}),sizeof(struct struct__insieme_expr_0))));
+	}
+}
+

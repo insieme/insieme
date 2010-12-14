@@ -168,6 +168,12 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	if(basic.isVarList(ptr)) {
 		return toEntry("...");
 	}
+	if(basic.isJob(ptr)) {
+		return toEntry("isbr_Job*");
+	}
+	if(basic.isThreadGroup(ptr)) {
+		return toEntry("isbr_ThreadGroup");
+	}
 
 	//assert(0 && "Unhandled generic type.");
 	return toEntry(string("[[unhandled_simple_type: ") + ptr->getName() + "]]");

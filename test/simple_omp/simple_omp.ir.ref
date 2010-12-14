@@ -1,0 +1,25 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        merge(parallel(8, 8, job([1-inf]){
+            default: fun(){
+                printf("hello world\n", varlist.pack(()));
+            }
+        }));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        merge(parallel(8, 8, job(([1-inf])){
+            default: fun(){
+                printf("hello world\n", varlist.pack(()));
+            }
+        }));
+    }
+

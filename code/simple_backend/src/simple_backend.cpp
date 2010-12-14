@@ -65,6 +65,9 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	FunctionManager functionManager(converter);
 	converter.setFunctionManager(&functionManager);
 
+	JobManager jobManager(converter);
+	converter.setJobManager(&jobManager);
+
 	// conduct conversion
 	return converter.convert(source);
 }
