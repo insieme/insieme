@@ -40,7 +40,7 @@
 
 #pragma insieme mark
 __kernel void hello(__global double* g, __local float* l, int i) {
-    float2 x = (double2)0;
+    float2 x = (float2)0;
     float2 y = {i, i+0.5};
 
     int gid = get_global_id(0);
