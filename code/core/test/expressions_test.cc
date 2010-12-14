@@ -363,6 +363,7 @@ TEST(ExpressionsTest, MarkerExpr) {
 
 TEST(ExpressionsTest, JobExpr) {
 	NodeManager manager;
+	ASTBuilder builder(manager);
 
 	TypePtr intType = manager.basic.getUIntGen();
 	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(), manager.basic.getUnit());
@@ -386,12 +387,13 @@ TEST(ExpressionsTest, JobExpr) {
 	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
 	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
 
-	JobExprPtr job = JobExpr::get(manager, defaultHandler, stmts, localDeclarations);
+	ExpressionPtr range = builder.getThreadNumRange(1,40);
+	JobExprPtr job = JobExpr::get(manager, range, defaultHandler, stmts, localDeclarations);
 
 	// check hash codes, children and cloning
 	TypePtr type = manager.basic.getJob();
 	vector<NodePtr> childList;
-	childList.push_back(type);
+	childList.push_back(range);
 	childList.push_back(localDeclarations[0]);
 	childList.push_back(localDeclarations[1]);
 	childList.push_back(guardA);

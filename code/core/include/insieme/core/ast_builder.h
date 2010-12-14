@@ -150,6 +150,11 @@ public:
 	CaptureInitExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 
+	// Creation of thread number ranges
+	CallExprPtr getThreadNumRange() const;
+	CallExprPtr getThreadNumRange(unsigned min) const;
+	CallExprPtr getThreadNumRange(unsigned min, unsigned max) const;
+
 	// Direct call expression of getThreadGroup
 	CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
 	CallExprPtr getThreadId(ExpressionPtr level = ExpressionPtr()) const;

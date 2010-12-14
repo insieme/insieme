@@ -643,12 +643,15 @@ public:
 	typedef std::vector<GuardedStmt> GuardedStmts;
 
 private:
+
+	const ExpressionPtr threadNumRange;
 	const LocalDecls localDecls;
 	const GuardedStmts guardedStmts;
 	const ExpressionPtr defaultStmt;
 
-	JobExpr(const TypePtr& type, const ExpressionPtr& defaultStmt,
+	JobExpr(const TypePtr& type, const ExpressionPtr& range, const ExpressionPtr& defaultStmt,
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
+
 	virtual JobExpr* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
@@ -659,11 +662,12 @@ protected:
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
+	const ExpressionPtr getThreadNumRange() const { return threadNumRange; }
 	const LocalDecls& getLocalDecls() const { return localDecls; }
 	const GuardedStmts& getGuardedStmts() const { return guardedStmts; }
 	const ExpressionPtr& getDefaultStmt() const { return defaultStmt; }
 
-	static JobExprPtr get(NodeManager& manager, const ExpressionPtr& defaultStmt,
+	static JobExprPtr get(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
 };
 
