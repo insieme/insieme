@@ -1007,6 +1007,7 @@ TEST(XmlTest, VariableTest) {
 
 TEST(XmlTest, JobExprTest) {
     NodeManager manager;
+	ASTBuilder builder(manager);
 
 	TypePtr intType = manager.basic.getUIntGen();
 	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(), manager.basic.getUnit());
@@ -1030,10 +1031,13 @@ TEST(XmlTest, JobExprTest) {
 	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
 	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
 
-	JobExprPtr job = JobExpr::get(manager, defaultHandler, stmts, localDeclarations);
+	ExpressionPtr range = builder.getThreadNumRange(1,40);
+	JobExprPtr job = JobExpr::get(manager, range, defaultHandler, stmts, localDeclarations);
+	
+	//JobExprPtr job = JobExpr::get(manager, defaultHandler, stmts, localDeclarations);
 	DummyAnnotationPtr dummy_jn(new DummyAnnotation("job n"));
 	job->addAnnotation(dummy_jn);
-
+	
 	NodePtr root = job;
 	
 	XmlUtil xml;
@@ -1046,7 +1050,7 @@ TEST(XmlTest, JobExprTest) {
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
-
+	
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));

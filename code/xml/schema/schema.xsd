@@ -262,10 +262,10 @@
 
 <xs:complexType name="T_jobExpr">
 	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
 		<xs:element name="declarations" type="T_listDeclarationStmtPtr" minOccurs="1"/>
 		<xs:element name="guardedStatements" type="T_guardedStatements" minOccurs="1"/>		
-		<xs:element name="defaultStatement" type="T_expressionPtr" minOccurs="1"/>	
+		<xs:element name="defaultStatement" type="T_expressionPtr" minOccurs="1"/>
+		<xs:element name="threadNumRange" type="T_expressionPtr" minOccurs="1"/>		
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
 	</xs:all>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
