@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma OPENCL EXTENSION cl_khr_fp64: enable
+
 #include "ocl_device.h"
 
 #pragma insieme mark
@@ -54,4 +56,3 @@ __kernel void hello(__global double* g, __local float* l, int i) {
 
     g[gid] = x.x * x.y;
 }
-

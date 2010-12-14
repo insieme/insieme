@@ -501,10 +501,6 @@ public:
 	void visitJobExpr(const JobExprPtr& cur) {
 		XmlElement jobExpr("jobExpr", doc);
 		rootElem << (jobExpr << XmlElement::Attribute("id", GET_ID(cur)));
-
-		XmlElement type("type", doc);
-		append(type, cur->getType(), "typePtr");
-		jobExpr << type;
 		
 		appendList(jobExpr, cur->getLocalDecls(), "declarations", "declarationStmtPtr");
 
@@ -524,6 +520,10 @@ public:
 		XmlElement defaultStatement("defaultStatement", doc);
 		append(defaultStatement, cur->getDefaultStmt(), "expressionPtr");
 		jobExpr << defaultStatement;
+		
+		XmlElement threadNumRange("threadNumRange", doc);
+		append(threadNumRange, cur->getThreadNumRange(), "expressionPtr");
+		jobExpr << threadNumRange;
 
 		visitAnnotations(cur->getAnnotations(), jobExpr);
 	}

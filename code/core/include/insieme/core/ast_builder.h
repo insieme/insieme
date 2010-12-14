@@ -151,7 +151,6 @@ public:
 	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
 
 	// Creation of thread number ranges
-	CallExprPtr getThreadNumRange() const;
 	CallExprPtr getThreadNumRange(unsigned min) const;
 	CallExprPtr getThreadNumRange(unsigned min, unsigned max) const;
 
