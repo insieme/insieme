@@ -36,6 +36,16 @@
 
 //OpenCL definitions
 
+//define all pragmas per default
+#define cl_khr_fp64
+#define cl_khr_base_atomics
+#define  cl_khr_int64_extended_atomics
+#define cl_khr_3d_image_writes
+#define cl_khr_fp16
+#define CL_APPLE_gl_sharing
+#define CL_KHR_gl_sharing
+#define cl_khr_gl_event
+#define cl_khr_d3d10_sharing
 
 //OpenCL constants
 //TODO change to enums once they are supported
@@ -105,13 +115,13 @@ fvec(float,4)
 fvec(float,8)
 fvec(float,16)
 
-//#ifdef cl_khr_fp64
+#ifdef cl_khr_fp64
 fvec(double,2)
 fvec(double,3)
 fvec(double,4)
 fvec(double,8)
 fvec(double,16)
-//#endif
+#endif
 
 //define build-in functions
 unsigned int get_global_id(unsigned int dmindx);
