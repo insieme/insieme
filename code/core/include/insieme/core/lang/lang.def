@@ -293,12 +293,19 @@ GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorP
 LITERAL(VectorSubscript,     "vector.subscript",     "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform,   "vector.initUniform",   "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitUndefined, "vector.initUndefined", "(intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorPointwise,     "vector.pointwise",     "(vector<'elem,#l>, vector<'elem,#l>, ('elem, 'elem) -> 'res) -> vector<'res,#l>")
+LITERAL(VectorPointwise,     "vector.pointwise",     "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
+//        "(vector<'elem,#l>, vector<'elem,#l>, ('elem, 'elem) -> 'res) -> vector<'res,#l>")
 LITERAL(VectorReduction,     "vector.reduction",     "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
 GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript)
+
+// Accuracy defining functions
+
+LITERAL(AccuracyHigh,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyBestEffort, "accuracy.bestEffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyFast,       "accuracy.fast", "(('a, 'a)->'b) -> ('a, 'a)->'b")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
@@ -336,8 +343,8 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->
 
 TYPE(JobRange, "JobRange")
 
-LITERAL(CreateMinRange,     "Range",    "(uint<#8>)->JobRange")					// lower boundery only
-LITERAL(CreateBoundRange,   "Range",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
+LITERAL(CreateMinRange,     "MinRange",    "(uint<#8>)->JobRange")					// lower boundery only
+LITERAL(CreateBoundRange,   "BoundRange",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
 
 
 // --------------------------------------------------------------------------------------------------------------------
