@@ -61,6 +61,9 @@ namespace insieme {
 namespace analysis {
 namespace cfg {
 
+/**
+ * CFGElement - Represents a top-level expression in a basic block.
+ */
 struct Element : core::StatementPtr {
 	Element(const core::StatementPtr& stmt = core::StatementPtr()) : core::StatementPtr(stmt) { }
 };
@@ -77,8 +80,11 @@ struct Terminator : public Element {
 };
 
 /**
- * Block: A Control Flow Block represents a sequence of statements with
- * a single entry/single exit control point.
+ * Block - Represents a single basic block in a source-level CFG.
+ *  It consists of:
+ *
+ *  (1) A set of statements/expressions (which may contain subexpressions).
+ *  (2) A "terminator" statement (not in the set of statements).
  */
 struct Block {
 	typedef std::vector<Element> StatementList;
@@ -91,7 +97,8 @@ struct Block {
 	const Terminator& getTerminator() const { return term; }
 
 	size_t getSize() const { return stmtList.size(); }
-	// Returns an iterator through the statements contained in this block
+
+	/// Returns an iterator through the statements contained in this block
 	StatementList::const_reverse_iterator stmt_begin() const { return stmtList.rbegin(); }
 	StatementList::const_reverse_iterator stmt_end() const { return stmtList.rend(); }
 

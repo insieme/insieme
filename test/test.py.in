@@ -138,7 +138,12 @@ def run_test_case(test_case_name):
 	sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
 
 	# if the test is successful move the executable in the ../#bin directory for further benchmarking
+	if os.path.exists("../#bin/" + ref_exec):
+		os.remove("../#bin/" + ref_exec)
 	shutil.move(ref_exec, "../#bin/")
+	
+	if os.path.exists("../#bin/" + test_exec):
+		os.remove("../#bin/" + test_exec)
 	shutil.move(test_exec, "../#bin/")
 
 	map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
@@ -155,7 +160,7 @@ def main():
 		tests = sys.argv[1:]
 	elif os.path.exists('./test.cfg'):
 		# read test cases from test.cfg file
-		tests = [test_case for test_case in open('test.cfg').read().split('\n') if not test_case.startswith('#')]
+		tests = [test_case for test_case in open('test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
 	else:
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
