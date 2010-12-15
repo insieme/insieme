@@ -96,6 +96,9 @@ def run_test_case(test_case_name):
 		return 1
 	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
+	ref_exec = test_case_name + '.ref'
+	test_exec = test_case_name + '.test'
+	
 	# file containing the output of the reference program
 	ref_out = "ref.out"
 	# file containing the output of the test program
@@ -103,12 +106,12 @@ def run_test_case(test_case_name):
 
 	sys.stderr.write(" * Compiling C input...                 ")
 	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':'ref', 'LDFLAGS':LDFLAGS_ORG}) 
+						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG}) 
 					)
 
 	sys.stderr.write(" * Compiling generated C output...      ")
 	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':'test', 'LDFLAGS':LDFLAGS_RES})
+						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES})
 					)
 	if check_for_error(test_case_name, ret):
 		os.chdir("../")
@@ -117,14 +120,14 @@ def run_test_case(test_case_name):
 
 	sys.stderr.write(" * Running input program...             ")
 	start = time.time()
-	os.system("./ref > {0}".format(ref_out))
+	os.system("./{0} > {1}".format(ref_exec, ref_out))
 	sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 	
 	sys.stderr.write(" * Running output program...            ")
 	ldPath = os.getenv("LD_LIBRARY_PATH", "");
 	os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 	start = time.time()
-	os.system("./test > {0}".format(test_out))
+	os.system("./{0} > {1}".format(test_exec, test_out))
 	sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 	os.putenv("LD_LIBRARY_PATH", ldPath);
 
@@ -134,8 +137,12 @@ def run_test_case(test_case_name):
 		return 1
 	sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
 
-	map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out, 'ref', 'test'])
+	# if the test is successful move the executable in the ../#bin directory for further benchmarking
+	shutil.move(ref_exec, "../#bin/")
+	shutil.move(test_exec, "../#bin/")
 
+	map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+	
 	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 	os.chdir("../")
 	return 0
