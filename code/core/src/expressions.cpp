@@ -476,7 +476,8 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
-	CallExprPtr range = CallExpr::get(manager, manager.basic.getJobRange(), manager.basic.getCreateUnboundRange(), ExpressionList());
+	ExpressionPtr one = Literal::get(manager, manager.basic.getUInt8(), "1");
+	CallExprPtr range = CallExpr::get(manager, manager.basic.getJobRange(), manager.basic.getCreateMinRange(), toVector(one));
 	return get(manager, range, defaultStmt, guardedStmts, localDecls);
 }
 

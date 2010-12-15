@@ -365,6 +365,11 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 		// => check all child nodes
 		auto childrenA = a->getChildList();
 		auto childrenB = b->getChildList();
+		if (childrenA.size() != childrenB.size()) {
+			// => not unifyable
+			return boost::optional<Substitution>();
+		}
+
 		std::for_each(
 				make_paired_iterator(childrenA.begin(), childrenB.begin()),
 				make_paired_iterator(childrenA.end(), childrenB.end()),

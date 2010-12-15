@@ -58,15 +58,18 @@ std::ostream& ConvertedCode::printTo(std::ostream& out) const {
 
 	// print some general header information ...
 	out << "// --- Generated Inspire Code ---\n";
-	out << "#include <alloca.h>\n";
-	out << "#include <stddef.h>\n";
-	out << "#include <stdlib.h>\n";
+	out << "#include <alloca.h>" << std::endl;
+	out << "#include <stddef.h>" << std::endl;
+	out << "#include <stdlib.h>" << std::endl;
+
+	out << "#include <runtime.h>" << std::endl;
+
 
 	// add some macro definitions
-	out << "#define bool int\n";
-	out << "#define true 1\n";
-	out << "#define false 0\n";
-	out << "#define null 0\n";
+	out << "#define bool int" << std::endl;
+	out << "#define true 1" << std::endl;
+	out << "#define false 0" << std::endl;
+	out << "#define null 0" << std::endl;
 
 	// add code for entry points
 	for_each(getSource()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
@@ -93,6 +96,11 @@ TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
 		converted->addFragment(ep, fragment);
 	});
 	return TargetCodePtr(converted);
+}
+
+void StmtConverter::visitJobExpr(const JobExprPtr& ptr) {
+	// just use job manager
+	cc.getJobManager().createJob(getCode(), ptr);
 }
 
 
@@ -852,6 +860,12 @@ namespace detail {
 				OUT(converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), target, true));
 				OUT(")");
 		});
+
+
+		// handle parallel operators
+		ADD_FORMATTER_DETAIL(basic.getParallel(), false, { OUT("isbr_parallel("); VISIT_ARG(2); OUT(")"); });
+		ADD_FORMATTER_DETAIL(basic.getMerge(), false, { OUT("isbr_merge("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(basic.getBarrier(), false, { OUT("isbr_barrier("); VISIT_ARG(0); OUT(")"); });
 
 
 		#undef ADD_FORMATTER

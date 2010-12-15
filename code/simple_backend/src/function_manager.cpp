@@ -123,23 +123,6 @@ CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
 }
 
 
-void FunctionManager::createCallable(const CodePtr& context, const core::CaptureInitExprPtr& capture) {
-
-//	// extract sub-expression
-//	auto subExpr = capture->getLambda();
-//	assert(subExpr->getNodeType() == NT_LambdaExpr && "Simple backend can't handle capture init expressions");
-//
-//	// convert to lambda expression
-//	LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(subExpr);
-//
-//	// lookup code information
-//	const LambdaCode& code = resolve(lambda);
-//
-//	// use code to generate initialization
-
-
-}
-
 string FunctionManager::getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda) {
 
 	// the pointer to the prototype

@@ -34,39 +34,17 @@
  * regarding third party software licenses.
  */
 
-// Insieme simple runtime
-
 #pragma once
 
-struct _isbr_job;
-struct _isbr_threadGroupImpl;
+#include <pthread.h>
 
-typedef struct _isbr_threadGroupImpl* isbr_ThreadGroup;
+typedef struct {
+    int needed;
+    int called;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+} isbr_barrier_t;
 
-typedef struct _isbr_jobArgs {
-	unsigned index, size;
-	struct _isbr_job* context;
-	isbr_ThreadGroup group;
-} isbr_JobArgs;
-
-typedef struct _isbr_job {
-	unsigned structSize;
-	unsigned min, max;
-	void (*fun)(isbr_JobArgs*);
-} isbr_Job;
-
-typedef struct _isbr_pforRange {
-	long long start, end, step;
-} isbr_PForRange;
-
-
-isbr_ThreadGroup isbr_parallel(isbr_Job*);
-
-void isbr_merge(isbr_ThreadGroup group);
-void isbr_barrier(isbr_ThreadGroup group);
-
-unsigned isbr_getThreadId(unsigned level);
-unsigned isbr_getGroupSize(unsigned level);
-isbr_ThreadGroup isbr_getThreadGroup(unsigned level);
-
-void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PForRange range));
+int isbr_barrier_init(isbr_barrier_t *barrier, int needed);
+int isbr_barrier_destroy(isbr_barrier_t *barrier);
+int isbr_barrier_wait(isbr_barrier_t *barrier);

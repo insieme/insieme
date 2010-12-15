@@ -176,6 +176,9 @@ if(MSVC)
 	add_definitions( /W4 )
 endif()
 
+# --------------------------------------------------------- Runtime
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+
 # --------------------------------------------------------- Valgrind / GTest testiong suite
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)

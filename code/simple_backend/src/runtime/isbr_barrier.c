@@ -34,39 +34,34 @@
  * regarding third party software licenses.
  */
 
-// Insieme simple runtime
+#include "insieme/simple_backend/runtime/isbr_barrier.h"
 
-#pragma once
+#include <assert.h>
+#define PTHREADCHECK(_test) assert(_test==0)
 
-struct _isbr_job;
-struct _isbr_threadGroupImpl;
+int isbr_barrier_init(isbr_barrier_t *barrier, int needed) {
+    barrier->needed = needed;
+	barrier->called = 0;
+	PTHREADCHECK(pthread_mutex_init(&barrier->mutex, NULL));
+	PTHREADCHECK(pthread_cond_init(&barrier->cond, NULL));
+    return 0;
+}
 
-typedef struct _isbr_threadGroupImpl* isbr_ThreadGroup;
+int isbr_barrier_destroy(isbr_barrier_t *barrier) {
+    PTHREADCHECK(pthread_mutex_destroy(&barrier->mutex));
+    PTHREADCHECK(pthread_cond_destroy(&barrier->cond));
+    return 0;
+}
 
-typedef struct _isbr_jobArgs {
-	unsigned index, size;
-	struct _isbr_job* context;
-	isbr_ThreadGroup group;
-} isbr_JobArgs;
-
-typedef struct _isbr_job {
-	unsigned structSize;
-	unsigned min, max;
-	void (*fun)(isbr_JobArgs*);
-} isbr_Job;
-
-typedef struct _isbr_pforRange {
-	long long start, end, step;
-} isbr_PForRange;
-
-
-isbr_ThreadGroup isbr_parallel(isbr_Job*);
-
-void isbr_merge(isbr_ThreadGroup group);
-void isbr_barrier(isbr_ThreadGroup group);
-
-unsigned isbr_getThreadId(unsigned level);
-unsigned isbr_getGroupSize(unsigned level);
-isbr_ThreadGroup isbr_getThreadGroup(unsigned level);
-
-void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PForRange range));
+int isbr_barrier_wait(isbr_barrier_t *barrier) {
+	PTHREADCHECK(pthread_mutex_lock(&barrier->mutex));
+    barrier->called++;
+    if(barrier->called == barrier->needed) {
+		barrier->called = 0;
+        PTHREADCHECK(pthread_cond_broadcast(&barrier->cond));
+	} else {
+        PTHREADCHECK(pthread_cond_wait(&barrier->cond, &barrier->mutex));
+    }
+    PTHREADCHECK(pthread_mutex_unlock(&barrier->mutex));
+    return 0;
+}

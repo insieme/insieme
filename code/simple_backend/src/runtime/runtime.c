@@ -39,35 +39,111 @@
  */
 
 #include "insieme/simple_backend/runtime/runtime.h"
+#include "insieme/simple_backend/runtime/isbr_barrier.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-ThreadGroup parallel(Job* job) {
-	return -1;
+#include <pthread.h>
+
+#define PTHREADCHECK(_test) assert(_test==0)
+
+// -------------------------------------------------------------------------------------- internals declarations
+
+struct _isbr_threadGroupImpl {
+	unsigned numThreads;
+	pthread_t* threads;
+	isbr_barrier_t barrier;
+} isbr_ThreadGroupImpl;
+
+pthread_key_t isbr_getJobArgKey();
+void* isbr_jobRunner(void *arg);
+
+// -------------------------------------------------------------------------------------- public function implementation
+
+isbr_ThreadGroup isbr_parallel(isbr_Job* jobDescription) {
+	// perform initialization
+	isbr_getJobArgKey();
+
+	unsigned numThreads = jobDescription->min;
+	isbr_JobArgs* args = (isbr_JobArgs*) calloc(numThreads, sizeof(isbr_JobArgs));
+	isbr_ThreadGroup threadGroup = (isbr_ThreadGroup) calloc(1, sizeof(isbr_ThreadGroupImpl));
+
+	// initialize threadgroup
+	threadGroup->numThreads = numThreads;
+	isbr_barrier_init(&threadGroup->barrier, numThreads);
+	threadGroup->threads = (pthread_t*) calloc(numThreads, sizeof(pthread_t));
+	for(unsigned i=0; i<numThreads; ++i) {
+		args[i].index = i;
+		args[i].size = numThreads;
+		args[i].context = jobDescription;
+		args[i].group = threadGroup;
+	}
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+
+	// Start threads, don't be tempted to join this with the loop above
+	for(unsigned i=0; i<numThreads; ++i) {
+		pthread_create(threadGroup->threads + i, &attr, &isbr_jobRunner, &args[i]); 
+	}
+	return threadGroup;
 }
 
-void merge(ThreadGroup group) {
-	// TODO: implement
+void isbr_merge(isbr_ThreadGroup group) {
+	for(unsigned i=0; i<group->numThreads; ++i) {
+		pthread_join(group->threads[i], NULL);
+	}
 }
 
-void barrier(ThreadGroup group) {
-	// TODO: implement
+void isbr_barrier(isbr_ThreadGroup group) {
+	isbr_barrier_wait(&group->barrier);
 }
 
-unsigned getThreadId(unsigned level) {
-	// TODO: implement
-	return 0;
+unsigned isbr_getThreadId(unsigned level) {
+	// TODO: implement level
+	return ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()))->index;
 }
 
-unsigned getGroupSize(unsigned level) {
-	// TODO: implement
-	return 1;
+unsigned isbr_getGroupSize(unsigned level) {
+	// TODO: implement level
+	return ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()))->size;
 }
 
-ThreadGroup getThreadGroup(unsigned level) {
-	return -1;
+isbr_ThreadGroup isbr_getThreadGroup(unsigned level) {
+	// TODO: implement level
+	return ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()))->group;
 }
 
-void pfor(ThreadGroup group, PForRange range, void (*fun)(PForRange range)) {
-	// TODO: implement
-	(*fun)(range);
+void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PForRange range)) {
+	// TODO: implement group other than current
+	// stupid non-normalized loops
+	isbr_PForRange myRange;
+	// TODO handle stupid corner cases
+	long long numit = (range.end - range.start) / (range.step);
+	long long chunk = numit / group->numThreads;
+	myRange.start = range.start + isbr_getThreadId(0) * chunk * range.step;
+	myRange.end = myRange.start + chunk * range.step;
+	myRange.step = range.step;
+	if(isbr_getThreadId(0) == isbr_getGroupSize(0)-1) myRange.end = range.end;
+	(*fun)(myRange);
+}
+
+// -------------------------------------------------------------------------------------- internals implementation
+
+pthread_key_t isbr_getJobArgKey() {
+	static bool initialized;
+	static pthread_key_t jobArgKey;
+	if(!initialized) {
+		PTHREADCHECK(pthread_key_create(&jobArgKey, NULL /* destructor */));
+		initialized = true;
+	}
+	return jobArgKey;
+}
+
+void* isbr_jobRunner(void *arg) {
+	isbr_JobArgs *jobArgs = (isbr_JobArgs*)arg;
+	PTHREADCHECK(pthread_setspecific(isbr_getJobArgKey(), arg));
+	jobArgs->context->fun(jobArgs);
+	return NULL;
 }
