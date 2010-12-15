@@ -44,20 +44,25 @@
 namespace insieme {
 namespace analysis {
 class CFG;
+namespace cfg {
+class Block;
+class Terminator;
+}
 } // end analysis namespace
 } // end insieme namespace
 
 namespace std {
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg);
+std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block);
+std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Terminator& term);
 } // end std namespace
 
 namespace insieme {
 namespace analysis {
 namespace cfg {
 
-struct CFGElement : public core::StatementPtr {
-	CFGElement() : core::StatementPtr() { }
-	CFGElement(const core::StatementPtr& stmt) : core::StatementPtr(stmt) { }
+struct Element : core::StatementPtr {
+	Element(const core::StatementPtr& stmt = core::StatementPtr()) : core::StatementPtr(stmt) { }
 };
 
 /**
@@ -67,40 +72,35 @@ struct CFGElement : public core::StatementPtr {
  * If the control-flow is conditional, the condition expression will appear
  * within the set of statements in the block (usually the last statement).
  */
-struct Terminator : public CFGElement {
-	Terminator() : CFGElement() { }
-	Terminator(const core::StatementPtr& stmt) : CFGElement(stmt) { }
+struct Terminator : public Element {
+	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : Element(stmt) { }
 };
 
 /**
- * CFGBlock: A Control Flow Block represents a sequence of statements with
+ * Block: A Control Flow Block represents a sequence of statements with
  * a single entry/single exit control point.
  */
-struct CFGBlock {
-	typedef std::vector<CFGElement> StatementList;
-
-	CFGBlock() { }
-	CFGBlock(const CFGBlock& other) : stmtList(other.stmtList) { }
-	~CFGBlock() { }
+struct Block {
+	typedef std::vector<Element> StatementList;
+	Block() { }
 
 	// Appends a statement to an existing CFGBlock
 	void appendStmt(const core::StatementPtr& stmt) { stmtList.push_back(stmt); }
 
-	// merges two CFGBlocks by appending statements of other into this
-	void merge(const CFGBlock& other) {
-		std::copy(other.stmt_begin(), other.stmt_end(), std::back_inserter(stmtList));
-	}
+	void setTerminal(const core::StatementPtr& stmt) { term = stmt; }
+	const Terminator& getTerminator() const { return term; }
 
+	size_t getSize() const { return stmtList.size(); }
 	// Returns an iterator through the statements contained in this block
-	StatementList::const_iterator stmt_begin() const { return stmtList.begin(); }
-	StatementList::const_iterator stmt_end() const { return stmtList.end(); }
+	StatementList::const_reverse_iterator stmt_begin() const { return stmtList.rbegin(); }
+	StatementList::const_reverse_iterator stmt_end() const { return stmtList.rend(); }
 
 private:
 	StatementList 	stmtList;
 	Terminator		term;
 };
 
-struct CFGEdge {
+struct Edge {
 
 };
 
@@ -109,11 +109,14 @@ struct CFGEdge {
 class CFG {
 
 	struct NodeProperty {
-		cfg::CFGElement node;
+		cfg::Block block;
+
+		NodeProperty() { }
+		NodeProperty(const cfg::Block& block) : block(block) { }
 	};
 
 	struct EdgeProperty {
-		cfg::CFGEdge edge;
+		cfg::Edge edge;
 	};
 
 	template <class NodeTy>
@@ -123,7 +126,8 @@ class CFG {
 
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=\"" << *prop[v] << "\"]";
+			const cfg::Block& node = prop[v];
+			out << node;
 		}
 	private:
 		NodeTy& prop;
@@ -131,42 +135,74 @@ class CFG {
 
 	friend std::ostream& std::operator<<(std::ostream& out, const CFG& cfg);
 public:
-	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, NodeProperty, EdgeProperty> 	ControlFlowGraph;
+	// The CFG will be internally represented by an adjacency list (we cannot use an adjacency matrix because the number
+	// of nodes in the graph is not known before hand), the CFG is a directed graph node and edge property classes
+	// are used to represent control flow blocks and edges properties
+	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS, NodeProperty, EdgeProperty> 		ControlFlowGraph;
 
-	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::CFGElement CFG::NodeProperty::*>::type NodePropertyMap;
-	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::CFGEdge CFG::EdgeProperty::*>::type 	EdgePropertyMap;
+	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::Block CFG::NodeProperty::*>::type 			NodePropertyMapTy;
+	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::Block CFG::NodeProperty::*>::const_type 	ConstNodePropertyMapTy;
 
-	typedef typename boost::graph_traits<NodeDepGraph>::vertex_descriptor 	VertexTy;
-	typedef typename boost::graph_traits<NodeDepGraph>::edge_descriptor 	EdgeTy;
+	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::*>::type 			EdgePropertyMapTy;
+	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::*>::const_type 	ConstEdgePropertyMapTy;
+
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 	VertexTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 	EdgeTy;
+
+	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 	OutEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 	InEdgeIterator;
 
 	CFG() { }
 
-	VertexTy addCFGNode(const cfg::CFGElement& block) {
-		VertexTy&& v = boost::add_vertex(graph);
-		NodePropertyMap&& node = get(&NodeProperty::node, graph);
-		boost::put(node, v, block);
-		return v;
+	/**
+	 * Adds a CFG element (or node) to the Control flow graph.
+	 *
+	 * @param block
+	 * @return
+	 */
+	VertexTy addNode(const cfg::Block& block) {
+		return boost::add_vertex(NodeProperty(block), graph);
 	}
 
-	EdgeTy addCFGEdge(VertexTy src, VertexTy dest) { }
+	VertexTy addNode() {
+		return boost::add_vertex(graph);
+	}
 
-	static CFG buildCFG(const core::StatementPtr& rootNode);
+	/**
+	 * Returns a cfg element of the graph given its vertex id.
+	 *
+	 * @param vertexId
+	 * @return
+	 */
+	cfg::Block& getNode(const VertexTy& vertexId) {
+		NodePropertyMapTy&& node = get(&NodeProperty::block, graph);
+		return node[vertexId];
+	}
+
+	const cfg::Element& getNode(const VertexTy& vertexId) const { return getNode(vertexId); }
+
+
+	EdgeTy addEdge(VertexTy src, VertexTy dest, const cfg::Edge& edge) {
+
+	}
+
+	EdgeTy addEdge(VertexTy src, VertexTy dest) {
+		return boost::add_edge(src, dest, graph).first;
+	}
+
+	ControlFlowGraph& getGraph() { return graph; }
+
+	/**
+	 * Builds a control flow graph starting from the rootNode
+	 *
+	 * @param rootNode
+	 * @return
+	 */
+	static CFG buildCFG(const core::ProgramPtr& rootNode);
 private:
-	NodeDepGraph	graph;
+	ControlFlowGraph	graph;
 };
 
 } // end analysis namespace
 } // end insieme namespace
 
-
-namespace std {
-
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
-	using namespace insieme::analysis;
-
-	typename boost::property_map<CFG::NodeDepGraph, cfg::CFGElement CFG::NodeProperty::*>::const_type&& node = get(&CFG::NodeProperty::node, cfg.graph);
-	boost::write_graphviz(out, cfg.graph, CFG::LabelWriter<typename boost::property_map<CFG::NodeDepGraph, cfg::CFGElement CFG::NodeProperty::*>::const_type>(node));
-	return out;
-}
-
-} // end std namespace

@@ -51,6 +51,8 @@
 // #include "insieme/opencl_backend/opencl_convert.h"
 // #include "insieme/opencl_backend/opencl_checker.h"
 
+#include "insieme/analysis/cfg.h"
+
 #include "insieme/c_info/naming.h"
 
 #include "insieme/utils/container_utils.h"
@@ -72,6 +74,7 @@ using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace xml = insieme::xml;
+namespace analysis = insieme::analysis;
 
 int main(int argc, char** argv) {
 
@@ -98,7 +101,6 @@ int main(int argc, char** argv) {
 			program = p.convert();
 			convertTimer.stop();
 			LOG(INFO) << convertTimer;
-
 
 			// perform some performance benchmarks
 			if (CommandLineOptions::BenchmarkCore) {
@@ -153,6 +155,17 @@ int main(int argc, char** argv) {
 				substitutionTime2.stop();
 				LOG(INFO) << substitutionTime2;
 				LOG(INFO) << "Number of modifications: " << count;
+			}
+
+			// Dump CFG
+			if(!CommandLineOptions::CFG.empty()) {
+				insieme::utils::Timer timer("Build.CFG");
+				std::fstream dotFile(CommandLineOptions::CFG.c_str(), std::fstream::out | std::fstream::trunc);
+				analysis::CFG graph = analysis::CFG::buildCFG(program);
+				timer.stop();
+				dotFile << graph;
+
+				LOG(INFO) << timer;
 			}
 
 			// perform checks

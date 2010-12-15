@@ -54,8 +54,25 @@ TEST(SimpleBackend, BasicCFG) {
 	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 3), literal);
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
+	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(cs0, stmt1));
+	CompoundStmtPtr cs2 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt2, cs1));
 
-	CFG cfg = CFG::buildCFG(cs0);
+//	CFG cfg = CFG::buildCFG(cs2);
 
-	std::cout << cfg;
+//	std::cout << cfg;
+}
+
+TEST(SimpleBackend, IfStmt) {
+
+	NodeManager manager;
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
+	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
+	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
+	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+
+	IfStmtPtr stmt = IfStmt::get(manager, var, stmt1, stmt2);
+
+//	CFG cfg = CFG::buildCFG(stmt);
+
+//	std::cout << cfg;
 }

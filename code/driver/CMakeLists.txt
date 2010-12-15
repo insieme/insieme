@@ -18,6 +18,7 @@ file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
+include_directories( ${insieme_analysis_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
 include_directories( ${insieme_opencl_backend_include_dir} )
 include_directories( ${insieme_c_info_include_dir} )
@@ -33,7 +34,7 @@ add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simpl
 
 # register linked libraries
 target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_transform insieme_simple_backend 
-							insieme_opencl_backend insieme_c_info insieme_xml )
+							insieme_opencl_backend insieme_c_info insieme_xml insieme_analysis )
 
 # add boost_program_options library
 target_link_libraries( main ${Boost_PROGRAM_OPTIONS_LIBRARY})
