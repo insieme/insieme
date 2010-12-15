@@ -39,14 +39,10 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-
 #include "insieme/opencl_backend/opencl_convert.h"
-
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
-
 #include "insieme/utils/set_utils.h"
-
 #include "insieme/c_info/naming.h"
 
 using namespace insieme::core;
@@ -56,7 +52,18 @@ using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 using namespace insieme::backend::ocl;
 
-ProgramPtr setupSampleProgram(ASTBuilder& build) {
+
+#include "insieme/frontend/program.h"
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/utils/logging.h"
+
+using namespace insieme::utils::set;
+using namespace insieme::utils::log;
+
+
+/*ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 	BasicGenerator typeGen(build.getNodeManager());
 
@@ -88,4 +95,25 @@ TEST(OpenCLBackend, Basic) {
 	std::cout << "Start OpenCL visit\n";
 	auto converted = insieme::backend::ocl::convert(prog);
 	std::cout << "Converted code:\n" << *converted;
+}*/
+
+TEST(OpenCLBackend, HelloCLTest) {
+    NodeManager manager;
+    ProgramPtr program = Program::create(manager);
+
+	std::cout << "Converting input program '" << string(SRC_DIR) << "hello.cl" << "' to IR...\n";
+	insieme::frontend::Program prog(manager);
+
+	std::cout << SRC_DIR << std::endl;
+	prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
+	program = prog.convert();
+	std::cout << "Done.\n";
+
+	insieme::core::printer::PrettyPrinter pp(program);
+	std::cout << "Printing the IR: " << pp;
+	
+	std::cout << "Start OpenCL Backend visit\n";
+	auto converted = insieme::backend::ocl::convert(program);
+	std::cout << "Converted code:\n" << *converted;
 }
+
