@@ -43,6 +43,7 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
 
+namespace ba = boost::algorithm;
 
 namespace insieme {
 namespace frontend {
@@ -283,6 +284,16 @@ private:
         }
     }
 
+    core::CallExprPtr resolveNative(const core::CallExprPtr& nativeOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args,
+            size_t preambleLength) {
+
+        core::CallExprPtr la = name  == "native_divide" ?
+                builder.callExpr(BASIC.getAccuracyFast(), BASIC.getRealDiv()) :
+                builder.callExpr(BASIC.getAccuracyFast(), builder.literal(name.substr(preambleLength,name.size()), type));
+
+        return builder.callExpr(la, args);
+    }
+
 
 public:
 
@@ -326,17 +337,31 @@ public:
 
                     return kd.accessId(OPL_GROUP, args.at(0));
                 }
+
+
                 if(literal->getValue() == "get_local_id") {
                     assert(args.size() == 1 && "Function get_local_id must have exactly 1 argument");
 
                     return kd.accessId(OPL_LOCAL, args.at(0));
                 }
 
-                // syncronization
+                // synchronization
                 if(literal->getValue() == "ocl_barrier") {
                     assert(args.size() == 1 && "Function barrier must have exactly 1 argument");
 
                     return kd.callBarrier(args.at(0));
+                }
+
+                // native math functions
+                if(literal->getValue().find("native_") != string::npos) {
+                    assert(args.size() >= 1 && "Native mathematical operations must have at least 1 arguments");
+
+                    return resolveNative(call, literal->getValue(), literal->getType(), args, 7);
+                }
+                if(literal->getValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
+                    assert(args.size() >= 1 && "Mathematical operations must have at least 1 arguments");
+
+                    return resolveNative(call, literal->getValue(), literal->getType(), args, 5);
                 }
             }
         /*
@@ -583,45 +608,6 @@ private:
         return builder.lambdaExpr(lpfType, body, localFunCaptures, core::Lambda::ParamList());
     }
 
-
-    std::vector<core::ExpressionPtr> gen3dPforArgs(core::VariablePtr end, core::ExpressionPtr body) {
-        std::vector<core::ExpressionPtr> expr;
-
-        expr.push_back(builder.getThreadGroup());
-        // start vector of pfor loop: [0,0,0]
-        expr.push_back(INT3DVECINIT("0"));
-        // end vector of pfor
-        expr.push_back(end)/*)*/;
-        // increment vector of pfor loop: [1,1,1]
-        expr.push_back(INT3DVECINIT("1"));
-        // lambda to be called
-        expr.push_back(body);
-
-        return expr;
-    }
-/*
-    // Creates the initial mapping of the vaiables: each variable (except for in-body private variables) will be mapped on itself
-    void getInitialVariables(VariableMapping& variableMapping) {
-        // constant arguments
-        variableMapping.add(constantArgs);
-
-        // global arguments
-        variableMapping.add(globalArgs);
-
-        // local arguments
-        variableMapping.add(localArgs);
-
-        // local in-body variables
-        variableMapping.add(kernelMapper.getLocalDeclarations());
-
-        // private arguments
-        variableMapping.add(privateArgs);
-
-        // private in-body variables
-        // not needed, is it?
-
-    }
-*/
 public:
 
     OclMapper(core::ASTBuilder& astBuilder)
@@ -776,7 +762,7 @@ public:
                     core::ExpressionPtr localParFct = genLocalCie(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
                     core::JobExpr::LocalDecls localJobShared;
-
+std::cout << "1\n";
                     createDeclarations(localJobShared, constantArgs);
                     createDeclarations(localJobShared, globalArgs);
                     createDeclarations(localJobShared, localArgs);
@@ -801,6 +787,7 @@ public:
 //                    expr.push_back(localRangeProduct); // min and max threads are equal
 
                     expr.push_back(localJob);
+                    std::cout << "2\n";
 
                     core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(),
                             builder.getNodeManager().basic.getParallel(), expr);
@@ -819,6 +806,7 @@ public:
                     // catch all arguments which are shared in global range
                     core::JobExpr::LocalDecls globalJobShared;
 
+                    std::cout << "3\n";
                     createDeclarations(globalJobShared, constantArgs);
                     createDeclarations(globalJobShared, globalArgs);
                     // catch loop boundaries
@@ -846,6 +834,7 @@ public:
                     appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
 
                     newParams.push_back(kd.globalRange); // add global range to parameters
+                    std::cout << "4\n";
 
                     std::vector<core::StatementPtr> newBodyStmts;
 
@@ -853,24 +842,27 @@ public:
                     if(!workGroupSizeDefined)
                         newParams.push_back(kd.localRange); // add the local range argument
                     else {
-                        //declare and set the local range if provided by work group size attribute
+                        // add a variable that will never be used just to keep interface consistent
                         newParams.push_back(builder.variable(builder.vectorType(BASIC.getUInt4(),
-                            core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))))); // add a variable that will never be used just to keep interface consistent
+                            core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)))));
 
+                        //declare and set the local range if provided by work group size attribute
                         core::DeclarationStmtPtr lrd = builder.declarationStmt(kd.localRange, builder.vectorExpr(toVector<core::ExpressionPtr>(
                                 builder.uintLit(wgs[0]), builder.uintLit(wgs[1]), builder.uintLit(wgs[2]))));
                         newBodyStmts.push_back(lrd);
                     }
-
+std::cout << "5\n";
                      //declare group range
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
                             builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
-                            BASIC.getVectorPointwise(), kd.globalRange, kd.localRange, BASIC.getUnsignedIntDiv()));
+                            builder.callExpr(BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
+                    std::cout << "6\n";
                     newBodyStmts.push_back(groupRdecl);
 
                     //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
                     newBodyStmts.push_back(globalPar);
+                    std::cout << "6\n";
 
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
