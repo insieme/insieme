@@ -762,7 +762,7 @@ public:
                     core::ExpressionPtr localParFct = genLocalCie(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
                     core::JobExpr::LocalDecls localJobShared;
-std::cout << "1\n";
+
                     createDeclarations(localJobShared, constantArgs);
                     createDeclarations(localJobShared, globalArgs);
                     createDeclarations(localJobShared, localArgs);
@@ -787,7 +787,6 @@ std::cout << "1\n";
 //                    expr.push_back(localRangeProduct); // min and max threads are equal
 
                     expr.push_back(localJob);
-                    std::cout << "2\n";
 
                     core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(),
                             builder.getNodeManager().basic.getParallel(), expr);
@@ -806,7 +805,6 @@ std::cout << "1\n";
                     // catch all arguments which are shared in global range
                     core::JobExpr::LocalDecls globalJobShared;
 
-                    std::cout << "3\n";
                     createDeclarations(globalJobShared, constantArgs);
                     createDeclarations(globalJobShared, globalArgs);
                     // catch loop boundaries
@@ -834,7 +832,6 @@ std::cout << "1\n";
                     appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
 
                     newParams.push_back(kd.globalRange); // add global range to parameters
-                    std::cout << "4\n";
 
                     std::vector<core::StatementPtr> newBodyStmts;
 
@@ -851,18 +848,17 @@ std::cout << "1\n";
                                 builder.uintLit(wgs[0]), builder.uintLit(wgs[1]), builder.uintLit(wgs[2]))));
                         newBodyStmts.push_back(lrd);
                     }
-std::cout << "5\n";
-                     //declare group range
+
+                    //declare group range
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
                             builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
                             builder.callExpr(BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
-                    std::cout << "6\n";
+
                     newBodyStmts.push_back(groupRdecl);
 
                     //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
                     newBodyStmts.push_back(globalPar);
-                    std::cout << "6\n";
 
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 

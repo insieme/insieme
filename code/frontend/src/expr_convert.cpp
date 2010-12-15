@@ -724,7 +724,7 @@ public:
 
 		baseOp = binOp->getOpcode();
 
-		core::LiteralPtr opFunc;
+		core::ExpressionPtr opFunc;
 		switch( binOp->getOpcode() ) {
 		case BO_PtrMemD:
 		case BO_PtrMemI:
@@ -832,7 +832,7 @@ public:
 		    vecOp = convFact.mgr.basic.getOperator(elemTy, op);
 		}
         core::ExpressionPtr&& retExpr = lhs->getType()->getNodeType() == core::NT_VectorType ?
-            convFact.builder.callExpr( exprTy, opFunc, lhs, rhs, vecOp ) : // create a callExpr with 3 arguments for pointwise vector operations
+            convFact.builder.callExpr( exprTy, convFact.builder.callExpr(opFunc, vecOp), lhs, rhs ) : // create a callExpr with 3 arguments for pointwise vector operations
 		    convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 
 		// handle eventual pragmas attached to the Clang node
