@@ -42,7 +42,7 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/type_utils.h"
-#include "insieme/core/ir_parse.h"
+#include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
 namespace core {

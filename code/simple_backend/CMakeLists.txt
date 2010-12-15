@@ -56,7 +56,7 @@ include(../environment.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_simple_backend_runtime_srcs 	src/runtime/*.c )
-file(GLOB_RECURSE insieme_simple_backend_runtime_incs 	include/*.h )
+file(GLOB_RECURSE insieme_simple_backend_runtime_incs 	include/runtime/*.h )
 
 # list all include paths
 
