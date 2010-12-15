@@ -91,3 +91,24 @@ TEST(LangBasic, OperatorGet) {
 	EXPECT_EQ(*op3, *nm.basic.getBoolEq());
 	EXPECT_NE(*op3, *nm.basic.getBoolNe());
 }
+
+TEST(LangBasic, DefinitionTest) {
+
+	NodeManager nm;
+	const BasicGenerator& gen = nm.basic;
+
+	// test all type and literal definitions
+#define CHECK(id) \
+	EXPECT_TRUE(gen.get##id ()); \
+	EXPECT_TRUE(gen.is##id(gen.get##id())); \
+
+#define TYPE(_id, _spec) CHECK(_id)
+#define LITERAL(_id, _name, _spec) CHECK(_id)
+
+#include "insieme/core/lang/lang.def"
+
+#undef LITERAL
+#undef TYPE
+#undef CHECK
+
+}
