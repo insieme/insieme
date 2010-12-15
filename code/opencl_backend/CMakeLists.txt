@@ -34,6 +34,7 @@ foreach ( case_file ${test_cases})
 	
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(ut_${case_name} insieme_frontend)
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_c_info)
 	target_link_libraries(ut_${case_name} insieme_utils)
