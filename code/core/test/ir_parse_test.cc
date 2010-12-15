@@ -44,7 +44,7 @@
 
 #include "insieme/core/identifier.h"
 #include "insieme/core/types.h"
-#include "insieme/core/ir_parse.h"
+#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/string_utils.h"

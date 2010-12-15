@@ -34,12 +34,47 @@
  * regarding third party software licenses.
  */
 
-#pragma OPENCL EXTENSION cl_khr_fp64: enable
+#pragma once
 
-#include "ocl_device.h"
+#include <exception>
 
-#pragma insieme mark
-__kernel void hello(__global double* g, __local float* l, int i) {
-	int v = 0;
-	v = v+1;
-}
+#define BOOST_SPIRIT_DEBUG
+
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/qi.hpp>
+
+#include "insieme/core/types.h"
+
+namespace insieme {
+namespace core {
+namespace parse {
+
+class ParseException : std::exception {
+	const char* what() const throw() {
+		return "IR Parsing failed";
+	}
+};
+
+/** A helper function for parsing an IR type declaration.
+ ** If more than one definition should be parsed it is better to generate a parser object and call the parseType method
+ ** @param nodeMan the NodeManager the generated definitions will be added to
+ ** @param input the string representation of the IR definition to be parsed
+ ** @return a pointer to an AST node representing the generated type
+ **/
+TypePtr parseType(NodeManager& nodeMan, const string& input);
+
+namespace qi = boost::spirit::qi;
+typedef std::string::const_iterator ParseIt;
+
+class IRParser {
+	NodeManager& nodeMan;
+
+public:
+	IRParser(NodeManager& nodeMan);
+
+	TypePtr parseType(const std::string& input);
+};
+
+} // namespace parse 
+} // namespace core
+} // namespace insieme

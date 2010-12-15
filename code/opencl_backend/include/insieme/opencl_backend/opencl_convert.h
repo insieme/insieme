@@ -48,7 +48,7 @@ simple_backend::TargetCodePtr convert(const core::ProgramPtr& source);
 class OclStmtConvert : public simple_backend::StmtConverter {
 public:
 	OclStmtConvert(simple_backend::Converter& conversionContext);
-	void visitLiteral(const core::LiteralPtr& ptr);
+	void visitLambdaExpr(const core::LambdaExprPtr& func);
 };
 
 } // namespace ocl

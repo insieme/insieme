@@ -38,7 +38,7 @@
 
 #include <map>
 
-#include "insieme/core/ir_parse.h"
+#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/set_utils.h"
