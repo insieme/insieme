@@ -35,11 +35,13 @@
  */
 
 #include "insieme/opencl_backend/opencl_convert.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl {
 
+namespace frontOpencl = insieme::frontend::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
@@ -74,9 +76,21 @@ TargetCodePtr convert(const ProgramPtr& source) {
 
 OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
 
-void OclStmtConvert::visitLiteral(const LiteralPtr& ptr) {
-	// just print strange literal
-	getCodeStream() << ptr->getValue() << "_OK_BLAH";
+void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
+	if(ptr->hasAnnotation(frontOpencl::BaseAnnotation::KEY)) {
+		std::cout << "Function with some Opencl Annotation...\n";
+		frontOpencl::BaseAnnotationPtr oclKernelAnnotation = ptr->getAnnotation(frontOpencl::BaseAnnotation::KEY);
+		assert(oclKernelAnnotation && "BaseAnnotation is empty");
+		for(frontOpencl::BaseAnnotation::AnnotationList::const_iterator iter = oclKernelAnnotation->getAnnotationListBegin();
+			iter < oclKernelAnnotation->getAnnotationListEnd(); ++iter) {
+			frontOpencl::AnnotationPtr ocl = std::dynamic_pointer_cast<frontOpencl::Annotation>(*iter);
+			if(frontOpencl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<frontOpencl::KernelFctAnnotation>(ocl)) {
+				std::cout << "Function with kernel annotation...\n";
+			}
+		}
+	}
+	FunctionManager& funManager = cc.getFunctionManager();
+	getCodeStream() << funManager.getFunctionName(defCodePtr, ptr);
 }
 
 } // namespace ocl
