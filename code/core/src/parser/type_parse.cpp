@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_parse.h"
+#include "insieme/core/parser/type_parse.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -69,7 +69,7 @@ namespace {
 	}
 }
 
-IRParser::IRParser(NodeManager& nodeMan) {
+TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule) {
 
 	auto nManRef = ph::ref(nodeMan);
 
@@ -173,21 +173,7 @@ IRParser::IRParser(NodeManager& nodeMan) {
 	//BOOST_SPIRIT_DEBUG_NODE(typeRule);
 }
 
-
-TypePtr IRParser::parseType(const std::string& input) {
-	TypePtr result;
-	auto startIt = input.cbegin(), endIt = input.cend();
-	bool parse_result = qi::phrase_parse(startIt, endIt, typeRule, qi::space, result);
-	parse_result = parse_result && (startIt == endIt);
-	if(!parse_result) throw ParseException();
-	return result;
-}
-
-TypePtr parseType(NodeManager& nodeMan, const string& input) {
-	IRParser parser(nodeMan);
-	return parser.parseType(input);
-}
-
 } // namespace parse 
 } // namespace core
 } // namespace insieme
+

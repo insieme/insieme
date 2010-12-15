@@ -36,37 +36,15 @@
 
 #pragma once
 
-#include <exception>
-
-#define BOOST_SPIRIT_DEBUG
-
-#include <boost/config/warning_disable.hpp>
-#include <boost/spirit/include/qi.hpp>
-
-#include "insieme/core/types.h"
+#include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
 namespace core {
 namespace parse {
 
-class ParseException : std::exception {
-	const char* what() const throw() {
-		return "IR Parsing failed";
-	}
-};
-
-/** A helper function for parsing an IR type declaration.
- ** If more than one definition should be parsed it is better to generate a parser object and call the parseType method
- ** @param nodeMan the NodeManager the generated definitions will be added to
- ** @param input the string representation of the IR definition to be parsed
- ** @return a pointer to an AST node representing the generated type
- **/
-TypePtr parseType(NodeManager& nodeMan, const string& input);
-
-namespace qi = boost::spirit::qi;
-typedef std::string::const_iterator ParseIt;
-
-class IRParser {
+struct TypeGrammar : public qi::grammar<ParseIt, TypePtr(), qi::space_type> {
+	
+	TypeGrammar(NodeManager& nodeMan);
 
 	// terminal rules, no skip parsing
 	qi::rule<ParseIt, Identifier()> identifier;
@@ -86,13 +64,8 @@ class IRParser {
 	qi::rule<ParseIt, UnionTypePtr(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
 	qi::rule<ParseIt, TypePtr(), qi::locals<Identifier, vector<TypePtr>, vector<IntTypeParam>>, qi::space_type> genericType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeRule;
-
-public:
-	IRParser(NodeManager& nodeMan);
-
-	TypePtr parseType(const std::string& input);
 };
 
-} // namespace parse 
-} // namespace core
-} // namespace insieme
+}
+}
+}
