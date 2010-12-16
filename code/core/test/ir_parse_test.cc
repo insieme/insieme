@@ -59,7 +59,7 @@ TEST(IRParser, TypeTests) {
 	NodeManager manager;
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
-	
+
 	auto intType = builder.genericType("int", vector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
 	EXPECT_EQ(intType, parser.parseType("int<#a>"));
 	EXPECT_EQ(intType, parser.parseType("(|int<#a>|)"));
@@ -90,7 +90,17 @@ TEST(IRParser, TypeTests) {
 	EXPECT_THROW(parser.parseType("(fail2"), ParseException);
 	EXPECT_THROW(parser.parseType("fail3)"), ParseException);
 	EXPECT_THROW(parser.parseType("int -> bool"), ParseException);
+}
 
+TEST(IRParser, ExpressionTests) {
+
+	string testStr("testGenType");
+	NodeManager manager;
+	IRParser parser(manager);
+	ASTBuilder builder(manager);
+
+	EXPECT_EQ(builder.intLit(5), parser.parseExpression("lit<int<4>, 5>"));
+	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 }
 
 TEST(IRParser, InteractiveTest) {

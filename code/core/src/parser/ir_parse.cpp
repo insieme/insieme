@@ -36,22 +36,11 @@
 
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/parser/type_parse.h"
+#include "insieme/core/parser/expression_parse.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/support_ascii.hpp>
-#include <boost/spirit/include/phoenix.hpp>
-#include <boost/spirit/include/phoenix_operator.hpp>
-
-// ----------------------- SPIRIT QI/PHOENIX survival hints
-// What to do if
-// - error: invalid initialization ... --> check whether ph::ref is used to pass references
-//									   --> check if you're using the right placeholders (char_ counts as auto attrib, literals and plain characters do NOT)
-// - error: template substitution failure --> check potential ambiguities, try supplying default parameters explicitly
-// - error: some operator can not be applied (eg =) --> attribute type may be different from expected
-// - error: invalid use of void expression --> trying to do a ph::ref of a reference? Placeholders are already references!
-// - other: use phoenix::bind and phoenix::construct instead of plain calls
-// ----------------------- - Peter
 
 namespace insieme {
 namespace core {
@@ -65,7 +54,6 @@ IRParser::IRParser(NodeManager& nodeMan) : nodeMan(nodeMan) {
 
 }
 
-
 TypePtr IRParser::parseType(const std::string& input) {
 	TypePtr result;
 	TypeGrammar typeGrammar(nodeMan);
@@ -76,9 +64,23 @@ TypePtr IRParser::parseType(const std::string& input) {
 	return result;
 }
 
+ExpressionPtr IRParser::parseExpression(const std::string& input) {
+	ExpressionPtr result;
+	ExpressionGrammar exprGrammar(nodeMan);
+	auto startIt = input.cbegin(), endIt = input.cend();
+	bool parse_result = qi::phrase_parse(startIt, endIt, exprGrammar, qi::space, result);
+	parse_result = parse_result && (startIt == endIt);
+	if(!parse_result) throw ParseException();
+	return result;
+}
+
 TypePtr parseType(NodeManager& nodeMan, const string& input) {
 	IRParser parser(nodeMan);
 	return parser.parseType(input);
+}
+ExpressionPtr parseExpression(NodeManager& nodeMan, const string& input) {
+	IRParser parser(nodeMan);
+	return parser.parseExpression(input);
 }
 
 } // namespace parse 

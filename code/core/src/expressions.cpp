@@ -95,6 +95,11 @@ LiteralPtr Literal::get(NodeManager& manager, const TypePtr& type, const string&
 	return manager.get(Literal(type, value) );
 }
 
+LiteralPtr Literal::parserGet(NodeManager& manager, const TypePtr& type, const string& value) {
+	return manager.get(Literal(type, value) );
+}
+
+
 
 // ------------------------------------- Variable ---------------------------------
 
@@ -1094,4 +1099,3 @@ MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpr
 MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id) {
 	return manager.get(MarkerExpr(subExpression, id));
 }
-
