@@ -294,8 +294,8 @@ LITERAL(VectorSubscript,     "vector.subscript",     "(vector<'elem,#l>, uint<#a
 LITERAL(VectorInitUniform,   "vector.initUniform",   "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitUndefined, "vector.initUndefined", "(intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorPointwise,     "vector.pointwise",     "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
-//        "(vector<'elem,#l>, vector<'elem,#l>, ('elem, 'elem) -> 'res) -> vector<'res,#l>")
 LITERAL(VectorReduction,     "vector.reduction",     "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
+LITERAL(VectorPermute,       "vector.permute",       "(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
