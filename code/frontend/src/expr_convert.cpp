@@ -781,7 +781,7 @@ public:
 			lhs = wrapVariable(binOp->getLHS());
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must of type ref<a'>." );
+			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must be of type ref<a'>." );
 			isAssignment = true;
 			opFunc = convFact.mgr.basic.getRefAssign();
 			exprTy = convFact.mgr.basic.getUnit();
@@ -1041,6 +1041,8 @@ public:
 		return annotatedNode;
 	}
 
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						EXT VECTOR ELEMENT EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1051,21 +1053,29 @@ public:
         std::string pos;
         llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
 
+        core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
+
         //translate OpenCL accessor string to index
         if(accessor == "x") 		pos = "0";
         else if(accessor == "y")    pos = "1";
         else if(accessor == "z")	pos = "2";
         else if(accessor == "w")	pos = "3";
-        else {
+	    else if(accessor.front() == 's'){
         	// the input string is in a form sXXX
-        	assert(accessor.front() == 's');
         	// we skip the s and return the value to get the number
         	llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
         	assert(insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 && "String is not a number");
         	pos = numStr;
-        }
+	    } else if (accessor.size() <= 4 ){ // opencl vector permutation
+            vector<core::ExpressionPtr> args;
 
-        core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
+            for(auto I = accessor.begin(), E = accessor.end(); I != E; ++I){
+                args.push_back(convFact.builder.intLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
+            }
+            return convFact.builder.callExpr(convFact.mgr.basic.getVectorPermute(), convFact.tryDeref(base), convFact.builder.vectorExpr(args));
+        } else
+            assert(accessor.size() <= 4 && "ExtVectorElementExpr has unknown format");
+
         // The type of the indes is always uint<4>
         core::ExpressionPtr&& idx = convFact.builder.literal(pos, convFact.builder.getNodeManager().basic.getUInt4());
         // if the type of the vector is a refType, we deref it

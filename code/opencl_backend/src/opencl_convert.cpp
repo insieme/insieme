@@ -36,6 +36,7 @@
 
 #include "insieme/opencl_backend/opencl_convert.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/core/ast_builder.h"
 
 namespace insieme {
 namespace backend {
@@ -77,20 +78,50 @@ TargetCodePtr convert(const ProgramPtr& source) {
 OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
 
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
+	ASTBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(frontOpencl::BaseAnnotation::KEY)) {
 		std::cout << "Function with some Opencl Annotation...\n";
-		frontOpencl::BaseAnnotationPtr oclKernelAnnotation = ptr->getAnnotation(frontOpencl::BaseAnnotation::KEY);
-		assert(oclKernelAnnotation && "BaseAnnotation is empty");
-		for(frontOpencl::BaseAnnotation::AnnotationList::const_iterator iter = oclKernelAnnotation->getAnnotationListBegin();
-			iter < oclKernelAnnotation->getAnnotationListEnd(); ++iter) {
-			frontOpencl::AnnotationPtr ocl = std::dynamic_pointer_cast<frontOpencl::Annotation>(*iter);
-			if(frontOpencl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<frontOpencl::KernelFctAnnotation>(ocl)) {
+		frontOpencl::BaseAnnotationPtr annotations = ptr->getAnnotation(frontOpencl::BaseAnnotation::KEY);
+		assert(annotations && "BaseAnnotation is empty");
+		for(frontOpencl::BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
+			iter < annotations->getAnnotationListEnd(); ++iter) {
+			if(frontOpencl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<frontOpencl::KernelFctAnnotation>(*iter)) {
 				std::cout << "Function with kernel annotation...\n";
+				const Lambda::ParamList& oldParams = ptr->getParameterList();
+				const StatementPtr& oldBody = ptr->getBody();
+				const FunctionTypePtr& oldFuncType = core::dynamic_pointer_cast<const core::FunctionType>(ptr->getType());
+				
+				// new paramList
+				Lambda::ParamList newParams;
+				for (uint i = 0; i < oldParams.size()-2; i++){
+					newParams.push_back(oldParams.at(i));
+				}
+				
+				// new functionType
+				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
+				const core::TypePtr& retType = oldFuncType->getReturnType();
+				assert(retType->getName() == "unit" && "Return type of kernel functions must be void.");
+				core::TypeList newArgs;
+				for (uint i = 0; i < oldArgs.size()-2; i++){
+					newArgs.push_back(oldArgs.at(i));
+				}
+				const FunctionTypePtr newFuncType = builder.functionType(newArgs, retType);
+				
+				// body
+				const StatementPtr newBody = builder.literal(builder.getNodeManager().basic.getInt2(), "-10");
+				
+				// function
+				LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBody));
+				
+				FunctionManager& funManager = cc.getFunctionManager();
+				getCodeStream() << funManager.getFunctionName(defCodePtr, newFunc);
 			}
 		}
+	} 
+	else {
+		FunctionManager& funManager = cc.getFunctionManager();
+		getCodeStream() << funManager.getFunctionName(defCodePtr, ptr);
 	}
-	FunctionManager& funManager = cc.getFunctionManager();
-	getCodeStream() << funManager.getFunctionName(defCodePtr, ptr);
 }
 
 } // namespace ocl

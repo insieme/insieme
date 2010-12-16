@@ -67,101 +67,165 @@ struct ScopeStack : std::vector<Scope> {
 	const Scope& top() const { return back(); }
 	void pop() { pop_back(); }
 
-	const Scope& getEnclosingLoop() const {
-		auto it = std::find_if(rbegin(), rend(), [](const Scope& curr){ return !!dynamic_pointer_cast<const ForStmt>(curr.root); });
+	const Scope& getEnclosingNode(const NodeType& type) const {
+		auto it = std::find_if(rbegin(), rend(), [type](const Scope& curr){ return curr.root->getNodeType() == type; });
 		assert(it != rend()); // if the IR is well formed a continue statement is only allowed if an enclosing loop exists
 		return *it;
 	}
 };
 
-typedef std::tuple<bool, CFG::VertexTy> BlockBounds;
+typedef std::pair<bool, CFG::VertexTy> NodeBound;
 
-struct CFGBuilder: public ASTVisitor< BlockBounds > {
+struct CFGBuilder: public ASTVisitor< void > {
 
 	CFG& cfg;
-	CFG::VertexTy head;
-	ScopeStack scopeStack;
 
-	CFGBuilder(CFG& cfg) : cfg(cfg) { }
+	cfg::Block* currBlock;
+	bool isPending;
 
-	BlockBounds visitIfStmt(const IfStmtPtr& ifStmt) {
-		cfg::Block ifBlock;
-		ifBlock.setTerminal(ifStmt);
+	CFG::VertexTy entry;
+	CFG::VertexTy exit;
+
+	CFG::VertexTy succ;
+
+	ScopeStack 	scopeStack;
+
+	CFGBuilder(CFG& cfg) : cfg(cfg), currBlock(NULL), isPending(true),
+			entry( cfg.addNode( new cfg::Block(0) ) ), exit( cfg.addNode( new cfg::Block(1) ) ), succ(exit) { }
+
+	void appendPendingBlock() {
+		if(isPending && currBlock && !currBlock->empty()) {
+			CFG::VertexTy&& node = cfg.addNode(currBlock);
+			// set the ID for this block
+			currBlock->setBlockID(node);
+			cfg.addEdge(node, succ);
+			succ = node;
+			currBlock = NULL;
+		}
+
+		if(currBlock && currBlock->empty()) {
+			delete currBlock;
+			currBlock = NULL;
+		}
+
+		if(!isPending)
+			currBlock = NULL;
+
+		isPending = true;
+	}
+
+	void visitIfStmt(const IfStmtPtr& ifStmt) {
+		cfg::Block* ifBlock = new cfg::Block;
+		ifBlock->appendStmt(ifStmt->getCondition());
+		ifBlock->setTerminal(ifStmt);
 		CFG::VertexTy&& src = cfg.addNode( ifBlock );
-		CFG::VertexTy sink = head;
+		ifBlock->setBlockID(src);
 
-		head = cfg.addNode();
-		cfg.addEdge(head, sink);
+		// the current node needs to be appendend to the graph (if not empty)
+		appendPendingBlock();
+		CFG::VertexTy sink = succ;
+
+		currBlock = new cfg::Block;
 		// push scope into the stack for this compound statement
-		BlockBounds&& thenCfg = visit(ifStmt->getThenBody());
-		cfg.addEdge(src, std::get<0>(thenCfg) ? std::get<1>(thenCfg) : head);
+		visit(ifStmt->getThenBody());
+		// cfg.addEdge(src, std::get<0>(thenCfg) ? std::get<1>(thenCfg) : head);
+		appendPendingBlock();
+		cfg.addEdge(src, succ);
 
-		head = cfg.addNode();
-		cfg.addEdge(head, sink);
-		BlockBounds&& elseCfg = visit(ifStmt->getElseBody());
-		cfg.addEdge(src, std::get<0>(elseCfg) ? std::get<1>(elseCfg) : head);
+		// reset the successor for the thenBody
+		succ = sink;
 
-		// move the pointer to the head of the CFG to the
-		// terminal statement associated to this if stmt
-		head = src;
+		currBlock = new cfg::Block;
+		// push scope into the stack for this compound statement
+		visit(ifStmt->getElseBody());
+		// cfg.addEdge(src, std::get<0>(elseCfg) ? std::get<1>(elseCfg) : head);
+		appendPendingBlock();
+		cfg.addEdge(src, succ);
 
-		return std::make_tuple(false, src);
+		succ = src;
+		currBlock = ifBlock;
+		isPending = false;
 	}
 
-	BlockBounds visitContinueStmt(const ContinueStmtPtr& continueStmt) {
-		CFG::VertexTy target = scopeStack.getEnclosingLoop().entry;
-		return std::make_tuple(true, target);
+	void visitContinueStmt(const ContinueStmtPtr& continueStmt) {
+		assert(!currBlock || (currBlock && currBlock->empty()));
+		if(!currBlock)
+			currBlock = new cfg::Block;
+
+		currBlock->setTerminal(continueStmt);
+		succ = scopeStack.getEnclosingNode(NT_ForStmt).entry;
 	}
 
-	BlockBounds visitBreakStmt(const BreakStmtPtr& breakStmt) {
-		CFG::VertexTy target = scopeStack.getEnclosingLoop().exit;
-		return std::make_tuple(true, target);
+	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
+		assert(!currBlock || (currBlock && currBlock->empty()));
+		if(!currBlock)
+			currBlock = new cfg::Block;
+
+		currBlock->setTerminal(breakStmt);
+		succ = scopeStack.getEnclosingNode(NT_ForStmt).exit;
 	}
 
-	BlockBounds visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
-		return visit( markerStmt->getSubStatement() );
+	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
+		assert(!currBlock || (currBlock && currBlock->empty()));
+		if(!currBlock)
+			currBlock = new cfg::Block;
+
+		currBlock->setTerminal(retStmt);
+		currBlock->appendStmt( retStmt->getReturnExpr() );
+		succ = scopeStack.getEnclosingNode(NT_LambdaExpr).exit;
 	}
 
-	BlockBounds visitForStmt(const ForStmtPtr& forStmt) {
-		cfg::Block forBlock;
-		forBlock.setTerminal(forStmt);
+	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
+		visit( markerStmt->getSubStatement() );
+	}
+
+	void visitForStmt(const ForStmtPtr& forStmt) {
+		cfg::Block* forBlock = new cfg::Block;
+		forBlock->setTerminal(forStmt);
+		forBlock->appendStmt(forStmt->getEnd());
 		CFG::VertexTy&& src = cfg.addNode( forBlock );
-		CFG::VertexTy&& sink = cfg.addNode( cfg::Block() );
+		forBlock->setBlockID(src);
 
-		cfg.addEdge(src, head);
-		cfg.addEdge(sink, src);
+		appendPendingBlock();
+		CFG::VertexTy sink = succ;
+
+		// increment expression
+		cfg::Block* incBlock = new cfg::Block;
+		incBlock->appendStmt(forStmt->getStep());
+		CFG::VertexTy&& inc = cfg.addNode( incBlock );
+		incBlock->setBlockID(inc);
+		cfg.addEdge(inc, src);
+
+		succ = inc;
+
+		currBlock = new cfg::Block;
 		// push scope into the stack for this compound statement
-		scopeStack.push( Scope(forStmt, src, head) );
-		head = sink;
-
+		scopeStack.push( Scope(forStmt, src, sink) );
 		visit(forStmt->getBody());
-		cfg.addEdge(src, head);
 		scopeStack.pop();
 
-		head = src;
-		return std::make_tuple(false, src);
+		appendPendingBlock();
+
+		cfg.addEdge(src, succ);
+		cfg.addEdge(src, sink);
+
+		succ = src;
+		// decl stmt of the for loop needs to be part of the incoming block
+		currBlock = new cfg::Block;
+		currBlock->appendStmt(forStmt->getDeclaration());
 	}
 
-	BlockBounds visitCompoundStmt(const CompoundStmtPtr& compStmt) {
-		// add a temporary node as sink of this compound stmt,
-		// later on, the proper CFGEleemnt will be written
+	void visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 		const std::vector<StatementPtr>& body = compStmt->getStatements();
-		if(body.empty())
-			return std::make_tuple(false, CFG::VertexTy());
+		if(!currBlock) {
+			// create a new block to host this compound stmt
+			currBlock = new cfg::Block;
+		}
 
 		// we are sure there is at least 1 element in this compound statement
 		for_each(body.rbegin(), body.rend(),
-			[ this ](const StatementPtr& curr) {
-				BlockBounds&& currNode = this->visit(curr);
-				// if the curr statement is not empty, is being appended to the graph
-				if(std::get<0>(currNode)) {
-					this->cfg.addEdge(std::get<1>(currNode), this->head);
-					this->head = std::get<1>(currNode);
-				}
-			}
+			[ this ](const StatementPtr& curr) { this->visit(curr); }
 		);
-
-		return std::make_tuple(true, head);
 	}
 
 //	BlockBounds visitCallExpr(const CallExprPtr& callExpr) {
@@ -180,69 +244,65 @@ struct CFGBuilder: public ASTVisitor< BlockBounds > {
 //		return visitStatement(callExpr);
 //	}
 
-	BlockBounds visitLambdaExpr(const LambdaExprPtr& lambda) {
-		CFG::VertexTy sink = head;
-
-		scopeStack.push( Scope(lambda, CFG::VertexTy(), sink) );
-		BlockBounds&& body = visit(lambda->getBody());
+	void visitLambdaExpr(const LambdaExprPtr& lambda) {
+		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
+		visit(lambda->getBody());
 		scopeStack.pop();
 
-		head = std::get<1>(body);
-
-		return std::make_tuple(true, head);
+		appendPendingBlock();
 	}
 
-	BlockBounds visitProgram(const ProgramPtr& program) {
-		CFG::VertexTy&& src = cfg.addNode( cfg::Block() );
-		CFG::VertexTy&& sink = cfg.addNode( cfg::Block() );
+	void visitProgram(const ProgramPtr& program) {
 
 		std::for_each(program->getEntryPoints().begin(), program->getEntryPoints().end(),
-			[ this, src, sink ]( const ExpressionPtr& curr ) {
-				this->head = sink;
-				BlockBounds&& currBlock = this->visit(curr);
-				this->cfg.addEdge(src, std::get<1>(currBlock));
+			[ this ]( const ExpressionPtr& curr ) {
+				this->succ = this->exit;
+				this->visit(curr);
+				// connect the resulting block with the entry point
+				this->cfg.addEdge(this->entry, this->succ);
 			}
 		);
-		head = src;
 
-		return std::make_tuple(true, src);
+		succ = entry;
 	}
 
-	BlockBounds visitStatement(const StatementPtr& stmt) {
-		// CFG::VertexTy&& v = cfg.addNode( cfg::Element(stmt, cfg::Element::BLOCK) );
-		cfg.getNode(head).appendStmt(stmt);
-		return std::make_tuple(false, head);
+	void visitStatement(const StatementPtr& stmt) {
+		assert(currBlock);
+		currBlock->appendStmt(stmt);
+	}
+
+	void completeGraph() {
+		if(entry == succ)
+			return;
+
+		if(currBlock) {
+			appendPendingBlock();
+		}
+		cfg.addEdge(entry, succ);
+		succ = entry;
 	}
 
 };
-
 
 } // end anonymous namespace
 
 namespace insieme {
 namespace analysis {
 
-namespace cfg {
-
-//core::ExpressionPtr Element::getCond() const {
-//	// assert(type == Element::TERMINAL);
-//	switch(stmt->getNodeType()) {
-//	case core::NT_IfStmt:
-//		return static_pointer_cast<const IfStmt>(stmt)->getCondition();
-//	case core::NT_ForStmt:
-//		return static_pointer_cast<const ForStmt>(stmt)->getEnd();
-//	default:
-//		assert(false);
-//	}
-//}
-
-} // end cfg namespace
-
-CFG CFG::buildCFG(const ProgramPtr& rootNode) {
-	CFG cfg;
-	CFGBuilder builder(cfg);
+CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
+	CFGPtr cfg = std::make_shared<CFG>();
+	CFGBuilder builder(*cfg);
 	builder.visit(rootNode);
+	builder.completeGraph();
 	return cfg;
+}
+
+CFG::~CFG() {
+	boost::graph_traits<ControlFlowGraph>::vertex_iterator vi, vi_end;
+	for (boost::tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
+		const cfg::Block* block = &getNode(*vi);
+		delete block;
+	}
 }
 
 } // end analysis namespace
@@ -259,31 +319,39 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block) {
-	if(block.getSize() > 0 || !!block.getTerminator()) {
+	if(!block.empty()) {
 		out << "[shape=box,label=\"";
+		out << "[B" << block.getBlockID() << "]\\l\\n";
 		size_t num = 0;
 		std::for_each(block.stmt_begin(), block.stmt_end(), [ &out, &num ](const insieme::analysis::cfg::Element& curr) {
-			out << num++ << ": " << insieme::core::printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 ) << "\\l";
+			out << num++ << ": " << printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 ) << "\\l";
 		});
 		if(!!block.getTerminator())
 			out << "T: " << block.getTerminator();
 
 		return out << "\"]";
 	}
-	return out << "[shape=circle,label=\"\"]";
+	assert(block.getBlockID() == 0 || block.getBlockID() == 1); // entry and exit block are the only allowed empty blocks
+	return out << "[shape=diamond,label=\""<< (block.getBlockID() == 0 ? "ENTRY" : "EXIT") << "\"]";
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Terminator& term) {
 	// assert(type == Element::TERMINAL);
 	switch(term->getNodeType()) {
-	case insieme::core::NT_IfStmt:
-		return out << "IF(" << insieme::core::printer::PrettyPrinter( static_pointer_cast<const IfStmt>(term)->getCondition(), 1<<5 ) << ")\\l";
-	case insieme::core::NT_ForStmt: {
+	case NT_IfStmt:
+		return out << "IF(...)\\l";
+	case NT_ForStmt: {
 		ForStmtPtr forStmt = static_pointer_cast<const ForStmt>(term);
-		return out << "FOR( " << printer::PrettyPrinter( forStmt->getDeclaration(), 1<<5) << "; "
-				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 1<<5 ) << " < " << printer::PrettyPrinter(forStmt->getEnd(), 1<<5 ) << "; "
-				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 1<<5 ) << " += " << printer::PrettyPrinter( forStmt->getStep(), 1<<5) << ")\\l";
+		return out << "FOR( " << "... ; "
+				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 1<<5 ) << " < "
+				<< printer::PrettyPrinter(forStmt->getEnd(), 1<<5 ) << "; ...)\\l";
 	}
+	case NT_ContinueStmt:
+		return out << "CONTINUE\\l";
+	case NT_BreakStmt:
+		return out << "BREAK\\l";
+	case NT_ReturnStmt:
+		return out << "RETURN\\l";
 	default:
 		assert(false);
 	}
