@@ -67,14 +67,8 @@ struct ScopeStack : std::vector<Scope> {
 	const Scope& top() const { return back(); }
 	void pop() { pop_back(); }
 
-	const Scope& getEnclosingLoop() const {
-		auto it = std::find_if(rbegin(), rend(), [](const Scope& curr){ return curr.root->getNodeType() == NT_ForStmt; });
-		assert(it != rend()); // if the IR is well formed a continue statement is only allowed if an enclosing loop exists
-		return *it;
-	}
-
-	const Scope& getEnclosingFunc() const {
-		auto it = std::find_if(rbegin(), rend(), [](const Scope& curr){ return curr.root->getNodeType() == NT_LambdaExpr; });
+	const Scope& getEnclosingNode(const NodeType& type) const {
+		auto it = std::find_if(rbegin(), rend(), [type](const Scope& curr){ return curr.root->getNodeType() == type; });
 		assert(it != rend()); // if the IR is well formed a continue statement is only allowed if an enclosing loop exists
 		return *it;
 	}
@@ -159,7 +153,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(continueStmt);
-		succ = scopeStack.getEnclosingLoop().entry;
+		succ = scopeStack.getEnclosingNode(NT_ForStmt).entry;
 	}
 
 	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
@@ -168,7 +162,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(breakStmt);
-		succ = scopeStack.getEnclosingLoop().exit;
+		succ = scopeStack.getEnclosingNode(NT_ForStmt).exit;
 	}
 
 	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
@@ -178,7 +172,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		currBlock->setTerminal(retStmt);
 		currBlock->appendStmt( retStmt->getReturnExpr() );
-		succ = scopeStack.getEnclosingFunc().exit;
+		succ = scopeStack.getEnclosingNode(NT_LambdaExpr).exit;
 	}
 
 	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {

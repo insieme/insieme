@@ -101,7 +101,7 @@ TEST(CFGBuilder, CompoundStmt) {
 	EXPECT_TRUE(it == end);
 }
 
-TEST(CFGBuilder, IfStmt) {
+TEST(CFGBuilder, IfStmt1) {
 
 	NodeManager manager;
 	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
@@ -124,6 +124,7 @@ TEST(CFGBuilder, IfStmt) {
 	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
 
 	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+	std::cout << std::endl;
 
 	const cfg::Block& entryBlock = cfg->getNode(verteces[0]);
 	EXPECT_TRUE(entryBlock.empty());
@@ -134,20 +135,171 @@ TEST(CFGBuilder, IfStmt) {
 	EXPECT_TRUE(ifBlock.hasTerminator());
 	EXPECT_EQ(*ifBlock.stmt_begin(), var); // condition
 	EXPECT_EQ(ifBlock.getTerminator(), stmt);
+	EXPECT_TRUE(boost::edge(verteces[0], verteces[1], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[3], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[4], cfg->getGraph()).second);
 
 	// Then
 	const cfg::Block& thenBlock = cfg->getNode(verteces[2]);
 	EXPECT_EQ(static_cast<unsigned>(1), thenBlock.size());
 	EXPECT_FALSE(thenBlock.hasTerminator());
-	EXPECT_EQ(*thenBlock.stmt_begin(), stmt1); // condition
+	EXPECT_EQ(*thenBlock.stmt_begin(), stmt1);
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[1], verteces[4], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[2], verteces[3], cfg->getGraph()).second);
 
 	// Else
 	const cfg::Block& elseBlock = cfg->getNode(verteces[3]);
 	EXPECT_EQ(static_cast<unsigned>(1), elseBlock.size());
 	EXPECT_FALSE(elseBlock.hasTerminator());
-	EXPECT_EQ(*elseBlock.stmt_begin(), stmt2); // condition
+	EXPECT_EQ(*elseBlock.stmt_begin(), stmt2);
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[3], cfg->getGraph()).second);
 
 	// Exit
 	const cfg::Block& exitBlock = cfg->getNode(verteces[4]);
 	EXPECT_TRUE(exitBlock.empty());
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[2], cfg->getGraph()).second);
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[3], cfg->getGraph()).second);
 }
+
+TEST(CFGBuilder, IfStmt2) {
+
+	NodeManager manager;
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
+	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
+	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
+	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+
+	IfStmtPtr ifStmt = IfStmt::get(manager, var, stmt1);
+	CompoundStmtPtr stmt = CompoundStmt::get(manager, toVector<StatementPtr>(ifStmt, stmt2));
+	CFGPtr cfg = CFG::buildCFG(stmt);
+
+	// print the graph on standard output
+	std::cout << *cfg;
+
+	EXPECT_EQ(static_cast<unsigned>(5), cfg->getSize());
+
+	std::vector<CFG::VertexTy> verteces;
+
+	CFG::VertexTy entry = cfg->getEntry();
+	boost::breadth_first_search
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+
+	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+	std::cout << std::endl;
+
+	const cfg::Block& entryBlock = cfg->getNode(verteces[0]);
+	EXPECT_TRUE(entryBlock.empty());
+
+	// IF
+	const cfg::Block& ifBlock = cfg->getNode(verteces[1]);
+	EXPECT_EQ(static_cast<unsigned>(1), ifBlock.size());
+	EXPECT_TRUE(ifBlock.hasTerminator());
+	EXPECT_EQ(*ifBlock.stmt_begin(), var); // condition
+	EXPECT_EQ(ifBlock.getTerminator(), ifStmt);
+	EXPECT_TRUE(boost::edge(verteces[0], verteces[1], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[3], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[4], cfg->getGraph()).second);
+
+	// Then
+	const cfg::Block& thenBlock = cfg->getNode(verteces[2]);
+	EXPECT_EQ(static_cast<unsigned>(1), thenBlock.size());
+	EXPECT_FALSE(thenBlock.hasTerminator());
+	EXPECT_EQ(*thenBlock.stmt_begin(), stmt1);
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[1], verteces[4], cfg->getGraph()).second);
+
+	// sink
+	const cfg::Block& sink = cfg->getNode(verteces[3]);
+	EXPECT_EQ(static_cast<unsigned>(1), sink.size());
+	EXPECT_FALSE(sink.hasTerminator());
+	EXPECT_EQ(*sink.stmt_begin(), stmt2);
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[3], cfg->getGraph()).second);
+	EXPECT_TRUE(boost::edge(verteces[2], verteces[3], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[2], verteces[4], cfg->getGraph()).second);
+
+	// Exit
+	const cfg::Block& exitBlock = cfg->getNode(verteces[4]);
+	EXPECT_TRUE(boost::edge(verteces[3], verteces[4], cfg->getGraph()).second);
+	EXPECT_TRUE(exitBlock.empty());
+}
+
+TEST(CFGBuilder, ForStmt) {
+
+	NodeManager manager;
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
+	LiteralPtr step = Literal::get(manager, manager.basic.getInt4(), "1");
+	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
+	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+
+	ForStmtPtr forStmt = ForStmt::get(manager, decl, stmt, literal, step);
+	CFGPtr cfg = CFG::buildCFG(forStmt);
+
+	// print the graph on standard output
+	std::cout << *cfg;
+
+	EXPECT_EQ(static_cast<unsigned>(6), cfg->getSize());
+
+	std::vector<CFG::VertexTy> verteces;
+
+	CFG::VertexTy entry = cfg->getEntry();
+	boost::breadth_first_search
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+
+	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+	std::cout << std::endl;
+
+	const cfg::Block& entryBlock = cfg->getNode(verteces[0]);
+	EXPECT_TRUE(entryBlock.empty());
+	EXPECT_TRUE(boost::edge(verteces[0], verteces[1], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[3], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[4], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[5], cfg->getGraph()).second);
+
+	// decl
+	const cfg::Block& declBlock = cfg->getNode(verteces[1]);
+	EXPECT_EQ(static_cast<unsigned>(1), declBlock.size());
+	EXPECT_FALSE(declBlock.hasTerminator());
+	EXPECT_EQ(*declBlock.stmt_begin(), decl);
+	EXPECT_TRUE(boost::edge(verteces[1], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[1], verteces[3], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[1], verteces[4], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[0], verteces[5], cfg->getGraph()).second);
+
+	// for
+	const cfg::Block& forBlock = cfg->getNode(verteces[2]);
+	EXPECT_EQ(static_cast<unsigned>(1), forBlock.size());
+	EXPECT_TRUE(forBlock.hasTerminator());
+	EXPECT_EQ(*forBlock.stmt_begin(), literal);
+	EXPECT_EQ(forBlock.getTerminator(), forStmt);
+	EXPECT_TRUE(boost::edge(verteces[2], verteces[3], cfg->getGraph()).second);
+	EXPECT_TRUE(boost::edge(verteces[2], verteces[4], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[2], verteces[5], cfg->getGraph()).second);
+
+	// body
+	const cfg::Block& bodyBlock = cfg->getNode(verteces[3]);
+	EXPECT_EQ(static_cast<unsigned>(1), bodyBlock.size());
+	EXPECT_FALSE(bodyBlock.hasTerminator());
+	EXPECT_EQ(*bodyBlock.stmt_begin(), stmt);
+	EXPECT_TRUE(boost::edge(verteces[3], verteces[5], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[3], verteces[4], cfg->getGraph()).second);
+
+	// step
+	const cfg::Block& stepBlock = cfg->getNode(verteces[5]);
+	EXPECT_EQ(static_cast<unsigned>(1), stepBlock.size());
+	EXPECT_FALSE(stepBlock.hasTerminator());
+	EXPECT_EQ(*stepBlock.stmt_begin(), step);
+	EXPECT_TRUE(boost::edge(verteces[5], verteces[2], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[5], verteces[4], cfg->getGraph()).second);
+
+	// Exit
+	const cfg::Block& exitBlock = cfg->getNode(verteces[4]);
+	EXPECT_TRUE(boost::edge(verteces[2], verteces[4], cfg->getGraph()).second);
+	EXPECT_FALSE(boost::edge(verteces[4], verteces[5], cfg->getGraph()).second);
+	EXPECT_TRUE(exitBlock.empty());
+}
+
