@@ -202,10 +202,10 @@ public:
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
-
 		// we need to check if the element type for this not a vector (or array) type
-		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
-				core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+		if(!((core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
+				core::dynamic_pointer_cast<const core::ArrayType>(elemTy)) &&
+				!arrTy->getElementType().getTypePtr()->isExtVectorType())) {
 			elemTy = convFact.builder.refType(elemTy);
 		}
 		core::TypePtr&& retTy = convFact.builder.vectorType( elemTy, 
