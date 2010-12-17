@@ -139,6 +139,8 @@ public:
 
 	static LiteralPtr get(NodeManager& manager, const string& value, const TypePtr& type);
 	static LiteralPtr get(NodeManager& manager, const TypePtr& type, const string& value);
+
+	static LiteralPtr parserGet(NodeManager& manager, const TypePtr& type, const string& value);
 };
 
 

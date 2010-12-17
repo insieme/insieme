@@ -38,9 +38,9 @@
 
 //define all pragmas per default
 #define cl_khr_fp64
-/*#define cl_khr_base_atomics not supported at the moment
+#define cl_khr_base_atomics
 #define  cl_khr_int64_extended_atomics
-#define cl_khr_3d_image_writes*/
+//#define cl_khr_3d_image_writes not supported at the moment
 #define cl_khr_fp16
 #define CL_APPLE_gl_sharing
 #define CL_KHR_gl_sharing
@@ -78,7 +78,10 @@
 #define kernel __attribute__((annotate("__kernel")))
 
 //define built-in data types
+#define ulong unsigned long
 #define uint unsigned int
+#define size_t unsigned int
+#define uchar unsigned char
 
 //define built-in vector types
 #define ivec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v; typedef __attribute__((ext_vector_type(v))) unsigned T u##T##v;
@@ -308,3 +311,18 @@ float __attribute__((overloadable)) nan(uint); float2 __attribute__((overloadabl
 float __attribute__((overloadable)) native_divide(float, float); float2 __attribute__((overloadable)) native_divide(float2, float2); \
     float3 __attribute__((overloadable)) native_divide(float3, float3); float4 __attribute__((overloadable)) native_divide(float4, float4); \
     float8 __attribute__((overloadable)) native_divide(float8, float8); float16 __attribute__((overloadable)) native_divide(float16, float16);
+
+
+// atomic operations
+#define atom_fct(op) long __attribute__((overloadable)) atom_##op(long p, long val); ulong __attribute__((overloadable)) atom_##op(ulong* p, ulong val);
+
+atom_fct(add)
+atom_fct(sub)
+atom_fct(xchg)
+atom_fct(xchg)
+
+#define atom_inc(p) atom_add(p, 1)
+#define atom_dec(p) atom_sub(p, 1)
+long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val); ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
+
+

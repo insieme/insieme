@@ -34,17 +34,3 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <pthread.h>
-
-typedef struct {
-    int needed;
-    int called;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-} isbr_barrier_t;
-
-int isbr_barrier_init(isbr_barrier_t *barrier, int needed);
-int isbr_barrier_destroy(isbr_barrier_t *barrier);
-int isbr_barrier_wait(isbr_barrier_t *barrier);

@@ -356,6 +356,11 @@ namespace {
 		});
 
 		PRINT(LambdaExpr, {
+				bool noExpandLambdas = print.hasOption(PrettyPrinter::NO_EXPAND_LAMBDAS);
+				if(noExpandLambdas) {
+					out << "fun{...}";
+					return;
+				}
 
 				// short-cut for non-recursive functions
 				if (!node->isRecursive()) {

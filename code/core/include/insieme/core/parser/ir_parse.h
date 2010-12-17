@@ -63,6 +63,14 @@ class ParseException : std::exception {
  **/
 TypePtr parseType(NodeManager& nodeMan, const string& input);
 
+/** A helper function for parsing an IR expression.
+ ** If more than one expression should be parsed it is better to generate a parser object and call the parseExpression method
+ ** @param nodeMan the NodeManager the generated nodes will be added to
+ ** @param input the string representation of the IR expression to be parsed
+ ** @return a pointer to an AST node representing the generated expression
+ **/
+ExpressionPtr parseExpression(NodeManager& nodeMan, const string& input);
+
 namespace qi = boost::spirit::qi;
 typedef std::string::const_iterator ParseIt;
 
@@ -73,6 +81,7 @@ public:
 	IRParser(NodeManager& nodeMan);
 
 	TypePtr parseType(const std::string& input);
+	ExpressionPtr parseExpression(const std::string& input);
 };
 
 } // namespace parse 
