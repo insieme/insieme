@@ -303,9 +303,12 @@ GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript)
 
 // Accuracy defining functions
 
-LITERAL(AccuracyHigh,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")
-LITERAL(AccuracyBestEffort, "accuracy.bestEffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")
-LITERAL(AccuracyFast,       "accuracy.fast", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyHighBinary,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyBestEffortBinary, "accuracy.bestEffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyFastBinary,       "accuracy.fast", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyHighUnary,       "accuracy.high.unary", "(('a)->'b) -> ('a)->'b")
+LITERAL(AccuracyBestEffortUnary, "accuracy.bestEffort.unary", "(('a)->'b) -> ('a)->'b")
+LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 

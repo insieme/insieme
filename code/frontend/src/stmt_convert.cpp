@@ -670,7 +670,8 @@ public:
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		vector<core::SwitchStmt::Case> cases;
 		// marks the beginning of a case expression
-		core::ExpressionPtr currCaseExpr;
+		vector<std::pair<core::ExpressionPtr,size_t>> caseExprs;
+		size_t defaultStart = 0;
 		// collected statements that will be part of the next case statement
 		vector<core::StatementPtr> caseStmts;
 		bool caseStart = false;
@@ -691,22 +692,20 @@ public:
 			}
 			// we encounter a case statement
 			caseStart=true;
-			if(isa<const SwitchCase>(curr) && !caseStmts.empty()) {
-				// a new case statement started with no break operation,
-				// we have to create an entry for the previous case
-				assert(currCaseExpr);
-				cases.push_back( std::make_pair(currCaseExpr, tryAggregateStmts( this->convFact.builder, caseStmts )) );
-			}
-
-			if( const CaseStmt* caseStmt = dyn_cast<const CaseStmt>(curr) ) {
-				currCaseExpr = this->convFact.convertExpr( caseStmt->getLHS() );
-				assert(currCaseExpr && "Case statement has empty expression");
+			while( CaseStmt* caseStmt = dyn_cast<CaseStmt>(curr) ) {
+				caseExprs.push_back( std::make_pair(this->convFact.convertExpr( caseStmt->getLHS() ), caseStmts.size()) );
 
 				core::StatementPtr subStmt;
 				if( const Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
 					subStmt = this->convFact.convertExpr( rhs );
-				} else if( const Stmt* sub = caseStmt->getSubStmt() ) {
+				} else if( Stmt* sub = caseStmt->getSubStmt() ) {
+					// if the sub statement is a case, skip until the end of the loop
+					if( isa<SwitchCase>(sub) ) {
+						curr = sub;
+						continue;
+					}
+
 					subStmt = tryAggregateStmts( this->convFact.builder, this->Visit( const_cast<Stmt*>(sub) ) );
 					// if the substatement is a BreakStmt we have to replace it with a noOp and remember to reset the caseStmts
 					if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
@@ -717,8 +716,13 @@ public:
 				// add the statements defined by this case to the list of
 				// statements which has to executed by this case
 				caseStmts.push_back(subStmt);
-			} else if(const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(curr)) {
+				break;
+			}
+
+			if(const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(curr)) {
 				isDefault = true;
+				defaultStart = caseStmts.size();
+
 				core::StatementPtr&& subStmt = tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
 				if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
 					subStmt = convFact.mgr.basic.getNoOp();
@@ -729,14 +733,22 @@ public:
 			// if the current statement is a break, or we encountred a break in the current case
 			// we create a new case and add to the list of cases for this switch statement
 			if(breakEncountred || isa<const BreakStmt>(curr)) {
-				if(!isDefault) {
-					assert(currCaseExpr);
-					cases.push_back( std::make_pair(currCaseExpr, tryAggregateStmts( this->convFact.builder, caseStmts )) );
-				} else {
-					defStmt = tryAggregateStmts( this->convFact.builder, caseStmts );
+				std::for_each(caseExprs.begin(), caseExprs.end(),
+					[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
+						std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
+						std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
+						cases.push_back( core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList )) );
+					}
+				);
+				if(isDefault) {
+					std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
+					std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
+					defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
 				}
 				// clear the list of statements collected until now
+				caseExprs.clear();
 				caseStmts.clear();
+
 				breakEncountred = false;
 			} else if(!isa<SwitchCase>(curr)) {
 				StmtWrapper&& visitedStmt = Visit( const_cast<Stmt*>(curr));
@@ -745,11 +757,17 @@ public:
 		}
 		// we still have some statement pending
 		if(!caseStmts.empty()) {
-			if(!isDefault) {
-				assert(currCaseExpr);
-				cases.push_back( std::make_pair(currCaseExpr, tryAggregateStmts( this->convFact.builder, caseStmts )) );
-			} else {
-				defStmt = tryAggregateStmts( this->convFact.builder, caseStmts );
+			std::for_each(caseExprs.begin(), caseExprs.end(),
+				[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
+					std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
+					std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
+					cases.push_back( core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList )) );
+				}
+			);
+			if(isDefault) {
+				std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
+				std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
+				defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
 			}
 		}
 
