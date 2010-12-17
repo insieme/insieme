@@ -103,9 +103,18 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 		cStr << ",";
 		cStr << "&" << info.funName;
 
+		// add all job handler
+		StmtConverter& stmtConverter = cc.getStmtConverter();
+		for_each(job->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
+
+			stmtConverter.convert(preprocessJobBranch(cur.second));
+
+		});
+
+		// add default job handler
+		stmtConverter.convert(preprocessJobBranch(job->getDefaultStmt())));
 
 		// local shared variables
-		StmtConverter& stmtConverter = cc.getStmtConverter();
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 			ExpressionPtr init = cur->getInitialization();
 			cStr << ",";
@@ -151,7 +160,17 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 	structStream << "struct struct" << name << " { " << CodeStream::indR << "\n";
 		structStream << "unsigned structSize;\n";
 		structStream << "unsigned min, max;\n";
-		structStream << "void (*fun)(isbr_JobArgs*);";
+		structStream << "void (*fun)(isbr_JobArgs*);\n";
+
+		structStream << " // ------------ Job-Handling functions ----------\n";
+
+		for(unsigned i=0; i<job->getGuardedStmts().size(); i++) {
+			structStream << "void (*handler" << i << ")();\n";
+		}
+
+		structStream << "void (*defFun)();\n";
+
+		structStream << " // ------------ Local Declarations ----------\n";
 
 		Converter& converter = cc;
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
@@ -187,22 +206,19 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 		funStream << "// ------------------ Processing Guards -----------------\n";
 
-		StmtConverter& stmtConverter = converter.getStmtConverter();
+		int i = 0;
 		for_each(job->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
 
 			// add condition
 			funStream << "if(" << ") {" << CodeStream::indR << "\n";
-			stmtConverter.convert(builder.callExpr(preprocessJobBranch(cur.second)), function);
+			funStream << " = ((" << structName << "*)args)->handler" << i++ << "()";
 			funStream << ";\nreturn;" << CodeStream::indL << "}";
 
 		});
 
-		funStream << "// ------------------ Default processing -----------------\n";
+		funStream << "// ----------------- Default processing -----------------\n";
+		funStream << "((" << structName << "*)args)->defFun();\n";
 
-		stmtConverter.convert(builder.callExpr(preprocessJobBranch(job->getDefaultStmt())), function);
-		funStream << ";";
-
-		// add default path
 
 	funStream << CodeStream::indL << "\n";
 	funStream << "}\n";
