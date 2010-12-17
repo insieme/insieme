@@ -68,15 +68,34 @@ struct ScopeStack : std::vector<Scope> {
 	void pop() { pop_back(); }
 
 	const Scope& getEnclosingLambda() const {
-		auto it = std::find_if(rbegin(), rend(), [](const Scope& curr){ return curr.root->getNodeType() == NT_LambdaExpr; });
-		assert(it != rend()); // if the IR is well formed a continue statement is only allowed if an enclosing loop exists
-		return *it;
+		auto filter = [](const Scope& curr) -> bool { return curr.root->getNodeType() == NT_LambdaExpr; };
+		return getEnclosingBlock(filter);
 	}
 
-	const Scope& getEnclosingLoop() const {
-		auto it = std::find_if(rbegin(), rend(), [](const Scope& curr){
-			return curr.root->getNodeType() == NT_WhileStmt || curr.root->getNodeType() == NT_ForStmt;
-		});
+	// Returns target block of a continue statement placed
+	// in the innermost scope
+	const Scope& getContinueTarget() const {
+		auto filter = [](const Scope& curr) -> bool {
+			NodeType&& nt = curr.root->getNodeType();
+			return nt == NT_WhileStmt || nt == NT_ForStmt;
+		};
+		return getEnclosingBlock(filter);
+	}
+
+	// Returns target block of a break statement placed
+	// in the innermost scope
+	const Scope& getBreakTarget() const {
+		auto filter = [](const Scope& curr) -> bool {
+			NodeType&& nt = curr.root->getNodeType();
+			return nt == NT_WhileStmt || nt == NT_ForStmt || NT_SwitchStmt;
+		};
+		return getEnclosingBlock(filter);
+	}
+
+private:
+	template <class Filter>
+	const Scope& getEnclosingBlock(const Filter& filter) const {
+		auto it = std::find_if(rbegin(), rend(), filter);
 		assert(it != rend()); // if the IR is well formed a continue statement is only allowed if an enclosing loop exists
 		return *it;
 	}
@@ -157,7 +176,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(continueStmt);
-		succ = scopeStack.getEnclosingLoop().entry;
+		succ = scopeStack.getContinueTarget().entry;
 	}
 
 	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
@@ -166,7 +185,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(breakStmt);
-		succ = scopeStack.getEnclosingLoop().exit;
+		succ = scopeStack.getBreakTarget().exit;
 	}
 
 	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
@@ -241,8 +260,39 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = src;
 	}
 
-	void visitSwithcStmt(const SwitchStmtPtr& whileStmt) {
+	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
+		cfg::Block* switchBlock = new cfg::Block;
+		switchBlock->appendElement( cfg::Element(switchStmt->getSwitchExpr()) );
+		switchBlock->setTerminal(switchStmt);
+		CFG::VertexTy&& src = cfg.addNode( switchBlock );
 
+		// the current node needs to be appendend to the graph (if not empty)
+		appendPendingBlock();
+		CFG::VertexTy sink = succ;
+
+		scopeStack.push( Scope(switchStmt, src, sink) );
+		const std::vector<SwitchStmt::Case>& cases = switchStmt->getCases();
+		std::for_each(cases.begin(), cases.end(), [this, &src, &sink](const SwitchStmt::Case& curr){
+			this->succ = sink;
+			this->currBlock = new cfg::Block;
+			// push scope into the stack for this compound statement
+			this->visit(curr.second);
+
+			appendPendingBlock();
+			this->cfg.addEdge(src, succ);
+		});
+
+		succ = sink;
+		currBlock = new cfg::Block;
+		// Default case
+		this->visit(switchStmt->getDefaultCase());
+		appendPendingBlock();
+		cfg.addEdge(src, succ);
+
+		scopeStack.pop();
+		succ = src;
+		currBlock = switchBlock;
+		isPending = false;
 	}
 
 	void visitCompoundStmt(const CompoundStmtPtr& compStmt) {
@@ -406,6 +456,8 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Termin
 	}
 	case NT_WhileStmt:
 		return out << "WHILE(...)\\l";
+	case NT_SwitchStmt:
+		return out << "SWITCH(...)\\l";
 	case NT_ContinueStmt:
 		return out << "CONTINUE\\l";
 	case NT_BreakStmt:
