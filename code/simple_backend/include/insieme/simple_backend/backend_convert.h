@@ -332,7 +332,7 @@ namespace detail {
 
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
  ** */
-class StmtConverter : private ASTVisitor<> {
+class StmtConverter : private ASTVisitor<>, private boost::noncopyable {
 protected:
 	/**
 	 * A reference to the central container maintaining all the instances of the required manager.

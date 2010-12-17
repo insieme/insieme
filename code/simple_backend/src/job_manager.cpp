@@ -92,38 +92,30 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 		assert("Unsupported range specification discovered!");
 	}
 
-	cStr << "memcpy(malloc(sizeof(struct " << info.structName << ")),";
+	StmtConverter& converter = cc.getStmtConverter();
 
-	cStr << "&((struct " << info.structName << "){";
+	cStr << "memcpy(malloc(sizeof(" << info.structName << ")),";
 
-		cStr << "sizeof(struct " << info.structName << "),";
-		cc.getStmtConverter().convert(min);
+	cStr << "&((" << info.structName << "){";
+
+		cStr << "sizeof(" << info.structName << "),";
+		converter.convert(min);
 		cStr << ",";
-		cc.getStmtConverter().convert(max);
+		converter.convert(max);
 		cStr << ",";
 		cStr << "&" << info.funName;
 
-		// add all job handler
-		StmtConverter& stmtConverter = cc.getStmtConverter();
-		for_each(job->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
-
-			stmtConverter.convert(preprocessJobBranch(cur.second));
-
-		});
-
-		// add default job handler
-		stmtConverter.convert(preprocessJobBranch(job->getDefaultStmt())));
 
 		// local shared variables
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 			ExpressionPtr init = cur->getInitialization();
 			cStr << ",";
-			stmtConverter.convert(init);
+			converter.convert(init);
 		});
 
 	cStr << "}),";
 
-	cStr << "sizeof(struct " << info.structName << ")";
+	cStr << "sizeof(" << info.structName << ")";
 
 	cStr << ")";
 }
@@ -150,27 +142,17 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	// get a name for the job
 	string name = cc.getNameManager().getName(job);
-	string structName = "struct" + name;
+	string structName = "struct " + name;
 	string funName = "fun" + name;
 
 	// Step a) create job struct
 	CodePtr jobStruct = std::make_shared<CodeFragment>("struct for job " + name);
 	CodeStream& structStream = jobStruct->getCodeStream();
 
-	structStream << "struct struct" << name << " { " << CodeStream::indR << "\n";
+	structStream << structName << " { " << CodeStream::indR << "\n";
 		structStream << "unsigned structSize;\n";
 		structStream << "unsigned min, max;\n";
-		structStream << "void (*fun)(isbr_JobArgs*);\n";
-
-		structStream << " // ------------ Job-Handling functions ----------\n";
-
-		for(unsigned i=0; i<job->getGuardedStmts().size(); i++) {
-			structStream << "void (*handler" << i << ")();\n";
-		}
-
-		structStream << "void (*defFun)();\n";
-
-		structStream << " // ------------ Local Declarations ----------\n";
+		structStream << "void (*fun)(isbr_JobArgs*);";
 
 		Converter& converter = cc;
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
@@ -206,18 +188,20 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 		funStream << "// ------------------ Processing Guards -----------------\n";
 
-		int i = 0;
+		StmtConverter& stmtConverter = converter.getStmtConverter();
 		for_each(job->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
 
 			// add condition
 			funStream << "if(" << ") {" << CodeStream::indR << "\n";
-			funStream << " = ((" << structName << "*)args)->handler" << i++ << "()";
+			stmtConverter.convert(builder.callExpr(preprocessJobBranch(cur.second)), function);
 			funStream << ";\nreturn;" << CodeStream::indL << "}";
 
 		});
 
-		funStream << "// ----------------- Default processing -----------------\n";
-		funStream << "((" << structName << "*)args)->defFun();\n";
+		funStream << "// ------------------ Default processing -----------------\n";
+
+		stmtConverter.convert(builder.callExpr(preprocessJobBranch(job->getDefaultStmt())), function);
+		funStream << ";";
 
 
 	funStream << CodeStream::indL << "\n";

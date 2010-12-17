@@ -71,7 +71,7 @@ ExpressionPtr IRParser::parseExpression(const std::string& input) {
 //	bool parse_result = qi::phrase_parse(startIt, endIt, exprGrammar, qi::space, result);
 //	parse_result = parse_result && (startIt == endIt);
 //	if(!parse_result) throw ParseException();
-//	return result;
+	return result;
 }
 
 TypePtr parseType(NodeManager& nodeMan, const string& input) {

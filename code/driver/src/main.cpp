@@ -48,9 +48,6 @@
 #include "insieme/simple_backend/simple_backend.h"
 #include "insieme/simple_backend/rewrite.h"
 
-// #include "insieme/opencl_backend/opencl_convert.h"
-// #include "insieme/opencl_backend/opencl_checker.h"
-
 #include "insieme/analysis/cfg.h"
 
 #include "insieme/c_info/naming.h"
@@ -204,7 +201,6 @@ int main(int argc, char** argv) {
 				ompTimer.stop();
 				LOG(INFO) << ompTimer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-				cout << core::printer::PrettyPrinter(program);
 				// check again
 				if(CommandLineOptions::CheckSema) {
 					checker();
