@@ -41,6 +41,8 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace simple_backend {
 
@@ -121,6 +123,56 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 }
 
 
+namespace {
+
+	class VariableCollector : public core::ASTVisitor<> {
+
+		vector<core::VariablePtr>& list;
+
+	public:
+
+		VariableCollector(vector<core::VariablePtr>& list) : list(list) {}
+
+	protected:
+
+		void visitVariable(const core::VariablePtr& var) {
+			// collect this variable
+			if (!contains(list, var)) {
+				list.push_back(var);
+			}
+		}
+
+		void visitLambdaExpr(const core::LambdaExprPtr& lambda) {
+			// break recursive decent when new scope is started
+		}
+
+		void visitType(const core::TypePtr& type) {
+			// just ignore types
+		}
+
+		void visitNode(const core::NodePtr& node) {
+			assert(node->getNodeType() != core::NT_LambdaExpr);
+			// visit all children recursively
+			for_each(node->getChildList(), [this](const NodePtr& cur){
+				this->visit(cur);
+			});
+		}
+
+	};
+
+
+	vector<core::VariablePtr> getVariablesToBeCaptured(const core::JobExprPtr& job) {
+		vector<core::VariablePtr> res;
+
+		// collect all variables potentially captured by this job
+		VariableCollector collector(res);
+		collector.visit(job);
+
+		return res;
+	}
+
+}
+
 JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	// try lookup ..
@@ -145,6 +197,9 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 	string structName = "struct " + name;
 	string funName = "fun" + name;
 
+	// collect list of captured variables
+	vector<core::VariablePtr> varList = getVariablesToBeCaptured(job);
+
 	// Step a) create job struct
 	CodePtr jobStruct = std::make_shared<CodeFragment>("struct for job " + name);
 	CodeStream& structStream = jobStruct->getCodeStream();
@@ -160,6 +215,14 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 			string varName = converter.getNameManager().getName(var);
 			structStream << "\n";
 			structStream <<  converter.getTypeManager().formatParamter(jobStruct, var->getType(), varName, false) << ";";
+		});
+
+		structStream << "\n// ---- additional captured variables -----";
+		for_each(varList, [&](const core::VariablePtr& var) {
+			string varName = converter.getNameManager().getName(var);
+			structStream << "\n";
+			structStream <<  converter.getTypeManager().formatParamter(jobStruct, var->getType(), varName, false) << ";";
+			structStream << "\t // Variable: " << toString(*var);
 		});
 
 	structStream << CodeStream::indL << "\n";
@@ -210,7 +273,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 
 	// Assemble result
-	JobInfo info(structName, funName, jobStruct, function);
+	JobInfo info(structName, funName, jobStruct, function, varList);
 	jobs.insert(std::make_pair(job, info));
 	return info;
 

@@ -14,6 +14,7 @@ struct __insieme_expr_0 {
 	unsigned structSize;
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
+	// ---- additional captured variables -----
 };
 
 // start code fragment :: Prototype for external function: printf //

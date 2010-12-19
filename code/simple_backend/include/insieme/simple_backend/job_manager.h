@@ -61,12 +61,13 @@ class JobManager {
 		string funName;				// the name of the function to be executed
 		CodePtr structDefinition;	// the definition of the job struct
 		CodePtr jobFunction;		// the definition of the function computing the job
+		vector<core::VariablePtr> capturedVars; 	// the variables to be captured within the job branches
 
 		/**
 		 * A simple constructor for this type.
 		 */
-		JobInfo(const string& structName, const string& funName, CodePtr& structDef, CodePtr& funDef)
-			: structName(structName), funName(funName), structDefinition(structDef), jobFunction(funDef) { }
+		JobInfo(const string& structName, const string& funName, CodePtr& structDef, CodePtr& funDef, const vector<core::VariablePtr>& capturedVars)
+			: structName(structName), funName(funName), structDefinition(structDef), jobFunction(funDef), capturedVars(capturedVars) { }
 	};
 
 	/**
