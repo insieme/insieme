@@ -64,8 +64,13 @@ namespace cfg {
 /**
  * CFGElement - Represents a top-level expression in a basic block.
  */
-struct Element : core::StatementPtr {
-	Element(const core::StatementPtr& stmt = core::StatementPtr()) : core::StatementPtr(stmt) { }
+struct Element : public core::StatementPtr {
+	enum Type { None, CtrlCond, LoopInit, LoopIncrement };
+
+	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) : core::StatementPtr (stmt), type(type) { }
+	Type getType() const { return type; }
+private:
+	Type type;
 };
 
 /**
@@ -80,6 +85,7 @@ struct Terminator : public Element {
 };
 
 struct Edge {
+
 
 };
 
@@ -129,12 +135,14 @@ public:
 
 	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 		VertexTy;
 	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator     	VertexIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator  	AdjacencyIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 	EdgeTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 		EdgeTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 		OutEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 		InEdgeIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 	OutEdgeIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 	InEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator  								AdjacencyIterator;
+	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph, VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
+
 
 	CFG() { }
 	~CFG();
@@ -145,9 +153,7 @@ public:
 	 * @param block
 	 * @return
 	 */
-	VertexTy addNode(const cfg::Block* block) {
-		return boost::add_vertex(NodeProperty(block), graph);
-	}
+	VertexTy addNode(cfg::Block* block);
 
 	/**
 	 * Returns a cfg element of the graph given its vertex id.
@@ -181,9 +187,9 @@ public:
 		return adjacent_vertices(v, graph);
 	}
 
-//	std::pair<AdjacencyIterator, AdjacencyIterator> getPrevious(const VertexTy& v) const {
-//		return inv_adjacent_vertices(v, graph);
-//	}
+	std::pair<InvAdjacencyIterator, InvAdjacencyIterator> getPrevious(const VertexTy& v) const {
+		return inv_adjacent_vertices(v, graph);
+	}
 
 	/**
 	 * Builds a control flow graph starting from the rootNode
@@ -192,6 +198,7 @@ public:
 	 * @return
 	 */
 	static CFGPtr buildCFG(const core::NodePtr& rootNode);
+
 private:
 	ControlFlowGraph	graph;
 };
@@ -213,7 +220,7 @@ struct Block {
 	Block(const CFG::VertexTy& id) : id(id) { }
 
 	// Appends a statement to an existing CFGBlock
-	void appendStmt(const core::StatementPtr& stmt) { stmtList.push_back(stmt); }
+	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
 
 	void setTerminal(const core::StatementPtr& stmt) { term = stmt; }
 	const Terminator& getTerminator() const { return term; }

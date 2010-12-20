@@ -122,8 +122,8 @@ NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel
 	auto parLambda = transform::extractLambda(nodeMan, stmtNode, true);
 
 	auto& basic = nodeMan.basic;
-	auto jobExp = build.jobExpr(parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
-	auto parallelCall = build.callExpr(basic.getParallel(), build.literal("8", basic.getUInt4()), build.literal("8", basic.getUInt4()), jobExp);
+	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
+	auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
 	return mergeCall;

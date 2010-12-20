@@ -441,15 +441,16 @@ JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& range, const Expressi
 
 JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new JobExpr(
-			mapper.map(-1, type),
-			mapper.map(0, threadNumRange),
-			mapper.map(1 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
-			copyGuardedStmtsUsing(mapper, 1 + localDecls.size(), guardedStmts),
-			mapper.map(1, localDecls));
+			mapper.map(0, type),
+			mapper.map(1, threadNumRange),
+			mapper.map(2 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
+			copyGuardedStmtsUsing(mapper, 2 + localDecls.size(), guardedStmts),
+			mapper.map(2, localDecls));
 }
 
 Node::OptionChildList JobExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
+	res->push_back(type);
 	res->push_back(threadNumRange);
 	std::copy(localDecls.cbegin(), localDecls.cend(), back_inserter(*res));
 	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&res](const GuardedStmt& cur) {

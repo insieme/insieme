@@ -286,12 +286,16 @@ private:
 
     core::CallExprPtr resolveNative(const core::CallExprPtr& nativeOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args,
             size_t preambleLength) {
+        assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
 
-        core::CallExprPtr la = name  == "native_divide" ?
-                builder.callExpr(BASIC.getAccuracyFast(), BASIC.getRealDiv()) :
-                builder.callExpr(BASIC.getAccuracyFast(), builder.literal(name.substr(preambleLength,name.size()), type));
+        if(name  == "native_divide")
+            return builder.callExpr(builder.callExpr(BASIC.getAccuracyFastBinary(), BASIC.getRealDiv()), args);
 
-        return builder.callExpr(la, args);
+        core::CallExprPtr nativeFct = args.size() == 1 ?
+                builder.callExpr(BASIC.getAccuracyFastUnary(), builder.literal(name.substr(preambleLength,name.size()), type)) :
+                builder.callExpr(BASIC.getAccuracyFastBinary(), builder.literal(name.substr(preambleLength,name.size()), type));
+
+        return builder.callExpr(nativeFct, args);
     }
 
 

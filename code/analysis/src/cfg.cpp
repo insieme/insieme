@@ -67,8 +67,35 @@ struct ScopeStack : std::vector<Scope> {
 	const Scope& top() const { return back(); }
 	void pop() { pop_back(); }
 
-	const Scope& getEnclosingNode(const NodeType& type) const {
-		auto it = std::find_if(rbegin(), rend(), [type](const Scope& curr){ return curr.root->getNodeType() == type; });
+	const Scope& getEnclosingLambda() const {
+		auto filter = [](const Scope& curr) -> bool { return curr.root->getNodeType() == NT_LambdaExpr; };
+		return getEnclosingBlock(filter);
+	}
+
+	// Returns target block of a continue statement placed
+	// in the innermost scope
+	const Scope& getContinueTarget() const {
+		auto filter = [](const Scope& curr) -> bool {
+			NodeType&& nt = curr.root->getNodeType();
+			return nt == NT_WhileStmt || nt == NT_ForStmt;
+		};
+		return getEnclosingBlock(filter);
+	}
+
+	// Returns target block of a break statement placed
+	// in the innermost scope
+	const Scope& getBreakTarget() const {
+		auto filter = [](const Scope& curr) -> bool {
+			NodeType&& nt = curr.root->getNodeType();
+			return nt == NT_WhileStmt || nt == NT_ForStmt || NT_SwitchStmt;
+		};
+		return getEnclosingBlock(filter);
+	}
+
+private:
+	template <class Filter>
+	const Scope& getEnclosingBlock(const Filter& filter) const {
+		auto it = std::find_if(rbegin(), rend(), filter);
 		assert(it != rend()); // if the IR is well formed a continue statement is only allowed if an enclosing loop exists
 		return *it;
 	}
@@ -91,13 +118,12 @@ struct CFGBuilder: public ASTVisitor< void > {
 	ScopeStack 	scopeStack;
 
 	CFGBuilder(CFG& cfg) : cfg(cfg), currBlock(NULL), isPending(true),
-			entry( cfg.addNode( new cfg::Block(0) ) ), exit( cfg.addNode( new cfg::Block(1) ) ), succ(exit) { }
+			entry( cfg.addNode( new cfg::Block ) ), exit( cfg.addNode( new cfg::Block ) ), succ(exit) { }
 
 	void appendPendingBlock() {
 		if(isPending && currBlock && !currBlock->empty()) {
 			CFG::VertexTy&& node = cfg.addNode(currBlock);
 			// set the ID for this block
-			currBlock->setBlockID(node);
 			cfg.addEdge(node, succ);
 			succ = node;
 			currBlock = NULL;
@@ -116,10 +142,9 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitIfStmt(const IfStmtPtr& ifStmt) {
 		cfg::Block* ifBlock = new cfg::Block;
-		ifBlock->appendStmt(ifStmt->getCondition());
+		ifBlock->appendElement( cfg::Element(ifStmt->getCondition(), cfg::Element::CtrlCond) );
 		ifBlock->setTerminal(ifStmt);
 		CFG::VertexTy&& src = cfg.addNode( ifBlock );
-		ifBlock->setBlockID(src);
 
 		// the current node needs to be appendend to the graph (if not empty)
 		appendPendingBlock();
@@ -128,7 +153,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 		currBlock = new cfg::Block;
 		// push scope into the stack for this compound statement
 		visit(ifStmt->getThenBody());
-		// cfg.addEdge(src, std::get<0>(thenCfg) ? std::get<1>(thenCfg) : head);
 		appendPendingBlock();
 		cfg.addEdge(src, succ);
 
@@ -138,7 +162,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 		currBlock = new cfg::Block;
 		// push scope into the stack for this compound statement
 		visit(ifStmt->getElseBody());
-		// cfg.addEdge(src, std::get<0>(elseCfg) ? std::get<1>(elseCfg) : head);
 		appendPendingBlock();
 		cfg.addEdge(src, succ);
 
@@ -153,7 +176,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(continueStmt);
-		succ = scopeStack.getEnclosingNode(NT_ForStmt).entry;
+		succ = scopeStack.getContinueTarget().entry;
 	}
 
 	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
@@ -162,7 +185,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(breakStmt);
-		succ = scopeStack.getEnclosingNode(NT_ForStmt).exit;
+		succ = scopeStack.getBreakTarget().exit;
 	}
 
 	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
@@ -171,8 +194,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = new cfg::Block;
 
 		currBlock->setTerminal(retStmt);
-		currBlock->appendStmt( retStmt->getReturnExpr() );
-		succ = scopeStack.getEnclosingNode(NT_LambdaExpr).exit;
+		currBlock->appendElement( cfg::Element(retStmt->getReturnExpr()) );
+		succ = scopeStack.getEnclosingLambda().exit;
 	}
 
 	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
@@ -182,18 +205,16 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitForStmt(const ForStmtPtr& forStmt) {
 		cfg::Block* forBlock = new cfg::Block;
 		forBlock->setTerminal(forStmt);
-		forBlock->appendStmt(forStmt->getEnd());
+		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
 		CFG::VertexTy&& src = cfg.addNode( forBlock );
-		forBlock->setBlockID(src);
 
 		appendPendingBlock();
 		CFG::VertexTy sink = succ;
 
 		// increment expression
 		cfg::Block* incBlock = new cfg::Block;
-		incBlock->appendStmt(forStmt->getStep());
+		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopIncrement) );
 		CFG::VertexTy&& inc = cfg.addNode( incBlock );
-		incBlock->setBlockID(inc);
 		cfg.addEdge(inc, src);
 
 		succ = inc;
@@ -212,7 +233,66 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
 		currBlock = new cfg::Block;
-		currBlock->appendStmt(forStmt->getDeclaration());
+		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopInit) );
+	}
+
+	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
+		cfg::Block* whileBlock = new cfg::Block;
+		whileBlock->appendElement( cfg::Element(whileStmt->getCondition()) );
+		whileBlock->setTerminal(whileStmt);
+		CFG::VertexTy&& src = cfg.addNode( whileBlock );
+
+		// the current node needs to be appendend to the graph (if not empty)
+		appendPendingBlock();
+		CFG::VertexTy sink = succ;
+
+		succ = src;
+		scopeStack.push( Scope(whileStmt, src, sink) );
+		currBlock = new cfg::Block;
+		// push scope into the stack for this compound statement
+		visit(whileStmt->getBody());
+		scopeStack.pop();
+
+		appendPendingBlock();
+		cfg.addEdge(src, succ);
+		cfg.addEdge(src, sink);
+
+		succ = src;
+	}
+
+	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
+		cfg::Block* switchBlock = new cfg::Block;
+		switchBlock->appendElement( cfg::Element(switchStmt->getSwitchExpr()) );
+		switchBlock->setTerminal(switchStmt);
+		CFG::VertexTy&& src = cfg.addNode( switchBlock );
+
+		// the current node needs to be appendend to the graph (if not empty)
+		appendPendingBlock();
+		CFG::VertexTy sink = succ;
+
+		scopeStack.push( Scope(switchStmt, src, sink) );
+		const std::vector<SwitchStmt::Case>& cases = switchStmt->getCases();
+		std::for_each(cases.begin(), cases.end(), [this, &src, &sink](const SwitchStmt::Case& curr){
+			this->succ = sink;
+			this->currBlock = new cfg::Block;
+			// push scope into the stack for this compound statement
+			this->visit(curr.second);
+
+			appendPendingBlock();
+			this->cfg.addEdge(src, succ);
+		});
+
+		succ = sink;
+		currBlock = new cfg::Block;
+		// Default case
+		this->visit(switchStmt->getDefaultCase());
+		appendPendingBlock();
+		cfg.addEdge(src, succ);
+
+		scopeStack.pop();
+		succ = src;
+		currBlock = switchBlock;
+		isPending = false;
 	}
 
 	void visitCompoundStmt(const CompoundStmtPtr& compStmt) {
@@ -268,7 +348,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitStatement(const StatementPtr& stmt) {
 		assert(currBlock);
-		currBlock->appendStmt(stmt);
+		currBlock->appendElement(stmt);
 	}
 
 	void completeGraph() {
@@ -289,12 +369,19 @@ struct CFGBuilder: public ASTVisitor< void > {
 namespace insieme {
 namespace analysis {
 
+
 CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
 	CFGPtr cfg = std::make_shared<CFG>();
 	CFGBuilder builder(*cfg);
 	builder.visit(rootNode);
 	builder.completeGraph();
 	return cfg;
+}
+
+CFG::VertexTy CFG::addNode(cfg::Block* block) {
+	CFG::VertexTy&& v = boost::add_vertex(CFG::NodeProperty(block), graph);
+	block->setBlockID(v);
+	return v;
 }
 
 CFG::~CFG() {
@@ -324,7 +411,28 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 		out << "[B" << block.getBlockID() << "]\\l\\n";
 		size_t num = 0;
 		std::for_each(block.stmt_begin(), block.stmt_end(), [ &out, &num ](const insieme::analysis::cfg::Element& curr) {
-			out << num++ << ": " << printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 ) << "\\l";
+			out << num++ << ": ";
+			switch(curr.getType()) {
+			case cfg::Element::None:
+				out << printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 );
+				break;
+			case cfg::Element::CtrlCond:
+				out << printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 ) << " <CTRL>";
+				break;
+			case cfg::Element::LoopInit: {
+				out << printer::PrettyPrinter( static_pointer_cast<const ForStmt>(curr)->getDeclaration(), 1<<5 ) << " <LOOP_INIT>";
+				break;
+			}
+			case cfg::Element::LoopIncrement: {
+				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
+				out << printer::PrettyPrinter(forStmt->getDeclaration()->getVariable()) << " += "
+				    << printer::PrettyPrinter( forStmt->getStep(), 1<<5 ) << " <LOOP_INC>";
+				break;
+			}
+			default:
+				break;
+			}
+			out << "\\l";
 		});
 		if(!!block.getTerminator())
 			out << "T: " << block.getTerminator();
@@ -346,6 +454,10 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Termin
 				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 1<<5 ) << " < "
 				<< printer::PrettyPrinter(forStmt->getEnd(), 1<<5 ) << "; ...)\\l";
 	}
+	case NT_WhileStmt:
+		return out << "WHILE(...)\\l";
+	case NT_SwitchStmt:
+		return out << "SWITCH(...)\\l";
 	case NT_ContinueStmt:
 		return out << "CONTINUE\\l";
 	case NT_BreakStmt:

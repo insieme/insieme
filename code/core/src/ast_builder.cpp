@@ -46,6 +46,8 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/map_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -219,21 +221,37 @@ CallExprPtr ASTBuilder::barrier(ExpressionPtr threadgroup) const {
 
 CallExprPtr ASTBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
 	if(!step) step = uintLit(1);
-	return callExpr(manager.basic.getPFor(), 
-		toVector<ExpressionPtr>(getThreadGroup(), vectorExpr(toVector(start)), vectorExpr(toVector(end)), vectorExpr(toVector(step)), body));
+	assert(manager.basic.isInt(start->getType()));
+	assert(manager.basic.isInt(end->getType()));
+	assert(manager.basic.isInt(step->getType()));
+	return callExpr(manager.basic.getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
 }
 
 CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	auto decl = initialFor->getDeclaration();
-	auto loopvar = decl->getVariable();
 	auto forBody = initialFor->getBody();
+	auto loopvar = decl->getVariable();
+
+	auto loopVarType = loopvar->getType();
+	while (loopVarType->getNodeType() == NT_RefType) {
+		loopVarType = static_pointer_cast<const RefType>(loopVarType)->getElementType();
+	}
 
 	// modify body to take vector iteration variable
-	auto pforLambdaParam = variable(vectorType(loopvar->getType(), IntTypeParam::getConcreteIntParam(1)));
-	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, loopvar, 
-		callExpr(manager.basic.getVectorSubscript(), pforLambdaParam, uintLit(0))));
+	auto pforLambdaParam = variable(loopVarType);
+
+	insieme::utils::map::PointerMap<NodePtr, NodePtr> modifications;
+	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
+	modifications.insert(std::make_pair(deref(loopvar), pforLambdaParam));
+	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
+
 	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
 	auto initExp = decl->getInitialization();
+
+	while (initExp->getType()->getNodeType() == NT_RefType) {
+		initExp = deref(initExp);
+	}
+
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
 }
 

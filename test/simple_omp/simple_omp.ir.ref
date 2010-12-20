@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        merge(parallel(8, 8, job([1-inf]){
+        merge(parallel(job([1-inf]){
             default: fun(){
                 printf("hello world\n", varlist.pack(()));
             }
@@ -16,7 +16,7 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        merge(parallel(8, 8, job(([1-inf])){
+        merge(parallel(job(([1-inf])){
             default: fun(){
                 printf("hello world\n", varlist.pack(()));
             }

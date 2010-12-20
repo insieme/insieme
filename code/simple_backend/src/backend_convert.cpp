@@ -863,10 +863,16 @@ namespace detail {
 
 
 		// handle parallel operators
-		ADD_FORMATTER_DETAIL(basic.getParallel(), false, { OUT("isbr_parallel("); VISIT_ARG(2); OUT(")"); });
+		ADD_FORMATTER_DETAIL(basic.getParallel(), false, { OUT("isbr_parallel("); VISIT_ARG(0); OUT(")"); });
 		ADD_FORMATTER_DETAIL(basic.getMerge(), false, { OUT("isbr_merge("); VISIT_ARG(0); OUT(")"); });
 		ADD_FORMATTER_DETAIL(basic.getBarrier(), false, { OUT("isbr_barrier("); VISIT_ARG(0); OUT(")"); });
 
+		ADD_FORMATTER_DETAIL(basic.getGetThreadGroup(), false, { OUT("isbr_getThreadGroup("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(basic.getGetThreadId(), false, { OUT("isbr_getThreadId("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(basic.getGetGroupSize(), false, { OUT("isbr_getGroupSize("); VISIT_ARG(0); OUT(")"); });
+
+
+		ADD_FORMATTER_DETAIL(basic.getPFor(), false, { OUT("isbr_pfor("); OUT(" ... "); OUT(")"); });
 
 		#undef ADD_FORMATTER
 		#undef ADD_FORMATTER_DETAIL

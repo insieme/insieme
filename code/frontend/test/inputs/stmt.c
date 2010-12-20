@@ -265,7 +265,7 @@ void switch_stmt_test() {
 	//};
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 1: (v1 := (( *v1)+1)) case 2: { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); } default: { { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); }; (( *v1)-1); } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 1: (v1 := (( *v1)+1)) case 2: { { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); }; (( *v1)-1); } default: (( *v1)-1) };}"
 	switch(a) {
 	case 1:
 		a+=1;
