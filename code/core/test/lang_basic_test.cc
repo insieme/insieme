@@ -76,17 +76,17 @@ TEST(LangBasic, Grouping) {
 TEST(LangBasic, OperatorGet) {
 	NodeManager nm;
 
-	LiteralPtr op = nm.basic.getOperator(nm.basic.getUInt4(), nm.basic.Add);
+	LiteralPtr op = dynamic_pointer_cast<const Literal>(nm.basic.getOperator(nm.basic.getUInt4(), nm.basic.Add));
 	EXPECT_TRUE(op);
 	EXPECT_EQ(*op, *nm.basic.getUnsignedIntAdd());
 	EXPECT_NE(*op, *nm.basic.getSignedIntAdd());
 
-	LiteralPtr op2 = nm.basic.getOperator(nm.basic.getInt2(), nm.basic.Mul);
+	LiteralPtr op2 = dynamic_pointer_cast<const Literal>(nm.basic.getOperator(nm.basic.getInt2(), nm.basic.Mul));
 	EXPECT_TRUE(op2);
 	EXPECT_EQ(*op2, *nm.basic.getSignedIntMul());
 	EXPECT_NE(*op2, *nm.basic.getUnsignedIntMul());
 
-	LiteralPtr op3 = nm.basic.getOperator(nm.basic.getBool(), nm.basic.Eq);
+	LiteralPtr op3 = dynamic_pointer_cast<const Literal>(nm.basic.getOperator(nm.basic.getBool(), nm.basic.Eq));
 	EXPECT_TRUE(op3);
 	EXPECT_EQ(*op3, *nm.basic.getBoolEq());
 	EXPECT_NE(*op3, *nm.basic.getBoolNe());
