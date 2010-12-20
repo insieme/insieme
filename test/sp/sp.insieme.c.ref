@@ -504,27 +504,27 @@ void initialize(void* _capture) {
 								((zeta) = (((double)((var_73)))*(((*var_42).dnzm1))));
 								{
 									for(int var_69 = 0; var_69 < 2; var_69 += 1) {
-										call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), ((double)((var_69))), (eta), (zeta), &(Pface[((unsigned int)((var_69)))][((unsigned int)(0))][((unsigned int)(0))]));
+										call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), ((double)((var_69))), (eta), (zeta), &((Pface)[((unsigned int)((var_69)))][((unsigned int)(0))][((unsigned int)(0))]));
 									};
 									((ix) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
 								};
 								{
 									for(int var_70 = 0; var_70 < 2; var_70 += 1) {
-										call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), ((double)((var_70))), (zeta), &(Pface[((unsigned int)((var_70)))][((unsigned int)(1))][((unsigned int)(0))]));
+										call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), ((double)((var_70))), (zeta), &((Pface)[((unsigned int)((var_70)))][((unsigned int)(1))][((unsigned int)(0))]));
 									};
 									((iy) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
 								};
 								{
 									for(int var_71 = 0; var_71 < 2; var_71 += 1) {
-										call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), ((double)((var_71))), &(Pface[((unsigned int)((var_71)))][((unsigned int)(2))][((unsigned int)(0))]));
+										call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), ((double)((var_71))), &((Pface)[((unsigned int)((var_71)))][((unsigned int)(2))][((unsigned int)(0))]));
 									};
 									((iz) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
 								};
 								{
 									for(int var_72 = 0; var_72 < 5; var_72 += 1) {
-										((Pxi) = (((xi)*((Pface[((unsigned int)(1))][((unsigned int)(0))][((unsigned int)((var_72)))])))+((1.0-(xi))*((Pface[((unsigned int)(0))][((unsigned int)(0))][((unsigned int)((var_72)))])))));
-										((Peta) = (((eta)*((Pface[((unsigned int)(1))][((unsigned int)(1))][((unsigned int)((var_72)))])))+((1.0-(eta))*((Pface[((unsigned int)(0))][((unsigned int)(1))][((unsigned int)((var_72)))])))));
-										((Pzeta) = (((zeta)*((Pface[((unsigned int)(1))][((unsigned int)(2))][((unsigned int)((var_72)))])))+((1.0-(zeta))*((Pface[((unsigned int)(0))][((unsigned int)(2))][((unsigned int)((var_72)))])))));
+										((Pxi) = (((xi)*(((Pface)[((unsigned int)(1))][((unsigned int)(0))][((unsigned int)((var_72)))])))+((1.0-(xi))*(((Pface)[((unsigned int)(0))][((unsigned int)(0))][((unsigned int)((var_72)))])))));
+										((Peta) = (((eta)*(((Pface)[((unsigned int)(1))][((unsigned int)(1))][((unsigned int)((var_72)))])))+((1.0-(eta))*(((Pface)[((unsigned int)(0))][((unsigned int)(1))][((unsigned int)((var_72)))])))));
+										((Pzeta) = (((zeta)*(((Pface)[((unsigned int)(1))][((unsigned int)(2))][((unsigned int)((var_72)))])))+((1.0-(zeta))*(((Pface)[((unsigned int)(0))][((unsigned int)(2))][((unsigned int)((var_72)))])))));
 										((((((((*var_42).u))[0]))[((unsigned int)((var_72)))][((unsigned int)((var_75)))][((unsigned int)((var_74)))][((unsigned int)((var_73)))])) = (((((((Pxi)+(Peta))+(Pzeta))-((Pxi)*(Peta)))-((Pxi)*(Pzeta)))-((Peta)*(Pzeta)))+(((Pxi)*(Peta))*(Pzeta))));
 									};
 									((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -546,10 +546,10 @@ void initialize(void* _capture) {
 				{
 					for(int var_77 = 0; var_77 < (((((((*var_42).grid_points))[0]))[((unsigned int)(2))])); var_77 += 1) {
 						((zeta) = (((double)((var_77)))*(((*var_42).dnzm1))));
-						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), temp);
+						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), (temp));
 						{
 							for(int var_76 = 0; var_76 < 5; var_76 += 1) {
-								((((((((*var_42).u))[0]))[((unsigned int)((var_76)))][((unsigned int)((i)))][((unsigned int)((var_78)))][((unsigned int)((var_77)))])) = ((temp[((unsigned int)((var_76)))])));
+								((((((((*var_42).u))[0]))[((unsigned int)((var_76)))][((unsigned int)((i)))][((unsigned int)((var_78)))][((unsigned int)((var_77)))])) = (((temp)[((unsigned int)((var_76)))])));
 							};
 							((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 						};
@@ -567,10 +567,10 @@ void initialize(void* _capture) {
 				{
 					for(int var_80 = 0; var_80 < (((((((*var_42).grid_points))[0]))[((unsigned int)(2))])); var_80 += 1) {
 						((zeta) = (((double)((var_80)))*(((*var_42).dnzm1))));
-						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), temp);
+						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), (temp));
 						{
 							for(int var_79 = 0; var_79 < 5; var_79 += 1) {
-								((((((((*var_42).u))[0]))[((unsigned int)((var_79)))][((unsigned int)((i)))][((unsigned int)((var_81)))][((unsigned int)((var_80)))])) = ((temp[((unsigned int)((var_79)))])));
+								((((((((*var_42).u))[0]))[((unsigned int)((var_79)))][((unsigned int)((i)))][((unsigned int)((var_81)))][((unsigned int)((var_80)))])) = (((temp)[((unsigned int)((var_79)))])));
 							};
 							((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 						};
@@ -588,10 +588,10 @@ void initialize(void* _capture) {
 				{
 					for(int var_83 = 0; var_83 < (((((((*var_42).grid_points))[0]))[((unsigned int)(2))])); var_83 += 1) {
 						((zeta) = (((double)((var_83)))*(((*var_42).dnzm1))));
-						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), temp);
+						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), (temp));
 						{
 							for(int var_82 = 0; var_82 < 5; var_82 += 1) {
-								((((((((*var_42).u))[0]))[((unsigned int)((var_82)))][((unsigned int)((var_84)))][((unsigned int)((j)))][((unsigned int)((var_83)))])) = ((temp[((unsigned int)((var_82)))])));
+								((((((((*var_42).u))[0]))[((unsigned int)((var_82)))][((unsigned int)((var_84)))][((unsigned int)((j)))][((unsigned int)((var_83)))])) = (((temp)[((unsigned int)((var_82)))])));
 							};
 							((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 						};
@@ -609,10 +609,10 @@ void initialize(void* _capture) {
 				{
 					for(int var_86 = 0; var_86 < (((((((*var_42).grid_points))[0]))[((unsigned int)(2))])); var_86 += 1) {
 						((zeta) = (((double)((var_86)))*(((*var_42).dnzm1))));
-						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), temp);
+						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), (temp));
 						{
 							for(int var_85 = 0; var_85 < 5; var_85 += 1) {
-								((((((((*var_42).u))[0]))[((unsigned int)((var_85)))][((unsigned int)((var_87)))][((unsigned int)((j)))][((unsigned int)((var_86)))])) = ((temp[((unsigned int)((var_85)))])));
+								((((((((*var_42).u))[0]))[((unsigned int)((var_85)))][((unsigned int)((var_87)))][((unsigned int)((j)))][((unsigned int)((var_86)))])) = (((temp)[((unsigned int)((var_85)))])));
 							};
 							((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 						};
@@ -630,10 +630,10 @@ void initialize(void* _capture) {
 				{
 					for(int var_89 = 0; var_89 < (((((((*var_42).grid_points))[0]))[((unsigned int)(1))])); var_89 += 1) {
 						((eta) = (((double)((var_89)))*(((*var_42).dnym1))));
-						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), temp);
+						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), (temp));
 						{
 							for(int var_88 = 0; var_88 < 5; var_88 += 1) {
-								((((((((*var_42).u))[0]))[((unsigned int)((var_88)))][((unsigned int)((var_90)))][((unsigned int)((var_89)))][((unsigned int)((k)))])) = ((temp[((unsigned int)((var_88)))])));
+								((((((((*var_42).u))[0]))[((unsigned int)((var_88)))][((unsigned int)((var_90)))][((unsigned int)((var_89)))][((unsigned int)((k)))])) = (((temp)[((unsigned int)((var_88)))])));
 							};
 							((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 						};
@@ -651,10 +651,10 @@ void initialize(void* _capture) {
 				{
 					for(int var_92 = 0; var_92 < (((((((*var_42).grid_points))[0]))[((unsigned int)(1))])); var_92 += 1) {
 						((eta) = (((double)((var_92)))*(((*var_42).dnym1))));
-						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), temp);
+						call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_42}))), (xi), (eta), (zeta), (temp));
 						{
 							for(int var_91 = 0; var_91 < 5; var_91 += 1) {
-								((((((((*var_42).u))[0]))[((unsigned int)((var_91)))][((unsigned int)((var_93)))][((unsigned int)((var_92)))][((unsigned int)((k)))])) = ((temp[((unsigned int)((var_91)))])));
+								((((((((*var_42).u))[0]))[((unsigned int)((var_91)))][((unsigned int)((var_93)))][((unsigned int)((var_92)))][((unsigned int)((k)))])) = (((temp)[((unsigned int)((var_91)))])));
 							};
 							((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 						};
@@ -775,17 +775,17 @@ void exact_rhs(void* _capture) {
 						{
 							for(int var_131 = 0; var_131 < (((((((((*var_109).grid_points))[0]))[((unsigned int)(0))]))-1)+1); var_131 += 1) {
 								((xi) = (((double)((var_131)))*(((*var_109).dnxm1))));
-								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_109}))), (xi), (eta), (zeta), dtemp);
+								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_109}))), (xi), (eta), (zeta), (dtemp));
 								{
 									for(int var_129 = 0; var_129 < 5; var_129 += 1) {
-										((((((((*var_109).ue))[0]))[((unsigned int)((var_129)))][((unsigned int)((var_131)))])) = ((dtemp[((unsigned int)((var_129)))])));
+										((((((((*var_109).ue))[0]))[((unsigned int)((var_129)))][((unsigned int)((var_131)))])) = (((dtemp)[((unsigned int)((var_129)))])));
 									};
 									((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 								};
-								((dtpp) = (1.0/((dtemp[((unsigned int)(0))]))));
+								((dtpp) = (1.0/(((dtemp)[((unsigned int)(0))]))));
 								{
 									for(int var_130 = 1; var_130 < 5; var_130 += 1) {
-										((((((((*var_109).buf))[0]))[((unsigned int)((var_130)))][((unsigned int)((var_131)))])) = ((dtpp)*((dtemp[((unsigned int)((var_130)))]))));
+										((((((((*var_109).buf))[0]))[((unsigned int)((var_130)))][((unsigned int)((var_131)))])) = ((dtpp)*(((dtemp)[((unsigned int)((var_130)))]))));
 									};
 									((m) = (1+(((int)(ceil((((double)((5-1)))/((double)(1))))))*1)));
 								};
@@ -851,17 +851,17 @@ void exact_rhs(void* _capture) {
 						{
 							for(int var_141 = 0; var_141 < (((((((((*var_109).grid_points))[0]))[((unsigned int)(1))]))-1)+1); var_141 += 1) {
 								((eta) = (((double)((var_141)))*(((*var_109).dnym1))));
-								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_109}))), (xi), (eta), (zeta), dtemp);
+								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_109}))), (xi), (eta), (zeta), (dtemp));
 								{
 									for(int var_139 = 0; var_139 < 5; var_139 += 1) {
-										((((((((*var_109).ue))[0]))[((unsigned int)((var_139)))][((unsigned int)((var_141)))])) = ((dtemp[((unsigned int)((var_139)))])));
+										((((((((*var_109).ue))[0]))[((unsigned int)((var_139)))][((unsigned int)((var_141)))])) = (((dtemp)[((unsigned int)((var_139)))])));
 									};
 									((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 								};
-								((dtpp) = (1.0/((dtemp[((unsigned int)(0))]))));
+								((dtpp) = (1.0/(((dtemp)[((unsigned int)(0))]))));
 								{
 									for(int var_140 = 1; var_140 < 5; var_140 += 1) {
-										((((((((*var_109).buf))[0]))[((unsigned int)((var_140)))][((unsigned int)((var_141)))])) = ((dtpp)*((dtemp[((unsigned int)((var_140)))]))));
+										((((((((*var_109).buf))[0]))[((unsigned int)((var_140)))][((unsigned int)((var_141)))])) = ((dtpp)*(((dtemp)[((unsigned int)((var_140)))]))));
 									};
 									((m) = (1+(((int)(ceil((((double)((5-1)))/((double)(1))))))*1)));
 								};
@@ -927,17 +927,17 @@ void exact_rhs(void* _capture) {
 						{
 							for(int var_151 = 0; var_151 < (((((((((*var_109).grid_points))[0]))[((unsigned int)(2))]))-1)+1); var_151 += 1) {
 								((zeta) = (((double)((var_151)))*(((*var_109).dnzm1))));
-								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_109}))), (xi), (eta), (zeta), dtemp);
+								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_109}))), (xi), (eta), (zeta), (dtemp));
 								{
 									for(int var_149 = 0; var_149 < 5; var_149 += 1) {
-										((((((((*var_109).ue))[0]))[((unsigned int)((var_149)))][((unsigned int)((var_151)))])) = ((dtemp[((unsigned int)((var_149)))])));
+										((((((((*var_109).ue))[0]))[((unsigned int)((var_149)))][((unsigned int)((var_151)))])) = (((dtemp)[((unsigned int)((var_149)))])));
 									};
 									((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 								};
-								((dtpp) = (1.0/((dtemp[((unsigned int)(0))]))));
+								((dtpp) = (1.0/(((dtemp)[((unsigned int)(0))]))));
 								{
 									for(int var_150 = 1; var_150 < 5; var_150 += 1) {
-										((((((((*var_109).buf))[0]))[((unsigned int)((var_150)))][((unsigned int)((var_151)))])) = ((dtpp)*((dtemp[((unsigned int)((var_150)))]))));
+										((((((((*var_109).buf))[0]))[((unsigned int)((var_150)))][((unsigned int)((var_151)))])) = ((dtpp)*(((dtemp)[((unsigned int)((var_150)))]))));
 									};
 									((m) = (1+(((int)(ceil((((double)((5-1)))/((double)(1))))))*1)));
 								};
@@ -3186,10 +3186,10 @@ void error_norm(void* _capture, double* rms) {
 						{
 							for(int var_688 = 0; var_688 < (((((((((*var_675).grid_points))[0]))[((unsigned int)(2))]))-1)+1); var_688 += 1) {
 								((zeta) = (((double)((var_688)))*(((*var_675).dnzm1))));
-								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_675}))), (xi), (eta), (zeta), u_exact);
+								call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&exact_solution, 0, var_675}))), (xi), (eta), (zeta), (u_exact));
 								{
 									for(int var_687 = 0; var_687 < 5; var_687 += 1) {
-										((add) = ((((((((*var_675).u))[0]))[((unsigned int)((var_687)))][((unsigned int)((var_690)))][((unsigned int)((var_689)))][((unsigned int)((var_688)))]))-((u_exact[((unsigned int)((var_687)))]))));
+										((add) = ((((((((*var_675).u))[0]))[((unsigned int)((var_687)))][((unsigned int)((var_690)))][((unsigned int)((var_689)))][((unsigned int)((var_688)))]))-(((u_exact)[((unsigned int)((var_687)))]))));
 										(((rms[((unsigned int)((var_687)))])) = (((rms[((unsigned int)((var_687)))]))+((add)*(add))));
 									};
 									((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -3294,12 +3294,12 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 		double dtref = 0.0;
 		int m = 0;
 		((epsilon) = 1.0e-08);
-		call__insieme_funType_type_29(((struct __insieme_funType_type_29*)(&((struct __insieme_funType_type_30){&error_norm, 0, var_664}))), xce);
+		call__insieme_funType_type_29(((struct __insieme_funType_type_29*)(&((struct __insieme_funType_type_30){&error_norm, 0, var_664}))), (xce));
 		call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&compute_rhs, 0, var_664}))));
-		call__insieme_funType_type_29(((struct __insieme_funType_type_29*)(&((struct __insieme_funType_type_30){&rhs_norm, 0, var_664}))), xcr);
+		call__insieme_funType_type_29(((struct __insieme_funType_type_29*)(&((struct __insieme_funType_type_30){&rhs_norm, 0, var_664}))), (xcr));
 		{
 			for(int var_710 = 0; var_710 < 5; var_710 += 1) {
-				(((xcr[((unsigned int)((var_710)))])) = (((xcr[((unsigned int)((var_710)))]))/(((*var_664).dt))));
+				((((xcr)[((unsigned int)((var_710)))])) = ((((xcr)[((unsigned int)((var_710)))]))/(((*var_664).dt))));
 			};
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
@@ -3307,83 +3307,83 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 		(((verified[0])) = 1);
 		{
 			for(int var_711 = 0; var_711 < 5; var_711 += 1) {
-				(((xcrref[((unsigned int)((var_711)))])) = 1.0);
-				(((xceref[((unsigned int)((var_711)))])) = 1.0);
+				((((xcrref)[((unsigned int)((var_711)))])) = 1.0);
+				((((xceref)[((unsigned int)((var_711)))])) = 1.0);
 			};
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
 		if((((((((((((*var_664).grid_points))[0]))[((unsigned int)(0))]))==12)&&((((((((*var_664).grid_points))[0]))[((unsigned int)(1))]))==12))&&((((((((*var_664).grid_points))[0]))[((unsigned int)(2))]))==12))&&(no_time_steps==100))) {
 			(((class[0])) = ((char)('S')));
 			((dtref) = 1.5e-2);
-			(((xcrref[((unsigned int)(0))])) = 2.7470315451339479e-02);
-			(((xcrref[((unsigned int)(1))])) = 1.0360746705285417e-02);
-			(((xcrref[((unsigned int)(2))])) = 1.6235745065095532e-02);
-			(((xcrref[((unsigned int)(3))])) = 1.5840557224455615e-02);
-			(((xcrref[((unsigned int)(4))])) = 3.4849040609362460e-02);
-			(((xceref[((unsigned int)(0))])) = 2.7289258557377227e-05);
-			(((xceref[((unsigned int)(1))])) = 1.0364446640837285e-05);
-			(((xceref[((unsigned int)(2))])) = 1.6154798287166471e-05);
-			(((xceref[((unsigned int)(3))])) = 1.5750704994480102e-05);
-			(((xceref[((unsigned int)(4))])) = 3.4177666183390531e-05);
+			((((xcrref)[((unsigned int)(0))])) = 2.7470315451339479e-02);
+			((((xcrref)[((unsigned int)(1))])) = 1.0360746705285417e-02);
+			((((xcrref)[((unsigned int)(2))])) = 1.6235745065095532e-02);
+			((((xcrref)[((unsigned int)(3))])) = 1.5840557224455615e-02);
+			((((xcrref)[((unsigned int)(4))])) = 3.4849040609362460e-02);
+			((((xceref)[((unsigned int)(0))])) = 2.7289258557377227e-05);
+			((((xceref)[((unsigned int)(1))])) = 1.0364446640837285e-05);
+			((((xceref)[((unsigned int)(2))])) = 1.6154798287166471e-05);
+			((((xceref)[((unsigned int)(3))])) = 1.5750704994480102e-05);
+			((((xceref)[((unsigned int)(4))])) = 3.4177666183390531e-05);
 		} else if((((((((((((*var_664).grid_points))[0]))[((unsigned int)(0))]))==36)&&((((((((*var_664).grid_points))[0]))[((unsigned int)(1))]))==36))&&((((((((*var_664).grid_points))[0]))[((unsigned int)(2))]))==36))&&(no_time_steps==400))) {
 			(((class[0])) = ((char)('W')));
 			((dtref) = 1.5e-3);
-			(((xcrref[((unsigned int)(0))])) = 0.1893253733584e-02);
-			(((xcrref[((unsigned int)(1))])) = 0.1717075447775e-03);
-			(((xcrref[((unsigned int)(2))])) = 0.2778153350936e-03);
-			(((xcrref[((unsigned int)(3))])) = 0.2887475409984e-03);
-			(((xcrref[((unsigned int)(4))])) = 0.3143611161242e-02);
-			(((xceref[((unsigned int)(0))])) = 0.7542088599534e-04);
-			(((xceref[((unsigned int)(1))])) = 0.6512852253086e-05);
-			(((xceref[((unsigned int)(2))])) = 0.1049092285688e-04);
-			(((xceref[((unsigned int)(3))])) = 0.1128838671535e-04);
-			(((xceref[((unsigned int)(4))])) = 0.1212845639773e-03);
+			((((xcrref)[((unsigned int)(0))])) = 0.1893253733584e-02);
+			((((xcrref)[((unsigned int)(1))])) = 0.1717075447775e-03);
+			((((xcrref)[((unsigned int)(2))])) = 0.2778153350936e-03);
+			((((xcrref)[((unsigned int)(3))])) = 0.2887475409984e-03);
+			((((xcrref)[((unsigned int)(4))])) = 0.3143611161242e-02);
+			((((xceref)[((unsigned int)(0))])) = 0.7542088599534e-04);
+			((((xceref)[((unsigned int)(1))])) = 0.6512852253086e-05);
+			((((xceref)[((unsigned int)(2))])) = 0.1049092285688e-04);
+			((((xceref)[((unsigned int)(3))])) = 0.1128838671535e-04);
+			((((xceref)[((unsigned int)(4))])) = 0.1212845639773e-03);
 		} else if((((((((((((*var_664).grid_points))[0]))[((unsigned int)(0))]))==64)&&((((((((*var_664).grid_points))[0]))[((unsigned int)(1))]))==64))&&((((((((*var_664).grid_points))[0]))[((unsigned int)(2))]))==64))&&(no_time_steps==400))) {
 			(((class[0])) = ((char)('A')));
 			((dtref) = 1.5e-3);
-			(((xcrref[((unsigned int)(0))])) = 2.4799822399300195);
-			(((xcrref[((unsigned int)(1))])) = 1.1276337964368832);
-			(((xcrref[((unsigned int)(2))])) = 1.5028977888770491);
-			(((xcrref[((unsigned int)(3))])) = 1.4217816211695179);
-			(((xcrref[((unsigned int)(4))])) = 2.1292113035138280);
-			(((xceref[((unsigned int)(0))])) = 1.0900140297820550e-04);
-			(((xceref[((unsigned int)(1))])) = 3.7343951769282091e-05);
-			(((xceref[((unsigned int)(2))])) = 5.0092785406541633e-05);
-			(((xceref[((unsigned int)(3))])) = 4.7671093939528255e-05);
-			(((xceref[((unsigned int)(4))])) = 1.3621613399213001e-04);
+			((((xcrref)[((unsigned int)(0))])) = 2.4799822399300195);
+			((((xcrref)[((unsigned int)(1))])) = 1.1276337964368832);
+			((((xcrref)[((unsigned int)(2))])) = 1.5028977888770491);
+			((((xcrref)[((unsigned int)(3))])) = 1.4217816211695179);
+			((((xcrref)[((unsigned int)(4))])) = 2.1292113035138280);
+			((((xceref)[((unsigned int)(0))])) = 1.0900140297820550e-04);
+			((((xceref)[((unsigned int)(1))])) = 3.7343951769282091e-05);
+			((((xceref)[((unsigned int)(2))])) = 5.0092785406541633e-05);
+			((((xceref)[((unsigned int)(3))])) = 4.7671093939528255e-05);
+			((((xceref)[((unsigned int)(4))])) = 1.3621613399213001e-04);
 		} else if((((((((((((*var_664).grid_points))[0]))[((unsigned int)(0))]))==102)&&((((((((*var_664).grid_points))[0]))[((unsigned int)(1))]))==102))&&((((((((*var_664).grid_points))[0]))[((unsigned int)(2))]))==102))&&(no_time_steps==400))) {
 			(((class[0])) = ((char)('B')));
 			((dtref) = 1.0e-3);
-			(((xcrref[((unsigned int)(0))])) = 0.6903293579998e+02);
-			(((xcrref[((unsigned int)(1))])) = 0.3095134488084e+02);
-			(((xcrref[((unsigned int)(2))])) = 0.4103336647017e+02);
-			(((xcrref[((unsigned int)(3))])) = 0.3864769009604e+02);
-			(((xcrref[((unsigned int)(4))])) = 0.5643482272596e+02);
-			(((xceref[((unsigned int)(0))])) = 0.9810006190188e-02);
-			(((xceref[((unsigned int)(1))])) = 0.1022827905670e-02);
-			(((xceref[((unsigned int)(2))])) = 0.1720597911692e-02);
-			(((xceref[((unsigned int)(3))])) = 0.1694479428231e-02);
-			(((xceref[((unsigned int)(4))])) = 0.1847456263981e-01);
+			((((xcrref)[((unsigned int)(0))])) = 0.6903293579998e+02);
+			((((xcrref)[((unsigned int)(1))])) = 0.3095134488084e+02);
+			((((xcrref)[((unsigned int)(2))])) = 0.4103336647017e+02);
+			((((xcrref)[((unsigned int)(3))])) = 0.3864769009604e+02);
+			((((xcrref)[((unsigned int)(4))])) = 0.5643482272596e+02);
+			((((xceref)[((unsigned int)(0))])) = 0.9810006190188e-02);
+			((((xceref)[((unsigned int)(1))])) = 0.1022827905670e-02);
+			((((xceref)[((unsigned int)(2))])) = 0.1720597911692e-02);
+			((((xceref)[((unsigned int)(3))])) = 0.1694479428231e-02);
+			((((xceref)[((unsigned int)(4))])) = 0.1847456263981e-01);
 		} else if((((((((((((*var_664).grid_points))[0]))[((unsigned int)(0))]))==162)&&((((((((*var_664).grid_points))[0]))[((unsigned int)(1))]))==162))&&((((((((*var_664).grid_points))[0]))[((unsigned int)(2))]))==162))&&(no_time_steps==400))) {
 			(((class[0])) = ((char)('C')));
 			((dtref) = 0.67e-3);
-			(((xcrref[((unsigned int)(0))])) = 0.5881691581829e+03);
-			(((xcrref[((unsigned int)(1))])) = 0.2454417603569e+03);
-			(((xcrref[((unsigned int)(2))])) = 0.3293829191851e+03);
-			(((xcrref[((unsigned int)(3))])) = 0.3081924971891e+03);
-			(((xcrref[((unsigned int)(4))])) = 0.4597223799176e+03);
-			(((xceref[((unsigned int)(0))])) = 0.2598120500183e+00);
-			(((xceref[((unsigned int)(1))])) = 0.2590888922315e-01);
-			(((xceref[((unsigned int)(2))])) = 0.5132886416320e-01);
-			(((xceref[((unsigned int)(3))])) = 0.4806073419454e-01);
-			(((xceref[((unsigned int)(4))])) = 0.5483377491301e+00);
+			((((xcrref)[((unsigned int)(0))])) = 0.5881691581829e+03);
+			((((xcrref)[((unsigned int)(1))])) = 0.2454417603569e+03);
+			((((xcrref)[((unsigned int)(2))])) = 0.3293829191851e+03);
+			((((xcrref)[((unsigned int)(3))])) = 0.3081924971891e+03);
+			((((xcrref)[((unsigned int)(4))])) = 0.4597223799176e+03);
+			((((xceref)[((unsigned int)(0))])) = 0.2598120500183e+00);
+			((((xceref)[((unsigned int)(1))])) = 0.2590888922315e-01);
+			((((xceref)[((unsigned int)(2))])) = 0.5132886416320e-01);
+			((((xceref)[((unsigned int)(3))])) = 0.4806073419454e-01);
+			((((xceref)[((unsigned int)(4))])) = 0.5483377491301e+00);
 		} else {
 			(((verified[0])) = 0);
 		};
 		{
 			for(int var_742 = 0; var_742 < 5; var_742 += 1) {
-				(((xcrdif[((unsigned int)((var_742)))])) = fabs(((((xcr[((unsigned int)((var_742)))]))-((xcrref[((unsigned int)((var_742)))])))/((xcrref[((unsigned int)((var_742)))])))));
-				(((xcedif[((unsigned int)((var_742)))])) = fabs(((((xce[((unsigned int)((var_742)))]))-((xceref[((unsigned int)((var_742)))])))/((xceref[((unsigned int)((var_742)))])))));
+				((((xcrdif)[((unsigned int)((var_742)))])) = fabs((((((xcr)[((unsigned int)((var_742)))]))-(((xcrref)[((unsigned int)((var_742)))])))/(((xcrref)[((unsigned int)((var_742)))])))));
+				((((xcedif)[((unsigned int)((var_742)))])) = fabs((((((xce)[((unsigned int)((var_742)))]))-(((xceref)[((unsigned int)((var_742)))])))/(((xceref)[((unsigned int)((var_742)))])))));
 			};
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
@@ -3406,12 +3406,12 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 		{
 			for(int var_743 = 0; var_743 < 5; var_743 += 1) {
 				if((((int)(((class[0]))))=='U')) {
-					printf("          %2d%20.13e\n", (var_743), ((xcr[((unsigned int)((var_743)))])));
-				} else if((((xcrdif[((unsigned int)((var_743)))]))>(epsilon))) {
+					printf("          %2d%20.13e\n", (var_743), (((xcr)[((unsigned int)((var_743)))])));
+				} else if(((((xcrdif)[((unsigned int)((var_743)))]))>(epsilon))) {
 					(((verified[0])) = 0);
-					printf(" FAILURE: %2d%20.13e%20.13e%20.13e\n", (var_743), ((xcr[((unsigned int)((var_743)))])), ((xcrref[((unsigned int)((var_743)))])), ((xcrdif[((unsigned int)((var_743)))])));
+					printf(" FAILURE: %2d%20.13e%20.13e%20.13e\n", (var_743), (((xcr)[((unsigned int)((var_743)))])), (((xcrref)[((unsigned int)((var_743)))])), (((xcrdif)[((unsigned int)((var_743)))])));
 				} else {
-					printf("          %2d%20.13e%20.13e%20.13e\n", (var_743), ((xcr[((unsigned int)((var_743)))])), ((xcrref[((unsigned int)((var_743)))])), ((xcrdif[((unsigned int)((var_743)))])));
+					printf("          %2d%20.13e%20.13e%20.13e\n", (var_743), (((xcr)[((unsigned int)((var_743)))])), (((xcrref)[((unsigned int)((var_743)))])), (((xcrdif)[((unsigned int)((var_743)))])));
 				};
 			};
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -3424,12 +3424,12 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 		{
 			for(int var_744 = 0; var_744 < 5; var_744 += 1) {
 				if((((int)(((class[0]))))=='U')) {
-					printf("          %2d%20.13e\n", (var_744), ((xce[((unsigned int)((var_744)))])));
-				} else if((((xcedif[((unsigned int)((var_744)))]))>(epsilon))) {
+					printf("          %2d%20.13e\n", (var_744), (((xce)[((unsigned int)((var_744)))])));
+				} else if(((((xcedif)[((unsigned int)((var_744)))]))>(epsilon))) {
 					(((verified[0])) = 0);
-					printf(" FAILURE: %2d%20.13e%20.13e%20.13e\n", (var_744), ((xce[((unsigned int)((var_744)))])), ((xceref[((unsigned int)((var_744)))])), ((xcedif[((unsigned int)((var_744)))])));
+					printf(" FAILURE: %2d%20.13e%20.13e%20.13e\n", (var_744), (((xce)[((unsigned int)((var_744)))])), (((xceref)[((unsigned int)((var_744)))])), (((xcedif)[((unsigned int)((var_744)))])));
 				} else {
-					printf("          %2d%20.13e%20.13e%20.13e\n", (var_744), ((xce[((unsigned int)((var_744)))])), ((xceref[((unsigned int)((var_744)))])), ((xcedif[((unsigned int)((var_744)))])));
+					printf("          %2d%20.13e%20.13e%20.13e\n", (var_744), (((xce)[((unsigned int)((var_744)))])), (((xceref)[((unsigned int)((var_744)))])), (((xcedif)[((unsigned int)((var_744)))])));
 				};
 			};
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));

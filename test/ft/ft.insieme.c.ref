@@ -617,7 +617,7 @@ void cffts1(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 		int jj = 0;
 		{
 			for(int var_129 = 0; var_129 < 3; var_129 += 1) {
-				(((logd[((unsigned int)((var_129)))])) = ilog2(((d[((unsigned int)((var_129)))]))));
+				((((logd)[((unsigned int)((var_129)))])) = ilog2(((d[((unsigned int)((var_129)))]))));
 			};
 			((i) = (0+(((int)(ceil((((double)((3-0)))/((double)(1))))))*1)));
 		};
@@ -637,7 +637,7 @@ void cffts1(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 							};
 							((j) = (0+(((int)(ceil((((double)(((((*var_123).fftblock))-0)))/((double)(1))))))*1)));
 						};
-						call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&cfftz, 0, var_123}))), is, ((logd[((unsigned int)(0))])), ((d[((unsigned int)(0))])), y0, y1);
+						call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&cfftz, 0, var_123}))), is, (((logd)[((unsigned int)(0))])), ((d[((unsigned int)(0))])), y0, y1);
 						{
 							for(int var_186 = 0; var_186 < (((*var_123).fftblock)); var_186 += 1) {
 								{
@@ -673,7 +673,7 @@ void cffts2(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 		int ii = 0;
 		{
 			for(int var_202 = 0; var_202 < 3; var_202 += 1) {
-				(((logd[((unsigned int)((var_202)))])) = ilog2(((d[((unsigned int)((var_202)))]))));
+				((((logd)[((unsigned int)((var_202)))])) = ilog2(((d[((unsigned int)((var_202)))]))));
 			};
 			((i) = (0+(((int)(ceil((((double)((3-0)))/((double)(1))))))*1)));
 		};
@@ -693,7 +693,7 @@ void cffts2(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 							};
 							((j) = (0+(((int)(ceil((((double)((((d[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
 						};
-						call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&cfftz, 0, var_196}))), is, ((logd[((unsigned int)(1))])), ((d[((unsigned int)(1))])), y0, y1);
+						call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&cfftz, 0, var_196}))), is, (((logd)[((unsigned int)(1))])), ((d[((unsigned int)(1))])), y0, y1);
 						{
 							for(int var_206 = 0; var_206 < ((d[((unsigned int)(1))])); var_206 += 1) {
 								{
@@ -729,7 +729,7 @@ void cffts3(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 		int ii = 0;
 		{
 			for(int var_222 = 0; var_222 < 3; var_222 += 1) {
-				(((logd[((unsigned int)((var_222)))])) = ilog2(((d[((unsigned int)((var_222)))]))));
+				((((logd)[((unsigned int)((var_222)))])) = ilog2(((d[((unsigned int)((var_222)))]))));
 			};
 			((i) = (0+(((int)(ceil((((double)((3-0)))/((double)(1))))))*1)));
 		};
@@ -749,7 +749,7 @@ void cffts3(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 							};
 							((k) = (0+(((int)(ceil((((double)((((d[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
 						};
-						call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&cfftz, 0, var_216}))), is, ((logd[((unsigned int)(2))])), ((d[((unsigned int)(2))])), y0, y1);
+						call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&cfftz, 0, var_216}))), is, (((logd)[((unsigned int)(2))])), ((d[((unsigned int)(2))])), y0, y1);
 						{
 							for(int var_226 = 0; var_226 < ((d[((unsigned int)(2))])); var_226 += 1) {
 								{
@@ -781,13 +781,13 @@ void fft(void* _capture, int dir, struct dcomplex(* x1)[128][128], struct dcompl
 		struct dcomplex y0[128][18];
 		struct dcomplex y1[128][18];
 		if((dir==1)) {
-			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts1, 0, var_114}))), 1, (((((*var_114).dims))[0]))[((unsigned int)(0))], x1, x1, y0, y1);
-			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts2, 0, var_114}))), 1, (((((*var_114).dims))[0]))[((unsigned int)(1))], x1, x1, y0, y1);
-			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts3, 0, var_114}))), 1, (((((*var_114).dims))[0]))[((unsigned int)(2))], x1, x2, y0, y1);
+			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts1, 0, var_114}))), 1, (((((*var_114).dims))[0]))[((unsigned int)(0))], x1, x1, (y0), (y1));
+			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts2, 0, var_114}))), 1, (((((*var_114).dims))[0]))[((unsigned int)(1))], x1, x1, (y0), (y1));
+			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts3, 0, var_114}))), 1, (((((*var_114).dims))[0]))[((unsigned int)(2))], x1, x2, (y0), (y1));
 		} else {
-			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts3, 0, var_114}))), (((int)(0))-1), (((((*var_114).dims))[0]))[((unsigned int)(2))], x1, x1, y0, y1);
-			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts2, 0, var_114}))), (((int)(0))-1), (((((*var_114).dims))[0]))[((unsigned int)(1))], x1, x1, y0, y1);
-			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts1, 0, var_114}))), (((int)(0))-1), (((((*var_114).dims))[0]))[((unsigned int)(0))], x1, x2, y0, y1);
+			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts3, 0, var_114}))), (((int)(0))-1), (((((*var_114).dims))[0]))[((unsigned int)(2))], x1, x1, (y0), (y1));
+			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts2, 0, var_114}))), (((int)(0))-1), (((((*var_114).dims))[0]))[((unsigned int)(1))], x1, x1, (y0), (y1));
+			call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&cffts1, 0, var_114}))), (((int)(0))-1), (((((*var_114).dims))[0]))[((unsigned int)(0))], x1, x2, (y0), (y1));
 		};
 	}
 }
@@ -1120,11 +1120,11 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 			(((class[0])) = ((char)('S')));
 			{
 				for(int var_321 = 1; var_321 < (nt+1); var_321 += 1) {
-					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_321)))])).real))-((vdata_real_s[((unsigned int)((var_321)))])))/((vdata_real_s[((unsigned int)((var_321)))]))));
+					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_321)))])).real))-(((vdata_real_s)[((unsigned int)((var_321)))])))/(((vdata_real_s)[((unsigned int)((var_321)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
-					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_321)))])).imag))-((vdata_imag_s[((unsigned int)((var_321)))])))/((vdata_imag_s[((unsigned int)((var_321)))]))));
+					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_321)))])).imag))-(((vdata_imag_s)[((unsigned int)((var_321)))])))/(((vdata_imag_s)[((unsigned int)((var_321)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
@@ -1136,11 +1136,11 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 			(((class[0])) = ((char)('W')));
 			{
 				for(int var_328 = 1; var_328 < (nt+1); var_328 += 1) {
-					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_328)))])).real))-((vdata_real_w[((unsigned int)((var_328)))])))/((vdata_real_w[((unsigned int)((var_328)))]))));
+					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_328)))])).real))-(((vdata_real_w)[((unsigned int)((var_328)))])))/(((vdata_real_w)[((unsigned int)((var_328)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
-					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_328)))])).imag))-((vdata_imag_w[((unsigned int)((var_328)))])))/((vdata_imag_w[((unsigned int)((var_328)))]))));
+					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_328)))])).imag))-(((vdata_imag_w)[((unsigned int)((var_328)))])))/(((vdata_imag_w)[((unsigned int)((var_328)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
@@ -1152,11 +1152,11 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 			(((class[0])) = ((char)('A')));
 			{
 				for(int var_335 = 1; var_335 < (nt+1); var_335 += 1) {
-					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_335)))])).real))-((vdata_real_a[((unsigned int)((var_335)))])))/((vdata_real_a[((unsigned int)((var_335)))]))));
+					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_335)))])).real))-(((vdata_real_a)[((unsigned int)((var_335)))])))/(((vdata_real_a)[((unsigned int)((var_335)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
-					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_335)))])).imag))-((vdata_imag_a[((unsigned int)((var_335)))])))/((vdata_imag_a[((unsigned int)((var_335)))]))));
+					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_335)))])).imag))-(((vdata_imag_a)[((unsigned int)((var_335)))])))/(((vdata_imag_a)[((unsigned int)((var_335)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
@@ -1168,11 +1168,11 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 			(((class[0])) = ((char)('B')));
 			{
 				for(int var_342 = 1; var_342 < (nt+1); var_342 += 1) {
-					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_342)))])).real))-((vdata_real_b[((unsigned int)((var_342)))])))/((vdata_real_b[((unsigned int)((var_342)))]))));
+					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_342)))])).real))-(((vdata_real_b)[((unsigned int)((var_342)))])))/(((vdata_real_b)[((unsigned int)((var_342)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
-					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_342)))])).imag))-((vdata_imag_b[((unsigned int)((var_342)))])))/((vdata_imag_b[((unsigned int)((var_342)))]))));
+					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_342)))])).imag))-(((vdata_imag_b)[((unsigned int)((var_342)))])))/(((vdata_imag_b)[((unsigned int)((var_342)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
@@ -1184,11 +1184,11 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 			(((class[0])) = ((char)('C')));
 			{
 				for(int var_349 = 1; var_349 < (nt+1); var_349 += 1) {
-					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_349)))])).real))-((vdata_real_c[((unsigned int)((var_349)))])))/((vdata_real_c[((unsigned int)((var_349)))]))));
+					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_349)))])).real))-(((vdata_real_c)[((unsigned int)((var_349)))])))/(((vdata_real_c)[((unsigned int)((var_349)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
-					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_349)))])).imag))-((vdata_imag_c[((unsigned int)((var_349)))])))/((vdata_imag_c[((unsigned int)((var_349)))]))));
+					};((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_349)))])).imag))-(((vdata_imag_c)[((unsigned int)((var_349)))])))/(((vdata_imag_c)[((unsigned int)((var_349)))]))));
 					if((fabs((err))>(epsilon))) {
 						(((verified[0])) = 0);
 						break;
@@ -1281,11 +1281,11 @@ void print_timers(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		int i = 0;
-		char* tstrings[7] = {"          total ", "          setup ", "            fft ", "         evolve ", "       checksum ", "         fftlow ", "        fftcopy "};
+		char*** tstrings[7] = {"          total ", "          setup ", "            fft ", "         evolve ", "       checksum ", "         fftlow ", "        fftcopy "};
 		{
 			for(int var_387 = 0; var_387 < 7; var_387 += 1) {
 				if((call__insieme_funType_type_28(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){&timer_read, 0, var_384}))), (var_387))!=0.0)) {
-					printf("timer %2d(%16s( :%10.6f\n", (var_387), tstrings[((unsigned int)((var_387)))], call__insieme_funType_type_28(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){&timer_read, 0, var_384}))), (var_387)));
+					printf("timer %2d(%16s( :%10.6f\n", (var_387), (tstrings)[((unsigned int)((var_387)))], call__insieme_funType_type_28(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){&timer_read, 0, var_384}))), (var_387)));
 				};
 			};
 			((i) = (0+(((int)(ceil((((double)((7-0)))/((double)(1))))))*1)));

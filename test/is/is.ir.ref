@@ -276,7 +276,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             decl ref<int<4>> v51 =  var(0);
             decl ref<int<4>> v52 =  var(0);
             decl ref<int<4>> v53 =  var(0);
-            decl vector<ref<int<4>>,65536> v54 = undefined(vector<ref<int<4>>,65536>);
+            decl ref<vector<ref<int<4>>,65536>> v54 =  var(undefined(vector<ref<int<4>>,65536>));
             {
                 v44.key_array[0][v43] := v43;
                 v44.key_array[0][v43+10] := int.lshift(1, 16)-v43;
@@ -408,7 +408,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     decl ref<int<4>> v51 =  var(0);
                     decl ref<int<4>> v52 =  var(0);
                     decl ref<int<4>> v53 =  var(0);
-                    decl vector<ref<int<4>>,65536> v54 = undefined(vector<ref<int<4>>,65536>);
+                    decl ref<vector<ref<int<4>>,65536>> v54 =  var(undefined(vector<ref<int<4>>,65536>));
                     {
                         v44.key_array[0][v43] := v43;
                         v44.key_array[0][v43+10] := int.lshift(1, 16)-v43;
@@ -864,7 +864,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             decl ref<int<4>> v51 = ( var(0));
             decl ref<int<4>> v52 = ( var(0));
             decl ref<int<4>> v53 = ( var(0));
-            decl vector<ref<int<4>>,65536> v54 = undefined(vector<ref<int<4>>,65536>);
+            decl ref<vector<ref<int<4>>,65536>> v54 = ( var(undefined(vector<ref<int<4>>,65536>)));
             <m id=1>{
                 ((( *(( *( *v44).key_array)[0]))[CAST<uint<4>>(v43)]) := v43);
                 ((( *(( *( *v44).key_array)[0]))[CAST<uint<4>>((v43+10))]) := (int.lshift(1, 16)-v43));
@@ -883,27 +883,27 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             }</m>;
             {
                 <m id=2>for(decl ref<int<4>> v57 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                    ((v54[CAST<uint<4>>(( *v57))]) := 0)
+                    ((( *v54)[CAST<uint<4>>(( *v57))]) := 0)
                 </m>;
                 (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
             };
             {
                 <m id=3>for(decl ref<int<4>> v58 = ( var(0)) .. int.lshift(1, 20) : 1) {
                     ((( *(( *( *v44).key_buff2)[0]))[CAST<uint<4>>(( *v58))]) := ( *(( *(( *( *v44).key_array)[0]))[CAST<uint<4>>(( *v58))])));
-                    int.postInc((v54[CAST<uint<4>>(( *(( *(( *( *v44).key_buff2)[0]))[CAST<uint<4>>(( *v58))])))]));
+                    int.postInc((( *v54)[CAST<uint<4>>(( *(( *(( *( *v44).key_buff2)[0]))[CAST<uint<4>>(( *v58))])))]));
                 }</m>;
                 (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
             };
             {
                 for(decl ref<int<4>> v59 = ( var(0)) .. (int.lshift(1, 16)-1) : 1) 
-                    ((v54[CAST<uint<4>>((( *v59)+1))]) := (( *(v54[CAST<uint<4>>((( *v59)+1))]))+( *(v54[CAST<uint<4>>(( *v59))]))))
+                    ((( *v54)[CAST<uint<4>>((( *v59)+1))]) := (( *(( *v54)[CAST<uint<4>>((( *v59)+1))]))+( *(( *v54)[CAST<uint<4>>(( *v59))]))))
                 ;
                 (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>(((int.lshift(1, 16)-1)-0))/CAST<real<8>>(1))))*1)));
             };
             <m id=4>{
                 {
                     for(decl ref<int<4>> v60 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                        ((( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]) := (( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]))+( *(v54[CAST<uint<4>>(( *v60))]))))
+                        ((( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]) := (( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]))+( *(( *v54)[CAST<uint<4>>(( *v60))]))))
                     ;
                     (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                 };
@@ -996,7 +996,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     decl ref<int<4>> v51 = ( var(0));
                     decl ref<int<4>> v52 = ( var(0));
                     decl ref<int<4>> v53 = ( var(0));
-                    decl vector<ref<int<4>>,65536> v54 = undefined(vector<ref<int<4>>,65536>);
+                    decl ref<vector<ref<int<4>>,65536>> v54 = ( var(undefined(vector<ref<int<4>>,65536>)));
                     <m id=1>{
                         ((( *(( *( *v44).key_array)[0]))[CAST<uint<4>>(v43)]) := v43);
                         ((( *(( *( *v44).key_array)[0]))[CAST<uint<4>>((v43+10))]) := (int.lshift(1, 16)-v43));
@@ -1015,27 +1015,27 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                     }</m>;
                     {
                         <m id=2>for(decl ref<int<4>> v57 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                            ((v54[CAST<uint<4>>(( *v57))]) := 0)
+                            ((( *v54)[CAST<uint<4>>(( *v57))]) := 0)
                         </m>;
                         (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                     };
                     {
                         <m id=3>for(decl ref<int<4>> v58 = ( var(0)) .. int.lshift(1, 20) : 1) {
                             ((( *(( *( *v44).key_buff2)[0]))[CAST<uint<4>>(( *v58))]) := ( *(( *(( *( *v44).key_array)[0]))[CAST<uint<4>>(( *v58))])));
-                            int.postInc((v54[CAST<uint<4>>(( *(( *(( *( *v44).key_buff2)[0]))[CAST<uint<4>>(( *v58))])))]));
+                            int.postInc((( *v54)[CAST<uint<4>>(( *(( *(( *( *v44).key_buff2)[0]))[CAST<uint<4>>(( *v58))])))]));
                         }</m>;
                         (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
                     };
                     {
                         for(decl ref<int<4>> v59 = ( var(0)) .. (int.lshift(1, 16)-1) : 1) 
-                            ((v54[CAST<uint<4>>((( *v59)+1))]) := (( *(v54[CAST<uint<4>>((( *v59)+1))]))+( *(v54[CAST<uint<4>>(( *v59))]))))
+                            ((( *v54)[CAST<uint<4>>((( *v59)+1))]) := (( *(( *v54)[CAST<uint<4>>((( *v59)+1))]))+( *(( *v54)[CAST<uint<4>>(( *v59))]))))
                         ;
                         (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>(((int.lshift(1, 16)-1)-0))/CAST<real<8>>(1))))*1)));
                     };
                     <m id=4>{
                         {
                             for(decl ref<int<4>> v60 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                                ((( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]) := (( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]))+( *(v54[CAST<uint<4>>(( *v60))]))))
+                                ((( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]) := (( *(( *(( *( *v44).key_buff1)[0]))[CAST<uint<4>>(( *v60))]))+( *(( *v54)[CAST<uint<4>>(( *v60))]))))
                             ;
                             (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                         };

@@ -7,10 +7,10 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<real<8>> v5 =  var(0.0);
         decl ref<real<8>> v6 =  var(0.0);
         v3 := clock();
-        decl vector<vector<ref<real<4>>,650>,650> v7 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        decl vector<vector<ref<real<4>>,650>,650> v8 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        decl vector<vector<ref<real<4>>,650>,650> v9 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        decl vector<vector<ref<real<4>>,650>,650> v10 = undefined(vector<vector<ref<real<4>>,650>,650>);
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v7 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v8 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v9 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v10 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
         memset(v7, 0, 650*650);
         memset(v9, 0, 650*650);
         for(decl ref<int<4>> v11 =  var(0) .. 650 : 1) 
@@ -64,15 +64,15 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<real<8>> v5 = ( var(0.0));
         decl ref<real<8>> v6 = ( var(0.0));
         (v3 := clock());
-        decl vector<vector<ref<real<4>>,650>,650> v7 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        decl vector<vector<ref<real<4>>,650>,650> v8 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        decl vector<vector<ref<real<4>>,650>,650> v9 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        decl vector<vector<ref<real<4>>,650>,650> v10 = undefined(vector<vector<ref<real<4>>,650>,650>);
-        memset(v7, 0, CAST<uint<8>>((650*650)));
-        memset(v9, 0, CAST<uint<8>>((650*650)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v7 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v8 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v9 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v10 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        memset(( *v7), 0, CAST<uint<8>>((650*650)));
+        memset(( *v9), 0, CAST<uint<8>>((650*650)));
         for(decl ref<int<4>> v11 = ( var(0)) .. 650 : 1) 
             for(decl ref<int<4>> v12 = ( var(0)) .. 650 : 1) 
-                (((v9[CAST<uint<4>>(( *v11))])[CAST<uint<4>>(( *v12))]) := CAST<real<4>>(fun(int<4> v13, int<4> v14){
+                (((( *v9)[CAST<uint<4>>(( *v11))])[CAST<uint<4>>(( *v12))]) := CAST<real<4>>(fun(int<4> v13, int<4> v14){
                     return (CAST<real<8>>(40)*sin(CAST<real<8>>(((16*((2*v13)-1))*v14))));
                 }(( *v11), ( *v12))))
             
@@ -88,19 +88,19 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         for(decl ref<int<4>> v28 = ( var(0)) .. 10 : 1) {
             <m id=3>for(decl ref<int<4>> v22 = ( var(1)) .. (650-1) : 1) {
                 for(decl ref<int<4>> v21 = ( var(1)) .. (650-1) : 1) 
-                    (((v8[CAST<uint<4>>(( *v22))])[CAST<uint<4>>(( *v21))]) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *((v7[CAST<uint<4>>((( *v22)-1))])[CAST<uint<4>>(( *v21))]))+( *((v7[CAST<uint<4>>(( *v22))])[CAST<uint<4>>((( *v21)+1))])))+( *((v7[CAST<uint<4>>(( *v22))])[CAST<uint<4>>((( *v21)-1))])))+( *((v7[CAST<uint<4>>((( *v22)+1))])[CAST<uint<4>>(( *v21))]))))-(( *v20)*CAST<real<8>>(( *((v9[CAST<uint<4>>(( *v22))])[CAST<uint<4>>(( *v21))]))))))))
+                    (((( *v8)[CAST<uint<4>>(( *v22))])[CAST<uint<4>>(( *v21))]) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *((( *v7)[CAST<uint<4>>((( *v22)-1))])[CAST<uint<4>>(( *v21))]))+( *((( *v7)[CAST<uint<4>>(( *v22))])[CAST<uint<4>>((( *v21)+1))])))+( *((( *v7)[CAST<uint<4>>(( *v22))])[CAST<uint<4>>((( *v21)-1))])))+( *((( *v7)[CAST<uint<4>>((( *v22)+1))])[CAST<uint<4>>(( *v21))]))))-(( *v20)*CAST<real<8>>(( *((( *v9)[CAST<uint<4>>(( *v22))])[CAST<uint<4>>(( *v21))]))))))))
                 ;
             }</m>;
-            memcpy(v7, v8, CAST<uint<8>>((650*650)));
+            memcpy(( *v7), ( *v8), CAST<uint<8>>((650*650)));
             for(decl ref<int<4>> v24 = ( var(1)) .. (650-1) : 1) {
                 for(decl ref<int<4>> v23 = ( var(1)) .. (650-1) : 1) 
-                    (((v10[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]) := (((((( *((v9[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]))-(CAST<real<4>>(4)*( *((v7[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]))))+( *((v7[CAST<uint<4>>((( *v24)-1))])[CAST<uint<4>>(( *v23))])))+( *((v7[CAST<uint<4>>((( *v24)+1))])[CAST<uint<4>>(( *v23))])))+( *((v7[CAST<uint<4>>(( *v24))])[CAST<uint<4>>((( *v23)-1))])))+( *((v7[CAST<uint<4>>(( *v24))])[CAST<uint<4>>((( *v23)+1))]))))
+                    (((( *v10)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]) := (((((( *((( *v9)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]))-(CAST<real<4>>(4)*( *((( *v7)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]))))+( *((( *v7)[CAST<uint<4>>((( *v24)-1))])[CAST<uint<4>>(( *v23))])))+( *((( *v7)[CAST<uint<4>>((( *v24)+1))])[CAST<uint<4>>(( *v23))])))+( *((( *v7)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>((( *v23)-1))])))+( *((( *v7)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>((( *v23)+1))]))))
                 ;
             };
             decl ref<real<8>> v25 = ( var(CAST<real<8>>(0)));
             <m id=4>for(decl ref<int<4>> v27 = ( var(1)) .. (650-1) : 1) {
                 for(decl ref<int<4>> v26 = ( var(1)) .. (650-1) : 1) 
-                    (v25 := (( *v25)+pow(CAST<real<8>>(( *((v10[CAST<uint<4>>(( *v27))])[CAST<uint<4>>(( *v26))]))), CAST<real<8>>(2))))
+                    (v25 := (( *v25)+pow(CAST<real<8>>(( *((( *v10)[CAST<uint<4>>(( *v27))])[CAST<uint<4>>(( *v26))]))), CAST<real<8>>(2))))
                 ;
             }</m>;
             (v19 := (sqrt(( *v25))/CAST<real<8>>((650-1))));

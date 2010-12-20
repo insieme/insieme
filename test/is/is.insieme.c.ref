@@ -232,27 +232,27 @@ void rank(void* _capture, int iteration) {
 		};
 		{
 			for(int var_57 = 0; var_57 < (1<<16); var_57 += 1) {
-				(((prv_buff1[((unsigned int)((var_57)))])) = 0);
+				((((prv_buff1)[((unsigned int)((var_57)))])) = 0);
 			};
 			((i) = (0+(((int)(ceil((((double)(((1<<16)-0)))/((double)(1))))))*1)));
 		};
 		{
 			for(int var_58 = 0; var_58 < (1<<20); var_58 += 1) {
 				((((((((*var_44).key_buff2))[0]))[((unsigned int)((var_58)))])) = (((((((*var_44).key_array))[0]))[((unsigned int)((var_58)))])));
-				(((prv_buff1[((unsigned int)((((((((*var_44).key_buff2))[0]))[((unsigned int)((var_58)))]))))]))++);
+				((((prv_buff1)[((unsigned int)((((((((*var_44).key_buff2))[0]))[((unsigned int)((var_58)))]))))]))++);
 			};
 			((i) = (0+(((int)(ceil((((double)(((1<<20)-0)))/((double)(1))))))*1)));
 		};
 		{
 			for(int var_59 = 0; var_59 < ((1<<16)-1); var_59 += 1) {
-				(((prv_buff1[((unsigned int)(((var_59)+1)))])) = (((prv_buff1[((unsigned int)(((var_59)+1)))]))+((prv_buff1[((unsigned int)((var_59)))]))));
+				((((prv_buff1)[((unsigned int)(((var_59)+1)))])) = ((((prv_buff1)[((unsigned int)(((var_59)+1)))]))+(((prv_buff1)[((unsigned int)((var_59)))]))));
 			};
 			((i) = (0+(((int)(ceil((((double)((((1<<16)-1)-0)))/((double)(1))))))*1)));
 		};
 		{
 			{
 				for(int var_60 = 0; var_60 < (1<<16); var_60 += 1) {
-					((((((((*var_44).key_buff1))[0]))[((unsigned int)((var_60)))])) = ((((((((*var_44).key_buff1))[0]))[((unsigned int)((var_60)))]))+((prv_buff1[((unsigned int)((var_60)))]))));
+					((((((((*var_44).key_buff1))[0]))[((unsigned int)((var_60)))])) = ((((((((*var_44).key_buff1))[0]))[((unsigned int)((var_60)))]))+(((prv_buff1)[((unsigned int)((var_60)))]))));
 				};
 				((i) = (0+(((int)(ceil((((double)(((1<<16)-0)))/((double)(1))))))*1)));
 			};
