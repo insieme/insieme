@@ -418,39 +418,8 @@ public:
         }
 
         // translate casts from scalars to OpenCL vectors to vector init expressions
-        if(core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(element)) {
-            core::Node::ChildList childs = cast->getChildList();
-
-            if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(childs.at(0))){//childs.at(0)->getNodeType() == core::NT_VectorType) {
-/*                for_each(childs.begin(), childs.end(), [] (const core::NodePtr& curr) {
-                    std::cout << "child: " << curr << std::endl;
-                });
-*/
-
-                if(core::ExpressionPtr arg = core::dynamic_pointer_cast<const core::Expression>(childs.at(1))){
-// TODO check why we never get a ref here
-/*                    bool makeRef = true;
-                    core::RefTypePtr ref = dynamic_pointer_cast<const core::RefType>(arg);
-                    if(ref)
-                        arg = ref->getBaseType();
-
-                    if(arg->getNodeType() == core::NT_RefType)
-                        makeRef = false;
-
-                    if(makeRef)
-                        std::cout << "is no ref\n";
-                    else
-                        std::cout << "is already a ref\n";
-*/
-                    if(BASIC.isScalarType(arg->getType())) {
-
-//                        toVector<core::ExpressionPtr>(arg, core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(4)));
-                        return builder.callExpr(cast->getType(), BASIC.getVectorInitUniform(), toVector<core::ExpressionPtr>(builder.refVar(arg),
-                                BASIC.getIntTypeParamLiteral(vt->getSize())));
-                    }
-                }
-            }
-        }
+        // moved to expr_convert.cpp
+//        if(core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(element)) {
 
         return element->substitute(builder.getNodeManager(), *this);
     }

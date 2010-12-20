@@ -463,6 +463,19 @@ public:
 		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !type->getNodeType() != core::NT_RefType) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
+
+		// Convert casts form scalars to vectors to vector init exrpessions
+		if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
+		    if(convFact.mgr.basic.isScalarType(subExpr->getType())) {
+		        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(type, convFact.mgr.basic.getVectorInitUniform(),
+		            (subExpr->getType() == vt->getElementType() ? subExpr :
+		                    convFact.builder.castExpr( vt->getElementType(), subExpr )),
+		            convFact.mgr.basic.getIntTypeParamLiteral(vt->getSize()));
+
+		        return retExpr;
+		    }
+		}
+
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
