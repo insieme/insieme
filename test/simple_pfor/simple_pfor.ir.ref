@@ -1,0 +1,59 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v1 =  var(0);
+        decl ref<vector<ref<int<4>>,10>> v2 =  var(undefined(vector<ref<int<4>>,10>));
+        merge(parallel(job([1-inf]){
+            default: [v2, v1]fun[ref<vector<ref<int<4>>,10>> v10, ref<int<4>> v9](){
+                {
+                    {
+                        pfor(getThreadGroup(0), 0, 10, 1, [v10]fun[ref<vector<ref<int<4>>,10>> v13](int<4> v14){
+                            v13[v14] := v14;
+                        });
+                        barrier(getThreadGroup(0));
+                    };
+                    v9 := 0+ceil(10-0/1)*1;
+                };
+            }
+        }));
+        printf("After Loop: %d\n", varlist.pack((v1)));
+        {
+            for(decl ref<int<4>> v7 =  var(0) .. 10 : 1) {
+                printf("a[%d]=%d\n", varlist.pack((v7, v2[v7])));
+            };
+            v1 := 0+ceil(10-0/1)*1;
+        };
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v1 = ( var(0));
+        decl ref<vector<ref<int<4>>,10>> v2 = ( var(undefined(vector<ref<int<4>>,10>)));
+        merge(parallel(job(([1-inf])){
+            default: [v2, v1]fun[ref<vector<ref<int<4>>,10>> v10, ref<int<4>> v9](){
+                {
+                    {
+                        pfor(getThreadGroup(0), 0, 10, 1, [v10]fun[ref<vector<ref<int<4>>,10>> v13](int<4> v14){
+                            ((( *v13)[CAST<uint<4>>(v14)]) := v14);
+                        });
+                        barrier(getThreadGroup(0));
+                    };
+                    (v9 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((10-0))/CAST<real<8>>(1))))*1)));
+                };
+            }
+        }));
+        printf("After Loop: %d\n", varlist.pack((( *v1))));
+        {
+            for(decl ref<int<4>> v7 = ( var(0)) .. 10 : 1) {
+                printf("a[%d]=%d\n", varlist.pack((( *v7), ( *(( *v2)[CAST<uint<4>>(( *v7))])))));
+            };
+            (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((10-0))/CAST<real<8>>(1))))*1)));
+        };
+    }
+
