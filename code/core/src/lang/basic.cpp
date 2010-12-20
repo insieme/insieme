@@ -166,7 +166,7 @@ LiteralPtr BasicGenerator::getLiteral(const string& name) const {
 	return LiteralPtr();
 }
 
-LiteralPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {
+ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {
 	auto fit = pimpl->operationMap.equal_range(op);
 	for(BasicGeneratorImpl::OperationMap::const_iterator it = fit.first, end = fit.second; it != end; ++it) {
 		const BasicGeneratorImpl::OperationMap::value_type& curr = *it;
@@ -175,7 +175,14 @@ LiteralPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator
 	}
 
 	if(VectorTypePtr vecTy = dynamic_pointer_cast<const VectorType>(type)){
-	    return (*this).getLiteral(string("vector.pointwise"));
+	    core::TypePtr vecElemTy = vecTy->getElementType();
+        vecElemTy = (vecElemTy->getNodeType() == core::NT_RefType ?
+            core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
+            vecElemTy);
+
+        core::LiteralPtr&& pointwise = (*this).getLiteral(string("vector.pointwise"));
+	    return pimpl->build.callExpr(pointwise, (*this).getOperator(vecElemTy, op));
+//	    return (*this).getLiteral(string("vector.pointwise"));
 	}
 
 	assert(false && "Required combination of operator and type not declared");

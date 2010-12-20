@@ -34,44 +34,28 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "../../include/insieme/simple_backend/runtime/runtime.h"
 
-#include "insieme/core/parser/ir_parse.h"
+#include <stdio.h>
 
-namespace insieme {
-namespace core {
-namespace parse {
-
-// FW Declaration
-struct TypeGrammar;
-
-class VariableTable {
-	NodeManager& nodeMan;
-	std::map<Identifier, VariablePtr> table;
-
-public:
-	VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
-
-	VariablePtr get(const TypePtr& typ, const Identifier& id);
-};
-
-struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {
-	TypeGrammar *typeG; // pointer for weak coupling
-	VariableTable varTab;
-	
-	ExpressionGrammar(NodeManager& nodeMan);
-	~ExpressionGrammar();
-
-	// terminal rules, no skip parsing
-	qi::rule<ParseIt, string()> literalString;
-
-	// nonterminal rules with skip parsing
-	qi::rule<ParseIt, LiteralPtr(), qi::space_type> literalExpr;
-	qi::rule<ParseIt, VariablePtr(), qi::space_type> variableExpr;
-
-	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> expressionRule;
-};
-
+void forFun(isbr_PForRange range) {
+	for(long long i = range.start; i<range.end; i+=range.step) {
+		printf("Thread %d working on loop iteration %lld\n", isbr_getThreadId(0), i);
+	}
 }
+
+void par(isbr_JobArgs *args) {
+	printf("Hello from %d of %d, getThreadId: %d\n", args->index, args->size, isbr_getThreadId(0));
+	isbr_barrier(isbr_getThreadGroup(0));
+	printf("After barrier\n");
+	isbr_barrier(isbr_getThreadGroup(0));
+	isbr_PForRange range = {3,33,5};
+	isbr_pfor(isbr_getThreadGroup(0), range, &forFun);
 }
+
+int main(int argc, char** argv) {
+	isbr_Job job = { sizeof(isbr_Job), 4, 8, &par };
+	isbr_ThreadGroup tg = isbr_parallel(&job);
+	isbr_merge(tg);
+	return 0;
 }
