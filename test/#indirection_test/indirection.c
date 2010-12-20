@@ -7,15 +7,15 @@
 
 #ifdef INDIRECT
 
-#define CREATE_MATRIX double a[N*N]
-#define A(X,Y) a[(X)*N+(Y)]
-#define FREE_MATRIX
-
-#else
-
 #define CREATE_MATRIX double (*a)[N*N]; a = malloc(N*N*sizeof(double))
 #define A(X,Y) (*a)[(X)*N+(Y)]
 #define FREE_MATRIX free(a)
+
+#else
+
+#define CREATE_MATRIX double a[N*N]
+#define A(X,Y) a[(X)*N+(Y)]
+#define FREE_MATRIX
 
 #endif
 
@@ -32,6 +32,8 @@ int main() {
 		}
 	}
 
+	// some seed
+	A(0,0) = 1;
 
 	for(int k=0; k<2000; k++) {
 
@@ -44,6 +46,16 @@ int main() {
 		}
 	}
 
+	double sum = 0;
+	for (int i=0; i<N; i++) {
+		for (int j=0; j<N; j++) {
+			sum += A(i,j);
+		}
+	}
+
+	printf("Total Sum: %lf\n", sum);
+
+	
 
 	// free matrix
 	FREE_MATRIX;
