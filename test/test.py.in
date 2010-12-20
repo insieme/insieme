@@ -77,8 +77,11 @@ def run_test_case(test_case_name):
 		os.chdir("../")
 		return 1
 
+	runTests = 0
 	if not os.path.exists(refIr):
 	  shutil.copyfile(testIr, refIr)
+	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+	  
 	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 	sys.stderr.write(" * Comparing generated IR...            ")
@@ -89,64 +92,66 @@ def run_test_case(test_case_name):
 
 	if not os.path.exists(refC):
 	  shutil.copyfile(testC, refC)
+	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 	  
 	sys.stderr.write(" * Comparing generated C output...      ")
 	if not check_diff(test_case_name, refC, testC):
 		os.chdir("../")
 		return 1
 	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-
-	ref_exec = test_case_name + '.ref'
-	test_exec = test_case_name + '.test'
 	
-	# file containing the output of the reference program
-	ref_out = "ref.out"
-	# file containing the output of the test program
-	test_out = "test.out"
+	if runTests:
+		ref_exec = test_case_name + '.ref'
+		test_exec = test_case_name + '.test'
+		
+		# file containing the output of the reference program
+		ref_out = "ref.out"
+		# file containing the output of the test program
+		test_out = "test.out"
 
-	sys.stderr.write(" * Compiling C input...                 ")
-	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG}) 
-					)
+		sys.stderr.write(" * Compiling C input...                 ")
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG}) 
+						)
 
-	sys.stderr.write(" * Compiling generated C output...      ")
-	ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-						**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES})
-					)
-	if check_for_error(test_case_name, ret):
-		os.chdir("../")
-		return 1
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+		sys.stderr.write(" * Compiling generated C output...      ")
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES})
+						)
+		if check_for_error(test_case_name, ret):
+			os.chdir("../")
+			return 1
+		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
-	sys.stderr.write(" * Running input program...             ")
-	start = time.time()
-	os.system("./{0} > {1}".format(ref_exec, ref_out))
-	sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
-	
-	sys.stderr.write(" * Running output program...            ")
-	ldPath = os.getenv("LD_LIBRARY_PATH", "");
-	os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
-	start = time.time()
-	os.system("./{0} > {1}".format(test_exec, test_out))
-	sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
-	os.putenv("LD_LIBRARY_PATH", ldPath);
+		sys.stderr.write(" * Running input program...             ")
+		start = time.time()
+		os.system("./{0} > {1}".format(ref_exec, ref_out))
+		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+		
+		sys.stderr.write(" * Running output program...            ")
+		ldPath = os.getenv("LD_LIBRARY_PATH", "");
+		os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
+		start = time.time()
+		os.system("./{0} > {1}".format(test_exec, test_out))
+		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+		os.putenv("LD_LIBRARY_PATH", ldPath);
 
-	sys.stderr.write(" * Checking generated program output... ")
-	if not check_diff(test_case_name, ref_out, test_out):
-		os.chdir("../")
-		return 1
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
+		sys.stderr.write(" * Checking generated program output... ")
+		if not check_diff(test_case_name, ref_out, test_out):
+			os.chdir("../")
+			return 1
+		sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
 
-	# if the test is successful move the executable in the ../#bin directory for further benchmarking
-	if os.path.exists("../#bin/" + ref_exec):
-		os.remove("../#bin/" + ref_exec)
-	shutil.move(ref_exec, "../#bin/")
-	
-	if os.path.exists("../#bin/" + test_exec):
-		os.remove("../#bin/" + test_exec)
-	shutil.move(test_exec, "../#bin/")
+		# if the test is successful move the executable in the ../#bin directory for further benchmarking
+		if os.path.exists("../#bin/" + ref_exec):
+			os.remove("../#bin/" + ref_exec)
+		shutil.move(ref_exec, "../#bin/")
+		
+		if os.path.exists("../#bin/" + test_exec):
+			os.remove("../#bin/" + test_exec)
+		shutil.move(test_exec, "../#bin/")
 
-	map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+		map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
 	
 	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 	os.chdir("../")
