@@ -40,6 +40,7 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -115,6 +116,12 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 			converter.convert(init);
 		});
 
+		// auto-captured variables
+		for_each(info.capturedVars, [&](const core::VariablePtr& var) {
+			cStr << ",";
+			converter.convert(var);
+		});
+
 	cStr << "}),";
 
 	cStr << "sizeof(" << info.structName << ")";
@@ -123,18 +130,87 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 }
 
 
+void JobManager::createPFor(const CodePtr& context, const core::ExpressionPtr& call) {
+
+	// check format
+	assert(analysis::isCallOf(call, cc.getLangBasic().getPFor()));
+
+	CodeStream& out = context->getCodeStream();
+	StmtConverter& stmtConverter = cc.getStmtConverter();
+
+	auto args = static_pointer_cast<const core::CallExpr>(call)->getArguments();
+
+	// resolve body
+	const PForBodyInfo& info = resolvePForBody(args[4]);
+
+	// add dependencies
+	context->addDependency(info.funDefinition);
+	context->addDependency(info.captureStruct);
+
+	// add call
+	// void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PForRange range));
+	out << "isbr_pfor(";
+	stmtConverter.convert(args[0]);
+	out << ",(isbr_PForRange){";
+
+	stmtConverter.convert(args[1]);
+	out << ", ";
+	stmtConverter.convert(args[2]);
+	out << ", ";
+	stmtConverter.convert(args[3]);
+	out << ", ";
+
+	unsigned numVars = info.capturedVars.size();
+	if (numVars > 0) {
+
+		out << "&((" << info.captureStructName << "){";
+
+		for (unsigned i=0; i<numVars; i++) {
+			stmtConverter.convert(info.capturedVars[i]);
+			if (i< numVars-1) {
+				out << ", ";
+			}
+		}
+
+		out << "})";
+	} else {
+		out << "0";
+	}
+
+	out << "},";
+	out << "&" << info.functionName;
+	out << ")";
+
+}
+
+
 namespace {
 
+	/**
+	 * A small helper-visitor collecting all variables which should be automatically
+	 * captured by jobs for their branches.
+	 */
 	class VariableCollector : public core::ASTVisitor<> {
 
+		/**
+		 * A reference to the resulting list of variables.
+		 */
 		vector<core::VariablePtr>& list;
 
 	public:
 
+		/**
+		 * Creates a new instance of this visitor based on the given list of variables.
+		 * @param list the list to be filled by this collector.
+		 */
 		VariableCollector(vector<core::VariablePtr>& list) : list(list) {}
 
 	protected:
 
+		/**
+		 * Visits a variable and adds the variable to the resulting list (without duplicates).
+		 * It also terminates the recursive decent.
+		 */
 		void visitVariable(const core::VariablePtr& var) {
 			// collect this variable
 			if (!contains(list, var)) {
@@ -142,14 +218,26 @@ namespace {
 			}
 		}
 
+		/**
+		 * Visiting a lambda expression terminates the recursive decent since a new scope
+		 * is started.
+		 */
 		void visitLambdaExpr(const core::LambdaExprPtr& lambda) {
 			// break recursive decent when new scope is started
 		}
 
+		/**
+		 * Types are generally ignored by this visitor for performance reasons (no variables will
+		 * occur within types).
+		 */
 		void visitType(const core::TypePtr& type) {
 			// just ignore types
 		}
 
+		/**
+		 * The default behavior for all other node types is to recursively decent by iterating
+		 * through the child-node list.
+		 */
 		void visitNode(const core::NodePtr& node) {
 			assert(node->getNodeType() != core::NT_LambdaExpr);
 			// visit all children recursively
@@ -161,7 +249,11 @@ namespace {
 	};
 
 
-	vector<core::VariablePtr> getVariablesToBeCaptured(const core::JobExprPtr& job) {
+	/**
+	 * Collects a list of variables to be captures by a job for proper initialization
+	 * of the various job branches.
+	 */
+	vector<core::VariablePtr> getVariablesToBeCaptured(const core::ExpressionPtr& job) {
 		vector<core::VariablePtr> res;
 
 		// collect all variables potentially captured by this job
@@ -199,6 +291,14 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	// collect list of captured variables
 	vector<core::VariablePtr> varList = getVariablesToBeCaptured(job);
+	utils::map::PointerMap<core::NodePtr, core::NodePtr> mapping;
+	for_each(varList, [&](const core::VariablePtr& var) {
+		mapping.insert(std::make_pair(var, builder.variable(var->getType())));
+	});
+
+	// replace the variables
+	core::JobExprPtr targetJob = static_pointer_cast<const core::JobExpr>(core::transform::replaceAll(manager, job, mapping, true));
+
 
 	// Step a) create job struct
 	CodePtr jobStruct = std::make_shared<CodeFragment>("struct for job " + name);
@@ -210,7 +310,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 		structStream << "void (*fun)(isbr_JobArgs*);";
 
 		Converter& converter = cc;
-		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+		for_each(targetJob->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 			VariablePtr var = cur->getVariable();
 			string varName = converter.getNameManager().getName(var);
 			structStream << "\n";
@@ -218,7 +318,9 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 		});
 
 		structStream << "\n// ---- additional captured variables -----";
-		for_each(varList, [&](const core::VariablePtr& var) {
+		for_each(varList, [&](const core::VariablePtr& cur) {
+
+			core::VariablePtr var = static_pointer_cast<const core::Variable>(mapping.find(cur)->second);
 			string varName = converter.getNameManager().getName(var);
 			structStream << "\n";
 			structStream <<  converter.getTypeManager().formatParamter(jobStruct, var->getType(), varName, false) << ";";
@@ -235,7 +337,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 		funStream << "// ----------- Unpacking local scope variables ----------\n";
 
-		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+		for_each(targetJob->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 
 			VariablePtr var = cur->getVariable();
 
@@ -249,10 +351,25 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 		});
 
+		funStream << "// ---------- Unpacking auto-captured variables ---------\n";
+		for_each(varList, [&](const core::VariablePtr& cur) {
+
+			core::VariablePtr var = static_pointer_cast<const core::Variable>(mapping.find(cur)->second);
+			string varName = converter.getNameManager().getName(var);
+
+			VariableManager::VariableInfo info;
+			info.location = VariableManager::HEAP;
+			converter.getVariableManager().addInfo(var, info);
+
+			funStream << converter.getTypeManager().formatParamter(function, var->getType(), varName, false);
+			funStream << " = ((" << structName << "*)args)->" << varName << ";\n";
+		});
+
+
 		funStream << "// ------------------ Processing Guards -----------------\n";
 
 		StmtConverter& stmtConverter = converter.getStmtConverter();
-		for_each(job->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
+		for_each(targetJob->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
 
 			// add condition
 			funStream << "if(" << ") {" << CodeStream::indR << "\n";
@@ -263,43 +380,97 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 		funStream << "// ------------------ Default processing -----------------\n";
 
-		stmtConverter.convert(builder.callExpr(preprocessJobBranch(job->getDefaultStmt())), function);
+		stmtConverter.convert(builder.callExpr(preprocessJobBranch(targetJob->getDefaultStmt())), function);
 		funStream << ";";
 
 
 	funStream << CodeStream::indL << "\n";
 	funStream << "}\n";
 
-
-
 	// Assemble result
 	JobInfo info(structName, funName, jobStruct, function, varList);
 	jobs.insert(std::make_pair(job, info));
 	return info;
 
-	//// check if local decls exist, if so generate struct to hold them and populate it
-	//auto localDecls = ptr->getLocalDecls();
-	//if(localDecls.size() > 0) {
-	//	string structName = nameGen.getName(ptr, "jobLocalDecls");
-	//	string structVarName = structName + "__var";
-	//	CodePtr structCode = defCodePtr->addDependency(structName);
-	//	CodeStream& sCStr = structCode->getCodeStream();
-	//	// definition
-	//	sCStr << "struct " << structName << CodeStream::indR << " {\n";
-	//	// variable declaration
-	//	cStr << "struct " << structName << "* " << structVarName << " = new " << structName << ";";
-	//	for_each(localDecls, [&](const DeclarationStmtPtr& cur) {
-	//		auto varExp = cur->getVarExpression();
-	//		// generate definition
-	//		sCStr << this->printTypeName(varExp->getType()) << " " << varExp->getIdentifier().getName() << ";";
-	//		// populate entry
-	//		cStr << structVarName << "." << varExp->getIdentifier().getName() << " = ";
-	//		this->visit(cur->getInitialization());
-	//		cStr << ";";
-	//	});
-	//	sCStr << CodeStream::indL << "};";
-	//	// TODO finish job generation (when runtime lib available)
-	//}
+}
+
+JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& body) {
+
+	// try lookup ..
+	auto pos = bodies.find(body);
+	if (pos != bodies.end()) {
+		return pos->second;
+	}
+
+	// some general assertions
+	assert(body->getType()->getNodeType() == NT_FunctionType);
+
+	// obtain a name for this body function
+	string name = cc.getNameManager().getName(body);
+	string structName = "struct capture" + name;
+
+	// collect variables to be captured
+	vector<core::VariablePtr> varList = getVariablesToBeCaptured(body);
+
+
+	// create the capture struct
+	CodePtr captureStruct = std::make_shared<CodeFragment>("capture-struct for pfor-body " + name);
+	CodeStream& captureStream = captureStruct->getCodeStream();
+
+	captureStream << structName << " {" << CodeStream::indR;
+
+		for_each(varList, [&](const core::VariablePtr& var) {
+			captureStream << "\n";
+			string varName = cc.getNameManager().getName(var);
+			captureStream << cc.getTypeManager().formatParamter(captureStruct, var->getType(), varName, false);
+			captureStream << ";";
+		});
+
+	captureStream << CodeStream::indL << "\n";
+	captureStream << "};\n";
+
+	// create the function
+	CodePtr function = std::make_shared<CodeFragment>("function for pfor-body " + name);
+	function->addDependency(captureStruct);
+	CodeStream& funStream = function->getCodeStream();
+
+	ASTBuilder builder(body->getNodeManager());
+
+	// TODO: improve this implementation by inlining the function body
+	funStream << "void " << name << "(const isbr_PForRange range) {" << CodeStream::indR << "\n";
+
+		// extract captured variables
+		funStream << "// ----- captured variables -----\n";
+		for_each(varList, [&](const core::VariablePtr& var) {
+			string varName = cc.getNameManager().getName(var);
+			funStream << cc.getTypeManager().formatParamter(function, var->getType(), varName, false);
+			funStream << " = ((" << structName << "*)(range.context))->" << varName << ";\n";
+		});
+
+		// add for-loop
+		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(body->getType())->getArgumentTypes()[0]);
+		cc.getNameManager().setName(inductionVar, "__it");
+
+		funStream << "\n// ----- process iterations -----\n";
+		funStream << "for(";
+		funStream << cc.getTypeManager().getTypeName(function, inductionVar->getType(), true);
+		funStream << " __it = range.start; __it<range.end; __it+=range.step) {" << CodeStream::indR << "\n";
+
+			ExpressionPtr call = builder.callExpr(body, inductionVar);
+			cc.getStmtConverter().convert(call, function);
+			funStream << ";";
+
+		funStream << CodeStream::indL << "\n";
+		funStream << "}\n";
+
+	funStream << CodeStream::indL << "\n";
+	funStream << "}\n";
+
+
+	// Assemble result
+	PForBodyInfo info(name, structName, function, captureStruct, varList);
+	bodies.insert(std::make_pair(body, info));
+	return info;
 
 }
 

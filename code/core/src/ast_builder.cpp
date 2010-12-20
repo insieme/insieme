@@ -46,6 +46,8 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
@@ -247,6 +249,10 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 
 	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
 	auto initExp = decl->getInitialization();
+
+	while (analysis::isCallOf(initExp, manager.basic.getRefVar()) || analysis::isCallOf(initExp, manager.basic.getRefNew())) {
+		initExp = static_pointer_cast<const CallExpr>(initExp)->getArguments()[0];
+	}
 
 	while (initExp->getType()->getNodeType() == NT_RefType) {
 		initExp = deref(initExp);

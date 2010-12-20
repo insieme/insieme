@@ -553,12 +553,12 @@ namespace detail {
 		 * @param n the index of the requested argument
 		 * @return the requested argument or a NULL pointer in case there is no such argument
 		 */
-		NodePtr getArgument(const CallExprPtr& call, unsigned n) {
+		ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
 			auto arguments = call->getArguments();
 			if (n < arguments.size()) {
 				return arguments[n];
 			}
-			return NodePtr();
+			return ExpressionPtr();
 		}
 
 		/**
@@ -569,7 +569,7 @@ namespace detail {
 		 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
 		 */
 		void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
-			NodePtr argument = getArgument(call, n);
+			ExpressionPtr argument = getArgument(call, n);
 			if (argument) {
 				converter.convert(argument);
 			}
@@ -872,7 +872,9 @@ namespace detail {
 		ADD_FORMATTER_DETAIL(basic.getGetGroupSize(), false, { OUT("isbr_getGroupSize("); VISIT_ARG(0); OUT(")"); });
 
 
-		ADD_FORMATTER_DETAIL(basic.getPFor(), false, { OUT("isbr_pfor("); OUT(" ... "); OUT(")"); });
+		ADD_FORMATTER_DETAIL(basic.getPFor(), false, {
+				converter.getConversionContext().getJobManager().createPFor(converter.getCode(), call);
+		});
 
 		#undef ADD_FORMATTER
 		#undef ADD_FORMATTER_DETAIL
