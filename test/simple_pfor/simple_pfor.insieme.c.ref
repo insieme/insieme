@@ -1,0 +1,137 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: struct for job __insieme_expr_0 //
+struct __insieme_expr_0 { 
+	unsigned structSize;
+	unsigned min, max;
+	void (*fun)(isbr_JobArgs*);
+	// ---- additional captured variables -----
+	int(* var_16)[100];	 // Variable: v16
+	int* var_17;	 // Variable: v17
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
+// Abstract prototype for lambdas of type __insieme_funType_type_1
+struct __insieme_funType_type_1 { 
+    void(*fun)(void*);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_1
+void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda) { return lambda->fun(lambda); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_2 //
+// Abstract prototype for lambdas of type __insieme_funType_type_2
+struct __insieme_funType_type_2 { 
+    void(*fun)(void*);
+    const size_t size;
+    int(* p0)[100];
+    int* p1;
+};
+
+// start code fragment :: capture-struct for pfor-body __insieme_expr_4 //
+struct capture__insieme_expr_4 {
+	int(* var_10)[100];
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_5 //
+// Abstract prototype for lambdas of type __insieme_funType_type_5
+struct __insieme_funType_type_5 { 
+    void(*fun)(void*, int);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_5
+void call__insieme_funType_type_5(struct __insieme_funType_type_5* lambda, int p1) { return lambda->fun(lambda, p1); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_6 //
+// Abstract prototype for lambdas of type __insieme_funType_type_6
+struct __insieme_funType_type_6 { 
+    void(*fun)(void*, int);
+    const size_t size;
+    int(* p0)[100];
+};
+
+// start code fragment :: Definition of __insieme_supp_7 //
+void __insieme_supp_7(void* _capture, int var_14) {
+	// --------- Captured Stuff - Begin -------------
+	int(* var_13)[100] = ((struct __insieme_funType_type_6*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		((((*var_13)[((unsigned int)(var_14))])) = var_14);
+	}
+}
+
+
+// start code fragment :: function for pfor-body __insieme_expr_4 //
+void __insieme_expr_4(const isbr_PForRange range) {
+	// ----- captured variables -----
+	int(* var_10)[100] = ((struct capture__insieme_expr_4*)(range.context))->var_10;
+	
+	// ----- process iterations -----
+	for(int __it = range.start; __it<range.end; __it+=range.step) {
+		call__insieme_funType_type_5(((struct __insieme_funType_type_5*)(&((struct __insieme_funType_type_6){&__insieme_supp_7, 0, var_10}))), __it);
+	}
+	
+}
+
+// start code fragment :: Prototype for external function: ceil //
+double ceil(double);
+
+// start code fragment :: Definition of __insieme_supp_3 //
+void __insieme_supp_3(void* _capture) {
+	// --------- Captured Stuff - Begin -------------
+	int(* var_10)[100] = ((struct __insieme_funType_type_2*)_capture)->p0;
+	int* var_9 = ((struct __insieme_funType_type_2*)_capture)->p1;
+	// --------- Captured Stuff -  End  -------------
+	{
+		{
+			{
+				isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 100, 1, &((struct capture__insieme_expr_4){var_10})},&__insieme_expr_4);
+				isbr_barrier(isbr_getThreadGroup(0));
+			};
+			((*var_9) = (0+(((int)(ceil((((double)((100-0)))/((double)(1))))))*1)));
+		};
+	}
+}
+
+
+// start code fragment :: function for job __insieme_expr_0 //
+void fun__insieme_expr_0(isbr_JobArgs* args) {
+	// ----------- Unpacking local scope variables ----------
+	// ---------- Unpacking auto-captured variables ---------
+	int(* var_16)[100] = ((struct __insieme_expr_0*)args)->var_16;
+	int* var_17 = ((struct __insieme_expr_0*)args)->var_17;
+	// ------------------ Processing Guards -----------------
+	// ------------------ Default processing -----------------
+	call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&__insieme_supp_3, 0, var_16, var_17}))));
+}
+
+// start code fragment :: Prototype for external function: printf //
+void printf(char*, ...);
+
+// start code fragment :: Definition of main //
+int main() {
+	{
+		int i = 0;
+		int a[100];
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,1<<20,&fun__insieme_expr_0,&a,&i}),sizeof(struct __insieme_expr_0))));
+		printf("After Loop: %d\n", (i));
+		{
+			for(int var_7 = 0; var_7 < 100; var_7 += 1) {
+				printf("a[%d]=%d\n", (var_7), (((a)[((unsigned int)((var_7)))])));
+			};
+			((i) = (0+(((int)(ceil((((double)((100-0)))/((double)(1))))))*1)));
+		};
+	}
+}
+
