@@ -112,7 +112,7 @@ TEST(IRParser, ExpressionTests) {
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
-	EXPECT_EQ(builder.intLit(5), parser.parseExpression("lit<int<4>, 5>"));
+	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 	
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
@@ -121,6 +121,7 @@ TEST(IRParser, ExpressionTests) {
 
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
+	EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
 }
 
 TEST(IRParser, InteractiveTest) {
