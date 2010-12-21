@@ -38,6 +38,8 @@
 
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/expressions.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/ast_builder.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -52,6 +54,7 @@
 // - error: template substitution failure --> check potential ambiguities, try supplying default parameters explicitly
 // - error: some operator can not be applied (eg =) --> attribute type may be different from expected
 // - error: invalid use of void expression --> trying to do a ph::ref of a reference? Placeholders are already references!
+// - error: <some callable> is not a class, struct or union in ph::bind --> check argument count and type
 // - other: use phoenix::bind and phoenix::construct instead of plain calls
 // ----------------------- - Peter
 
@@ -74,11 +77,26 @@ VariablePtr VariableTable::get(const TypePtr& typ, const Identifier& id) {
 	return newVar;
 }
 
+CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, ExpressionList arguments) {
+	//TODO determine return type by inference (arguments may be empty!)
+	ASTBuilder build(nodeMan);
+	return build.callExpr(callee, arguments);
+}
+
+void callDepthCheck(bool reset, unsigned& callDepthCount) {
+	if(!reset) {
+		if(callDepthCount > 1000) throw ParseException();
+	} else {
+		callDepthCount = 0;
+	}
+}
+
 ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan) 
 	: ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
 
 	auto nManRef = ph::ref(nodeMan);
-
+	auto basicRef = ph::ref(nodeMan.basic);
+	
 	// RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 
 	// terminals, no skip parser
@@ -86,7 +104,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	literalString = 
 		*(qi::char_ - ">")											[ qi::_val = qi::_1 ];
 	
-	// nonterminals, skip parser
+	// nonterminals, skip parser 
 
 	//// Let me tell you a little story about the folly of C++ compilers:
 	//// Since there are 2 different Literal::get methods with the same number of parameters, when you directly
@@ -99,11 +117,34 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 		( qi::lit("lit<") >> typeG->typeRule >> ',' 
 		>> literalString >> '>' )									[ qi::_val = ph::bind(&Literal::parserGet, nManRef, qi::_1, qi::_2) ];
 
+	opExpr =
+		( qi::lit("op<") >> literalString >> '>' )					[ qi::_val = ph::bind(&lang::BasicGenerator::getLiteral, basicRef, qi::_1) ];
+
 	variableExpr =
 		( typeG->typeRule >> ':' >> typeG->identifier )				[ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
 
+	callExpr =
+		(expressionRule >> "()")									[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, ExpressionList()) ]
+	  |	(expressionRule >> '(' >> (expressionRule					[ ph::push_back(qi::_a, qi::_1) ]
+		  % ',') >> ')' )											[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_a) ];
+
+	castExpr =
+		( qi::lit("CAST<") >> typeG->typeRule 
+		>> '>' >> '(' >> expressionRule >> ')' )					[ qi::_val = ph::bind(&CastExpr::get, nManRef, qi::_1, qi::_2) ];
+
 	expressionRule =
-		literalExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
+		literalExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+	  |	opExpr														[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+	  |	variableExpr												[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+	  | castExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+	  |	callExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
+
+	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
+	BOOST_SPIRIT_DEBUG_NODE(opExpr);
+	BOOST_SPIRIT_DEBUG_NODE(variableExpr);
+	BOOST_SPIRIT_DEBUG_NODE(callExpr);
+	BOOST_SPIRIT_DEBUG_NODE(castExpr);
+	BOOST_SPIRIT_DEBUG_NODE(expressionRule);
 }
 
 ExpressionGrammar::~ExpressionGrammar() {

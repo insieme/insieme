@@ -168,7 +168,7 @@ public:
 		// convert (statically) and check the type name
 		const Type& ref = static_cast<const Type&>(other);
 		// TODO: improve this by eliminating the name!
-		return name == ref.name;
+		return getNodeType() == ref.getNodeType() && name == ref.name;
 	}
 
 
