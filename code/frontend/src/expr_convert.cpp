@@ -432,11 +432,30 @@ public:
 			nonRefExpr->getType()->getNodeType() == core::NT_VectorType )
 			return subExpr;
 
+        // Convert casts form scalars to vectors to vector init exrpessions
+        if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
+            if(convFact.mgr.basic.isScalarType(subExpr->getType())) {
+
+
+                // get rid of ref types
+                core::TypePtr targetType = (vt->getElementType()->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+                        dynamic_pointer_cast<const core::RefType>(vt->getElementType())->getElementType();
+
+                core::ExpressionPtr&& retExpr = convFact.builder.callExpr(type, convFact.mgr.basic.getVectorInitUniform(),
+                    subExpr->getType() == targetType ? subExpr : convFact.builder.castExpr(targetType , subExpr ),
+                    convFact.mgr.basic.getIntTypeParamLiteral(vt->getSize()));
+
+                END_LOG_EXPR_CONVERSION(retExpr);
+                return retExpr;
+            }
+        }
+
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
-		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
+
+        core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}
@@ -455,25 +474,30 @@ public:
 			return convFact.builder.getNodeManager().basic.getNull();
 		}
 
+		// Convert casts form scalars to vectors to vector init exrpessions
+		if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
+		    if(convFact.mgr.basic.isScalarType(subExpr->getType())) {
+		        // get rid of ref types
+		        core::TypePtr targetType = (vt->getElementType()->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+		                dynamic_pointer_cast<const core::RefType>(vt->getElementType())->getElementType();
+
+		        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(type, convFact.mgr.basic.getVectorInitUniform(),
+		            subExpr->getType() == targetType ? subExpr : convFact.builder.castExpr(targetType , subExpr ),
+		            convFact.mgr.basic.getIntTypeParamLiteral(vt->getSize()));
+
+		        END_LOG_EXPR_CONVERSION(retExpr);
+		        return retExpr;
+		    }
+		}
+
 		// Mallocs/Allocs are replaced with ref.new expression
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
 			return retExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !type->getNodeType() != core::NT_RefType) {
+std::cout << "NOT ref\n";
 			subExpr = convFact.tryDeref(subExpr);
-		}
-
-		// Convert casts form scalars to vectors to vector init exrpessions
-		if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-		    if(convFact.mgr.basic.isScalarType(subExpr->getType())) {
-		        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(type, convFact.mgr.basic.getVectorInitUniform(),
-		            (subExpr->getType() == vt->getElementType() ? subExpr :
-		                    convFact.builder.castExpr( vt->getElementType(), subExpr )),
-		            convFact.mgr.basic.getIntTypeParamLiteral(vt->getSize()));
-
-		        return retExpr;
-		    }
 		}
 
 		core::ExpressionPtr&& retExpr = convFact.builder.castExpr( type, subExpr );
