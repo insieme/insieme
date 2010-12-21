@@ -117,9 +117,10 @@ TEST(IRParser, ExpressionTests) {
 	
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
-	LOG(INFO) << "BLA";
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
-	LOG(INFO) << "ALB";
+
+	auto mergeAll = manager.basic.getLiteral("mergeAll");
+	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
 }
 
 TEST(IRParser, InteractiveTest) {
