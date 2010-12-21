@@ -124,8 +124,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 		( typeG->typeRule >> ':' >> typeG->identifier )				[ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
 
 	callExpr =
-		(expressionRule >> "()")									[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, ExpressionList()) ]
-	  |	(expressionRule >> '(' >> (expressionRule					[ ph::push_back(qi::_a, qi::_1) ]
+		(expressionRule >> '(' >> -(expressionRule					[ ph::push_back(qi::_a, qi::_1) ]
 		  % ',') >> ')' )											[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_a) ];
 
 	castExpr =

@@ -42,10 +42,15 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
+
+LiteralNotFoundException::LiteralNotFoundException(const string& lit) throw() : msg(string("Literal not found: ") + lit) {
+	LOG(ERROR) << msg;
+}
 
 // Work around GCC unimplemented features
 template<class ...All>
@@ -147,9 +152,9 @@ bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 		#include "insieme/core/lang/lang.def"
 	}
 	else if(auto lN = dynamic_pointer_cast<const Literal>(node)) {
-		#define LITERAL(_id, _name, _spec)\
+		#define LITERAL(_id, _name, _spec) \
 		if(node == get##_id()) return true;
-		#define OPERATION(_type, _op, _name, _spec)\
+		#define OPERATION(_type, _op, _name, _spec) \
 		if(node == get##_type##_op()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
@@ -161,9 +166,7 @@ LiteralPtr BasicGenerator::getLiteral(const string& name) const {
 	if(lIt != pimpl->literalMap.end()) {
 		return ((*this).*lIt->second)();
 	}
-	// DLOG(ERROR) << name;
-	// assert(false && "Liternal name not registered");
-	return LiteralPtr();
+	throw LiteralNotFoundException(name);
 }
 
 ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {
