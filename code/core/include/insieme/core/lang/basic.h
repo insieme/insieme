@@ -61,6 +61,16 @@ typedef Pointer<const Statement> StatementPtr;
 
 namespace lang {
 
+class LiteralNotFoundException : std::exception {
+	string msg;
+public:
+	LiteralNotFoundException(const string& lit) throw();
+	~LiteralNotFoundException() throw() { }
+	const char* what() const throw() {
+		return msg.c_str();
+	}
+};
+
 class BasicGenerator : boost::noncopyable {
 	mutable NodeManager& nm;
 	struct BasicGeneratorImpl;
