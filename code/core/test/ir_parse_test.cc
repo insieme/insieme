@@ -90,6 +90,18 @@ TEST(IRParser, TypeTests) {
 	EXPECT_THROW(parser.parseType("(fail2"), ParseException);
 	EXPECT_THROW(parser.parseType("fail3)"), ParseException);
 	EXPECT_THROW(parser.parseType("int -> bool"), ParseException);
+
+
+	// vector parameter test
+	{
+		TypeVariablePtr var = builder.typeVariable("a");
+		TypePtr vector = builder.vectorType(var, IntTypeParam::getVariableIntParam('l'));
+
+		auto funType = builder.functionType(TypeList(), toVector<TypePtr>(vector, var), var);
+		EXPECT_EQ(funType, parser.parseType("(vector<'a,l>, 'a)->'a"));
+
+		EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(parser.parseType("(vector<'a,l>)->'a"))->getArgumentTypes()[0]->getNodeType());
+	}
 }
 
 TEST(IRParser, ExpressionTests) {
