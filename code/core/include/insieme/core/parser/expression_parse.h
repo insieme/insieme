@@ -67,7 +67,11 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 
 	// nonterminal rules with skip parsing
 	qi::rule<ParseIt, LiteralPtr(), qi::space_type> literalExpr;
+	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> opExpr;
 	qi::rule<ParseIt, VariablePtr(), qi::space_type> variableExpr;
+	
+	qi::rule<ParseIt, ExpressionPtr(), qi::locals<ExpressionList>, qi::space_type> callExpr;
+	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> castExpr;
 
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> expressionRule;
 };

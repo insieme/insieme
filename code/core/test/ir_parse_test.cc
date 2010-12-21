@@ -48,6 +48,7 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/logging.h"
 
 using namespace insieme::core;
 using namespace insieme::core::parse;
@@ -99,9 +100,14 @@ TEST(IRParser, ExpressionTests) {
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
-	// TODO: re-enable when actually implemented
-//	EXPECT_EQ(builder.intLit(5), parser.parseExpression("lit<int<4>, 5>"));
-//	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
+	EXPECT_EQ(builder.intLit(5), parser.parseExpression("lit<int<4>, 5>"));
+	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
+	
+	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
+	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
+	LOG(INFO) << "BLA";
+	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
+	LOG(INFO) << "ALB";
 }
 
 TEST(IRParser, InteractiveTest) {
