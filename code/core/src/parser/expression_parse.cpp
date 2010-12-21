@@ -102,7 +102,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	// terminals, no skip parser
 
 	literalString = 
-		*(qi::char_ - ">")											[ qi::_val = qi::_1 ];
+		*(qi::char_ - ">");
 	
 	// nonterminals, skip parser 
 
@@ -124,8 +124,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 		( typeG->typeRule >> ':' >> typeG->identifier )				[ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
 
 	callExpr =
-		(expressionRule >> '(' >> -(expressionRule					[ ph::push_back(qi::_a, qi::_1) ]
-		  % ',') >> ')' )											[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_a) ];
+		( qi::lit("(") >> expressionRule >> '(' >> -(expressionRule	[ ph::push_back(qi::_a, qi::_1) ]
+		  % ',') >> ')' >> ')' )									[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_a) ];
 
 	castExpr =
 		( qi::lit("CAST<") >> typeG->typeRule 
