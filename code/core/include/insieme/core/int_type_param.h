@@ -187,7 +187,7 @@ public:
 	const string toString() const {
 		switch (type) {
 		case VARIABLE:
-			return ::toString(symbol);
+			return "#" + ::toString(symbol);
 		case CONCRETE:
 			return ::toString(value);
 		case INFINITE:

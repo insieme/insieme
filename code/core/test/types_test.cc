@@ -249,7 +249,7 @@ TEST(TypeTest, GenericType) {
 	EXPECT_EQ ( "C<'alpha>" , typeC->getName() );
 	GenericTypePtr typeD = GenericType::get(manager, "D", emptyPtr, toVector(IntTypeParam::getVariableIntParam('a')));
 	EXPECT_FALSE ( typeD->isConcrete() );
-	EXPECT_EQ ( "D<a>" , typeD->getName() );
+	EXPECT_EQ ( "D<#a>" , typeD->getName() );
 
 	// create complex type with multiple parameter
 	vector<TypePtr> typeListA;
@@ -743,7 +743,7 @@ TEST(TypeTest, IntTypeParam) {
 	EXPECT_EQ (inf.toString(), "Inf");
 
 	IntTypeParam pvp = IntTypeParam::getVariableIntParam('p');
-	EXPECT_EQ (pvp.toString(), "p");
+	EXPECT_EQ (pvp.toString(), "#p");
 
 	// test isConcrete()
 	EXPECT_EQ (p12.isConcrete(), true);

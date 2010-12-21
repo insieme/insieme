@@ -42,7 +42,12 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/type_utils.h"
+
+#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/typechecks.h"
+
 #include "insieme/core/parser/ir_parse.h"
+
 
 namespace insieme {
 namespace core {
@@ -275,8 +280,8 @@ TEST(TypeUtils, FreeTypeVariableAssignment) {
 	TypePtr resA = res.first;
 	TypePtr resB = res.second;
 
-	EXPECT_EQ("a<'FV1,a>", toString(*resA));
-	EXPECT_EQ("a<'FV2,b>", toString(*resB));
+	EXPECT_EQ("a<'FV1,#a>", toString(*resA));
+	EXPECT_EQ("a<'FV2,#b>", toString(*resB));
 
 	EXPECT_NE(vars, getTypeVariables(resA));
 	EXPECT_NE(vars, getTypeVariables(resB));
@@ -299,6 +304,46 @@ TEST(TypeUtils, ArrayVectorRelation) {
 
 	EXPECT_PRED2(unifyable, typeA, typeB);
 
+}
+
+TEST(TypeUtils, VariableSubstitutionBug) {
+
+	// The basis of this Test case is the following type checker error:
+	//		MSG: Invalid return type -
+	// 				expected: uint<a>
+	// 				actual:   uint<4>
+	// 				function type: ((vector<'elem,l>,'res,(('elem,'res)->'res))->'res)
+	//
+	// This error occurs when the function is invoked using a literal as
+	// its second argument and a generic integer operation is it's last.
+	// The expected return type should be consistent with the typeo of the
+	// second argument.
+
+	// reconstruct test case
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr intType = manager.basic.getUInt4();
+	TypePtr vectorType = builder.vectorType(intType, IntTypeParam::getConcreteIntParam(8));
+	TypePtr funType = parse::parseType(manager, "(vector<'elem,#l>,'res,('elem,'res)->'res)->'res");
+	EXPECT_TRUE(funType);
+
+	EXPECT_EQ(NT_VectorType, vectorType->getNodeType());
+	EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(funType)->getArgumentTypes()[0]->getNodeType());
+
+	LiteralPtr fun = Literal::get(manager, funType, "fun");
+	LiteralPtr vector = Literal::get(manager, vectorType, "x");
+	LiteralPtr zero = Literal::get(manager, intType, "0");
+	LiteralPtr op = manager.basic.getUnsignedIntAdd();
+
+	ExpressionPtr call = builder.callExpr(intType, fun, vector, zero, op);
+
+	// run check
+	CheckPtr callCheck = make_check<checks::CallExprTypeCheck>();
+	auto res = check(call, callCheck);
+
+	// there shouldn't be any errors
+	EXPECT_TRUE(res.empty());
 }
 
 } // end namespace core

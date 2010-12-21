@@ -290,7 +290,7 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 			});
 
 			// compose current mapping with overall result
-			res = Substitution::compose(manager, res, mapping);
+			res = Substitution::compose(manager, mapping, res);
 			continue;
 		}
 
@@ -358,7 +358,7 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 				});
 
 				// compose current mapping with overall result
-				res = Substitution::compose(manager, res, mapping);
+				res = Substitution::compose(manager, mapping, res);
 			}
 		}
 

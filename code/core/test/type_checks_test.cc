@@ -58,15 +58,15 @@ TEST(CallExprTypeCheck, Basic) {
 	TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
 	EXPECT_EQ("()", toString(*empty));
 	FunctionTypePtr nullary = builder.functionType(empty->getElementTypes(), type);
-	EXPECT_EQ("(()->int<a>)", toString(*nullary));
+	EXPECT_EQ("(()->int<#a>)", toString(*nullary));
 	TupleTypePtr single = builder.tupleType(toVector(type));
-	EXPECT_EQ("(int<a>)", toString(*single));
+	EXPECT_EQ("(int<#a>)", toString(*single));
 	FunctionTypePtr unary = builder.functionType(single->getElementTypes(), type);
-	EXPECT_EQ("((int<a>)->int<a>)", toString(*unary));
+	EXPECT_EQ("((int<#a>)->int<#a>)", toString(*unary));
 	TupleTypePtr pair = builder.tupleType(toVector(type, type));
-	EXPECT_EQ("(int<a>,int<a>)", toString(*pair));
+	EXPECT_EQ("(int<#a>,int<#a>)", toString(*pair));
 	FunctionTypePtr binary = builder.functionType(pair->getElementTypes(), type);
-	EXPECT_EQ("((int<a>,int<a>)->int<a>)", toString(*binary));
+	EXPECT_EQ("((int<#a>,int<#a>)->int<#a>)", toString(*binary));
 
 	// define literals
 	LiteralPtr x = builder.literal(type, "1");
@@ -288,6 +288,68 @@ TEST(CastExpr, Basic) {
 	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_ILLEGAL_CAST, "", Message::ERROR));
 	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_ILLEGAL_CAST, "", Message::ERROR));
 	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ILLEGAL_CAST, "", Message::ERROR));
+}
+
+TEST(KeywordCheck, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create correct and wrong instances
+
+	TypePtr element = builder.genericType("A");
+	IntTypeParam param = IntTypeParam::getConcreteIntParam(8);
+
+	CheckPtr typeCheck = make_check<KeywordCheck>();
+
+	// test vector
+	{
+		TypePtr ok = builder.vectorType(element, param);
+		TypePtr err = builder.genericType("vector", toVector<TypePtr>(element), toVector<IntTypeParam>(param));
+
+		EXPECT_FALSE(*ok == *err);
+
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
+	}
+
+	// test array
+	{
+		TypePtr ok = builder.arrayType(element, param);
+		TypePtr err = builder.genericType("array", toVector<TypePtr>(element), toVector<IntTypeParam>(param));
+
+		EXPECT_FALSE(*ok == *err);
+
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
+	}
+
+	// test references
+	{
+		TypePtr ok = builder.refType(element);
+		TypePtr err = builder.genericType("ref", toVector<TypePtr>(element));
+
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
+	}
+
+	// test channel
+	{
+		TypePtr ok = builder.channelType(element, param);
+		TypePtr err = builder.genericType("channel", toVector<TypePtr>(element), toVector<IntTypeParam>(param));
+
+		EXPECT_FALSE(*ok == *err);
+
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
+	}
+
 }
 
 

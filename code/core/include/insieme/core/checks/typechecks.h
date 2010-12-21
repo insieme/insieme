@@ -60,6 +60,8 @@ enum {
 	EC_TYPE_NON_REF_TO_REF_CAST,
 
 	EC_TYPE_ILLEGAL_CAST,
+
+	EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD,
 };
 
 /**
@@ -73,6 +75,8 @@ enum {
 		public: \
 		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
+
+SIMPLE_CHECK(Keyword, GenericType);
 
 SIMPLE_CHECK(CallExprType, CallExpr);
 SIMPLE_CHECK(FunctionType, LambdaExpr);

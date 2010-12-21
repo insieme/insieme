@@ -46,6 +46,23 @@ namespace checks {
 	static_pointer_cast<const TargetType>(value)
 
 
+OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
+
+	OptionalMessageList res;
+
+	if ((address->getFamilyName() == "vector" && address->getNodeType()!=NT_VectorType) ||
+		(address->getFamilyName() == "array" && address->getNodeType()!=NT_ArrayType) ||
+		(address->getFamilyName() == "ref" && address->getNodeType()!=NT_RefType) ||
+		(address->getFamilyName() == "channel" && address->getNodeType()!=NT_ChannelType)) {
+
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD,
+				format("Name of generic type %s is a reserved keyword.", toString(*address).c_str()),
+				Message::WARNING));
+	}
+	return res;
+}
+
 OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 
 	NodeManager manager;
