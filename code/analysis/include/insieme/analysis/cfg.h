@@ -85,8 +85,8 @@ struct Terminator : public Element {
 };
 
 struct Edge {
-
-
+	std::string label;
+	Edge(const std::string& label = std::string()) : label(label) { }
 };
 
 } // end cfg namespace
@@ -103,12 +103,14 @@ class CFG {
 
 	struct EdgeProperty {
 		cfg::Edge edge;
+		EdgeProperty() { }
+		EdgeProperty(const cfg::Edge& edge) : edge(edge) { }
 	};
 
 	template <class NodeTy>
-	class LabelWriter {
+	class BlockLabelWriter {
 	public:
-		LabelWriter(NodeTy& node) : prop(node) { }
+		BlockLabelWriter(NodeTy& node) : prop(node) { }
 
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
@@ -118,6 +120,20 @@ class CFG {
 		}
 	private:
 		NodeTy& prop;
+	};
+
+	template <class EdgeTy>
+	class EdgeLabelWriter {
+	public:
+		EdgeLabelWriter(EdgeTy& edge) : edge(edge) { }
+
+		template <class VertexOrEdge>
+		void operator()(std::ostream& out, const VertexOrEdge& v) const {
+			const cfg::Edge& e = edge[v];
+			out << "[label=\"" << e.label << "\"]";
+		}
+	private:
+		EdgeTy& edge;
 	};
 
 	friend std::ostream& std::operator<<(std::ostream& out, const CFG& cfg);
@@ -161,16 +177,13 @@ public:
 	 * @param vertexId
 	 * @return
 	 */
-	const cfg::Block& getNode(const VertexTy& vertexId) {
-		NodePropertyMapTy&& node = get(&NodeProperty::block, graph);
+	const cfg::Block& getNode(const VertexTy& vertexId) const {
+		ConstNodePropertyMapTy&& node = get(&NodeProperty::block, graph);
 		return *node[vertexId];
 	}
 
-	const cfg::Element& getNode(const VertexTy& vertexId) const { return getNode(vertexId); }
-
-
 	EdgeTy addEdge(VertexTy src, VertexTy dest, const cfg::Edge& edge) {
-		return addEdge(src, dest); // TODO
+		return boost::add_edge(src, dest, CFG::EdgeProperty(edge), graph).first;
 	}
 
 	EdgeTy addEdge(VertexTy src, VertexTy dest) {

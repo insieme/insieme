@@ -48,6 +48,8 @@ class NodeManager;
 template<class T> class Pointer;
 class Type;
 typedef Pointer<const Type> TypePtr;
+class Expression;
+typedef Pointer<const Expression> ExpressionPtr;
 class Literal;
 typedef Pointer<const Literal> LiteralPtr;
 
@@ -93,7 +95,7 @@ public:
 
 	bool isBuiltIn(const NodePtr& node) const;
 	LiteralPtr getLiteral(const std::string& name) const;
-	LiteralPtr getOperator(const TypePtr& type, const Operator& op) const;
+	ExpressionPtr getOperator(const TypePtr& type, const Operator& op) const;
 	// ----- extra material ---
 
 	StatementPtr getNoOp() const;

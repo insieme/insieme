@@ -57,16 +57,16 @@ void basic_type_test() {
 	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
 	double g;
 	
-	#pragma test "vector<ref<real<4>>,3> v1 = undefined(vector<ref<real<4>>,3>)"
+	#pragma test "ref<vector<ref<real<4>>,3>> v1 = ref.var(undefined(vector<ref<real<4>>,3>))"
 	float v[3];
 
-    #pragma test "vector<vector<ref<int<4>>,2>,3> v1 = undefined(vector<vector<ref<int<4>>,2>,3>)"
+    #pragma test "ref<vector<vector<ref<int<4>>,2>,3>> v1 = ref.var(undefined(vector<vector<ref<int<4>>,2>,3>))"
 	int vv[3][2];
 
-	#pragma test "vector<ref<real<4>>,3> v1 = {ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0))}"
+	#pragma test "ref<vector<ref<real<4>>,3>> v1 = ref.var({ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0))})"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "vector<vector<ref<real<4>>,1>,2> v1 = {ref.var({ref.var(cast<real<4>>(0))}),ref.var({ref.var(cast<real<4>>(0))})}"
+	#pragma test "ref<vector<vector<ref<real<4>>,1>,2>> v1 = ref.var({ref.var({ref.var(cast<real<4>>(0))}),ref.var({ref.var(cast<real<4>>(0))})})"
 	float vvvv[][1] = { {0}, {0} };
 }
 

@@ -38,10 +38,13 @@
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/utils/map_utils.h"
+
 #include <stack>
 #include <tuple>
 
 using namespace insieme::core;
+using namespace insieme::utils;
 using namespace insieme::analysis;
 using namespace insieme::analysis::cfg;
 
@@ -117,8 +120,12 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	ScopeStack 	scopeStack;
 
+	bool subExpr;
+
+	static insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr> cfgMap;
+
 	CFGBuilder(CFG& cfg) : cfg(cfg), currBlock(NULL), isPending(true),
-			entry( cfg.addNode( new cfg::Block ) ), exit( cfg.addNode( new cfg::Block ) ), succ(exit) { }
+			entry( cfg.addNode( new cfg::Block ) ), exit( cfg.addNode( new cfg::Block ) ), succ(exit), subExpr(false) { }
 
 	void appendPendingBlock() {
 		if(isPending && currBlock && !currBlock->empty()) {
@@ -154,7 +161,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		// push scope into the stack for this compound statement
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
-		cfg.addEdge(src, succ);
+		cfg.addEdge(src, succ, cfg::Edge("T"));
 
 		// reset the successor for the thenBody
 		succ = sink;
@@ -163,7 +170,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		// push scope into the stack for this compound statement
 		visit(ifStmt->getElseBody());
 		appendPendingBlock();
-		cfg.addEdge(src, succ);
+		cfg.addEdge(src, succ, cfg::Edge("F"));
 
 		succ = src;
 		currBlock = ifBlock;
@@ -227,8 +234,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		appendPendingBlock();
 
-		cfg.addEdge(src, succ);
-		cfg.addEdge(src, sink);
+		cfg.addEdge(src, succ, cfg::Edge("T"));
+		cfg.addEdge(src, sink, cfg::Edge("F"));
 
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
@@ -254,8 +261,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 		scopeStack.pop();
 
 		appendPendingBlock();
-		cfg.addEdge(src, succ);
-		cfg.addEdge(src, sink);
+		cfg.addEdge(src, succ, cfg::Edge("T"));
+		cfg.addEdge(src, sink, cfg::Edge("F"));
 
 		succ = src;
 	}
@@ -279,7 +286,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			this->visit(curr.second);
 
 			appendPendingBlock();
-			this->cfg.addEdge(src, succ);
+			this->cfg.addEdge(src, succ, cfg::Edge( curr.first->toString() ));
 		});
 
 		succ = sink;
@@ -308,6 +315,27 @@ struct CFGBuilder: public ASTVisitor< void > {
 		);
 	}
 
+	void visitCallExpr(const CallExprPtr& callExpr) {
+		std::cout << "Visiting call expr: " << printer::PrettyPrinter(callExpr, 1<<5) << std::endl;
+		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
+			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+			auto fit = cfgMap.find(lambdaExpr);
+			std::cout << "Building CFG for function" << std::endl;
+			if(fit == cfgMap.end())
+				cfgMap.insert( std::make_pair(lambdaExpr, CFG::buildCFG(lambdaExpr)) );
+		}
+
+		if(!subExpr) {
+			if(!currBlock)
+				currBlock = new cfg::Block;
+			currBlock->appendElement(StatementPtr(callExpr));
+		}
+		subExpr = true;
+		const vector<ExpressionPtr>& args = callExpr->getArguments();
+		std::for_each(args.begin(), args.end(), [this](const ExpressionPtr& curr){ this->visit(curr); });
+		subExpr = false;
+	}
+
 //	BlockBounds visitCallExpr(const CallExprPtr& callExpr) {
 //		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
 //			cfg::Block callBlock;
@@ -328,7 +356,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
 		visit(lambda->getBody());
 		scopeStack.pop();
-
+		// cfgMap.insert( std::make_pair(lambda, CFGPtr(&cfg)) );
 		appendPendingBlock();
 	}
 
@@ -364,6 +392,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 };
 
+insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr> CFGBuilder::cfgMap = insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr>();
 } // end anonymous namespace
 
 namespace insieme {
@@ -375,6 +404,16 @@ CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
 	CFGBuilder builder(*cfg);
 	builder.visit(rootNode);
 	builder.completeGraph();
+
+	// print stats
+	std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+	std::cout << "Num of CFG graphs: " << CFGBuilder::cfgMap.size() << std::endl;
+	std::for_each(CFGBuilder::cfgMap.begin(), CFGBuilder::cfgMap.end(),
+		[](insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr>::value_type curr){
+			std::cout << "number of nodes: " << curr.second->getSize() << std::endl;
+		}
+	);
+	std::cout << "main: " << cfg->getSize() << std::endl;
 	return cfg;
 }
 
@@ -401,14 +440,17 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 	using namespace insieme::analysis;
 
 	CFG::ConstNodePropertyMapTy&& node = get(&CFG::NodeProperty::block, cfg.graph);
-	boost::write_graphviz(out, cfg.graph, CFG::LabelWriter<CFG::ConstNodePropertyMapTy>(node));
+	CFG::ConstEdgePropertyMapTy&& edge = get(&CFG::EdgeProperty::edge, cfg.graph);
+	boost::write_graphviz(out, cfg.graph,
+			CFG::BlockLabelWriter<CFG::ConstNodePropertyMapTy>(node),
+			CFG::EdgeLabelWriter<CFG::ConstEdgePropertyMapTy>(edge));
 	return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block) {
 	if(!block.empty()) {
 		out << "[shape=box,label=\"";
-		out << "[B" << block.getBlockID() << "]\\l\\n";
+		out << "[B" << block.getBlockID() << "]\\l";
 		size_t num = 0;
 		std::for_each(block.stmt_begin(), block.stmt_end(), [ &out, &num ](const insieme::analysis::cfg::Element& curr) {
 			out << num++ << ": ";

@@ -681,13 +681,6 @@ public:
 
 		// get basic element type of vectors
         core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
-        core::TypePtr vecElemTy;
-        if(subExprLHS->getType()->getNodeType() == core::NT_VectorType) {
-            vecElemTy = dynamic_pointer_cast<const core::VectorType>(subExprLHS->getType())->getElementType();
-            vecElemTy = (vecElemTy->getNodeType() == core::NT_RefType ?
-                core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
-                subExprLHS->getType());
-        }
 
         // we take care of compound operators first,
 		// we rewrite the RHS expression in a normal form, i.e.:
@@ -725,9 +718,7 @@ public:
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
 			core::ExpressionPtr&& opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
-			rhs = subExprLHS->getType()->getNodeType() == core::NT_VectorType ?
-                builder.callExpr(exprTy, builder.callExpr(opFunc, convFact.mgr.basic.getOperator(vecElemTy, op)), subExprLHS, rhs ) : // create two nested call expressions for pointwise vector operations
-                builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
+			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 		}
 
 		bool isAssignment = false;
@@ -833,9 +824,7 @@ public:
 		}
 		assert(opFunc);
 
-        core::ExpressionPtr&& retExpr = lhs->getType()->getNodeType() == core::NT_VectorType ?
-            convFact.builder.callExpr( exprTy, convFact.builder.callExpr(opFunc, convFact.mgr.basic.getOperator(vecElemTy, op)), lhs, rhs ) : // create two nested call expressions for pointwise vector operations
-		    convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);

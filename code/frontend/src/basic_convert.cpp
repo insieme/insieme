@@ -236,8 +236,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );
-	if( !(varTy.isConstQualified() || isa<const clang::ParmVarDecl>(varDecl) ||
-	        (type->getNodeType() == core::NT_VectorType && !varTy.getTypePtr()->isExtVectorType()) )) {
+	if( !(varTy.isConstQualified() || isa<const clang::ParmVarDecl>(varDecl)
+	//		|| (type->getNodeType() == core::NT_VectorType && !varTy.getTypePtr()->isExtVectorType()) Removed after discussion 20/12/2010
+	)) {
 		// add a ref in the case of variables which are not const or declared as function parameters
 		type = builder.refType(type);
 	}
@@ -367,9 +368,8 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	// if no init expression is provided => use undefined for given set of types
 	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
 		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		    // FIXME add zero initialization of references if needed
 			const core::TypePtr& res = refTy->getElementType();
-			return builder.refVar( builder.callExpr( res, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(res) ) );
+			return builder.refVar( builder.callExpr( res, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res) ) );
 		}
 		return builder.callExpr( type, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type));
 	} else if (!expr)

@@ -85,7 +85,7 @@ isbr_ThreadGroup isbr_parallel(isbr_Job* jobDescription) {
 
 	// Start threads, don't be tempted to join this with the loop above
 	for(unsigned i=0; i<numThreads; ++i) {
-		pthread_create(threadGroup->threads + i, &attr, &isbr_jobRunner, &args[i]); 
+		pthread_create(&(threadGroup->threads[i]), &attr, &isbr_jobRunner, &args[i]);
 	}
 	return threadGroup;
 }
@@ -122,6 +122,7 @@ void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PF
 	// TODO handle stupid corner cases
 	long long numit = (range.end - range.start) / (range.step);
 	long long chunk = numit / group->numThreads;
+	myRange.context = range.context;
 	myRange.start = range.start + isbr_getThreadId(0) * chunk * range.step;
 	myRange.end = myRange.start + chunk * range.step;
 	myRange.step = range.step;
@@ -144,6 +145,6 @@ pthread_key_t isbr_getJobArgKey() {
 void* isbr_jobRunner(void *arg) {
 	isbr_JobArgs *jobArgs = (isbr_JobArgs*)arg;
 	PTHREADCHECK(pthread_setspecific(isbr_getJobArgKey(), arg));
-	jobArgs->context->fun(jobArgs);
+	jobArgs->context->fun(jobArgs->context);
 	return NULL;
 }

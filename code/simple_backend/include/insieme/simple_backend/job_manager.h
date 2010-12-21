@@ -66,8 +66,42 @@ class JobManager {
 		/**
 		 * A simple constructor for this type.
 		 */
-		JobInfo(const string& structName, const string& funName, CodePtr& structDef, CodePtr& funDef, const vector<core::VariablePtr>& capturedVars)
-			: structName(structName), funName(funName), structDefinition(structDef), jobFunction(funDef), capturedVars(capturedVars) { }
+		JobInfo(
+				const string& structName,
+				const string& funName,
+				CodePtr& structDef,
+				CodePtr& funDef,
+				const vector<core::VariablePtr>& capturedVars)
+			:
+				structName(structName),
+				funName(funName),
+				structDefinition(structDef),
+				jobFunction(funDef),
+				capturedVars(capturedVars) { }
+	};
+
+	/**
+	 * A info struct containing all the information to be stored for a pfor-body.
+	 */
+	struct PForBodyInfo {
+		string functionName;		// the name of the function realizing the body
+		string captureStructName;	// the name of the struct containing the captured variables
+		CodePtr funDefinition;		// the definition of the function
+		CodePtr captureStruct;		// the definition of the capture struct
+		vector<core::VariablePtr> capturedVars; 	// the variables to be captured for this parallel for
+
+		PForBodyInfo(
+				const string& functionName,
+				const string& captureStructName,
+				const CodePtr& funDefinition,
+				const CodePtr& captureStruct,
+				const vector<core::VariablePtr> capturedVars)
+			:
+				functionName(functionName),
+				captureStructName(captureStructName),
+				funDefinition(funDefinition),
+				captureStruct(captureStruct),
+				capturedVars(capturedVars) { }
 	};
 
 	/**
@@ -79,6 +113,11 @@ class JobManager {
 	 * A map linking jobs to their definitions within the resulting source code.
 	 */
 	utils::map::PointerMap<core::JobExprPtr, JobInfo> jobs;
+
+	/**
+	 * A map linking pfor body statements to their definitions within the resulting source code.
+	 */
+	utils::map::PointerMap<core::ExpressionPtr, PForBodyInfo> bodies;
 
 public:
 
@@ -96,12 +135,22 @@ public:
 	 */
 	void createJob(const CodePtr& context, const core::JobExprPtr& job);
 
+	/**
+	 * Creates a call to the pfor-runtime function based on the given call expression.
+	 */
+	void createPFor(const CodePtr& context, const core::ExpressionPtr& pforCall);
+
 private:
 
 	/**
 	 * Resolves the given job expression and obtains the necessary information for creating a job.
 	 */
 	JobInfo resolveJob(const core::JobExprPtr& job);
+
+	/**
+	 * Resolves the given pfor body statement.
+	 */
+	PForBodyInfo resolvePForBody(const core::ExpressionPtr& body);
 };
 
 

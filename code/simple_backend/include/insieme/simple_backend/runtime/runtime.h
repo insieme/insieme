@@ -52,11 +52,12 @@ typedef struct _isbr_jobArgs {
 typedef struct _isbr_job {
 	unsigned structSize;
 	unsigned min, max;
-	void (*fun)(isbr_JobArgs*);
+	void (*fun)(struct _isbr_job*);
 } isbr_Job;
 
 typedef struct _isbr_pforRange {
 	long long start, end, step;
+	void* context;
 } isbr_PForRange;
 
 

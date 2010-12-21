@@ -64,7 +64,7 @@ private:
 };
 
 template <class Tag>
-inline vertex_orderer<Tag> order_verteces(std::vector<CFG::VertexTy>& bfs, Tag) {
+inline vertex_orderer<Tag> order_blocks(std::vector<CFG::VertexTy>& bfs, Tag) {
 	return vertex_orderer<Tag>(bfs);
 }
 
@@ -129,51 +129,51 @@ TEST(CFGBuilder, IfStmt1) {
 	EXPECT_EQ(static_cast<unsigned>(5), cfg->getSize());
 
 	enum DFS_ORDER{ ENTRY, IF, THEN, ELSE, EXIT };
-	std::vector<CFG::VertexTy> verteces;
+	std::vector<CFG::VertexTy> blocks;
 
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
-	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) ) );
 
-	// std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+	// std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 	// std::cout << std::endl;
 
-	const cfg::Block& entryBlock = cfg->getNode(verteces[ENTRY]);
+	const cfg::Block& entryBlock = cfg->getNode(blocks[ENTRY]);
 	EXPECT_TRUE(entryBlock.empty());
 	// ENTRY -> IF
-	CHECK_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[IF]), cfg);
-	CHECK_NOT_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[THEN], verteces[ELSE], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[IF]), cfg);
+	CHECK_NOT_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[THEN], blocks[ELSE], blocks[EXIT]), cfg);
 
 	// IF
-	const cfg::Block& ifBlock = cfg->getNode(verteces[IF]);
+	const cfg::Block& ifBlock = cfg->getNode(blocks[IF]);
 	EXPECT_EQ(static_cast<unsigned>(1), ifBlock.size());
 	EXPECT_TRUE(ifBlock.hasTerminator());
 	EXPECT_EQ(*ifBlock.stmt_begin(), var); // condition
 	EXPECT_EQ(ifBlock.getTerminator(), stmt);
 	// IF-> THEN && IF -> ELSE
-	CHECK_CONNECTED(verteces[IF], toVector<CFG::VertexTy>(verteces[THEN], verteces[ELSE]), cfg);
-	CHECK_NOT_CONNECTED(verteces[1], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[IF], toVector<CFG::VertexTy>(blocks[THEN], blocks[ELSE]), cfg);
+	CHECK_NOT_CONNECTED(blocks[1], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[EXIT]), cfg);
 
 	// Then
-	const cfg::Block& thenBlock = cfg->getNode(verteces[THEN]);
+	const cfg::Block& thenBlock = cfg->getNode(blocks[THEN]);
 	EXPECT_EQ(static_cast<unsigned>(1), thenBlock.size());
 	EXPECT_FALSE(thenBlock.hasTerminator());
 	EXPECT_EQ(*thenBlock.stmt_begin(), stmt1);
-	CHECK_CONNECTED(verteces[THEN], toVector<CFG::VertexTy>(verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[THEN], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[IF], verteces[ELSE]), cfg);
+	CHECK_CONNECTED(blocks[THEN], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[THEN], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[ELSE]), cfg);
 
 	// Else
-	const cfg::Block& elseBlock = cfg->getNode(verteces[ELSE]);
+	const cfg::Block& elseBlock = cfg->getNode(blocks[ELSE]);
 	EXPECT_EQ(static_cast<unsigned>(1), elseBlock.size());
 	EXPECT_FALSE(elseBlock.hasTerminator());
 	EXPECT_EQ(*elseBlock.stmt_begin(), stmt2);
-	CHECK_CONNECTED(verteces[ELSE], toVector<CFG::VertexTy>(verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[ELSE], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[IF], verteces[THEN]), cfg);
+	CHECK_CONNECTED(blocks[ELSE], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[ELSE], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[THEN]), cfg);
 
 	// Exit
-	const cfg::Block& exitBlock = cfg->getNode(verteces[EXIT]);
+	const cfg::Block& exitBlock = cfg->getNode(blocks[EXIT]);
 	EXPECT_TRUE(exitBlock.empty());
-	CHECK_NOT_CONNECTED(verteces[EXIT], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[IF], verteces[THEN], verteces[ELSE]), cfg);
+	CHECK_NOT_CONNECTED(blocks[EXIT], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[THEN], blocks[ELSE]), cfg);
 }
 
 TEST(CFGBuilder, IfStmt2) {
@@ -194,50 +194,50 @@ TEST(CFGBuilder, IfStmt2) {
 	EXPECT_EQ(static_cast<unsigned>(5), cfg->getSize());
 
 	enum DFS_ORDER{ ENTRY, IF, THEN, SINK, EXIT };
-	std::vector<CFG::VertexTy> verteces;
+	std::vector<CFG::VertexTy> blocks;
 
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
-	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) ) );
 
-//	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+//	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;
 
-	const cfg::Block& entryBlock = cfg->getNode(verteces[ENTRY]);
+	const cfg::Block& entryBlock = cfg->getNode(blocks[ENTRY]);
 	EXPECT_TRUE(entryBlock.empty());
-	CHECK_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[IF]), cfg);
-	CHECK_NOT_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[THEN], verteces[SINK], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[IF]), cfg);
+	CHECK_NOT_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[THEN], blocks[SINK], blocks[EXIT]), cfg);
 
 	// IF
-	const cfg::Block& ifBlock = cfg->getNode(verteces[IF]);
+	const cfg::Block& ifBlock = cfg->getNode(blocks[IF]);
 	EXPECT_EQ(static_cast<unsigned>(1), ifBlock.size());
 	EXPECT_TRUE(ifBlock.hasTerminator());
 	EXPECT_EQ(*ifBlock.stmt_begin(), var); // condition
 	EXPECT_EQ(ifBlock.getTerminator(), ifStmt);
-	CHECK_CONNECTED(verteces[IF], toVector<CFG::VertexTy>(verteces[THEN], verteces[SINK]), cfg);
-	CHECK_NOT_CONNECTED(verteces[IF], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[IF], toVector<CFG::VertexTy>(blocks[THEN], blocks[SINK]), cfg);
+	CHECK_NOT_CONNECTED(blocks[IF], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[EXIT]), cfg);
 
 	// Then
-	const cfg::Block& thenBlock = cfg->getNode(verteces[THEN]);
+	const cfg::Block& thenBlock = cfg->getNode(blocks[THEN]);
 	EXPECT_EQ(static_cast<unsigned>(1), thenBlock.size());
 	EXPECT_FALSE(thenBlock.hasTerminator());
 	EXPECT_EQ(*thenBlock.stmt_begin(), stmt1);
-	CHECK_CONNECTED(verteces[THEN], toVector<CFG::VertexTy>(verteces[SINK]), cfg);
-	CHECK_NOT_CONNECTED(verteces[THEN], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[IF], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[THEN], toVector<CFG::VertexTy>(blocks[SINK]), cfg);
+	CHECK_NOT_CONNECTED(blocks[THEN], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[EXIT]), cfg);
 
 	// sink
-	const cfg::Block& sink = cfg->getNode(verteces[SINK]);
+	const cfg::Block& sink = cfg->getNode(blocks[SINK]);
 	EXPECT_EQ(static_cast<unsigned>(1), sink.size());
 	EXPECT_FALSE(sink.hasTerminator());
 	EXPECT_EQ(*sink.stmt_begin(), stmt2);
-	CHECK_CONNECTED(verteces[SINK], toVector<CFG::VertexTy>(verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[SINK], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[IF], verteces[THEN]), cfg);
+	CHECK_CONNECTED(blocks[SINK], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[SINK], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[THEN]), cfg);
 
 	// Exit
-	const cfg::Block& exitBlock = cfg->getNode(verteces[4]);
-	EXPECT_TRUE(boost::edge(verteces[3], verteces[4], cfg->getGraph()).second);
+	const cfg::Block& exitBlock = cfg->getNode(blocks[4]);
+	EXPECT_TRUE(boost::edge(blocks[3], blocks[4], cfg->getGraph()).second);
 	EXPECT_TRUE(exitBlock.empty());
-	CHECK_NOT_CONNECTED(verteces[SINK], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[IF], verteces[THEN], verteces[SINK]), cfg);
+	CHECK_NOT_CONNECTED(blocks[SINK], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[THEN], blocks[SINK]), cfg);
 }
 
 TEST(CFGBuilder, ForStmt) {
@@ -257,59 +257,59 @@ TEST(CFGBuilder, ForStmt) {
 
 	EXPECT_EQ(static_cast<unsigned>(6), cfg->getSize());
 	enum DFS_ORDER{ ENTRY, DECL, FOR, BODY, EXIT, INC };
-	std::vector<CFG::VertexTy> verteces;
+	std::vector<CFG::VertexTy> blocks;
 
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
-	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) ) );
 
-//	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+//	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;
 
-	const cfg::Block& entryBlock = cfg->getNode(verteces[ENTRY]);
+	const cfg::Block& entryBlock = cfg->getNode(blocks[ENTRY]);
 	EXPECT_TRUE(entryBlock.empty());
-	CHECK_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[DECL]), cfg);
-	CHECK_NOT_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[FOR], verteces[BODY], verteces[INC], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[DECL]), cfg);
+	CHECK_NOT_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[FOR], blocks[BODY], blocks[INC], blocks[EXIT]), cfg);
 
 	// decl
-	const cfg::Block& declBlock = cfg->getNode(verteces[DECL]);
+	const cfg::Block& declBlock = cfg->getNode(blocks[DECL]);
 	EXPECT_EQ(static_cast<unsigned>(1), declBlock.size());
 	EXPECT_FALSE(declBlock.hasTerminator());
 	EXPECT_EQ(*declBlock.stmt_begin(), forStmt);
 	EXPECT_EQ(declBlock.stmt_begin()->getType(), cfg::Element::LoopInit);
-	CHECK_CONNECTED(verteces[DECL], toVector<CFG::VertexTy>(verteces[FOR]), cfg);
-	CHECK_NOT_CONNECTED(verteces[DECL], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[BODY], verteces[INC], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[DECL], toVector<CFG::VertexTy>(blocks[FOR]), cfg);
+	CHECK_NOT_CONNECTED(blocks[DECL], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[BODY], blocks[INC], blocks[EXIT]), cfg);
 
 	// for
-	const cfg::Block& forBlock = cfg->getNode(verteces[FOR]);
+	const cfg::Block& forBlock = cfg->getNode(blocks[FOR]);
 	EXPECT_EQ(static_cast<unsigned>(1), forBlock.size());
 	EXPECT_TRUE(forBlock.hasTerminator());
 	EXPECT_EQ(*forBlock.stmt_begin(), literal);
 	EXPECT_EQ(forBlock.getTerminator(), forStmt);
-	CHECK_CONNECTED(verteces[FOR], toVector<CFG::VertexTy>(verteces[BODY], verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[FOR], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[FOR], verteces[INC]), cfg);
+	CHECK_CONNECTED(blocks[FOR], toVector<CFG::VertexTy>(blocks[BODY], blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[FOR], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[FOR], blocks[INC]), cfg);
 
 	// body
-	const cfg::Block& bodyBlock = cfg->getNode(verteces[BODY]);
+	const cfg::Block& bodyBlock = cfg->getNode(blocks[BODY]);
 	EXPECT_EQ(static_cast<unsigned>(1), bodyBlock.size());
 	EXPECT_FALSE(bodyBlock.hasTerminator());
 	EXPECT_EQ(*bodyBlock.stmt_begin(), stmt);
-	CHECK_CONNECTED(verteces[BODY], toVector<CFG::VertexTy>(verteces[INC]), cfg);
-	CHECK_NOT_CONNECTED(verteces[BODY], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[DECL], verteces[FOR], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[BODY], toVector<CFG::VertexTy>(blocks[INC]), cfg);
+	CHECK_NOT_CONNECTED(blocks[BODY], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[DECL], blocks[FOR], blocks[EXIT]), cfg);
 
 	// step
-	const cfg::Block& stepBlock = cfg->getNode(verteces[INC]);
+	const cfg::Block& stepBlock = cfg->getNode(blocks[INC]);
 	EXPECT_EQ(static_cast<unsigned>(1), stepBlock.size());
 	EXPECT_FALSE(stepBlock.hasTerminator());
 	EXPECT_EQ(*stepBlock.stmt_begin(), forStmt);
 	EXPECT_EQ(stepBlock.stmt_begin()->getType(), cfg::Element::LoopIncrement);
-	CHECK_CONNECTED(verteces[INC], toVector<CFG::VertexTy>(verteces[FOR]), cfg);
-	CHECK_NOT_CONNECTED(verteces[INC], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[DECL], verteces[BODY], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[INC], toVector<CFG::VertexTy>(blocks[FOR]), cfg);
+	CHECK_NOT_CONNECTED(blocks[INC], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[DECL], blocks[BODY], blocks[EXIT]), cfg);
 
 	// Exit
-	const cfg::Block& exitBlock = cfg->getNode(verteces[EXIT]);
+	const cfg::Block& exitBlock = cfg->getNode(blocks[EXIT]);
 	EXPECT_TRUE(exitBlock.empty());
-	CHECK_NOT_CONNECTED(verteces[EXIT], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[DECL], verteces[FOR], verteces[BODY], verteces[INC]), cfg);
+	CHECK_NOT_CONNECTED(blocks[EXIT], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[DECL], blocks[FOR], blocks[BODY], blocks[INC]), cfg);
 }
 
 
@@ -328,40 +328,40 @@ TEST(CFGBuilder, WhileStmt) {
 
 	EXPECT_EQ(static_cast<unsigned>(4), cfg->getSize());
 	enum DFS_ORDER{ ENTRY, WHILE, BODY, EXIT };
-	std::vector<CFG::VertexTy> verteces;
+	std::vector<CFG::VertexTy> blocks;
 
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
-	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) ) );
 
-//	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+//	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;
 
-	const cfg::Block& entryBlock = cfg->getNode(verteces[ENTRY]);
+	const cfg::Block& entryBlock = cfg->getNode(blocks[ENTRY]);
 	EXPECT_TRUE(entryBlock.empty());
-	CHECK_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[WHILE]), cfg);
-	CHECK_NOT_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[BODY], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[WHILE]), cfg);
+	CHECK_NOT_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[BODY], blocks[EXIT]), cfg);
 
 	// while
-	const cfg::Block& declBlock = cfg->getNode(verteces[WHILE]);
+	const cfg::Block& declBlock = cfg->getNode(blocks[WHILE]);
 	EXPECT_EQ(static_cast<unsigned>(1), declBlock.size());
 	EXPECT_TRUE(declBlock.hasTerminator());
 	EXPECT_EQ(*declBlock.stmt_begin(), whileStmt->getCondition());
-	CHECK_CONNECTED(verteces[WHILE], toVector<CFG::VertexTy>(verteces[BODY], verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[WHILE], toVector<CFG::VertexTy>(verteces[ENTRY]), cfg);
+	CHECK_CONNECTED(blocks[WHILE], toVector<CFG::VertexTy>(blocks[BODY], blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[WHILE], toVector<CFG::VertexTy>(blocks[ENTRY]), cfg);
 
 	// body
-	const cfg::Block& bodyBlock = cfg->getNode(verteces[BODY]);
+	const cfg::Block& bodyBlock = cfg->getNode(blocks[BODY]);
 	EXPECT_EQ(static_cast<unsigned>(1), bodyBlock.size());
 	EXPECT_FALSE(bodyBlock.hasTerminator());
 	EXPECT_EQ(*bodyBlock.stmt_begin(), stmt);
-	CHECK_CONNECTED(verteces[BODY], toVector<CFG::VertexTy>(verteces[WHILE]), cfg);
-	CHECK_NOT_CONNECTED(verteces[BODY], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[BODY], toVector<CFG::VertexTy>(blocks[WHILE]), cfg);
+	CHECK_NOT_CONNECTED(blocks[BODY], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[EXIT]), cfg);
 
 	// Exit
-	const cfg::Block& exitBlock = cfg->getNode(verteces[EXIT]);
+	const cfg::Block& exitBlock = cfg->getNode(blocks[EXIT]);
 	EXPECT_TRUE(exitBlock.empty());
-	CHECK_NOT_CONNECTED(verteces[EXIT], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[WHILE], verteces[BODY]), cfg);
+	CHECK_NOT_CONNECTED(blocks[EXIT], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[WHILE], blocks[BODY]), cfg);
 }
 
 TEST(CFGBuilder, SwitchStmt) {
@@ -382,46 +382,46 @@ TEST(CFGBuilder, SwitchStmt) {
 
 	EXPECT_EQ(static_cast<unsigned>(5), cfg->getSize());
 	enum DFS_ORDER{ ENTRY, SWITCH, CASE1, CASE2, EXIT };
-	std::vector<CFG::VertexTy> verteces;
+	std::vector<CFG::VertexTy> blocks;
 
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
-	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_verteces(verteces, boost::on_discover_vertex()) ) ) );
+	    ( cfg->getGraph(), entry, boost::visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) ) );
 
-//	std::copy(verteces.begin(), verteces.end(), std::ostream_iterator<int, char>(std::cout, " "));
+//	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;
 
-	const cfg::Block& entryBlock = cfg->getNode(verteces[ENTRY]);
+	const cfg::Block& entryBlock = cfg->getNode(blocks[ENTRY]);
 	EXPECT_TRUE(entryBlock.empty());
-	CHECK_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[SWITCH]), cfg);
-	CHECK_NOT_CONNECTED(verteces[ENTRY], toVector<CFG::VertexTy>(verteces[CASE1], verteces[CASE2], verteces[EXIT]), cfg);
+	CHECK_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[SWITCH]), cfg);
+	CHECK_NOT_CONNECTED(blocks[ENTRY], toVector<CFG::VertexTy>(blocks[CASE1], blocks[CASE2], blocks[EXIT]), cfg);
 
 	// switch
-	const cfg::Block& switchBlock = cfg->getNode(verteces[SWITCH]);
+	const cfg::Block& switchBlock = cfg->getNode(blocks[SWITCH]);
 	EXPECT_EQ(static_cast<unsigned>(1), switchBlock.size());
 	EXPECT_TRUE(switchBlock.hasTerminator());
 	EXPECT_EQ(*switchBlock.stmt_begin(), switchStmt->getSwitchExpr());
-	CHECK_CONNECTED(verteces[SWITCH], toVector<CFG::VertexTy>(verteces[CASE1], verteces[CASE2], verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[SWITCH], toVector<CFG::VertexTy>(verteces[ENTRY]), cfg);
+	CHECK_CONNECTED(blocks[SWITCH], toVector<CFG::VertexTy>(blocks[CASE1], blocks[CASE2], blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[SWITCH], toVector<CFG::VertexTy>(blocks[ENTRY]), cfg);
 
 	// case1
-	const cfg::Block& case1Block = cfg->getNode(verteces[CASE1]);
+	const cfg::Block& case1Block = cfg->getNode(blocks[CASE1]);
 	EXPECT_EQ(static_cast<unsigned>(1), case1Block.size());
 	EXPECT_FALSE(case1Block.hasTerminator());
 	EXPECT_EQ(*case1Block.stmt_begin(), stmt1);
-	CHECK_CONNECTED(verteces[CASE1], toVector<CFG::VertexTy>(verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[CASE1], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[SWITCH], verteces[CASE2]), cfg);
+	CHECK_CONNECTED(blocks[CASE1], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[CASE1], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[SWITCH], blocks[CASE2]), cfg);
 
 	// case2
-	const cfg::Block& case2Block = cfg->getNode(verteces[CASE2]);
+	const cfg::Block& case2Block = cfg->getNode(blocks[CASE2]);
 	EXPECT_EQ(static_cast<unsigned>(1), case2Block.size());
 	EXPECT_FALSE(case2Block.hasTerminator());
 	EXPECT_EQ(*case2Block.stmt_begin(), stmt2);
-	CHECK_CONNECTED(verteces[CASE2], toVector<CFG::VertexTy>(verteces[EXIT]), cfg);
-	CHECK_NOT_CONNECTED(verteces[CASE2], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[SWITCH], verteces[CASE1]), cfg);
+	CHECK_CONNECTED(blocks[CASE2], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
+	CHECK_NOT_CONNECTED(blocks[CASE2], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[SWITCH], blocks[CASE1]), cfg);
 
 	// Exit
-	const cfg::Block& exitBlock = cfg->getNode(verteces[EXIT]);
+	const cfg::Block& exitBlock = cfg->getNode(blocks[EXIT]);
 	EXPECT_TRUE(exitBlock.empty());
-	CHECK_NOT_CONNECTED(verteces[EXIT], toVector<CFG::VertexTy>(verteces[ENTRY], verteces[SWITCH], verteces[CASE1], verteces[CASE2]), cfg);
+	CHECK_NOT_CONNECTED(blocks[EXIT], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[SWITCH], blocks[CASE1], blocks[CASE2]), cfg);
 }

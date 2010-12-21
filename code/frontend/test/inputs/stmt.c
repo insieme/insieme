@@ -338,11 +338,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"(v1[CAST<uint<4>>(0)])"
+	"(( *v1)[CAST<uint<4>>(0)])"
 	a[0];
 
 	#pragma test \
-	"((v1[CAST<uint<4>>(0)]) := 1)"
+	"((( *v1)[CAST<uint<4>>(0)]) := 1)"
 	a[0] = 1;
 
 	//#pragma test \
@@ -350,11 +350,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"((v1[CAST<uint<4>>(0)])[CAST<uint<4>>(0)])"
+	"((( *v1)[CAST<uint<4>>(0)])[CAST<uint<4>>(0)])"
 	b[0][0];
 
 	#pragma test \
-	"(((v1[CAST<uint<4>>(1)])[CAST<uint<4>>(1)]) := 0)"
+	"(((( *v1)[CAST<uint<4>>(1)])[CAST<uint<4>>(1)]) := 0)"
 	b[1][1] = 0;
 
 	//#pragma test \
