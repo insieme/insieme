@@ -52,6 +52,8 @@ class Expression;
 typedef Pointer<const Expression> ExpressionPtr;
 class Literal;
 typedef Pointer<const Literal> LiteralPtr;
+class VectorType;
+typedef Pointer<const VectorType> VectorTypePtr;
 
 class Node;
 typedef Pointer<const Node> NodePtr;
@@ -116,6 +118,9 @@ public:
 
 	// a factory method for a type literal
 	LiteralPtr getTypeLiteral(const TypePtr& type) const;
+
+	// a method generating a vector init expression form a scalar
+	ExpressionPtr scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const;
 };
 
 } // namespace lang
