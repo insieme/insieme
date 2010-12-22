@@ -1115,9 +1115,9 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 		double vdata_imag_c[21] = {0.0, 5.149019699238e+02, 5.127578201997e+02, 5.122251847514e+02, 5.121090289018e+02, 5.121143685824e+02, 5.121496764568e+02, 5.121870921893e+02, 5.122193250322e+02, 5.122454735794e+02, 5.122663649603e+02, 5.122830879827e+02, 5.122965869718e+02, 5.123075927445e+02, 5.123166486553e+02, 5.123241541685e+02, 5.123304037599e+02, 5.123356167976e+02, 5.123399592211e+02, 5.123435588985e+02, 5.123465164008e+02};
 		((epsilon) = 1.0e-12);
 		(((verified[0])) = 1);
-		(((class[0])) = ((char)('U')));
+		(((class[0])) = 'U');
 		if(((((d1==64)&&(d2==64))&&(d3==64))&&(nt==6))) {
-			(((class[0])) = ((char)('S')));
+			(((class[0])) = 'S');
 			{
 				for(int var_321 = 1; var_321 < (nt+1); var_321 += 1) {
 					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_321)))])).real))-(((vdata_real_s)[((unsigned int)((var_321)))])))/(((vdata_real_s)[((unsigned int)((var_321)))]))));
@@ -1133,7 +1133,7 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 				((i) = (1+(((int)(ceil((((double)(((nt+1)-1)))/((double)(1))))))*1)));
 			};
 		} else if(((((d1==128)&&(d2==128))&&(d3==32))&&(nt==6))) {
-			(((class[0])) = ((char)('W')));
+			(((class[0])) = 'W');
 			{
 				for(int var_328 = 1; var_328 < (nt+1); var_328 += 1) {
 					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_328)))])).real))-(((vdata_real_w)[((unsigned int)((var_328)))])))/(((vdata_real_w)[((unsigned int)((var_328)))]))));
@@ -1149,7 +1149,7 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 				((i) = (1+(((int)(ceil((((double)(((nt+1)-1)))/((double)(1))))))*1)));
 			};
 		} else if(((((d1==256)&&(d2==256))&&(d3==128))&&(nt==6))) {
-			(((class[0])) = ((char)('A')));
+			(((class[0])) = 'A');
 			{
 				for(int var_335 = 1; var_335 < (nt+1); var_335 += 1) {
 					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_335)))])).real))-(((vdata_real_a)[((unsigned int)((var_335)))])))/(((vdata_real_a)[((unsigned int)((var_335)))]))));
@@ -1165,7 +1165,7 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 				((i) = (1+(((int)(ceil((((double)(((nt+1)-1)))/((double)(1))))))*1)));
 			};
 		} else if(((((d1==512)&&(d2==256))&&(d3==256))&&(nt==20))) {
-			(((class[0])) = ((char)('B')));
+			(((class[0])) = 'B');
 			{
 				for(int var_342 = 1; var_342 < (nt+1); var_342 += 1) {
 					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_342)))])).real))-(((vdata_real_b)[((unsigned int)((var_342)))])))/(((vdata_real_b)[((unsigned int)((var_342)))]))));
@@ -1181,7 +1181,7 @@ void verify(void* _capture, int d1, int d2, int d3, int nt, int* verified, char*
 				((i) = (1+(((int)(ceil((((double)(((nt+1)-1)))/((double)(1))))))*1)));
 			};
 		} else if(((((d1==512)&&(d2==512))&&(d3==512))&&(nt==20))) {
-			(((class[0])) = ((char)('C')));
+			(((class[0])) = 'C');
 			{
 				for(int var_349 = 1; var_349 < (nt+1); var_349 += 1) {
 					((err) = (((((((((((*var_305).sums))[0]))[((unsigned int)((var_349)))])).real))-(((vdata_real_c)[((unsigned int)((var_349)))])))/(((vdata_real_c)[((unsigned int)((var_349)))]))));

@@ -53,7 +53,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<char> v3 = ( var(CAST<char>('a')));
+        decl ref<char> v3 = ( var('a'));
         decl ref<vector<ref<char>,5>> v4 = ( var("Hallo"));
         decl ref<vector<vector<ref<char>,3>,5>> v5 = ( var([( var("X")), ( var("Y")), ( var("Z"))]));
         decl ref<vector<vector<vector<ref<char>,2>,3>,5>> v6 = ( var(undefined(vector<vector<vector<ref<char>,2>,3>,5>)));
@@ -66,7 +66,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         decl ref<array<ref<array<ref<array<ref<vector<ref<char>,3>>,1>>,1>>,1>> v13 = ( var(undefined(array<ref<array<ref<array<ref<vector<ref<char>,3>>,1>>,1>>,1>)));
         decl ref<array<ref<vector<vector<vector<ref<char>,1>,2>,3>>,1>> v14 = ( var(undefined(array<ref<vector<vector<vector<ref<char>,1>,2>,3>>,1>)));
         decl ref<struct<s1:ref<char>,s2:ref<array<ref<char>,1>>,s3:vector<ref<char>,5>,s4:vector<vector<ref<char>,3>,5>,s5:ref<array<ref<char>,1>>,s6:ref<array<ref<array<ref<char>,1>>,1>>,s7:ref<array<ref<vector<ref<char>,4>>,1>>,s8:ref<array<ref<vector<vector<ref<char>,3>,4>>,1>>,s9:ref<array<ref<array<ref<vector<ref<char>,4>>,1>>,1>>,s10:ref<array<ref<array<ref<vector<vector<ref<char>,3>,4>>,1>>,1>>>> v15 = ( var(undefined(struct<s1:ref<char>,s2:ref<array<ref<char>,1>>,s3:vector<ref<char>,5>,s4:vector<vector<ref<char>,3>,5>,s5:ref<array<ref<char>,1>>,s6:ref<array<ref<array<ref<char>,1>>,1>>,s7:ref<array<ref<vector<ref<char>,4>>,1>>,s8:ref<array<ref<vector<vector<ref<char>,3>,4>>,1>>,s9:ref<array<ref<array<ref<vector<ref<char>,4>>,1>>,1>>,s10:ref<array<ref<array<ref<vector<vector<ref<char>,3>,4>>,1>>,1>>>)));
-        (( *v15).s1 := CAST<char>('#'));
+        (( *v15).s1 := '#');
         printf("size of s %d\n", varlist.pack((sizeof(struct<s1:ref<char>,s2:ref<array<ref<char>,1>>,s3:vector<ref<char>,5>,s4:vector<vector<ref<char>,3>,5>,s5:ref<array<ref<char>,1>>,s6:ref<array<ref<array<ref<char>,1>>,1>>,s7:ref<array<ref<vector<ref<char>,4>>,1>>,s8:ref<array<ref<vector<vector<ref<char>,3>,4>>,1>>,s9:ref<array<ref<array<ref<vector<ref<char>,4>>,1>>,1>>,s10:ref<array<ref<array<ref<vector<vector<ref<char>,3>,4>>,1>>,1>>>))));
         printf("size of b1 %d\n", varlist.pack(((5*sizeof(char)))));
         printf("size of b2 %d\n", varlist.pack(((5*(3*sizeof(char))))));

@@ -10560,9 +10560,9 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 decl ref<vector<ref<real<8>>,21>> v320 = ( var([( var(0.0)), ( var(5.149019699238e+02)), ( var(5.127578201997e+02)), ( var(5.122251847514e+02)), ( var(5.121090289018e+02)), ...]));
                 (v310 := 1.0e-12);
                 ((v303[0]) := 1);
-                ((v304[0]) := CAST<char>('U'));
+                ((v304[0]) := 'U');
                 if(((((v299==64)&&[v300]fun[int<4> v322]()return (v322==64))&&[v301]fun[int<4> v324]()return (v324==64))&&[v302]fun[int<4> v326]()return (v326==6))) {
-                    ((v304[0]) := CAST<char>('S'));
+                    ((v304[0]) := 'S');
                     {
                         for(decl ref<int<4>> v321 = ( var(1)) .. (v302+1) : 1) {
                             (v309 := ((( *( *(( *(( *( *v305).sums)[0]))[CAST<uint<4>>(( *v321))])).real)-( *(( *v311)[CAST<uint<4>>(( *v321))])))/( *(( *v311)[CAST<uint<4>>(( *v321))]))));
@@ -10579,7 +10579,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         (v308 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v302+1)-1))/CAST<real<8>>(1))))*1)));
                     };
                 } else if(((((v299==128)&&[v300]fun[int<4> v329]()return (v329==128))&&[v301]fun[int<4> v331]()return (v331==32))&&[v302]fun[int<4> v333]()return (v333==6))) {
-                    ((v304[0]) := CAST<char>('W'));
+                    ((v304[0]) := 'W');
                     {
                         for(decl ref<int<4>> v328 = ( var(1)) .. (v302+1) : 1) {
                             (v309 := ((( *( *(( *(( *( *v305).sums)[0]))[CAST<uint<4>>(( *v328))])).real)-( *(( *v313)[CAST<uint<4>>(( *v328))])))/( *(( *v313)[CAST<uint<4>>(( *v328))]))));
@@ -10596,7 +10596,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         (v308 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v302+1)-1))/CAST<real<8>>(1))))*1)));
                     };
                 } else if(((((v299==256)&&[v300]fun[int<4> v336]()return (v336==256))&&[v301]fun[int<4> v338]()return (v338==128))&&[v302]fun[int<4> v340]()return (v340==6))) {
-                    ((v304[0]) := CAST<char>('A'));
+                    ((v304[0]) := 'A');
                     {
                         for(decl ref<int<4>> v335 = ( var(1)) .. (v302+1) : 1) {
                             (v309 := ((( *( *(( *(( *( *v305).sums)[0]))[CAST<uint<4>>(( *v335))])).real)-( *(( *v315)[CAST<uint<4>>(( *v335))])))/( *(( *v315)[CAST<uint<4>>(( *v335))]))));
@@ -10613,7 +10613,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         (v308 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v302+1)-1))/CAST<real<8>>(1))))*1)));
                     };
                 } else if(((((v299==512)&&[v300]fun[int<4> v343]()return (v343==256))&&[v301]fun[int<4> v345]()return (v345==256))&&[v302]fun[int<4> v347]()return (v347==20))) {
-                    ((v304[0]) := CAST<char>('B'));
+                    ((v304[0]) := 'B');
                     {
                         for(decl ref<int<4>> v342 = ( var(1)) .. (v302+1) : 1) {
                             (v309 := ((( *( *(( *(( *( *v305).sums)[0]))[CAST<uint<4>>(( *v342))])).real)-( *(( *v317)[CAST<uint<4>>(( *v342))])))/( *(( *v317)[CAST<uint<4>>(( *v342))]))));
@@ -10630,7 +10630,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         (v308 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v302+1)-1))/CAST<real<8>>(1))))*1)));
                     };
                 } else if(((((v299==512)&&[v300]fun[int<4> v350]()return (v350==512))&&[v301]fun[int<4> v352]()return (v352==512))&&[v302]fun[int<4> v354]()return (v354==20))) {
-                    ((v304[0]) := CAST<char>('C'));
+                    ((v304[0]) := 'C');
                     {
                         for(decl ref<int<4>> v349 = ( var(1)) .. (v302+1) : 1) {
                             (v309 := ((( *( *(( *(( *( *v305).sums)[0]))[CAST<uint<4>>(( *v349))])).real)-( *(( *v319)[CAST<uint<4>>(( *v349))])))/( *(( *v319)[CAST<uint<4>>(( *v349))]))));

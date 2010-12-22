@@ -5609,19 +5609,19 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             };
         };
         if((int.ne(( *(( *(( *( *v1).nx)[0]))[CAST<uint<4>>(( *( *v1).lt))])), ( *(( *(( *( *v1).ny)[0]))[CAST<uint<4>>(( *( *v1).lt))])))||[v1]fun[ref<struct<nx:ref<array<ref<vector<ref<int<4>>,12>>,1>>,ny:ref<array<ref<vector<ref<int<4>>,12>>,1>>,nz:ref<array<ref<vector<ref<int<4>>,12>>,1>>,Class:ref<char>,debug_vec:ref<array<ref<vector<ref<int<4>>,8>>,1>>,m1:ref<array<ref<vector<ref<int<4>>,12>>,1>>,m2:ref<array<ref<vector<ref<int<4>>,12>>,1>>,m3:ref<array<ref<vector<ref<int<4>>,12>>,1>>,lt:ref<int<4>>,lb:ref<int<4>>,is1:ref<int<4>>,is2:ref<int<4>>,is3:ref<int<4>>,ie1:ref<int<4>>,ie2:ref<int<4>>,ie3:ref<int<4>>,s:ref<real<8>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v414]()return int.ne(( *(( *(( *( *v414).nx)[0]))[CAST<uint<4>>(( *( *v414).lt))])), ( *(( *(( *( *v414).nz)[0]))[CAST<uint<4>>(( *( *v414).lt))]))))) {
-            (( *v1).Class := CAST<char>('U'));
+            (( *v1).Class := 'U');
         } else if(((( *(( *(( *( *v1).nx)[0]))[CAST<uint<4>>(( *( *v1).lt))]))==32)&&[v21]fun[ref<int<4>> v416]()return (( *v416)==4))) {
-            (( *v1).Class := CAST<char>('S'));
+            (( *v1).Class := 'S');
         } else if(((( *(( *(( *( *v1).nx)[0]))[CAST<uint<4>>(( *( *v1).lt))]))==64)&&[v21]fun[ref<int<4>> v418]()return (( *v418)==40))) {
-            (( *v1).Class := CAST<char>('W'));
+            (( *v1).Class := 'W');
         } else if(((( *(( *(( *( *v1).nx)[0]))[CAST<uint<4>>(( *( *v1).lt))]))==256)&&[v21]fun[ref<int<4>> v420]()return (( *v420)==20))) {
-            (( *v1).Class := CAST<char>('B'));
+            (( *v1).Class := 'B');
         } else if(((( *(( *(( *( *v1).nx)[0]))[CAST<uint<4>>(( *( *v1).lt))]))==512)&&[v21]fun[ref<int<4>> v422]()return (( *v422)==20))) {
-            (( *v1).Class := CAST<char>('C'));
+            (( *v1).Class := 'C');
         } else if(((( *(( *(( *( *v1).nx)[0]))[CAST<uint<4>>(( *( *v1).lt))]))==256)&&[v21]fun[ref<int<4>> v424]()return (( *v424)==4))) {
-            (( *v1).Class := CAST<char>('A'));
+            (( *v1).Class := 'A');
         } else {
-            (( *v1).Class := CAST<char>('U'));
+            (( *v1).Class := 'U');
         };
         ((( *v13)[CAST<uint<4>>(0)]) := ((CAST<real<8>>(0)-8.0)/3.0));
         ((( *v13)[CAST<uint<4>>(1)]) := 0.0);

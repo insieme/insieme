@@ -770,22 +770,22 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         (( *v1).firstcol := 1);
         (( *v1).lastcol := 7000);
         if(((((7000==1400)&&fun()return (8==7))&&fun()return (15==15))&&fun()return (12.0==10.0))) {
-            (v15 := CAST<char>('S'));
+            (v15 := 'S');
             (v17 := 8.5971775078648);
         } else if(((((7000==7000)&&fun()return (8==8))&&fun()return (15==15))&&fun()return (12.0==12.0))) {
-            (v15 := CAST<char>('W'));
+            (v15 := 'W');
             (v17 := 10.362595087124);
         } else if(((((7000==14000)&&fun()return (8==11))&&fun()return (15==15))&&fun()return (12.0==20.0))) {
-            (v15 := CAST<char>('A'));
+            (v15 := 'A');
             (v17 := 17.130235054029);
         } else if(((((7000==75000)&&fun()return (8==13))&&fun()return (15==75))&&fun()return (12.0==60.0))) {
-            (v15 := CAST<char>('B'));
+            (v15 := 'B');
             (v17 := 22.712745482631);
         } else if(((((7000==150000)&&fun()return (8==15))&&fun()return (15==75))&&fun()return (12.0==110.0))) {
-            (v15 := CAST<char>('C'));
+            (v15 := 'C');
             (v17 := 28.973605592845);
         } else {
-            (v15 := CAST<char>('U'));
+            (v15 := 'U');
         };
         printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - CG Benchmark\n", varlist.pack(()));
         printf(" Size: %10d\n", varlist.pack((7000)));
