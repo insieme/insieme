@@ -1467,19 +1467,19 @@ int main(int argc, char** argv) {
 			};
 		};
 		if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))!=(((((((var_1).ny))[0]))[((unsigned int)((((var_1).lt))))])))||call__insieme_funType_type_7(((struct __insieme_funType_type_7*)(&((struct __insieme_funType_type_8){&__insieme_supp_9, 0, &var_1})))))) {
-			((((var_1).Class)) = ((char)('U')));
+			((((var_1).Class)) = 'U');
 		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==32)&&((nit)==4))) {
-			((((var_1).Class)) = ((char)('S')));
+			((((var_1).Class)) = 'S');
 		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==64)&&((nit)==40))) {
-			((((var_1).Class)) = ((char)('W')));
+			((((var_1).Class)) = 'W');
 		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==256)&&((nit)==20))) {
-			((((var_1).Class)) = ((char)('B')));
+			((((var_1).Class)) = 'B');
 		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==512)&&((nit)==20))) {
-			((((var_1).Class)) = ((char)('C')));
+			((((var_1).Class)) = 'C');
 		} else if((((((((((var_1).nx))[0]))[((unsigned int)((((var_1).lt))))]))==256)&&((nit)==4))) {
-			((((var_1).Class)) = ((char)('A')));
+			((((var_1).Class)) = 'A');
 		} else {
-			((((var_1).Class)) = ((char)('U')));
+			((((var_1).Class)) = 'U');
 		};
 		((((a)[((unsigned int)(0))])) = ((((double)(0))-8.0)/3.0));
 		((((a)[((unsigned int)(1))])) = 0.0);

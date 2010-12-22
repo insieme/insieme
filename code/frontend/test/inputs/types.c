@@ -45,7 +45,7 @@ void basic_type_test() {
 	#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(0xFFFF))"
 	short c = 0xFFFF;
 
-	#pragma test "ref<char> v1 = ref.var(cast<char>('a'))"
+	#pragma test "ref<char> v1 = ref.var('a')"
 	char d = 'a';
 
 //	#pragma test "ref<array<ref<'a>,1>> v4 = ref.var(null)"

@@ -214,6 +214,26 @@ LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
 	return pimpl->build.literal(literalType, toString(*type));
 }
 
+ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
+    // Convert casts form scalars to vectors to vector init exrpessions
+    if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
+        if(pimpl->nm.basic.isScalarType(subExpr->getType())) {
+            // get rid of ref types
+            core::TypePtr targetType = (vt->getElementType()->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+                    dynamic_pointer_cast<const core::RefType>(vt->getElementType())->getElementType();
+
+            core::ExpressionPtr&& retExpr = pimpl->build.callExpr(type, pimpl->nm.basic.getVectorInitUniform(),
+                subExpr->getType() == targetType ? subExpr : pimpl->build.castExpr(targetType , subExpr ),
+                pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
+
+            return retExpr;
+        }
+    }
+
+    // expression is either already a vector/array type or the type is not a vector type
+    return subExpr;
+}
+
 } // namespace lang
 } // namespace core
 } // namespace insieme

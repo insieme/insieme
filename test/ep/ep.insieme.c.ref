@@ -417,7 +417,7 @@ int main(int argc, char** argv) {
 		{
 			for(int var_149 = (((int)(0))-13); var_149 < ((((int)(0))-1)+1); var_149 += 1) {
 				if((((int)((((size)[((unsigned int)((((int)(0))-(var_149))))]))))=='.')) {
-					((((size)[((unsigned int)((((int)(0))-(var_149))))])) = ((char)(' ')));
+					((((size)[((unsigned int)((((int)(0))-(var_149))))])) = ' ');
 				};
 			};
 			((j) = (13+(((int)(ceil((((double)((((((int)(0))-1)+1)-13)))/((double)(1))))))*1)));
@@ -573,7 +573,7 @@ int main(int argc, char** argv) {
 			};
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
-		c_print_results("EP", ((char)('W')), (25+1), 0, 0, (nit), (nthreads), (tm), (Mops), "Random numbers generated", (verified), "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
+		c_print_results("EP", 'W', (25+1), 0, 0, (nit), (nthreads), (tm), (Mops), "Random numbers generated", (verified), "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
 		if((0==1)) {
 			printf("Total time:     %f", call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&timer_read, 0, &var_1}))), 1));
 			printf("Gaussian pairs: %f", call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&timer_read, 0, &var_1}))), 2));

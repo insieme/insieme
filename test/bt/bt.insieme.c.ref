@@ -3027,7 +3027,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			};
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
-		(((class[0])) = ((char)('U')));
+		(((class[0])) = 'U');
 		(((verified[0])) = 1);
 		{
 			for(int var_474 = 0; var_474 < 5; var_474 += 1) {
@@ -3037,7 +3037,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
 		if((((((((((((*var_427).grid_points))[0]))[((unsigned int)(0))]))==12)&&((((((((*var_427).grid_points))[0]))[((unsigned int)(1))]))==12))&&((((((((*var_427).grid_points))[0]))[((unsigned int)(2))]))==12))&&(no_time_steps==60))) {
-			(((class[0])) = ((char)('S')));
+			(((class[0])) = 'S');
 			((dtref) = 1.0e-2);
 			((((xcrref)[((unsigned int)(0))])) = 1.7034283709541311e-01);
 			((((xcrref)[((unsigned int)(1))])) = 1.2975252070034097e-02);
@@ -3050,7 +3050,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			((((xceref)[((unsigned int)(3))])) = 7.3821238632439731e-05);
 			((((xceref)[((unsigned int)(4))])) = 8.9269630987491446e-04);
 		} else if((((((((((((*var_427).grid_points))[0]))[((unsigned int)(0))]))==24)&&((((((((*var_427).grid_points))[0]))[((unsigned int)(1))]))==24))&&((((((((*var_427).grid_points))[0]))[((unsigned int)(2))]))==24))&&(no_time_steps==200))) {
-			(((class[0])) = ((char)('W')));
+			(((class[0])) = 'W');
 			((dtref) = 0.8e-3);
 			((((xcrref)[((unsigned int)(0))])) = 0.1125590409344e+03);
 			((((xcrref)[((unsigned int)(1))])) = 0.1180007595731e+02);
@@ -3063,7 +3063,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			((((xceref)[((unsigned int)(3))])) = 0.9235878729944e+00);
 			((((xceref)[((unsigned int)(4))])) = 0.1018045837718e+02);
 		} else if((((((((((((*var_427).grid_points))[0]))[((unsigned int)(0))]))==64)&&((((((((*var_427).grid_points))[0]))[((unsigned int)(1))]))==64))&&((((((((*var_427).grid_points))[0]))[((unsigned int)(2))]))==64))&&(no_time_steps==200))) {
-			(((class[0])) = ((char)('A')));
+			(((class[0])) = 'A');
 			((dtref) = 0.8e-3);
 			((((xcrref)[((unsigned int)(0))])) = 1.0806346714637264e+02);
 			((((xcrref)[((unsigned int)(1))])) = 1.1319730901220813e+01);
@@ -3076,7 +3076,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			((((xceref)[((unsigned int)(3))])) = 8.8302063039765474e-01);
 			((((xceref)[((unsigned int)(4))])) = 9.7379901770829278e+00);
 		} else if((((((((((((*var_427).grid_points))[0]))[((unsigned int)(0))]))==102)&&((((((((*var_427).grid_points))[0]))[((unsigned int)(1))]))==102))&&((((((((*var_427).grid_points))[0]))[((unsigned int)(2))]))==102))&&(no_time_steps==200))) {
-			(((class[0])) = ((char)('B')));
+			(((class[0])) = 'B');
 			((dtref) = 3.0e-4);
 			((((xcrref)[((unsigned int)(0))])) = 1.4233597229287254e+03);
 			((((xcrref)[((unsigned int)(1))])) = 9.9330522590150238e+01);
@@ -3089,7 +3089,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			((((xceref)[((unsigned int)(3))])) = 1.2006925323559144e+01);
 			((((xceref)[((unsigned int)(4))])) = 1.2459576151035986e+02);
 		} else if((((((((((((*var_427).grid_points))[0]))[((unsigned int)(0))]))==162)&&((((((((*var_427).grid_points))[0]))[((unsigned int)(1))]))==162))&&((((((((*var_427).grid_points))[0]))[((unsigned int)(2))]))==162))&&(no_time_steps==200))) {
-			(((class[0])) = ((char)('C')));
+			(((class[0])) = 'C');
 			((dtref) = 1.0e-4);
 			((((xcrref)[((unsigned int)(0))])) = 0.62398116551764615e+04);
 			((((xcrref)[((unsigned int)(1))])) = 0.50793239190423964e+03);
@@ -3116,7 +3116,7 @@ void verify(void* _capture, int no_time_steps, char* class, int* verified) {
 			printf(" accuracy setting for epsilon = %20.13e\n", (epsilon));
 			if((fabs(((((*var_427).dt))-(dtref)))>(epsilon))) {
 				(((verified[0])) = 0);
-				(((class[0])) = ((char)('U')));
+				(((class[0])) = 'U');
 				printf(" DT does not match the reference value of %15.8e\n", (dtref));
 			};
 		} else {

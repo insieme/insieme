@@ -539,7 +539,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         sprintf(( *v35), "%12.0f", varlist.pack((pow(2.0, CAST<real<8>>((25+1))))));
         {
             for(decl ref<int<4>> v149 = ( var((CAST<int<4>>(0)-13))) .. ((CAST<int<4>>(0)-1)+1) : 1) {
-                if((CAST<int<4>>(( *(( *v35)[CAST<uint<4>>((CAST<int<4>>(0)-( *v149)))])))=='.')) ((( *v35)[CAST<uint<4>>((CAST<int<4>>(0)-( *v149)))]) := CAST<char>(' ')) else { };
+                if((CAST<int<4>>(( *(( *v35)[CAST<uint<4>>((CAST<int<4>>(0)-( *v149)))])))=='.')) ((( *v35)[CAST<uint<4>>((CAST<int<4>>(0)-( *v149)))]) := ' ') else { };
             };
             (v32 := (13+(CAST<int<4>>(ceil((CAST<real<8>>((((CAST<int<4>>(0)-1)+1)-13))/CAST<real<8>>(1))))*1)));
         };
@@ -979,7 +979,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             printf("    CFLAGS       = %s\n", varlist.pack((v141)));
             printf("    CLINKFLAGS   = %s\n", varlist.pack((v142)));
             printf("    RAND         = %s\n", varlist.pack((v143)));
-        }("EP", CAST<char>('W'), (25+1), 0, 0, ( *v27), ( *v33), ( *v13), ( *v4), "Random numbers generated", ( *v34), "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
+        }("EP", 'W', (25+1), 0, 0, ( *v27), ( *v33), ( *v13), ( *v4), "Random numbers generated", ( *v34), "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
         if((0==1)) {
             printf("Total time:     %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
                 return ( *(( *(( *( *v111).elapsed)[0]))[CAST<uint<4>>(v110)]));

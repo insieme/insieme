@@ -2583,7 +2583,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 		double dtref = 0.0;
 		int m = 0;
 		((epsilon) = 1.0e-08);
-		(((class[0])) = ((char)('U')));
+		(((class[0])) = 'U');
 		(((verified[0])) = 1);
 		{
 			for(int var_547 = 0; var_547 < 5; var_547 += 1) {
@@ -2594,7 +2594,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 		};
 		((xciref) = 1.0);
 		if((((((((*var_537).nx0))==12)&&((((*var_537).ny0))==12))&&((((*var_537).nz0))==12))&&((((*var_537).itmax))==50))) {
-			(((class[0])) = ((char)('S')));
+			(((class[0])) = 'S');
 			((dtref) = 5.0e-1);
 			((((xcrref)[((unsigned int)(0))])) = 1.6196343210976702e-02);
 			((((xcrref)[((unsigned int)(1))])) = 2.1976745164821318e-03);
@@ -2608,7 +2608,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 			((((xceref)[((unsigned int)(4))])) = 1.3103347914111294e-03);
 			((xciref) = 7.8418928865937083);
 		} else if((((((((*var_537).nx0))==33)&&((((*var_537).ny0))==33))&&((((*var_537).nz0))==33))&&((((*var_537).itmax))==300))) {
-			(((class[0])) = ((char)('W')));
+			(((class[0])) = 'W');
 			((dtref) = 1.5e-3);
 			((((xcrref)[((unsigned int)(0))])) = 0.1236511638192e+02);
 			((((xcrref)[((unsigned int)(1))])) = 0.1317228477799e+01);
@@ -2622,7 +2622,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 			((((xceref)[((unsigned int)(4))])) = 0.1084277417792e+01);
 			((xciref) = 0.1161399311023e+02);
 		} else if((((((((*var_537).nx0))==64)&&((((*var_537).ny0))==64))&&((((*var_537).nz0))==64))&&((((*var_537).itmax))==250))) {
-			(((class[0])) = ((char)('A')));
+			(((class[0])) = 'A');
 			((dtref) = 2.0e+0);
 			((((xcrref)[((unsigned int)(0))])) = 7.7902107606689367e+02);
 			((((xcrref)[((unsigned int)(1))])) = 6.3402765259692870e+01);
@@ -2636,7 +2636,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 			((((xceref)[((unsigned int)(4))])) = 7.0715315688392578e+01);
 			((xciref) = 2.6030925604886277e+01);
 		} else if((((((((*var_537).nx0))==102)&&((((*var_537).ny0))==102))&&((((*var_537).nz0))==102))&&((((*var_537).itmax))==250))) {
-			(((class[0])) = ((char)('B')));
+			(((class[0])) = 'B');
 			((dtref) = 2.0e+0);
 			((((xcrref)[((unsigned int)(0))])) = 3.5532672969982736e+03);
 			((((xcrref)[((unsigned int)(1))])) = 2.6214750795310692e+02);
@@ -2650,7 +2650,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 			((((xceref)[((unsigned int)(4))])) = 2.6054907504857413e+02);
 			((xciref) = 4.7887162703308227e+01);
 		} else if((((((((*var_537).nx0))==162)&&((((*var_537).ny0))==162))&&((((*var_537).nz0))==162))&&((((*var_537).itmax))==250))) {
-			(((class[0])) = ((char)('C')));
+			(((class[0])) = 'C');
 			((dtref) = 2.0e+0);
 			((((xcrref)[((unsigned int)(0))])) = 1.03766980323537846e+04);
 			((((xcrref)[((unsigned int)(1))])) = 8.92212458801008552e+02);
@@ -2679,7 +2679,7 @@ void verify(void* _capture, double* xcr, double* xce, double xci, char* class, i
 			printf(" Accuracy setting for epsilon = %20.13e\n", (epsilon));
 			if((fabs(((((*var_537).dt))-(dtref)))>(epsilon))) {
 				(((verified[0])) = 0);
-				(((class[0])) = ((char)('U')));
+				(((class[0])) = 'U');
 				printf(" DT does not match the reference value of %15.8e\n", (dtref));
 			};
 		} else {
