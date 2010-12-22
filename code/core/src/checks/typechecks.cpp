@@ -237,21 +237,24 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	const NodeManager& manager = address->getNodeManager();
 
 	// obtain literal
-	LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
-	if (!buildIn) {
-		return res;
+	try {
+		LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
+
+		// TODO: only allow more specialized type - not unified!
+		if (!isUnifyable(buildIn->getType(),address->getType())) {
+			add(res, Message(address,
+					EC_TYPE_INVALID_TYPE_OF_LITERAL,
+					format("Deviating type of build in literal %s - expected: %s, actual: %s",
+							address->getValue().c_str(),
+							toString(*buildIn->getType()).c_str(),
+							toString(*address->getType()).c_str()),
+					Message::WARNING));
+		}
+
+	} catch (const lang::LiteralNotFoundException& lnfe) {
+		// no such literal => all fine
 	}
 
-	// TODO: only allow more specialized type - not unified!
-	if (!isUnifyable(buildIn->getType(),address->getType())) {
-		add(res, Message(address,
-				EC_TYPE_INVALID_TYPE_OF_LITERAL,
-				format("Deviating type of build in literal %s - expected: %s, actual: %s",
-						address->getValue().c_str(),
-						toString(*buildIn->getType()).c_str(),
-						toString(*address->getType()).c_str()),
-				Message::WARNING));
-	}
 	return res;
 }
 
