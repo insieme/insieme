@@ -55,14 +55,8 @@
 // avoid naming conflicts with insieme barriers
 #define barrier(mem_fence) ocl_barrier(mem_fence)
 
-/*#define __private __attribute__((address_space(0))) //default value
-#define private __attribute__((address_space(0)))
-#define __local __attribute__((address_space(1)))
-#define local __attribute__((address_space(1)))
-#define __global __attribute__((address_space(2)))
-#define global __attribute__((address_space(2)))
-#define __constant __attribute__((address_space(3)))
-#define constant __attribute__((address_space(3)))*/
+//images are not supported
+#define __IMAGE_SUPPORT__ 0
 
 //define address spaces
 #define __private __attribute__((annotate("__private"))) //default value
@@ -81,7 +75,13 @@
 #define ulong unsigned long
 #define uint unsigned int
 #define size_t unsigned int
+#define ushort unsigned short
 #define uchar unsigned char
+
+//half workaround
+#ifdef cl_khr_fp16
+#define half float
+#endif
 
 //define built-in vector types
 #define ivec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v; typedef __attribute__((ext_vector_type(v))) unsigned T u##T##v;
@@ -136,11 +136,6 @@ unsigned int get_local_id(unsigned int dmindx);
 unsigned int get_local_size(unsigned int dmindx);
 
 void barrier(int flags); //TODO change to enum
-
-//half workaround
-#ifdef cl_khr_fp16
-#define half float
-#endif
 
 // math functions
 #ifdef cl_khr_fp64
@@ -325,4 +320,29 @@ atom_fct(xchg)
 #define atom_dec(p) atom_sub(p, 1)
 long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val); ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
 
+// convert
+#define iconv_round(dest, src, fct) dest __attribute__((overloadable)) fct(src); dest __attribute__((overloadable)) fct##_rte(src); \
+    dest __attribute__((overloadable)) fct##_rtz(src); dest __attribute__((overloadable)) fct##_rtp(src); dest __attribute__((overloadable)) fct##_rtn(src);
+#define iconv_sat(dest, src) iconv_round(dest, src, convert_##dest) iconv_round(dest, src, convert_##dest##_sat) \
+    iconv_round(u##dest, src, convert_u##dest) iconv_round(u##dest, src, convert_u##dest##_sat)
+#define iconv_vec(dest, src) iconv_sat(dest, src) iconv_sat(dest##2, src##2) iconv_sat(dest##3, src##3) iconv_sat(dest##4, src##4) iconv_sat(dest##8, src##8) \
+    iconv_sat(dest##16, src##16)
+#define iconv(type) iconv_vec(type, char) iconv_vec(type, uchar) iconv_vec(type, short) iconv_vec(type, ushort) iconv_vec(type, int) iconv_vec(type, uint) \
+    iconv_vec(type, long) iconv_vec(type, ulong) iconv_vec(type, float) iconv_vec(type, double)
+
+iconv(char)
+iconv(short)
+iconv(int)
+iconv(long)
+
+#define fconv_round(dest, src, fct) dest __attribute__((overloadable)) fct(src); dest __attribute__((overloadable)) fct##_rte(src); \
+    dest __attribute__((overloadable)) fct##_rtz(src); dest __attribute__((overloadable)) fct##_rtp(src); dest __attribute__((overloadable)) fct##_rtn(src);
+#define fconv_sat(dest, src) fconv_round(dest, src, convert_##dest) fconv_round(dest, src, convert_##dest##_sat)
+#define fconv_vec(dest, src) fconv_sat(dest, src) fconv_sat(dest##2, src##2) fconv_sat(dest##3, src##3) fconv_sat(dest##4, src##4) fconv_sat(dest##8, src##8) \
+    fconv_sat(dest##16, src##16)
+#define fconv(type) fconv_vec(type, char) fconv_vec(type, uchar) fconv_vec(type, short) fconv_vec(type, ushort) fconv_vec(type, int) fconv_vec(type, uint) \
+    fconv_vec(type, long) fconv_vec(type, ulong) fconv_vec(type, float) fconv_vec(type, double)
+
+fconv(float)
+fconv(double)
 
