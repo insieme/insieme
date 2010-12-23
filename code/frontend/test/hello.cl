@@ -35,7 +35,7 @@
  */
 
 #include "ocl_device.h"
-/*
+
 #pragma insieme mark
 __kernel void hello(__global double* g, __local float* l, int i) {
     float2 x = (float2)0;
@@ -55,7 +55,7 @@ __kernel void hello(__global double* g, __local float* l, int i) {
     x = x+y;
 
     g[gid] = x.x * x.y;
-}*/
+}
 /*
 #pragma insieme mark
 __kernel void mandelbrot (__global int * mandelbrotImage,
