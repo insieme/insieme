@@ -95,23 +95,23 @@ core::LambdaExprPtr KernelData::buildGetId(enum OCL_PAR_LEVEL opl) {
 }*/
 
 core::CallExprPtr KernelData::calcIdidx0(core::LiteralPtr& level, core::VariablePtr& boundaries){
-    core::ExpressionPtr one = builder.uintLit(1);
-    core::ExpressionPtr two = builder.uintLit(2);
+    core::ExpressionPtr one = builder.uintLit(1u);
+    core::ExpressionPtr two = builder.uintLit(2u);
     return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(),
                builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level),
                    vecAccess(boundaries, two)), vecAccess(boundaries, one));
 }
 
 core::CallExprPtr KernelData::calcIdidx1(core::LiteralPtr& level, core::VariablePtr& boundaries){
-    core::ExpressionPtr one = builder.uintLit(1);
-    core::ExpressionPtr two = builder.uintLit(2);
+    core::ExpressionPtr one = builder.uintLit(1u);
+    core::ExpressionPtr two = builder.uintLit(2u);
     return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
                builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level),
                    vecAccess(boundaries, two)), vecAccess(boundaries, one));
 }
 
 core::CallExprPtr KernelData::calcIdidx2(core::LiteralPtr& level, core::VariablePtr& boundaries){
-    core::ExpressionPtr two = builder.uintLit(2);
+    core::ExpressionPtr two = builder.uintLit(2u);
     return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
                builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level), vecAccess(boundaries, two));
 }
@@ -175,15 +175,15 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
     core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
 
-    core::LiteralPtr zero = builder.uintLit(0);
-    core::LiteralPtr one = builder.uintLit(1);
+    core::LiteralPtr zero = builder.uintLit(0u);
+    core::LiteralPtr one = builder.uintLit(1u);
 
     // TODO make prettier
     core::ExpressionPtr zeroExpr = zero;
     core::ExpressionPtr oneExpr = one;
     core::ExpressionPtr twoExpr = builder.uintLit(2);
 
-    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1 : 0);
+    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
 
     core::CallExprPtr id0 = opl == OPL_GLOBAL ?
         builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx0(zero, boundaries),
@@ -299,6 +299,18 @@ private:
     }
 
 
+    core::CastExprPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
+        assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
+
+        if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
+            return builder.castExpr(ftype->getReturnType(), args.at(0));
+        }
+
+        assert(false && "Type of OpenCL convert function is not a function Type");
+
+        return NULL;
+    }
+
 public:
 
 
@@ -366,6 +378,11 @@ public:
                     assert(args.size() >= 1 && "Mathematical operations must have at least 1 arguments");
 
                     return resolveNative(call, literal->getValue(), literal->getType(), args, 5);
+                }
+                if(literal->getValue().find("convert_") != string::npos) {
+                    assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
+
+                    return resolveConvert(call, literal->getValue(), literal->getType(), args);
                 }
             }
         /*
@@ -477,7 +494,7 @@ private:
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
 
-        return builder.callExpr(BASIC.getUInt4(), BASIC.getVectorReduction(), vec, builder.uintLit(1), BASIC.getUnsignedIntMul());
+        return builder.callExpr(BASIC.getUInt4(), BASIC.getVectorReduction(), vec, builder.uintLit(1u), BASIC.getUnsignedIntMul());
 
         --n;
         if(n == 0) {
@@ -794,7 +811,6 @@ public:
 
                     expr.clear();
                     //construct vector of arguments for local parallel
-//                    expr.push_back(builder.literal("1", builder.getNodeManager().basic.getUInt4()));
 
                     expr.push_back(globalJob);
 
