@@ -318,7 +318,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		case NT_ArrayType:
 		case NT_ChannelType:
 		case NT_RefType:
-		case NT_VectorType: // TODO check if this should be VectorExpr or VectorType
+		case NT_VectorType:
 			src = static_pointer_cast<const Type>(src->getChildList()[0]);
 			trg = static_pointer_cast<const Type>(trg->getChildList()[0]);
 			break;
@@ -338,14 +338,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 			// this cast is allowed (for now)
 			return res;
 		default:
-		    add(res, Message( address, EC_TYPE_ILLEGAL_CAST,
-		            format("Casting between %s and %s not defined",
-                            toString(*source).c_str(),
-                            toString(*target).c_str()),
-                    Message::WARNING));
-		    // avoid infinite loop
-		    return res;
-			break;
+			assert(false && "Sorry, missed some type!");
 		}
 	}
 
