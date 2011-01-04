@@ -37,6 +37,8 @@
 #include "insieme/opencl_backend/opencl_convert.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/core/ast_builder.h"
+#include "insieme/utils/logging.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace backend {
@@ -88,8 +90,8 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 			if(frontOpencl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<frontOpencl::KernelFctAnnotation>(*iter)) {
 				std::cout << "Function with kernel annotation...\n";
 				const Lambda::ParamList& oldParams = ptr->getParameterList();
-				const StatementPtr& oldBody = ptr->getBody();
-				const FunctionTypePtr& oldFuncType = core::dynamic_pointer_cast<const core::FunctionType>(ptr->getType());
+				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(ptr->getBody());
+				const FunctionTypePtr& oldFuncType = dynamic_pointer_cast<const FunctionType>(ptr->getType());
 				
 				// new paramList
 				Lambda::ParamList newParams;
@@ -101,17 +103,44 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
 				const core::TypePtr& retType = oldFuncType->getReturnType();
 				assert(retType->getName() == "unit" && "Return type of kernel functions must be void.");
-				core::TypeList newArgs;
+				TypeList newArgs;
 				for (uint i = 0; i < oldArgs.size()-2; i++){
 					newArgs.push_back(oldArgs.at(i));
 				}
 				const FunctionTypePtr newFuncType = builder.functionType(newArgs, retType);
 				
-				// body
-				const StatementPtr newBody = builder.literal(builder.getNodeManager().basic.getInt2(), "-10");
+				// reverse
+				const vector<StatementPtr>& bodyCompoundStmt = oldBody->getStatements();
 				
-				// function
-				LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBody));
+				const CallExprPtr& globalParallel = dynamic_pointer_cast<const CallExpr>(bodyCompoundStmt.back());
+				
+				const vector<ExpressionPtr>& globalExpr = globalParallel->getArguments();
+				
+				const JobExprPtr& globalJob = dynamic_pointer_cast<const JobExpr>(globalExpr.back());
+				
+				const CaptureInitExprPtr& globalCapture =  dynamic_pointer_cast<const CaptureInitExpr>(globalJob->getDefaultStmt());
+				
+				const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCapture->getLambda());
+				
+				const CompoundStmtPtr& globalParBody = dynamic_pointer_cast<const CompoundStmt>(globalParFct->getBody());
+				
+				const vector<StatementPtr>& globalBodyStmts = globalParBody->getStatements();
+				
+				const CallExprPtr& localParallel =  dynamic_pointer_cast<const CallExpr>(globalBodyStmts.front());
+				
+				const vector<ExpressionPtr>& localExpr = localParallel->getArguments();
+				
+				const JobExprPtr& localJob = dynamic_pointer_cast<const JobExpr>(localExpr.back());
+				
+				const CaptureInitExprPtr& localCapture =  dynamic_pointer_cast<const CaptureInitExpr>(localJob->getDefaultStmt());
+				
+				const LambdaExprPtr& localParFct = dynamic_pointer_cast<const LambdaExpr>(localCapture->getLambda());
+				
+				const CompoundStmtPtr& localParBody = dynamic_pointer_cast<const CompoundStmt>(localParFct->getBody());
+				
+				//LOG(INFO) << core::printer::PrettyPrinter(localParBody);
+				
+				LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, localParBody);
 				
 				FunctionManager& funManager = cc.getFunctionManager();
 				getCodeStream() << funManager.getFunctionName(defCodePtr, newFunc);
