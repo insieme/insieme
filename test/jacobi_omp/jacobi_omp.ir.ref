@@ -1,0 +1,127 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+        decl ref<int<8>> v3 =  var(0);
+        decl ref<int<8>> v4 =  var(0);
+        decl ref<real<8>> v5 =  var(0.0);
+        decl ref<real<8>> v6 =  var(0.0);
+        v3 := clock();
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v7 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v8 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v9 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v10 =  var(undefined(vector<vector<ref<real<4>>,650>,650>));
+        memset(v7, 0, 650*650*sizeof(real<4>));
+        memset(v9, 0, 650*650*sizeof(real<4>));
+        for(decl ref<int<4>> v11 =  var(0) .. 650 : 1) 
+            for(decl ref<int<4>> v12 =  var(0) .. 650 : 1) 
+                v9[v11][v12] := fun(int<4> v13, int<4> v14){
+                    return 40*sin(16*2*v13-1*v14);
+                }(v11, v12)
+            
+        ;
+        decl ref<real<8>> v16 =  var(0);
+        decl ref<real<8>> v17 =  var(0);
+        decl ref<real<8>> v18 =  var(0);
+        decl ref<real<8>> v19 =  var(0.0);
+        decl ref<real<8>> v20 =  var(pow(1/650, 2));
+        v4 := clock();
+        v5 := v4-v3/1000000l;
+        v3 := clock();
+        for(decl ref<int<4>> v28 =  var(0) .. 10 : 1) {
+            merge(parallel(job([1-inf]){
+                default: [v7, v20, v8, v9]fun[ref<vector<vector<ref<real<4>>,650>,650>> v34, ref<real<8>> v31, ref<vector<vector<ref<real<4>>,650>,650>> v33, ref<vector<vector<ref<real<4>>,650>,650>> v32](){
+                    {
+                        pfor(getThreadGroup(0), 1, 650-1, 1, [v32, v33, v31, v34]fun[ref<vector<vector<ref<real<4>>,650>,650>> v40, ref<vector<vector<ref<real<4>>,650>,650>> v39, ref<real<8>> v38, ref<vector<vector<ref<real<4>>,650>,650>> v37](int<4> v41){
+                            for(decl ref<int<4>> v21 =  var(1) .. 650-1 : 1) {
+                                v39[v41][v21] := 1/4*v37[v41-1][v21]+v37[v41][v21+1]+v37[v41][v21-1]+v37[v41+1][v21]-v38*v40[v41][v21];
+                            };
+                        });
+                        barrier(getThreadGroup(0));
+                    };
+                }
+            }));
+            memcpy(v7, v8, 650*650*sizeof(real<4>));
+            for(decl ref<int<4>> v24 =  var(1) .. 650-1 : 1) {
+                for(decl ref<int<4>> v23 =  var(1) .. 650-1 : 1) 
+                    v10[v24][v23] := v9[v24][v23]-4*v7[v24][v23]+v7[v24-1][v23]+v7[v24+1][v23]+v7[v24][v23-1]+v7[v24][v23+1]
+                ;
+            };
+            decl ref<real<8>> v25 =  var(0);
+            for(decl ref<int<4>> v27 =  var(1) .. 650-1 : 1) {
+                for(decl ref<int<4>> v26 =  var(1) .. 650-1 : 1) {
+                    v25 := v25+pow(v10[v27][v26], 2);
+                };
+            };
+            v19 := sqrt(v25)/650-1;
+        };
+        v4 := clock();
+        v6 := v4-v3/1000000l;
+        printf("Job Done! - residuo: %lf\n", varlist.pack((v19)));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+        decl ref<int<8>> v3 = ( var(0));
+        decl ref<int<8>> v4 = ( var(0));
+        decl ref<real<8>> v5 = ( var(0.0));
+        decl ref<real<8>> v6 = ( var(0.0));
+        (v3 := clock());
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v7 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v8 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v9 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        decl ref<vector<vector<ref<real<4>>,650>,650>> v10 = ( var(undefined(vector<vector<ref<real<4>>,650>,650>)));
+        memset(( *v7), 0, (CAST<uint<8>>((650*650))*sizeof(real<4>)));
+        memset(( *v9), 0, (CAST<uint<8>>((650*650))*sizeof(real<4>)));
+        for(decl ref<int<4>> v11 = ( var(0)) .. 650 : 1) 
+            for(decl ref<int<4>> v12 = ( var(0)) .. 650 : 1) 
+                (((( *v9)[CAST<uint<4>>(( *v11))])[CAST<uint<4>>(( *v12))]) := CAST<real<4>>(fun(int<4> v13, int<4> v14){
+                    return (CAST<real<8>>(40)*sin(CAST<real<8>>(((16*((2*v13)-1))*v14))));
+                }(( *v11), ( *v12))))
+            
+        ;
+        decl ref<real<8>> v16 = ( var(CAST<real<8>>(0)));
+        decl ref<real<8>> v17 = ( var(CAST<real<8>>(0)));
+        decl ref<real<8>> v18 = ( var(CAST<real<8>>(0)));
+        decl ref<real<8>> v19 = ( var(0.0));
+        decl ref<real<8>> v20 = ( var(pow((CAST<real<8>>(1)/CAST<real<8>>(650)), CAST<real<8>>(2))));
+        (v4 := clock());
+        (v5 := (CAST<real<8>>((( *v4)-( *v3)))/CAST<real<8>>(1000000l)));
+        (v3 := clock());
+        for(decl ref<int<4>> v28 = ( var(0)) .. 10 : 1) {
+            merge(parallel(job(([1-inf])){
+                default: [v7, v20, v8, v9]fun[ref<vector<vector<ref<real<4>>,650>,650>> v34, ref<real<8>> v31, ref<vector<vector<ref<real<4>>,650>,650>> v33, ref<vector<vector<ref<real<4>>,650>,650>> v32](){
+                    {
+                        pfor(getThreadGroup(0), 1, (650-1), 1, [v32, v33, v31, v34]fun[ref<vector<vector<ref<real<4>>,650>,650>> v40, ref<vector<vector<ref<real<4>>,650>,650>> v39, ref<real<8>> v38, ref<vector<vector<ref<real<4>>,650>,650>> v37](int<4> v41){
+                            for(decl ref<int<4>> v21 = ( var(1)) .. (650-1) : 1) {
+                                (((( *v39)[CAST<uint<4>>(v41)])[CAST<uint<4>>(( *v21))]) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *((( *v37)[CAST<uint<4>>((v41-1))])[CAST<uint<4>>(( *v21))]))+( *((( *v37)[CAST<uint<4>>(v41)])[CAST<uint<4>>((( *v21)+1))])))+( *((( *v37)[CAST<uint<4>>(v41)])[CAST<uint<4>>((( *v21)-1))])))+( *((( *v37)[CAST<uint<4>>((v41+1))])[CAST<uint<4>>(( *v21))]))))-(( *v38)*CAST<real<8>>(( *((( *v40)[CAST<uint<4>>(v41)])[CAST<uint<4>>(( *v21))]))))))));
+                            };
+                        });
+                        barrier(getThreadGroup(0));
+                    };
+                }
+            }));
+            memcpy(( *v7), ( *v8), (CAST<uint<8>>((650*650))*sizeof(real<4>)));
+            for(decl ref<int<4>> v24 = ( var(1)) .. (650-1) : 1) {
+                for(decl ref<int<4>> v23 = ( var(1)) .. (650-1) : 1) 
+                    (((( *v10)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]) := (((((( *((( *v9)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]))-(CAST<real<4>>(4)*( *((( *v7)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>(( *v23))]))))+( *((( *v7)[CAST<uint<4>>((( *v24)-1))])[CAST<uint<4>>(( *v23))])))+( *((( *v7)[CAST<uint<4>>((( *v24)+1))])[CAST<uint<4>>(( *v23))])))+( *((( *v7)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>((( *v23)-1))])))+( *((( *v7)[CAST<uint<4>>(( *v24))])[CAST<uint<4>>((( *v23)+1))]))))
+                ;
+            };
+            decl ref<real<8>> v25 = ( var(CAST<real<8>>(0)));
+            for(decl ref<int<4>> v27 = ( var(1)) .. (650-1) : 1) {
+                for(decl ref<int<4>> v26 = ( var(1)) .. (650-1) : 1) {
+                    (v25 := (( *v25)+pow(CAST<real<8>>(( *((( *v10)[CAST<uint<4>>(( *v27))])[CAST<uint<4>>(( *v26))]))), CAST<real<8>>(2))));
+                };
+            };
+            (v19 := (sqrt(( *v25))/CAST<real<8>>((650-1))));
+        };
+        (v4 := clock());
+        (v6 := (CAST<real<8>>((( *v4)-( *v3)))/CAST<real<8>>(1000000l)));
+        printf("Job Done! - residuo: %lf\n", varlist.pack((( *v19))));
+    }
+
