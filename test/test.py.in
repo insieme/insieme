@@ -170,18 +170,22 @@ def main():
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
 			
-	failed = sum( map(lambda x: run_test_case(x), tests) )
+	failed = filter(lambda x: run_test_case(x), tests)
 	
 	# print summary
 	sys.stderr.write("###############################\n")
 	sys.stderr.write("#          Summary            #\n")
 	sys.stderr.write("#-----------------------------#\n")
 	sys.stderr.write("# Total number of tests: {0:4} #\n".format( len(tests) ))
-	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(tests) - failed))
-	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(failed))
+	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(tests) - len(failed)))
+	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(len(failed)))
+
+	for test in failed:
+		sys.stderr.write("#    - {0:22} #\n".format(test))
+
 	sys.stderr.write("###############################\n")
 	
-	return  os._exit(failed);
+	return  os._exit(len(failed));
 
 if __name__ == "__main__":
     sys.exit(main())
