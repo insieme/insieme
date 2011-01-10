@@ -40,7 +40,7 @@ struct __insieme_funType_type_2 {
 
 // start code fragment :: capture-struct for pfor-body __insieme_expr_4 //
 struct capture__insieme_expr_4 {
-	int(* var_10)[100];
+	int(* var_9)[100];
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_5 //
@@ -62,12 +62,12 @@ struct __insieme_funType_type_6 {
 };
 
 // start code fragment :: Definition of __insieme_supp_7 //
-void __insieme_supp_7(void* _capture, int var_14) {
+void __insieme_supp_7(void* _capture, int var_13) {
 	// --------- Captured Stuff - Begin -------------
-	int(* var_13)[100] = ((struct __insieme_funType_type_6*)_capture)->p0;
+	int(* var_14)[100] = ((struct __insieme_funType_type_6*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((*var_13)[((unsigned int)(var_14))])) = var_14);
+		((((*var_14)[((unsigned int)(var_13))])) = var_13);
 	}
 }
 
@@ -75,11 +75,11 @@ void __insieme_supp_7(void* _capture, int var_14) {
 // start code fragment :: function for pfor-body __insieme_expr_4 //
 void __insieme_expr_4(const isbr_PForRange range) {
 	// ----- captured variables -----
-	int(* var_10)[100] = ((struct capture__insieme_expr_4*)(range.context))->var_10;
+	int(* var_9)[100] = ((struct capture__insieme_expr_4*)(range.context))->var_9;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		call__insieme_funType_type_5(((struct __insieme_funType_type_5*)(&((struct __insieme_funType_type_6){&__insieme_supp_7, 0, var_10}))), __it);
+		call__insieme_funType_type_5(((struct __insieme_funType_type_5*)(&((struct __insieme_funType_type_6){&__insieme_supp_7, 0, var_9}))), __it);
 	}
 	
 }
@@ -90,16 +90,16 @@ double ceil(double);
 // start code fragment :: Definition of __insieme_supp_3 //
 void __insieme_supp_3(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
-	int(* var_10)[100] = ((struct __insieme_funType_type_2*)_capture)->p0;
-	int* var_9 = ((struct __insieme_funType_type_2*)_capture)->p1;
+	int(* var_9)[100] = ((struct __insieme_funType_type_2*)_capture)->p0;
+	int* var_10 = ((struct __insieme_funType_type_2*)_capture)->p1;
 	// --------- Captured Stuff -  End  -------------
 	{
 		{
 			{
-				isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 100, 1, &((struct capture__insieme_expr_4){var_10})},&__insieme_expr_4);
+				isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 100, 1, &((struct capture__insieme_expr_4){var_9})},&__insieme_expr_4);
 				isbr_barrier(isbr_getThreadGroup(0));
 			};
-			((*var_9) = (0+(((int)(ceil((((double)((100-0)))/((double)(1))))))*1)));
+			((*var_10) = (0+(((int)(ceil((((double)((100-0)))/((double)(1))))))*1)));
 		};
 	}
 }
