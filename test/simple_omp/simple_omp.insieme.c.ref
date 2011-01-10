@@ -40,7 +40,7 @@ void fun__insieme_expr_0(isbr_JobArgs* args) {
 // start code fragment :: Definition of main //
 int main() {
 	{
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,1<<20,&fun__insieme_expr_0}),sizeof(struct __insieme_expr_0))));
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0}),sizeof(struct __insieme_expr_0))));
 	}
 }
 

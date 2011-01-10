@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
 		((setup_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
 		((start_t) = clock());
 		for(int it = 0; it < 10; it += 1) {
-			isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,1<<20,&fun__insieme_expr_0,&f,&tmp,&factor,&u}),sizeof(struct __insieme_expr_0))));
+			isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&f,&tmp,&factor,&u}),sizeof(struct __insieme_expr_0))));
 			memcpy((u), (tmp), (((unsigned long)((650*650)))*sizeof(float)));
 			for(int i = 1; i < (650-1); i += 1) {
 				for(int j = 1; j < (650-1); j += 1) {

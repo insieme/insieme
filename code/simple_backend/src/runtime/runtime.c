@@ -65,7 +65,7 @@ unsigned isbr_determineThreadNum(isbr_Job* jobDescription);
 
 // -------------------------------------------------------------------------------------- public function implementation
 
-inline unsigned isbr_getMaxThreads() {
+unsigned isbr_getMaxThreads() {
 	// not defined in all Pthread implementations, just return constant for now
 	return 1<<16;
 }

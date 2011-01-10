@@ -124,7 +124,7 @@ int main() {
 	{
 		int i = 0;
 		int a[100];
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,1<<20,&fun__insieme_expr_0,&a,&i}),sizeof(struct __insieme_expr_0))));
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&a,&i}),sizeof(struct __insieme_expr_0))));
 		printf("After Loop: %d\n", (i));
 		{
 			for(int var_7 = 0; var_7 < 100; var_7 += 1) {
