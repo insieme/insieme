@@ -349,8 +349,13 @@ namespace {
 		LambdaDeltaVisitor ldv;
 		visitAllInterruptable(StatementAddress(root), ldv);
 
+		// sort set to ensure code identity
+		std::vector<VariablePtr> undeclared(ldv.undeclared.size());
+		std::copy(ldv.undeclared.cbegin(), ldv.undeclared.cend(), back_inserter(undeclared));
+		std::sort(undeclared.begin(), undeclared.end(), [&](const VariablePtr& p1, const VariablePtr& p2) { return p1->getId() > p2->getId(); });
+
 		ASTBuilder build(manager);
-		for_each(ldv.undeclared, [&](VariablePtr p) {
+		for_each(undeclared, [&](VariablePtr p) {
 			auto var = build.variable(p->getType());
 			if(std::find(passAsArguments.cbegin(), passAsArguments.cend(), p) == passAsArguments.end()) 
 				captures[var] = p;
