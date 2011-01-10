@@ -5,15 +5,15 @@ fun(){
         decl ref<int<4>> v1 =  var(0);
         decl ref<vector<ref<int<4>>,100>> v2 =  var(undefined(vector<ref<int<4>>,100>));
         merge(parallel(job([1-inf]){
-            default: [v2, v1]fun[ref<vector<ref<int<4>>,100>> v10, ref<int<4>> v9](){
+            default: [v1, v2]fun[ref<int<4>> v10, ref<vector<ref<int<4>>,100>> v9](){
                 {
                     {
-                        pfor(getThreadGroup(0), 0, 100, 1, [v10]fun[ref<vector<ref<int<4>>,100>> v13](int<4> v14){
-                            v13[v14] := v14;
+                        pfor(getThreadGroup(0), 0, 100, 1, [v9]fun[ref<vector<ref<int<4>>,100>> v14](int<4> v13){
+                            v14[v13] := v13;
                         });
                         barrier(getThreadGroup(0));
                     };
-                    v9 := 0+ceil(100-0/1)*1;
+                    v10 := 0+ceil(100-0/1)*1;
                 };
             }
         }));
@@ -36,15 +36,15 @@ fun(){
         decl ref<int<4>> v1 = ( var(0));
         decl ref<vector<ref<int<4>>,100>> v2 = ( var(undefined(vector<ref<int<4>>,100>)));
         merge(parallel(job(([1-inf])){
-            default: [v2, v1]fun[ref<vector<ref<int<4>>,100>> v10, ref<int<4>> v9](){
+            default: [v1, v2]fun[ref<int<4>> v10, ref<vector<ref<int<4>>,100>> v9](){
                 {
                     {
-                        pfor(getThreadGroup(0), 0, 100, 1, [v10]fun[ref<vector<ref<int<4>>,100>> v13](int<4> v14){
-                            ((( *v13)[CAST<uint<4>>(v14)]) := v14);
+                        pfor(getThreadGroup(0), 0, 100, 1, [v9]fun[ref<vector<ref<int<4>>,100>> v14](int<4> v13){
+                            ((( *v14)[CAST<uint<4>>(v13)]) := v13);
                         });
                         barrier(getThreadGroup(0));
                     };
-                    (v9 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));
+                    (v10 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));
                 };
             }
         }));
