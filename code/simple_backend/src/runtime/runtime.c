@@ -49,6 +49,8 @@
 
 #define PTHREADCHECK(_test) assert(_test==0)
 
+#define NUMTHREADS_ENVVAR "ISBR_NUMTHREADS"
+
 // -------------------------------------------------------------------------------------- internals declarations
 
 struct _isbr_threadGroupImpl {
@@ -59,14 +61,20 @@ struct _isbr_threadGroupImpl {
 
 pthread_key_t isbr_getJobArgKey();
 void* isbr_jobRunner(void *arg);
+unsigned isbr_determineThreadNum(isbr_Job* jobDescription);
 
 // -------------------------------------------------------------------------------------- public function implementation
+
+inline unsigned isbr_getMaxThreads() {
+	// not defined in all Pthread implementations, just return constant for now
+	return 1<<16;
+}
 
 isbr_ThreadGroup isbr_parallel(isbr_Job* jobDescription) {
 	// perform initialization
 	isbr_getJobArgKey();
 
-	unsigned numThreads = jobDescription->min;
+	unsigned numThreads = isbr_determineThreadNum(jobDescription);
 	isbr_JobArgs* args = (isbr_JobArgs*) calloc(numThreads, sizeof(isbr_JobArgs));
 	isbr_ThreadGroup threadGroup = (isbr_ThreadGroup) calloc(1, sizeof(isbr_ThreadGroupImpl));
 
@@ -147,4 +155,16 @@ void* isbr_jobRunner(void *arg) {
 	PTHREADCHECK(pthread_setspecific(isbr_getJobArgKey(), arg));
 	jobArgs->context->fun(jobArgs->context);
 	return NULL;
+}
+
+
+unsigned isbr_determineThreadNum(isbr_Job* jobDescription) {
+	char* envThreadNumStr = getenv(NUMTHREADS_ENVVAR);
+	unsigned threadNum = 1;
+	if(envThreadNumStr) {
+		threadNum = atoi(envThreadNumStr);
+	}
+	if(threadNum>jobDescription->max) threadNum = jobDescription->max;
+	if(threadNum<jobDescription->min) threadNum = jobDescription->min;
+	return threadNum;
 }
