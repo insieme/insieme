@@ -25,10 +25,10 @@ int main(int argc, char** argv) {
 
 	// init matrix
 	float u[N][N], tmp[N][N], f[N][N], res[N][N];
-	memset(u, 0, N*N);    // 	initialize it with zeros
+	memset(u, 0, N*N*sizeof(float));    // 	initialize it with zeros
 
 	// init F
-	memset(f, 0, N*N);
+	memset(f, 0, N*N*sizeof(float));
 	for (int i=0; i<N; i++)
 		for (int j=0; j<N; j++)
 			f[i][j] = init_func(i, j);
@@ -46,15 +46,16 @@ int main(int argc, char** argv) {
 	for(int it=0; it<10; it++) {
 		// main Jacobi loop
 
-		#pragma parallel
+		#pragma omp parallel
 		{
 			#pragma omp for
 			for (int i=1; i < N-1; i++) {
-				 for (int j=1; j < N-1; j++)
-					 tmp[i][j] = (double)1/4 * (u[i-1][j] + u[i][j+1] + u[i][j-1] + u[i+1][j] - factor * f[i][j]);
+				for (int j=1; j < N-1; j++) {
+					tmp[i][j] = (double)1/4 * (u[i-1][j] + u[i][j+1] + u[i][j-1] + u[i+1][j] - factor * f[i][j]);
+				}
 			}
 		}
-		memcpy(u, tmp, N*N);
+		memcpy(u, tmp, N*N*sizeof(float));
 
 		// calc the residuo
 		for (int i=1; i<N-1; i++) {
@@ -66,10 +67,12 @@ int main(int argc, char** argv) {
 		double norm = 0;
 		//#pragma omp for reduction(+: norm)
 		for (int i=1; i<N-1; i++) {
-			for (int j=1; j<N-1; j++)
+			for (int j=1; j<N-1; j++) {
 				norm += pow( res[i][j], 2 );
+			}
 		}
 
+					
 		resv = sqrt(norm)/(N-1);
 	}
 
@@ -78,5 +81,5 @@ int main(int argc, char** argv) {
 	// printf("%d, %0.2f, %0.2f, %0.2f\n", N, setup_time + elapsed_time, setup_time, elapsed_time);
 
 	// add some output to make correct execution distinguishable from segmentation fault
-	printf("Job Done!\n");
+	printf("Job Done! - residuo: %lf\n", resv);
 }
