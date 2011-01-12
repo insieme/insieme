@@ -37,10 +37,11 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 
 namespace insieme {
-namespace frontend {
 namespace ocl {
 
 const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
+
+const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
 void KernelFctAnnotation::setKernelFct(bool isKernelFct) {
     kf = isKernelFct;
@@ -78,5 +79,4 @@ AddressSpaceAnnotation::addressSpace AddressSpaceAnnotation::getAddressSpace() c
 }
 
 } // namespace ocl
-} // namespace insieme
 } // namespace c_info

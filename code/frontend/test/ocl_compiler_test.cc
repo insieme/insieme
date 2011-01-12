@@ -72,7 +72,7 @@ public:
         if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
             const core::TypeList& args = funcType->getArgumentTypes();
 
-            if(func->hasAnnotation(fe::ocl::BaseAnnotation::KEY)) {
+            if(func->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
 
                 const core::TypePtr& retTy = funcType->getReturnType();
 

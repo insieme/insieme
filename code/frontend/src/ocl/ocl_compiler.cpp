@@ -244,18 +244,41 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
     }
 
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
-        if(lit->getValue() == "0u") {
+        if(lit->getValue() == "0") {
             //if lit is 0 CLK_LOCAL_MEM_FENCE,
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
         }
-        if(lit->getValue() == "1u"){
+        if(lit->getValue() == "1"){
             //if lit is 1 CLK_GLOBAL_MEM_FENCE
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
+    // can also be barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE)
+    if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(arg)) {
+        if(call->getFunctionExpr() == BASIC.getOperator(call->getType(), core::lang::BasicGenerator::Or)) {
+            vector<core::ExpressionPtr> args = call->getArguments();
+
+            // variable to check which flags have been set
+            unsigned int b = 0x2;
+            for(auto I = args.begin(), E = args.end(); I != E; ++I) {
+                if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(*I)){
+                    if(lit->getValue() == "0") {
+                        //if lit is 0 CLK_LOCAL_MEM_FENCE,
+                        b &= 0x1; // set second last bit to 0 and preserve last bit
+                    }
+                    if(lit->getValue() == "1"){
+                        //if lit is 1 CLK_GLOBAL_MEM_FENCE
+                        b = 0x1; // set second last bit to 0 and last bit to 1
+                    }
+                }
+            }
+            if(b < 2) // if valid argument has been found
+                return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(b)));
+        }
+    }
 
     // TODO show warning
-    assert(false && "OpenCL barrier has unexpected argument. Has to be 0u or 1u");
+    assert(false && "OpenCL barrier has unexpected argument. Has to be 0 or 1");
     return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
@@ -385,10 +408,10 @@ public:
                     return resolveConvert(call, literal->getValue(), literal->getType(), args);
                 }
             }
-        /*
 
-        std::cout << "FUNCTION: " << fun << std::endl;
-            const core::Node::ChildList& elems = call->getChildList();
+
+//        std::cout << "FUNCTION: " << call << std::endl;
+/*            const core::Node::ChildList& elems = call->getChildList();
             for(size_t i = 0; i < elems.size(); ++i) {
                 std::cout << "child: " << elems.at(i) << std::endl;
             }
@@ -396,30 +419,69 @@ public:
             return element->substitute(builder.getNodeManager(), *this);
         }
 
+        if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_CaptureInitExpr) {
+            core::CaptureInitExprPtr cie = core::dynamic_pointer_cast<const core::CaptureInitExpr>(element);
+            core::LambdaExprPtr fun = cie ? // if we are in a capture init expression we get the lambda out of it
+                    core::dynamic_pointer_cast<const core::LambdaExpr>(cie->getLambda()) :
+                    core::dynamic_pointer_cast<const core::LambdaExpr>(element); // else we are in a lambda expession;
+
+            // create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
+            KernelData lambdaData(builder);
+            KernelMapper lambdaMapper(builder, lambdaData);
+
+            // transform body of lambda
+            core::StatementPtr newBody = core::dynamic_pointer_cast<const core::Statement>(fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper));
+
+            // store capture list of function (if existent)
+            core::ASTBuilder::CaptureList funCaptures = fun->getCaptureList();;
+            core::CaptureInitExpr::Values funCaptInits;
+            if(cie) funCaptInits = cie->getValues();
+
+            // add needed variables to the capture list
+            if(lambdaData.globalRangeUsed) {
+                kd.globalRangeUsed = true;
+                funCaptures.push_back(lambdaData.globalRange);
+                funCaptInits.push_back(kd.globalRange);
+            }
+            if(lambdaData.numGroupsUsed){
+                kd.numGroupsUsed = true;
+                funCaptures.push_back(lambdaData.numGroups);
+                funCaptInits.push_back(kd.numGroups);
+            }
+            if(lambdaData.localRangeUsed) {
+                kd.localRangeUsed = true;
+                funCaptures.push_back(lambdaData.localRange);
+                funCaptInits.push_back(kd.localRange);
+            }
+
+            return builder.captureInitExpr(builder.lambdaExpr(newBody, funCaptures, fun->getParameterList()), funCaptInits);
+
+        }
+
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
-//            std::cout << "a variable declaration " << (element.hasAnnotation(ocl::BaseAnnotation::KEY) ? "with . attributes " : " -  ") <<
-//                    (element->hasAnnotation(ocl::BaseAnnotation::KEY) ? "with -> attributes \n" : " -  \n");
+//            std::cout << "a variable declaration " << (element.hasAnnotation(insieme::ocl::BaseAnnotation::KEY) ? "with . attributes " : " -  ") <<
+//                    (element->hasAnnotation(insieme::ocl::BaseAnnotation::KEY) ? "with -> attributes \n" : " -  \n");
 //            std::cout << "variable: " << decl->toString() << std::endl;
 
-            if(decl->getVariable()->hasAnnotation(ocl::BaseAnnotation::KEY)) {
-                ocl::BaseAnnotationPtr annot = decl->getVariable()->getAnnotation(ocl::BaseAnnotation::KEY);
-                for(ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
+            if(decl->getVariable()->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
+                insieme::ocl::BaseAnnotationPtr annot = decl->getVariable()->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
+                for(insieme::ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
                         E = annot->getAnnotationListEnd(); I != E; ++I) {
-                    if(ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)) {
+                    if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
-                        case ocl::AddressSpaceAnnotation::LOCAL: {
+                        case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
                             localVars.push_back(decl);
                             return builder.getNodeManager().basic.getNoOp();
                             break;
                         }
-                        case ocl::AddressSpaceAnnotation::PRIVATE: {
+                        case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {
                             privateVars.push_back(decl->getVariable());
                             break;
                         }
-                        case ocl::AddressSpaceAnnotation::CONSTANT: {
+                        case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
                             assert(false && "Address space CONSTANT not allowed for local variables");
                         }
-                        case ocl::AddressSpaceAnnotation::GLOBAL: {
+                        case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
                             assert(false && "Address space GLOBAL not allowed for local variables");
                         }
                         default:
@@ -622,17 +684,17 @@ public:
                 bool workGroupSizeDefined = false;
 
                 auto cName = func->getAnnotation(c_info::CNameAnnotation::KEY);
-                auto funcAnnotation = element->getAnnotation(ocl::BaseAnnotation::KEY);
+                auto funcAnnotation = element->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
 
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
 
                 size_t wgs[3];
-                for(ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
+                for(insieme::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
-                    ocl::AnnotationPtr annot = (*I);
+                    insieme::ocl::AnnotationPtr annot = (*I);
 
-                    if(ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<ocl::WorkGroupSizeAnnotation>(annot)) {
+                    if(insieme::ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<insieme::ocl::WorkGroupSizeAnnotation>(annot)) {
                         workGroupSizeDefined = true;
                         wgs[0] = wgsap->getXdim();
                         assert(wgs[0] > 0 && "Work group Size x-dimension has to be greater than 0.");
@@ -641,7 +703,7 @@ public:
                         wgs[2] = wgsap->getZdim();
                         assert(wgs[2] > 0 && "Work group Size z-dimension has to be greater than 0.");
                     }
-                    if(ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::KernelFctAnnotation>(annot)) {
+                    if(insieme::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<insieme::ocl::KernelFctAnnotation>(annot)) {
                         isKernelFunction = kf->isKernelFct();
                     }
 
@@ -667,28 +729,28 @@ public:
                 // store memory spaces of arguments
                 for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
                     core::VariablePtr var = *pi;
-                    if(var->hasAnnotation(ocl::BaseAnnotation::KEY)) {
-                        ocl::BaseAnnotationPtr annot = var->getAnnotation(ocl::BaseAnnotation::KEY);
-                        for(ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
+                    if(var->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
+                        insieme::ocl::BaseAnnotationPtr annot = var->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
+                        for(insieme::ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
                                 E = annot->getAnnotationListEnd(); I != E; ++I) {
-                            if(ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)) {
+                            if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
                                 switch(asa->getAddressSpace()) {
-                                case ocl::AddressSpaceAnnotation::GLOBAL: {
+                                case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
                                     globalArgs.push_back(var);
                                     argsOrder.push_back(GLOBAL);
                                     break;
                                 }
-                                case ocl::AddressSpaceAnnotation::CONSTANT: {
+                                case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
                                     constantArgs.push_back(var);
                                     argsOrder.push_back(CONSTANT);
                                     break;
                                 }
-                                case ocl::AddressSpaceAnnotation::LOCAL: {
+                                case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
                                     localArgs.push_back(var);
                                     argsOrder.push_back(LOCAL);
                                     break;
                                 }
-                                case ocl::AddressSpaceAnnotation::PRIVATE: {
+                                case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {
                                     privateArgs.push_back(var);
                                     argsOrder.push_back(PRIVATE);
                                     break;

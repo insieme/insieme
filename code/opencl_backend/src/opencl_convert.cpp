@@ -44,7 +44,7 @@ namespace insieme {
 namespace backend {
 namespace ocl {
 
-namespace frontOpencl = insieme::frontend::ocl;
+using namespace insieme::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
@@ -81,23 +81,48 @@ OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::S
 
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 	ASTBuilder builder(ptr->getNodeManager());
-	if(ptr->hasAnnotation(frontOpencl::BaseAnnotation::KEY)) {
+	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
 		std::cout << "Function with some Opencl Annotation...\n";
-		frontOpencl::BaseAnnotationPtr annotations = ptr->getAnnotation(frontOpencl::BaseAnnotation::KEY);
+		BaseAnnotationPtr annotations = ptr->getAnnotation(BaseAnnotation::KEY);
 		assert(annotations && "BaseAnnotation is empty");
-		for(frontOpencl::BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
+		for(BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
 			iter < annotations->getAnnotationListEnd(); ++iter) {
-			if(frontOpencl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<frontOpencl::KernelFctAnnotation>(*iter)) {
+			if(KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<KernelFctAnnotation>(*iter)) {
 				std::cout << "Function with kernel annotation...\n";
 				const Lambda::ParamList& oldParams = ptr->getParameterList();
 				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(ptr->getBody());
 				const FunctionTypePtr& oldFuncType = dynamic_pointer_cast<const FunctionType>(ptr->getType());
 				
-				// new paramList
+				// Memory Qualifier Map
+				std::map<unsigned, VariablePtr> qualifierMap;
+				// Variable Name Map
+				std::map<unsigned, unsigned> varNameMap;
+				
+				// new paramList (case IR created from OpenCL frontend)
 				Lambda::ParamList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){
-					newParams.push_back(oldParams.at(i));
+					VariablePtr tmpVar = oldParams.at(i);
+					//newParams.push_back(oldParams.at(i));
+					newParams.push_back(tmpVar);
+					qualifierMap.insert(std::make_pair(tmpVar->getId(), tmpVar));
 				}
+				
+				// TEST
+				/*
+				std::map<unsigned, VariablePtr>::const_iterator fit = qualifierMap.find(24);
+				assert(fit != qualifierMap.end() && "WTF -> element not in the map!");
+				const VariablePtr& temp = fit->second;
+				
+				AddressSpaceAnnotationPtr globalMem(new AddressSpaceAnnotation(AddressSpaceAnnotation::addressSpace::GLOBAL));
+				AddressSpaceAnnotationPtr localMem(new AddressSpaceAnnotation(AddressSpaceAnnotation::addressSpace::LOCAL));
+				
+				temp->addAnnotation(globalMem);
+				
+				if(temp->hasAnnotation(AddressSpaceAnnotation::KEY)) {
+					std::cout << "ECCCCCOOOLLLLO" << std::endl;
+				}
+				*/
+				// END TEST
 				
 				// new functionType
 				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
@@ -117,6 +142,26 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const vector<ExpressionPtr>& globalExpr = globalParallel->getArguments();
 				
 				const JobExprPtr& globalJob = dynamic_pointer_cast<const JobExpr>(globalExpr.back());
+				
+				// check global, local, etc..
+				
+				const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls();
+				
+				const VariablePtr& var = globalJobDecls[0]->getVariable();
+				
+				const unsigned name = var->getId();
+				
+				const ExpressionPtr& init = globalJobDecls[0]->getInitialization();
+				
+				const VariablePtr& var2 = dynamic_pointer_cast<const Variable>(init);
+				
+				const unsigned name2 = var2->getId();
+				
+				LOG(INFO) << core::printer::PrettyPrinter(var);
+				LOG(INFO) << core::printer::PrettyPrinter(var2);
+				
+				
+				// 
 				
 				const CaptureInitExprPtr& globalCapture =  dynamic_pointer_cast<const CaptureInitExpr>(globalJob->getDefaultStmt());
 				
