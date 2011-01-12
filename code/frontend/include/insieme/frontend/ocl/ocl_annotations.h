@@ -43,7 +43,6 @@
     typedef std::shared_ptr<Type> Type##Ptr;
 
 namespace insieme {
-namespace frontend {
 namespace ocl {
 
 DEFINE_TYPE(BaseAnnotation);
@@ -142,6 +141,7 @@ public:
     addressSpace getAddressSpace() const;
 };
 
+typedef std::shared_ptr<AddressSpaceAnnotation> AddressSpaceAnnotationPtr;
+
 } // namespace ocl
-} // namespace c_info
 } // namespace insieme

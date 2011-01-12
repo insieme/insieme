@@ -39,7 +39,6 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 
 namespace insieme {
-namespace frontend {
 namespace ocl {
 
 TEST(ocl_properties, FunctionAnnotations) {
@@ -103,5 +102,4 @@ TEST(ocl_properties, DeclarationAnnotations) {
 }
 
 } //namespace ocl
-} //namespace frontend
 } //namespace insieme
