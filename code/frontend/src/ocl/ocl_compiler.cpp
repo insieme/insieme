@@ -419,8 +419,12 @@ public:
             return element->substitute(builder.getNodeManager(), *this);
         }
 
-        if(core::LambdaExprPtr fun = core::dynamic_pointer_cast<const core::LambdaExpr>(element)){
-            std::cout << "LAMBDA: " << fun << std::endl;
+        if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_CaptureInitExpr) {
+            core::CaptureInitExprPtr cie = core::dynamic_pointer_cast<const core::CaptureInitExpr>(element);
+            core::LambdaExprPtr fun = cie ? // if we are in a capture init expression we get the lambda out of it
+                    core::dynamic_pointer_cast<const core::LambdaExpr>(cie->getLambda()) :
+                    core::dynamic_pointer_cast<const core::LambdaExpr>(element); // else we are in a lambda expession;
+            std::cout << "LAMBDA: " << cie << std::endl;
             // create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
             KernelData lambdaData(builder);
             KernelMapper lambdaMapper(builder, lambdaData);
@@ -428,28 +432,33 @@ public:
             // transform body of lambda
             core::StatementPtr newBody = core::dynamic_pointer_cast<const core::Statement>(fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper));
 
-            core::ASTBuilder::CaptureInits funCaptures;
-            core::TypeList funCtypes;
-            // catch loop boundaries
+            core::ASTBuilder::CaptureList funCaptures;
+            core::CaptureInitExpr::Values funCaptInits;
+            if(cie) funCaptures = fun->getCaptureList();
+            if(cie) funCaptInits = cie->getValues();
 
             if(lambdaData.globalRangeUsed) {
                 kd.globalRangeUsed = true;
-                funCaptures[lambdaData.globalRange] = kd.globalRange;
-                funCtypes.push_back(lambdaData.globalRange->getType());
+                funCaptures.push_back(lambdaData.globalRange);
+                funCaptInits.push_back(kd.globalRange);
+//                funCtypes.push_back(lambdaData.globalRange->getType());
             }
             if(lambdaData.numGroupsUsed){
                 kd.numGroupsUsed = true;
-                funCaptures[lambdaData.numGroups] = kd.numGroups;
-                funCtypes.push_back(lambdaData.numGroups->getType());
+                funCaptures.push_back(lambdaData.numGroups);
+                funCaptInits.push_back(kd.numGroups);
+//                funCtypes.push_back(lambdaData.numGroups->getType());
             }
             if(lambdaData.localRangeUsed) {
                 kd.localRangeUsed = true;
-                funCaptures[lambdaData.localRange] = kd.localRange;
-                funCtypes.push_back(lambdaData.localRange->getType());
+                funCaptures.push_back(lambdaData.localRange);
+                funCaptInits.push_back(kd.localRange);
+//                funCtypes.push_back(lambdaData.localRange->getType());
             }
  //           core::FunctionTypePtr type = builder.functionType(funCtypes, fun->get, builder.getNodeManager().basic.getUnit());
 
-            return builder.lambdaExpr(newBody, funCaptures, fun->getParameterList());
+            core::LambdaExprPtr newFun = builder.lambdaExpr(newBody, funCaptures, fun->getParameterList());
+            return builder.captureInitExpr(newFun, funCaptInits);
 
         }
 
