@@ -44,7 +44,7 @@ namespace insieme {
 namespace backend {
 namespace ocl {
 
-namespace frontOpencl = insieme::frontend::ocl;
+namespace frontOpencl = insieme::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
@@ -93,10 +93,18 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(ptr->getBody());
 				const FunctionTypePtr& oldFuncType = dynamic_pointer_cast<const FunctionType>(ptr->getType());
 				
-				// new paramList
+				// Memory Qualifier Map
+				std::map<unsigned, VariablePtr> qualMap;
+				// Variable Name Map
+				std::map<unsigned, unsigned> varNameMap;
+				
+				// new paramList (case IR created from OpenCL code)
 				Lambda::ParamList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){
-					newParams.push_back(oldParams.at(i));
+					VariablePtr tmpVar = oldParams.at(i);
+					//newParams.push_back(oldParams.at(i));
+					newParams.push_back(tmpVar);
+					qualMap.insert(std::make_pair(tmpVar->getId(), tmpVar));
 				}
 				
 				// new functionType
@@ -117,6 +125,26 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const vector<ExpressionPtr>& globalExpr = globalParallel->getArguments();
 				
 				const JobExprPtr& globalJob = dynamic_pointer_cast<const JobExpr>(globalExpr.back());
+				
+				// check global, local, etc..
+				
+				const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls();
+				
+				const VariablePtr& var = globalJobDecls[0]->getVariable();
+				
+				const unsigned name = var->getId();
+				
+				const ExpressionPtr& init = globalJobDecls[0]->getInitialization();
+				
+				const VariablePtr& var2 = dynamic_pointer_cast<const Variable>(init);
+				
+				const unsigned name2 = var2->getId();
+				
+				LOG(INFO) << core::printer::PrettyPrinter(var);
+				LOG(INFO) << core::printer::PrettyPrinter(var2);
+				
+				
+				// 
 				
 				const CaptureInitExprPtr& globalCapture =  dynamic_pointer_cast<const CaptureInitExpr>(globalJob->getDefaultStmt());
 				
