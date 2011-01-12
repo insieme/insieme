@@ -50,8 +50,8 @@
 //OpenCL constants
 //TODO change to enums once they are supported
 //enum cl_mem_fence_flags {CLK_LOCAL_MEM_FENCE, CLK_GLOBAL_MEM_FENCE};
-#define CLK_LOCAL_MEM_FENCE 0u
-#define CLK_GLOBAL_MEM_FENCE 1u
+#define CLK_LOCAL_MEM_FENCE 0
+#define CLK_GLOBAL_MEM_FENCE 1
 // avoid naming conflicts with insieme barriers
 #define barrier(mem_fence) ocl_barrier(mem_fence)
 
@@ -186,7 +186,7 @@ void barrier(int flags); //TODO change to enum
 	float3 __attribute__((overloadable)) fct(float3); float4 __attribute__((overloadable)) fct(float4); \
 	float8 __attribute__((overloadable)) fct(float8); float16 __attribute__((overloadable)) fct(float16); dtypefun(fct);
 
-#define genfun2(fct) float __attribute__((overloadable)) fct(float, float); float2 __attribute__((overloadable)) fct(float2, float2); \
+#define genfun2(fct) float __attribute__((overloadable)) fct(float, float); int __attribute__((overloadable)) fct(int, uint); float2 __attribute__((overloadable)) fct(float2, float2); \
 	float3 __attribute__((overloadable)) fct(float3, float3); float4 __attribute__((overloadable)) fct(float4, float4); \
 	float8 __attribute__((overloadable)) fct(float8, float8); float16 __attribute__((overloadable)) fct(float16, float16); dtypefun2(fct)
 
@@ -221,8 +221,6 @@ void barrier(int flags); //TODO change to enum
 #define genfun2_native(fct) float __attribute__((overloadable)) native_##fct(float, float); float2 __attribute__((overloadable)) native_##fct(float2, float2); \
 	float3 __attribute__((overloadable)) native_##fct(float3, float3); float4 __attribute__((overloadable)) native_##fct(float4, float4); \
 	float8 __attribute__((overloadable)) native_##fct(float8, float8); float16 __attribute__((overloadable)) native_##fct(float16, float16); genfun2(fct)
-
-
 
 genfun(acos)
 genfun(acosh)
@@ -309,7 +307,9 @@ float __attribute__((overloadable)) native_divide(float, float); float2 __attrib
 
 
 // atomic operations
-#define atom_fct(op) long __attribute__((overloadable)) atom_##op(long p, long val); ulong __attribute__((overloadable)) atom_##op(ulong* p, ulong val);
+#define atom_fct(op) long __attribute__((overloadable)) atom_##op(long* p, long val); ulong __attribute__((overloadable)) atom_##op(ulong* p, ulong val); \
+    /* only to ship around clang problems */ \
+    int __attribute__((overloadable)) atom_##op(int* p, int val); uint __attribute__((overloadable)) atom_##op(uint* p, uint val); \
 
 atom_fct(add)
 atom_fct(sub)
@@ -321,6 +321,7 @@ atom_fct(xchg)
 long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val); ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
 
 // convert
+//* too slow...
 #define iconv_round(dest, src, fct) dest __attribute__((overloadable)) fct(src); dest __attribute__((overloadable)) fct##_rte(src); \
     dest __attribute__((overloadable)) fct##_rtz(src); dest __attribute__((overloadable)) fct##_rtp(src); dest __attribute__((overloadable)) fct##_rtn(src);
 #define iconv_sat(dest, src) iconv_round(dest, src, convert_##dest) iconv_round(dest, src, convert_##dest##_sat) \

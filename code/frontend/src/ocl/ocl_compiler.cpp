@@ -244,18 +244,41 @@ core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
     }
 
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
-        if(lit->getValue() == "0u") {
+        if(lit->getValue() == "0") {
             //if lit is 0 CLK_LOCAL_MEM_FENCE,
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
         }
-        if(lit->getValue() == "1u"){
+        if(lit->getValue() == "1"){
             //if lit is 1 CLK_GLOBAL_MEM_FENCE
             return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
+    // can also be barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE)
+    if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(arg)) {
+        if(call->getFunctionExpr() == BASIC.getOperator(call->getType(), core::lang::BasicGenerator::Or)) {
+            vector<core::ExpressionPtr> args = call->getArguments();
+
+            // variable to check which flags have been set
+            unsigned int b = 0x2;
+            for(auto I = args.begin(), E = args.end(); I != E; ++I) {
+                if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(*I)){
+                    if(lit->getValue() == "0") {
+                        //if lit is 0 CLK_LOCAL_MEM_FENCE,
+                        b &= 0x1; // set second last bit to 0 and preserve last bit
+                    }
+                    if(lit->getValue() == "1"){
+                        //if lit is 1 CLK_GLOBAL_MEM_FENCE
+                        b = 0x1; // set second last bit to 0 and last bit to 1
+                    }
+                }
+            }
+            if(b < 2) // if valid argument has been found
+                return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(b)));
+        }
+    }
 
     // TODO show warning
-    assert(false && "OpenCL barrier has unexpected argument. Has to be 0u or 1u");
+    assert(false && "OpenCL barrier has unexpected argument. Has to be 0 or 1");
     return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
@@ -385,15 +408,49 @@ public:
                     return resolveConvert(call, literal->getValue(), literal->getType(), args);
                 }
             }
-        /*
 
-        std::cout << "FUNCTION: " << fun << std::endl;
-            const core::Node::ChildList& elems = call->getChildList();
+
+//        std::cout << "FUNCTION: " << call << std::endl;
+/*            const core::Node::ChildList& elems = call->getChildList();
             for(size_t i = 0; i < elems.size(); ++i) {
                 std::cout << "child: " << elems.at(i) << std::endl;
             }
 */
             return element->substitute(builder.getNodeManager(), *this);
+        }
+
+        if(core::LambdaExprPtr fun = core::dynamic_pointer_cast<const core::LambdaExpr>(element)){
+            std::cout << "LAMBDA: " << fun << std::endl;
+            // create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
+            KernelData lambdaData(builder);
+            KernelMapper lambdaMapper(builder, lambdaData);
+
+            // transform body of lambda
+            core::StatementPtr newBody = core::dynamic_pointer_cast<const core::Statement>(fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper));
+
+            core::ASTBuilder::CaptureInits funCaptures;
+            core::TypeList funCtypes;
+            // catch loop boundaries
+
+            if(lambdaData.globalRangeUsed) {
+                kd.globalRangeUsed = true;
+                funCaptures[lambdaData.globalRange] = kd.globalRange;
+                funCtypes.push_back(lambdaData.globalRange->getType());
+            }
+            if(lambdaData.numGroupsUsed){
+                kd.numGroupsUsed = true;
+                funCaptures[lambdaData.numGroups] = kd.numGroups;
+                funCtypes.push_back(lambdaData.numGroups->getType());
+            }
+            if(lambdaData.localRangeUsed) {
+                kd.localRangeUsed = true;
+                funCaptures[lambdaData.localRange] = kd.localRange;
+                funCtypes.push_back(lambdaData.localRange->getType());
+            }
+ //           core::FunctionTypePtr type = builder.functionType(funCtypes, fun->get, builder.getNodeManager().basic.getUnit());
+
+            return builder.lambdaExpr(newBody, funCaptures, fun->getParameterList());
+
         }
 
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
