@@ -67,6 +67,10 @@ def run_test_case(test_case_name):
 	if os.path.exists(test_case_name + '/insieme.flags'):
 		insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().split(',')])
 
+	gccFlagsRef = ''
+	if os.path.exists(test_case_name + '/ref-gcc.flags'):
+		gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().split(',')])
+
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
@@ -110,8 +114,8 @@ def run_test_case(test_case_name):
 		test_out = "test.out"
 
 		sys.stderr.write(" * Compiling C input...                 ")
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG}) 
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG, 'GCCFLAGS':gccFlagsRef})  
 						)
 
 		sys.stderr.write(" * Compiling generated C output...      ")
