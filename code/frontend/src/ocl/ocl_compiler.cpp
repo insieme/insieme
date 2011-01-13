@@ -402,6 +402,13 @@ public:
 
                     return resolveNative(call, literal->getValue(), literal->getType(), args, 5);
                 }
+                if(literal->getValue() == "mul24") {
+                    assert(args.size() == 2 && "Mathematical operations must have at least 1 arguments");
+
+                    return builder.callExpr(builder.callExpr(BASIC.getAccuracyFastBinary(), BASIC.getSignedIntMul()), args);
+                }
+
+                // vector conversion function
                 if(literal->getValue().find("convert_") != string::npos) {
                     assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
 

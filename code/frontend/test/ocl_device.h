@@ -265,6 +265,8 @@ genfun_native(log10)
 genfun(log1p)
 genfun(logb)
 genfun3(mad)
+genfun2(max) genfunflt(max)
+genfun2(min) genfunflt(min)
 genfun2(maxmag)
 genfun2(minmag)
 genfunptr(modf)
@@ -288,6 +290,17 @@ genfun(tanh)
 genfun(tanpi)
 genfun(tgamma)
 genfun(trunc)
+
+#define clamp(x, minval, maxval) min(max(x, minval), maxval)
+
+#define genfunVec(fct, type) type __attribute__((overloadable)) fct(type, type); type##2 __attribute__((overloadable)) fct(type##2, type##2); \
+    type##3 __attribute__((overloadable)) fct(type##3, type##3);  type##4 __attribute__((overloadable)) fct(type##4, type##4); \
+	type##8 __attribute__((overloadable)) fct(type##8, type##8);  type##16 __attribute__((overloadable)) fct(type##16, type##16);
+#define genfunSign(fct, type) genfunVec(fct, type) genfunVec(fct, u##type)
+#define genfunInt(fct) genfunSign(fct, char) genfunSign(fct, short) genfunSign(fct, int) genfunSign(fct, long)
+
+genfunInt(mul_hi)
+genfunSign(mul24, int)
 
 float __attribute__((overloadable)) ldexp(float, int); float2 __attribute__((overloadable)) ldexp(float2, int2); \
     float3 __attribute__((overloadable)) ldexp(float3, int3); float4 __attribute__((overloadable)) ldexp(float4, int4); \
