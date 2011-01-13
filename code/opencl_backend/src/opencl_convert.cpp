@@ -39,6 +39,7 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -143,27 +144,23 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				const JobExprPtr& globalJob = dynamic_pointer_cast<const JobExpr>(globalExpr.back());
 				
-				// check global, local, etc..
-				
+				// Check global
 				const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls();
 				
-				const VariablePtr& var = globalJobDecls[0]->getVariable();
+				for_each(globalJobDecls, [&](const DeclarationStmtPtr& curDecl) {
+					varNameMap.insert(std::make_pair((curDecl->getVariable())->getId(), 
+							(dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId()));
+				});
 				
-				const unsigned name = var->getId();
-				
-				const ExpressionPtr& init = globalJobDecls[0]->getInitialization();
-				
-				const VariablePtr& var2 = dynamic_pointer_cast<const Variable>(init);
-				
-				const unsigned name2 = var2->getId();
-				
-				LOG(INFO) << core::printer::PrettyPrinter(var);
-				LOG(INFO) << core::printer::PrettyPrinter(var2);
-				
-				
-				// 
+				// Add Global Qualifier
+				// addGlobalQualifier();
 				
 				const CaptureInitExprPtr& globalCapture =  dynamic_pointer_cast<const CaptureInitExpr>(globalJob->getDefaultStmt());
+				
+				const std::vector<ExpressionPtr> values = globalCapture->getValues();
+				
+				// CHECK!!
+				
 				
 				const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCapture->getLambda());
 				
