@@ -71,6 +71,10 @@ def run_test_case(test_case_name):
 	if os.path.exists(test_case_name + '/ref-gcc.flags'):
 		gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().split(',')])
 
+	gccFlagsTest = ''
+	if os.path.exists(test_case_name + '/test-gcc.flags'):
+		gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().split(',')])
+
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
@@ -119,8 +123,8 @@ def run_test_case(test_case_name):
 						)
 
 		sys.stderr.write(" * Compiling generated C output...      ")
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES})
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES, 'GCCFLAGS':gccFlagsTest})
 						)
 		if check_for_error(test_case_name, ret):
 			os.chdir("../")

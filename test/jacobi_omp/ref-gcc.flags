@@ -1,1 +1,1 @@
--fopenmp
+-fopenmp -pg -g

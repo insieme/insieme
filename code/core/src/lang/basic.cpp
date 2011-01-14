@@ -48,9 +48,7 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-LiteralNotFoundException::LiteralNotFoundException(const string& lit) throw() : msg(string("Literal not found: ") + lit) {
-	LOG(ERROR) << msg;
-}
+LiteralNotFoundException::LiteralNotFoundException(const string& lit) throw() : msg(string("Literal not found: ") + lit) { }
 
 // Work around GCC unimplemented features
 template<class ...All>
