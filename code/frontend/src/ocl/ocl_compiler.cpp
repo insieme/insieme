@@ -311,19 +311,65 @@ private:
             size_t preambleLength) {
         assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
 
+        // transform arguments
+        for_each(args, [&](core::ExpressionPtr arg){
+            arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
+        });
+
+        core::LiteralPtr literal;
+        core::FunctionTypePtr fType = dynamic_pointer_cast<const core::FunctionType>(type); // default (=scalar) case
+        assert(fType && "Native OpenCL function has invalid function type");
+
+        bool isVector = false; //flag to inidicate if we are processing a vector function
+        core::TypePtr resType = fType->getReturnType();
+        core::TypePtr elemType = resType; // equal to the result type for scalars, the element type of it in case of vectors
+        core::ExpressionPtr function;
+
+        // check if it is a vector operation
+        if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(resType)) {
+            isVector = true;
+            elemType = vecTy->getElementType();
+            // build a literal using scalars instead of vectors
+            core::TypeList scalarArgs;
+            for(size_t i = 0; i < args.size(); ++i) {
+                // type of the arguments of native functions is always equal to the return type
+                scalarArgs.push_back(elemType);
+            }
+            fType = builder.functionType(scalarArgs, elemType);
+        }
+
         if(name  == "native_divide")
-            return builder.callExpr(builder.callExpr(BASIC.getAccuracyFastBinary(), BASIC.getRealDiv()), args);
+            literal = BASIC.getRealDiv();
+        else if(name == "mul24")
+            literal = BASIC.isUnsignedInt(elemType) ? BASIC.getUnsignedIntMul() : BASIC.getSignedIntMul();
+        else
+            literal = builder.literal(name.substr(preambleLength,name.size()), fType);
+
+        if(isVector) {
+            // build a pointwise operation in case of a vector
+            function = args.size() == 1 ?
+                    builder.callExpr(type, BASIC.getVectorPointwiseUnary(), literal) :
+                    builder.callExpr(type, BASIC.getVectorPointwise(), literal);
+        }
+        else {
+            function = literal;
+        }
 
         core::CallExprPtr nativeFct = args.size() == 1 ?
-                builder.callExpr(BASIC.getAccuracyFastUnary(), builder.literal(name.substr(preambleLength,name.size()), type)) :
-                builder.callExpr(BASIC.getAccuracyFastBinary(), builder.literal(name.substr(preambleLength,name.size()), type));
+                builder.callExpr(type, BASIC.getAccuracyFastUnary(), function) :
+                builder.callExpr(type, BASIC.getAccuracyFastBinary(), function);
 
-        return builder.callExpr(nativeFct, args);
+        return builder.callExpr(resType, nativeFct, args);
     }
 
 
     core::CastExprPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
+
+        // transform arguments
+        for_each(args, [&](core::ExpressionPtr arg){
+            arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
+        });
 
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
             return builder.castExpr(ftype->getReturnType(), args.at(0));
@@ -402,10 +448,17 @@ public:
 
                     return resolveNative(call, literal->getValue(), literal->getType(), args, 5);
                 }
-                if(literal->getValue() == "mul24") {
+                if(literal->getValue() == "mul24") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
                     assert(args.size() == 2 && "Mathematical operations must have at least 1 arguments");
 
-                    return builder.callExpr(builder.callExpr(BASIC.getAccuracyFastBinary(), BASIC.getSignedIntMul()), args);
+                    return resolveNative(call, literal->getValue(), literal->getType(), args, 0);
+                    core::ExpressionPtr op = BASIC.isUnsignedInt(args.at(0)->getType()) ? BASIC.getUnsignedIntMul() : BASIC.getSignedIntMul();
+                    // transform arguments
+                    for_each(args, [&](core::ExpressionPtr arg){
+                        arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
+                    });
+
+                    return builder.callExpr(builder.callExpr(BASIC.getAccuracyFastBinary(), op), args);
                 }
 
                 // vector conversion function

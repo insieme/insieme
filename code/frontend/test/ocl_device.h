@@ -291,6 +291,8 @@ genfun(tanpi)
 genfun(tgamma)
 genfun(trunc)
 
+#define mad(a, b, c) (a * b) + c
+
 #define clamp(x, minval, maxval) min(max(x, minval), maxval)
 
 #define genfunVec(fct, type) type __attribute__((overloadable)) fct(type, type); type##2 __attribute__((overloadable)) fct(type##2, type##2); \
