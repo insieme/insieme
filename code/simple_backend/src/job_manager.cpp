@@ -80,7 +80,7 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 	NodeManager& manager = job->getNodeManager();
 	TypePtr uintType = manager.basic.getUInt8();
 	ExpressionPtr min = Literal::get(manager, "1", uintType);
-	ExpressionPtr max = Literal::get(manager, "1<<20", uintType);
+	ExpressionPtr max = Literal::get(manager, "isbr_getMaxThreads()", uintType);
 
 	// evaluate range - primitive variant
 	ExpressionPtr range = job->getThreadNumRange();

@@ -48,9 +48,7 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-LiteralNotFoundException::LiteralNotFoundException(const string& lit) throw() : msg(string("Literal not found: ") + lit) {
-	LOG(ERROR) << msg;
-}
+LiteralNotFoundException::LiteralNotFoundException(const string& lit) throw() : msg(string("Literal not found: ") + lit) { }
 
 // Work around GCC unimplemented features
 template<class ...All>
@@ -218,12 +216,16 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
     // Convert casts form scalars to vectors to vector init exrpessions
     if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
         if(pimpl->nm.basic.isScalarType(subExpr->getType())) {
-            // get rid of ref types
-            core::TypePtr targetType = (vt->getElementType()->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
-                    dynamic_pointer_cast<const core::RefType>(vt->getElementType())->getElementType();
+            // get vector element type without ref
+            core::TypePtr elementType = vt->getElementType();
+            core::TypePtr targetType = (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+                    dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
+
+            core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
+                pimpl->build.castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
 
             core::ExpressionPtr&& retExpr = pimpl->build.callExpr(type, pimpl->nm.basic.getVectorInitUniform(),
-                subExpr->getType() == targetType ? subExpr : pimpl->build.castExpr(targetType , subExpr ),
+                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? pimpl->build.refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
                 pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
 
             return retExpr;

@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
@@ -74,7 +75,7 @@ int main(int argc, char** argv) {
 			#pragma omp for
 			for (int i=1; i < N-1; i++) {
 				for (int j=1; j < N-1; j++) {
-					tmp[i*N+j] = (double)1/4 * (u[(i-1)*N+j] + u[i*N+j+1] + u[i*N+j-1] + u[(i+1)*N+j] - factor * f[i*N+j]);
+					tmp[i*N+j] = (double)1/4 * (u[(i-1)*N+j] + u[(i*N)+j+1] + u[(i*N)+j-1] + u[(i+1)*N+j] - factor * f[i*N+j]);
 				}
 			}
 		}

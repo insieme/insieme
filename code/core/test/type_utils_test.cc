@@ -346,6 +346,27 @@ TEST(TypeUtils, VariableSubstitutionBug) {
 	EXPECT_TRUE(res.empty());
 }
 
+TEST(TypeUtils, ReturnTypeBug) {
+
+	// MSG: Invalid return type
+	//		- expected: vector<'res,#l>, actual: vector<uint<4>,3>
+	//		- function type: ((vector<'elem,#l>,vector<'elem,#l>)->vector<'res,#l>)
+	//
+	// => occurs in conjunction with the vector.pointwise operator
+
+	// build a pointwise sum ...
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	TypePtr uint4 = manager.basic.getUInt4();
+	ExpressionPtr add = manager.basic.getOperator(uint4, lang::BasicGenerator::Add);
+	ExpressionPtr pointwise = builder.callExpr(manager.basic.getVectorPointwise(), add);
+
+	//EXPECT_EQ("", toString(*add->getType()));
+	//EXPECT_EQ("", toString(*pointwise->getType()));
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

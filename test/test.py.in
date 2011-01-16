@@ -67,6 +67,14 @@ def run_test_case(test_case_name):
 	if os.path.exists(test_case_name + '/insieme.flags'):
 		insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().split(',')])
 
+	gccFlagsRef = ''
+	if os.path.exists(test_case_name + '/ref-gcc.flags'):
+		gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().split(',')])
+
+	gccFlagsTest = ''
+	if os.path.exists(test_case_name + '/test-gcc.flags'):
+		gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().split(',')])
+
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
@@ -110,13 +118,13 @@ def run_test_case(test_case_name):
 		test_out = "test.out"
 
 		sys.stderr.write(" * Compiling C input...                 ")
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG}) 
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG, 'GCCFLAGS':gccFlagsRef})  
 						)
 
 		sys.stderr.write(" * Compiling generated C output...      ")
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES})
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES, 'GCCFLAGS':gccFlagsTest})
 						)
 		if check_for_error(test_case_name, ret):
 			os.chdir("../")
@@ -170,18 +178,22 @@ def main():
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
 			
-	failed = sum( map(lambda x: run_test_case(x), tests) )
+	failed = filter(lambda x: run_test_case(x), tests)
 	
 	# print summary
 	sys.stderr.write("###############################\n")
 	sys.stderr.write("#          Summary            #\n")
 	sys.stderr.write("#-----------------------------#\n")
 	sys.stderr.write("# Total number of tests: {0:4} #\n".format( len(tests) ))
-	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(tests) - failed))
-	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(failed))
+	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(tests) - len(failed)))
+	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(len(failed)))
+
+	for test in failed:
+		sys.stderr.write("#    - {0:22} #\n".format(test))
+
 	sys.stderr.write("###############################\n")
 	
-	return  os._exit(failed);
+	return  os._exit(len(failed));
 
 if __name__ == "__main__":
     sys.exit(main())

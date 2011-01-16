@@ -120,7 +120,7 @@ public:
     //returns a call expression calculating the global id from the pfor loops variable and local range
     core::CallExprPtr accessId(OCL_PAR_LEVEL level, core::ExpressionPtr idx);
 
-    //returns a call expression to a merge function
+    //returns a call expression to one or two barrier function
     core::CallExprPtr callBarrier(core::ExpressionPtr memFence);
 };
 } // namespace

@@ -43,7 +43,6 @@
     typedef std::shared_ptr<Type> Type##Ptr;
 
 namespace insieme {
-namespace frontend {
 namespace ocl {
 
 DEFINE_TYPE(BaseAnnotation);
@@ -116,7 +115,7 @@ public:
  ** Should be used to annotate OpenCL variable declarations inside kernel functions
  ** Default value is getAddressSpace() = addressSpace::PRIVATE
  ** */
-class AddressSpaceAnnotation : public Annotation {
+class AddressSpaceAnnotation : public Annotation , public core::Annotation {
 public:
     enum addressSpace{
         PRIVATE,
@@ -133,15 +132,19 @@ public:
 
     const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
 
-    AddressSpaceAnnotation() : Annotation(), as(addressSpace::PRIVATE) { }
+    AddressSpaceAnnotation() : ocl::Annotation(), core::Annotation(), as(addressSpace::PRIVATE) { }
 
-    AddressSpaceAnnotation(addressSpace space) : Annotation(), as(space) { }
+    AddressSpaceAnnotation(addressSpace space) : ocl::Annotation(), core::Annotation(), as(space) { }
 
     bool setAddressSpace(addressSpace newAs);
 
     addressSpace getAddressSpace() const;
+
+	const core::AnnotationKey* getKey() const { return &KEY; }
+
 };
 
+typedef std::shared_ptr<AddressSpaceAnnotation> AddressSpaceAnnotationPtr;
+
 } // namespace ocl
-} // namespace c_info
 } // namespace insieme
