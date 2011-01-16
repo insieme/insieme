@@ -49,6 +49,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -137,21 +138,51 @@ CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const Statement
 	return compoundStmt(toVector(s1, s2, s3));
 }
 
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
-	TypePtr&& retType = manager.basic.getUnit();
-	if(auto funType = dynamic_pointer_cast<const FunctionType>(functionExpr->getType())) {
-		retType = funType->getReturnType();
+namespace {
+
+	TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+		// check function expression
+		assert(functionExpr->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
+
+		// extract function type
+		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(functionExpr->getType());
+		assert(funType->getArgumentTypes().size() == arguments.size() && "Invalid number of arguments!");
+
+		// deduce return type
+		core::TypeList argumentTypes;
+		::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+		return deduceReturnType(funType, argumentTypes);
 	}
-	return callExpr(retType, functionExpr, arguments);
+
+	/**
+	 * Checks whether the given result type is matching the type expected when using automatic type inference.
+	 */
+	bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+		// check types
+		if (*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
+			// print a warning if they are not matching
+			LOG(WARNING) << "Potentially invalid return type for call specified - function type: "
+							<< toString(*functionExpr->getType())
+							<< ", arguments: " << join(", ", arguments, print<deref<ExpressionPtr>>());
+		}
+		return true;
+	}
+
+
+	CallExprPtr createCall(const ASTBuilder& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+
+		// check user-specified return type - only when compiled in debug mode
+		// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
+		assert(checkType(resultType, functionExpr, arguments) && "Incorrect user-specified return type!");
+
+		// create calling expression
+		return builder.callExpr(resultType, functionExpr, arguments);
+	}
 }
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-	return callExpr(resultType, functionExpr, toVector(arg1));
-}
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-	return callExpr(resultType, functionExpr, toVector(arg1, arg2));
-}
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-	return callExpr(resultType, functionExpr, toVector(arg1, arg2, arg3));
+
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
+	// use deduced return type to construct call
+	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return callExpr(functionExpr, toVector(arg1));
@@ -161,6 +192,15 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 }
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+	return createCall(*this, resultType, functionExpr, toVector(arg1));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
 
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {

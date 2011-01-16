@@ -166,6 +166,17 @@ std::pair<TypePtr, TypePtr> makeTypeVariablesUnique(NodeManager& manager, const 
  */
 std::vector<TypePtr> makeTypeVariablesUnique(NodeManager& manager, const vector<TypePtr>& types);
 
+
+/**
+ * This function is deducing the type returned when calling a function having the given
+ * type by passing parameters of the given types.
+ *
+ * @param funType the type of the function to be invoked, for which the return type should be deduced
+ * @param argumentTypes the types of arguments passed to this function
+ * @return the deduced, most generic return type
+ */
+TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes);
+
 }
 }
 

@@ -176,7 +176,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 	Lambda::ParamList param;
 	param.push_back(builder.variable(gen.getUInt4(), 3));
 
-	LiteralPtr zero = builder.literal(gen.getUInt1(), "0");
+	LiteralPtr zero = builder.literal(gen.getUInt4(), "0");
 	VariablePtr x = builder.variable(gen.getUInt4(), 3);
 	ExpressionPtr condition = builder.callExpr(gen.getBool(), gen.getUnsignedIntEq(), x, zero);
 

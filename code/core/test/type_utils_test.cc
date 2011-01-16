@@ -306,6 +306,47 @@ TEST(TypeUtils, ArrayVectorRelation) {
 
 }
 
+TEST(TypeUtils, ReturnTypeDeduction) {
+
+	NodeManager manager;
+
+	// some variables and types
+	TypePtr varA = TypeVariable::get(manager, "a");
+	TypePtr varB = TypeVariable::get(manager, "b");
+
+	TypePtr typeA = GenericType::get(manager, "typeA");
+	TypePtr typeB = GenericType::get(manager, "typeB");
+
+	TypePtr genA = GenericType::get(manager, "type", toVector<TypePtr>(varA));
+	TypePtr genB = GenericType::get(manager, "type", toVector<TypePtr>(varB));
+
+	TypePtr genSpecA = GenericType::get(manager, "type", toVector<TypePtr>(typeA));
+	TypePtr genSpecB = GenericType::get(manager, "type", toVector<TypePtr>(typeB));
+
+	// test some functions
+	FunctionTypePtr funType;
+
+	// a simple case
+	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(varA), varA);
+	EXPECT_EQ("(('a)->'a)", toString(*funType));
+	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(typeA))));
+
+
+	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(varA, varB), varA);
+	EXPECT_EQ("(('a,'b)->'a)", toString(*funType));
+	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(typeA, typeB))));
+	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(typeB, typeA))));
+
+
+	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(genA, varA), varA);
+	EXPECT_EQ("((type<'a>,'a)->'a)", toString(*funType));
+	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, typeA))));
+	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecA, typeA))));
+	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecB, typeB))));
+	EXPECT_EQ("'a", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, varA))));
+
+}
+
 TEST(TypeUtils, VariableSubstitutionBug) {
 
 	// The basis of this Test case is the following type checker error:
@@ -362,8 +403,8 @@ TEST(TypeUtils, ReturnTypeBug) {
 	ExpressionPtr add = manager.basic.getOperator(uint4, lang::BasicGenerator::Add);
 	ExpressionPtr pointwise = builder.callExpr(manager.basic.getVectorPointwise(), add);
 
-	//EXPECT_EQ("", toString(*add->getType()));
-	//EXPECT_EQ("", toString(*pointwise->getType()));
+//	EXPECT_EQ("", toString(*add->getType()));
+//	EXPECT_EQ("", toString(*pointwise->getType()));
 
 }
 

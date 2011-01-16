@@ -43,7 +43,7 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
-
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -518,6 +518,32 @@ std::vector<TypePtr> makeTypeVariablesUnique(NodeManager& manager, const vector<
 	return res;
 }
 
+
+
+TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
+
+	NodeManager& manager = funType->getNodeManager();
+
+	// extract return type
+	const TypePtr& resType = funType->getReturnType();
+
+	// try unifying the argument types
+	// TODO: replace unification by match-making!
+	auto mgu = unifyAll(manager, argumentTypes, funType->getArgumentTypes());
+
+	// check whether unification was successful
+	if (!mgu) {
+		// return null-pointer
+		LOG(WARNING) << "Unable to deduce return type for call to function of type "
+				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
+
+		// return unit type
+		return manager.basic.getUnit();
+	}
+
+	// compute and return the expected return type
+	return mgu->applyTo(manager, resType);
+}
 
 
 

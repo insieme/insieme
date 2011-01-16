@@ -112,6 +112,10 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr retType = mgu->applyTo(manager, returnType);
 	TypePtr resType = address->getType();
 
+	// cross check with return-type inference mechanism (debugging only)
+	assert(*retType == *deduceReturnType(functionType, parameterTypes)
+			&& "Type checker is not matching automatic deduction!");
+
 	if (*retType != *resType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
