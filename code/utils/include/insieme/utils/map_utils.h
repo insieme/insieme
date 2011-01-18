@@ -173,7 +173,6 @@ std::size_t computeHash(const Map& map) {
  * @param container the map to be printed
  * @return the handed in ostream to chain operation invocations.
  */
-
 template<typename Key, typename Mapped, typename Hash, typename Pred, typename Alloc>
 std::ostream& operator<<(std::ostream& out, const std::unordered_map<Key, Mapped, Hash, Pred, Alloc>& container) {
 	typedef typename std::unordered_map<Key, Mapped, Hash, Pred, Alloc>::value_type Element;
@@ -194,7 +193,23 @@ template<typename Key, typename Mapped, typename Hash, typename Pred, typename A
 std::ostream& operator<<(std::ostream& out, const boost::unordered_map<Key,Mapped, Hash, Pred, Alloc>& container) {
 	typedef typename boost::unordered_map<Key, Mapped, Hash, Pred, Alloc>::value_type Element;
 
-	return out << "{" <<  join(", ", container, [](const Element& cur) {
-		return format("%s=%s", toString(cur.first), toString(cur.second));
+	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
+		out << cur.first << "=" << cur.second;
+	}) << "}";
+}
+
+/**
+ * Allows to print maps including printable elements.
+ *
+ * @param out the stream to which the given map should be printed to
+ * @param container the map to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename Key, typename Mapped, typename Compare, typename Alloc>
+std::ostream& operator<<(std::ostream& out, const std::map<Key, Mapped, Compare, Alloc>& container) {
+	typedef typename std::unordered_map<Key, Mapped, Compare, Alloc>::value_type Element;
+
+	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
+		out << cur.first << "=" << cur.second;
 	}) << "}";
 }

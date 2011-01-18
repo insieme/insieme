@@ -265,5 +265,9 @@ inline std::size_t hash_value(const IntTypeParam& param) {
 } // end namespace insieme
 
 namespace std {
+
+	/**
+	 * Enable int type parameter to be printed to an output stream.
+	 */
 	ostream& operator<<(ostream& os, const insieme::core::IntTypeParam& p);
 }

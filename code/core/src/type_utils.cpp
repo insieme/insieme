@@ -50,18 +50,45 @@ namespace core {
 
 namespace {
 
+/**
+ * This class provides a wrapper for a substitution to be applied to some type. This
+ * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
+ * mechanism to perform
+ */
 class SubstitutionMapper : public NodeMapping {
 
+	/**
+	 * The node manager to be used for creating new type nodes.
+	 */
 	NodeManager& manager;
+
+	/**
+	 * The type variable mapping constituting the substitution to be wrapped by this instance.
+	 */
 	const Substitution::Mapping& mapping;
+
+	/**
+	 * The int type parameter mapping of the substitution to be wrapped by this instance.
+	 */
 	const Substitution::IntTypeParamMapping& paramMapping;
 
 public:
 
+	/**
+	 * Creates a new instance of this class wrapping the given substitution.
+	 *
+	 * @param manager the node manager to be used for creating new node instances if necessary
+	 * @param substitution the substitution to be wrapped by the resulting instance.
+	 */
 	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
 		: NodeMapping(!substitution.getIntTypeParamMapping().empty()), manager(manager),
 		  mapping(substitution.getMapping()), paramMapping(substitution.getIntTypeParamMapping()) {};
 
+	/**
+	 * The procedure mapping a node to its substitution.
+	 *
+	 * @param element the node to be resolved
+	 */
 	const NodePtr mapElement(unsigned, const NodePtr& element) {
 		// quick check - only variables are substituted
 		if (element->getNodeType() != NT_TypeVariable) {
@@ -80,6 +107,11 @@ public:
 		return element;
 	}
 
+	/**
+	 * The procedure mapping an int-type-parameter to its substitution.
+	 *
+	 * @param param the parameter to be resolved
+	 */
 	virtual IntTypeParam mapParam(const IntTypeParam& param) {
 		if (param.getType() != IntTypeParam::VARIABLE) {
 			return param;
@@ -165,19 +197,19 @@ Substitution Substitution::compose(NodeManager& manager, const Substitution& a, 
 	typedef Substitution::Mapping::value_type Entry;
 	typedef Substitution::IntTypeParamMapping::value_type ParamEntry;
 
-	// copy substitution b
-	Substitution res(b);
+	// copy substitution a
+	Substitution res(a);
 
 	// --- normal types ---
 
-	// apply substitution a to all mappings in b
-	for_each(res.mapping, [&manager, &a](Entry& cur) {
-		cur.second = a.applyTo(manager, cur.second);
+	// apply substitution b to all mappings in a
+	for_each(res.mapping, [&manager, &b](Entry& cur) {
+		cur.second = b.applyTo(manager, cur.second);
 	});
 
-	// add remaining mappings of a
+	// add remaining mappings of b
 	Substitution::Mapping& resMapping = res.mapping;
-	for_each(a.mapping, [&resMapping](const Entry& cur) {
+	for_each(b.mapping, [&resMapping](const Entry& cur) {
 		if (resMapping.find(cur.first) == resMapping.end()) {
 			resMapping.insert(cur);
 		}
@@ -185,14 +217,14 @@ Substitution Substitution::compose(NodeManager& manager, const Substitution& a, 
 
 	// --- int type parameter ---
 
-	// apply substitution a to all mappings in b
-	for_each(res.paramMapping, [&manager, &a](ParamEntry& cur) {
-		cur.second = a.applyTo(cur.second);
+	// apply substitution b to all mappings in a
+	for_each(res.paramMapping, [&manager, &b](ParamEntry& cur) {
+		cur.second = b.applyTo(cur.second);
 	});
 
-	// add remaining mappings of a
+	// add remaining mappings of b
 	Substitution::IntTypeParamMapping& resParamMapping = res.paramMapping;
-	for_each(a.paramMapping, [&resParamMapping](const ParamEntry& cur) {
+	for_each(b.paramMapping, [&resParamMapping](const ParamEntry& cur) {
 		if (resParamMapping.find(cur.first) == resParamMapping.end()) {
 			resParamMapping.insert(cur);
 		}
@@ -211,145 +243,137 @@ bool occurs(const NodePtr& x, const NodePtr& term) {
 
 namespace {
 
-	inline void preprocessTypes(NodeManager& manager, TypePtr& typeA, TypePtr& typeB) {
+
+	/**
+	 * Checks whether the given super type is a subType is a sub type of the given super type.
+	 *
+	 * @param subType the type to be checked
+	 * @param superType the type to be checked against
+	 * @return true if subType is a sub-type of superType
+	 */
+	inline bool isSubtypeOf(const GenericTypePtr& subType, const GenericTypePtr& superType) {
+		const lang::BasicGenerator& basic = superType->getNodeManager().basic;
+
+		// start by ensuring both types are integer types
+		if (!(basic.isInt(superType) && basic.isInt(subType))) {
+			return false;
+		}
+
+		// get int type parameter
+		const IntTypeParam& superSize = superType->getIntTypeParameter()[0];
+		const IntTypeParam& subSize = subType->getIntTypeParameter()[0];
+
+		// check whether sizes are comparable
+		if (!(superSize.isConcrete() && subSize.isConcrete())) {
+			return false;
+		}
+
+		// get sign status
+		bool superSigned = basic.isSignedInt(superType);
+		bool subSigned = basic.isSignedInt(subType);
+
+		// if same sized => just compare size
+		if (superSigned == subSigned) {
+			return subSize < superSize || subSize == superSize;
+		}
+
+		// sign is different => depends on super type
+		if (superSigned) {
+			// size has to strictly less
+			return subSize < superSize || superSize == IntTypeParam::INF;
+		}
+
+		// sign is different and super is unsigned
+		return false; // => never works
+	}
+
+
+	/**
+	 * Pre-processes types to handle vector/array sub-type relations. Basically, when passing
+	 * an vector to a parameter requesting an array, the vector will be converted into an array.
+	 */
+	inline void preprocessTypes(NodeManager& manager, TypePtr& parameter, TypePtr& argument) {
 
 		// check node types
-		NodeType a = typeA->getNodeType();
-		NodeType b = typeB->getNodeType();
+		NodeType a = parameter->getNodeType();
+		NodeType b = argument->getNodeType();
 
-		if (a==b) {
-			return;
-		}
-
-
-		// if only one is a vector, replace the vector with an array ...
+		// if only the parameter is a vector, replace the vector with an array ...
 		if (a == NT_ArrayType && b == NT_VectorType) {
-			preprocessTypes(manager, typeB, typeA);
-			return;
-		}
-		if (a == NT_VectorType && b == NT_ArrayType) {
-			TypePtr elementType = static_pointer_cast<const VectorType>(typeA)->getElementType();
-			typeA = ArrayType::get(manager, elementType, IntTypeParam::getConcreteIntParam(1));
+			TypePtr elementType = static_pointer_cast<const VectorType>(argument)->getElementType();
+			argument = ArrayType::get(manager, elementType, IntTypeParam::getConcreteIntParam(1));
 			return;
 		}
 	}
 
-}
+	/**
+	 * This method implements the actual algorithm for computing a type variable substitution to match/unify a list of types.
+	 *
+	 * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+	 * @param list the list of pairs of types to be matched / unified. In case matching should be applied,
+	 * 				the first component has to be the pattern. The list will be altered during the computation.
+	 * @param unify a boolean flag to distinguish between matching and unifying the given types
+	 * @param considerSubTypes allows to enable / disable the consideration of sub-type relations
+	 * @return the resulting (most general) unifier or an uninitialized value if the types couldn't be matched / unified.
+	 */
+	boost::optional<Substitution> computeSubstitution(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool unify, bool considerSubtypes) {
+		typedef std::pair<TypePtr, TypePtr> Pair;
+		typedef std::list<Pair> List;
 
-boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list) {
-	typedef std::pair<TypePtr, TypePtr> Pair;
-	typedef std::list<Pair> List;
+		// check input parameter
+		assert( !(unify && considerSubtypes) && "Cannot perform unification with subtypes!");
 
-	// create result
-	Substitution res;
+		// create result
+		Substitution res;
+		boost::optional<Substitution> unmatchable;
 
-	while(!list.empty()) {
+		while(!list.empty()) {
 
-		// get current element
-		Pair cur = list.front();
-		list.pop_front();
+			// get current element
+			Pair cur = list.front();
+			list.pop_front();
 
-		TypePtr a = cur.first;
-		TypePtr b = cur.second;
+			TypePtr a = cur.first;
+			TypePtr b = cur.second;
 
-		// preprocess types (e.g. vector - array relation)
-		preprocessTypes(manager, a, b);
-
-		const NodeType typeOfA = a->getNodeType();
-		const NodeType typeOfB = b->getNodeType();
-
-		// 1) if (a == b) ignore pair ..
-		if (*a==*b) {
-			continue;
-		}
-
-		// 2) swap if b is a variable but a is not ..
-		if (typeOfA != NT_TypeVariable && typeOfB == NT_TypeVariable) {
-			// add swapped pair to front of list
-			list.push_front(std::make_pair(b, a));
-			continue;
-		}
-
-		// 3) handle variables on left hand side ...
-		if (typeOfA == NT_TypeVariable) {
-			if (occurs(a, b)) {
-				// not unifiable (e.g. X = type<X> cannot be unified)
-				return boost::optional<Substitution>();
+			if (considerSubtypes) {
+				// preprocess types (e.g. handle vector - array relation)
+				preprocessTypes(manager, a, b);
 			}
 
-			// convert current pair into substitution
-			Substitution mapping(
-					static_pointer_cast<const TypeVariable>(a),
-					static_pointer_cast<const Type>(b)
-			);
+			const NodeType typeOfA = a->getNodeType();
+			const NodeType typeOfB = b->getNodeType();
 
-			// apply substitution to remaining pairs
-			for_each(list, [&mapping, &manager](Pair& cur) {
-				cur.first = mapping.applyTo(manager, cur.first);
-				cur.second = mapping.applyTo(manager, cur.second);
-			});
-
-			// compose current mapping with overall result
-			res = Substitution::compose(manager, mapping, res);
-			continue;
-		}
-
-		// 4) function types / generic types / tuples / structs / unions / recursive types
-		if (typeOfA != typeOfB) {
-			// => not unifiable
-			return boost::optional<Substitution>();
-		}
-
-		if (typeOfA == NT_RecType) {
-			// TODO: implement
-			assert ("RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!");
-		}
-
-		// => check family of generic type
-		if (typeOfA == NT_GenericType) {
-			const GenericTypePtr& genericTypeA = static_pointer_cast<const GenericType>(a);
-			const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
-
-			if (genericTypeA->getFamilyName() != genericTypeB->getFamilyName()) {
-				return boost::optional<Substitution>();
+			// 1) if (a == b) ignore pair ..
+			if (*a==*b) {
+				continue;
 			}
 
-			// ---- unify int type parameter ---
-
-			// get lists
-			auto paramsA = genericTypeA->getIntTypeParameter();
-			auto paramsB = genericTypeB->getIntTypeParameter();
-
-			// check number of arguments ...
-			if (paramsA.size() != paramsB.size()) {
-				// => not unifyable
-				return boost::optional<Substitution>();
-			}
-
-			for(std::size_t i=0; i<paramsA.size(); i++) {
-				IntTypeParam paramA = paramsA[i];
-				IntTypeParam paramB = paramsB[i];
-
-				// equivalent pairs can be ignored ...
-				if (paramA == paramB) {
+			// 2) test whether on the B side there is a variable
+			if (typeOfA != NT_TypeVariable && typeOfB == NT_TypeVariable) {
+				if (unify) {
+					// unification: no problem => swap sides
+					// add swapped pair to front of list
+					list.push_front(std::make_pair(b, a));
 					continue;
+				} else {
+					// matching => cannot be matched
+					return unmatchable;
+				}
+			}
+
+			// 3) handle variables on left hand side ...
+			if (typeOfA == NT_TypeVariable) {
+				if (occurs(a, b)) {
+					// not unifiable (e.g. X = type<X> cannot be unified)
+					return unmatchable;
 				}
 
-				// check for variables
-				if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() != IntTypeParam::VARIABLE) {
-					// different constants => not unifyable!
-					return boost::optional<Substitution>();
-				}
-
-				// move variable to first place
-				if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() ==IntTypeParam::VARIABLE) {
-					IntTypeParam tmp = paramA;
-					paramA = paramB;
-					paramB = tmp;
-				}
-
-				// add mapping
-				Substitution mapping(paramA,paramB);
+				// convert current pair into substitution
+				Substitution mapping(
+						static_pointer_cast<const TypeVariable>(a),
+						static_pointer_cast<const Type>(b)
+				);
 
 				// apply substitution to remaining pairs
 				for_each(list, [&mapping, &manager](Pair& cur) {
@@ -358,42 +382,180 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
 				});
 
 				// compose current mapping with overall result
-				res = Substitution::compose(manager, mapping, res);
+				res = Substitution::compose(manager, res, mapping);
+				continue;
 			}
+
+			// 4) function types / generic types / tuples / structs / unions / recursive types
+			if (typeOfA != typeOfB) {
+				// => not unifiable
+				return unmatchable;
+			}
+
+			// handle recursive types (special treatment)
+			if (typeOfA == NT_RecType) {
+				// TODO: implement
+				assert ("RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!");
+			}
+
+			// handle function types (special treatment)
+			if (!unify && typeOfA == NT_FunctionType) {
+				// TODO: this is kind of a hack - might work, might not ... if not => redo unification properly
+				// matching functions is kind of difficult since variables are universal quantified
+				// => use unification from here on ...
+				std::list<std::pair<TypePtr, TypePtr>> tmpList;
+				tmpList.push_front(std::make_pair(a, b));
+				auto mapping = computeSubstitution(manager, tmpList, true, false);
+				if (!mapping) {
+					return unmatchable;
+				}
+
+				// apply substitution to remaining pairs
+				for_each(list, [&mapping, &manager](Pair& cur) {
+					cur.first = mapping->applyTo(manager, cur.first);
+					cur.second = mapping->applyTo(manager, cur.second);
+				});
+
+				res = Substitution::compose(manager, res, *mapping);
+				continue;
+			}
+
+			// => check family of generic type
+			if (typeOfA == NT_GenericType) {
+				GenericTypePtr genericTypeA = static_pointer_cast<const GenericType>(a);
+				GenericTypePtr genericTypeB = static_pointer_cast<const GenericType>(b);
+
+				// handle sub-types
+				if (considerSubtypes && isSubtypeOf(genericTypeB, genericTypeA)) {
+					// "upgrade" B-side
+					genericTypeB = genericTypeA;
+				}
+
+				// check family names
+				if (genericTypeA->getFamilyName() != genericTypeB->getFamilyName()) {
+					return unmatchable;
+				}
+
+				// ---- unify int type parameter ---
+
+				// get lists
+				auto paramsA = genericTypeA->getIntTypeParameter();
+				auto paramsB = genericTypeB->getIntTypeParameter();
+
+				// check number of arguments ...
+				if (paramsA.size() != paramsB.size()) {
+					// => not unifyable
+					return unmatchable;
+				}
+
+				for(std::size_t i=0; i<paramsA.size(); i++) {
+					IntTypeParam paramA = paramsA[i];
+					IntTypeParam paramB = paramsB[i];
+
+					// equivalent pairs can be ignored ...
+					if (paramA == paramB) {
+						continue;
+					}
+
+					// check for variables
+					if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() != IntTypeParam::VARIABLE) {
+						// different constants => not matchable / unifyable!
+						return unmatchable;
+					}
+
+					// move variable to first place
+					if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() ==IntTypeParam::VARIABLE) {
+						if (!unify) {
+							// => only allowed for unification
+							return unmatchable;
+						}
+
+						// switch sides
+						IntTypeParam tmp = paramA;
+						paramA = paramB;
+						paramB = tmp;
+					}
+
+					// add mapping
+					Substitution mapping(paramA,paramB);
+
+					// apply substitution to remaining pairs
+					for_each(list, [&mapping, &manager](Pair& cur) {
+						cur.first = mapping.applyTo(manager, cur.first);
+						cur.second = mapping.applyTo(manager, cur.second);
+					});
+
+					// compose current mapping with overall result
+					res = Substitution::compose(manager, res, mapping);
+				}
+			}
+
+			// => check all child nodes
+			auto childrenA = a->getChildList();
+			auto childrenB = b->getChildList();
+			if (childrenA.size() != childrenB.size()) {
+				// => not matchable / unifyable
+				return unmatchable;
+			}
+
+			std::for_each(
+					make_paired_iterator(childrenA.begin(), childrenB.begin()),
+					make_paired_iterator(childrenA.end(), childrenB.end()),
+
+					[&list](const std::pair<NodePtr, NodePtr>& cur) {
+						list.push_back(std::make_pair(
+								static_pointer_cast<const Type>(cur.first),
+								static_pointer_cast<const Type>(cur.second)
+						));
+			});
 		}
 
-		// => check all child nodes
-		auto childrenA = a->getChildList();
-		auto childrenB = b->getChildList();
-		if (childrenA.size() != childrenB.size()) {
-			// => not unifyable
-			return boost::optional<Substitution>();
-		}
-
-		std::for_each(
-				make_paired_iterator(childrenA.begin(), childrenB.begin()),
-				make_paired_iterator(childrenA.end(), childrenB.end()),
-
-				[&list](const std::pair<NodePtr, NodePtr>& cur) {
-					list.push_front(std::make_pair(
-							static_pointer_cast<const Type>(cur.first),
-							static_pointer_cast<const Type>(cur.second)
-					));
-		});
+		// done
+		return boost::optional<Substitution>(res);
 	}
 
-	// done
-	return boost::optional<Substitution>(res);
 }
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Unification
+// -------------------------------------------------------------------------------------------------------------------------
 
 
 boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB) {
 	return unifyAll(manager, toVector<TypePtr>(typeA), toVector<TypePtr>(typeB));
 }
 
+boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list) {
+	return computeSubstitution(manager, list, true, false);
+}
+
 bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB) {
+	if (typeA == typeB) {
+		return true;
+	}
 	NodeManager tmp; // requires only temporary manager
-	return typeA==typeB || unify(tmp, typeA, typeB);
+	return unify(tmp, typeA, typeB);
+}
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Matching
+// -------------------------------------------------------------------------------------------------------------------------
+
+
+boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
+	return matchAll(manager, toVector(pattern), toVector(type));
+}
+
+boost::optional<Substitution> matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes) {
+	return computeSubstitution(manager, list, false, true);
+}
+
+bool isMatching(const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
+	if (pattern == type) {
+		return true;
+	}
+	NodeManager tmp; // requires only temporary manager
+	return match(tmp, pattern, type);
 }
 
 
@@ -528,8 +690,7 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 	const TypePtr& resType = funType->getReturnType();
 
 	// try unifying the argument types
-	// TODO: replace unification by match-making!
-	auto mgu = unifyAll(manager, argumentTypes, funType->getArgumentTypes());
+	auto mgu = matchAll(manager, funType->getArgumentTypes(), argumentTypes);
 
 	// check whether unification was successful
 	if (!mgu) {

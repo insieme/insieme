@@ -130,11 +130,10 @@ TEST(CallExprTypeCheck, Basic) {
 	LiteralPtr w = builder.literal(boolType, "true");
 	EXPECT_EQ("true", toString(*w));
 
-	// => not unifyable arguments ...
-	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,z));
+	// => not unifyable arguments (but forming a sub-type) ...
+	expr = builder.callExpr(concreteType, binaryFun, toVector<ExpressionPtr>(y,z));
 	issues = check(expr, typeCheck);
-	EXPECT_EQ((std::size_t)1, issues.size());
-	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+	EXPECT_TRUE(issues.empty());
 
 	// => not unifyable arguments
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,w));
