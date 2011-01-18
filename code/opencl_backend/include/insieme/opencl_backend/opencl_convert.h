@@ -44,6 +44,11 @@ namespace ocl {
 
 simple_backend::TargetCodePtr convert(const core::ProgramPtr& source);
 
+class OclFunctionManager : public simple_backend::FunctionManager {
+public:
+	OclFunctionManager(simple_backend::Converter& conversionContext);
+	simple_backend::CodePtr resolve(const core::LambdaPtr& lambda);
+};
 
 class OclStmtConvert : public simple_backend::StmtConverter {
 public:

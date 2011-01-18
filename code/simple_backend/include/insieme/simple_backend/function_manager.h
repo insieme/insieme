@@ -54,12 +54,12 @@ class Converter;
 
 
 class FunctionManager {
-
+protected:
 	/**
 	 * The conversion context this manager is part of.
 	 */
 	Converter& cc;
-
+	
 	/**
 	 * A map linking lambda nodes to prototype declarations within the program code.
 	 */
@@ -96,12 +96,11 @@ public:
 	string getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda);
 
 private:
+	
+	virtual CodePtr resolve(const LambdaDefinitionPtr& definition);
+	virtual CodePtr resolve(const LambdaPtr& lambda);
 
-
-	CodePtr resolve(const LambdaDefinitionPtr& definition);
-	CodePtr resolve(const LambdaPtr& lambda);
-
-	CodePtr resolve(const LiteralPtr& literal);
+	virtual CodePtr resolve(const LiteralPtr& literal);
 };
 
 
