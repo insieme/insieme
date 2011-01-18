@@ -381,7 +381,7 @@ namespace {
 					cur.second = mapping.applyTo(manager, cur.second);
 				});
 
-				// compose current mapping with overall result
+				// combine current mapping with overall result
 				res = Substitution::compose(manager, res, mapping);
 				continue;
 			}
@@ -416,6 +416,7 @@ namespace {
 					cur.second = mapping->applyTo(manager, cur.second);
 				});
 
+				// combine current mapping with overall result
 				res = Substitution::compose(manager, res, *mapping);
 				continue;
 			}
@@ -485,7 +486,7 @@ namespace {
 						cur.second = mapping.applyTo(manager, cur.second);
 					});
 
-					// compose current mapping with overall result
+					// combine current mapping with overall result
 					res = Substitution::compose(manager, res, mapping);
 				}
 			}
@@ -498,6 +499,7 @@ namespace {
 				return unmatchable;
 			}
 
+			// add pairs of children to list to be processed
 			std::for_each(
 					make_paired_iterator(childrenA.begin(), childrenB.begin()),
 					make_paired_iterator(childrenA.end(), childrenB.end()),
