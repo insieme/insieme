@@ -288,15 +288,17 @@ LITERAL(ArraySubscriptND, "array.subscript.ND", "(array<'elem,#n>, vector<uint<8
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
-GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction)
+GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction, VectorChgElem, VectorChgSingleElem)
 
 LITERAL(VectorSubscript,      "vector.subscript",       "(vector<'elem,#l>, uint<#a>) -> 'elem")
-LITERAL(VectorInitUniform,    "vector.initUniform",     "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorInitUndefined,  "vector.initUndefined",   "(intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUniform,    "vector.init.uniform",    "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined,  "vector.init.undefined",  "(intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorPointwise,      "vector.pointwise",       "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorPointwiseUnary, "vector.pointwise.unary", "(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorReduction,      "vector.reduction",       "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        "vector.permute",         "(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
+LITERAL(VectorChgElem,        "vector.chg.elem",        "(vector<'elem,#l>, vector<uint<#a>,#m>, vector<'elem,#m>) -> vector<'elem,#l>")
+LITERAL(VectorChgSingleElem,  "vector.chg.single.elem", "(vector<'elem,#l>, uint<#a>, 'elem) -> vector<'elem,#l>")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
@@ -305,10 +307,10 @@ GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript)
 // Accuracy defining functions
 
 LITERAL(AccuracyHighBinary,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")
-LITERAL(AccuracyBestEffortBinary, "accuracy.bestEffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyBestEffortBinary, "accuracy.besteffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")
 LITERAL(AccuracyFastBinary,       "accuracy.fast", "(('a, 'a)->'b) -> ('a, 'a)->'b")
 LITERAL(AccuracyHighUnary,       "accuracy.high.unary", "(('a)->'b) -> ('a)->'b")
-LITERAL(AccuracyBestEffortUnary, "accuracy.bestEffort.unary", "(('a)->'b) -> ('a)->'b")
+LITERAL(AccuracyBestEffortUnary, "accuracy.besteffort.unary", "(('a)->'b) -> ('a)->'b")
 LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
@@ -332,8 +334,8 @@ LITERAL(MergeAll, "mergeAll", "() -> unit")
 GROUP(ThreadOp, GetThreadGroup, GetThreadId)
 
 LITERAL(GetThreadGroup, "getThreadGroup", "(uint<#a>) -> threadgroup")
-LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<8>")
-LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<8>")
+LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<4>")
+LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<4>")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
 LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->unit")
