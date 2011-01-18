@@ -137,7 +137,7 @@ string FunctionManager::getFunctionName(const CodePtr& context, const core::Lamb
 		} else {
 			// resolve non-recursive functions directly (avoids prototype)
 			LambdaPtr fun = lambda->getLambda();
-			prototype = FunctionManager::resolve(fun);
+			prototype = resolve(fun);
 			prototypes.insert(std::make_pair(fun, prototype));
 		}
 	} else {
