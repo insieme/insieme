@@ -48,11 +48,21 @@
 namespace insieme {
 namespace core {
 
+/**
+ * This class represents a substitution for type variables within types.
+ */
 class Substitution {
 
 public:
 
-	typedef boost::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> Mapping;
+	/**
+	 * The definition of the data structure used to maintain type variable mappings.
+	 */
+	typedef utils::map::PointerMap<TypeVariablePtr, TypePtr> Mapping;
+
+	/**
+	 * The definition of the data structure used to maintain int type parameter mappings.
+	 */
 	typedef std::map<IntTypeParam, IntTypeParam> IntTypeParamMapping;
 
 private:
@@ -69,50 +79,134 @@ private:
 
 public:
 
+	/**
+	 * Creates a new, empty substitution.
+	 */
 	Substitution() {};
 
+	/**
+	 * Creates a single-element mapping.
+	 *
+	 * @param var the variable to be substituted
+	 * @param type the type the variable should be substituted with
+	 */
 	Substitution(const TypeVariablePtr& var, const TypePtr& type);
 
-	Substitution(const IntTypeParam& var, const IntTypeParam& type);
+	/**
+	 * Creates a single-int-type-parameter mapping.
+	 *
+	 * @param var the parameter to be substituted
+	 * @param parameter the int-type-parameter the parameter is substituted for
+	 */
+	Substitution(const IntTypeParam& var, const IntTypeParam& parameter);
 
+	/**
+	 * Applies this substitution to the given type.
+	 * @param manager the manager to be used for creating new type node instances
+	 * @param type the type to which this substitution should be applied to
+	 * @return the resulting type expression
+	 */
 	TypePtr applyTo(NodeManager& manager, const TypePtr& type) const;
 
+	/**
+	 * Applies this substitution to the given int type parameter.
+	 * @param param the int type param this substitution should be applied to
+	 * @return the resulting int type parameter
+	 */
 	IntTypeParam applyTo(const IntTypeParam& param) const;
 
+	/**
+	 * Extends this substitution by the given mapping. If the same variable
+	 * is already mapped to some type, the current mapping will be replaced.
+	 *
+	 * @param the variable which should be substituted.
+	 * @param the type the variable should be substituted for.
+	 */
 	void addMapping(const TypeVariablePtr& var, const TypePtr& type);
 
+	/**
+	 * Extends this substitution by the given int-type param mapping. If the same
+	 * variable is already mapped to some value, the curren mapping will be replaced.
+	 *
+	 * @param var the int type parameter variable to be substituted. This has to be a int type parameter variable.
+	 * @param value the value the variable should be substituted with.
+	 */
 	void addMapping(const IntTypeParam& var, const IntTypeParam& value);
 
+	/**
+	 * Removes the mapping stored for the given variable from this substitution.
+	 * @param var the variable which's entry should be removed
+	 */
 	void remMappingOf(const TypeVariablePtr& var);
 
+	/**
+	 * Removes the mapping stored for the given variable from this substitution.
+	 * @param var the variable which's entry should be removed
+	 */
 	void remMappingOf(const IntTypeParam& var);
 
+	/**
+	 * Obtains a constant reference to the type variable mapping constituting this substitution.
+	 * @return a constant reference to the internally maintained type variable mapping
+	 */
 	const Mapping& getMapping() const {
 		return mapping;
 	}
 
+	/**
+	 * Obtains a constant reference to the int-type parameter mapping constituting this substitution.
+	 * @return a constant reference to the internally maintained int type parameter mapping
+	 */
 	const IntTypeParamMapping& getIntTypeParamMapping() const {
 		return paramMapping;
 	}
 
+	/**
+	 * A utility function to compose two substitutions. Applying the resulting substitution will have the
+	 * same effect on any type expression as applying substitution a followed by b.
+	 *
+	 * @param manager the manager to be used for creating new type nodes if necessary
+	 * @param a the first substitution to be applied
+	 * @param b the second substitution to be applied
+	 * @return a substitution combining the given substitutions.
+	 */
 	static Substitution compose(NodeManager& manager, const Substitution& a, const Substitution& b);
 
 };
 
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Unification
+// -------------------------------------------------------------------------------------------------------------------------
+
 /**
- * Checks whether the given node x is referenced directly or indirectly
- * within the given term.
+ * Tries to unify the two given types.
  *
- * @param x the node to be searched within the given term
- * @param term the term to be searched
- * @return true if present, false otherwise
+ * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+ * @param typeA the first type to be unified
+ * @param typeB the second type to be unified
+ * @return the resulting most general unifier or an uninitialized value if the types couldn't be unified.
  */
-bool occurs(const NodePtr& x, const NodePtr& term);
+boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB);
 
-
-
+/**
+ * Tries to unify the given list of type pairs. This method actually implements the unification algorithm.
+ *
+ * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+ * @param list the list of pairs of types to be unified
+ * @return an optional containing a substitution if the pairs could be unified. The substitution will be the most general
+ * unifier (mgu) for the given pairs. Applying the substitution to all pairs will result in a list of equal pairs. The optional
+ * will be uninitialized if the given types are not unifyable.
+ */
 boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list);
 
+/**
+ * Tries to unify the types stored within the given lists (pairwise).
+ *
+ * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+ * @param listA the first list of types
+ * @param listB the second list of types
+ * @return the resulting most general unifier or an uninitialized value if the types couldn't be unified.
+ */
 template<typename Container>
 boost::optional<Substitution> unifyAll(NodeManager& manager, const Container& listA, const Container& listB) {
 
@@ -134,16 +228,132 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, const Container& li
 	return unifyAll(manager, list);
 }
 
-boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB);
-
+/**
+ * Tests whether the given two types are unifyable at all.
+ *
+ * @param typeA the first type
+ * @param typeB the second type
+ * @return true if they are unifyable, false otherwise
+ */
 bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB);
 
+/**
+ * Tests whether all the types within the given lists are (pairwise) unifyable.
+ *
+ * @param listA the first list of types
+ * @param listB the second list of types
+ * @return true if unifyable, false otherwise
+ */
 template<typename Container>
 bool areUnifyable(const Container& listA, const Container& listB) {
 	NodeManager tmp; // requires only temporary manager
 	// exploits implicit boolean conversion of boost::optional
 	return unify(tmp, listA, listB);
 }
+
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Matching
+// -------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Tries to match the given type to the given pattern. The resulting substitution will be uninitialized in case
+ * the given type does match the given pattern. Otherwise the result will describe the mapping of type variables to
+ * be applied to the pattern to reach the given type.
+ *
+ * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+ * @param pattern the pattern to be checked against (type variables represent variable regions)
+ * @param type the type to be matched against the given pattern
+ * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
+ * @return a initialized substitution transforming the given pattern into the given type or an uninitialized optional in case the
+ * given type is not matching the pattern
+ */
+boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes=true);
+
+/**
+ * Tries to match the given pattern/type pairs.
+ *
+ * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+ * @param list the list of pattern/type pairs
+ * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
+ * @return a initialized substitution transforming the given patterns into the given types or an uninitialized optional in case the
+ * given types are not matching the patterns
+ */
+boost::optional<Substitution> matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes=true);
+
+/**
+ * Tries to match the given types to the given list of type patterns.
+ *
+ * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+ * @param patterns the list of patterns
+ * @param types the list of types to be matched to the patterns
+ * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
+ * @return a initialized substitution transforming the given patterns into the given types or an uninitialized optional in case the
+ * given types are not matching the patterns
+ */
+template<typename Container>
+boost::optional<Substitution> matchAll(NodeManager& manager, const Container& patterns, const Container& types, bool considerSubtypes=true) {
+
+	// check length of lists ...
+	if (patterns.size() != types.size()) {
+		// ... if not equal => not matchable
+		return boost::optional<Substitution>();
+	}
+
+	// define some types ...
+	typedef std::pair<TypePtr, TypePtr> Pair;
+	typedef std::list<Pair> List;
+
+	// merge the given lists to a list of pairs
+	List list(
+				make_paired_iterator(patterns.begin(), types.begin()),
+				make_paired_iterator(patterns.end(), types.end())
+	);
+	return matchAll(manager, list);
+}
+
+
+/**
+ * Tests whether the given type can be matched to the given pattern.
+ *
+ * @param pattern the pattern the type should be matched to
+ * @param type the type to be matched against the pattern
+ * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
+ * @return true if matchable, false otherwise
+ */
+bool isMatching(const TypePtr& pattern, const TypePtr& type, bool considerSubtypes=true);
+
+/**
+ * Tests whether the given types can be matched to the given patterns.
+ *
+ * @param patterns the patterns to be matched to
+ * @param types the types to be matched
+ * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
+ * @return true if all types can be matched to the given patterns
+ */
+template<typename Container>
+bool areMatching(const Container& patterns, const Container& types, bool considerSubtypes=true) {
+	// use temporary manager (to avoid polluting other managers)
+	NodeManager tmp;
+	// exploits implicit boolean conversion of boost::optional
+	return matchAll(tmp, patterns, types);
+}
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Utilities
+// -------------------------------------------------------------------------------------------------------------------------
+
+
+
+/**
+ * Checks whether the given node x is referenced directly or indirectly
+ * within the given term.
+ *
+ * @param x the node to be searched within the given term
+ * @param term the term to be searched
+ * @return true if present, false otherwise
+ */
+bool occurs(const NodePtr& x, const NodePtr& term);
 
 /**
  * Searches for reused type variables within the given types. In case the same type variables

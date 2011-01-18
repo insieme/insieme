@@ -52,6 +52,23 @@
 namespace insieme {
 namespace core {
 
+
+bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
+	return isUnifyable(typeA, typeB);
+}
+
+bool matchable(const TypePtr& pattern, const TypePtr& type) {
+	return isMatching(pattern, type);
+}
+
+bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
+	return !isUnifyable(typeA, typeB);
+}
+
+bool notMatchable(const TypePtr& pattern, const TypePtr& type) {
+	return !isMatching(pattern, type);
+}
+
 TEST(TypeUtils, Substitution) {
 	ASTBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
@@ -59,19 +76,28 @@ TEST(TypeUtils, Substitution) {
 	TypeVariablePtr varA = builder.typeVariable("A");
 	TypeVariablePtr varB = builder.typeVariable("B");
 
-	TypePtr constType = builder.genericType("constType");
+	IntTypeParam paramVarX = IntTypeParam::getVariableIntParam('x');
+	IntTypeParam paramVarY = IntTypeParam::getVariableIntParam('y');
 
-	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA));
-	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB));
-	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB));
+	TypePtr constType = builder.genericType("constType");
+	IntTypeParam constParam = IntTypeParam::getConcreteIntParam(15);
+
+	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA), toVector<IntTypeParam>(paramVarX));
+	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB), toVector<IntTypeParam>(paramVarX, paramVarY));
+	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB), toVector<IntTypeParam>(paramVarY, paramVarY));
 
 
 	EXPECT_EQ("'A", toString(*varA));
 	EXPECT_EQ("'B", toString(*varB));
+	EXPECT_EQ("#x", toString(paramVarX));
+	EXPECT_EQ("#y", toString(paramVarY));
+
 	EXPECT_EQ("constType", toString(*constType));
-	EXPECT_EQ("type<'A>", toString(*typeA));
-	EXPECT_EQ("type<'A,'B>", toString(*typeB));
-	EXPECT_EQ("type<type<'A,'B>,'B>", toString(*typeC));
+	EXPECT_EQ("15", toString(constParam));
+
+	EXPECT_EQ("type<'A,#x>", toString(*typeA));
+	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*typeB));
+	EXPECT_EQ("type<type<'A,'B,#x,#y>,'B,#y,#y>", toString(*typeC));
 
 	// test empty substitution
 	auto all = toVector<TypePtr>(varA, varB, typeA, typeB, typeC);
@@ -88,46 +114,99 @@ TEST(TypeUtils, Substitution) {
 	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varA)));
 	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<'B>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<'B,'B>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<'B,'B>,'B>", toString(*substitution.applyTo(manager, typeC)));
+	EXPECT_EQ("type<'B,#x>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<'B,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<'B,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
 
 	// test one variable replacement
 	substitution = Substitution(varA, constType);
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
 	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<constType>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<constType,'B>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<constType,'B>,'B>", toString(*substitution.applyTo(manager, typeC)));
+	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<constType,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<constType,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+	// test one int type parameter replacement
+	substitution = Substitution(paramVarX, paramVarY);
+	EXPECT_EQ(paramVarY, substitution.applyTo(paramVarX));
+	EXPECT_EQ(paramVarY, substitution.applyTo(paramVarY));
+
+	EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
+	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
+	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+	EXPECT_EQ("type<'A,#y>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<'A,'B,#y,#y>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<'A,'B,#y,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+	// test one int type parameter replacement
+	substitution = Substitution(paramVarY, constParam);
+	EXPECT_EQ(paramVarX, substitution.applyTo(paramVarX));
+	EXPECT_EQ(constParam, substitution.applyTo(paramVarY));
+
+	EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
+	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
+	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+	EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<'A,'B,#x,15>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<'A,'B,#x,15>,'B,15,15>", toString(*substitution.applyTo(manager, typeC)));
+
 
 	// add replacement for variable B
+	substitution = Substitution(varA, constType);
 	substitution.addMapping(varB, typeA);
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("type<'A>", toString(*substitution.applyTo(manager, varB)));
+	EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, varB)));
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<constType>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<constType,type<'A>>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<constType,type<'A>>,type<'A>>", toString(*substitution.applyTo(manager, typeC)));
+	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<constType,type<'A,#x>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<constType,type<'A,#x>,#x,#y>,type<'A,#x>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
 
 	// override replacement for second variable
 	substitution.addMapping(varB, typeB);
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("type<'A,'B>", toString(*substitution.applyTo(manager, varB)));
+	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*substitution.applyTo(manager, varB)));
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<constType>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<constType,type<'A,'B>>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<constType,type<'A,'B>>,type<'A,'B>>", toString(*substitution.applyTo(manager, typeC)));
+	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<constType,type<'A,'B,#x,#y>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<constType,type<'A,'B,#x,#y>,#x,#y>,type<'A,'B,#x,#y>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
 
 
 	// remove one mapping
 	substitution.remMappingOf(varA);
 	EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("type<'A,'B>", toString(*substitution.applyTo(manager, varB)));
+	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*substitution.applyTo(manager, varB)));
 	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<'A>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<'A,type<'A,'B>>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<'A,type<'A,'B>>,type<'A,'B>>", toString(*substitution.applyTo(manager, typeC)));
+	EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, typeA)));
+	EXPECT_EQ("type<'A,type<'A,'B,#x,#y>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+	EXPECT_EQ("type<type<'A,type<'A,'B,#x,#y>,#x,#y>,type<'A,'B,#x,#y>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+
+	// test substitution composition
+	Substitution subA(varA, typeB);
+
+	Substitution subB(varB, constType);
+	subB.addMapping(paramVarX, constParam);
+
+
+	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>)}", toString(subA.getMapping()));
+	EXPECT_EQ("{}", toString(subA.getIntTypeParamMapping()));
+	EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getMapping()));
+	EXPECT_EQ("{#x=15}", toString(subB.getIntTypeParamMapping()));
+
+	Substitution combinedAA = Substitution::compose(manager, subA, subA);
+	Substitution combinedAB = Substitution::compose(manager, subA, subB);
+	Substitution combinedBA = Substitution::compose(manager, subB, subA);
+	Substitution combinedBB = Substitution::compose(manager, subB, subB);
+
+	EXPECT_EQ("{AP('A)=AP(type<'A,constType,15,#y>), AP('B)=AP(constType)}", toString(combinedAB.getMapping()));
+	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>), AP('B)=AP(constType)}", toString(combinedBA.getMapping()));
+	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
+
+	EXPECT_EQ("{}", toString(combinedAA.getIntTypeParamMapping()));
+	EXPECT_EQ("{#x=15}", toString(combinedAB.getIntTypeParamMapping()));
+	EXPECT_EQ("{#x=15}", toString(combinedBA.getIntTypeParamMapping()));
+	EXPECT_EQ("{#x=15}", toString(combinedBB.getIntTypeParamMapping()));
 }
 
 TEST(TypeUtils, Unification) {
@@ -179,7 +258,7 @@ TEST(TypeUtils, Unification) {
 		EXPECT_EQ("f<'x,g<'y>,'x>", toString(*termA));
 		EXPECT_EQ("f<'z,g<'u>,h<'u>>", toString(*termB));
 
-		ASSERT_PRED2(isUnifyable, termA, termB);
+		ASSERT_PRED2(unifyable, termA, termB);
 
 		auto unifyingMap = *unify(manager, termA, termB);
 		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA)));
@@ -198,7 +277,7 @@ TEST(TypeUtils, Unification) {
 		EXPECT_EQ("('x,array<'y>,'x)", toString(*termA));
 		EXPECT_EQ("('z,array<'u>,vector<'u>)", toString(*termB));
 
-		EXPECT_TRUE(isUnifyable(termA, termB));
+		EXPECT_PRED2(unifyable, termA, termB);
 		auto unifyingMap = *unify(manager, termA, termB);
 		EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termA)));
 		EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termB)));
@@ -206,13 +285,143 @@ TEST(TypeUtils, Unification) {
 	}
 }
 
-bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
-	return isUnifyable(typeA, typeB);
+
+TEST(TypeUtils, Matching) {
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	// create some types to "play"
+	TypeVariablePtr varA = builder.typeVariable("A");
+	TypeVariablePtr varB = builder.typeVariable("B");
+
+	TypePtr constType = builder.genericType("constType");
+
+	TypePtr genTypeA = builder.genericType("type", toVector<TypePtr>(varA));
+	TypePtr genTypeB = builder.genericType("type", toVector<TypePtr>(varB));
+
+	TypePtr specializedType = builder.genericType("type", toVector<TypePtr>(constType));
+
+	TypePtr genIntTypeA = builder.genericType("type", toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
+	TypePtr genIntTypeB = builder.genericType("type", toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('b')));
+	TypePtr specIntType = builder.genericType("type", toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(123)));
+
+
+	// case: one side is a variable
+	EXPECT_PRED2(matchable, varA, constType);
+	EXPECT_PRED2(notMatchable, constType, varA);
+	EXPECT_PRED2(unifyable, varA, constType);
+	EXPECT_PRED2(unifyable, constType, varA);
+
+	// case: both sides are variables
+	EXPECT_PRED2(matchable, varA, varB);
+	EXPECT_PRED2(matchable, varB, varA);
+	EXPECT_PRED2(unifyable, varA, varB);
+	EXPECT_PRED2(unifyable, varB, varA);
+
+	// more complex case: type wit
+	EXPECT_PRED2(matchable, genTypeA, specializedType);
+	EXPECT_PRED2(notMatchable, specializedType, genTypeA);
+	EXPECT_PRED2(matchable, genTypeB, specializedType);
+	EXPECT_PRED2(notMatchable, specializedType, genTypeB);
+
+	EXPECT_PRED2(unifyable, genTypeA, specializedType);
+	EXPECT_PRED2(unifyable, specializedType, genTypeA);
+	EXPECT_PRED2(unifyable, genTypeB, specializedType);
+	EXPECT_PRED2(unifyable, specializedType, genTypeB);
+
+	// case: int type parameter
+	EXPECT_PRED2(matchable, genIntTypeA, specIntType);
+	EXPECT_PRED2(notMatchable, specIntType, genIntTypeA);
+	EXPECT_PRED2(matchable, genIntTypeB, specIntType);
+	EXPECT_PRED2(notMatchable, specIntType, genIntTypeB);
+
+	EXPECT_PRED2(unifyable, genIntTypeA, specIntType);
+	EXPECT_PRED2(unifyable, specIntType, genIntTypeA);
+	EXPECT_PRED2(unifyable, genIntTypeB, specIntType);
+	EXPECT_PRED2(unifyable, specIntType, genIntTypeB);
+
+	// check result of matching process
+	auto unifier = *match(manager, genTypeA, specializedType);
+	EXPECT_EQ(*unifier.applyTo(manager, genTypeA), *unifier.applyTo(manager, specializedType));
 }
 
-bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
-	return !isUnifyable(typeA, typeB);
+
+TEST(TypeUtils, SubTyping) {
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	// check sub-type relation between int and uint
+
+	TypePtr int1 = manager.basic.getInt1();
+	TypePtr int2 = manager.basic.getInt2();
+	TypePtr int4 = manager.basic.getInt4();
+	TypePtr int8 = manager.basic.getInt8();
+	TypePtr intInf = manager.basic.getIntInf();
+
+	TypePtr uint1 = manager.basic.getUInt1();
+	TypePtr uint2 = manager.basic.getUInt2();
+	TypePtr uint4 = manager.basic.getUInt4();
+	TypePtr uint8 = manager.basic.getUInt8();
+	TypePtr uintInf = manager.basic.getUIntInf();
+
+
+	EXPECT_TRUE(isMatching(int8, int4, false));
+	EXPECT_TRUE(isMatching(int8, int4, true));
+
+	EXPECT_TRUE(isMatching(intInf, int4));
+	EXPECT_FALSE(isMatching(int4, intInf));
+
+	// check some cases
+	EXPECT_TRUE(isMatching(int1, int1));
+	EXPECT_TRUE(isMatching(int2, int2));
+	EXPECT_TRUE(isMatching(int4, int4));
+	EXPECT_TRUE(isMatching(int8, int8));
+	EXPECT_TRUE(isMatching(intInf, intInf));
+
+
+	EXPECT_TRUE(isMatching(int2, int1));
+	EXPECT_FALSE(isMatching(int1, int2));
+
+	EXPECT_TRUE(isMatching(int4, int2));
+	EXPECT_FALSE(isMatching(int2, int4));
+
+	EXPECT_TRUE(isMatching(int8, int4));
+	EXPECT_FALSE(isMatching(int4, int8));
+
+	EXPECT_TRUE(isMatching(intInf, int8));
+	EXPECT_FALSE(isMatching(int8, intInf));
+
+
+	EXPECT_TRUE(isMatching(uint1, uint1));
+	EXPECT_TRUE(isMatching(uint2, uint2));
+	EXPECT_TRUE(isMatching(uint4, uint4));
+	EXPECT_TRUE(isMatching(uint8, uint8));
+	EXPECT_TRUE(isMatching(uintInf, uintInf));
+
+	EXPECT_TRUE(isMatching(uint2, uint1));
+	EXPECT_FALSE(isMatching(uint1, uint2));
+
+	EXPECT_TRUE(isMatching(uint4, uint2));
+	EXPECT_FALSE(isMatching(uint2, uint4));
+
+	EXPECT_TRUE(isMatching(uint8, uint4));
+	EXPECT_FALSE(isMatching(uint4, uint8));
+
+	EXPECT_TRUE(isMatching(uintInf, uint8));
+	EXPECT_FALSE(isMatching(uint8, uintInf));
+
+	// cross signed / unsigned tests
+	EXPECT_TRUE(isMatching(int8, uint4));
+	EXPECT_FALSE(isMatching(int8, uint8));
+
+	EXPECT_TRUE(isMatching(int2, uint1));
+	EXPECT_FALSE(isMatching(int4, uint8));
+
+	EXPECT_TRUE(isMatching(intInf, uintInf));
+	EXPECT_FALSE(isMatching(uintInf, intInf));
+
 }
+
 
 TEST(TypeUtils, IntParamUnification) {
 	ASTBuilder builder;
@@ -302,7 +511,7 @@ TEST(TypeUtils, ArrayVectorRelation) {
 
 	EXPECT_NE(typeA, typeB);
 
-	EXPECT_PRED2(unifyable, typeA, typeB);
+	EXPECT_PRED2(matchable, typeA, typeB);
 
 }
 

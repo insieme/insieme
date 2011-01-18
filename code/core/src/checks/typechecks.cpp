@@ -73,22 +73,22 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
 	FunctionTypePtr functionType = CAST(FunctionType, funType);
-	TypeList argumentTypes = functionType->getArgumentTypes();
+	TypeList parameterTypes = functionType->getArgumentTypes();
 	TypePtr returnType = functionType->getReturnType();
 
 	// Obtain argument type
-	TypeList parameterTypes;
-	transform(address->getArguments(), back_inserter(parameterTypes), [](const ExpressionPtr& cur) {
+	TypeList argumentTypes;
+	transform(address->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
 		return cur->getType();
 	});
 
 	// 1) check number of arguments
-	int numArguments = argumentTypes.size();
 	int numParameter = parameterTypes.size();
+	int numArguments = argumentTypes.size();
 	if (numArguments != numParameter) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
-						format("Wrong number of arguments - expected: %d, actual: %d", numArguments, numParameter),
+						format("Wrong number of arguments - expected: %d, actual: %d", numParameter, numArguments),
 						Message::ERROR));
 		return res;
 	}
@@ -96,7 +96,8 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	// 2) check types of arguments => by computing most general unifier
 	TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
 	TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
-	auto mgu = unify(manager, argumentTuple, parameterTuple);
+
+	auto mgu = match(manager, parameterTuple, argumentTuple);
 	if (!mgu) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
@@ -108,12 +109,12 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 		return res;
 	}
 
-	// 3) check return type - which has to be unifyable with modified function return value.
+	// 3) check return type - which has to be matched with modified function return value.
 	TypePtr retType = mgu->applyTo(manager, returnType);
 	TypePtr resType = address->getType();
 
 	// cross check with return-type inference mechanism (debugging only)
-	assert(*retType == *deduceReturnType(functionType, parameterTypes)
+	assert(*retType == *deduceReturnType(functionType, argumentTypes)
 			&& "Type checker is not matching automatic deduction!");
 
 	if (*retType != *resType) {
@@ -244,8 +245,8 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 	try {
 		LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
 
-		// TODO: only allow more specialized type - not unified!
-		if (!isUnifyable(buildIn->getType(),address->getType())) {
+		// check whether used one is special case of build-in version
+		if (!isMatching(buildIn->getType(),address->getType())) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_LITERAL,
 					format("Deviating type of build in literal %s - expected: %s, actual: %s",
