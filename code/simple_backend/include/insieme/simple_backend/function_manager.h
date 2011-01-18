@@ -83,7 +83,15 @@ protected:
 
 public:
 
+	/**
+	 * A constructor for this manager being initialized with the conversion context.
+	 */
 	FunctionManager(Converter& conversionContext) : cc(conversionContext) { }
+
+	/**
+	 * A virtual destructor introduced to support proper sub-classing.
+	 */
+	virtual ~FunctionManager() {};
 
 	/**
 	 * Appends the name of the external function to the given context.
