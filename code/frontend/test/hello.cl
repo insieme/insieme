@@ -37,58 +37,6 @@
 #include "ocl_device.h"
 
 #pragma insieme mark
-__kernel void hello(__global double* g, __local float* l, int i) {
-    float2 x = (float2)0;
-    float2 y;// = {i, i+0.5};
-
-    x = 2.0f + y;
-
-    int gid = get_global_id(0);
-    uint lid = get_local_id(0);
-    l[lid] = g[gid];
-    l[2*lid] = g[gid+i];
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-    x.x = l[i];
-    x.y = native_sin(l[lid+i]);
-
-    x = x+y;
-
-    g[gid] = x.x * x.y;
+__kernel void hello(__global double* g, __local float* l, double i) {
+    l[0] = 0.0;
 }
-/*
-#pragma insieme mark
-__kernel void mandelbrot (__global int * mandelbrotImage,
-                          const    float scale,
-                          const    uint maxIterations,
-                          const    int width
-                          )
-{
-    int tid = get_global_id(0);
-
-    int i = tid%width;
-    int j = tid/width;
-
-    float x0 = ((i*scale) - ((scale/2)*width))/width;
-    float y0 = ((j*scale) - ((scale/2)*width))/width;
-
-    float x = x0;
-    float y = y0;
-
-    float x2 = x*x;
-    float y2 = y*y;
-
-    float scaleSquare = scale * scale;
-
-    uint iter=0;
-    for(iter=0; (x2+y2 <= scaleSquare) && (iter < maxIterations); ++iter)
-    {
-        y = 2 * x * y + y0;
-        x = x2 - y2   + x0;
-
-        x2 = x*x;
-        y2 = y*y;
-    }
-    mandelbrotImage[tid] = 255*iter/maxIterations;
-}
-*/

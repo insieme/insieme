@@ -46,7 +46,6 @@ namespace backend {
 namespace ocl {
 
 using namespace insieme::ocl;
-using namespace insieme::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
@@ -72,7 +71,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	VariableManager variableManager;
 	converter.setVariableManager(&variableManager);
 
-	FunctionManager functionManager(converter);
+	OclFunctionManager functionManager(converter);
 	converter.setFunctionManager(&functionManager);
 
 	// conduct conversion
@@ -81,23 +80,158 @@ TargetCodePtr convert(const ProgramPtr& source) {
 
 OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
 
-unsigned initialVarName(std::map<unsigned, unsigned>& varNameMap, unsigned value){
+OclFunctionManager::OclFunctionManager(Converter& conversionContext) : FunctionManager(conversionContext) { }
+
+
+
+
+
+//// ------------------------------------ OclStmtConvert ---------------------------- ////
+
+namespace {
+std::ostream& OclprintFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param,
+		VariableManager& varManager, TypeManager& typeManager, NameManager& nameManager) {
+
+		// register ref-based variable within the variable manager
+		if (param->getType()->getNodeType() == NT_RefType) {
+			VariableManager::VariableInfo info;
+			info.location = VariableManager::HEAP;
+			varManager.addInfo(param, info);
+		}
+
+		// format parameter using type manager
+		std::cout << "--------------- IT WORKS!!!!!You are inside OclprintFunctionParamter ---------------\n";
+		return out << typeManager.formatParamter(context, param->getType(), nameManager.getVarName(param), true);
+}
+}
+
+CodePtr OclFunctionManager::resolve(const LambdaPtr& lambda) {
+	std::cout << "--------------- IT WORKS!!!!! You are inside OclFunction::resolve ---------------\n";
+	// lookup definition
+	auto pos = functions.find(lambda);
+	if (pos != functions.end()) {
+		return pos->second;
+	}
+
+	// provide some manager
+	VariableManager& varManager = cc.getVariableManager();
+	TypeManager& typeManager = cc.getTypeManager();
+	NameManager& nameManager = cc.getNameManager();
+
+	// get name
+	string name = nameManager.getName(lambda);
+	FunctionTypePtr funType = lambda->getType();
+
+
+	// create function code for lambda
+	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
+	CodeStream& cs = function->getCodeStream();
+
+	// write the function header
+	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
+
+	if (lambda->isCapturing()) {
+		cs << "void* _capture";
+		if (!lambda->getParameterList().empty()) {
+			cs << ", ";
+		}
+	}
+	if (!lambda->getParameterList().empty()) {
+		cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& os, const VariablePtr& param) {
+			OclprintFunctionParamter(os, function, param, (this->cc).getVariableManager(),(this->cc).getTypeManager(),(this->cc).getNameManager());
+			// printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeManager(), cc.getNameManager())
+		});
+	}
+	cs << ")";
+
+
+	// add function body
+	cs << " {" << CodeStream::indR << "\n";
+
+	if (lambda->isCapturing()) {
+		// extract capture list
+		cs << "// --------- Captured Stuff - Begin -------------\n";
+
+		// get name of struct from type manager
+		string structName = typeManager.getFunctionTypeDetails(funType).functorName;
+
+		int i = 0;
+		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
+			VariableManager::VariableInfo info;
+			info.location = VariableManager::HEAP;
+
+			varManager.addInfo(var, info);
+
+			// standard handling
+			cs << typeManager.formatParamter(function, var->getType(), nameManager.getVarName(var), false);
+			cs << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
+
+		});
+
+		cs << "// --------- Captured Stuff -  End  -------------\n";
+	}
+
+	// generate the function body
+	cc.getStmtConverter().convert(lambda->getBody(), function);
+
+	cs << CodeStream::indL << "\n}\n";
+	cs << "\n";
+
+	// register and return result
+	functions.insert(std::make_pair(lambda, function));
+	return function;
+}
+
+
+
+
+
+
+//// ------------------------------------ OclStmtConvert ---------------------------- ////
+
+typedef std::map<unsigned, unsigned> varNameMapType;
+typedef std::map<unsigned, core::VariablePtr> qualifierMapType;
+
+unsigned getVarName(varNameMapType& varNameMap, unsigned value){
 	for (auto fit = varNameMap.find(value); fit != varNameMap.end(); fit = varNameMap.find(value)){
 		value = fit->second;
 	}
 	return value;
 }
 
-void addQualifier(std::map<unsigned, VariablePtr>& qualifierMap, unsigned value, 
+void addQualifier(qualifierMapType& qualifierMap, unsigned value, 
 					enum AddressSpaceAnnotation::addressSpace as) {
+	auto&& fit = qualifierMap.find(value);
+	if (fit != qualifierMap.end()) {
+		const VariablePtr& var = fit->second;
+		if(!var->hasAnnotation(AddressSpaceAnnotation::KEY)){
+			AddressSpaceAnnotationPtr an(new AddressSpaceAnnotation(as));
+			var->addAnnotation(an);
+		}
+	}
+}
 
+void moveQualifier(qualifierMapType& qualifierMap, unsigned oldName, unsigned newName){
+	auto&& fit = qualifierMap.find(oldName);
+	auto&& fit2 = qualifierMap.find(newName);
+	if (fit != qualifierMap.end() && fit2 != qualifierMap.end()) {
+		VariablePtr& oldVar = fit->second;
+		VariablePtr& newVar = fit2->second;
+		if(oldVar->hasAnnotation(AddressSpaceAnnotation::KEY)){
+			newVar->addAnnotation(oldVar->getAnnotation(AddressSpaceAnnotation::KEY));
+			oldVar->remAnnotation(AddressSpaceAnnotation::KEY);
+		}
+	}
+	else {
+		assert(false && "WTF: varName not in qualifierMap!!");
+	}
 }
 
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 	ASTBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
 		std::cout << "Function with some Opencl Annotation...\n";
-		BaseAnnotationPtr annotations = ptr->getAnnotation(BaseAnnotation::KEY);
+		BaseAnnotationPtr&& annotations = ptr->getAnnotation(BaseAnnotation::KEY);
 		assert(annotations && "BaseAnnotation is empty");
 		for(BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
 			iter < annotations->getAnnotationListEnd(); ++iter) {
@@ -108,33 +242,16 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const FunctionTypePtr& oldFuncType = dynamic_pointer_cast<const FunctionType>(ptr->getType());
 				
 				// Memory Qualifier Map
-				std::map<unsigned, VariablePtr> qualifierMap;
+				qualifierMapType qualifierMap;
 				// Variable Name Map
-				std::map<unsigned, unsigned> varNameMap;
+				varNameMapType backwardVarNameMap;
+				varNameMapType forwardVarNameMap;
 				
 				// new paramList (case IR created from OpenCL frontend)
-				Lambda::ParamList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){
-					VariablePtr tmpVar = oldParams.at(i);
-					newParams.push_back(tmpVar);
+					const VariablePtr& tmpVar = oldParams.at(i);
 					qualifierMap.insert(std::make_pair(tmpVar->getId(), tmpVar));
 				}
-				
-				// TEST
-				/*
-				std::map<unsigned, VariablePtr>::const_iterator fit = qualifierMap.find(24);
-				assert(fit != qualifierMap.end() && "WTF -> element not in the map!");
-				const VariablePtr& temp = fit->second;
-				
-				AddressSpaceAnnotationPtr globalMem(new AddressSpaceAnnotation(AddressSpaceAnnotation::addressSpace::GLOBAL));
-				AddressSpaceAnnotationPtr localMem(new AddressSpaceAnnotation(AddressSpaceAnnotation::addressSpace::LOCAL));
-				
-				temp->addAnnotation(globalMem);
-				
-				if(temp->hasAnnotation(AddressSpaceAnnotation::KEY)) {
-				}
-				*/
-				// END TEST
 				
 				// new functionType
 				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
@@ -144,9 +261,8 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				for (uint i = 0; i < oldArgs.size()-2; i++){
 					newArgs.push_back(oldArgs.at(i));
 				}
-				const FunctionTypePtr newFuncType = builder.functionType(newArgs, retType);
+				const FunctionTypePtr& newFuncType = builder.functionType(newArgs, retType);
 				
-				// reverse
 				const vector<StatementPtr>& bodyCompoundStmt = oldBody->getStatements();
 				
 				const CallExprPtr& globalParallel = dynamic_pointer_cast<const CallExpr>(bodyCompoundStmt.back());
@@ -158,30 +274,33 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				// Check for global variables
 				const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls();
 				for_each(globalJobDecls, [&](const DeclarationStmtPtr& curDecl) {
-					unsigned newValue = (curDecl->getVariable())->getId();
-					unsigned  oldValue = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
-					varNameMap.insert(std::make_pair(newValue, oldValue));
-					unsigned firstVal = initialVarName(varNameMap, oldValue);
+					unsigned newName = (curDecl->getVariable())->getId();
+					unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
+					
+					backwardVarNameMap.insert(std::make_pair(newName, oldName));
+					forwardVarNameMap.insert(std::make_pair(oldName, newName));
+					unsigned firstVal = getVarName(backwardVarNameMap, oldName);
 					// Add global qualifier
 					addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::GLOBAL);
 				});
 				
 				const CaptureInitExprPtr& globalCapture =  dynamic_pointer_cast<const CaptureInitExpr>(globalJob->getDefaultStmt());
 				
-				const std::vector<ExpressionPtr> globalNewValues = globalCapture->getValues();			
+				const std::vector<ExpressionPtr>& globalNewValues = globalCapture->getValues();			
 				
 				const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCapture->getLambda());
 				
-				const std::vector<VariablePtr> globalOldValues = globalParFct->getCaptureList();
+				const std::vector<VariablePtr>& globalOldValues = globalParFct->getCaptureList();
 				
 				// check for local variables
-				auto iter2 = globalNewValues.begin();
-				for (auto iter = globalOldValues.begin(); iter != globalOldValues.end(); ++iter, ++iter2){
-					unsigned newValue = (*iter)->getId();
-					unsigned  oldValue = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
+				auto&& iter2 = globalNewValues.begin();
+				for (auto&& iter = globalOldValues.begin(); iter != globalOldValues.end(); ++iter, ++iter2){
+					unsigned newName = (*iter)->getId();
+					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
 					
-					varNameMap.insert(std::make_pair(newValue, oldValue));
-					unsigned firstVal = initialVarName(varNameMap, oldValue);
+					backwardVarNameMap.insert(std::make_pair(newName, oldName));
+					forwardVarNameMap.insert(std::make_pair(oldName, newName));
+					unsigned firstVal = getVarName(backwardVarNameMap, oldName);
 					// Add local qualifier
 					addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::LOCAL);
 				}
@@ -198,34 +317,58 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				const vector<DeclarationStmtPtr>& localJobDecls = localJob->getLocalDecls();
 				for_each(localJobDecls, [&](const DeclarationStmtPtr& curDecl) {
-					varNameMap.insert(std::make_pair((curDecl->getVariable())->getId(), 
-							(dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId()));
+					unsigned newName = (curDecl->getVariable())->getId(); 
+					unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
+						
+					backwardVarNameMap.insert(std::make_pair(newName, oldName));
+					forwardVarNameMap.insert(std::make_pair(oldName, newName));
 				});
 				
 				const CaptureInitExprPtr& localCapture =  dynamic_pointer_cast<const CaptureInitExpr>(localJob->getDefaultStmt());
 				
-				const std::vector<ExpressionPtr> localNewValues = localCapture->getValues();
+				const std::vector<ExpressionPtr>& localNewValues = localCapture->getValues();
 				
 				const LambdaExprPtr& localParFct = dynamic_pointer_cast<const LambdaExpr>(localCapture->getLambda());
 				
-				const std::vector<VariablePtr> localOldValues = localParFct->getCaptureList();
+				const std::vector<VariablePtr>& localOldValues = localParFct->getCaptureList();
 				
 				iter2 = localNewValues.begin();
-				for (auto iter = localOldValues.begin(); iter != localOldValues.end(); ++iter, ++iter2){
-					varNameMap.insert(std::make_pair((*iter)->getId(), 
-							(dynamic_pointer_cast<const Variable>(*iter2))->getId()));
+				for (auto&& iter = localOldValues.begin(); iter != localOldValues.end(); ++iter, ++iter2){
+					unsigned newName = (*iter)->getId(); 
+					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
+					
+					backwardVarNameMap.insert(std::make_pair(newName, oldName));
+					forwardVarNameMap.insert(std::make_pair(oldName, newName));
+					qualifierMap.insert(std::make_pair(newName, *iter));
+				}
+				
+				Lambda::ParamList newParams;
+				for (uint i = 0; i < oldParams.size()-2; i++){
+					unsigned oldName = (oldParams.at(i))->getId();
+					unsigned newName = getVarName(forwardVarNameMap, oldName);
+					moveQualifier(qualifierMap, oldName, newName);
+					auto&& fit = qualifierMap.find(newName);
+					if (fit != qualifierMap.end()) {
+						newParams.push_back(fit->second);
+					} else {
+						assert(false && "WTF: varName not in qualifierMap!!");
+					}
 				}
 				
 				const CompoundStmtPtr& localParBody = dynamic_pointer_cast<const CompoundStmt>(localParFct->getBody());
-				// FIXME: check in localParPoby all variables and change name to them(or change the name of the function parameters)
 				
-				
-				for (auto iter = varNameMap.begin(); iter != varNameMap.end(); ++iter)
+				/*for (auto iter = backwardVarNameMap.begin(); iter != backwardVarNameMap.end(); ++iter)
 					std::cout << iter->first << " -> " << iter->second << std::endl;
+				
+				std::cout << "_____NUOVA_____\n";
+					
+				for (auto iter = forwardVarNameMap.begin(); iter != forwardVarNameMap.end(); ++iter)
+					std::cout << iter->first << " -> " << iter->second << std::endl;*/
 				
 				//LOG(INFO) << core::printer::PrettyPrinter(localParBody);
 				
-				LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, localParBody);
+				LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, localParBody);
+				// FIXME: aggiungere annotazione kernel
 				
 				FunctionManager& funManager = cc.getFunctionManager();
 				getCodeStream() << funManager.getFunctionName(defCodePtr, newFunc);
