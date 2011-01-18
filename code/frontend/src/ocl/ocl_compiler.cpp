@@ -307,10 +307,9 @@ private:
         }
     }
 
-    core::CallExprPtr resolveNative(const core::CallExprPtr& nativeOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args,
-            size_t preambleLength) {
+    core::CallExprPtr resolveNative(const string& name, size_t preambleLength, const core::TypePtr& type,
+            const core::ExpressionPtr accuracyFct,const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
-
         // transform arguments
         for_each(args, [&](core::ExpressionPtr arg){
             arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
@@ -337,10 +336,9 @@ private:
             }
             fType = builder.functionType(scalarArgs, elemType);
         }
-
         if(name  == "native_divide")
             literal = BASIC.getRealDiv();
-        else if(name == "mul24")
+        else if(name == "mul24") // special threatement bc we don't know the type at fct call level
             literal = BASIC.isUnsignedInt(elemType) ? BASIC.getUnsignedIntMul() : BASIC.getSignedIntMul();
         else
             literal = builder.literal(name.substr(preambleLength,name.size()), fType);
@@ -441,24 +439,28 @@ public:
                 if(literal->getValue().find("native_") != string::npos) {
                     assert(args.size() >= 1 && "Native mathematical operations must have at least 1 arguments");
 
-                    return resolveNative(call, literal->getValue(), literal->getType(), args, 7);
+                    return resolveNative(literal->getValue(), 7, literal->getType(),
+                            (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
                 if(literal->getValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
                     assert(args.size() >= 1 && "Mathematical operations must have at least 1 arguments");
 
-                    return resolveNative(call, literal->getValue(), literal->getType(), args, 5);
+                    return resolveNative(literal->getValue(), 5, literal->getType(),
+                            (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
                 if(literal->getValue() == "mul24") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
-                    assert(args.size() == 2 && "Mathematical operations must have at least 1 arguments");
+                    assert(args.size() == 2 && "mul24 must have 2 arguments");
 
-                    return resolveNative(call, literal->getValue(), literal->getType(), args, 0);
-                    core::ExpressionPtr op = BASIC.isUnsignedInt(args.at(0)->getType()) ? BASIC.getUnsignedIntMul() : BASIC.getSignedIntMul();
-                    // transform arguments
-                    for_each(args, [&](core::ExpressionPtr arg){
-                        arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
-                    });
+                    return resolveNative(literal->getValue(), 0, literal->getType(), BASIC.getAccuracyFastBinary(), args);
+                }
 
-                    return builder.callExpr(builder.callExpr(BASIC.getAccuracyFastBinary(), op), args);
+                if(literal->getValue() == "fma") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
+                    assert(args.size() == 3 && "fma must have 3 arguments");
+
+                    // construct function type: all elements have the same (real) datatype, but only 2 instead of three arguments
+                    core::TypePtr fctType = builder.functionType(toVector(args.at(0)->getType(), args.at(0)->getType()), args.at(0)->getType());
+                    return resolveNative("real.add", 0, fctType, BASIC.getAccuracyHighBinary(), toVector((core::ExpressionPtr)resolveNative(
+                        "real.mul", 0, fctType, BASIC.getAccuracyHighBinary(), toVector(args.at(0), args.at(1))) , args.at(2)));
                 }
 
                 // vector conversion function
@@ -959,11 +961,12 @@ public:
                                 builder.uintLit(wgs[0]), builder.uintLit(wgs[1]), builder.uintLit(wgs[2]))));
                         newBodyStmts.push_back(lrd);
                     }
-
-                    //declare group range
+                    //declare group range TODO fix error of checker
+                    core::TypePtr vecUint = builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)));
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
-                            builder.callExpr(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))),
-                            builder.callExpr(BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
+                            builder.callExpr(vecUint,
+                            builder.callExpr(builder.functionType(toVector(vecUint, vecUint), vecUint ),
+                                    BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
 
                     newBodyStmts.push_back(groupRdecl);
 
