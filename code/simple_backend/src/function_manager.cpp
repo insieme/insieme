@@ -42,25 +42,6 @@ namespace insieme {
 namespace simple_backend {
 
 namespace {
-
-	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param,
-			VariableManager& varManager, TypeManager& typeManager, NameManager& nameManager) {
-
-		// register ref-based variable within the variable manager
-		if (param->getType()->getNodeType() == NT_RefType) {
-			VariableManager::VariableInfo info;
-			info.location = VariableManager::HEAP;
-			varManager.addInfo(param, info);
-		}
-
-		// format parameter using type manager
-		return out << typeManager.formatParamter(context, param->getType(), nameManager.getVarName(param), true);
-	}
-
-	std::ostream& printFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param, Converter& cc) {
-		return printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeManager(), cc.getNameManager());
-	}
-
 	string getSignatureOf(const CodePtr& context, const FunctionTypePtr& funType, const string& name, TypeManager& typeManager) {
 		std::stringstream ss;
 
@@ -79,10 +60,19 @@ namespace {
 
 		return ss.str();
 	}
-
 }
 
+std::ostream& FunctionManager::appendFunctionParameter(std::ostream& out, CodePtr& context, const VariablePtr& param) {
+	// register ref-based variable within the variable manager
+	if (param->getType()->getNodeType() == NT_RefType) {
+		VariableManager::VariableInfo info;
+		info.location = VariableManager::HEAP;
+		(cc.getVariableManager()).addInfo(param, info);
+	}
 
+	// format parameter using type manager
+	return out << (cc.getTypeManager()).formatParamter(context, param->getType(), (cc.getNameManager()).getVarName(param), true);
+}
 
 string FunctionManager::getFunctionName(const CodePtr& context, const core::LiteralPtr& external) {
 
@@ -228,7 +218,7 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	// create function code for lambda
 	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
 	CodeStream& cs = function->getCodeStream();
-
+	addFunctionPrefix(cs, lambda);
 	// write the function header
 	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
 
@@ -240,7 +230,7 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	}
 	if (!lambda->getParameterList().empty()) {
 		cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& os, const VariablePtr& param) {
-			printFunctionParamter(os, function, param, this->cc);
+			appendFunctionParameter(os, function, param);
 		});
 	}
 	cs << ")";

@@ -43,6 +43,9 @@ const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
 
 const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
+const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+
+
 void KernelFctAnnotation::setKernelFct(bool isKernelFct) {
     kf = isKernelFct;
 }

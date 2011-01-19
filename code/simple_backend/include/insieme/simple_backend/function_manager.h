@@ -103,8 +103,9 @@ public:
 
 	string getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda);
 
-private:
-	
+protected:
+	virtual std::ostream& appendFunctionParameter(std::ostream& out, CodePtr& context, const VariablePtr& param);
+	virtual void addFunctionPrefix(CodeStream& cs, const core::LambdaPtr& lambda) { }
 	virtual CodePtr resolve(const LambdaDefinitionPtr& definition);
 	virtual CodePtr resolve(const LambdaPtr& lambda);
 

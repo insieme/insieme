@@ -75,19 +75,22 @@ class Annotation {
  ** Should be used to annotate OpenCL kernel functions
  ** Default value is isKernelFct() = true
  ** */
-class KernelFctAnnotation : public Annotation {
+class KernelFctAnnotation : public Annotation , public core::Annotation {
 
 private:
     bool kf;
 public:
+	static const core::StringKey<KernelFctAnnotation> KEY;
 
-    KernelFctAnnotation() : Annotation(), kf(true){ }
+    KernelFctAnnotation() : ocl::Annotation(), core::Annotation(), kf(true){ }
 
     const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
 
     void setKernelFct(bool isKernelFct);
 
     bool isKernelFct() const;
+
+	const core::AnnotationKey* getKey() const { return &KEY; }
 };
 
 /** Annotation class intended to mark store the required work group size if given.
