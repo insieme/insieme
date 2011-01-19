@@ -497,12 +497,15 @@ public:
                     if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
                         case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
+                            core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getInitZero(),
+                                BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
                             // store the variable in list, initialized with zero, will be declared in job shared var list
-                            localVars.push_back(builder.declarationStmt(decl->getVariable(), builder.callExpr(BASIC.getInitZero(),
-                                    BASIC.getTypeLiteral(decl->getVariable()->getType()))));
+                            localVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
-                            // write the variable with it's initialization to the place the declaration was
-                            return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), tryDeref(decl->getInitialization()));
+                            if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
+                                return BASIC.getNoOp();
+                            else // write the variable with it's initialization to the place the declaration was
+                                return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), tryDeref(decl->getInitialization()));
                             break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {

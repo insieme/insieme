@@ -48,6 +48,18 @@
 //#define cl_khr_d3d10_sharing
 
 //OpenCL constants
+#define FLT_DIG        6
+#define FLT_MANT_DIG   24
+#define FLT_MAX_10_EXP +38
+#define FLT_MAX_EXP    +128
+#define FLT_MIN_10_EXP -37
+#define FLT_MIN_EXP    -125
+#define FLT_RADIX      2
+#define FLT_MAX        0x1.fffffep127f
+#define FLT_MIN        0x1.0p-126f
+#define FLT_EPSILON    0x1.0p-23f
+
+
 //TODO change to enums once they are supported
 //enum cl_mem_fence_flags {CLK_LOCAL_MEM_FENCE, CLK_GLOBAL_MEM_FENCE};
 #define CLK_LOCAL_MEM_FENCE 0
@@ -264,7 +276,7 @@ genfun_native(log2)
 genfun_native(log10)
 genfun(log1p)
 genfun(logb)
-genfun3(mad)
+//genfun3(mad)
 genfun2(max) genfunflt(max)
 genfun2(min) genfunflt(min)
 genfun2(maxmag)

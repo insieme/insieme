@@ -687,7 +687,7 @@ public:
 				core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType() :
 				lhs->getType();
 
-		// get basic element type of vectors
+		// get basic element type
         core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 
         // we take care of compound operators first,
@@ -1059,11 +1059,11 @@ public:
         else if(accessor == "y")    pos = "1";
         else if(accessor == "z")	pos = "2";
         else if(accessor == "w")	pos = "3";
-	    else if(accessor.front() == 's'){
+	    else if(accessor.front() == 's' || accessor.front() == 'S'){
         	// the input string is in a form sXXX
         	// we skip the s and return the value to get the number
         	llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
-        	assert(insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 && "String is not a number");
+        	assert(insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 && "Vector accessing string is not a number");
         	pos = numStr;
 	    } else if (accessor.size() <= 4 ){ // opencl vector permutation
             vector<core::ExpressionPtr> args;
