@@ -88,18 +88,9 @@ OclFunctionManager::OclFunctionManager(Converter& conversionContext) : FunctionM
 
 //// ------------------------------------ OclFunctionManager ---------------------------- ////
 
-namespace {
-std::ostream& OclprintFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param,
-		VariableManager& varManager, TypeManager& typeManager, NameManager& nameManager) {
 
-		// register ref-based variable within the variable manager
-		if (param->getType()->getNodeType() == NT_RefType) {
-			VariableManager::VariableInfo info;
-			info.location = VariableManager::HEAP;
-			varManager.addInfo(param, info);
-		}
-
-		// format parameter using type manager and add OpenCL Memory Qualifier
+std::ostream& OclFunctionManager::appendFunctionParameter(std::ostream& out, CodePtr& context, const VariablePtr& param) {
+		// add OpenCL Memory Qualifier to parameter
 		if(param->hasAnnotation(AddressSpaceAnnotation::KEY)){
 			AddressSpaceAnnotationPtr ann = param->getAnnotation(AddressSpaceAnnotation::KEY);
 			switch (ann->getAddressSpace()) {
@@ -119,91 +110,15 @@ std::ostream& OclprintFunctionParamter(std::ostream& out, CodePtr& context, cons
 					break;
 			}
 		}
-		return out << typeManager.formatParamter(context, param->getType(), nameManager.getVarName(param), true);
+		return FunctionManager::appendFunctionParameter(out, context, param);
 }
-}
 
-CodePtr OclFunctionManager::resolve(const LambdaPtr& lambda) {
-	// lookup definition
-	auto pos = functions.find(lambda);
-	if (pos != functions.end()) {
-		return pos->second;
-	}
-
-	// provide some manager
-	VariableManager& varManager = cc.getVariableManager();
-	TypeManager& typeManager = cc.getTypeManager();
-	NameManager& nameManager = cc.getNameManager();
-
-	// get name
-	string name = nameManager.getName(lambda);
-	FunctionTypePtr funType = lambda->getType();
-
-
-	// create function code for lambda
-	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
-	CodeStream& cs = function->getCodeStream();
 	
+void OclFunctionManager::addFunctionPrefix(CodeStream& cs, const LambdaPtr& lambda) {
 	if(lambda->hasAnnotation(KernelFctAnnotation::KEY)){
-		cs << "__kernel "; 
+		cs << "__kernel ";
 	}
-	// write the function header
-	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
-
-	if (lambda->isCapturing()) {
-		cs << "void* _capture";
-		if (!lambda->getParameterList().empty()) {
-			cs << ", ";
-		}
-	}
-	if (!lambda->getParameterList().empty()) {
-		cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& os, const VariablePtr& param) {
-			OclprintFunctionParamter(os, function, param, (this->cc).getVariableManager(),(this->cc).getTypeManager(),(this->cc).getNameManager());
-		});
-	}
-	cs << ")";
-
-
-	// add function body
-	cs << " {" << CodeStream::indR << "\n";
-
-	if (lambda->isCapturing()) {
-		// extract capture list
-		cs << "// --------- Captured Stuff - Begin -------------\n";
-
-		// get name of struct from type manager
-		string structName = typeManager.getFunctionTypeDetails(funType).functorName;
-
-		int i = 0;
-		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
-			VariableManager::VariableInfo info;
-			info.location = VariableManager::HEAP;
-
-			varManager.addInfo(var, info);
-
-			// standard handling
-			cs << typeManager.formatParamter(function, var->getType(), nameManager.getVarName(var), false);
-			cs << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
-
-		});
-
-		cs << "// --------- Captured Stuff -  End  -------------\n";
-	}
-
-	// generate the function body
-	cc.getStmtConverter().convert(lambda->getBody(), function);
-
-	cs << CodeStream::indL << "\n}\n";
-	cs << "\n";
-
-	// register and return result
-	functions.insert(std::make_pair(lambda, function));
-	return function;
 }
-
-
-
-
 
 
 //// ------------------------------------ OclStmtConvert ---------------------------- ////
@@ -338,10 +253,8 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				for_each(localJobDecls, [&](const DeclarationStmtPtr& curDecl) {
 					unsigned newName = (curDecl->getVariable())->getId(); 
-					std::cout << "PROVA1: " << newName << "\n";
 					if (dynamic_pointer_cast<const Variable>(curDecl->getInitialization())){
 						unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
-						std::cout << "PROVA2: " << oldName << "\n";
 						
 						backwardVarNameMap.insert(std::make_pair(newName, oldName));
 						forwardVarNameMap.insert(std::make_pair(oldName, newName));
@@ -404,22 +317,12 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				const CompoundStmtPtr& localParBody = dynamic_pointer_cast<const CompoundStmt>(localParFct->getBody());
 				
-				//const vector<StatementPtr>& localParBodyStmts = localParBody->getStatements();
 				for_each(localParBody->getStatements(), [&](const StatementPtr& curStmt) {
 					newRenameBodyDecls.push_back(curStmt);
 				});
 				
 				CompoundStmtPtr newBody = builder.compoundStmt(newRenameBodyDecls);
 				
-				
-				// body final compoundStmt
-				//vector<StatementPtr> stmtList;
-				//for_each(newBodyDecls, [&](const DeclarationStmtPtr& curDecl) {
-				//}
-				
-				//CompoundStmtPtr newBody = builder.compoundStmt();
-				
-				//
 				for (uint i = 0; i < oldArgs.size()-2; i++){
 					newArgs.push_back(oldArgs.at(i));
 				}

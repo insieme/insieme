@@ -47,7 +47,8 @@ simple_backend::TargetCodePtr convert(const core::ProgramPtr& source);
 class OclFunctionManager : public simple_backend::FunctionManager {
 public:
 	OclFunctionManager(simple_backend::Converter& conversionContext);
-	simple_backend::CodePtr resolve(const core::LambdaPtr& lambda);
+	std::ostream& appendFunctionParameter(std::ostream& out, simple_backend::CodePtr& context, const core::VariablePtr& param);
+	void addFunctionPrefix(simple_backend::CodeStream& cs, const core::LambdaPtr& lambda);
 };
 
 class OclStmtConvert : public simple_backend::StmtConverter {
