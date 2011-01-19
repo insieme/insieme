@@ -213,6 +213,7 @@ LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
 }
 
 ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
+std::cout << "HERE we are\n";
     // Convert casts form scalars to vectors to vector init exrpessions
     if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
         if(pimpl->nm.basic.isScalarType(subExpr->getType())) {
@@ -229,6 +230,28 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
                 pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
 
             return retExpr;
+        }
+    }
+
+
+    // check for casts from salar pointers to vector pointers
+    if(core::ArrayTypePtr array = dynamic_pointer_cast<const core::ArrayType>(type)) {
+        core::RefTypePtr refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
+        core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(refType->getElementType());
+        core::ArrayTypePtr castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
+        if(castedArray && vt) {
+            // check if they have the same type
+            assert(castedArray->getElementType() == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+            core::RefTypePtr innerRefType = dynamic_pointer_cast<const core::RefType>(vt->getElementType());
+            core::RefTypePtr rightRefType = dynamic_pointer_cast<const core::RefType>(castedArray->getElementType());
+
+            // if both were ref types, we have to check their element types again
+            if(innerRefType && rightRefType)
+                assert(innerRefType->getElementType() == rightRefType->getElementType() &&
+                        "cast from array to array of vectors only allowed within the same (reference)type");
+
+
+            return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
         }
     }
 

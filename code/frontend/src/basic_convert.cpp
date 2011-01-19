@@ -195,12 +195,13 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			//check if the declaration has attribute __global
 			if(sr == "__global") {
 				// keywords global and local are only allowed for parameters
-				if(isa<const clang::ParmVarDecl>(varDecl)) {
+
+				if(isa<const clang::ParmVarDecl>(varDecl) || varDecl->getType().getTypePtr()->isPointerType()) {
 					VLOG(2) << "           OpenCL address space __global";
 					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL ));
 					continue;
 				}
-				ss << "Address space __global not allowed for local variable";
+				ss << "Address space __global not allowed for local scalar variable";
 				throw &ss;
 			}
 

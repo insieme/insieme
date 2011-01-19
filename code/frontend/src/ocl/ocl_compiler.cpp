@@ -512,11 +512,16 @@ public:
                             privateVars.push_back(decl->getVariable());
                             break;
                         }
+                        case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
+                            core::TypePtr declType = tryDeref(decl->getVariable())->getType();
+
+                            // only pointers can have global scope inside a kernel body
+                            assert(declType->getNodeType() == core::NodeType::NT_ArrayType && "Address space GLOBAL not allowed for local scalar variables");
+
+                            break;
+                        }
                         case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
                             assert(false && "Address space CONSTANT not allowed for local variables");
-                        }
-                        case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
-                            assert(false && "Address space GLOBAL not allowed for local variables");
                         }
                         default:
                             assert(false && "Unexpected OpenCL address space attribute for local variable");
@@ -532,7 +537,6 @@ public:
 
         // translate casts from scalars to OpenCL vectors to vector init expressions
         // moved to expr_convert.cpp
-//        if(core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(element)) {
 
         return element->substitute(builder.getNodeManager(), *this);
     }
