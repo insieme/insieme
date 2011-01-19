@@ -50,49 +50,6 @@ namespace frontend {
 namespace ocl {
 
 namespace {
-/* not needed any more
-core::LambdaExprPtr KernelData::buildGetId(enum OCL_PAR_LEVEL opl) {
-    if(opl == OPL_GLOBAL) {
-        // do complicated stuff
-    } else {
-        core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1 : 0);
-        core::VariablePtr idx = builder.variable(BASIC.getUInt4());
-        core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
-
-        core::ExpressionPtr one = builder.uintLit(1);
-        core::ExpressionPtr two = builder.uintLit(2);
-
-        core::ReturnStmtPtr id0 = builder.returnStmt(builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level),
-                vecAccess(boundaries, two)), vecAccess(boundaries, one)));
-
-        core::ReturnStmtPtr id1 = builder.returnStmt(builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level),
-                vecAccess(boundaries, two)), vecAccess(boundaries, one)));
-
-        core::ReturnStmtPtr id2 = builder.returnStmt(builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level), vecAccess(boundaries, two)));
-
-        vector<core::SwitchStmt::Case> cases;
-
-        cases.push_back(std::make_pair(builder.uintLit(0), id0));
-        cases.push_back(std::make_pair(builder.uintLit(1), id1));
-        cases.push_back(std::make_pair(builder.uintLit(2), id2));
-
-        core::SwitchStmtPtr swtch = builder.switchStmt(idx, cases);
-
-        core::ASTBuilder::CaptureInits capture;
-
-        capture[opl == OPL_GROUP ? numGroups : localRange] = boundaries;
-
-        std::vector<core::StatementPtr> body;
-//        core::FunctionTypePtr funTy = builder.f
-
-        return builder.lambdaExpr(BASIC.getUInt4(), swtch, toVector(boundaries),
-            toVector(idx));
-    }
-
-}*/
 
 core::CallExprPtr KernelData::calcIdidx0(core::LiteralPtr& level, core::VariablePtr& boundaries){
     core::ExpressionPtr one = builder.uintLit(1u);
@@ -294,6 +251,14 @@ class KernelMapper : public core::transform::CachedNodeMapping {
     KernelData& kd;
 
 private:
+    core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const {
+        // core::ExpressionPtr retExpr = expr;
+        if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+            return builder.callExpr( refTy->getElementType(), BASIC.getRefDeref(), expr );
+        }
+        return expr;
+    }
+
 
     void append(std::vector<core::VariablePtr>& sink, std::vector<core::VariablePtr>& source) {
         for(std::vector<core::VariablePtr>::iterator I = source.begin(), E = source.end(); I != E; I++) {
@@ -532,8 +497,12 @@ public:
                     if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
                         case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
-                            localVars.push_back(decl);
-                            return builder.getNodeManager().basic.getNoOp();
+                            // store the variable in list, initialized with zero, will be declared in job shared var list
+                            localVars.push_back(builder.declarationStmt(decl->getVariable(), builder.callExpr(BASIC.getInitZero(),
+                                    BASIC.getTypeLiteral(decl->getVariable()->getType()))));
+
+                            // write the variable with it's initialization to the place the declaration was
+                            return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), tryDeref(decl->getInitialization()));
                             break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {
