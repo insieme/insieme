@@ -36,7 +36,16 @@
 
 #include "ocl_device.h"
 
+float sum () {
+	return 42.0;
+}
 #pragma insieme mark
-__kernel void hello(__global double* g, __local float* l, double i) {
-    l[0] = 0.0;
+__kernel void hello(__global double* a, __local float* b, __global double* c, int d, __global float g) {
+	int pp = 4;
+	__local float e = g;
+	//e += 1.1;
+	//__local float e = sum();
+	/*__local float f = 1.0;
+	e = c[0] + b[0];
+	c[0] = e + f;*/
 }

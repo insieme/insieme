@@ -406,7 +406,7 @@ public:
 		visit(node);
 	}
 
-private:
+protected:
 
 	void visitNode(const NodePtr& node) {
 		getCodeStream() << "<?>" << toString(*node) << "</?>";

@@ -86,7 +86,7 @@ OclFunctionManager::OclFunctionManager(Converter& conversionContext) : FunctionM
 
 
 
-//// ------------------------------------ OclStmtConvert ---------------------------- ////
+//// ------------------------------------ OclFunctionManager ---------------------------- ////
 
 namespace {
 std::ostream& OclprintFunctionParamter(std::ostream& out, CodePtr& context, const VariablePtr& param,
@@ -99,14 +99,31 @@ std::ostream& OclprintFunctionParamter(std::ostream& out, CodePtr& context, cons
 			varManager.addInfo(param, info);
 		}
 
-		// format parameter using type manager
-		std::cout << "--------------- IT WORKS!!!!!You are inside OclprintFunctionParamter ---------------\n";
+		// format parameter using type manager and add OpenCL Memory Qualifier
+		if(param->hasAnnotation(AddressSpaceAnnotation::KEY)){
+			AddressSpaceAnnotationPtr ann = param->getAnnotation(AddressSpaceAnnotation::KEY);
+			switch (ann->getAddressSpace()) {
+				case AddressSpaceAnnotation::addressSpace::GLOBAL: 
+					out << "__global ";
+					break;
+				case AddressSpaceAnnotation::addressSpace::LOCAL: 
+					out << "__local ";
+					break;
+				case AddressSpaceAnnotation::addressSpace::CONSTANT: 
+					out << "__constant ";
+					break;
+				case AddressSpaceAnnotation::addressSpace::PRIVATE: 
+					out << "__private ";
+					break;
+				case AddressSpaceAnnotation::addressSpace::size:
+					break;
+			}
+		}
 		return out << typeManager.formatParamter(context, param->getType(), nameManager.getVarName(param), true);
 }
 }
 
 CodePtr OclFunctionManager::resolve(const LambdaPtr& lambda) {
-	std::cout << "--------------- IT WORKS!!!!! You are inside OclFunction::resolve ---------------\n";
 	// lookup definition
 	auto pos = functions.find(lambda);
 	if (pos != functions.end()) {
@@ -126,7 +143,10 @@ CodePtr OclFunctionManager::resolve(const LambdaPtr& lambda) {
 	// create function code for lambda
 	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
 	CodeStream& cs = function->getCodeStream();
-
+	
+	if(lambda->hasAnnotation(KernelFctAnnotation::KEY)){
+		cs << "__kernel "; 
+	}
 	// write the function header
 	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
 
@@ -139,7 +159,6 @@ CodePtr OclFunctionManager::resolve(const LambdaPtr& lambda) {
 	if (!lambda->getParameterList().empty()) {
 		cs << join(", ", lambda->getParameterList(), [&, this](std::ostream& os, const VariablePtr& param) {
 			OclprintFunctionParamter(os, function, param, (this->cc).getVariableManager(),(this->cc).getTypeManager(),(this->cc).getNameManager());
-			// printFunctionParamter(out, context, param, cc.getVariableManager(), cc.getTypeManager(), cc.getNameManager())
 		});
 	}
 	cs << ")";
@@ -297,12 +316,9 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				for (auto&& iter = globalOldValues.begin(); iter != globalOldValues.end(); ++iter, ++iter2){
 					unsigned newName = (*iter)->getId();
 					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
-					
+
 					backwardVarNameMap.insert(std::make_pair(newName, oldName));
 					forwardVarNameMap.insert(std::make_pair(oldName, newName));
-					unsigned firstVal = getVarName(backwardVarNameMap, oldName);
-					// Add local qualifier
-					addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::LOCAL);
 				}
 				
 				const CompoundStmtPtr& globalParBody = dynamic_pointer_cast<const CompoundStmt>(globalParFct->getBody());
@@ -316,12 +332,29 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const JobExprPtr& localJob = dynamic_pointer_cast<const JobExpr>(localExpr.back());
 				
 				const vector<DeclarationStmtPtr>& localJobDecls = localJob->getLocalDecls();
+				
+				// declarations that we want to add to the body of the function
+				vector<DeclarationStmtPtr> newBodyDecls;
+				
 				for_each(localJobDecls, [&](const DeclarationStmtPtr& curDecl) {
 					unsigned newName = (curDecl->getVariable())->getId(); 
-					unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
+					std::cout << "PROVA1: " << newName << "\n";
+					if (dynamic_pointer_cast<const Variable>(curDecl->getInitialization())){
+						unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
+						std::cout << "PROVA2: " << oldName << "\n";
 						
-					backwardVarNameMap.insert(std::make_pair(newName, oldName));
-					forwardVarNameMap.insert(std::make_pair(oldName, newName));
+						backwardVarNameMap.insert(std::make_pair(newName, oldName));
+						forwardVarNameMap.insert(std::make_pair(oldName, newName));
+						unsigned firstVal = getVarName(backwardVarNameMap, oldName);
+						// Add local qualifier
+						addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::LOCAL);
+					}
+					else {
+						// for example: v17 = initZero(ref<real<4>> // literal
+						qualifierMap.insert(std::make_pair(newName, curDecl->getVariable()));
+						addQualifier(qualifierMap, newName, AddressSpaceAnnotation::addressSpace::LOCAL);
+						newBodyDecls.push_back(curDecl);
+					}
 				});
 				
 				const CaptureInitExprPtr& localCapture =  dynamic_pointer_cast<const CaptureInitExpr>(localJob->getDefaultStmt());
@@ -355,20 +388,47 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					}
 				}
 				
+				// modify the DeclarationStmts that we have to add to the body
+				vector<StatementPtr> newRenameBodyDecls;
+				for_each(newBodyDecls, [&](const DeclarationStmtPtr& curDecl) {
+					unsigned oldName = (curDecl->getVariable())->getId();
+					unsigned newName = getVarName(forwardVarNameMap, oldName);
+					moveQualifier(qualifierMap, oldName, newName);
+					auto&& fit = qualifierMap.find(newName);
+					if (fit != qualifierMap.end()) {
+						newRenameBodyDecls.push_back(builder.declarationStmt(fit->second,curDecl->getInitialization()));
+					} else {
+						assert(false && "WTF: varName not in qualifierMap!!");
+					}
+				});
+				
 				const CompoundStmtPtr& localParBody = dynamic_pointer_cast<const CompoundStmt>(localParFct->getBody());
 				
-				/*for (auto iter = backwardVarNameMap.begin(); iter != backwardVarNameMap.end(); ++iter)
-					std::cout << iter->first << " -> " << iter->second << std::endl;
+				//const vector<StatementPtr>& localParBodyStmts = localParBody->getStatements();
+				for_each(localParBody->getStatements(), [&](const StatementPtr& curStmt) {
+					newRenameBodyDecls.push_back(curStmt);
+				});
 				
-				std::cout << "_____NUOVA_____\n";
-					
-				for (auto iter = forwardVarNameMap.begin(); iter != forwardVarNameMap.end(); ++iter)
-					std::cout << iter->first << " -> " << iter->second << std::endl;*/
+				CompoundStmtPtr newBody = builder.compoundStmt(newRenameBodyDecls);
 				
-				//LOG(INFO) << core::printer::PrettyPrinter(localParBody);
 				
-				LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, localParBody);
-				// FIXME: aggiungere annotazione kernel
+				// body final compoundStmt
+				//vector<StatementPtr> stmtList;
+				//for_each(newBodyDecls, [&](const DeclarationStmtPtr& curDecl) {
+				//}
+				
+				//CompoundStmtPtr newBody = builder.compoundStmt();
+				
+				//
+				for (uint i = 0; i < oldArgs.size()-2; i++){
+					newArgs.push_back(oldArgs.at(i));
+				}
+				
+				//LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, localParBody);
+				LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, newBody);
+				KernelFctAnnotationPtr an(new KernelFctAnnotation());
+				const LambdaPtr& lambda = newFunc->getLambda();
+				lambda->addAnnotation(an);
 				
 				FunctionManager& funManager = cc.getFunctionManager();
 				getCodeStream() << funManager.getFunctionName(defCodePtr, newFunc);
@@ -379,6 +439,32 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 		FunctionManager& funManager = cc.getFunctionManager();
 		getCodeStream() << funManager.getFunctionName(defCodePtr, ptr);
 	}
+}
+
+void OclStmtConvert::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
+	CodeStream& cStr = getCodeStream();
+	VariablePtr var = ptr->getVariable();
+	// format parameter using type manager and add OpenCL Memory Qualifier
+	if(var->hasAnnotation(AddressSpaceAnnotation::KEY)){
+		AddressSpaceAnnotationPtr ann = var->getAnnotation(AddressSpaceAnnotation::KEY);
+		switch (ann->getAddressSpace()) {
+			case AddressSpaceAnnotation::addressSpace::GLOBAL: 
+				cStr << "__global ";
+				break;
+			case AddressSpaceAnnotation::addressSpace::LOCAL: 
+				cStr << "__local ";
+				break;
+			case AddressSpaceAnnotation::addressSpace::CONSTANT: 
+				cStr << "__constant ";
+				break;
+			case AddressSpaceAnnotation::addressSpace::PRIVATE: 
+				cStr << "__private ";
+				break;
+			case AddressSpaceAnnotation::addressSpace::size:
+				break;
+		}
+	}
+	StmtConverter::visitDeclarationStmt(ptr);
 }
 
 } // namespace ocl

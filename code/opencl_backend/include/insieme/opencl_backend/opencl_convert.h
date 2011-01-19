@@ -54,6 +54,7 @@ class OclStmtConvert : public simple_backend::StmtConverter {
 public:
 	OclStmtConvert(simple_backend::Converter& conversionContext);
 	void visitLambdaExpr(const core::LambdaExprPtr& func);
+	void visitDeclarationStmt(const core::DeclarationStmtPtr& ptr);
 };
 
 } // namespace ocl
