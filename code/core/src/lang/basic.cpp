@@ -213,7 +213,6 @@ LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
 }
 
 ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
-std::cout << "HERE we are\n";
     // Convert casts form scalars to vectors to vector init exrpessions
     if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
         if(pimpl->nm.basic.isScalarType(subExpr->getType())) {

@@ -245,6 +245,7 @@ class KernelMapper : public core::transform::CachedNodeMapping {
 
     // Vectors to store local variables
 
+    std::vector<core::DeclarationStmtPtr> globalVars;
     std::vector<core::DeclarationStmtPtr> localVars;
     std::vector<core::VariablePtr> privateVars;
 
@@ -513,12 +514,16 @@ public:
                             break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
-                            core::TypePtr declType = tryDeref(decl->getVariable())->getType();
+                            core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getInitZero(),
+                                 BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
+                             // store the variable in list, initialized with zero, will be declared in global capture init list
+                             globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
-                            // only pointers can have global scope inside a kernel body
-                            assert(declType->getNodeType() == core::NodeType::NT_ArrayType && "Address space GLOBAL not allowed for local scalar variables");
-
-                            break;
+                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
+                                 return BASIC.getNoOp();
+                             else // write the variable with it's initialization to the place the declaration was
+                                 return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), tryDeref(decl->getInitialization()));
+                             break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
                             assert(false && "Address space CONSTANT not allowed for local variables");
@@ -545,6 +550,7 @@ public:
     // gets vectors of variables and appends the variables found in the function body to them
     void getMemspaces(std::vector<core::VariablePtr>& constantV, std::vector<core::VariablePtr>& globalV,
             std::vector<core::VariablePtr>& localV, std::vector<core::VariablePtr>& privateV){
+        append(globalV, globalVars);
         append(localV, localVars);
         append(privateV, privateVars);
     }
@@ -559,7 +565,13 @@ public:
         return localVars;
     }
 
+    // returns vector containing the private variables
+    std::vector<core::DeclarationStmtPtr>& getGlobalDeclarations() {
+        return globalVars;
+    }
+
     void resetMemspaces() {
+        globalVars.clear();
         localVars.clear();
         privateVars.clear();
     }
@@ -646,10 +658,20 @@ private:
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             core::DeclarationStmtPtr tmp = builder.declarationStmt((*I)->getVariable()->getType(), (*I)->getInitialization());
 
+            // capture a newly generated variable and initialize the one in (*I) in it
             outVec[(*I)->getVariable()] = tmp->getVariable();
             types.push_back((*I)->getVariable()->getType());
 
+            // store the new variable where (*I) was
             *I = tmp;
+        }
+    }
+
+    void initCaptureInList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            // capture a newly generated variable and initialize the one in (*I) in it
+            outVec[(*I)->getVariable()] = (*I)->getInitialization();
+            types.push_back((*I)->getVariable()->getType());
         }
     }
 
@@ -676,26 +698,31 @@ private:
 
 
     // TODO make body ref
-    core::ExpressionPtr genLocalCie(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
+    core::ExpressionPtr genCaptueInits(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
             constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
         // capture all arguments
-        core::ASTBuilder::CaptureInits localFunCaptures;
-        core::TypeList localFunCtypes;
+        core::ASTBuilder::CaptureInits funCaptures;
+        core::TypeList funCtypes;
 
-        createCaptureList(localFunCaptures, constantArgs, localFunCtypes);
-        createCaptureList(localFunCaptures, globalArgs, localFunCtypes);
-        createCaptureList(localFunCaptures, localArgs, localFunCtypes);
-        createCaptureList(localFunCaptures, privateArgs, localFunCtypes);
+        createCaptureList(funCaptures, constantArgs, funCtypes);
+        createCaptureList(funCaptures, globalArgs, funCtypes);
+        createCaptureList(funCaptures, localArgs, funCtypes);
+        createCaptureList(funCaptures, privateArgs, funCtypes);
         // in-body local variables
-        if(scope == OCL_LOCAL_JOB || scope == OCL_LOCAL_PAR)
-            createCaptureList(localFunCaptures, kernelMapper.getLocalDeclarations(), localFunCtypes);
+        if(scope == OCL_LOCAL_JOB /*|| scope == OCL_LOCAL_PAR*/)
+            createCaptureList(funCaptures, kernelMapper.getLocalDeclarations(), funCtypes);
+        // in-body pointers to global variables, map to a new variable at local scope
+        if(scope == OCL_LOCAL_JOB)
+            createCaptureList(funCaptures, kernelMapper.getGlobalDeclarations(), funCtypes);
+        else // map the existing variable to it's init expression
+            initCaptureInList(funCaptures, kernelMapper.getGlobalDeclarations(), funCtypes);
+
         // catch loop boundaries
+        kd.appendCaptures(funCaptures, scope, funCtypes);
 
-        kd.appendCaptures(localFunCaptures, scope, localFunCtypes);
+        core::FunctionTypePtr lpfType = builder.functionType(funCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
 
-        core::FunctionTypePtr lpfType = builder.functionType(localFunCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
-
-        return builder.lambdaExpr(lpfType, body, localFunCaptures, core::Lambda::ParamList());
+        return builder.lambdaExpr(lpfType, body, funCaptures, core::Lambda::ParamList());
     }
 
 public:
@@ -849,7 +876,7 @@ public:
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
-                    core::ExpressionPtr localParFct = genLocalCie(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
+                    core::ExpressionPtr localParFct = genCaptueInits(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
                     core::JobExpr::LocalDecls localJobShared;
 
@@ -889,7 +916,7 @@ public:
 
 
                     // build expression to be used as body of global job
-                    core::ExpressionPtr globalParFct = genLocalCie(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
+                    core::ExpressionPtr globalParFct = genCaptueInits(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
                             privateArgs);
 
                     // catch all arguments which are shared in global range
