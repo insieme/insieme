@@ -364,8 +364,8 @@ public:
         size_t num = vecTy->getNumElements();
         core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
 
-        //note: members of OpenCL vectors are always modifiable
-        return convFact.builder.vectorType( convFact.builder.refType(subType), numElem);
+        //note: members of OpenCL vectors are never refs
+        return convFact.builder.vectorType( subType, numElem);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

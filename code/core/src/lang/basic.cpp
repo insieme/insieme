@@ -234,20 +234,17 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
 
 
     // check for casts from salar pointers to vector pointers
-    if(core::ArrayTypePtr array = dynamic_pointer_cast<const core::ArrayType>(type)) {
-        core::RefTypePtr refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
-        core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(refType->getElementType());
-        core::ArrayTypePtr castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
-        if(castedArray && vt) {
-            // check if they have the same type
-            assert(castedArray->getElementType() == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
-            core::RefTypePtr innerRefType = dynamic_pointer_cast<const core::RefType>(vt->getElementType());
-            core::RefTypePtr rightRefType = dynamic_pointer_cast<const core::RefType>(castedArray->getElementType());
+    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
+        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
+        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(refType->getElementType());
+        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
+        core::TypePtr elemTy = castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
+                dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() : castedArray->getElementType();
 
-            // if both were ref types, we have to check their element types again
-            if(innerRefType && rightRefType)
-                assert(innerRefType->getElementType() == rightRefType->getElementType() &&
-                        "cast from array to array of vectors only allowed within the same (reference)type");
+        if(elemTy && vt) {
+            // check if they have the same type
+std::cout << "Cast from " <<  elemTy << " to " << vt->getElementType() << std::endl;
+            assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
 
 
             return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));

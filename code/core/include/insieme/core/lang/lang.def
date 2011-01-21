@@ -287,7 +287,7 @@ LITERAL(ArraySubscript1D, "array.subscript.1D", "(array<'elem,1>, uint<8>) -> 'e
 LITERAL(ArraySubscriptND, "array.subscript.ND", "(array<'elem,#n>, vector<uint<8>,#a>) -> 'elem")
 
 // function to copy an array 1D of type t and size m to an 1D array of type ref<vector<t,n> and size m/n
-LITERAL(ArrayElemToVec, "array.elem.to.vec", "(array<'elem,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
+LITERAL(ArrayElemToVec, "array.elem.to.vec", "(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
