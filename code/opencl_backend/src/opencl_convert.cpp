@@ -164,13 +164,13 @@ void moveQualifier(qualifierMapType& qualifierMap, unsigned oldName, unsigned ne
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 	ASTBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
-		std::cout << "Function with some Opencl Annotation...\n";
+		LOG(INFO) << "Function with some Opencl Annotation...\n";
 		BaseAnnotationPtr&& annotations = ptr->getAnnotation(BaseAnnotation::KEY);
 		assert(annotations && "BaseAnnotation is empty");
 		for(BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
 			iter < annotations->getAnnotationListEnd(); ++iter) {
 			if(KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<KernelFctAnnotation>(*iter)) {
-				std::cout << "Function with kernel annotation...\n";
+				LOG(INFO) << "Function with kernel annotation...\n";
 				const Lambda::ParamList& oldParams = ptr->getParameterList();
 				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(ptr->getBody());
 				const FunctionTypePtr& oldFuncType = dynamic_pointer_cast<const FunctionType>(ptr->getType());

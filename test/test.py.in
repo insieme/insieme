@@ -121,7 +121,7 @@ def run_test_case(test_case_name):
 		if not os.path.exists("../#bin/" + ref_exec) or not os.path.exists("../#bin/" + test_exec):
 			runTests = 1 # => ensure that all binaries are present within #bin
 
-	if runTests:
+if runTests & (test_case_name != "ocl_kernel"):
 
 		# file containing the output of the reference program
 		ref_out = "ref.out"
