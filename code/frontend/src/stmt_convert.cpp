@@ -428,9 +428,9 @@ public:
 
 			core::StatementPtr&& whileStmt = builder.whileStmt(
 				convFact.convertExpr( forStmt->getCond() ), // cond
-					builder.compoundStmt(
-						toVector<core::StatementPtr>( tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
-					)
+				forStmt->getInc() ?
+					builder.compoundStmt( toVector<core::StatementPtr>( tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) ) ) :
+					tryAggregateStmts(builder, body)
 				);
 
 			// handle eventual pragmas attached to the Clang node

@@ -158,7 +158,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 			if (loopHelper.incrExpr->getType()->getNodeType() == core::NT_RefType) {
 				loopHelper.incrExpr = convFact.getASTBuilder().deref(loopHelper.incrExpr);
 			}
-			break;
+			return;
 		}
 		default:
 			// the increment operation cannot be translated into a normal form loop
@@ -166,42 +166,40 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 			// assert(false && "BinaryOperator not supported in increment expression");
 		}
 	}
+	throw LoopNormalizationError();
 }
 
 
 void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
-	const Expr* cond = forStmt->getCond();
-	if(!cond)
-		throw LoopNormalizationError();
-
-	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
-		DeclRefExpr* lhs = utils::skipSugar<DeclRefExpr>(binOp->getLHS());
-		assert(lhs && lhs->getDecl() == loopHelper.inductionVar);
-		core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
-		switch(binOp->getOpcode()) {
-		case BO_LT:
-			// return: condExpr
-			loopHelper.condExpr = condExpr;
-			break;
-		case BO_LE:
-			// return: condExpr + 1
-			loopHelper.condExpr = addOne(convFact.getASTBuilder(), condExpr);
-			break;
-		case BO_GT:
-			loopHelper.condExpr = convFact.getASTBuilder().invertSign(condExpr);
-			loopHelper.invert = true;
-			break;
-		case BO_GE:
-			loopHelper.condExpr = addOne(convFact.getASTBuilder(), convFact.getASTBuilder().invertSign(condExpr));
-			loopHelper.invert = true;
-			break;
-		default:
-			assert(false && "Condition expression not supported");
+	if(const Expr* cond = forStmt->getCond()) {
+		if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
+			DeclRefExpr* lhs = utils::skipSugar<DeclRefExpr>(binOp->getLHS());
+			if(lhs && lhs->getDecl() == loopHelper.inductionVar) {
+				core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
+				switch(binOp->getOpcode()) {
+				case BO_LT:
+					// return: condExpr
+					loopHelper.condExpr = condExpr;
+					break;
+				case BO_LE:
+					// return: condExpr + 1
+					loopHelper.condExpr = addOne(convFact.getASTBuilder(), condExpr);
+					break;
+				case BO_GT:
+					loopHelper.condExpr = convFact.getASTBuilder().invertSign(condExpr);
+					loopHelper.invert = true;
+					break;
+				case BO_GE:
+					loopHelper.condExpr = addOne(convFact.getASTBuilder(), convFact.getASTBuilder().invertSign(condExpr));
+					loopHelper.invert = true;
+					break;
+				default:
+					assert(false && "Condition expression not supported");
+				}
+				return;
+			}
 		}
-
-
-		return;
 	}
 	throw LoopNormalizationError();
 }
