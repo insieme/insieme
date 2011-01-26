@@ -17,7 +17,7 @@ for v in insieme gcc  ; do
 
 	echo
 	echo "Running $v version ..."
-	LD_LIBRARY_PATH=$SIMPLE_BACKEND_RUNTIME_HOME $TIME_CMD -f "$TIME_FORMAT" ./jacobi_$v $N > /dev/null
+	LD_LIBRARY_PATH=$SIMPLE_BACKEND_RUNTIME_HOME taskset -c 1 $TIME_CMD -f "$TIME_FORMAT" ./jacobi_$v $N > /dev/null
 	mv gmon.out profile_$v.out
 	gprof -l jacobi_$v profile_$v.out > profile_$v.txt
 
