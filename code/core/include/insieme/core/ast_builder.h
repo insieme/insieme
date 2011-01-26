@@ -106,7 +106,7 @@ public:
 		return manager.basic;
 	}
 
-	ProgramPtr createProgram(const Program::EntryPointSet& entryPoints = Program::EntryPointSet(), bool main = false);
+	ProgramPtr createProgram(const Program::EntryPointList& entryPoints = Program::EntryPointList(), bool main = false);
 
 #include "ast_builder.inl"
 

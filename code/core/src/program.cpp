@@ -40,7 +40,6 @@
 #include <boost/functional/hash.hpp>
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/utils/set_utils.h"
 #include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/program.h"
@@ -52,7 +51,7 @@ using namespace std;
 using namespace insieme::core;
 using namespace insieme::utils::set;
 
-std::size_t hash(bool main, const Program::EntryPointSet& entryPoints) {
+std::size_t hash(bool main, const Program::EntryPointList& entryPoints) {
 	std::size_t hash = 0;
 	boost::hash_combine(hash, HS_Program);
 	boost::hash_combine(hash, main);
@@ -73,33 +72,45 @@ Node::OptionChildList Program::getChildNodes() const {
 	return res;
 }
 
-Program::Program(const EntryPointSet& entryPoints, bool main) :
+Program::Program(const EntryPointList& entryPoints, bool main) :
 	Node(NT_Program, NC_Program, ::hash(main, entryPoints)), main(main), entryPoints(entryPoints) {
 
 	assert((!main || entryPoints.size() == 1) && "Cannot mark program as a main program exposing less or more than one entry points!");
 };
 
 Program::Program() :
-	Node(NT_Program, NC_Program, ::hash(false, EntryPointSet())), main(false) { };
+	Node(NT_Program, NC_Program, ::hash(false, EntryPointList())), main(false) { };
 
-ProgramPtr Program::create(NodeManager& manager, const EntryPointSet& entryPoints, bool main) {
+ProgramPtr Program::create(NodeManager& manager, const EntryPointList& entryPoints, bool main) {
 	return manager.get(Program(entryPoints, main));
 }
 
 ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint, bool main) {
-	return addEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint));
+	return addEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
 }
 
-ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints, bool main) {
-	return manager.get(Program(merge(program->getEntryPoints(), isolate(entryPoints)), main));
+ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointList& entryPoints, bool main) {
+	std::vector<ExpressionPtr> list(program->getEntryPoints());
+	for_each(isolate(entryPoints), [&list](const ExpressionPtr& cur) {
+		if (!contains(list, cur, equal_target<ExpressionPtr>())) {
+			list.push_back(cur);
+		}
+	});
+	return manager.get(Program(list, main));
 }
 
 ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint, bool main) {
-	return remEntryPoints(manager, program, toSet<EntryPointSet>(entryPoint), main);
+	return remEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint), main);
 }
 
-ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& entryPoints, bool main) {
-	return manager.get(Program(difference(program->getEntryPoints(), entryPoints), main));
+ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointList& entryPoints, bool main) {
+	std::vector<ExpressionPtr> list;
+	for_each(program->getEntryPoints(), [&list, &entryPoints](const ExpressionPtr& cur) {
+		if (!contains(entryPoints, cur, equal_target<ExpressionPtr>())) {
+			list.push_back(cur);
+		}
+	});
+	return manager.get(Program(list, main));
 }
 
 ProgramPtr Program::setMainFlag(NodeManager& manager, const ProgramPtr& program, bool main) {
@@ -115,7 +126,7 @@ bool Program::equals(const Node& other) const {
 	const Program& ref = static_cast<const Program&>(other);
 
 	// compare definitions and entry points
-	return main==ref.main && insieme::utils::set::equal(entryPoints, ref.entryPoints);
+	return main==ref.main && ::equals(entryPoints, ref.entryPoints, equal_target<ExpressionPtr>());
 }
 
 bool compareEntryPoints(const ExpressionPtr& exprA, const ExpressionPtr& exprB) {

@@ -74,9 +74,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
 
-	return build.createProgram(
-		toSet<Program::EntryPointSet>(mainLambda)
-	);
+	return build.createProgram(toVector<ExpressionPtr>(mainLambda));
 }
 
 TEST(SimpleBackend, Basic) {

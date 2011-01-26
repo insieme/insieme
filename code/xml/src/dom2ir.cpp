@@ -467,9 +467,9 @@ public:
 	NodePtr handle_program(const XmlElement& elem) {
 		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 
-		Program::EntryPointSet exprVec;
+		Program::EntryPointList exprVec;
 		for(auto iter = exprs.begin(), end = exprs.end(); iter != end; ++iter) {
-			exprVec.insert( createNode<Expression>(*iter));
+			exprVec.push_back( createNode<Expression>(*iter));
 		}
 		
 		bool main = (elem.getAttr("main") == "1") ? true : false;

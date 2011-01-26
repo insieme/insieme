@@ -79,7 +79,7 @@ namespace {
 
 }
 
-ProgramPtr ASTBuilder::createProgram(const Program::EntryPointSet& entryPoints, bool main) {
+ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints, bool main) {
 	return Program::create(manager, entryPoints, main);
 }
 

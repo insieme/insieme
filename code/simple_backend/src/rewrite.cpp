@@ -156,7 +156,7 @@ bool Rewriter::CodeModification::operator<(const CodeModification& other) const 
 void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFileName) {
 
 	CodeModificationList list;
-	const Program::EntryPointSet& entryPoints = program->getEntryPoints();
+	const Program::EntryPointList& entryPoints = program->getEntryPoints();
 	std::for_each(entryPoints.begin(), entryPoints.end(),
 		[ &list ](const core::ExpressionPtr& curr) {
 			// we expect entry point to have annotations with corresponding source locations

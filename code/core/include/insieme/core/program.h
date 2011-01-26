@@ -75,7 +75,7 @@ public:
 	/**
 	 * The type used to represent the list of entry points.
 	 */
-	typedef std::unordered_set<ExpressionPtr, hash_target<ExpressionPtr>, equal_target<ExpressionPtr>> EntryPointSet;
+	typedef std::vector<ExpressionPtr> EntryPointList;
 
 private:
 
@@ -92,7 +92,7 @@ private:
 	 * has to be considered. In case elements of this list represent functions,
 	 * the signature of the corresponding structure may not be changed.
 	 */
-	const EntryPointSet entryPoints;
+	const EntryPointList entryPoints;
 
 	/**
 	 * Creates a new AST using a fresh AST node manager.
@@ -106,7 +106,7 @@ private:
 	 * @param main a flag allowing to indicate that the given entry point represents the main
 	 * function of a program and should be synthesized accordingly by the backend
 	 */
-	Program(const EntryPointSet& entryPoints, bool main);
+	Program(const EntryPointList& entryPoints, bool main);
 
 	/**
 	 * Implements the copy method defined by the Base Node class.
@@ -134,7 +134,7 @@ public:
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr create(NodeManager& manager, const EntryPointSet& entryPoints = EntryPointSet(), bool main=false);
+	static ProgramPtr create(NodeManager& manager, const EntryPointList& entryPoints = EntryPointList(), bool main=false);
 
 	/**
 	 * Creates a new program node within the given manager which is equivalent to the given program plus the
@@ -160,7 +160,7 @@ public:
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points, bool main=false);
+	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointList& points, bool main=false);
 
 	/**
 	 * Creates a new program node within the given manager which is equivalent to the given program except the
@@ -186,7 +186,7 @@ public:
 	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
 	 * 						will be bound to the given manager.
 	 */
-	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointSet& points, bool main=false);
+	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointList& points, bool main=false);
 
 	/**
 	 * Creates a copy of the given program using the given main flag. The flag may only be true in case there is only
@@ -215,7 +215,7 @@ public:
 	 *
 	 * @return the set of entry points.
 	 */
-	const EntryPointSet& getEntryPoints() const {
+	const EntryPointList& getEntryPoints() const {
 		return entryPoints;
 	}
 

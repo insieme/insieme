@@ -74,8 +74,8 @@ TEST(Program, HelloWorld) {
 	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
 	
 	LiteralPtr main = build.literal(voidNullaryFunctionType, "main");
-	ProgramPtr pro = build.createProgram(toSet<Program::EntryPointSet>(main));
-	ProgramPtr pro2 = build.createProgram(toSet<Program::EntryPointSet>(main), true);
+	ProgramPtr pro = build.createProgram(toVector<ExpressionPtr>(main));
+	ProgramPtr pro2 = build.createProgram(toVector<ExpressionPtr>(main), true);
 
 	EXPECT_NE(pro, pro2);
 	EXPECT_NE(*pro, *pro2);
@@ -112,17 +112,17 @@ TEST(Program, ProgramData) {
 
 	program = Program::addEntryPoint(programManager, program, entryA);
 	EXPECT_NE (entryA , *program->getEntryPoints().begin());
-	EXPECT_EQ (toSet<Program::EntryPointSet>(programManager.get(entryA)), program->getEntryPoints());
+	EXPECT_EQ (toVector<ExpressionPtr>(programManager.get(entryA)), program->getEntryPoints());
 
-	Program::EntryPointSet entrySet;
-	entrySet.insert(entryA);
-	entrySet.insert(entryB);
-	entrySet.insert(entryC);
+	Program::EntryPointList entrySet;
+	entrySet.push_back(entryA);
+	entrySet.push_back(entryB);
+	entrySet.push_back(entryC);
 
 	program = Program::addEntryPoints(programManager, program, entrySet);
 	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
 
-	const Program::EntryPointSet& points = program->getEntryPoints();
+	const Program::EntryPointList& points = program->getEntryPoints();
 	std::for_each(points.cbegin(), points.cend(),
 		[&manager, &programManager](const ExpressionPtr& cur) {
 			EXPECT_FALSE( manager.addressesLocal(cur) );

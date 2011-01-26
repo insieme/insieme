@@ -233,6 +233,24 @@ inline bool contains(const Container& container, const typename Container::value
 	return contains(container, value, std::equal_to<const typename Container::value_type&>());
 }
 
+/**
+ * Creates a new list containing the same elements as a concatenation
+ * of the given lists.
+ *
+ * @tparam List the type of list to be handled
+ * @param listA the first list
+ * @param listB the second list
+ * @return the resulting concatenated of listA and listB
+ */
+template<typename T, typename L1, typename L2>
+std::vector<T> concatenate(const L1& listA, const L2& listB) {
+	// merging by simply adding all elements to one set ...
+	std::vector<T> res;
+	std::copy(listA.begin(), listA.end(), std::back_inserter(res));
+	std::copy(listB.begin(), listB.end(), std::back_inserter(res));
+	return res;
+}
+
 /** Checks whether a condition is true for all elements of the supplied iteration range.
  *
  *  @param first iterator designating the start of the iteration range

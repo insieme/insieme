@@ -1108,8 +1108,8 @@ TEST(XmlTest, ProgramTest) {
 	DummyAnnotationPtr dummy_an(new DummyAnnotation("entrya n"));
 	entryA->addAnnotation(dummy_an);
 
-	Program::EntryPointSet entrySet;
-	entrySet.insert(entryA);
+	Program::EntryPointList entrySet;
+	entrySet.push_back(entryA);
 
 	program = Program::addEntryPoints(manager, program, entrySet, true);
 	DummyAnnotationPtr dummy_pn(new DummyAnnotation("program n"));
