@@ -58,6 +58,10 @@ namespace std {
 std::ostream& operator<<(std::ostream& out, const clang::NamedDecl* decl) {
 	return out << decl->getNameAsString();
 }
+std::ostream& operator<<(std::ostream& out, const insieme::frontend::analysis::GlobalVarCollector& globals) {
+	globals.dump(out);
+	return out;
+}
 
 }
 
@@ -235,11 +239,3 @@ void GlobalVarCollector::dump(std::ostream& out) const {
 } // end analysis namespace
 } // end frontend namespace
 } // end insieme namespace
-
-namespace std {
-
-std::ostream& operator<<(std::ostream& out, const insieme::frontend::analysis::GlobalVarCollector& globals) {
-	globals.dump(out);
-	return out;
-}
-} // end std namespace
