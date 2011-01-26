@@ -48,25 +48,46 @@
 
 using namespace insieme::core;
 
-enum HashSeed {
-	RECURSIVE_DEFINITION
-};
+
+// ---------------------------------------- TypeList --------------------------------
+
+namespace {
+
+	/**
+	 * Combines the given seed with the hash values of the types within
+	 * the given TypeList.
+	 */
+	void hashTypeList(std::size_t& seed, TypeList list) {
+		insieme::utils::hashList(seed, list, deref<TypePtr>());
+	}
+
+	/**
+	 * Compute a hash value for a type list.
+	 */
+	std::size_t hashTypeList(TypeList list) {
+		std::size_t seed = 0;
+		hashTypeList(seed, list);
+		return seed;
+	}
+
+}
 
 
 // ---------------------------------------- Type --------------------------------
 
-/**
- * Tests whether all of the type pointer within the given vector are concrete types.
- *
- * @param elementTypes the types to be tested
- * @return true if all are concrete types, false otherwise.
- */
-bool Type::allConcrete(const vector<TypePtr>& elementTypes) {
-	// just use all-functionality of container utils
-	return all(elementTypes, [](const TypePtr& param) { return param->isConcrete(); });
+
+bool Type::equals(const Node& other) const {
+	// precondition: other must be a type
+	assert( dynamic_cast<const Type*>(&other) && "Type violation by base class!" );
+
+	// convert (statically) and check the type name
+	return equalsType(static_cast<const Type&>(other));
 }
 
 // -------------------------------------- Type Variable -------------------------------
+
+TypeVariable::TypeVariable(const string& name)
+	: Type(NT_TypeVariable, utils::combineHashes(HS_TypeVariable, name)), varName(name) { }
 
 TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
 	return manager.get(TypeVariable(name));
@@ -76,56 +97,35 @@ TypeVariablePtr TypeVariable::getFromId(NodeManager& manager, const Identifier& 
 	return manager.get(TypeVariable(id.getName()));
 }
 
+bool TypeVariable::equalsType(const Type& type) const {
+	// just compare names
+	const TypeVariable& rhs = static_cast<const TypeVariable&>(type);
+	return varName == rhs.varName;
+}
+
 TypeVariable* TypeVariable::createCopyUsing(NodeMapping&) const {
 	return new TypeVariable(getVarName());
 }
 
-// ---------------------------------------- Tuple Type --------------------------------
-
-/**
- * A private utility method building the name of a tuple type.
- *
- * @param elementTypes	the list of element types
- * @return a string representation of the resulting tuple type
- */
-string TupleType::buildNameString(const TypeList& elementTypes) {
-
-	// create output buffer
-	std::stringstream res;
-	res << "(";
-
-	vector<string> list;
-	std::transform(elementTypes.cbegin(), elementTypes.cend(), back_inserter(list),
-		[](const TypePtr& cur) {
-			return cur->getName();
-	});
-
-	res << boost::join(list, ",");
-
-	res << ")";
-	return res.str();
+std::ostream& TypeVariable::printTypeTo(std::ostream& out) const {
+	return out << "'" << varName;
 }
 
-/**
- * Creates a new, empty tuple type.
- */
-TupleType::TupleType() : Type(NT_TupleType, buildNameString(toVector<TypePtr>()), allConcrete(toVector<TypePtr>())), elementTypes(toVector<TypePtr>()) {}
+// ---------------------------------------- Tuple Type --------------------------------
 
-/**
- * Creates a new tuple type based on the given element type(s).
- */
-TupleType::TupleType(const TypePtr& a)
-	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a)), allConcrete(toVector<TypePtr>(a))), elementTypes(toVector<TypePtr>(isolate(a))) {}
+namespace {
 
-/**
- * Creates a new tuple type based on the given element type(s).
- */
-TupleType::TupleType(const TypePtr& a, const TypePtr& b)
-	: Type(NT_TupleType, buildNameString(toVector<TypePtr>(a,b)), allConcrete(toVector<TypePtr>(a,b))), elementTypes(toVector<TypePtr>(isolate(a),isolate(b))) {}
+	std::size_t hashTupleType(const TypeList& elementTypes) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_TupleType);
+		hashTypeList(seed, elementTypes);
+		return seed;
+	}
+
+}
 
 TupleType::TupleType(const TypeList& elementTypes) :
-	Type(NT_TupleType, buildNameString(elementTypes), allConcrete(elementTypes)), elementTypes(isolate(elementTypes)) {}
-
+	Type(NT_TupleType, hashTupleType(elementTypes)), elementTypes(isolate(elementTypes)) {}
 
 TupleType* TupleType::createCopyUsing(NodeMapping& mapper) const {
 	return new TupleType(mapper.map(0, elementTypes));
@@ -139,44 +139,41 @@ TupleTypePtr TupleType::get(NodeManager& manager, const TypeList& elementTypes) 
 	return manager.get(TupleType(elementTypes));
 }
 
+bool TupleType::equalsType(const Type& type) const {
+	const TupleType& other = static_cast<const TupleType&>(type);
+	return ::equals(elementTypes, other.elementTypes, equal_target<TypePtr>());
+}
+
+std::ostream& TupleType::printTypeTo(std::ostream& out) const {
+	// create output buffer
+	return out << '(' << join(",", elementTypes, print<deref<TypePtr>>()) << ')';
+}
+
 Node::OptionChildList TupleType::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	std::copy(elementTypes.cbegin(), elementTypes.cend(), back_inserter(*res));
 	return res;
 }
 
+
 // ---------------------------------------- Function Type ------------------------------
 
 namespace {
 
-	string buildFunctionTypeName(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) {
-		// create output buffer
-		std::stringstream res;
-
-		res << "(";
-		// add capture list
-		if (!captureTypes.empty()) {
-			res << "[" << join(",", captureTypes, print<deref<TypePtr>>()) << "]";
-		}
-		// add arguments
-		res << "(" << join(",", argumentTypes, print<deref<TypePtr>>()) << ")";
-
-		// add result
-		res << "->" << *returnType << ")";
-		return res.str();
+	std::size_t hashFunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_FunctionType);
+		hashTypeList(seed, captureTypes);
+		hashTypeList(seed, argumentTypes);
+		boost::hash_combine(seed, *returnType);
+		return seed;
 	}
-}
 
-
-FunctionType::FunctionType(const TypeList& argumentTypes, const TypePtr& returnType) :
-	Type(NT_FunctionType, buildFunctionTypeName(TypeList(), argumentTypes, returnType), true, true),
-	argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) {
 }
 
 FunctionType::FunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) :
-	Type(NT_FunctionType, buildFunctionTypeName(captureTypes, argumentTypes, returnType), true, true),
-	captureTypes(isolate(captureTypes)), argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) {
-}
+		Type(NT_FunctionType, hashFunctionType(captureTypes, argumentTypes, returnType)),
+		captureTypes(isolate(captureTypes)), argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) { }
 
 FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& argumentTypes, const TypePtr& returnType) {
 	// obtain reference to new element
@@ -201,34 +198,43 @@ Node::OptionChildList FunctionType::getChildNodes() const {
 	return res;
 }
 
+std::ostream& FunctionType::printTypeTo(std::ostream& out) const {
+	out << "(";
+	// add capture list
+	if (!captureTypes.empty()) {
+		out << "[" << join(",", captureTypes, print<deref<TypePtr>>()) << "]";
+	}
+	// add arguments
+	out << "(" << join(",", argumentTypes, print<deref<TypePtr>>()) << ")";
+
+	// add result
+	return out << "->" << *returnType << ")";
+}
+
+bool FunctionType::equalsType(const Type& type) const {
+	const FunctionType& other = static_cast<const FunctionType&>(type);
+
+	bool res = true;
+	res = res && ::equals(captureTypes, other.captureTypes, equal_target<TypePtr>());
+	res = res && ::equals(argumentTypes, other.argumentTypes, equal_target<TypePtr>());
+	res = res && *returnType == *other.returnType;
+	return res;
+}
+
+
 // ---------------------------------------- Generic Type ------------------------------
 
-/**
- * A private utility method building the name of a generic type.
- *
- * @param name			the name of the generic type (only prefix, generic parameters are added automatically)
- * @param typeParams 	the list of type parameters to be appended
- * @param intParams		the list of integer type parameters to be appended
- * @return a string representation of the type
- */
-string buildNameString(const Identifier& name, const vector<TypePtr>& typeParams,
-		const vector<IntTypeParam>& intParams) {
+namespace {
 
-	// create output buffer
-	std::stringstream res;
-	res << name;
-
-	// check whether there are type parameters
-	if (!typeParams.empty() || !intParams.empty()) {
-
-		// convert type parameters to strings ...
-		vector<string> list;
-		std::transform(typeParams.cbegin(), typeParams.cend(), back_inserter(list), [](const TypePtr& cur) {return cur->getName();});
-		std::transform(intParams.cbegin(), intParams.cend(), back_inserter(list), [](const IntTypeParam& cur) {return cur.toString();});
-
-		res << "<" << boost::join(list, ",") << ">";
+	static std::size_t hashGenericType(std::size_t hashSeed, const Identifier& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intTypeParams, const TypePtr& baseType) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, hashSeed);
+		boost::hash_combine(seed, name);
+		boost::hash_range(seed, intTypeParams.begin(), intTypeParams.end());
+		hashPtrRange(seed, typeParams);
+		if (baseType) { boost::hash_combine(seed, *baseType); }
+		return seed;
 	}
-	return res.str();
 }
 
 /**
@@ -239,19 +245,19 @@ GenericType::GenericType(const Identifier& name,
 		const vector<IntTypeParam>& intTypeParams,
 		const TypePtr& baseType)
 	:
-		Type(NT_GenericType, ::buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
+		Type(NT_GenericType, hashGenericType(HS_GenericType, name, typeParams, intTypeParams, baseType)),
 		familyName(name),
 		typeParams(isolate(typeParams)),
 		intParams(intTypeParams),
 		baseType(isolate(baseType)) { }
 
 
-GenericType::GenericType(NodeType nodeType, const Identifier& name,
+GenericType::GenericType(NodeType nodeType, std::size_t hashSeed, const Identifier& name,
 		const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intTypeParams,
 		const TypePtr& baseType)
 	:
-		Type(nodeType, ::buildNameString(name, typeParams, intTypeParams), Type::allConcrete(typeParams) && IntTypeParam::allConcrete(intTypeParams)),
+		Type(nodeType, hashGenericType(hashSeed, name, typeParams, intTypeParams, baseType)),
 		familyName(name),
 		typeParams(isolate(typeParams)),
 		intParams(intTypeParams),
@@ -299,16 +305,50 @@ Node::OptionChildList GenericType::getChildNodes() const {
 	return res;
 }
 
+std::ostream& GenericType::printTypeTo(std::ostream& out) const {
+	// create output buffer
+	out << familyName;
+
+	// check whether there are type parameters
+	if (!typeParams.empty() || !intParams.empty()) {
+		// print parameters ...
+		out << '<';
+		out << join(",", typeParams, print<deref<TypePtr>>());
+		if (!typeParams.empty() && !intParams.empty()) {
+			out << ',';
+		}
+		out << join(",", intParams);
+		out << '>';
+	}
+	return out;
+}
+
+bool GenericType::equalsType(const Type& type) const {
+	const GenericType& other = static_cast<const GenericType&>(type);
+
+	bool res = true;
+	res = res && familyName == other.familyName;
+	res = res && typeParams.size() == other.typeParams.size();
+	res = res && intParams.size() == other.intParams.size();
+	res = res && ((!baseType && !other.baseType) || (baseType && other.baseType && *baseType==*other.baseType));
+	res = res && ::equals(typeParams, other.typeParams, equal_target<TypePtr>());
+	res = res && ::equals(intParams, other.intParams);
+	return  res;
+}
+
 // ------------------------------------ Rec Definition ------------------------------
 
 namespace { // some anonymous functions for the Rec Definition
 
 	std::size_t hashRecTypeDefinition(const RecTypeDefinition::RecTypeDefs& definitions) {
-		std::size_t hash = RECURSIVE_DEFINITION;
-		boost::hash_combine(hash, insieme::utils::map::computeHash(definitions));
-		return hash;
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_RecTypeDefinition);
+		for_each(definitions, [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+			boost::hash_combine(seed, *cur.first);
+			boost::hash_combine(seed, *cur.second);
+		});
+		return seed;
 	}
-
 
 	const RecTypeDefinition::RecTypeDefs& isolateRecDefinitons(const RecTypeDefinition::RecTypeDefs& definitions) {
 		for_each(definitions, [](const RecTypeDefinition::RecTypeDefs::value_type& cur) {
@@ -423,33 +463,19 @@ const TypePtr RecTypeDefinition::getDefinitionOf(const TypeVariablePtr& variable
 
 // ---------------------------------------- Rec Type ------------------------------
 
+namespace {
 
-string buildRecTypeName(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
-	// create output buffer
-	std::stringstream res;
-	res << "rec " << *variable << "." << *definition;
-	return res.str();
+	static std::size_t hashRecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_RecType);
+		boost::hash_combine(seed, *variable);
+		boost::hash_combine(seed, *definition);
+		return seed;
+	}
 }
 
-bool isConcreteRecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition) {
-	// TODO: search for unbound type variables - if there are, return false - true otherwise
-	return true;
-}
-
-bool isRecFunctionType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definitions) {
-	TypePtr definition = definitions->getDefinitionOf(variable);
-	assert( definition && "No definition for given variable within definitions!");
-	return definition->isFunctionType();
-}
-
-
-// TODO: determine whether recursive type is concrete or function type ..
 RecType::RecType(const TypeVariablePtr& variable, const RecTypeDefinitionPtr& definition)
-	: Type(NT_RecType, buildRecTypeName(variable, definition),
-			isConcreteRecType(variable, definition),
-			isRecFunctionType(variable, definition)),
-			typeVariable(isolate(variable)), definition(isolate(definition)) { }
-
+	: Type(NT_RecType, hashRecType(variable, definition)), typeVariable(isolate(variable)), definition(isolate(definition)) { }
 
 RecType* RecType::createCopyUsing(NodeMapping& mapper) const {
 	return new RecType(mapper.map(0, typeVariable), mapper.map(1, definition));
@@ -466,14 +492,37 @@ RecTypePtr RecType::get(NodeManager& manager, const TypeVariablePtr& typeVariabl
 	return manager.get(RecType(typeVariable, definition));
 }
 
+std::ostream& RecType::printTypeTo(std::ostream& out) const {
+	return out << "rec " << *typeVariable << "." << *definition;
+}
+
+bool RecType::equalsType(const Type& type) const {
+	const RecType& other = static_cast<const RecType&>(type);
+	return *typeVariable == *other.typeVariable && *definition == *other.definition;
+}
 
 // ------------------------------------ Named Composite Type ---------------------------
 
-const NamedCompositeType::Entries& isolateEntries(const NamedCompositeType::Entries& entries) {
-	for_each(entries, [](const NamedCompositeType::Entry& cur) {
-		isolate(cur.second);
-	});
-	return entries;
+namespace {
+
+	std::size_t hashNamedCompositeType(std::size_t hashSeed, const string& prefix, const NamedCompositeType::Entries& entries) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, hashSeed);
+		boost::hash_combine(seed, prefix);
+		for_each(entries, [&seed](const NamedCompositeType::Entry& cur) {
+			boost::hash_combine(seed, cur.first.getName());
+			boost::hash_combine(seed, *cur.second);
+		});
+		return seed;
+	}
+
+	const NamedCompositeType::Entries& isolateEntries(const NamedCompositeType::Entries& entries) {
+		for_each(entries, [](const NamedCompositeType::Entry& cur) {
+			isolate(cur.second);
+		});
+		return entries;
+	}
+
 }
 
 NamedCompositeType::Entries copyEntriesUsing(NodeMapping& mapper, unsigned offset, const NamedCompositeType::Entries& entries) {
@@ -492,8 +541,8 @@ NamedCompositeType::Entries copyEntriesUsing(NodeMapping& mapper, unsigned offse
 }
 
 
-NamedCompositeType::NamedCompositeType(NodeType nodeType, const string& prefix, const Entries& entries)
-	: Type(nodeType, buildNameString(prefix, entries), allConcrete(entries)), entries(isolateEntries(entries)) {
+NamedCompositeType::NamedCompositeType(NodeType nodeType, std::size_t hashSeed, const string& prefix, const Entries& entries)
+	: Type(nodeType, hashNamedCompositeType(hashSeed, prefix, entries)), entries(isolateEntries(entries)) {
 
 	// get projection to first element
 	auto start = boost::make_transform_iterator(entries.cbegin(), extractFirst<Entry>());
@@ -502,42 +551,6 @@ NamedCompositeType::NamedCompositeType(NodeType nodeType, const string& prefix, 
 	if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
 		throw std::invalid_argument("No duplicates within identifiers are allowed!");
 	}
-}
-
-
-string NamedCompositeType::buildNameString(const string& prefix, const Entries& elements) {
-	// create output buffer
-	std::stringstream res;
-	res << prefix << "<";
-
-	// check whether there are type parameters
-	if (!elements.empty()) {
-
-		// convert type parameters to strings ...
-		vector<string> list;
-		std::transform(elements.cbegin(), elements.cend(), back_inserter(list),
-			[](const Entry& cur) {
-				return format("%s:%s", cur.first.getName().c_str(), cur.second->toString().c_str());
-		});
-
-		res << boost::join(list, ",");
-	}
-	res << ">";
-	return res.str();
-}
-
-/**
- * Checks whether all types within the given list of entries are concrete types. If so, true
- * is returned, false otherwise.
- *
- * @param elements the list of elements which's types should be checked
- * @return true if all are concrete, false otherwise
- */
-bool NamedCompositeType::allConcrete(const Entries& elements) {
-	return all(elements,
-		[](const Entry& cur) {
-			return cur.second->isConcrete();
-	});
 }
 
 Node::OptionChildList NamedCompositeType::getChildNodes() const {
@@ -557,9 +570,29 @@ const TypePtr NamedCompositeType::getTypeOfMember(const Identifier& member) cons
 	return TypePtr();
 }
 
+bool NamedCompositeType::equalsType(const Type& type) const {
+	const NamedCompositeType& other = static_cast<const NamedCompositeType&>(type);
+	return ::equals(entries, other.entries, [](const Entry& a, const Entry& b) {
+		return a.first == b.first && *a.second == *b.second;
+	});
+}
+
+std::ostream& NamedCompositeType::printTypeTo(std::ostream& out) const {
+	// create output buffer
+	std::stringstream res;
+	out << ((getNodeType() == NT_UnionType)?"union<":"struct<");
+
+	out << join(",", entries, [](std::ostream& out, const Entry& cur) {
+		out << cur.first.getName() << ":" << *cur.second;
+	});
+
+	return out << ">";
+}
 
 // ------------------------------------ Struct Type ---------------------------
 
+StructType::StructType(const Entries& entries)
+	: NamedCompositeType(NT_StructType, HS_StructType, "struct", entries) {}
 
 StructTypePtr StructType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
@@ -571,6 +604,9 @@ StructType* StructType::createCopyUsing(NodeMapping& mapper) const {
 }
 
 // ------------------------------------ Union Type ---------------------------
+
+UnionType::UnionType(const Entries& elements)
+	: NamedCompositeType(NT_UnionType, HS_UnionType, "union", elements) {}
 
 UnionTypePtr UnionType::get(NodeManager& manager, const Entries& entries) {
 	// just ask manager for new pointer
@@ -584,15 +620,15 @@ UnionType* UnionType::createCopyUsing(NodeMapping& mapper) const {
 
 // ------------------------------------ Single Element Type ---------------------------
 
-SingleElementType::SingleElementType(NodeType nodeType, const string& name,
+SingleElementType::SingleElementType(NodeType nodeType, std::size_t hashSeed, const string& name,
 		const TypePtr& elementType, const vector<IntTypeParam>& intTypeParams) :
-	GenericType(nodeType, name, toVector(isolate(elementType)), intTypeParams) {};
+	GenericType(nodeType, hashSeed, name, toVector(elementType), intTypeParams) {};
 
 
 // ------------------------------------ Array Type ---------------------------
 
 ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParam& dim) :
-	SingleElementType(NT_ArrayType, "array", elementType, toVector(dim)) {}
+	SingleElementType(NT_ArrayType, HS_ArrayType, "array", elementType, toVector(dim)) {}
 
 ArrayType* ArrayType::createCopyUsing(NodeMapping& mapper) const {
 	return new ArrayType(mapper.map(0, getElementType()), mapper.mapParam(getDimension()));
@@ -610,7 +646,7 @@ const IntTypeParam ArrayType::getDimension() const {
 // ------------------------------------ Vector Type ---------------------------
 
 VectorType::VectorType(const TypePtr& elementType, const IntTypeParam& size) :
-	SingleElementType(NT_VectorType, "vector", elementType, toVector(size)) {}
+	SingleElementType(NT_VectorType, HS_VectorType, "vector", elementType, toVector(size)) {}
 
 VectorType* VectorType::createCopyUsing(NodeMapping& mapper) const {
 	return new VectorType(mapper.map(0, getElementType()), mapper.mapParam(getSize()));
@@ -627,7 +663,7 @@ const IntTypeParam VectorType::getSize() const {
 // ------------------------------------ Ref Type ---------------------------
 
 RefType::RefType(const TypePtr& elementType) :
-	SingleElementType(NT_RefType, "ref", elementType) {}
+	SingleElementType(NT_RefType, HS_RefType, "ref", elementType) {}
 
 RefTypePtr RefType::get(NodeManager& manager, const TypePtr& elementType) {
 	return manager.get(RefType(elementType));
@@ -641,7 +677,7 @@ RefType* RefType::createCopyUsing(NodeMapping& mapper) const {
 // ------------------------------------ Channel Type ---------------------------
 
 ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParam& size) :
-	SingleElementType(NT_ChannelType, "channel", elementType, toVector(size)) {}
+	SingleElementType(NT_ChannelType, HS_ChannelType, "channel", elementType, toVector(size)) {}
 
 ChannelType* ChannelType::createCopyUsing(NodeMapping& mapper) const {
 	return new ChannelType(mapper.map(0, getElementType()), mapper.mapParam(getSize()));

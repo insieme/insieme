@@ -36,9 +36,15 @@
 
 #pragma once
 
+#include <algorithm>
+
+#include <boost/functional/hash.hpp>
+
 #include <boost/utility/enable_if.hpp>
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_convertible.hpp>
+
+#include <insieme/utils/functional_utils.h>
 
 namespace insieme {
 namespace utils {
@@ -140,6 +146,120 @@ public:
 template<typename Derived>
 inline std::size_t hash_value(const insieme::utils::HashableImmutableData<Derived>& instance) {
 	return instance.hash();
+}
+
+
+/**
+ * The terminal case for the hash combine operation (where no values are left).
+ *
+ * @param seed the seed to which no additional hash value should be appended to
+ * @return the resulting hash value (the handed in seed)
+ */
+inline std::size_t appendHash(std::size_t& seed) {
+	// nothing to do
+	return seed;
+}
+
+/**
+ * The generic implementation of the hash combine operation.
+ * @param seed the hash seed to which the hash values of the given arguments should be appended to
+ * @param first the first of the elements to be hashed and appended
+ * @param rest the remaining elements to be hashed and appended
+ * @return the resulting hash value
+ */
+template<typename T, typename... Args>
+inline std::size_t appendHash(std::size_t& seed, const T& first, const Args&... rest) {
+	boost::hash_combine(seed, first);
+	appendHash(seed, rest...);
+	return seed;
+}
+
+
+/**
+ * The terminal case for the variadic template based implementation of the combineHashes function.
+ *
+ * @return the initial hash seed corresponding to an empty tuple (0)
+ */
+inline std::size_t combineHashes() {
+	return 0;
+}
+
+/**
+ * A generic hash combining function computing a hash value for the given list of elements.
+ *
+ * @param first the first of the elements to be hashed
+ * @param rest the remaining elements to be hashed
+ * @return the resulting hash value
+ */
+template<typename T, typename ... Args>
+inline std::size_t combineHashes(const T& first, const Args&... rest) {
+	// initialize hash seed
+	std::size_t seed = 0;
+
+	// append all the hash values
+	appendHash(seed, first, rest...);
+	return seed;
+}
+
+// --------------------------------------------------------------------------------------------------------------
+// 												Hashing Containers
+// --------------------------------------------------------------------------------------------------------------
+
+/**
+ * This functor can be used to print elements to an output stream.
+ */
+template<typename Extractor>
+struct hash : public std::unary_function<const typename Extractor::argument_type&, std::size_t> {
+	Extractor extractor;
+	std::size_t operator()(const typename Extractor::argument_type& cur) const {
+		boost::hash<typename Extractor::argument_type> hasher;
+		return hasher(cur);
+	}
+};
+
+/**
+ * A generic method capable of computing a hash value for a ordered container (list, trees, ...).
+ *
+ * @param container the container for which a hash value should be computed
+ * @return the computed hash value
+ */
+template<typename Container>
+std::size_t hashList(const Container& container) {
+	typedef typename Container::value_type Element;
+	return hashList(container, hash<id<const Element&>>());
+}
+
+/**
+ * A generic method capable of computing a hash value for a ordered container (list, trees, ...).
+ *
+ * @param container the container for which a hash value should be computed
+ * @param hasher the hasher used for deriving a hash value for each element within the container
+ * @return the computed hash value
+ */
+template<typename Container, typename Hasher>
+std::size_t hashList(const Container& container, Hasher hasher) {
+	typedef typename Container::value_type Element;
+
+	std::size_t seed = 0;
+	hashList(seed, container, hasher);
+	return seed;
+}
+
+/**
+ * A generic method capable of computing a hash value for a ordered container (list, trees, ...).
+ *
+ * @param seed the hash value to be manipulated by introducing the elements of the list
+ * @param container the container for which a hash value should be computed
+ * @param hasher the hasher used for deriving a hash value for each element within the container
+ */
+template<typename Container, typename Hasher>
+void hashList(std::size_t& seed, const Container& container, Hasher hasher) {
+	typedef typename Container::value_type Element;
+
+	// combine hashes of all elements within the container
+	std::for_each(container.begin(), container.end(), [&](const Element& cur) {
+		boost::hash_combine(seed, hasher(cur));
+	});
 }
 
 } // end namespace utils

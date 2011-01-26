@@ -40,17 +40,18 @@
 #include <unordered_set>
 #include <functional>
 
+#include <iostream>
+
 #include <boost/functional/hash.hpp>
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_const.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/utility.hpp>
 
-#include "functional_utils.h"
-#include "instance_ptr.h"
-#include "container_utils.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/instance_ptr.h"
 
-#include <iostream>
 
 /**
  * An instance manager is capable of handling a set of instances of a generic type T. Instances
@@ -90,7 +91,6 @@ class InstanceManager : private boost::noncopyable {
 		const T* clone = orig->cloneTo(*static_cast<typename S::Manager*>(this));
 
 		// make sure clone is valid
-		using insieme::utils::hash_value; // required
 		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
 		assert( *orig == *clone && "Clone not equivalent to original!" );
 

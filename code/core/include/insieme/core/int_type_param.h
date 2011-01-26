@@ -254,7 +254,7 @@ inline std::size_t hash_value(const IntTypeParam& param) {
 	case IntTypeParam::VARIABLE:
 		return boost::hash_value(param.getSymbol());
 	case IntTypeParam::CONCRETE:
-		return ~boost::hash_value(param.getSymbol());
+		return ~boost::hash_value(param.getValue());
 	case IntTypeParam::INFINITE:
 		return std::numeric_limits<std::size_t>::max();
 	}

@@ -74,6 +74,10 @@ namespace core = insieme::core;
 namespace xml = insieme::xml;
 namespace analysis = insieme::analysis;
 
+
+bool checkForHashCollisions(const ProgramPtr& program);
+
+
 int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
@@ -190,6 +194,12 @@ int main(int argc, char** argv) {
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			};
 
+			// used for verifying quality of node-hashing
+//			if (!checkForHashCollisions(program)) {
+//				return -1;
+//			}
+
+
 			if(CommandLineOptions::CheckSema) {
 				checker();
 			}
@@ -301,3 +311,75 @@ int main(int argc, char** argv) {
 
 }
 
+// ------------------------------------------------------------------------------------------------------------------
+//                                     Hash code evaluation
+// ------------------------------------------------------------------------------------------------------------------
+typedef std::size_t hash_t;
+
+void hash_node(hash_t& seed, const NodePtr& cur) {
+	boost::hash_combine(seed, cur->getNodeType());
+	switch(cur->getNodeType()) {
+		case insieme::core::NT_GenericType:
+		case insieme::core::NT_ArrayType:
+		case insieme::core::NT_VectorType:
+		case insieme::core::NT_ChannelType:
+		case insieme::core::NT_RefType:  {
+			const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
+			boost::hash_combine(seed, type->getFamilyName().getName());
+			for_each(type->getIntTypeParameter(), [&](const core::IntTypeParam& cur) {
+				boost::hash_combine(seed, insieme::core::hash_value(cur));
+			});
+			break;
+		}
+		case insieme::core::NT_Variable:     { boost::hash_combine(seed, static_pointer_cast<const Variable>(cur)->getId()); break; }
+		case insieme::core::NT_TypeVariable: { boost::hash_combine(seed, static_pointer_cast<const TypeVariable>(cur)->getVarName()); break; }
+		case insieme::core::NT_Literal:      { boost::hash_combine(seed, static_pointer_cast<const Literal>(cur)->getValue()); break; }
+		case insieme::core::NT_MemberAccessExpr:      { boost::hash_combine(seed, static_pointer_cast<const MemberAccessExpr>(cur)->getMemberName().getName()); break; }
+		default: {}
+	}
+}
+
+hash_t computeHash(const NodePtr& cur) {
+	hash_t seed = 0;
+	hash_node(seed, cur);
+	for_each(cur->getChildList(), [&](const NodePtr& child) {
+		boost::hash_combine(seed, computeHash(child));
+	});
+	return seed;
+}
+
+
+bool checkForHashCollisions(const ProgramPtr& program) {
+
+	// create a set of all nodes
+	insieme::utils::set::PointerSet<NodePtr> allNodes;
+	insieme::core::visitAllOnce(program, insieme::core::makeLambdaPtrVisitor([&allNodes](const NodePtr& cur) {
+		allNodes.insert(cur);
+	}));
+
+	// evaluate hash codes
+	LOG(INFO) << "Number of nodes: " << allNodes.size();
+	std::map<std::size_t, NodePtr> hashIndex;
+	int collisionCount = 0;
+	for_each(allNodes, [&](const NodePtr& cur) {
+		// try inserting node
+		std::size_t hash = cur->hash();
+		//std::size_t hash = boost::hash_value(cur->toString());
+		//std::size_t hash = ::computeHash(cur);
+
+		auto res = hashIndex.insert(std::make_pair(hash, cur));
+		if (!res.second) {
+			LOG(INFO) << "Hash Collision detected: \n"
+					  << "   Hash code:     " << hash << "\n"
+					  << "   First Element: " << *res.first->second << "\n"
+					  << "   New Element:   " << *cur << "\n"
+					  << "   Equal:         " << ((*cur==*res.first->second)?"true":"false") << "\n";
+			collisionCount++;
+		}
+	});
+	LOG(INFO) << "Number of Collisions: " << collisionCount;
+
+	// terminate main program
+	return false;
+
+}

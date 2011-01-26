@@ -44,12 +44,6 @@ namespace insieme {
 namespace core {
 
 
-enum {
-	HASHVAL_NOOP, HASHVAL_BREAK, HASHVAL_CONTINUE, HASHVAL_DECLARATION, HASHVAL_RETURN,
-	HASHVAL_COMPOUND, HASHVAL_WHILE, HASHVAL_FOR, HASHVAL_IF, HASHVAL_SWITCH, HASHVAL_MARKER
-};
-
-
 // ------------------------------------- Statement ---------------------------------
 
 bool Statement::equals(const Node& node) const {
@@ -65,7 +59,15 @@ std::size_t hash_value(const Statement& stmt) {
 
 // ------------------------------------- BreakStmt ---------------------------------
 
-BreakStmt::BreakStmt(): Statement(NT_BreakStmt, HASHVAL_BREAK) {}
+namespace {
+	inline std::size_t hashBreakStmt() {
+		std::size_t res = 0;
+		boost::hash_combine(res, HS_BreakStmt);
+		return res;
+	}
+}
+
+BreakStmt::BreakStmt(): Statement(NT_BreakStmt, hashBreakStmt()) {}
 
 std::ostream& BreakStmt::printTo(std::ostream& out) const {
 	return out << "break";
@@ -91,7 +93,15 @@ BreakStmtPtr BreakStmt::get(NodeManager& manager) {
 
 // ------------------------------------- ContinueStmt ---------------------------------
 
-ContinueStmt::ContinueStmt() : Statement(NT_ContinueStmt, HASHVAL_CONTINUE) {};
+namespace {
+	inline std::size_t hashContinueStmt() {
+		std::size_t res = 0;
+		boost::hash_combine(res, HS_ContinueStmt);
+		return res;
+	}
+}
+
+ContinueStmt::ContinueStmt() : Statement(NT_ContinueStmt, hashContinueStmt()) {};
 
 std::ostream& ContinueStmt::printTo(std::ostream& out) const {
 	return out << "continue";
@@ -118,7 +128,8 @@ ContinueStmtPtr ContinueStmt::get(NodeManager& manager) {
 // ------------------------------------- ReturnStmt ---------------------------------
 
 std::size_t hashReturnStmt(const ExpressionPtr& returnExpression) {
-	std::size_t seed = HASHVAL_RETURN;
+	std::size_t seed = 0;
+	boost::hash_combine(seed, HS_ReturnStmt);
     boost::hash_combine(seed, returnExpression->hash());
 	return seed;
 }
@@ -153,11 +164,14 @@ ReturnStmtPtr ReturnStmt::get(NodeManager& manager, const ExpressionPtr& returnE
 
 // ------------------------------------- DeclarationStmt ---------------------------------
 
-std::size_t hashDeclarationStmt(const VariablePtr& variable, const ExpressionPtr& initExpression) {
-	std::size_t seed = HASHVAL_DECLARATION;
-    boost::hash_combine(seed, variable->hash());
-    boost::hash_combine(seed, initExpression->hash());
-	return seed;
+namespace {
+	std::size_t hashDeclarationStmt(const VariablePtr& variable, const ExpressionPtr& initExpression) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_DeclarationStmt);
+		boost::hash_combine(seed, variable->hash());
+		boost::hash_combine(seed, initExpression->hash());
+		return seed;
+	}
 }
 
 DeclarationStmt::DeclarationStmt(const VariablePtr& variable, const ExpressionPtr& initExpression)
@@ -196,10 +210,13 @@ DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const VariablePtr&
 
 // ------------------------------------- CompoundStmt ---------------------------------
 
-std::size_t hashCompoundStmt(const vector<StatementPtr>& stmts) {
-	std::size_t seed = HASHVAL_COMPOUND;
-	hashPtrRange(seed, stmts);
-	return seed;
+namespace {
+	std::size_t hashCompoundStmt(const vector<StatementPtr>& stmts) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_CompoundStmt);
+		hashPtrRange(seed, stmts);
+		return seed;
+	}
 }
 
 CompoundStmt::CompoundStmt(const vector<StatementPtr>& stmts)
@@ -246,11 +263,14 @@ CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const vector<StatementPt
 
 // ------------------------------------- WhileStmt ---------------------------------
 
-std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& body) {
-	std::size_t seed = HASHVAL_WHILE;
-	boost::hash_combine(seed, condition->hash());
-	boost::hash_combine(seed, body->hash());
-	return seed;
+namespace {
+	std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& body) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_WhileStmt);
+		boost::hash_combine(seed, condition->hash());
+		boost::hash_combine(seed, body->hash());
+		return seed;
+	}
 }
 
 WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
@@ -285,13 +305,16 @@ WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition
 
 // ------------------------------------- ForStmt ---------------------------------
 
-std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
-	std::size_t seed = HASHVAL_FOR;
-	boost::hash_combine(seed, declaration->hash());
-	boost::hash_combine(seed, body->hash());
-	boost::hash_combine(seed, end->hash());
-	boost::hash_combine(seed, step->hash());
-	return seed;
+namespace {
+	std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_ForStmt);
+		boost::hash_combine(seed, declaration->hash());
+		boost::hash_combine(seed, end->hash());
+		boost::hash_combine(seed, step->hash());
+		boost::hash_combine(seed, body->hash());
+		return seed;
+	}
 }
 
 ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
@@ -335,7 +358,8 @@ ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declarat
 // ------------------------------------- IfStmt ---------------------------------
 
 std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) {
-	std::size_t seed = HASHVAL_IF;
+	std::size_t seed = 0;
+	boost::hash_combine(seed, HS_IfStmt);
 	boost::hash_combine(seed, condition->hash());
 	boost::hash_combine(seed, thenBody->hash());
 	boost::hash_combine(seed, elseBody->hash());
@@ -388,7 +412,8 @@ IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, cons
 namespace { // some anonymous utilities for the switch statement
 
 	std::size_t hashSwitchStmt(const ExpressionPtr& switchExpr, const vector<SwitchStmt::Case>& cases, const StatementPtr& defaultCase) {
-		std::size_t seed = HASHVAL_SWITCH;
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_SwitchStmt);
 		boost::hash_combine(seed, switchExpr->hash());
 		std::for_each(cases.begin(), cases.end(), [&seed](const SwitchStmt::Case& cur) {
 			boost::hash_combine(seed, cur.first->hash());
@@ -469,9 +494,10 @@ SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchE
 namespace {
 
 	std::size_t hashMarkerStmt(const StatementPtr& subStatement, const unsigned id) {
-		std::size_t hash = HASHVAL_MARKER;
-		boost::hash_combine(hash, subStatement);
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_MarkerStmt);
 		boost::hash_combine(hash, id);
+		boost::hash_combine(hash, subStatement->hash());
 		return hash;
 	}
 

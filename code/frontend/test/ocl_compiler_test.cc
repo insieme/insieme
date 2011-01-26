@@ -77,12 +77,12 @@ public:
                 const core::TypePtr& retTy = funcType->getReturnType();
 
                 //check return type
-                EXPECT_EQ("unit", retTy->getName());
+                EXPECT_EQ("unit", toString(*retTy));
                 EXPECT_GE(args.size(), static_cast<size_t>(2));
                 core::TypePtr globalRange = args.at(args.size()-2);
-                EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
+                EXPECT_EQ("vector<uint<4>,3>", toString(*globalRange));
                 core::TypePtr localRange = args.back();
-                EXPECT_EQ("vector<uint<4>,3>", globalRange->getName());
+                EXPECT_EQ("vector<uint<4>,3>", toString(*globalRange));
 
 //LOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 

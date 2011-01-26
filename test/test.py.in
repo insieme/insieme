@@ -29,7 +29,7 @@ def run_cmd(cmd):
 	pid = subprocess.Popen( shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 	# waits for process and collects everything send to stdout/stderr	
-	res = pid.communicate()[1]
+	res = pid.communicate()[0]
 	elapsed = time.time() - start
 	sys.stderr.write(" [{0:.4f} secs]\n".format(elapsed) )
 
@@ -102,6 +102,7 @@ def run_test_case(test_case_name):
 	if check_diff(test_case_name, refIr, testIr):
 		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 	else:
+		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 		runTests = 1 # => file comparison failed, but program might still be OK
 
 	if not os.path.exists(refC):
@@ -112,6 +113,7 @@ def run_test_case(test_case_name):
 	if check_diff(test_case_name, refC, testC):
 		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 	else:
+		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 		runTests = 1 # => file comparison failed, but program might still be OK
 	
 	# test whether executables are missing within #bin directory
