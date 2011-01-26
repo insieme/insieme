@@ -43,7 +43,7 @@ __kernel void constantMemArg(__constant double* c) {
 
 #pragma insieme mark
 __kernel void globalMemArg(__global float* g) {
-    __global float* privateGptr = g;
+//    __global float* privateGptr = g;
     float element = g[0];
 //    __global float4* privateGvec = (float4*)g;
 
