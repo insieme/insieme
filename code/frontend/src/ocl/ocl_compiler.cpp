@@ -481,8 +481,9 @@ public:
                 funCaptures.push_back(lambdaData.localRange);
                 funCaptInits.push_back(kd.localRange);
             }
+            core::TypePtr retTy = dynamic_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
 
-            return builder.captureInitExpr(builder.lambdaExpr(newBody, funCaptures, fun->getParameterList()), funCaptInits);
+            return builder.captureInitExpr(builder.lambdaExpr(retTy, newBody, funCaptures, fun->getParameterList()), funCaptInits);
 
         }
 

@@ -43,7 +43,7 @@ target_link_libraries( main ${Boost_PROGRAM_OPTIONS_LIBRARY})
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-file(GLOB test_cases test/*.cc)
+file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 

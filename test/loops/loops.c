@@ -39,6 +39,17 @@ int main(int argc, char* argv[]) {
 		printf("a=%d\n", a);
 	}
 	
+	// example of loop with a complex condition expression
+	// in this case the loop is rewritten as a while loop
+	for(a=1;a < 10 && a > 0; a+=2) {
+		printf("a=%d\n", a);
+	}
+	
+	// example of for loop with missing increment expression
+	for(a=0; a!=0; ) {
+		printf("a=%d\n", a);
+	}
+	
 	printf("a=%d\n", a);
 	
 	func(a);

@@ -121,7 +121,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	   if(lambdaExpr)
     	   assert(dynamic_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr &&
     	       "Conversion of function returned a marker expression which does not contain a lambda espression");
-	   
     }
 	
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
@@ -329,8 +328,8 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 //    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
 //    		}
 //    	);
-    	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
     	//return builder.structExpr(structTy, members);
+    	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
     }
 
     // Handle unions initialization
@@ -522,14 +521,11 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
     // if OpenCL related annotations have been found, create OclBaseAnnotation and
     // add it to the funciton's attribute
     if(!kernelAnnotation.empty()) {
-        // kreate new marker node
+        // create new marker node
         core::MarkerExprPtr&& marker = builder.markerExpr(node);
-
         marker->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
-
         return marker;
     }
-
     return node;
 }
 
@@ -573,7 +569,6 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 //	return lambdaExpr;
 	return core::LambdaExprPtr();
 }
-
 
 } // End conversion namespace
 } // End frontend namespace

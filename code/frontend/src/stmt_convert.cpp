@@ -428,9 +428,9 @@ public:
 
 			core::StatementPtr&& whileStmt = builder.whileStmt(
 				convFact.convertExpr( forStmt->getCond() ), // cond
-					builder.compoundStmt(
-						toVector<core::StatementPtr>( tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
-					)
+				forStmt->getInc() ?
+					builder.compoundStmt( toVector<core::StatementPtr>( tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) ) ) :
+					tryAggregateStmts(builder, body)
 				);
 
 			// handle eventual pragmas attached to the Clang node
@@ -681,6 +681,23 @@ public:
 
 		CompoundStmt* compStmt = dyn_cast<CompoundStmt>(switchStmt->getBody());
 		assert(compStmt && "Switch statements doesn't contain a compound stmt");
+
+		// lambda function which creates a case stmt using the accumulated statements
+		auto addCase = [this, &cases, &caseStmts, &caseExprs, &defaultStart, &defStmt, &isDefault]() -> void {
+			std::for_each(caseExprs.begin(), caseExprs.end(),
+				[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
+					std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
+					std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
+					cases.push_back( core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList )) );
+				}
+			);
+			if(isDefault) {
+				std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
+				std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
+				defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
+			}
+		};
+
 		for(auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 			Stmt* curr = *it;
 			// statements which are before the first case.
@@ -707,7 +724,7 @@ public:
 					}
 
 					subStmt = tryAggregateStmts( this->convFact.builder, this->Visit( const_cast<Stmt*>(sub) ) );
-					// if the substatement is a BreakStmt we have to replace it with a noOp and remember to reset the caseStmts
+					// if the sub-statement is a BreakStmt we have to replace it with a noOp and remember to reset the caseStmts
 					if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
 						subStmt = convFact.mgr.basic.getNoOp();
 						breakEncountred = true;
@@ -730,21 +747,11 @@ public:
 				}
 				caseStmts.push_back(subStmt);
 			}
+
 			// if the current statement is a break, or we encountred a break in the current case
 			// we create a new case and add to the list of cases for this switch statement
 			if(breakEncountred || isa<const BreakStmt>(curr)) {
-				std::for_each(caseExprs.begin(), caseExprs.end(),
-					[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
-						std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
-						std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
-						cases.push_back( core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList )) );
-					}
-				);
-				if(isDefault) {
-					std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
-					std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
-					defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
-				}
+				addCase();
 				// clear the list of statements collected until now
 				caseExprs.clear();
 				caseStmts.clear();
@@ -756,20 +763,8 @@ public:
 			}
 		}
 		// we still have some statement pending
-		if(!caseStmts.empty()) {
-			std::for_each(caseExprs.begin(), caseExprs.end(),
-				[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
-					std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
-					std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
-					cases.push_back( core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList )) );
-				}
-			);
-			if(isDefault) {
-				std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
-				std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
-				defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
-			}
-		}
+		if(!caseStmts.empty())
+			addCase();
 
 		// initialize the default case with an empty compoundstmt
 		core::StatementPtr&& irNode = builder.switchStmt(condExpr, cases, defStmt);
