@@ -46,6 +46,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/simple_backend/simple_backend.h"
+#include "insieme/opencl_backend/opencl_convert.h"
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/analysis/cfg.h"
@@ -271,19 +272,27 @@ int main(int argc, char** argv) {
 		}
 
 		if (CommandLineOptions::OpenCL) {
-			/*LOG(INFO) << "Converting to OpenCL ... ";
+            insieme::utils::Timer timer("OpenCL.Backend");
 
-			insieme::opencl_backend::OpenCLChecker oc;
-			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "CHECKED" : "WRONG");
+            LOG(INFO) << "========================= Converting to OpenCL ===============================";
 
-			insieme::opencl_backend::ConversionContext cc;
-			auto converted = cc.convert(program);
-			// TODO write to output file
-			std::cout << converted;*/
+//TODO find the OpenCLChecker
+//			insieme::opencl_backend::OpenCLChecker oc;
+//			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
+
+            if(!CommandLineOptions::Output.empty()) {
+                insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+            } else {
+                auto converted = insieme::backend::ocl::convert(program);
+                LOG(INFO) << *converted;
+            }
+
+            timer.stop();
+            LOG(INFO) << timer;
 		} else {
 			insieme::utils::Timer timer("Simple.Backend");
 
-			LOG(INFO) << "========================== Converting to C++ ================================";
+			LOG(INFO) << "========================== Converting to C++ =================================";
 
 			if(!CommandLineOptions::Output.empty()) {
 				insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
