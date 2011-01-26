@@ -243,9 +243,7 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
 
         if(elemTy && vt) {
             // check if they have the same type
-std::cout << "Cast from " <<  elemTy << " to " << vt->getElementType() << std::endl;
             assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
-
 
             return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
         }
