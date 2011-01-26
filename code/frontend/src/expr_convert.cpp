@@ -1079,8 +1079,8 @@ public:
         // if the type of the vector is a refType, we deref it
         base = convFact.tryDeref(base);
 
-        core::ExpressionPtr&& retExpr =
-        	convFact.builder.callExpr(convFact.builder.refType(exprTy), convFact.mgr.basic.getVectorSubscript(), base, idx);
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(exprTy, convFact.mgr.basic.getVectorSubscript(), base, idx);
+
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
     }
