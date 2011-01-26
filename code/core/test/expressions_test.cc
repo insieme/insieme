@@ -393,7 +393,6 @@ TEST(ExpressionsTest, JobExpr) {
 	// check hash codes, children and cloning
 	TypePtr type = manager.basic.getJob();
 	vector<NodePtr> childList;
-	childList.push_back(type);
 	childList.push_back(range);
 	childList.push_back(localDeclarations[0]);
 	childList.push_back(localDeclarations[1]);

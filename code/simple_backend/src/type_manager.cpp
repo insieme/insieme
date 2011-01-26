@@ -140,10 +140,10 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 			case 2: return toEntry(qualifier + "short");
 			case 4: return toEntry(qualifier + "int");
 			case 8: return toEntry(qualifier + "long"); // long long ?
-			default: return toEntry(ptr->getName());
+			default: return toEntry(ptr->toString());
 		}
 		// TODO Warn?
-		return toEntry(ptr->getName());
+		return toEntry(ptr->toString());
 	}
 	if(basic.isBool(ptr)) {
 		return toEntry("bool");
@@ -154,10 +154,10 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 			case 4: return toEntry("float");
 			case 8: return toEntry("double");
 			case 16: return toEntry("long double");
-			default: return toEntry(ptr->getName());
+			default: return toEntry(ptr->toString());
 		}
 		// TODO Warn?
-		return toEntry(ptr->getName());
+		return toEntry(ptr->toString());
 	}
 	if(basic.isString(ptr)) {
 		return toEntry("string");
@@ -176,7 +176,7 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	}
 
 	//assert(0 && "Unhandled generic type.");
-	return toEntry(string("[[unhandled_simple_type: ") + ptr->getName() + "]]");
+	return toEntry(string("[[unhandled_simple_type: ") + ptr->toString() + "]]");
 }
 
 TypeManager::Entry TypeManager::resolveFunctionType(const FunctionTypePtr& ptr) {

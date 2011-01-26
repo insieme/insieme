@@ -95,6 +95,19 @@ enum NodeType {
 #undef CONCRETE
 
 /**
+ * Defines an enumeration containing an entry for every node type. This
+ * enumeration is used as a seed for the individual hashing functions of
+ * the nodes. In its current version, the seed is equivalent to the node
+ * type.
+ */
+#define CONCRETE(name) HS_ ## name,
+enum HashSeeds {
+// the necessary information is obtained from the node-definition file
+#include "insieme/core/ast_nodes.def"
+};
+#undef CONCRETE
+
+/**
  * A constant defining the number of node types.
  */
 #define CONCRETE(name) +1
@@ -392,9 +405,7 @@ public:
 	 * The default virtual destructor enforcing the proper destruction of derived
 	 * instances.
 	 */
-	virtual ~Node() {
-	}
-	;
+	virtual ~Node() {};
 
 	/**
 	 * Creates a new version of this node where every referenced to a child node
@@ -452,7 +463,7 @@ public:
 	 *
 	 * @return a string representation for this node instance
 	 */
-	virtual string toString() const {
+	string toString() const {
 		return ::toString(*this);
 	}
 

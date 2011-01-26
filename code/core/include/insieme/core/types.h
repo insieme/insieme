@@ -45,8 +45,10 @@
 #include <string>
 #include <ostream>
 #include <vector>
+#include <sstream>
 
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/instance_manager.h"
@@ -62,45 +64,18 @@ using std::map;
 namespace insieme {
 namespace core {
 
-/**
- * This class is used to represent integer parameters of generic types.
- */
-class IntTypeParam;
-
 // ---------------------------------------- A token for an abstract type ------------------------------
 
 /**
  * The base type for all type tokens. Type tokens are immutable instances of classes derived from this base
  * class and are used to represent the type of data elements and functions (generally types) within the IR.
- *
- * Each type is equipped with a unique name. The name makes them distinguishable. Further, there are two sorts
- * of types. Concrete types represent types which for which actual values exist. For instance, a value for the type
- * int<4> would be 7. Variable types however represent a family of types, e.g. the type int<p> represents all
- * types where the integer-type parameter p can be substituted by some arbitrary value between 0 and infinity (including
- * both). Variable types can only be used as the input/output types of functions.
  */
 class Type: public Node {
 
 	/**
-	 * The name of this type. This name is used to uniquely identify the represented type. Since types
-	 * are generally immutable, the type name is marked to be constant.
-	 *
-	 * TODO: introduce lazy evaluation to speed up the creation of instances
+	 * The name of this type as a string (the result of the toString).
 	 */
-	const string name;
-
-	/**
-	 * A flag indicating whether this type represents a concrete type (true) or a family of types
-	 * based on type variables (false).
-	 */
-	const bool concrete;
-
-	/**
-	 * A flag indicating whether this type represents a function type (true) or a data type (false).
-	 */
-	const bool functionType;
-
-	virtual Type* createCopyUsing(NodeMapping& mapper) const = 0;
+	mutable boost::optional<string> typeName;
 
 protected:
 
@@ -113,8 +88,8 @@ protected:
 	 * 					due to type variables. Default: true
 	 * @param functionType a flag indicating whether this type is a function type or not. Default: false
 	 */
-	Type(NodeType type, const std::string& name, const bool concrete = true, const bool functionType = false)
-		: Node(type, NC_Type, boost::hash_value(name)), name(name), concrete(concrete), functionType(functionType) { }
+	Type(NodeType type, const std::size_t& hashCode)
+		: Node(type, NC_Type, hashCode) { }
 
 public:
 
@@ -124,63 +99,46 @@ public:
 	virtual ~Type() { }
 
 	/**
-	 * Checks whether the represented type is a concrete type (hence, it does not have any unbound,
-	 * variable type parameters).
-	 *
-	 * @return true if it is a concrete type, false otherwise
-	 */
-	bool isConcrete() const {
-		return concrete;
-	}
-
-	/**
-	 * Tests whether the represented type is a function type.
-	 * Since most types are not function types, the default implementation returns false.
-	 */
-	bool isFunctionType() const {
-		return functionType;
-	}
-
-	/**
-	 * Retrieves the unique name identifying this type.
-	 */
-	const string& getName() const {
-		return name;
-	}
-
-	/**
-	 * Provides a string representation of this type, which is by default
-	 * the actual name of the type. Specific sub-types may override this method
-	 * to customize the representation.
-	 */
-	std::ostream& printTo(std::ostream& out) const {
-		return (out << getName());
-	}
-
-	/**
 	 * A default implementation of the equals operator comparing the actual
 	 * names of the types.
 	 */
-	bool equals(const Node& other) const {
-		// precondition: other must be a type
-		assert( dynamic_cast<const Type*>(&other) && "Type violation by base class!" );
+	bool equals(const Node& other) const;
 
-		// convert (statically) and check the type name
-		const Type& ref = static_cast<const Type&>(other);
-		// TODO: improve this by eliminating the name!
-		return getNodeType() == ref.getNodeType() && name == ref.name;
+	/**
+	 * Requests an actual type implementation to print a string representation of
+	 * itself into the given output stream.
+	 */
+	virtual std::ostream& printTypeTo(std::ostream& out) const = 0;
+
+	/**
+	 * Implements the printTo method as requested by the basic node definition. However,
+	 * for performance reasons the string-variant of a type is cached within a lazy evaluated
+	 * internal string.
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const {
+		if (!typeName) {
+			std::stringstream res;
+			printTypeTo(res);
+			typeName.reset(res.str());
+		}
+		return out << *typeName;
 	}
 
 
-	// ---------------------------------- Type Utils ----------------------------------------
-
+protected:
 
 	/**
-	 * Tests whether this generic type instance represents a concrete or variable type.
-	 *
-	 * @return true if it is a concrete type, hence no type parameter is variable, false otherwise
+	 * An abstract method to be implemented by sub-types to realize the actual type
+	 * comparison.
 	 */
-	static bool allConcrete(const vector<TypePtr>& elementTypes);
+	virtual bool equalsType(const Type& type) const = 0;
+
+private:
+
+	/**
+	 * Creates a modified version of this type using the given node mapper.
+	 */
+	virtual Type* createCopyUsing(NodeMapping& mapper) const = 0;
 
 };
 
@@ -211,24 +169,23 @@ public:
 	 *
 	 * @param name the name of the type variable to be created
 	 */
-	TypeVariable(const string& name) : Type(NT_TypeVariable, format("'%s", name.c_str()), false, false), varName(name) { }
-
-private:
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual TypeVariable* createCopyUsing(NodeMapping&) const;
+	TypeVariable(const string& name);
 
 protected:
 
 	/**
-	 * Creates a empty child list since this node represents a terminal node.
+	 * Creates the list of child nodes of this type. Since the type variable is a
+	 * terminal node, the resulting list will always be empty.
 	 */
 	virtual OptionChildList getChildNodes() const {
 		// return an option child list filled with an empty list
 		return OptionChildList(new ChildList());
 	}
+
+	/**
+	 * Compares this type variable with the given type.
+	 */
+	virtual bool equalsType(const Type& type) const;
 
 public:
 
@@ -239,7 +196,19 @@ public:
 	 */
 	static TypeVariablePtr get(NodeManager& manager, const string& name);
 
+	/**
+	 * This static factory method allows to construct a type variable based on an identifier.
+	 *
+	 * @param manager the manager used for maintaining instances of this class
+	 * @param id the identifier defining the name of the resulting type variable
+	 * @return the requested type instance managed by the given manager
+	 */
 	static TypeVariablePtr getFromId(NodeManager& manager, const Identifier& id);
+
+	/**
+	 * Prints a string-representation of this type to the given output stream.
+	 */
+	virtual std::ostream& printTypeTo(std::ostream& out) const;
 
 	/**
 	 * Obtains the name of the variable represented by this instance.
@@ -247,6 +216,21 @@ public:
 	const std::string getVarName() const {
 		return varName;
 	}
+
+	/**
+	 * The less-than operation supported between type variables to allow those
+	 * to be used within tree-based map implementations.
+	 */
+	bool operator<(const TypeVariable& other) const {
+		return varName < other.varName;
+	}
+
+private:
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual TypeVariable* createCopyUsing(NodeMapping&) const;
 
 };
 
@@ -264,53 +248,33 @@ class TupleType: public Type {
 	 */
 	const TypeList elementTypes;
 
-	/**
-	 * A private utility method building the name of a tuple type.
-	 *
-	 * @param elementTypes	the list of element types
-	 * @return a string representation of the resulting tuple type
-	 */
-	static string buildNameString(const TypeList& elementTypes);
-
-public:
-
-	/**
-	 * Creates a new, empty tuple type.
-	 */
-	TupleType();
-
-	/**
-	 * Creates a new tuple type based on the given element type(s).
-	 */
-	TupleType(const TypePtr&);
-
-	/**
-	 * Creates a new tuple type based on the given element type(s).
-	 */
-	TupleType(const TypePtr&, const TypePtr&);
+private:
 
 	/**
 	 * Creates a new tuple type based on the given element types.
 	 */
 	TupleType(const TypeList& elementTypes);
 
-private:
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual TupleType* createCopyUsing(NodeMapping& mapper) const;
-
 protected:
 
 	/**
-	 * Creates a empty child list since this node represents a terminal node.
+	 * Creates the list of child nodes of this type.
 	 */
 	virtual OptionChildList getChildNodes() const;
 
+	/**
+	 * Compares this type with the given type.
+	 */
+	virtual bool equalsType(const Type& type) const;
+
 public:
 
-	const TypeList& getElementTypes() const { return elementTypes; }
+	/**
+	 * Obtains the list of types constituting this tuple type.
+	 */
+	const TypeList& getElementTypes() const {
+		return elementTypes;
+	}
 
 	/**
 	 * This method provides a static factory method for an empty tuple type.
@@ -328,6 +292,18 @@ public:
 	 * @param elementTypes the list of element types to be used to form the tuple
 	 */
 	static TupleTypePtr get(NodeManager& manager, const TypeList& elementTypes = TypeList());
+
+	/**
+	 * Prints a string-representation of this type to the given output stream.
+	 */
+	virtual std::ostream& printTypeTo(std::ostream& out) const;
+
+private:
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual TupleType* createCopyUsing(NodeMapping& mapper) const;
 
 };
 
@@ -354,16 +330,7 @@ class FunctionType: public Type {
 	 */
 	const TypePtr returnType;
 
-public:
-
-	/**
-	 * Creates a new instance of this type based on the given in and output types.
-	 *
-	 * @param argumentTypes a reference to the type used as argument types
-	 * @param returnType a reference to the type used as return type
-	 */
-	FunctionType(const TypeList& argumentTypes, const TypePtr& returnType);
-
+private:
 
 	/**
 	 * Creates a new instance of this type based on the given in and output types.
@@ -377,14 +344,14 @@ public:
 protected:
 
 	/**
-	 * Creates a clone of this node.
-	 */
-	virtual FunctionType* createCopyUsing(NodeMapping& mapper) const;
-
-	/**
 	 * Creates a empty child list since this node represents a terminal node.
 	 */
 	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this type with the given type.
+	 */
+	virtual bool equalsType(const Type& type) const;
 
 public:
 
@@ -440,6 +407,19 @@ public:
 	const TypePtr& getReturnType() const {
 		return returnType;
 	}
+
+	/**
+	 * Prints a string-representation of this type to the given output stream.
+	 */
+	virtual std::ostream& printTypeTo(std::ostream& out) const;
+
+private:
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual FunctionType* createCopyUsing(NodeMapping& mapper) const;
+
 };
 
 
@@ -474,7 +454,7 @@ class GenericType: public Type {
 	 */
 	const TypePtr baseType;
 
-public:
+protected:
 
 	/**
 	 * Creates an new generic type instance based on the given parameters.
@@ -489,19 +469,19 @@ public:
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
 
-protected:
-
 	/**
 	 * A special constructor which HAS to be used by all sub-classes to ensure
 	 * that the node type token is matching the actual class type.
 	 *
 	 * @param nodeType		the token to be used to identify the type of this node
+	 * @param hashSeed		the seed to be used for computing a hash value
 	 * @param name 			the name of the new type (only the prefix)
 	 * @param typeParams	the type parameters of this type, concrete or variable
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 	 * @param baseType		the base type of this generic type
 	 */
 	GenericType(NodeType nodeType,
+			std::size_t hashSeed,
 			const Identifier& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
@@ -509,15 +489,15 @@ protected:
 
 
 	/**
-	 * Creates a clone of this node.
-	 */
-	virtual GenericType* createCopyUsing(NodeMapping& mapper) const;
-
-	/**
 	 * Obtains a list of all type parameters and the optional base type
 	 * referenced by this generic type.
 	 */
 	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this type with the given type.
+	 */
+	virtual bool equalsType(const Type& type) const;
 
 public:
 
@@ -571,6 +551,19 @@ public:
 	const TypePtr& getBaseType() const {
 		return baseType;
 	}
+
+	/**
+	 * Prints a string-representation of this type to the given output stream.
+	 */
+	virtual std::ostream& printTypeTo(std::ostream& out) const;
+
+private:
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual GenericType* createCopyUsing(NodeMapping& mapper) const;
+
 };
 
 // ---------------------------------------- Recursive Type ------------------------------
@@ -580,7 +573,11 @@ class RecTypeDefinition : public Node {
 
 public:
 
-	typedef std::unordered_map<TypeVariablePtr, TypePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> RecTypeDefs;
+	/**
+	 * The data type used for maintaining recursive type definitions. The tree based
+	 * std::map is required to fix the order of the contained elements.
+	 */
+	typedef std::map<TypeVariablePtr, TypePtr, compare_target<TypeVariablePtr>> RecTypeDefs;
 
 private:
 
@@ -589,23 +586,46 @@ private:
 	 */
 	const RecTypeDefs definitions;
 
+	/**
+	 * A constructor for this type of node.
+	 */
 	RecTypeDefinition(const RecTypeDefs& definitions);
 
+	/**
+	 * Creates a clone of this node.
+	 */
 	RecTypeDefinition* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
 
+	/**
+	 * Compares this node with the given node.
+	 */
 	virtual bool equals(const Node& other) const;
 
+	/**
+	 * Obtains a list of child nodes.
+	 */
 	virtual OptionChildList getChildNodes() const;
 
 public:
 
+	/**
+	 * Constructs a new node of this type based on the given type definitions.
+	 */
 	static RecTypeDefinitionPtr get(NodeManager& manager, const RecTypeDefs& definitions);
 
+	/**
+	 * Obtains the definitions constituting this type of node.
+	 */
 	const RecTypeDefs& getDefinitions() const{
 		return definitions;
 	}
+
+	/**
+	 * Obtains a specific definition maintained within this node.
+	 */
+	const TypePtr getDefinitionOf(const TypeVariablePtr& variable) const;
 
 	/**
 	 * Unrolls this definition once for the given variable.
@@ -616,8 +636,9 @@ public:
 	 */
 	TypePtr unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const;
 
-	const TypePtr getDefinitionOf(const TypeVariablePtr& variable) const;
-
+	/**
+	 * Prints a string representation of this node to the given output stream.
+	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 };
@@ -651,20 +672,19 @@ class RecType: public Type {
 	 */
 	RecType(const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition);
 
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual RecType* createCopyUsing(NodeMapping& mapper) const;
-
-	/**
-	 * Obtains a list of all sub-nodes referenced by this AST node.
-	 */
-	virtual OptionChildList getChildNodes() const;
-
 public:
 
-	const RecTypeDefinitionPtr getDefinition() const { return definition; }
+	/**
+	 * Obtains the definition-part of this recursive type.
+	 */
+	const RecTypeDefinitionPtr getDefinition() const {
+		return definition;
+	}
 
+	/**
+	 * Obtains the type variable referencing the represented representation within
+	 * the associated definition.
+	 */
 	const TypeVariablePtr getTypeVariable() const { return typeVariable; }
 
 	/**
@@ -683,6 +703,31 @@ public:
 	TypePtr unroll(NodeManager& manager) const {
 		return definition->unrollOnce(manager, typeVariable);
 	}
+
+	/**
+	 * Prints a string-representation of this type to the given output stream.
+	 */
+	virtual std::ostream& printTypeTo(std::ostream& out) const;
+
+protected:
+
+	/**
+	 * Obtains a list of all sub-nodes referenced by this AST node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this type with the given type.
+	 */
+	virtual bool equalsType(const Type& type) const;
+
+private:
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual RecType* createCopyUsing(NodeMapping& mapper) const;
+
 };
 
 
@@ -719,17 +764,23 @@ protected:
 	 * Creates a new named composite type having the given name and set of entries.
 	 *
 	 * @param nodeType the token to identify the actual type of the resulting node
+	 * @param hashSeed	the seed to be used for computing a hash value
 	 * @param prefix the prefix to be used for the new type (union or struct)
 	 * @param entries the entries of the new type
 	 *
 	 * @throws std::invalid_argument if the same identifier is used more than once within the type
 	 */
-	NamedCompositeType(NodeType nodeType, const string& prefix, const Entries& entries);
+	NamedCompositeType(NodeType nodeType, std::size_t hashSeed, const string& prefix, const Entries& entries);
 
 	/**
 	 * Obtains a list of all child sub-types used within this struct.
 	 */
 	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this type with the given type.
+	 */
+	virtual bool equalsType(const Type& type) const;
 
 public:
 
@@ -748,25 +799,10 @@ public:
 	 */
 	const TypePtr getTypeOfMember(const Identifier& member) const;
 
-private:
-
 	/**
-	 * A static utility function composing the name of this type.
-	 *
-	 * @param prefix the prefix of the type name (union or struct)
-	 * @param entries the list of entries forming the content of this type
-	 * @return the name to be used by this named composite type
+	 * Prints a string-representation of this type to the given output stream.
 	 */
-	static string buildNameString(const string& prefix, const Entries& entries);
-
-	/**
-	 * Checks whether all types within the given list of entries are concrete types. If so, true
-	 * is returned, false otherwise.
-	 *
-	 * @param elements the list of elements which's types should be checked
-	 * @return true if all are concrete, false otherwise
-	 */
-	static bool allConcrete(const Entries&);
+	virtual std::ostream& printTypeTo(std::ostream& out) const;
 
 };
 
@@ -783,7 +819,7 @@ class StructType: public NamedCompositeType {
 	 * @param entries the entries the new type should consist of
 	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
 	 */
-	StructType(const Entries& entries) : NamedCompositeType(NT_StructType, "struct", entries) {}
+	StructType(const Entries& entries);
 
 	/**
 	 * Creates a clone of this type within the given manager.
@@ -820,7 +856,7 @@ class UnionType: public NamedCompositeType {
 	 * @param elements the elements the new type should consist of
 	 * @see NamedCompositeType::NamedCompositeType(const string&, const Entries&)
 	 */
-	UnionType(const Entries& elements) : NamedCompositeType(NT_UnionType, "union", elements) {}
+	UnionType(const Entries& elements);
 
 	/**
 	 * Creates a clone of this type within the given manager.
@@ -859,13 +895,14 @@ protected:
 	 * integer parameters.
 	 *
 	 * @param nodeType the node type of the concrete implementation of this abstract class
+	 * @param hashSeed	the seed to be used for computing a hash value
 	 * @param name the (prefix) of the name of the new type
 	 * @param elementType its single type parameter
 	 * @param intTypeParams additional integer type parameters. By default this parameters
 	 * 						will be set to an empty set.
 	 */
-	SingleElementType(NodeType nodeType, const string& name,
-			const TypePtr& elementType,
+	SingleElementType(NodeType nodeType, std::size_t hashSeed,
+			const string& name, const TypePtr& elementType,
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ());
 
 public:

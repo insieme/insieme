@@ -133,19 +133,19 @@ struct B1;
 struct C1;
 struct D1;
 
-#pragma test "struct<b:ref<array<ref<rec 'B1.{'C1=struct<b:ref<array<ref<'B1>,1>>,d:ref<array<ref<struct<val:ref<int<4>>>>,1>>>, 'B1=struct<b:ref<array<ref<'C1>,1>>>}>,1>>>"
+#pragma test "struct<b:ref<array<ref<rec 'B1.{'B1=struct<b:ref<array<ref<'C1>,1>>>, 'C1=struct<b:ref<array<ref<'B1>,1>>,d:ref<array<ref<struct<val:ref<int<4>>>>,1>>>}>,1>>>"
 struct A1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;
 };
 
-#pragma test "rec 'B1.{'C1=struct<b:ref<array<ref<'B1>,1>>,d:ref<array<ref<struct<val:ref<int<4>>>>,1>>>, 'B1=struct<b:ref<array<ref<'C1>,1>>>}"
+#pragma test "rec 'B1.{'B1=struct<b:ref<array<ref<'C1>,1>>>, 'C1=struct<b:ref<array<ref<'B1>,1>>,d:ref<array<ref<struct<val:ref<int<4>>>>,1>>>}"
 struct B1 {
 	// cppcheck-suppress unusedStructMember
 	struct C1* b;
 };
 
-#pragma test "rec 'C1.{'C1=struct<b:ref<array<ref<'B1>,1>>,d:ref<array<ref<struct<val:ref<int<4>>>>,1>>>, 'B1=struct<b:ref<array<ref<'C1>,1>>>}"
+#pragma test "rec 'C1.{'B1=struct<b:ref<array<ref<'C1>,1>>>, 'C1=struct<b:ref<array<ref<'B1>,1>>,d:ref<array<ref<struct<val:ref<int<4>>>>,1>>>}"
 struct C1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;

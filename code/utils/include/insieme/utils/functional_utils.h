@@ -41,7 +41,6 @@
 #include <boost/type_traits/remove_pointer.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "insieme/utils/hash_utils.h"
 
 struct empty {};
 

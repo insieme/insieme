@@ -38,6 +38,7 @@
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/annotation.h"
+#include "insieme/core/program.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -45,6 +46,73 @@
 
 namespace insieme {
 namespace core {
+
+bool hasHash(const Node& a, std::size_t hash) {
+	return a.hash() == hash;
+}
+
+typedef std::size_t hash_t;
+
+hash_t hash_combine(hash_t& seed, hash_t value) {
+	boost::hash_combine(seed, value);
+	return seed;
+}
+
+hash_t hash_combine(hash_t& seed, const string& value) {
+	return hash_combine(seed, boost::hash_value(value));
+}
+
+void hash_node(hash_t& seed, const NodePtr& cur) {
+	hash_combine(seed, cur->getNodeType());
+	switch(cur->getNodeType()) {
+		case insieme::core::NT_GenericType:
+		case insieme::core::NT_ArrayType:
+		case insieme::core::NT_VectorType:
+		case insieme::core::NT_ChannelType:
+		case insieme::core::NT_RefType:  {
+			const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
+			hash_combine(seed, type->getFamilyName().getName());
+			for_each(type->getIntTypeParameter(), [&](const core::IntTypeParam& cur) {
+				hash_combine(seed, insieme::core::hash_value(cur));
+			});
+			break;
+		}
+		case insieme::core::NT_Variable:     { hash_combine(seed, static_pointer_cast<const Variable>(cur)->getId()); break; }
+		case insieme::core::NT_TypeVariable: { hash_combine(seed, static_pointer_cast<const TypeVariable>(cur)->getVarName()); break; }
+		case insieme::core::NT_Literal:      { hash_combine(seed, static_pointer_cast<const Literal>(cur)->getValue()); break; }
+		case insieme::core::NT_MemberAccessExpr:      { hash_combine(seed, static_pointer_cast<const MemberAccessExpr>(cur)->getMemberName().getName()); break; }
+		case insieme::core::NT_TupleProjectionExpr:   { hash_combine(seed, static_pointer_cast<const TupleProjectionExpr>(cur)->getIndex()); break; }
+		case insieme::core::NT_MarkerExpr:   { hash_combine(seed, static_pointer_cast<const MarkerExpr>(cur)->getID()); break; }
+		case insieme::core::NT_MarkerStmt:   { hash_combine(seed, static_pointer_cast<const MarkerStmt>(cur)->getID()); break; }
+		case insieme::core::NT_Program:      { boost::hash_combine(seed, static_pointer_cast<const Program>(cur)->isMain()); break; };
+		default: {}
+	}
+}
+
+hash_t computeHashChildOnly(const NodePtr& cur) {
+
+	// special treatment for named composite types (for simplicity reasons)
+	if (auto type = dynamic_pointer_cast<const NamedCompositeType>(cur)) {
+		return type->hash();
+	}
+	if (auto expr = dynamic_pointer_cast<const StructExpr>(cur)) {
+		return expr->hash();
+	}
+
+
+	hash_t seed = 0;
+	hash_node(seed, cur);
+	for_each(cur->getChildList(), [&](const NodePtr& child) {
+		std::size_t res = computeHashChildOnly(child);
+		EXPECT_PRED2(hasHash, *child, res);
+		hash_combine(seed, res);
+	});
+	return seed;
+}
+
+hash_t computeHash(const NodePtr& cur) {
+	return computeHashChildOnly(cur);
+}
 
 
 template<typename T>
@@ -75,6 +143,9 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	EXPECT_TRUE ( equals( listA, listB ) );
 	EXPECT_TRUE ( equals( listA, listB, equal_target<insieme::core::NodePtr>()) );
 
+	// ------------ Hash Code Tests -------------
+
+	EXPECT_PRED2(hasHash, *node, computeHash(node));
 
 	// ------------ Type Token based tests -------------
 

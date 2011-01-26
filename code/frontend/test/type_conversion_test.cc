@@ -63,7 +63,7 @@ namespace fe = insieme::frontend;
 	clang::Type* builtin = new clang::BuiltinType(clang::BuiltinType::TypeName); \
 	TypePtr convType = convFactory.convertType( builtin ); \
 	EXPECT_TRUE(convType); \
-	EXPECT_EQ(InsiemeTypeDesc, convType->getName()); \
+	EXPECT_EQ(InsiemeTypeDesc, toString(*convType)); \
 	operator delete (builtin); }
 
 TEST(TypeConversion, HandleBuildinType) {

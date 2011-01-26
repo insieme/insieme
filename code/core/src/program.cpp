@@ -53,8 +53,11 @@ using namespace insieme::core;
 using namespace insieme::utils::set;
 
 std::size_t hash(bool main, const Program::EntryPointSet& entryPoints) {
-	std::size_t hash = insieme::utils::set::computeHash(entryPoints, hash_target<ExpressionPtr>());
-	return (main)?~hash:hash<<1;
+	std::size_t hash = 0;
+	boost::hash_combine(hash, HS_Program);
+	boost::hash_combine(hash, main);
+	hashPtrRange(hash, entryPoints);
+	return hash;
 }
 
 Program* Program::createCopyUsing(NodeMapping& mapper) const {

@@ -190,7 +190,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				// new functionType
 				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
 				const core::TypePtr& retType = oldFuncType->getReturnType();
-				assert(retType->getName() == "unit" && "Return type of kernel functions must be void.");
+				assert(retType->getNodeManager().basic.isUnit(retType) && "Return type of kernel functions must be void.");
 				TypeList newArgs;
 				for (uint i = 0; i < oldArgs.size()-2; i++){
 					newArgs.push_back(oldArgs.at(i));

@@ -46,13 +46,6 @@
 
 using namespace insieme::core;
 
-enum {
-	HASHVAL_LITERAL = 100 /* offset from statements */,
-	HASHVAL_VAREXPR, HASHVAL_CALLEXPR, HASHVAL_CASTEXPR, HASHVAL_PARAMEXPR, HASHVAL_CAPTURE_INIT,
-	HASHVAL_TUPLEEXPR, HASHVAL_STRUCTEXPR, HASHVAL_UNIONEXPR, HASHVAL_JOBEXPR, HASHVAL_LAMBDA_DEFINITION,
-	HASHVAL_LAMBDA, HASHVAL_VECTOREXPR, HASHVAL_VARIABLE, HASHVAL_MEMBER_ACCESS, HASHVAL_TUPLE_PROJECTION,
-	HASHVAL_MARKER
-};
 
 // ------------------------------------- Expression ---------------------------------
 
@@ -68,9 +61,10 @@ bool Expression::equals(const Node& stmt) const {
 // ------------------------------------- Literal ---------------------------------
 
 static std::size_t hashLiteral(const TypePtr& type, const string& value) {
-	std::size_t seed = HASHVAL_LITERAL;
-	boost::hash_combine(seed, type->hash());
+	std::size_t seed = 0;
+	boost::hash_combine(seed, HS_Literal);
 	boost::hash_combine(seed, boost::hash_value(value));
+	boost::hash_combine(seed, type->hash());
 	return seed;
 }
 
@@ -105,9 +99,10 @@ LiteralPtr Literal::parserGet(NodeManager& manager, const TypePtr& type, const s
 
 namespace {
 	std::size_t hashVariable(const TypePtr& type, unsigned int id) {
-		std::size_t seed = HASHVAL_VARIABLE;
-		boost::hash_combine(seed, type->hash());
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_Variable);
 		boost::hash_combine(seed, id);
+		boost::hash_combine(seed, type->hash());
 		return seed;
 	}
 }
@@ -148,7 +143,8 @@ bool Variable::operator<(const Variable& other) const {
 // ------------------------------------- TupleExpr ---------------------------------
 
 std::size_t hashTupleExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions) {
-	size_t seed = HASHVAL_TUPLEEXPR;
+	size_t seed = 0;
+	boost::hash_combine(seed, HS_TupleExpr);
 	boost::hash_combine(seed, type->hash());
 	hashPtrRange(seed, expressions);
 	return seed;
@@ -195,7 +191,8 @@ TupleExprPtr TupleExpr::get(NodeManager& manager, const TupleTypePtr& type, cons
 // ------------------------------------- VectorExpr ---------------------------------
 
 std::size_t hashVectorExpr(const TypePtr& type, const vector<ExpressionPtr>& expressions) {
-	size_t seed = HASHVAL_VECTOREXPR;
+	size_t seed = 0;
+	boost::hash_combine(seed, HS_VectorExpr);
 	boost::hash_combine(seed, type->hash());
 	hashPtrRange(seed, expressions);
 	return seed;
@@ -280,8 +277,13 @@ namespace {
 		return entries;
 	}
 
-	std::size_t hashStructMember(size_t seed, const StructExpr::Members& members) {
-		std::for_each(members.cbegin(), members.cend(), [&](const StructExpr::Member &m) { boost::hash_combine(seed, m); });
+	std::size_t hashStructMember(const StructExpr::Members& members) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, HS_StructExpr);
+		for_each(members, [&](const StructExpr::Member& m) {
+			boost::hash_combine(seed, m.first.getName());
+			boost::hash_combine(seed, m.second->hash());
+		});
 		return seed;
 	}
 
@@ -290,7 +292,7 @@ namespace {
 // ------------------------------------- StructExpr ---------------------------------
 
 StructExpr::StructExpr(const StructTypePtr& type, const Members& members)
-	: Expression(NT_StructExpr, type, ::hashStructMember(HASHVAL_STRUCTEXPR, members)), members(isolateMembers(members)) { }
+	: Expression(NT_StructExpr, type, ::hashStructMember(members)), members(isolateMembers(members)) { }
 
 StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new StructExpr(static_pointer_cast<const StructType>(mapper.map(0, type)), copyMembersUsing(mapper, 1, members));
@@ -336,7 +338,7 @@ std::size_t hashUnionExpr(size_t seed, const Identifier& memberName, const Expre
 }
 
 UnionExpr::UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
-	: Expression(NT_UnionExpr, type, ::hashUnionExpr(HASHVAL_UNIONEXPR, memberName, member)), memberName(memberName), member(isolate(member)) { }
+	: Expression(NT_UnionExpr, type, ::hashUnionExpr(HS_UnionExpr, memberName, member)), memberName(memberName), member(isolate(member)) { }
 
 UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new UnionExpr(static_pointer_cast<const UnionType>(mapper.map(0, type)), memberName, mapper.map(1,member));
@@ -372,13 +374,15 @@ UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, cons
 namespace {
 
 	size_t hashJobExpr(const ExpressionPtr& range, const StatementPtr& defaultStmt, const JobExpr::GuardedStmts& guardedStmts, const JobExpr::LocalDecls& localDecls) {
-		size_t seed = HASHVAL_JOBEXPR;
-		boost::hash_combine(seed, defaultStmt);
+		size_t seed = 0;
+		boost::hash_combine(seed, HS_JobExpr);
+		boost::hash_combine(seed, range->hash());
 		hashPtrRange(seed, localDecls);
 		std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&seed](const JobExpr::GuardedStmt& s){
-			boost::hash_combine(seed, s.first);
-			boost::hash_combine(seed, s.second);
+			boost::hash_combine(seed, s.first->hash());
+			boost::hash_combine(seed, s.second->hash());
 		});
+		boost::hash_combine(seed, defaultStmt->hash());
 		return seed;
 	}
 
@@ -414,10 +418,13 @@ JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& range, const Expressi
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
     assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
 
+    TypePtr unitType = type->getNodeManager().basic.getUnit();
+    TypePtr boolType = type->getNodeManager().basic.getBool();
+
     if(CaptureInitExprPtr cie = dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)){
         //FIXME check return type also if default type is a capture init expression
     } else {
-        assert(defaultType->getReturnType()->getName() == "unit" && "Return value of default statement must be unit.");
+        assert(*defaultType->getReturnType() == *unitType && "Return value of default statement must be unit.");
     }
     TypeList guardParams = TypeList(2, type->getNodeManager().basic.getUIntGen());
 
@@ -426,13 +433,13 @@ JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& range, const Expressi
     	FunctionTypePtr guardType = static_pointer_cast<const FunctionType>(s.first->getType());
     	assert(guardType->getCaptureTypes().empty() && "Guard must not have any capture variables.");
         assert(::equals(guardType->getArgumentTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
-        assert(guardType->getReturnType()->getName() == "bool" && "Return value of guard must be bool.");
+        assert(*guardType->getReturnType() == *boolType && "Return value of guard must be bool.");
 
         //Check guarded statements
         FunctionTypePtr stmtType = static_pointer_cast<const FunctionType>(s.second->getType());
         assert(stmtType->getCaptureTypes().empty() && "Guarded statement is not allowed to have any capture variables.");
         assert(stmtType->getArgumentTypes().empty() && "Guarded statement is not allowed to have any arguments");
-        assert(stmtType->getReturnType()->getName() == "unit" && "Return value of guarded statement must be void.");
+        assert(*stmtType->getReturnType() == *unitType && "Return value of guarded statement must be void.");
     });
 
 }
@@ -450,7 +457,6 @@ JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 
 Node::OptionChildList JobExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	res->push_back(type);
 	res->push_back(threadNumRange);
 	std::copy(localDecls.cbegin(), localDecls.cend(), back_inserter(*res));
 	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&res](const GuardedStmt& cur) {
@@ -503,7 +509,8 @@ const TypePtr& getReturnType(const ExpressionPtr& functionExpr) {
 }
 
 std::size_t hashCallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-	size_t seed = HASHVAL_CALLEXPR;
+	size_t seed = 0;
+	boost::hash_combine(seed, HS_CallExpr);
 	boost::hash_combine(seed, type->hash());
 	boost::hash_combine(seed, functionExpr->hash());
 	hashPtrRange(seed, arguments);
@@ -556,7 +563,7 @@ CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& resultType, const
 // ------------------------------------- CastExpr ---------------------------------
 
 std::size_t hashCastExpr(const TypePtr& type, const ExpressionPtr& subExpression) {
-	size_t seed = HASHVAL_CASTEXPR;
+	size_t seed = HS_CastExpr;
 	boost::hash_combine(seed, type->hash());
 	boost::hash_combine(seed, subExpression->hash());
 	return seed;
@@ -597,7 +604,8 @@ namespace {
 	std::size_t hashLambda(const FunctionTypePtr& type, const Lambda::CaptureList& captureList,
 			const Lambda::ParamList& paramList, const StatementPtr& body) {
 
-		std::size_t hash = HASHVAL_LAMBDA;
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_Lambda);
 		boost::hash_combine(hash, type->hash());
 		hashPtrRange(hash, captureList);
 		hashPtrRange(hash, paramList);
@@ -671,8 +679,12 @@ LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const C
 namespace {
 
 	std::size_t hashLambdaDefinition(const LambdaDefinition::Definitions& definitions) {
-		std::size_t hash = HASHVAL_LAMBDA_DEFINITION;
-		boost::hash_combine(hash, insieme::utils::map::computeHash(definitions, hash_target<VariablePtr>(), hash_target<LambdaPtr>()));
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_LambdaDefinition);
+		for_each(definitions, [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
+			boost::hash_combine(hash, *cur.first);
+			boost::hash_combine(hash, *cur.second);
+		});
 		return hash;
 	}
 
@@ -825,7 +837,8 @@ LambdaExprPtr LambdaDefinition::unrollOnce(NodeManager& manager, const VariableP
 namespace {
 
 	std::size_t hashLambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
-		std::size_t hash = HASHVAL_LAMBDA;
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_LambdaExpr);
 		boost::hash_combine(hash, variable->hash());
 		boost::hash_combine(hash, definition->hash());
 		return hash;
@@ -899,19 +912,19 @@ const StatementPtr& LambdaExpr::getBody() const {
 
 namespace {
 
-	std::size_t hashCaptureInitExpr(const ExpressionPtr& lambda, const CaptureInitExpr::Values& values) {
-		std::size_t hash = HASHVAL_CAPTURE_INIT;
+	std::size_t hashCaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const CaptureInitExpr::Values& values) {
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_CaptureInitExpr);
+		boost::hash_combine(hash, type->hash());
 		boost::hash_combine(hash, lambda->hash());
 		hashPtrRange(hash, values);
 		return hash;
 	}
 
-
-
 }
 
 CaptureInitExpr::CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values)
-	: Expression(NT_CaptureInitExpr, type, ::hashCaptureInitExpr(lambda, values)),
+	: Expression(NT_CaptureInitExpr, type, ::hashCaptureInitExpr(type, lambda, values)),
 	  lambda(isolate(lambda)), values(isolate(values)) { }
 
 CaptureInitExpr* CaptureInitExpr::createCopyUsing(NodeMapping& mapper) const {
@@ -965,9 +978,10 @@ namespace {
 	}
 
 	std::size_t hashMemberAccess(const ExpressionPtr& subExpression, const Identifier& member) {
-		std::size_t res = HASHVAL_MEMBER_ACCESS;
-		boost::hash_combine(res, subExpression);
-		boost::hash_combine(res, member);
+		std::size_t res = 0;
+		boost::hash_combine(res, HS_MemberAccessExpr);
+		boost::hash_combine(res, member.getName());
+		boost::hash_combine(res, subExpression->hash());
 		return res;
 	}
 }
@@ -1015,9 +1029,10 @@ namespace {
 	}
 
 	std::size_t hashTupleProjection(const ExpressionPtr& subExpression, const unsigned index) {
-		std::size_t res = HASHVAL_TUPLE_PROJECTION;
-		boost::hash_combine(res, subExpression);
+		std::size_t res = 0;
+		boost::hash_combine(res, HS_TupleProjectionExpr);
 		boost::hash_combine(res, index);
+		boost::hash_combine(res, subExpression->hash());
 		return res;
 	}
 }
@@ -1057,9 +1072,10 @@ TupleProjectionExprPtr TupleProjectionExpr::get(NodeManager& manager, const Expr
 namespace {
 
 	std::size_t hashMarkerExpr(const ExpressionPtr& subExpression, const unsigned id) {
-		std::size_t hash = HASHVAL_MARKER;
-		boost::hash_combine(hash, subExpression);
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_MarkerExpr);
 		boost::hash_combine(hash, id);
+		boost::hash_combine(hash, subExpression->hash());
 		return hash;
 	}
 

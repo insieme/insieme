@@ -844,7 +844,7 @@ public:
                     core::TypePtr retTy = funcType->getReturnType();
 
                     //check return type
-                    assert(retTy->getName() == "unit" && "Return type of kernel functions must be void.");
+                    assert(retTy->getNodeManager().basic.isUnit(retTy) && "Return type of kernel functions must be void.");
 
                     core::TypeList args = funcType->getArgumentTypes();
                     args.push_back(kd.globalRange->getType());
