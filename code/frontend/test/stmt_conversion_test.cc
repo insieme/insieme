@@ -92,7 +92,7 @@ std::string getPrettyPrinted(const NodePtr& node) {
 
 TEST(StmtConversion, FileTest) {
 
-	Logger::get(std::cerr, INFO, 0);
+	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
 	fe::Program prog(manager);

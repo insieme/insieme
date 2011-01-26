@@ -189,6 +189,7 @@ namespace {
 
 				// visit / check all child nodes
 				for (std::size_t i=0, e=node->getChildList().size(); i<e; ++i) {
+					std:: cout << *node;
 					visitor->visit(node.getAddressOfChild(i));
 				}
 			});
