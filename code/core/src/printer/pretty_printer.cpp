@@ -229,7 +229,7 @@ namespace {
 		 * @param print the setup of the pretty print
 		 */
 		InspirePrinter(std::ostream& out, const PrettyPrinter& print)
-				: formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
+				: ASTVisitor<>(true), formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
 
 		/**
 		 * A macro simplifying the definition for print routine of some node type.

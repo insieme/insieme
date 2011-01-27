@@ -57,7 +57,7 @@ typedef std::set<core::VariablePtr, lt_ident> VarSet;
  */
 struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
 
-	VarRefFinder(const core::NodePtr& node) {
+	VarRefFinder(const core::NodePtr& node) : core::ASTVisitor<void>(false) {
 		visit(node);
 		// we have to remove eventual variables which are declared inside this block of code
 		VarSet nonDecls;

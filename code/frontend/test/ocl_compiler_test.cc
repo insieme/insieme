@@ -63,6 +63,9 @@ using namespace insieme::utils::log;
 namespace {
 class OclTestVisitor : public core::ASTVisitor<void> {
 public:
+
+	OclTestVisitor() : core::ASTVisitor<void>(false) {}
+
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
 //        core::AnnotationMap map = func.getAnnotations();
  //       std::cout << "Size: " << map.size() << std::endl;

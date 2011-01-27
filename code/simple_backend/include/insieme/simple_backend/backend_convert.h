@@ -361,7 +361,7 @@ private:
 
 public:
 
-	StmtConverter(Converter& context) : cc(context), formats(detail::initFormatTable(context.getLangBasic())) { };
+	StmtConverter(Converter& context) : ASTVisitor<>(false), cc(context), formats(detail::initFormatTable(context.getLangBasic())) { };
 
 	CodePtr getCode() const {
 		return defCodePtr;

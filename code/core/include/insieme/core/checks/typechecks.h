@@ -70,26 +70,27 @@ enum {
  * @param Name the name of the new check (without the tailing Check)
  * @param NodeType the type the check should be applied on
  */
-#define SIMPLE_CHECK(Name, NodeType) \
+#define SIMPLE_CHECK(Name, NodeType, visitTypes) \
 	class Name ## Check : public ASTCheck { \
 		public: \
+		Name ## Check() : ASTCheck(visitTypes) {}; \
 		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
 
-SIMPLE_CHECK(Keyword, GenericType);
+SIMPLE_CHECK(Keyword, GenericType, true);
 
-SIMPLE_CHECK(CallExprType, CallExpr);
-SIMPLE_CHECK(FunctionType, LambdaExpr);
-SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt);
-SIMPLE_CHECK(IfConditionType, IfStmt);
-SIMPLE_CHECK(WhileConditionType, WhileStmt);
-SIMPLE_CHECK(SwitchExpressionType, SwitchStmt);
+SIMPLE_CHECK(CallExprType, CallExpr, false);
+SIMPLE_CHECK(FunctionType, LambdaExpr, false);
+SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
+SIMPLE_CHECK(IfConditionType, IfStmt, false);
+SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
+SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
 
-SIMPLE_CHECK(BuiltInLiteral, Literal);
+SIMPLE_CHECK(BuiltInLiteral, Literal, false);
 
-SIMPLE_CHECK(RefCast, CastExpr);
+SIMPLE_CHECK(RefCast, CastExpr, false);
 
-SIMPLE_CHECK(Cast, CastExpr);
+SIMPLE_CHECK(Cast, CastExpr, false);
 
 
 // TODO:

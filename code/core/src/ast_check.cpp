@@ -75,7 +75,8 @@ namespace {
 		 *
 		 * @param checks the checks to be conducted by the resulting check
 		 */
-		CombinedASTCheck(const CheckList& checks = CheckList()) : checks(checks) {};
+		CombinedASTCheck(const CheckList& checks = CheckList())
+			: ASTCheck(any(checks, [](const CheckPtr& cur) { return cur->isVisitingTypes(); })), checks(checks) {};
 
 	protected:
 
@@ -109,7 +110,8 @@ namespace {
 		 *
 		 * @param check the check to be conducted recursively on all nodes.
 		 */
-		RecursiveASTCheck(const CheckPtr& check) : check(check) {};
+		RecursiveASTCheck(const CheckPtr& check)
+			: ASTCheck(check->isVisitingTypes()), check(check) {};
 
 	protected:
 
@@ -130,7 +132,7 @@ namespace {
 				for (int i=0, e=node->getChildList().size(); i<e; i++) {
 					visitor->visit(node.getAddressOfChild(i));
 				}
-			});
+			}, this->isVisitingTypes());
 
 			// update pointer ..
 			visitor = &lambdaVisitor;
@@ -161,7 +163,7 @@ namespace {
 		 *
 		 * @param check the check to be conducted recursively on all nodes.
 		 */
-		VisitOnceASTCheck(const CheckPtr& check) : check(check) {};
+		VisitOnceASTCheck(const CheckPtr& check) : ASTCheck(check->isVisitingTypes()), check(check) {};
 
 	protected:
 
@@ -191,7 +193,7 @@ namespace {
 				for (std::size_t i=0, e=node->getChildList().size(); i<e; ++i) {
 					visitor->visit(node.getAddressOfChild(i));
 				}
-			});
+			}, this->isVisitingTypes());
 
 			// update pointer ..
 			visitor = &lambdaVisitor;

@@ -53,23 +53,24 @@ enum {
  * @param Name the name of the new check (without the tailing Check)
  * @param NodeType the type the check should be applied on
  */
-#define SIMPLE_CHECK(Name, NodeType) \
+#define SIMPLE_CHECK(Name, NodeType, visitTypes) \
 	class Name ## Check : public ASTCheck { \
 		public: \
+		Name ## Check() : ASTCheck(visitTypes) {}; \
 		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
 
 /**
  * This check verifies that variables are only used within their scope.
  */
-SIMPLE_CHECK(UndeclaredVariable, Node);
+SIMPLE_CHECK(UndeclaredVariable, Node, false);
 
 /**
  * This check verifies whether the same variable is used within more than one situation.
  * Unlike other checks, this check is intrinsically recursive and does not need to be wrapped
  * into a recursive check.
  */
-SIMPLE_CHECK(DeclaredOnce, Node);
+SIMPLE_CHECK(DeclaredOnce, Node, false);
 
 
 // TODO: add another test verifying that every variable is only defined once

@@ -203,7 +203,7 @@ namespace {
 		 * Creates a new instance of this visitor based on the given list of variables.
 		 * @param list the list to be filled by this collector.
 		 */
-		VariableCollector(vector<core::VariablePtr>& list) : list(list) {}
+		VariableCollector(vector<core::VariablePtr>& list) : core::ASTVisitor<>(false), list(list) {}
 
 	protected:
 

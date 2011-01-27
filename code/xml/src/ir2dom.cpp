@@ -78,7 +78,7 @@ class XmlVisitor : public ASTVisitor<void> {
 	}
 
 public:
-	XmlVisitor(DOMDocument* udoc): doc(udoc), rootElem(doc->getDocumentElement()) { }
+	XmlVisitor(DOMDocument* udoc): ASTVisitor<void>(true), doc(udoc), rootElem(doc->getDocumentElement()) { }
 
 	void visitAnnotations(const AnnotationMap& map, XmlElement& node) {
 		if (map.empty())

@@ -71,7 +71,8 @@ namespace {
 
 	public:
 
-		VarDeclarationCheck(VariableSet& predefined) : declaredVariables(predefined), undeclaredVariableUsage() {}
+		VarDeclarationCheck(VariableSet& predefined)
+			: ASTVisitor<void, Address>(false), declaredVariables(predefined), undeclaredVariableUsage() {}
 
 		std::vector<VariableAddress>& getUndeclaredVariableUsages() {
 			return undeclaredVariableUsage;
@@ -281,6 +282,11 @@ namespace {
 		DeclarationMap declarations;
 
 	public:
+
+		/**
+		 * A simple constructor for this check.
+		 */
+		SingleDeclarationCheck() : ASTCheck(false) {}
 
 		/**
 		 * Visits a declaration - if the same variable has already been
