@@ -94,6 +94,9 @@ struct Edge {
 class CFG;
 typedef std::shared_ptr<CFG> CFGPtr;
 
+/**
+ * CFG: represents the graph built from IR.
+ */
 class CFG {
 
 	struct NodeProperty {
@@ -169,7 +172,7 @@ public:
 	 * @param block
 	 * @return
 	 */
-	VertexTy addNode(cfg::Block* block);
+	VertexTy addBlock(cfg::Block* block);
 
 	/**
 	 * Returns a cfg element of the graph given its vertex id.
@@ -177,7 +180,7 @@ public:
 	 * @param vertexId
 	 * @return
 	 */
-	const cfg::Block& getNode(const VertexTy& vertexId) const {
+	const cfg::Block& getBlock(const VertexTy& vertexId) const {
 		ConstNodePropertyMapTy&& node = get(&NodeProperty::block, graph);
 		return *node[vertexId];
 	}

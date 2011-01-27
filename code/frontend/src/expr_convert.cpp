@@ -117,10 +117,11 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 core::CallExprPtr getSizeOfType(const core::ASTBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
 
+	const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 	if( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		return builder.callExpr(
-			builder.getBasicGenerator().getSignedIntMul(),
-			builder.getBasicGenerator().getIntTypeParamLiteral(vecTy->getSize()),
+			gen.getUnsignedIntMul(),
+			builder.literal(gen.getUInt8(), toString(vecTy->getSize().getValue())),
 			getSizeOfType(builder, vecTy->getElementType())
 		);
 	}
@@ -129,7 +130,7 @@ core::CallExprPtr getSizeOfType(const core::ASTBuilder& builder, const core::Typ
 		return getSizeOfType( builder, refTy->getElementType() );
 	}
 
-	return builder.callExpr( builder.getBasicGenerator().getSizeof(), builder.getBasicGenerator().getTypeLiteral(type) );
+	return builder.callExpr( gen.getSizeof(), gen.getTypeLiteral(type) );
 }
 
 core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr) {
@@ -138,6 +139,7 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 			if(lit->getValue() == "malloc" || lit->getValue() == "calloc") {
 				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
 
+				const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
 				assert(type->getNodeType() == core::NT_ArrayType);
 				core::TypePtr elemType = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
@@ -145,17 +147,14 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 				// The number of elements to be allocated of type 'targetType' is:
 				//      expr / sizeof(targetType)
 				core::CallExprPtr&& size = builder.callExpr(
-					builder.getBasicGenerator().getSignedIntDiv(),
-						callExpr->getArguments().front(),
-						getSizeOfType(builder, elemType)
+					gen.getUnsignedIntDiv(), callExpr->getArguments().front(), getSizeOfType(builder, elemType)
 				);
 
 				assert(elemType->getNodeType() == core::NT_RefType);
 				elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
 
-				return builder.callExpr(type, builder.getBasicGenerator().getArrayCreate1D(),
-						builder.refVar(builder.callExpr(elemType, builder.getBasicGenerator().getUndefined(),
-							builder.getBasicGenerator().getTypeLiteral(elemType))), size);
+				return builder.callExpr(type, gen.getArrayCreate1D(),
+						builder.refVar(builder.callExpr(elemType,gen.getUndefined(), gen.getTypeLiteral(elemType))), size);
 			}
 		}
 	}
@@ -186,7 +185,6 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
 	void VisitCallExpr(clang::CallExpr* callExpr) {
 		if(FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee())) {
-			LOG(DEBUG) << "FUNC_CALL " << funcDecl->getNameAsString();
 			const clang::FunctionDecl* def = NULL;
 			// this will find function definitions if they are declared in  the same translation unit (also defined as static)
 			if( !funcDecl->hasBody(def) ) {
@@ -818,6 +816,7 @@ public:
 			lhs = convFact.tryDeref(lhs);
 
 			// Handle pointers arithmetic
+			VLOG(2) << *lhs;
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
 
