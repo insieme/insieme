@@ -238,14 +238,16 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
         core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
         core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(refType->getElementType());
         core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
-        core::TypePtr elemTy = castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
-                dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() : castedArray->getElementType();
+        if(castedArray && vt ){
+            core::TypePtr elemTy = castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
+                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() : castedArray->getElementType();
 
-        if(elemTy && vt) {
-            // check if they have the same type
-            assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+            if(elemTy) {
+                // check if they have the same type
+                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
 
-            return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
+                return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
+            }
         }
     }
 
