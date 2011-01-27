@@ -45,15 +45,22 @@ namespace insieme {
 namespace core {
 
 
-class AllFine : public ASTCheck {};
+class AllFine : public ASTCheck {
+public:
+	AllFine() : ASTCheck(true) {}
+};
 
 class IDontLikeAnythingCheck : public ASTCheck {
+public:
+	IDontLikeAnythingCheck() : ASTCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
 		return toVector(Message(node, 1, "I hate it!"));
 	}
 };
 
 class IAmScaredCheck : public ASTCheck {
+public:
+	IAmScaredCheck() : ASTCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
 		return toVector(Message(node, 2, "Don't know - I'm scared!", Message::WARNING));
 	}

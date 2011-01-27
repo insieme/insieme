@@ -782,7 +782,7 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 
 		// check whether the variable is a recursive function
 		return defs.find(static_pointer_cast<const Variable>(node)) == defs.end();
-	});
+	}, false);
 
 	// run visitor => if interrupted, the definition is recursive
 	return visitAllInterruptable(lambda, detector);

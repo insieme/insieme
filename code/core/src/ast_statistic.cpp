@@ -74,13 +74,13 @@ ASTStatistic ASTStatistic::evaluate(const NodePtr& node) {
 	visitAllOnce(node, makeLambdaPtrVisitor([&res](const NodePtr& ptr) {
 		res.numSharedNodes++;
 		res.nodeTypeInfo[ptr->getNodeType()].numShared++;
-	}));
+	}, true));
 
 	// ... and addressable nodes
 	visitAll(node, makeLambdaPtrVisitor([&res](const NodePtr& ptr) {
 		res.numAddressableNodes++;
 		res.nodeTypeInfo[ptr->getNodeType()].numAddressable++;
-	}));
+	}, true));
 
 	// ... and height (lightweight)
 	res.height = evalHeight(node);

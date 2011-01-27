@@ -48,7 +48,7 @@ namespace frontend {
 namespace omp {
 
 
-class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
+class SemaVisitor : public core::AddressVisitor<bool> {
 
 	core::NodeManager& nodeMan;
 	core::ASTBuilder build;
@@ -63,7 +63,7 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
 
 public:
-	SemaVisitor(core::NodeManager& nm) : nodeMan(nm), build(nm) { }
+	SemaVisitor(core::NodeManager& nm) : core::AddressVisitor<bool>(false), nodeMan(nm), build(nm) { }
 
 	core::ProgramPtr getReplacement() { return replacement; }
 };

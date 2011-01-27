@@ -448,7 +448,7 @@ VariableSet getTypeVariables(const TypePtr& ptr) {
 		if (node->getNodeType() == NT_TypeVariable) {
 			res.insert(static_pointer_cast<const TypeVariable>(node));
 		}
-	});
+	}, true);
 	return res;
 }
 
@@ -463,7 +463,7 @@ ParamSet getParamVariables(const TypePtr& ptr) {
 				}
 			});
 		}
-	});
+	}, true);
 	return res;
 }
 

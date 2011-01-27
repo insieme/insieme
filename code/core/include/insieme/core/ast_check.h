@@ -56,7 +56,9 @@ typedef boost::optional<std::vector<Message>> OptionalMessageList;
 void addAll(OptionalMessageList& target, const OptionalMessageList& list);
 void add(OptionalMessageList& target, const Message& msg);
 
-class ASTCheck : public AddressVisitor<OptionalMessageList> {};
+class ASTCheck : public AddressVisitor<OptionalMessageList> {
+public: ASTCheck(bool visitTypes) : AddressVisitor<OptionalMessageList>(visitTypes) {}
+};
 
 typedef std::shared_ptr<ASTCheck> CheckPtr;
 typedef std::vector<CheckPtr> CheckList;

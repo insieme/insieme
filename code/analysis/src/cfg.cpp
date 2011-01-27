@@ -124,7 +124,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	static insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr> cfgMap;
 
-	CFGBuilder(CFG& cfg) : cfg(cfg), currBlock(NULL), isPending(true),
+	CFGBuilder(CFG& cfg) : ASTVisitor<void>(false), cfg(cfg), currBlock(NULL), isPending(true),
 			entry( cfg.addBlock( new cfg::Block ) ), exit( cfg.addBlock( new cfg::Block ) ), succ(exit), subExpr(false) { }
 
 	void appendPendingBlock() {

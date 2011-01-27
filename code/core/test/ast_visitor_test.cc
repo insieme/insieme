@@ -49,7 +49,7 @@ public:
 	int countExpressions;
 	int countRefTypes;
 
-	SimpleVisitor() : countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
+	SimpleVisitor() : ASTVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
 
 public:
 	void visitGenericType(const GenericTypePtr& cur) {
@@ -139,7 +139,8 @@ public:
 
 	int counter;
 
-	CountingVisitor() : counter(0) {};
+	CountingVisitor(bool countTypes=true)
+		: ASTVisitor<int>(countTypes), counter(0) {};
 
 	int visitNode(const NodePtr& node) {
 		// std::cout << *node << std::endl;
@@ -157,7 +158,8 @@ public:
 
 	int counter;
 
-	CountingAddressVisitor() : counter(0) {};
+	CountingAddressVisitor(bool countTypes=true)
+		: ASTVisitor<int, Address>(countTypes), counter(0) {};
 
 	int visitNode(const NodeAddress& address) {
 		return ++counter;
@@ -175,7 +177,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
-	CountingVisitor visitor;
+	CountingVisitor visitor(true);
 	auto recVisitor = makeRecursiveVisitor(visitor);
 
 	ProgramPtr program = Program::create(manager);
@@ -226,7 +228,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 
 	// ------ test for addresses ----
-	CountingAddressVisitor adrVisitor;
+	CountingAddressVisitor adrVisitor(true);
 	auto recAdrVisitor = makeRecursiveVisitor(adrVisitor);
 
 	adrVisitor.reset();
@@ -236,6 +238,30 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	adrVisitor.reset();
 	recAdrVisitor.visit(NodeAddress(ifStmt));
 	EXPECT_EQ ( 6, adrVisitor.counter );
+
+
+	// test without types
+	CountingVisitor noTypePtrVisitor(false);
+	auto recNoTypeVisitor = makeRecursiveVisitor(noTypePtrVisitor);
+
+	noTypePtrVisitor.reset();
+	noTypePtrVisitor.visit(ifStmt);
+	EXPECT_EQ ( 1, noTypePtrVisitor.counter );
+
+	noTypePtrVisitor.reset();
+	recNoTypeVisitor.visit(ifStmt);
+	EXPECT_EQ ( 4, noTypePtrVisitor.counter );
+
+	CountingAddressVisitor noTypeAdrVisitor(false);
+	auto recNoTypeAdrVisitor = makeRecursiveVisitor(noTypeAdrVisitor);
+
+	noTypeAdrVisitor.reset();
+	noTypeAdrVisitor.visit(NodeAddress(ifStmt));
+	EXPECT_EQ ( 1, noTypeAdrVisitor.counter );
+
+	noTypeAdrVisitor.reset();
+	recNoTypeAdrVisitor.visit(NodeAddress(ifStmt));
+	EXPECT_EQ ( 4, noTypeAdrVisitor.counter );
 
 
 }
@@ -264,7 +290,7 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 	// create a visitor collecting all nodes
 	auto collector = makeLambdaPtrVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
-	});
+	}, true);
 
 	auto breadthVisitor = makeBreadthFirstVisitor(collector);
 
@@ -289,7 +315,7 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
 	visitAllNodesBreadthFirst(typeA, [&res](const NodePtr& cur) {
 		res.push_back(cur);
-	});
+	}, true);
 	EXPECT_TRUE ( equals(expected, res));
 
 }
@@ -310,7 +336,7 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 	// create a visitor collecting all nodes
 	auto collector = makeLambdaPtrVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
-	});
+	}, true);
 
 	// visit all recursively
 	res.clear();
@@ -348,7 +374,7 @@ TEST(ASTVisitor, UtilitiesTest) {
 	// create a visitor collecting all nodes
 	auto collector = makeLambdaPtrVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
-	});
+	}, true);
 
 	// visit all recursively
 	res.clear();
@@ -371,7 +397,7 @@ TEST(ASTVisitor, UtilitiesTest) {
 
 	// visit all recursively
 	res.clear();
-	visitAllNodes(type, fun);
+	visitAllNodes(type, fun, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
 	res.clear();
@@ -379,20 +405,20 @@ TEST(ASTVisitor, UtilitiesTest) {
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
 	res.clear();
-	visitAllNodes(type, fun, false);
+	visitAllNodes(type, fun, true, false);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, shared, type), res));
 
 	// visit all, only once
-	res.clear();
-	visitAllNodesOnce(type, fun);
-	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
-
 	res.clear();
 	visitAllNodesOnce(type, fun, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	visitAllNodesOnce(type, fun, false);
+	visitAllNodesOnce(type, fun, true, true);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+
+	res.clear();
+	visitAllNodesOnce(type, fun, true, false);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
 }
@@ -404,7 +430,7 @@ public:
 	int counter;
 	int limit;
 
-	InterruptingVisitor(int limit) : counter(0), limit(limit) {};
+	InterruptingVisitor(int limit) : ASTVisitor<bool,Ptr>(true), counter(0), limit(limit) {};
 
 	bool visitNode(const Ptr<const Node>& node) {
 		return ++counter < limit;

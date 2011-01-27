@@ -319,11 +319,15 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 // ------------------------------ lambda extraction -------------------------------------------------------------------
 
 namespace { 
-	 /** Will certainly determine the declaration status of variables inside a block.
+	/**
+	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
 		utils::set::PointerSet<VariablePtr> declared;
 		utils::set::PointerSet<VariablePtr> undeclared;
+
+		// do not visit types
+		LambdaDeltaVisitor() : ASTVisitor<bool, Address>(false) {}
 
 		bool visitNode(const NodeAddress& node) { return true; } // default behaviour: continue visiting
 

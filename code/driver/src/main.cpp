@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 				int count = 0;
 				core::visitAll(program, core::makeLambdaPtrVisitor([&](const NodePtr& cur) {
 					count++;
-				}));
+				}, true));
 				visitPtrTime.stop();
 				LOG(INFO) << visitPtrTime;
 				LOG(INFO) << "Number of nodes: " << count;
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 				count = 0;
 				core::visitAll(core::ProgramAddress(program), core::makeLambdaAddressVisitor([&](const NodeAddress& cur) {
 					count++;
-				}));
+				}, true));
 				visitAddrTime.stop();
 				LOG(INFO) << visitAddrTime;
 				LOG(INFO) << "Number of nodes: " << count;
@@ -355,7 +355,7 @@ bool checkForHashCollisions(const ProgramPtr& program) {
 	insieme::utils::set::PointerSet<NodePtr> allNodes;
 	insieme::core::visitAllOnce(program, insieme::core::makeLambdaPtrVisitor([&allNodes](const NodePtr& cur) {
 		allNodes.insert(cur);
-	}));
+	}, true));
 
 	// evaluate hash codes
 	LOG(INFO) << "Number of nodes: " << allNodes.size();
