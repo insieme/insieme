@@ -197,9 +197,7 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 				}
 			}
 
-			if(def) {
-				callGraph.insert(def);
-			}
+			if( def ) callGraph.insert(def);
 		}
 		VisitStmt(callExpr);
 	}
@@ -648,7 +646,7 @@ public:
 				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType());
 				assert(subTy);
 
-				base = convFact.tryDeref( builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getInt4()) ) );
+				base = convFact.tryDeref( builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getUInt8()) ) );
 			}
 		}
 

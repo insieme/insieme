@@ -175,10 +175,10 @@ public:
 	VertexTy addBlock(cfg::Block* block);
 
 	/**
-	 * Returns a cfg element of the graph given its vertex id.
+	 * Returns a CFG element of the graph given its vertex id.
 	 *
-	 * @param vertexId
-	 * @return
+	 * @param vertexId The id of the CFG Block
+	 * @return A reference to the CFG Block associated to this vertex
 	 */
 	const cfg::Block& getBlock(const VertexTy& vertexId) const {
 		ConstNodePropertyMapTy&& node = get(&NodeProperty::block, graph);
@@ -189,14 +189,30 @@ public:
 		return boost::add_edge(src, dest, CFG::EdgeProperty(edge), graph).first;
 	}
 
+	/**
+	 * Insert an edge connecting the source to the destination.
+	 *
+	 * @param src CFG Block representing the source of the edge
+	 * @param dest CFG Block representing the sink of the edge
+	 * @return The identifier of the newly created edge
+	 */
 	EdgeTy addEdge(VertexTy src, VertexTy dest) {
 		return boost::add_edge(src, dest, graph).first;
 	}
 
+	/**
+	 * Returns the internal representation of this CFG.
+	 */
 	ControlFlowGraph& getGraph() { return graph; }
 
+	/**
+	 * Returns the number of CFG Blocks in this graph.
+	 */
 	size_t getSize() { return num_vertices(graph); }
 
+	/**
+	 * Returns the entry block of the CFG.
+	 */
 	VertexTy getEntry() const { return *(boost::vertices(graph).first); }
 
 	std::pair<AdjacencyIterator, AdjacencyIterator> getSuccessors(const VertexTy& v) const {
@@ -211,7 +227,6 @@ public:
 	 * Builds a control flow graph starting from the rootNode
 	 *
 	 * @param rootNode
-	 * @return
 	 */
 	static CFGPtr buildCFG(const core::NodePtr& rootNode);
 

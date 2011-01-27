@@ -62,7 +62,7 @@ struct Scope {
 /**
  * ScopeStack: represent a stack of scopes
  */
-struct ScopeStack : std::vector<Scope> {
+struct ScopeStack : public std::vector<Scope> {
 
 	ScopeStack() { }
 
@@ -161,7 +161,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		// push scope into the stack for this compound statement
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
-		cfg.addEdge(src, succ, cfg::Edge("T"));
+		cfg.addEdge(src, succ, cfg::Edge("T")); // FIXME
 
 		// reset the successor for the thenBody
 		succ = sink;
@@ -170,7 +170,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		// push scope into the stack for this compound statement
 		visit(ifStmt->getElseBody());
 		appendPendingBlock();
-		cfg.addEdge(src, succ, cfg::Edge("F"));
+		cfg.addEdge(src, succ, cfg::Edge("F")); // FIXME
 
 		succ = src;
 		currBlock = ifBlock;
@@ -234,8 +234,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		appendPendingBlock();
 
-		cfg.addEdge(src, succ, cfg::Edge("T"));
-		cfg.addEdge(src, sink, cfg::Edge("F"));
+		cfg.addEdge(src, succ, cfg::Edge("T")); // FIXME
+		cfg.addEdge(src, sink, cfg::Edge("F")); // FIXME
 
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
@@ -261,8 +261,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 		scopeStack.pop();
 
 		appendPendingBlock();
-		cfg.addEdge(src, succ, cfg::Edge("T"));
-		cfg.addEdge(src, sink, cfg::Edge("F"));
+		cfg.addEdge(src, succ, cfg::Edge("T")); // FIXME
+		cfg.addEdge(src, sink, cfg::Edge("F")); // FIXME
 
 		succ = src;
 	}
