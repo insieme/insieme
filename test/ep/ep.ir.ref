@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v1 =  var(struct{_x:= var(array.create.1D( new(vector.initUniform( var(0.0), 131073)), 1)), x:= var(null), q:= var(array.create.1D( new(vector.initUniform( var(0.0), 10)), 1)), start:= var(array.create.1D( new(vector.initUniform( var(0.0), 64)), 1)), elapsed:= var(array.create.1D( new(vector.initUniform( var(0.0), 64)), 1)), sec:= var(0-1)});
+        decl ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v1 =  var(struct{_x:= var(array.create.1D( new(vector.init.uniform( var(0.0), 131073)), 1)), x:= var(null), q:= var(array.create.1D( new(vector.init.uniform( var(0.0), 10)), 1)), start:= var(array.create.1D( new(vector.init.uniform( var(0.0), 64)), 1)), elapsed:= var(array.create.1D( new(vector.init.uniform( var(0.0), 64)), 1)), sec:= var(0-1)});
         decl ref<real<8>> v4 =  var(0.0);
         decl ref<real<8>> v5 =  var(0.0);
         decl ref<real<8>> v6 =  var(0.0);
@@ -501,7 +501,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v1 = ( var(struct{_x:=( var(array.create.1D(( new(vector.initUniform(( var(0.0)), 131073))), 1))), x:=( var(null)), q:=( var(array.create.1D(( new(vector.initUniform(( var(0.0)), 10))), 1))), start:=( var(array.create.1D(( new(vector.initUniform(( var(0.0)), 64))), 1))), elapsed:=( var(array.create.1D(( new(vector.initUniform(( var(0.0)), 64))), 1))), sec:=( var((CAST<int<4>>(0)-1)))}));
+        decl ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v1 = ( var(struct{_x:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 131073))), 1))), x:=( var(null)), q:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 10))), 1))), start:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 64))), 1))), elapsed:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 64))), 1))), sec:=( var((CAST<int<4>>(0)-1)))}));
         decl ref<real<8>> v4 = ( var(0.0));
         decl ref<real<8>> v5 = ( var(0.0));
         decl ref<real<8>> v6 = ( var(0.0));

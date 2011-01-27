@@ -125,11 +125,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 	static insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr> cfgMap;
 
 	CFGBuilder(CFG& cfg) : cfg(cfg), currBlock(NULL), isPending(true),
-			entry( cfg.addNode( new cfg::Block ) ), exit( cfg.addNode( new cfg::Block ) ), succ(exit), subExpr(false) { }
+			entry( cfg.addBlock( new cfg::Block ) ), exit( cfg.addBlock( new cfg::Block ) ), succ(exit), subExpr(false) { }
 
 	void appendPendingBlock() {
 		if(isPending && currBlock && !currBlock->empty()) {
-			CFG::VertexTy&& node = cfg.addNode(currBlock);
+			CFG::VertexTy&& node = cfg.addBlock(currBlock);
 			// set the ID for this block
 			cfg.addEdge(node, succ);
 			succ = node;
@@ -151,7 +151,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg::Block* ifBlock = new cfg::Block;
 		ifBlock->appendElement( cfg::Element(ifStmt->getCondition(), cfg::Element::CtrlCond) );
 		ifBlock->setTerminal(ifStmt);
-		CFG::VertexTy&& src = cfg.addNode( ifBlock );
+		CFG::VertexTy&& src = cfg.addBlock( ifBlock );
 
 		// the current node needs to be appendend to the graph (if not empty)
 		appendPendingBlock();
@@ -213,7 +213,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg::Block* forBlock = new cfg::Block;
 		forBlock->setTerminal(forStmt);
 		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
-		CFG::VertexTy&& src = cfg.addNode( forBlock );
+		CFG::VertexTy&& src = cfg.addBlock( forBlock );
 
 		appendPendingBlock();
 		CFG::VertexTy sink = succ;
@@ -221,7 +221,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		// increment expression
 		cfg::Block* incBlock = new cfg::Block;
 		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopIncrement) );
-		CFG::VertexTy&& inc = cfg.addNode( incBlock );
+		CFG::VertexTy&& inc = cfg.addBlock( incBlock );
 		cfg.addEdge(inc, src);
 
 		succ = inc;
@@ -247,7 +247,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg::Block* whileBlock = new cfg::Block;
 		whileBlock->appendElement( cfg::Element(whileStmt->getCondition()) );
 		whileBlock->setTerminal(whileStmt);
-		CFG::VertexTy&& src = cfg.addNode( whileBlock );
+		CFG::VertexTy&& src = cfg.addBlock( whileBlock );
 
 		// the current node needs to be appendend to the graph (if not empty)
 		appendPendingBlock();
@@ -271,7 +271,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg::Block* switchBlock = new cfg::Block;
 		switchBlock->appendElement( cfg::Element(switchStmt->getSwitchExpr()) );
 		switchBlock->setTerminal(switchStmt);
-		CFG::VertexTy&& src = cfg.addNode( switchBlock );
+		CFG::VertexTy&& src = cfg.addBlock( switchBlock );
 
 		// the current node needs to be appendend to the graph (if not empty)
 		appendPendingBlock();
@@ -417,7 +417,7 @@ CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
 	return cfg;
 }
 
-CFG::VertexTy CFG::addNode(cfg::Block* block) {
+CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	CFG::VertexTy&& v = boost::add_vertex(CFG::NodeProperty(block), graph);
 	block->setBlockID(v);
 	return v;
@@ -426,7 +426,7 @@ CFG::VertexTy CFG::addNode(cfg::Block* block) {
 CFG::~CFG() {
 	boost::graph_traits<ControlFlowGraph>::vertex_iterator vi, vi_end;
 	for (boost::tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
-		const cfg::Block* block = &getNode(*vi);
+		const cfg::Block* block = &getBlock(*vi);
 		delete block;
 	}
 }
