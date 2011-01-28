@@ -356,28 +356,6 @@ bool areMatching(const Container& patterns, const Container& types, bool conside
 bool occurs(const NodePtr& x, const NodePtr& term);
 
 /**
- * Searches for reused type variables within the given types. In case the same type variables
- * are used within multiple of the given types, they will be substituted by fresh variables.
- *
- * @param manager the manager to be used for creating new types
- * @param typeA the first type to be checked
- * @param typeB the second type to be checked
- * @return a pair containing the resulting types
- */
-std::pair<TypePtr, TypePtr> makeTypeVariablesUnique(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB);
-
-/**
- * Searches for reused type variables within the given types. In case the same type variables
- * are used within multiple of the given types, they will be substituted by fresh variables.
- *
- * @param manager the manager to be used for creating new types
- * @param a list of types which should be checked for reused type variables
- * @return the corrected list of types
- */
-std::vector<TypePtr> makeTypeVariablesUnique(NodeManager& manager, const vector<TypePtr>& types);
-
-
-/**
  * This function is deducing the type returned when calling a function having the given
  * type by passing parameters of the given types.
  *

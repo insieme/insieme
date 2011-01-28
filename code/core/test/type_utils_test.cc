@@ -468,40 +468,6 @@ ParamSet getParamVariables(const TypePtr& ptr) {
 }
 
 
-TEST(TypeUtils, FreeTypeVariableAssignment) {
-	ASTBuilder builder;
-	NodeManager& manager = builder.getNodeManager();
-
-	TypeVariablePtr typeVar = builder.typeVariable("X");
-	IntTypeParam varParam = IntTypeParam::getVariableIntParam('x');
-	TypePtr typeA = builder.genericType("a", toVector<TypePtr>(typeVar), toVector(varParam));
-
-	VariableSet vars;
-	vars.insert(typeVar);
-
-	ParamSet params;
-	params.insert(varParam);
-
-	EXPECT_EQ(vars, getTypeVariables(typeA));
-	EXPECT_EQ(params, getParamVariables(typeA));
-
-	auto res = makeTypeVariablesUnique(manager, typeA, typeA);
-	TypePtr resA = res.first;
-	TypePtr resB = res.second;
-
-	EXPECT_EQ("a<'FV1,#a>", toString(*resA));
-	EXPECT_EQ("a<'FV2,#b>", toString(*resB));
-
-	EXPECT_NE(vars, getTypeVariables(resA));
-	EXPECT_NE(vars, getTypeVariables(resB));
-	EXPECT_NE(getTypeVariables(resA), getTypeVariables(resB));
-
-	EXPECT_NE(params, getParamVariables(resA));
-	EXPECT_NE(params, getParamVariables(resB));
-	EXPECT_NE(getParamVariables(resA), getParamVariables(resB));
-}
-
-
 TEST(TypeUtils, ArrayVectorRelation) {
 
 	NodeManager manager;
@@ -549,7 +515,6 @@ TEST(TypeUtils, ReturnTypeDeduction) {
 
 	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(genA, varA), varA);
 	EXPECT_EQ("((type<'a>,'a)->'a)", toString(*funType));
-	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, typeA))));
 	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecA, typeA))));
 	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecB, typeB))));
 	EXPECT_EQ("'a", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, varA))));
@@ -616,6 +581,40 @@ TEST(TypeUtils, ReturnTypeBug) {
 //	EXPECT_EQ("", toString(*pointwise->getType()));
 
 }
+
+TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
+
+	// The Bug:
+	// 		Unable to deduce return type for call to function of type
+	//		(('elem,uint<8>)->array<'elem,1>) using arguments
+	//		ref<struct<top:ref<array<ref<rec 'elem.{'elem=struct<value:ref<int<4>>,next:ref<array<ref<'elem>,1>>>}>,1>>>>, uint<8>
+
+	// The reason:
+	// 		within the element type the same variable 'elem is used as within the
+	//		function type => leading to a mess
+
+	// The fix:
+	//		before trying to match the given arguments to the function parameters
+	//		all type variables are replaced by fresh variables.
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+	const lang::BasicGenerator& basic = manager.basic;
+
+	// get element type
+	TypePtr elementType = builder.genericType("Set", toVector<TypePtr>(builder.typeVariable("elem")));
+
+	// create the call
+	ExpressionPtr element = builder.literal(elementType, "X");
+	ExpressionPtr size = builder.literal(basic.getUInt8(), "15");
+	ExpressionPtr res = builder.callExpr(basic.getArrayCreate1D(), element, size);
+
+	// check infered type
+	TypePtr resType = builder.arrayType(elementType, IntTypeParam::getConcreteIntParam(1));
+	EXPECT_EQ(*resType, *res->getType());
+
+}
+
 
 } // end namespace core
 } // end namespace insieme

@@ -110,12 +110,8 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	}
 
 	// 3) check return type - which has to be matched with modified function return value.
-	TypePtr retType = mgu->applyTo(manager, returnType);
+	TypePtr retType = deduceReturnType(functionType, argumentTypes);
 	TypePtr resType = address->getType();
-
-	// cross check with return-type inference mechanism (debugging only)
-	assert(*retType == *deduceReturnType(functionType, argumentTypes)
-			&& "Type checker is not matching automatic deduction!");
 
 	if (*retType != *resType) {
 		add(res, Message(address,
