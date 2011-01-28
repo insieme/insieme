@@ -561,60 +561,38 @@ bool isMatching(const TypePtr& pattern, const TypePtr& type, bool considerSubtyp
 }
 
 
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Return type deduction
+// -------------------------------------------------------------------------------------------------------------------------
+
+
 namespace {
-	using std::pair;
 
-	// ------------- Utilities to support the replacement of type variables with fresh variables ------------------------
-
-	pair<vector<TypeVariablePtr>, vector<IntTypeParam>> getVariables(const TypePtr& typeA) {
-
-		pair<vector<TypeVariablePtr>, vector<IntTypeParam>> res;
-
-		visitAllNodesOnce(typeA, [&res](const NodePtr& node){
-			switch(node->getNodeType()) {
-			case NT_TypeVariable:
-				// collect type variables
-				res.first.push_back(static_pointer_cast<const TypeVariable>(node));
-				break;
-			case NT_GenericType: {
-					// collect int-type param variables
-					GenericTypePtr genType = static_pointer_cast<const GenericType>(node);
-					for_each(genType->getIntTypeParameter(), [&res](const IntTypeParam& cur) {
-						if (cur.getType() == IntTypeParam::VARIABLE) {
-							res.second.push_back(cur);
-						}
-					});
-					break;
-				}
-			default:
-				// nothing to do for the rest
-				break;
-			}
-		}, true);
-
-		return res;
-	}
-
-	class TypeVariableReplacer : public NodeMapping {
-
-		unsigned varCounter;
-
-		unsigned paramCounter;
+	class FreshVariableSubstitution : public NodeMapping {
 
 		NodeManager& manager;
 
-		boost::unordered_map<TypeVariablePtr, TypeVariablePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> varMap;
+		// sets of used variables
+		TypeSet& varSet;
+		std::set<IntTypeParam>& paramSet;
 
-		boost::unordered_map<IntTypeParam, IntTypeParam, boost::hash<IntTypeParam>> paramMap;
+		// a container for "remembering" replacements
+		utils::map::PointerMap<TypeVariablePtr, TypeVariablePtr> varMap;
+		std::map<IntTypeParam, IntTypeParam> paramMap;
+
+		// some utilities for generating variables
+		unsigned varCounter;
+		unsigned paramCounter;
 
 	public:
 
-		TypeVariableReplacer(NodeManager& manager) : NodeMapping(true), varCounter((unsigned)0), paramCounter((unsigned)0), manager(manager) { }
+		FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, std::set<IntTypeParam>& paramSet)
+			: NodeMapping(true), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
 
 		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 			// only handle type variables
 			if (ptr->getNodeType() != NT_TypeVariable) {
-				return ptr;
+				return ptr->substitute(manager, *this);
 			}
 
 			// cast type variable
@@ -628,11 +606,18 @@ namespace {
 			}
 
 			// create new variable substitution
-			varMap.insert(std::make_pair(cur, TypeVariable::get(manager, "FV" + toString(++varCounter))));
-			return mapElement(0, cur);
+			TypeVariablePtr res = getFreshVar();
+			varMap.insert(std::make_pair(cur, res));
+			varSet.insert(res);
+			return res;
 		}
 
 		virtual IntTypeParam mapParam(const IntTypeParam& param) {
+			// only variables need to be considered
+			if (param.getType() != IntTypeParam::VARIABLE) {
+				return param;
+			}
+
 			// search for parameter ...
 			auto pos = paramMap.find(param);
 			if (pos != paramMap.end()) {
@@ -640,59 +625,83 @@ namespace {
 				return pos->second;
 			}
 
-			// create new variable substitution
-			paramMap.insert(std::make_pair(param, IntTypeParam::getVariableIntParam('a' + paramCounter)));
-			paramCounter++;
-			return mapParam(param);
+			// create fresh parameter ...
+			IntTypeParam res = getFreshParam();
+			paramMap.insert(std::make_pair(param, res));
+			paramSet.insert(res);
+			return res;
 		}
 
-		void startNewType() {
-			varMap.clear();
-			paramMap.clear();
+	private:
+
+		TypeVariablePtr getFreshVar() {
+			TypeVariablePtr res;
+			do {
+				res = TypeVariable::get(manager, "V" + toString(++varCounter));
+			} while(varSet.find(res) != varSet.end());
+			return res;
+		}
+
+		IntTypeParam getFreshParam() {
+			IntTypeParam res;
+			do {
+				res = IntTypeParam::getVariableIntParam('a' + (paramCounter++));
+			} while (paramSet.find(res) != paramSet.end());
+			return res;
 		}
 
 	};
 
-}
 
+	void collectAllTypeVariables(const TypeList& types, TypeSet& varSet, std::set<IntTypeParam>& paramSet) {
 
-std::pair<TypePtr, TypePtr> makeTypeVariablesUnique(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB) {
-	std::vector<TypePtr>&& list = makeTypeVariablesUnique(manager, toVector(typeA, typeB));
-	return std::make_pair(list[0],list[1]);
-}
+		// assemble type-variable collecting visitor
+		auto visitor = makeLambdaPtrVisitor([&](const NodePtr& cur) {
+			// collect all type variables
+			if (cur->getNodeType() == NT_TypeVariable) {
+				varSet.insert(static_pointer_cast<const Type>(cur));
+			}
 
-std::vector<TypePtr> makeTypeVariablesUnique(NodeManager& manager, const vector<TypePtr>& types) {
-	// check whether a check is actually necessary ..
-	if (types.size() < 2) {
-		// => no collisions possible - done!
-		return types;
+			// collect variable int-type parameters
+			if (cur->getNodeType() == NT_GenericType) {
+				const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
+				for_each(type->getIntTypeParameter(), [&](const IntTypeParam& cur) {
+					if (cur.getType() == IntTypeParam::VARIABLE) {
+						paramSet.insert(cur);
+					}
+				});
+			}
+
+		}, true);
+
+		// collect type variables
+		for_each(types, [&](const TypePtr& cur) {
+			visitAllOnce(cur, visitor);
+		});
+
 	}
 
-	// replace type variables and variable int-type parameter
+	template<typename T>
+	Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, std::set<IntTypeParam>& paramSet) {
+		NodeManager& manager = target->getNodeManager();
+		FreshVariableSubstitution mapper(manager, usedTypes, paramSet);
+		return static_pointer_cast<T>(target->substitute(manager, mapper));
+	}
 
-	// The replacer is handling the actual replacement by mapping variables to new values within types
-	TypeVariableReplacer replacer(manager);
-
-	// apply transformation
-	std::vector<TypePtr> res;
-	transform(types, std::back_inserter(res), [&](const TypePtr& type)->TypePtr {
-		replacer.startNewType();
-		return static_pointer_cast<const Type>(type->substitute(manager, replacer));
-	});
-	return res;
 }
-
-
 
 TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
 
-	// extract return type
-	const TypePtr& resType = funType->getReturnType();
+	// make type variables within function types unique
+	TypeSet usedVars;
+	std::set<IntTypeParam> usedParams;
+	collectAllTypeVariables(argumentTypes, usedVars, usedParams);
+	FunctionTypePtr modFunType = makeTypeVariablesUnique(funType, usedVars, usedParams);
 
 	// try unifying the argument types
-	auto mgu = matchAll(manager, funType->getArgumentTypes(), argumentTypes);
+	auto mgu = matchAll(manager, modFunType->getArgumentTypes(), argumentTypes);
 
 	// check whether unification was successful
 	if (!mgu) {
@@ -703,6 +712,9 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 		// return unit type
 		return manager.basic.getUnit();
 	}
+
+	// extract return type
+	const TypePtr& resType = modFunType->getReturnType();
 
 	// compute and return the expected return type
 	return mgu->applyTo(manager, resType);
