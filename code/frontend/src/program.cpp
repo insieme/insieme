@@ -180,7 +180,7 @@ const Program::TranslationUnitSet& Program::getTranslationUnits() const { return
 clang::idx::Program& Program::getClangProgram() { return pimpl->mProg; }
 clang::idx::Indexer& Program::getClangIndexer() { return pimpl->mIdx; }
 
-void Program::dumpCallGraph() const { return pimpl->mCallGraph.dump(); }
+void Program::dumpCallGraph() const { pimpl->mCallGraph.dump(); }
 
 const TranslationUnit& Program::getTranslationUnit(const clang::idx::TranslationUnit* tu) {
 	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));

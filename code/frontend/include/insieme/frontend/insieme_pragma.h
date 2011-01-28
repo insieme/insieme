@@ -64,7 +64,7 @@ public:
 };
 
 /**
- * The pragma 'insieme mark' is used to mark code reagions (i.e. function definitions and code blocks)
+ * The pragma 'insieme mark' is used to mark code regions (i.e. function definitions and code blocks)
  * that will be parsed by the compiler.
  */
 class InsiemePragma: public Pragma {

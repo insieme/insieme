@@ -389,14 +389,14 @@ CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
 	builder.completeGraph();
 
 	// print stats
-	std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-	std::cout << "Num of CFG graphs: " << CFGBuilder::cfgMap.size() << std::endl;
+	VLOG(2) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	VLOG(2) << "Num of CFG graphs: " << CFGBuilder::cfgMap.size();
 	std::for_each(CFGBuilder::cfgMap.begin(), CFGBuilder::cfgMap.end(),
 		[](insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr>::value_type curr){
-			std::cout << "number of nodes: " << curr.second->getSize() << std::endl;
+			VLOG(2) << "number of nodes: " << curr.second->getSize();
 		}
 	);
-	std::cout << "main: " << cfg->getSize() << std::endl;
+	VLOG(2) << "Main: " << cfg->getSize();
 	return cfg;
 }
 

@@ -141,5 +141,5 @@ std::shared_ptr<ASTPrinter> makeDotPrinter(std::ostream& out, const MessageList&
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
 
-}
-}
+} // end namespace driver
+} // end namespace insieme

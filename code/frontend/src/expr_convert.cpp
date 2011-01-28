@@ -92,7 +92,8 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 	if( argsTy.empty() )
 		return args;
 
-	if(*argsTy.back() == *builder.getBasicGenerator().getVarList()) {
+	const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+	if( gen.isVarList(argsTy.back()) ) {
 		ExpressionList ret;
 		assert(args.size() >= argsTy.size()-1 && "Function called with fewer arguments than necessary");
 		// last type is a var_list, we have to do the packing of arguments
@@ -107,7 +108,7 @@ vector<core::ExpressionPtr> tryPack(const core::ASTBuilder& builder, core::Funct
 
 		// arguments has to be packed into a tuple expression, and then inserted into a pack expression
 		ret.push_back(
-			builder.callExpr(builder.getBasicGenerator().getVarList(), builder.getBasicGenerator().getVarlistPack(), builder.tupleExpr(toPack))
+			builder.callExpr(gen.getVarList(), gen.getVarlistPack(), builder.tupleExpr(toPack))
 		);
 		return ret;
 	}
@@ -204,9 +205,7 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
 	void VisitStmt(clang::Stmt* stmt) {
 		std::for_each(stmt->child_begin(), stmt->child_end(),
-			[ this ](clang::Stmt* curr) {
-				if(curr) this->Visit(curr);
-			});
+			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); });
 	}
 };
 
@@ -269,16 +268,16 @@ core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, c
 	core::CaptureInitExpr::Values values;
 	std::for_each(args.begin(), args.end(),
 		[ &capture, &captureListType, &builder, &body, &values ] (const core::ExpressionPtr& curr) {
-			const core::VariablePtr& bodyVar = core::dynamic_pointer_cast<const core::Variable>(curr);
+			assert(curr->getNodeType() == core::NT_Variable);
+			const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
 			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
 			capture.push_back( parmVar );
 			captureListType.push_back( bodyVar->getType() );
 			values.push_back( bodyVar );
 			// we have to replace the variable of the body with the newly created parmVar
-			body = core::dynamic_pointer_cast<const core::Statement>(
+			body = core::static_pointer_cast<const core::Statement>(
 					core::transform::replaceAll(builder.getNodeManager(), body, bodyVar, parmVar, true)
 			);
-			assert(body);
 		}
 	);
 
@@ -305,8 +304,7 @@ class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConvert
 	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
 		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
 		if(ref && isa<const ParmVarDecl>(ref->getDecl())) {
-			core::VariablePtr&& parmVar = core::dynamic_pointer_cast<const core::Variable>( convFact.convertExpr(ref) );
-			assert(parmVar);
+			const core::VariablePtr& parmVar = core::static_pointer_cast<const core::Variable>( convFact.convertExpr(ref) );
 			auto fit = ctx.wrapRefMap.find(parmVar);
 			if(fit == ctx.wrapRefMap.end()) {
 				fit = ctx.wrapRefMap.insert( std::make_pair(parmVar, convFact.builder.variable(convFact.builder.refType(parmVar->getType()))) ).first;
@@ -424,12 +422,11 @@ public:
 			return retExpr;
 
 		// if the subexpression is an array or a vector, remove all the C implicit casts
-		if( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
-			nonRefExpr->getType()->getNodeType() == core::NT_VectorType )
+		if( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType || nonRefExpr->getType()->getNodeType() == core::NT_VectorType )
 			return subExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !core::dynamic_pointer_cast<const core::RefType>(type)) {
+		if(!convFact.builder.getBasicGenerator().isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 
@@ -460,7 +457,7 @@ public:
 			return retExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(*subExpr != *convFact.builder.getNodeManager().basic.getNull() && !type->getNodeType() != core::NT_RefType) {
+		if(!convFact.builder.getBasicGenerator().isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 
@@ -480,7 +477,7 @@ public:
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			const core::ASTBuilder& builder = convFact.builder;
 
-			core::FunctionTypePtr&& funcTy = core::dynamic_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+			core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			// collects the type of each argument of the expression
 			ExpressionList args;
@@ -521,7 +518,7 @@ public:
 			if(!definition) {
 				// No definition has been found in any of the translation units, we mark this function as extern!
 				core::ExpressionPtr&& irNode =
-						convFact.builder.callExpr(	funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
+						convFact.builder.callExpr( funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs );
 				// handle eventual pragmas attached to the Clang node
 				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
 				return annotatedNode;
@@ -567,8 +564,7 @@ public:
 			}
 
 			assert(definition && "No definition found for function");
-			core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(convFact.convertFunctionDecl(definition));
-			assert(lambdaExpr && "Call expression resulted in a empty lambda expression");
+			core::ExpressionPtr lambdaExpr = core::static_pointer_cast<const core::LambdaExpr>(convFact.convertFunctionDecl(definition));
 			convFact.currTU = oldTU;
 
 			// initialize the capture list
@@ -631,21 +627,18 @@ public:
 		START_LOG_EXPR_CONVERSION(membExpr);
 		const core::ASTBuilder& builder = convFact.builder;
 
-		core::ExpressionPtr&& base = convFact.tryDeref(Visit(membExpr->getBase()));
+		core::ExpressionPtr&& base = convFact.tryDeref( Visit(membExpr->getBase()) );
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
 			// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
 			base = convFact.tryDeref( Visit(membExpr->getBase()) );
 
-			if(core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ||
-				core::dynamic_pointer_cast<const core::ArrayType>(base->getType())) {
+			if(base->getType()->getNodeType() == core::NT_VectorType || base->getType()->getNodeType() == core::NT_ArrayType ) {
 
-				core::LiteralPtr&& op = core::dynamic_pointer_cast<const core::VectorType>(base->getType()) ?
-						builder.getBasicGenerator().getVectorSubscript() :
-						builder.getBasicGenerator().getArraySubscript1D();
+				core::LiteralPtr&& op = base->getType()->getNodeType() == core::NT_VectorType ?
+						gen.getVectorSubscript() : gen.getArraySubscript1D();
 
-				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType());
-				assert(subTy);
-
+				const core::SingleElementTypePtr& subTy = core::static_pointer_cast<const core::SingleElementType>(base->getType());
 				base = convFact.tryDeref( builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getUInt8()) ) );
 			}
 		}
@@ -665,6 +658,7 @@ public:
 	core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp)  {
 		START_LOG_EXPR_CONVERSION(binOp);
 		const core::ASTBuilder& builder = convFact.builder;
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 
  		core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 		core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
@@ -680,8 +674,7 @@ public:
 
 		// the type of this expression is the type of the LHS expression
 		core::TypePtr exprTy = lhs->getType()->getNodeType() == core::NT_RefType ?
-				core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType() :
-				lhs->getType();
+				core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType() : lhs->getType();
 
 		// get basic element type
         core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
@@ -721,7 +714,7 @@ public:
 		if( isCompound ) {
 			// we check if the RHS is a ref, in that case we use the deref operator
 			rhs = convFact.tryDeref(rhs);
-			core::ExpressionPtr&& opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+			core::ExpressionPtr&& opFunc = gen.getOperator(exprTy, op);
 			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 		}
 
@@ -789,8 +782,8 @@ public:
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) && "LHS operand must be of type ref<a'>." );
 			isAssignment = true;
-			opFunc = convFact.mgr.basic.getRefAssign();
-			exprTy = convFact.mgr.basic.getUnit();
+			opFunc = gen.getRefAssign();
+			exprTy = gen.getUnit();
 			break;
 		}
 		default:
@@ -801,31 +794,29 @@ public:
 		// Operators && and || introduce short circuit operations,
 		// this has to be directly supported in the IR.
 		if( baseOp == BO_LAnd || baseOp == BO_LOr ) {
-			if(!convFact.mgr.basic.isBool(lhs->getType()))
-				lhs = builder.castExpr(convFact.mgr.basic.getBool(), lhs);
+			if(!gen.isBool(lhs->getType()))
+				lhs = builder.castExpr(gen.getBool(), lhs);
 			if(!convFact.mgr.basic.isBool(rhs->getType()))
-				rhs = builder.castExpr(convFact.mgr.basic.getBool(), rhs);
+				rhs = builder.castExpr(gen.getBool(), rhs);
 			// lazy evaluation of RHS
-			exprTy = convFact.mgr.basic.getBool();
-			rhs = convFact.createCallExpr(builder.returnStmt(rhs), convFact.mgr.basic.getBool());
+			exprTy = gen.getBool();
+			rhs = convFact.createCallExpr(builder.returnStmt(rhs), gen.getBool());
 		}
 
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
 
 			// Handle pointers arithmetic
-			VLOG(2) << *lhs;
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-			opFunc = builder.getBasicGenerator().getOperator(exprTy, op);
+			opFunc = gen.getOperator(exprTy, op);
 
 			if(DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS())) {
 				if( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 					assert(false && "Pointer arithmetic not yet supported");
 			}
 
-			if(isLogical) {
-				exprTy = convFact.mgr.basic.getBool();
-			}
+			if(isLogical)
+				exprTy = gen.getBool();
 		}
 		assert(opFunc);
 
@@ -843,27 +834,28 @@ public:
 	core::ExpressionPtr VisitUnaryOperator(clang::UnaryOperator *unOp) {
 		START_LOG_EXPR_CONVERSION(unOp);
 		const core::ASTBuilder& builder = convFact.builder;
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
 
 		// build lambda expression for post/pre increment/decrement unary operators
-		auto encloseIncrementOperator = [ this, &builder ](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op)->core::ExpressionPtr {
+		auto encloseIncrementOperator =
+			[ this, &builder, &gen ](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
-			core::TypePtr type = subExpr->getType();
-			assert(type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type");
+				core::TypePtr type = subExpr->getType();
+				assert(type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type");
+				core::TypePtr elementType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
 
-			core::TypePtr elementType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
+				core::TypePtr genType;
+				if (gen.isSignedInt(elementType)) {
+					genType = gen.getIntGen();
+				} else if (gen.isUnsignedInt(elementType)) {
+					genType = gen.getUIntGen();
+				} else {
+					assert(false && "Illegal operand type for increment/decrement operator.");
+				}
 
-			core::TypePtr genType;
-			if (convFact.mgr.basic.isSignedInt(elementType)) {
-				genType = convFact.mgr.basic.getIntGen();
-			} else if (convFact.mgr.basic.isUnsignedInt(elementType)) {
-				genType = convFact.mgr.basic.getUIntGen();
-			} else {
-				assert(false && "Illegal operand type for increment/decrement operator.");
-			}
-
-			return convFact.builder.callExpr(elementType, convFact.mgr.basic.getOperator(genType, op), subExpr);
-		};
+				return convFact.builder.callExpr(elementType, convFact.mgr.basic.getOperator(genType, op), subExpr);
+			};
 
 		switch(unOp->getOpcode()) {
 		// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
@@ -902,17 +894,13 @@ public:
 		case UO_Deref: {
 			subExpr = convFact.tryDeref(subExpr);
 
-			if(core::dynamic_pointer_cast<const core::VectorType>(subExpr->getType()) ||
-				core::dynamic_pointer_cast<const core::ArrayType>(subExpr->getType())) {
+			if(subExpr->getType()->getNodeType() == core::NT_VectorType || subExpr->getType()->getNodeType() == core::NT_ArrayType) {
+				const core::SingleElementTypePtr& subTy = core::static_pointer_cast<const core::SingleElementType>(subExpr->getType());
 
-				core::SingleElementTypePtr&& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(subExpr->getType());
-				assert(subTy);
+				core::LiteralPtr&& op = subExpr->getType()->getNodeType() == core::NT_VectorType ?
+						gen.getVectorSubscript() : gen.getArraySubscript1D();
 
-				core::LiteralPtr&& op = core::dynamic_pointer_cast<const core::VectorType>(subExpr->getType()) ?
-						builder.getBasicGenerator().getVectorSubscript() :
-						builder.getBasicGenerator().getArraySubscript1D();
-
-				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", convFact.mgr.basic.getUInt4()) );
+				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", gen.getUInt4()) );
 			}
 			break;
 		}
@@ -922,24 +910,22 @@ public:
 			break;
 		// -a
 		case UO_Minus:
-			subExpr = builder.invertSign(convFact.tryDeref(subExpr));
+			subExpr = builder.invertSign( convFact.tryDeref(subExpr) );
 			break;
 		// ~a
 		case UO_Not:
 			subExpr = convFact.tryDeref(subExpr);
-			subExpr = builder.callExpr( subExpr->getType(),
-						builder.getNodeManager().basic.getOperator(subExpr->getType(), core::lang::BasicGenerator::Not), subExpr
-					  );
+			subExpr = builder.callExpr( subExpr->getType(), gen.getOperator(subExpr->getType(), core::lang::BasicGenerator::Not), subExpr );
 			break;
 		// !a
 		case UO_LNot:
 			subExpr = convFact.tryDeref(subExpr);
-			if(*subExpr->getType() != *builder.getNodeManager().basic.getBool()) {
+			if( !gen.isBool(subExpr->getType()) ) {
 				// for now add a cast expression to bool FIXME
-				subExpr = convFact.getASTBuilder().castExpr(builder.getNodeManager().basic.getBool(), subExpr);
+				subExpr = convFact.getASTBuilder().castExpr(gen.getBool(), subExpr);
 			}
-			assert(*subExpr->getType() == *builder.getNodeManager().basic.getBool());
-			subExpr = builder.callExpr( subExpr->getType(), builder.getNodeManager().basic.getBoolLNot(), subExpr );
+			assert( gen.isBool(subExpr->getType()) );
+			subExpr = builder.callExpr( subExpr->getType(), gen.getBoolLNot(), subExpr );
 			break;
 		case UO_Real:
 		case UO_Imag:
@@ -963,6 +949,7 @@ public:
 	core::ExpressionPtr VisitConditionalOperator(clang::ConditionalOperator* condOp) {
 		START_LOG_EXPR_CONVERSION(condOp);
 		const core::ASTBuilder& builder = convFact.builder;
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		assert(!condOp->getSaveExpr() && "Conditional operation with 'gcc save' expession not supperted.");
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 
@@ -973,9 +960,9 @@ public:
 		// add ref.deref if needed
 		condExpr = convFact.tryDeref(condExpr);
 
-		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
+		if( !gen.isBool(condExpr->getType()) ) {
 			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME
+			condExpr = builder.castExpr(gen.getBool(), condExpr); // FIXME
 		}
 
 		// Dereference eventual references
@@ -983,7 +970,7 @@ public:
 			retTy= core::static_pointer_cast<const core::RefType>(retTy)->getElementType();
 		}
 
-		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, convFact.mgr.basic.getIfThenElse(),
+		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
 				condExpr,	// Condition
 				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy), // True
 				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy) // False
@@ -1002,6 +989,7 @@ public:
 	core::ExpressionPtr VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
 		START_LOG_EXPR_CONVERSION(arraySubExpr);
 
+		const core::lang::BasicGenerator& gen = convFact.builder.getBasicGenerator();
 		// CLANG introduces implicit cast for the base expression of array subscripts
 		// which cast the array type into a simple pointer. As insieme supports subscripts
 		// only for array or vector types, we skip eventual implicit cast operations
@@ -1010,25 +998,22 @@ public:
 			baseExpr = castExpr->getSubExpr();
 
 		// IDX
-		core::ExpressionPtr&& idx = convFact.tryDeref(Visit( arraySubExpr->getIdx() ));
+		core::ExpressionPtr&& idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 
 		// BASE
-		core::ExpressionPtr&& base = convFact.tryDeref(Visit( baseExpr ) );
+		core::ExpressionPtr&& base = convFact.tryDeref( Visit( baseExpr ) );
 
 		// TODO: we need better checking for vector type
-		assert( (core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ||
-				core::dynamic_pointer_cast<const core::ArrayType>( base->getType() )) &&
+		assert( (base->getType()->getNodeType() == core::NT_VectorType || base->getType()->getNodeType() == core::NT_ArrayType) &&
 				"Base expression of array subscript is not a vector/array type.");
 
-		core::LiteralPtr&& op = core::dynamic_pointer_cast<const core::VectorType>( base->getType() ) ?
-				convFact.builder.getBasicGenerator().getVectorSubscript() :
-				convFact.builder.getBasicGenerator().getArraySubscript1D();
+		core::LiteralPtr&& op = base->getType()->getNodeType() == core::NT_VectorType ? gen.getVectorSubscript() : gen.getArraySubscript1D();
 
 		// We are sure the type of base is either a vector or an array
-		const core::TypePtr& subTy = core::dynamic_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(convFact.mgr.basic.getUInt4(), idx) );
+			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(gen.getUInt4(), idx) );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, arraySubExpr, convFact);
@@ -1036,14 +1021,13 @@ public:
 		return annotatedNode;
 	}
 
-
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						EXT VECTOR ELEMENT EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr){
         START_LOG_EXPR_CONVERSION(vecElemExpr);
         core::ExpressionPtr&& base = Visit( vecElemExpr->getBase() );
+        const core::lang::BasicGenerator& gen = convFact.builder.getBasicGenerator();
 
         std::string pos;
         llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
@@ -1067,16 +1051,16 @@ public:
             for(auto I = accessor.begin(), E = accessor.end(); I != E; ++I){
                 args.push_back(convFact.builder.intLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
             }
-            return convFact.builder.callExpr(convFact.mgr.basic.getVectorPermute(), convFact.tryDeref(base), convFact.builder.vectorExpr(args));
+            return convFact.builder.callExpr(gen.getVectorPermute(), convFact.tryDeref(base), convFact.builder.vectorExpr(args));
         } else
             assert(accessor.size() <= 4 && "ExtVectorElementExpr has unknown format");
 
         // The type of the indes is always uint<4>
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, convFact.builder.getNodeManager().basic.getUInt4());
+        core::ExpressionPtr&& idx = convFact.builder.literal(pos, gen.getUInt4());
         // if the type of the vector is a refType, we deref it
         base = convFact.tryDeref(base);
 
-        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(exprTy, convFact.mgr.basic.getVectorSubscript(), base, idx);
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr(exprTy, gen.getVectorSubscript(), base, idx);
 
         END_LOG_EXPR_CONVERSION(retExpr);
         return retExpr;
@@ -1156,8 +1140,8 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 	}
 
 	core::ExpressionPtr retExpr;
-	if(core::dynamic_pointer_cast<const core::VectorType>(currType) || core::dynamic_pointer_cast<const core::ArrayType>(currType)) {
-		core::TypePtr elemTy = core::dynamic_pointer_cast<const core::SingleElementType>(currType)->getElementType();
+	if( currType->getNodeType() == core::NT_VectorType || currType->getNodeType() == core::NT_ArrayType ) {
+		const core::TypePtr& elemTy = core::static_pointer_cast<const core::SingleElementType>(currType)->getElementType();
 		ExpressionList elements;
 		// get all values of the init expression
 		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
@@ -1244,8 +1228,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				[ this ] (std::set<const FunctionDecl*>::value_type fd) {
 
 					if(this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end()) {
-						core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(this->convertType(GET_TYPE_PTR(fd)));
-						assert(funcType);
+						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>( this->convertType(GET_TYPE_PTR(fd)) );
 						if(this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end()) {
 							funcType = this->builder.functionType(
 									toVector<core::TypePtr>( this->builder.refType(this->ctx.globalStruct.first )),
@@ -1272,7 +1255,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	vector<core::VariablePtr> params;
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[ &params, this ] (ParmVarDecl* currParam) {
-			params.push_back( core::dynamic_pointer_cast<const core::Variable>(this->lookUpVariable(currParam)) );
+			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 		}
 	);
 
@@ -1311,10 +1294,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				//
 				// as the variable can olny appear in the RHS of expression, we have to sobstitute it with
 				// its dereference
-				body = core::dynamic_pointer_cast<const core::Statement>(
+				body = core::static_pointer_cast<const core::Statement>(
 						core::transform::replaceAll(this->builder.getNodeManager(), body, fit->first, this->tryDeref(fit->second), true)
 				);
-				assert(body);
 			}
 		}
 	);
@@ -1328,8 +1310,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// ADD THE GLOBALS
 	if(isEntryPoint && ctx.globalVar) {
-		core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body);
-		assert(compStmt);
+		const core::CompoundStmtPtr& compStmt = core::static_pointer_cast<const core::CompoundStmt>(body);
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
 		std::vector<core::StatementPtr> stmts;
@@ -1417,7 +1398,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				this->currTU = &Program::getTranslationUnit(ret.second);
 			}
 
-			core::LambdaPtr&& lambda = core::dynamic_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
+			const core::LambdaPtr& lambda = core::static_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
 			assert(lambda && "Resolution of sub recursive lambda yield a wrong result");
 			this->currTU = oldTU;
 			// attach name annotation to the lambda

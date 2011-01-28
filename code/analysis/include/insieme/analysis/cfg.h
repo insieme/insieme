@@ -47,7 +47,7 @@ class CFG;
 namespace cfg {
 class Block;
 class Terminator;
-}
+} // end cfg namespace
 } // end analysis namespace
 } // end insieme namespace
 
@@ -62,13 +62,14 @@ namespace analysis {
 namespace cfg {
 
 /**
- * CFGElement - Represents a top-level expression in a basic block.
+ * Element - Represents a top-level expression in a basic block.
+ * A type is included to distinguish expression from terminal nodes.
  */
 struct Element : public core::StatementPtr {
 	enum Type { None, CtrlCond, LoopInit, LoopIncrement };
 
 	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) : core::StatementPtr (stmt), type(type) { }
-	Type getType() const { return type; }
+	const Type& getType() const { return type; }
 private:
 	Type type;
 };
@@ -84,8 +85,12 @@ struct Terminator : public Element {
 	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : Element(stmt) { }
 };
 
+/**
+ * Edge: An edge interconnects two CFG Blocks. An edge can contain an expression which
+ * determines the condition under which the path is taken.
+ */
 struct Edge {
-	std::string label;
+	std::string label; // fixme: replace the string label with an expression
 	Edge(const std::string& label = std::string()) : label(label) { }
 };
 
@@ -95,10 +100,11 @@ class CFG;
 typedef std::shared_ptr<CFG> CFGPtr;
 
 /**
- * CFG: represents the graph built from IR.
+ * CFG: represents the graph built from IR. Boost.Graph is used as internal representation.
  */
 class CFG {
 
+	// Each node of the boost::graph is mapped to a CFGBlock.
 	struct NodeProperty {
 		const cfg::Block* block;
 		NodeProperty(const cfg::Block* block=NULL) : block(block) { }
@@ -110,6 +116,11 @@ class CFG {
 		EdgeProperty(const cfg::Edge& edge) : edge(edge) { }
 	};
 
+	/**
+	 * Utility class for the production of a DOT graph from the boost::graph.
+	 *
+	 * This class takes care of printing the content of CFG Blocks to the output stream.
+	 */
 	template <class NodeTy>
 	class BlockLabelWriter {
 	public:
@@ -125,6 +136,11 @@ class CFG {
 		NodeTy& prop;
 	};
 
+	/**
+	 * Utility class for the production of a DOT graph from the boost::graph.
+	 *
+	 * This class takes care of printing the content of CFG Edges to the output stream.
+	 */
 	template <class EdgeTy>
 	class EdgeLabelWriter {
 	public:
@@ -167,10 +183,10 @@ public:
 	~CFG();
 
 	/**
-	 * Adds a CFG element (or node) to the Control flow graph.
+	 * Adds a CFG block (or node) to the Control flow graph.
 	 *
-	 * @param block
-	 * @return
+	 * @param cfg block containing a list of cfg elements.
+	 * @return the internal vertex id which identifies the block within the boost::graph
 	 */
 	VertexTy addBlock(cfg::Block* block);
 
@@ -250,14 +266,17 @@ struct Block {
 	Block() { }
 	Block(const CFG::VertexTy& id) : id(id) { }
 
-	// Appends a statement to an existing CFGBlock
+	/// Appends a statement to an existing CFGBlock
 	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
 
+	/// Set a terminal element for this block
 	void setTerminal(const core::StatementPtr& stmt) { term = stmt; }
 	const Terminator& getTerminator() const { return term; }
 	bool hasTerminator() const { return !!term; }
 
+	/// Returns the number of elements inside this block
 	size_t size() const { return stmtList.size(); }
+	/// Returns true of the block is empty
 	bool empty() const { return stmtList.empty() && !term; }
 
 	void setBlockID(const CFG::VertexTy& vid) { id = vid; }

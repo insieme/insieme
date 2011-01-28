@@ -208,11 +208,11 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 }
 
-ASTContext& 	ClangCompiler::getASTContext() const { return pimpl->clang.getASTContext(); }
-Preprocessor& 	ClangCompiler::getPreprocessor() const { return pimpl->clang.getPreprocessor(); }
-Diagnostic& 	ClangCompiler::getDiagnostics() const { return pimpl->clang.getDiagnostics(); }
+ASTContext& 	ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
+Preprocessor& 	ClangCompiler::getPreprocessor()  const { return pimpl->clang.getPreprocessor(); }
+Diagnostic& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 	ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
-TargetInfo& 	ClangCompiler::getTargetInfo() const { return pimpl->clang.getTarget(); }
+TargetInfo& 	ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
