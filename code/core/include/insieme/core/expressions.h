@@ -651,8 +651,7 @@ private:
 	const GuardedStmts guardedStmts;
 	const ExpressionPtr defaultStmt;
 
-	JobExpr(const TypePtr& type, const ExpressionPtr& range, const ExpressionPtr& defaultStmt,
-		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
+	JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecs);
 
 	virtual JobExpr* createCopyUsing(NodeMapping& mapper) const;
 	

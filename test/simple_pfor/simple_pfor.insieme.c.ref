@@ -15,8 +15,8 @@ struct __insieme_expr_0 {
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
-	int* var_16;	 // Variable: v16
-	int(* var_17)[100];	 // Variable: v17
+	int(* var_16)[100];	 // Variable: v16
+	int* var_17;	 // Variable: v17
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
@@ -34,8 +34,8 @@ void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda) { ret
 struct __insieme_funType_type_2 { 
     void(*fun)(void*);
     const size_t size;
-    int* p0;
-    int(* p1)[100];
+    int(* p0)[100];
+    int* p1;
 };
 
 // start code fragment :: capture-struct for pfor-body __insieme_expr_4 //
@@ -90,8 +90,8 @@ double ceil(double);
 // start code fragment :: Definition of __insieme_supp_3 //
 void __insieme_supp_3(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
-	int* var_10 = ((struct __insieme_funType_type_2*)_capture)->p0;
-	int(* var_9)[100] = ((struct __insieme_funType_type_2*)_capture)->p1;
+	int(* var_9)[100] = ((struct __insieme_funType_type_2*)_capture)->p0;
+	int* var_10 = ((struct __insieme_funType_type_2*)_capture)->p1;
 	// --------- Captured Stuff -  End  -------------
 	{
 		{
@@ -109,8 +109,8 @@ void __insieme_supp_3(void* _capture) {
 void fun__insieme_expr_0(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	int* var_16 = ((struct __insieme_expr_0*)args)->var_16;
-	int(* var_17)[100] = ((struct __insieme_expr_0*)args)->var_17;
+	int(* var_16)[100] = ((struct __insieme_expr_0*)args)->var_16;
+	int* var_17 = ((struct __insieme_expr_0*)args)->var_17;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
 	call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&__insieme_supp_3, 0, var_16, var_17}))));
@@ -124,7 +124,7 @@ int main() {
 	{
 		int i = 0;
 		int a[100];
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&i,&a}),sizeof(struct __insieme_expr_0))));
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&a,&i}),sizeof(struct __insieme_expr_0))));
 		printf("After Loop: %d\n", (i));
 		{
 			for(int var_7 = 0; var_7 < 100; var_7 += 1) {

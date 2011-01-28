@@ -413,9 +413,12 @@ public:
 	 *
 	 * @param manager the manager to be used to create the new node
 	 * @param mapper the mapper used to translate child node references
+	 * @param preevaluate a flag allowing to determine whether the mapping should be pre-evaluated and checked for modifications. If no
+	 * modification is detected, this node is returned immediately - without constructing a new node. This is manly a performance tuning flag
+	 * and should be enabled whenever possible.
 	 * @return a pointer to the modified node.
 	 */
-	NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
+	NodePtr substitute(NodeManager& manager, NodeMapping& mapper, bool preevaluate = true) const;
 
 	/**
 	 * Obtains a reference to the manager maintaining this node instance. In case this

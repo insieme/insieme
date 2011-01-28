@@ -70,16 +70,23 @@ const Node::ChildList& Node::getChildList() const {
 	return *children;
 }
 
-NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper) const {
+NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper, bool preevaluate) const {
 
-	// use child list mapper to check for changes
-	transform::ChildListMapping listMapper(getChildList(), mapper);
-	if (!listMapper.isDifferent()) {
-		return NodePtr(this);
+	// pre-evaluated all mappings and check for changes
+	if (preevaluate) {
+
+		// use child list mapper to check for changes
+		transform::ChildListMapping listMapper(getChildList(), mapper);
+		if (!listMapper.isDifferent()) {
+			return NodePtr(this);
+		}
+
+		// use list-based mapper
+		return substitute(manager, listMapper, false);
 	}
 
 	// create a version having everything substituted
-	Node* node = createCopyUsing(listMapper);
+	Node* node = createCopyUsing(mapper);
 
 	// obtain element within the manager
 	NodePtr res = manager.get(node);
