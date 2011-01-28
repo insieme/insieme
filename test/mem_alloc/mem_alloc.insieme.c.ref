@@ -13,7 +13,7 @@
 int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: memcpy //
-int memcpy();
+void* memcpy(void*, void*, unsigned long);
 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {

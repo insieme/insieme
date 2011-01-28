@@ -41,11 +41,11 @@ struct __insieme_expr_0 {
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
-	double* var_59;	 // Variable: v59
+	float** var_59;	 // Variable: v59
 	float** var_60;	 // Variable: v60
 	float** var_61;	 // Variable: v61
-	int* var_62;	 // Variable: v62
-	float** var_63;	 // Variable: v63
+	double* var_62;	 // Variable: v62
+	int* var_63;	 // Variable: v63
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
@@ -63,19 +63,19 @@ void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda) { ret
 struct __insieme_funType_type_2 { 
     void(*fun)(void*);
     const size_t size;
-    double* p0;
+    float** p0;
     float** p1;
     float** p2;
-    int* p3;
-    float** p4;
+    double* p3;
+    int* p4;
 };
 
 // start code fragment :: capture-struct for pfor-body __insieme_expr_4 //
 struct capture__insieme_expr_4 {
-	int* var_49;
 	double* var_45;
-	float** var_48;
 	float** var_47;
+	float** var_48;
+	int* var_49;
 	float** var_46;
 };
 
@@ -94,20 +94,20 @@ void call__insieme_funType_type_5(struct __insieme_funType_type_5* lambda, int p
 struct __insieme_funType_type_6 { 
     void(*fun)(void*, int);
     const size_t size;
-    int* p0;
-    double* p1;
+    double* p0;
+    float** p1;
     float** p2;
-    float** p3;
+    int* p3;
     float** p4;
 };
 
 // start code fragment :: Definition of __insieme_supp_7 //
 void __insieme_supp_7(void* _capture, int var_52) {
 	// --------- Captured Stuff - Begin -------------
-	int* var_53 = ((struct __insieme_funType_type_6*)_capture)->p0;
-	double* var_57 = ((struct __insieme_funType_type_6*)_capture)->p1;
+	double* var_57 = ((struct __insieme_funType_type_6*)_capture)->p0;
+	float** var_55 = ((struct __insieme_funType_type_6*)_capture)->p1;
 	float** var_54 = ((struct __insieme_funType_type_6*)_capture)->p2;
-	float** var_55 = ((struct __insieme_funType_type_6*)_capture)->p3;
+	int* var_53 = ((struct __insieme_funType_type_6*)_capture)->p3;
 	float** var_56 = ((struct __insieme_funType_type_6*)_capture)->p4;
 	// --------- Captured Stuff -  End  -------------
 	{
@@ -121,15 +121,15 @@ void __insieme_supp_7(void* _capture, int var_52) {
 // start code fragment :: function for pfor-body __insieme_expr_4 //
 void __insieme_expr_4(const isbr_PForRange range) {
 	// ----- captured variables -----
-	int* var_49 = ((struct capture__insieme_expr_4*)(range.context))->var_49;
 	double* var_45 = ((struct capture__insieme_expr_4*)(range.context))->var_45;
-	float** var_48 = ((struct capture__insieme_expr_4*)(range.context))->var_48;
 	float** var_47 = ((struct capture__insieme_expr_4*)(range.context))->var_47;
+	float** var_48 = ((struct capture__insieme_expr_4*)(range.context))->var_48;
+	int* var_49 = ((struct capture__insieme_expr_4*)(range.context))->var_49;
 	float** var_46 = ((struct capture__insieme_expr_4*)(range.context))->var_46;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		call__insieme_funType_type_5(((struct __insieme_funType_type_5*)(&((struct __insieme_funType_type_6){&__insieme_supp_7, 0, var_49, var_45, var_48, var_47, var_46}))), __it);
+		call__insieme_funType_type_5(((struct __insieme_funType_type_5*)(&((struct __insieme_funType_type_6){&__insieme_supp_7, 0, var_45, var_47, var_48, var_49, var_46}))), __it);
 	}
 	
 }
@@ -137,15 +137,15 @@ void __insieme_expr_4(const isbr_PForRange range) {
 // start code fragment :: Definition of __insieme_supp_3 //
 void __insieme_supp_3(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
-	double* var_45 = ((struct __insieme_funType_type_2*)_capture)->p0;
-	float** var_46 = ((struct __insieme_funType_type_2*)_capture)->p1;
-	float** var_47 = ((struct __insieme_funType_type_2*)_capture)->p2;
-	int* var_49 = ((struct __insieme_funType_type_2*)_capture)->p3;
-	float** var_48 = ((struct __insieme_funType_type_2*)_capture)->p4;
+	float** var_48 = ((struct __insieme_funType_type_2*)_capture)->p0;
+	float** var_47 = ((struct __insieme_funType_type_2*)_capture)->p1;
+	float** var_46 = ((struct __insieme_funType_type_2*)_capture)->p2;
+	double* var_45 = ((struct __insieme_funType_type_2*)_capture)->p3;
+	int* var_49 = ((struct __insieme_funType_type_2*)_capture)->p4;
 	// --------- Captured Stuff -  End  -------------
 	{
 		{
-			isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){1, ((*var_49)-1), 1, &((struct capture__insieme_expr_4){var_49, var_45, var_48, var_47, var_46})},&__insieme_expr_4);
+			isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){1, ((*var_49)-1), 1, &((struct capture__insieme_expr_4){var_45, var_47, var_48, var_49, var_46})},&__insieme_expr_4);
 			isbr_barrier(isbr_getThreadGroup(0));
 		};
 	}
@@ -156,11 +156,11 @@ void __insieme_supp_3(void* _capture) {
 void fun__insieme_expr_0(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	double* var_59 = ((struct __insieme_expr_0*)args)->var_59;
+	float** var_59 = ((struct __insieme_expr_0*)args)->var_59;
 	float** var_60 = ((struct __insieme_expr_0*)args)->var_60;
 	float** var_61 = ((struct __insieme_expr_0*)args)->var_61;
-	int* var_62 = ((struct __insieme_expr_0*)args)->var_62;
-	float** var_63 = ((struct __insieme_expr_0*)args)->var_63;
+	double* var_62 = ((struct __insieme_expr_0*)args)->var_62;
+	int* var_63 = ((struct __insieme_expr_0*)args)->var_63;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
 	call__insieme_funType_type_1(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_2){&__insieme_supp_3, 0, var_59, var_60, var_61, var_62, var_63}))));
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 		((setup_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
 		((start_t) = clock());
 		for(int it = 0; it < (numIter); it += 1) {
-			isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&factor,&f,&tmp,&N,&u}),sizeof(struct __insieme_expr_0))));
+			isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&u,&tmp,&f,&factor,&N}),sizeof(struct __insieme_expr_0))));
 			memcpy((u), (tmp), (((unsigned long)(((N)*(N))))*sizeof(float)));
 			for(int i = 1; i < ((N)-1); i += 1) {
 				for(int j = 1; j < ((N)-1); j += 1) {

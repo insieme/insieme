@@ -45,9 +45,9 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         v3 := clock();
         for(decl ref<int<4>> v36 =  var(0) .. v8 : 1) {
             merge(parallel(job([1-inf]){
-                default: [v28, v11, v10, v7, v9]fun[ref<real<8>> v45, ref<array<ref<real<4>>,1>> v46, ref<array<ref<real<4>>,1>> v47, ref<int<4>> v49, ref<array<ref<real<4>>,1>> v48](){
+                default: [v9, v10, v11, v28, v7]fun[ref<array<ref<real<4>>,1>> v48, ref<array<ref<real<4>>,1>> v47, ref<array<ref<real<4>>,1>> v46, ref<real<8>> v45, ref<int<4>> v49](){
                     {
-                        pfor(getThreadGroup(0), 1, v49-1, 1, [v49, v45, v48, v47, v46]fun[ref<int<4>> v53, ref<real<8>> v57, ref<array<ref<real<4>>,1>> v54, ref<array<ref<real<4>>,1>> v55, ref<array<ref<real<4>>,1>> v56](int<4> v52){
+                        pfor(getThreadGroup(0), 1, v49-1, 1, [v45, v47, v48, v49, v46]fun[ref<real<8>> v57, ref<array<ref<real<4>>,1>> v55, ref<array<ref<real<4>>,1>> v54, ref<int<4>> v53, ref<array<ref<real<4>>,1>> v56](int<4> v52){
                             for(decl ref<int<4>> v29 =  var(1) .. v53-1 : 1) {
                                 v55[v52*v53+v29] := 1/4*v54[v52-1*v53+v29]+v54[v52*v53+v29+1]+v54[v52*v53+v29-1]+v54[v52+1*v53+v29]-v57*v56[v52*v53+v29];
                             };
@@ -129,9 +129,9 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
         (v3 := clock());
         for(decl ref<int<4>> v36 = ( var(0)) .. ( *v8) : 1) {
             merge(parallel(job(([1-inf])){
-                default: [v28, v11, v10, v7, v9]fun[ref<real<8>> v45, ref<array<ref<real<4>>,1>> v46, ref<array<ref<real<4>>,1>> v47, ref<int<4>> v49, ref<array<ref<real<4>>,1>> v48](){
+                default: [v9, v10, v11, v28, v7]fun[ref<array<ref<real<4>>,1>> v48, ref<array<ref<real<4>>,1>> v47, ref<array<ref<real<4>>,1>> v46, ref<real<8>> v45, ref<int<4>> v49](){
                     {
-                        pfor(getThreadGroup(0), 1, (( *v49)-1), 1, [v49, v45, v48, v47, v46]fun[ref<int<4>> v53, ref<real<8>> v57, ref<array<ref<real<4>>,1>> v54, ref<array<ref<real<4>>,1>> v55, ref<array<ref<real<4>>,1>> v56](int<4> v52){
+                        pfor(getThreadGroup(0), 1, (( *v49)-1), 1, [v45, v47, v48, v49, v46]fun[ref<real<8>> v57, ref<array<ref<real<4>>,1>> v55, ref<array<ref<real<4>>,1>> v54, ref<int<4>> v53, ref<array<ref<real<4>>,1>> v56](int<4> v52){
                             for(decl ref<int<4>> v29 = ( var(1)) .. (( *v53)-1) : 1) {
                                 ((( *v55)[CAST<uint<4>>(((v52*( *v53))+( *v29)))]) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *(( *v54)[CAST<uint<4>>((((v52-1)*( *v53))+( *v29)))]))+( *(( *v54)[CAST<uint<4>>((((v52*( *v53))+( *v29))+1))])))+( *(( *v54)[CAST<uint<4>>((((v52*( *v53))+( *v29))-1))])))+( *(( *v54)[CAST<uint<4>>((((v52+1)*( *v53))+( *v29)))]))))-(( *v57)*CAST<real<8>>(( *(( *v56)[CAST<uint<4>>(((v52*( *v53))+( *v29)))]))))))));
                             };
