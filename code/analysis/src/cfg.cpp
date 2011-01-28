@@ -39,8 +39,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/logging.h"
 
-#include <stack>
 #include <tuple>
 
 using namespace insieme::core;
@@ -106,6 +106,10 @@ private:
 
 typedef std::pair<bool, CFG::VertexTy> NodeBound;
 
+/**
+ * Builder of the Control Flow Graph. Traverses the IR and creates blocks appending them to the CFG.
+ * The visit is done in reverse order in a way the number of CFG nodes is minimized.
+ */
 struct CFGBuilder: public ASTVisitor< void > {
 
 	CFG& cfg;
@@ -130,7 +134,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void appendPendingBlock() {
 		if(isPending && currBlock && !currBlock->empty()) {
 			CFG::VertexTy&& node = cfg.addBlock(currBlock);
-			// set the ID for this block
 			cfg.addEdge(node, succ);
 			succ = node;
 			currBlock = NULL;
@@ -153,7 +156,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		ifBlock->setTerminal(ifStmt);
 		CFG::VertexTy&& src = cfg.addBlock( ifBlock );
 
-		// the current node needs to be appendend to the graph (if not empty)
+		// the current node needs to be append to the graph (if not empty)
 		appendPendingBlock();
 		CFG::VertexTy sink = succ;
 
@@ -249,7 +252,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		whileBlock->setTerminal(whileStmt);
 		CFG::VertexTy&& src = cfg.addBlock( whileBlock );
 
-		// the current node needs to be appendend to the graph (if not empty)
+		// the current node needs to be append to the graph (if not empty)
 		appendPendingBlock();
 		CFG::VertexTy sink = succ;
 
@@ -316,13 +319,14 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void visitCallExpr(const CallExprPtr& callExpr) {
-		std::cout << "Visiting call expr: " << printer::PrettyPrinter(callExpr, 1<<5) << std::endl;
+		VLOG(1) << "Visiting CallExpr: " << printer::PrettyPrinter(callExpr, 1<<5);
 		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
 			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 			auto fit = cfgMap.find(lambdaExpr);
-			std::cout << "Building CFG for function" << std::endl;
-			if(fit == cfgMap.end())
+			if(fit == cfgMap.end()) {
+				VLOG(1) << "Building CFG for function";
 				cfgMap.insert( std::make_pair(lambdaExpr, CFG::buildCFG(lambdaExpr)) );
+			}
 		}
 
 		if(!subExpr) {
@@ -336,22 +340,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 		subExpr = false;
 	}
 
-//	BlockBounds visitCallExpr(const CallExprPtr& callExpr) {
-//		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
-//			cfg::Block callBlock;
-//			callBlock.setTerminal(callExpr);
-//			CFG::VertexTy&& src = cfg.addNode( callBlock );
-//			CFG::VertexTy&& sink = cfg.addNode( cfg::Block() );
-//			cfg.addEdge(sink, head);
-//			head = sink;
-//			visit(callExpr->getFunctionExpr());
-//			cfg.addEdge(src, head);
-//			head = src;
-//			return std::make_tuple(false, head);
-//		}
-//		return visitStatement(callExpr);
-//	}
-
 	void visitLambdaExpr(const LambdaExprPtr& lambda) {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
 		visit(lambda->getBody());
@@ -361,7 +349,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void visitProgram(const ProgramPtr& program) {
-
 		std::for_each(program->getEntryPoints().begin(), program->getEntryPoints().end(),
 			[ this ]( const ExpressionPtr& curr ) {
 				this->succ = this->exit;
@@ -380,12 +367,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void completeGraph() {
-		if(entry == succ)
-			return;
-
-		if(currBlock) {
-			appendPendingBlock();
-		}
+		if(entry == succ) return;
+		if(currBlock) appendPendingBlock();
 		cfg.addEdge(entry, succ);
 		succ = entry;
 	}

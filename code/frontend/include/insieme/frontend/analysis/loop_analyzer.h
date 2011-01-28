@@ -41,13 +41,21 @@
 #include <stdexcept>
 
 namespace clang {
+
 class VarDecl;
 class ForStmt;
-}
 
-namespace insieme { namespace frontend { namespace conversion {
+} // end clang namespace
+
+namespace insieme {
+namespace frontend {
+namespace conversion {
+
 class ConversionFactory;
-}}}
+
+} // End conversion namespace
+} // End frontend namespace
+} // End insieme namespace
 
 namespace insieme {
 namespace frontend {
@@ -81,7 +89,7 @@ class LoopAnalyzer {
 		bool 							invert;
 
 		//TODO: recheck: Visual Studio 2010 fix
-		LoopHelper(): inductionVar(NULL), incrExpr(NULL), condExpr(NULL), invert(false) {	}
+		LoopHelper(): inductionVar(NULL), invert(false) {	}
 	};
 
 	const ConversionFactory& 	convFact;

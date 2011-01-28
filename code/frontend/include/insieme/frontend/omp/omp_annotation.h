@@ -100,12 +100,10 @@ private:
 class Annotation {
 public:
 	virtual std::ostream& dump(std::ostream& out) const { return out; }
-//	virtual void toXml(insieme::xml::XmlElement& elem) = 0;
 };
 
 class Barrier: public Annotation {
 public:
-//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "barrier"; }
 };
 
@@ -216,7 +214,6 @@ private:
  */
 class Master: public Annotation {
 public:
-//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "master"; }
 };
 
@@ -243,17 +240,7 @@ public:
 
 	bool hasNoWait() const { return noWait; }
 
-	std::ostream& dump(std::ostream& out) const {
-		if(hasLastPrivate())
-			out << "lastprivate(" << join(",", *lastPrivateClause) << "), ";
-		if(hasSchedule())
-			scheduleClause->dump(out) << ", ";
-		if(hasCollapse())
-			out << "collapse(" << *collapseExpr << "), ";
-		if(hasNoWait())
-			out << "nowait, ";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 class SharedParallelAndTaskClause {
@@ -273,15 +260,7 @@ public:
 	bool hasShared() const { return static_cast<bool>(sharedClause); }
 	const VarList& getShared() const { assert(hasShared()); return *sharedClause; }
 
-	std::ostream& dump(std::ostream& out) const {
-		if(hasIf())
-			out << "if(" << *ifClause << "), ";
-		if(hasDefault())
-			defaultClause->dump(out) << ", ";
-		if(hasShared())
-			out << "shared(" << join(",", *sharedClause) << "), ";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 class ParallelClause: public SharedParallelAndTaskClause {
@@ -302,14 +281,7 @@ public:
 	bool hasCopyin() const { return static_cast<bool>(copyinClause); }
 	const VarList& getCopyin() const { assert(hasCopyin()); return *copyinClause; }
 
-	std::ostream& dump(std::ostream& out) const {
-		SharedParallelAndTaskClause::dump(out) << ",";
-		if(hasNumThreads())
-			out << "num_threads(" << *numThreadClause << "), ";
-		if(hasCopyin())
-			out << "copyin(" << join(",", *copyinClause) << "), ";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 class CommonClause {
@@ -325,13 +297,7 @@ public:
 	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause); }
 	const VarList& getFirstPrivate() const { assert(hasFirstPrivate()); return *firstPrivateClause; }
 
-	std::ostream& dump(std::ostream& out) const {
-		if(hasPrivate())
-			out << "private(" << join(",", *privateClause) << "), ";
-		if(hasFirstPrivate())
-			out << "firstprivate(" << join(",", *firstPrivateClause) << "), ";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -354,16 +320,7 @@ public:
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "parallel(";
-		CommonClause::dump(out);
-		ParallelClause::dump(out);
-		if(hasReduction())
-			reductionClause->dump(out) << ", ";
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -385,17 +342,7 @@ public:
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "for(";
-		CommonClause::dump(out);
-		ForClause::dump(out);
-		if(hasReduction()) {
-			reductionClause->dump(out) << ", ";
-		}
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -422,18 +369,7 @@ public:
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "parallel for(";
-		CommonClause::dump(out);
-		ParallelClause::dump(out);
-		ForClause::dump(out);
-		if(hasReduction()) {
-			reductionClause->dump(out) << ", ";
-		}
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 class SectionClause {
@@ -454,15 +390,7 @@ public:
 
 	bool hasNoWait() const { return noWait; }
 
-	std::ostream& dump(std::ostream& out) const {
-		if(hasLastPrivate())
-			out << "lastprivate(" << join(",", *lastPrivateClause) << "), ";
-		if(hasReduction())
-			reductionClause->dump(out) << ", ";
-		if(hasNoWait())
-			out << "nowait, ";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -479,13 +407,7 @@ public:
 			CommonClause(privateClause, firstPrivateClause),
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "sections(";
-		CommonClause::dump(out);
-		return SectionClause::dump(out) << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -507,15 +429,7 @@ public:
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "parallel sections(";
-		CommonClause::dump(out);
-		ParallelClause::dump(out);
-		SectionClause::dump(out);
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -523,7 +437,6 @@ public:
  */
 class Section: public Annotation {
 public:
-//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "section"; }
 };
 
@@ -546,17 +459,7 @@ public:
 
 	bool hasNoWait() const { return noWait; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "single(";
-		CommonClause::dump(out);
-		if(hasCopyPrivate())
-			out << "copyprivate(" << join(",", *copyPrivateClause) << "), ";
-		if(hasNoWait())
-			out << "nowait";
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -576,16 +479,7 @@ public:
 
 	bool hasUntied() const { return untied; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "task(";
-		CommonClause::dump(out);
-		SharedParallelAndTaskClause::dump(out);
-		if(hasUntied())
-			out << "united";
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -593,8 +487,6 @@ public:
  */
 class TaskWait: public Annotation {
 public:
-//	void toXml(insieme::xml::XmlElement& elem);
-
 	std::ostream& dump(std::ostream& out) const { return out << "task wait"; }
 };
 
@@ -603,8 +495,6 @@ public:
  */
 class Atomic: public Annotation {
 public:
-//	void toXml(insieme::xml::XmlElement& elem);
-
 	std::ostream& dump(std::ostream& out) const { return out << "atomic"; }
 };
 
@@ -620,14 +510,7 @@ public:
 	bool hasName() const { return static_cast<bool>(name); }
 	const core::Variable& getName() const { assert(hasName()); return *name; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "critical";
-		if(hasName())
-			out << "(" << *name << ")";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -635,7 +518,6 @@ public:
  */
 class Ordered: public Annotation {
 public:
-//	void toXml(insieme::xml::XmlElement& elem);
 	std::ostream& dump(std::ostream& out) const { return out << "ordered"; }
 };
 
@@ -650,14 +532,7 @@ public:
 	bool hasVarList() const { return static_cast<bool>(varList); }
 	const VarList& getVarList() const { assert(hasVarList()); return *varList; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "flush";
-		if(hasVarList())
-			out << "(" << join(",", *varList) << ")";
-		return out;
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 /**
@@ -671,14 +546,7 @@ public:
 	bool hasThreadPrivate() const { return static_cast<bool>(threadPrivateClause); }
 	const VarList& getThreadPrivate() const { assert(hasThreadPrivate()); return *threadPrivateClause; }
 
-//	void toXml(insieme::xml::XmlElement& elem);
-
-	std::ostream& dump(std::ostream& out) const {
-		out << "threadprivate(";
-		if(hasThreadPrivate())
-			out << join(",", *threadPrivateClause);
-		return out << ")";
-	}
+	std::ostream& dump(std::ostream& out) const;
 };
 
 } // End omp namespace

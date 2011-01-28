@@ -42,10 +42,15 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
+/**
+ * Defines the ordering for Variables used within the VarSet set
+ */
 struct lt_ident {
+
   bool operator()(const core::VariablePtr& s1, const core::VariablePtr& s2) const {
     return s1->getId() < s2->getId();
   }
+
 };
 
 typedef std::set<core::VariablePtr, lt_ident> VarSet;
