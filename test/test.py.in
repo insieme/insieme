@@ -92,7 +92,7 @@ def run_test_case(test_case_name):
 		return 1
 
 	runTests = 0
-	if not os.path.exists(refIr):
+	if (not os.path.exists(refIr)) & os.path.exists(testIr):
 	  shutil.copyfile(testIr, refIr)
 	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 	  
@@ -105,7 +105,7 @@ def run_test_case(test_case_name):
 		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 		runTests = 1 # => file comparison failed, but program might still be OK
 
-	if not os.path.exists(refC):
+	if (not os.path.exists(refC)) & os.path.exists(testC):
 	  shutil.copyfile(testC, refC)
 	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 	  
