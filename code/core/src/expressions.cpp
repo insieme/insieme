@@ -411,8 +411,8 @@ namespace {
 
 }
 
-JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
-	: Expression(NT_JobExpr, type, ::hashJobExpr(range, defaultStmt, guardedStmts, localDecls)), threadNumRange(range),
+JobExpr::JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
+	: Expression(NT_JobExpr, range->getNodeManager().basic.getJob(), ::hashJobExpr(range, defaultStmt, guardedStmts, localDecls)), threadNumRange(range),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 	// TODO: use ordinary type checks for this section ...
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
@@ -448,11 +448,10 @@ JobExpr::JobExpr(const TypePtr& type, const ExpressionPtr& range, const Expressi
 
 JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new JobExpr(
-			mapper.map(0, type),
-			mapper.map(1, threadNumRange),
-			mapper.map(2 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
-			copyGuardedStmtsUsing(mapper, 2 + localDecls.size(), guardedStmts),
-			mapper.map(2, localDecls));
+			mapper.map(0, threadNumRange),
+			mapper.map(1 + localDecls.size() + guardedStmts.size()*2,defaultStmt),
+			copyGuardedStmtsUsing(mapper, 1 + localDecls.size(), guardedStmts),
+			mapper.map(1, localDecls));
 }
 
 Node::OptionChildList JobExpr::getChildNodes() const {
@@ -494,8 +493,7 @@ JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& defaultStmt, 
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
-	auto type = manager.basic.getJob();
-	return manager.get(JobExpr(type, threadNumRange, defaultStmt, guardedStmts, localDecls));
+	return manager.get(JobExpr(threadNumRange, defaultStmt, guardedStmts, localDecls));
 }
 
 // ------------------------------------- CallExpr ---------------------------------

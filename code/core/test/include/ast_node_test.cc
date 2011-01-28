@@ -279,7 +279,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 			return ptr;
 		});
 
-		cur->substitute(manager, mapper);
+		cur->substitute(manager, mapper, false);
 
 		// check number of visited children
 		EXPECT_EQ(cur->getChildList().size(), static_cast<size_t>(count));
