@@ -202,6 +202,23 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 		}
 
 		case NT_CallExpr:
+		{
+
+			TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
+			defCodePtr->addDependency(details.functorAndCaller);
+
+			// use call wrapper
+			cStr << details.callerName;
+			cStr << "(";
+			visit(funExp);
+			if (!args.empty()) {
+				cStr << ", ";
+				functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+			}
+			cStr << ")";
+			return;
+		}
+
 		case NT_CaptureInitExpr:
 		{
 
@@ -210,13 +227,11 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 
 			// check whether it is a direct initialization / call situation
 			bool directCall = false;
-			if (funExp->getNodeType() == NT_CaptureInitExpr) {
-				CaptureInitExprPtr initExpr = static_pointer_cast<const CaptureInitExpr>(funExp);
-				if (LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(initExpr->getLambda())) {
-					// it is a direct call to a function => avoid using call wrapper
-					cStr << cc.getFunctionManager().getFunctionName(defCodePtr, lambda);
-					directCall = true;
-				}
+			CaptureInitExprPtr initExpr = static_pointer_cast<const CaptureInitExpr>(funExp);
+			if (LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(initExpr->getLambda())) {
+				// it is a direct call to a function => avoid using call wrapper
+				cStr << cc.getFunctionManager().getFunctionName(defCodePtr, lambda);
+				directCall = true;
 			}
 
 			if (!directCall) {
@@ -225,7 +240,7 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 			}
 
 			cStr << "(";
-			visit(funExp);
+			visitCaptureInitExprInternal(initExpr, directCall);
 			if (!args.empty()) {
 				cStr << ", ";
 				functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
@@ -250,6 +265,10 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 }
 
 void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
+	visitCaptureInitExprInternal(ptr, false);
+}
+
+void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
 
 	// resolve resulting type of expression
 	FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
@@ -270,8 +289,12 @@ void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 	cStr << "{";
 
 	// add function reference
-	cStr << "&";
-	visit(ptr->getLambda());
+	if (directCall) {
+		cStr << "0";
+	} else {
+		cStr << "&";
+		visit(ptr->getLambda());
+	}
 
 	 // TODO: add real size
 	cStr << ", 0";
