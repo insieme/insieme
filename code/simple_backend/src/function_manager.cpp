@@ -244,7 +244,9 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 		cs << "// --------- Captured Stuff - Begin -------------\n";
 
 		// get name of struct from type manager
-		string structName = typeManager.getFunctionTypeDetails(funType).functorName;
+		TypeManager::FunctionTypeEntry functionTypeEntry = typeManager.getFunctionTypeDetails(funType);
+		function->addDependency(functionTypeEntry.functorAndCaller);
+		string structName = functionTypeEntry.functorName;
 
 		int i = 0;
 		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {

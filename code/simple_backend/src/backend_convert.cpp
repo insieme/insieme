@@ -208,7 +208,22 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 			TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
 			defCodePtr->addDependency(details.functorAndCaller);
 
-			cStr << details.callerName;
+			// check whether it is a direct initialization / call situation
+			bool directCall = false;
+			if (funExp->getNodeType() == NT_CaptureInitExpr) {
+				CaptureInitExprPtr initExpr = static_pointer_cast<const CaptureInitExpr>(funExp);
+				if (LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(initExpr->getLambda())) {
+					// it is a direct call to a function => avoid using call wrapper
+					cStr << cc.getFunctionManager().getFunctionName(defCodePtr, lambda);
+					directCall = true;
+				}
+			}
+
+			if (!directCall) {
+				// use call wrapper
+				cStr << details.callerName;
+			}
+
 			cStr << "(";
 			visit(funExp);
 			if (!args.empty()) {
