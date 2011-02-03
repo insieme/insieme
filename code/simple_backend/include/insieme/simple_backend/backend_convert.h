@@ -447,6 +447,8 @@ protected:
 
 	void visitCaptureInitExpr(const CaptureInitExprPtr& ptr);
 
+	void visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall);
+
 	void visitCastExpr(const CastExprPtr& ptr);
 
 	void visitJobExpr(const JobExprPtr& ptr);
