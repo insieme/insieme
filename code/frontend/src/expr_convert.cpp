@@ -1399,7 +1399,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			}
 
 			const core::LambdaPtr& lambda = core::static_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
-			assert(lambda && "Resolution of sub recursive lambda yield a wrong result");
+			assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 			this->currTU = oldTU;
 			// attach name annotation to the lambda
 			lambda->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );

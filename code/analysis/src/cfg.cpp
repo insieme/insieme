@@ -318,27 +318,27 @@ struct CFGBuilder: public ASTVisitor< void > {
 		);
 	}
 
-	void visitCallExpr(const CallExprPtr& callExpr) {
-		VLOG(1) << "Visiting CallExpr: " << printer::PrettyPrinter(callExpr, 1<<5);
-		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
-			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
-			auto fit = cfgMap.find(lambdaExpr);
-			if(fit == cfgMap.end()) {
-				VLOG(1) << "Building CFG for function";
-				cfgMap.insert( std::make_pair(lambdaExpr, CFG::buildCFG(lambdaExpr)) );
-			}
-		}
-
-		if(!subExpr) {
-			if(!currBlock)
-				currBlock = new cfg::Block;
-			currBlock->appendElement(StatementPtr(callExpr));
-		}
-		subExpr = true;
-		const vector<ExpressionPtr>& args = callExpr->getArguments();
-		std::for_each(args.begin(), args.end(), [this](const ExpressionPtr& curr){ this->visit(curr); });
-		subExpr = false;
-	}
+//	void visitCallExpr(const CallExprPtr& callExpr) {
+//		VLOG(1) << "Visiting CallExpr: " << printer::PrettyPrinter(callExpr, 1<<5);
+//		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
+//			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+//			auto fit = cfgMap.find(lambdaExpr);
+//			if(fit == cfgMap.end()) {
+//				VLOG(1) << "Building CFG for function";
+//				cfgMap.insert( std::make_pair(lambdaExpr, CFG::buildCFG(lambdaExpr)) );
+//			}
+//		}
+//
+//		if(!subExpr) {
+//			if(!currBlock)
+//				currBlock = new cfg::Block;
+//			currBlock->appendElement(StatementPtr(callExpr));
+//		}
+//		subExpr = true;
+//		const vector<ExpressionPtr>& args = callExpr->getArguments();
+//		std::for_each(args.begin(), args.end(), [this](const ExpressionPtr& curr){ this->visit(curr); });
+//		subExpr = false;
+//	}
 
 	void visitLambdaExpr(const LambdaExprPtr& lambda) {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
