@@ -123,9 +123,6 @@ void OclFunctionManager::addFunctionPrefix(CodeStream& cs, const LambdaPtr& lamb
 
 //// ------------------------------------ OclStmtConvert ---------------------------- ////
 
-typedef std::map<unsigned, unsigned> varNameMapType;
-typedef std::map<unsigned, core::VariablePtr> qualifierMapType;
-
 unsigned getVarName(varNameMapType& varNameMap, unsigned value){
 	for (auto fit = varNameMap.find(value); fit != varNameMap.end(); fit = varNameMap.find(value)){
 		value = fit->second;
@@ -161,6 +158,16 @@ void moveQualifier(qualifierMapType& qualifierMap, unsigned oldName, unsigned ne
 	}
 }
 
+void addBuiltinAnnotation(ASTBuilder& builder, qualifierMapType& qualifierMap, VariablePtr var, string s){
+	TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+	core::TypeList tList;
+	tList.push_back(t);
+	LiteralPtr lit = builder.literal(builder.functionType(tList, t), s);
+	BuiltinFunctionAnnotationPtr ann(new BuiltinFunctionAnnotation(lit));
+	var->addAnnotation(ann);
+	qualifierMap.insert(std::make_pair(var->getId(), var));	
+}
+
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 	ASTBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
@@ -175,17 +182,15 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(ptr->getBody());
 				const FunctionTypePtr& oldFuncType = dynamic_pointer_cast<const FunctionType>(ptr->getType());
 				
-				// Memory Qualifier Map
-				qualifierMapType qualifierMap;
-				// Variable Name Map
-				varNameMapType backwardVarNameMap;
-				varNameMapType forwardVarNameMap;
-				
 				// new paramList (case IR created from OpenCL frontend)
 				for (uint i = 0; i < oldParams.size()-2; i++){
 					const VariablePtr& tmpVar = oldParams.at(i);
 					qualifierMap.insert(std::make_pair(tmpVar->getId(), tmpVar));
 				}
+				
+				// add builtin annotation for get_global_size & get_local_size to the variable
+				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-2), "get_global_size");
+				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-1), "get_local_size");
 				
 				// new functionType
 				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
@@ -198,6 +203,10 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const FunctionTypePtr& newFuncType = builder.functionType(newArgs, retType);
 				
 				const vector<StatementPtr>& bodyCompoundStmt = oldBody->getStatements();
+				
+				// add builtin for get_num_groups
+				const DeclarationStmtPtr& dcl = dynamic_pointer_cast<const DeclarationStmt>(bodyCompoundStmt.front());
+				addBuiltinAnnotation(builder, qualifierMap, dcl->getVariable(), "get_num_groups");
 				
 				const CallExprPtr& globalParallel = dynamic_pointer_cast<const CallExpr>(bodyCompoundStmt.back());
 				
@@ -327,7 +336,6 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					newArgs.push_back(oldArgs.at(i));
 				}
 				
-				//LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, localParBody);
 				LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, newBody);
 				KernelFctAnnotationPtr an(new KernelFctAnnotation());
 				const LambdaPtr& lambda = newFunc->getLambda();
@@ -339,9 +347,27 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 		}
 	} 
 	else {
-		FunctionManager& funManager = cc.getFunctionManager();
-		getCodeStream() << funManager.getFunctionName(defCodePtr, ptr);
+		simple_backend::StmtConverter::visitLambdaExpr(ptr);
 	}
+}
+
+void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
+	ASTBuilder builder(ptr->getNodeManager());	
+	const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr->getArgument(0));
+	if (var){
+		unsigned firstVal = getVarName(backwardVarNameMap, var->getId());
+		auto&& fit = qualifierMap.find(firstVal);
+		if (fit != qualifierMap.end()) {
+			if ((fit->second)->hasAnnotation(BuiltinFunctionAnnotation::KEY)){
+				std::vector<ExpressionPtr> newArgs;
+				newArgs.push_back(ptr->getArgument(1));
+				CallExprPtr call = builder.callExpr((fit->second)->getAnnotation(BuiltinFunctionAnnotation::KEY)->getBuiltinLiteral(), newArgs);
+				simple_backend::StmtConverter::visitCallExpr(call);
+			}
+		}
+	} 
+	else
+		simple_backend::StmtConverter::visitCallExpr(ptr);	
 }
 
 void OclStmtConvert::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
