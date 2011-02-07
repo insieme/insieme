@@ -51,11 +51,22 @@ public:
 	void addFunctionPrefix(simple_backend::CodeStream& cs, const core::LambdaPtr& lambda);
 };
 
+typedef std::map<unsigned, unsigned> varNameMapType;
+typedef std::map<unsigned, core::VariablePtr> qualifierMapType;
+
 class OclStmtConvert : public simple_backend::StmtConverter {
+	
+	// Memory Qualifier Map
+	qualifierMapType qualifierMap;
+	// Variable Name Map
+	varNameMapType backwardVarNameMap;
+	varNameMapType forwardVarNameMap;
+	
 public:
 	OclStmtConvert(simple_backend::Converter& conversionContext);
 	void visitLambdaExpr(const core::LambdaExprPtr& func);
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& ptr);
+	void visitCallExpr(const core::CallExprPtr& ptr);
 };
 
 } // namespace ocl

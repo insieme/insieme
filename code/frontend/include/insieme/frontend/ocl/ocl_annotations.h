@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/annotation.h"
+#include "insieme/core/expressions.h"
 
 #define DEFINE_TYPE(Type) \
     class Type; \
@@ -148,6 +149,29 @@ public:
 };
 
 typedef std::shared_ptr<AddressSpaceAnnotation> AddressSpaceAnnotationPtr;
+
+
+/** Annotation class intended to keep OpenCL built-in functions information.
+ ** Should be used to annotate OpenCL variable that have to be translated to
+ ** built-in functions by the OpenCL Back-end
+ ** */
+class BuiltinFunctionAnnotation : public Annotation , public core::Annotation {
+private:
+    core::LiteralPtr lit;
+public:
+    static const core::StringKey<BuiltinFunctionAnnotation> KEY;
+
+    const std::string getAnnotationName() const { return "OclBuiltinFunctionAnnotation"; }
+
+    BuiltinFunctionAnnotation(core::LiteralPtr l) : ocl::Annotation(), core::Annotation(), lit(l) { }
+
+    core::LiteralPtr getBuiltinLiteral() const;
+
+	const core::AnnotationKey* getKey() const { return &KEY; }
+
+};
+
+typedef std::shared_ptr<BuiltinFunctionAnnotation> BuiltinFunctionAnnotationPtr;
 
 } // namespace ocl
 } // namespace insieme

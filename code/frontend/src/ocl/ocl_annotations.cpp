@@ -40,34 +40,24 @@ namespace insieme {
 namespace ocl {
 
 const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
-
+const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+const core::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
 const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
-const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+void KernelFctAnnotation::setKernelFct(bool isKernelFct) { kf = isKernelFct; }
 
+bool KernelFctAnnotation::isKernelFct() const { return kf; }
 
-void KernelFctAnnotation::setKernelFct(bool isKernelFct) {
-    kf = isKernelFct;
-}
-
-bool KernelFctAnnotation::isKernelFct() const {
-    return kf;
-}
-
-unsigned int WorkGroupSizeAnnotation::getXdim() const {
-    return xDim;
-}
-unsigned int WorkGroupSizeAnnotation::getYdim() const {
-    return yDim;
-}
-unsigned int WorkGroupSizeAnnotation::getZdim() const {
-    return zDim;
-}
+unsigned int WorkGroupSizeAnnotation::getXdim() const { return xDim; }
+unsigned int WorkGroupSizeAnnotation::getYdim() const { return yDim; }
+unsigned int WorkGroupSizeAnnotation::getZdim() const { return zDim; }
 /*
 unsigned int* OclWorkGroupSizeAnnotation::getDims() {
     unsigned int dims[3] = {xDim, yDim, zDim};
     return dims;
 }*/
+
+AddressSpaceAnnotation::addressSpace AddressSpaceAnnotation::getAddressSpace() const { return as; }
 
 bool AddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     if(as > addressSpace::size)
@@ -77,9 +67,9 @@ bool AddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     return true;
 }
 
-AddressSpaceAnnotation::addressSpace AddressSpaceAnnotation::getAddressSpace() const {
-    return as;
-}
+
+
+core::LiteralPtr BuiltinFunctionAnnotation::getBuiltinLiteral() const { return lit; }
 
 } // namespace ocl
 } // namespace c_info
