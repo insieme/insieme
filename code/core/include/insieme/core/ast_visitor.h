@@ -395,6 +395,55 @@ public:
 	}
 };
 
+/**
+ * The RecursivePrunableASTVisitor provides a wrapper around an ordinary visitor which
+ * will recursively iterated depth first, pre-order through every visited node. Thereby,
+ * within every node, the sub-visitor's visit method will be invoked. The result of the
+ * visit will be used to determine whether its child nodes should be visited.
+ */
+template<
+	template<class Target> class Ptr = Pointer
+>
+class RecursivePrunableASTVisitor : public ASTVisitor<void, Ptr> {
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	ASTVisitor<bool, Ptr>& subVisitor;
+
+	/**
+	 * The child factory to be used to create pointer to child nodes.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	RecursivePrunableASTVisitor(ASTVisitor<bool, Ptr>& subVisitor)
+		: ASTVisitor<void, Ptr>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
+
+	/**
+	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * subtree rooted at this node.
+	 */
+	void visitNode(const Ptr<const Node>& node) {
+
+		// visit current node
+		if(!subVisitor.visit(node)) {
+			// => visiting sub-nodes is not required
+			return;
+		}
+
+		// recursively visit all sub-nodes
+		const Node::ChildList& children = node->getChildList();
+		for(std::size_t i=0; i<children.size(); i++) {
+			this->visit(childFactory(node, i));
+		}
+	}
+};
+
 
 
 /**
@@ -537,7 +586,7 @@ public:
 
 /**
  * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
- * the
+ * the visiting process can be aborted at any place.
  */
 template<
 	template<class Target> class Ptr = Pointer
@@ -618,6 +667,73 @@ public:
 	}
 };
 
+
+/**
+ * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
+ * the recursive visiting of sub-trees can be pruned at any time.
+ */
+template<
+	template<class Target> class Ptr = Pointer
+>
+class VisitOncePrunableASTVisitor : public ASTVisitor<void, Ptr> {
+
+	/**
+	 * The sub-visitor visiting all nodes recursively.
+	 */
+	ASTVisitor<bool, Ptr>& subVisitor;
+
+	/**
+	 * The child factory to be used to create pointer to child nodes.
+	 */
+	typename Ptr<const Node>::ChildFactory childFactory;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	VisitOncePrunableASTVisitor(ASTVisitor<bool, Ptr>& subVisitor)
+		: ASTVisitor<void, Ptr>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
+
+
+	/**
+	 * The entry point for the visiting process.
+	 */
+	virtual void visit(const Ptr<const Node>& node) {
+
+		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		ASTVisitor<void, Ptr>* visitor;
+		auto lambdaVisitor = makeLambdaVisitor<Ptr>([&all, &visitor, this](const Ptr<const Node>& node) {
+
+			// add current node to set ..
+			bool isNew = all.insert(node).second;
+			if (!isNew) {
+				return;
+			}
+
+			// visit current node
+			if (!this->subVisitor.visit(node)) {
+				// visitor decided not to visit child nodes
+				return;
+			}
+
+			// visit all child nodes recursively
+			const Node::ChildList& children = node->getChildList();
+			for(std::size_t i = 0; i<children.size(); i++) {
+				visitor->visit(this->childFactory(node, i));
+			}
+
+		}, this->isVisitingTypes());
+
+		// update pointer ..
+		visitor = &lambdaVisitor;
+
+		// trigger the visit (only once)
+		visitor->visit(node);
+	}
+};
+
+
 /**
  * A factory method creating recursive visitors based on a predefined visitor.
  *
@@ -639,6 +755,17 @@ RecursiveASTVisitor<Result, Ptr> makeRecursiveVisitor(ASTVisitor<Result,Ptr>& vi
 template<template<class Target> class Ptr>
 RecursiveInterruptableASTVisitor<Ptr> makeRecursiveInterruptableVisitor(ASTVisitor<bool,Ptr>& visitor, bool preorder=true) {
 	return RecursiveInterruptableASTVisitor<Ptr>(visitor, preorder);
+}
+
+/**
+ * A factory method creating a recursive visitor capable of Pruning the iteration space.
+ *
+ * @param visitor the visitor to be based on
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<template<class Target> class Ptr>
+RecursivePrunableASTVisitor<Ptr> makeRecursivePrunableVisitor(ASTVisitor<bool,Ptr>& visitor) {
+	return RecursivePrunableASTVisitor<Ptr>(visitor);
 }
 
 /**
@@ -673,6 +800,18 @@ template<template<class Target> class Ptr>
 VisitOnceInterruptableASTVisitor<Ptr> makeVisitOnceInterruptableVisitor(ASTVisitor<bool,Ptr>& visitor, bool preorder=true) {
 	return VisitOnceInterruptableASTVisitor<Ptr>(visitor, preorder);
 }
+
+/**
+ * A factory method creating visit once visitor based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @return a recursive visitor encapsulating the given visitor
+ */
+template<template<class Target> class Ptr>
+VisitOncePrunableASTVisitor<Ptr> makeVisitOncePrunableVisitor(ASTVisitor<bool,Ptr>& visitor) {
+	return VisitOncePrunableASTVisitor<Ptr>(visitor);
+}
+
 
 /**
  * The given visitor is recursively applied to all nodes reachable starting from the
@@ -714,6 +853,24 @@ inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&&
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor, bool preorder = true) {
 	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
+}
+
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If the given visitor returns false, the corresponding sub-tree will be pruned.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ */
+template<typename Node, template<class Target> class Ptr>
+inline void visitAllPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor) {
+	makeRecursivePrunableVisitor(visitor).visit(root);
+}
+
+// same as above, however it is accepting visitors by reference
+template<typename Node, template<class Target> class Ptr>
+inline void visitAllPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor) {
+	makeRecursivePrunableVisitor(visitor).visit(root);
 }
 
 /**
@@ -796,6 +953,27 @@ inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Pt
 template<typename Node, template<class Target> class Ptr>
 inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor, bool preorder = true) {
 	return makeVisitOnceInterruptableVisitor(visitor, preorder).visit(root);
+}
+
+/**
+ * The given visitor is recursively applied to all nodes reachable starting from the
+ * given root node. If the given visitor returns false, the corresponding sub-tree will be pruned.
+ *
+ * NOTE: if used based on Addresses, only the first address referencing a shared node
+ * 		 is visited.
+ *
+ * @param root the root not to start the visiting from
+ * @param visitor the visitor to be visiting all the nodes
+ */
+template<typename Node, template<class Target> class Ptr>
+inline void visitAllOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>&& visitor) {
+	makeVisitOncePrunableVisitor(visitor).visit(root);
+}
+
+// same as above, however it is accepting visitors by reference
+template<typename Node, template<class Target> class Ptr>
+inline void visitAllOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr>& visitor) {
+	makeVisitOncePrunableVisitor(visitor).visit(root);
 }
 
 /**
