@@ -351,7 +351,7 @@ namespace {
 	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, ASTBuilder::CaptureInits& captures,
 			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
-		visitAllInterruptable(StatementAddress(root), ldv);
+		visitAllPrunable(StatementAddress(root), ldv);
 
 		// sort set to ensure code identity
 		std::vector<VariablePtr> undeclared(ldv.undeclared.cbegin(), ldv.undeclared.cend());
