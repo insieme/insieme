@@ -141,11 +141,8 @@ public:
  * @return the down-casted pointer pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(InstancePtr<T>& src) {
-	if (!src || dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<InstancePtr<B>* >(&src));
-	}
-	return NULL;
+inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(const InstancePtr<T>& src) {
+	return InstancePtr<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
 }
 
 /**

@@ -75,11 +75,8 @@ public:
 
 template<typename B, typename T>
 inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>>::type
-dynamic_pointer_cast(Pointer<T> src) {
-	if(!src || dynamic_cast<B*>(&(*src))) {
-		return *(reinterpret_cast<Pointer<B>* >(&src));
-	}
-	return NULL;
+dynamic_pointer_cast(const Pointer<T>& src) {
+	return Pointer<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
 }
 
 template<typename B, typename T>
@@ -95,6 +92,7 @@ static_pointer_cast(const Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return reinterpret_cast<const Pointer<B>&>(src);
 }
+
 
 /**
  * A template version for a functor performing static pointer casts on annotated pointer.
