@@ -83,6 +83,10 @@ int runCalc( PetscInt rank, PetscInt size, FETask &feJob) {
 
 	bool success=false;
 
+#ifdef MPI_OPT
+	int* scatter_data = NULL;
+#endif
+
 	if( rank==0) {
 		time( &rawTimeEnd);
 		timeinfo=localtime( &rawTimeEnd);
@@ -109,17 +113,28 @@ int runCalc( PetscInt rank, PetscInt size, FETask &feJob) {
 		numDOF=feJob.getNrOfNodes()*feJob.getDOFPerNode();
 		//printf( "%d -- numDOF -- %d\n", rank, numDOF);
 
+	#ifdef MPI_OPT
+		scatter_data = new int[size];
+		for( i=1; i<size; i++) 
+			scatter_data[i] = i;
+	#else
 		for( i=1; i<size; i++) {
 			rc=MPI_Send( &numDOF, 1, MPI_INT, i, 101, PETSC_COMM_WORLD);
 			//PetscPrintf( PETSC_COMM_WORLD, "sende an %d\n", i);
 		}
+	#endif
 	}
+#ifndef MPI_OPT
 	else {
 		rc=MPI_Recv( &numDOF, 1, MPI_INT, 0, 101, PETSC_COMM_WORLD, &status);
 		//printf( "%d empfange %d\n", rank, numDOF);
 	}
-
 	PetscBarrier( (PetscObject) PETSC_NULL);
+#else
+	rc = MPI_Scatter(scatter_data, 1, MPI_INT, &numDOF, 1, MPI_INT, PETSC_COMM_WORLD);
+	if(rank == )
+		delete[] scatter_data;
+#end
 
 	Mat Kt;						//global stiffnessmatrix
 	//ierr=MatCreateSeqAIJ( PETSC_COMM_WORLD, numDOF, numDOF, 81, PETSC_NULL, &Kt); CHKERRQ( ierr);
