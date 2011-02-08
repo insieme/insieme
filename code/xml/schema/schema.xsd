@@ -13,9 +13,9 @@
 </xs:complexType>
 
 <xs:complexType name="T_typePtr">
-	<xs:all>
-		<xs:element name="typePtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="typePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_listTypePtr">
@@ -25,9 +25,9 @@
 </xs:complexType>
 
 <xs:complexType name="T_variablePtr">
-	<xs:all>
-		<xs:element name="variablePtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="variablePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_listVariablePtr">
@@ -37,9 +37,9 @@
 </xs:complexType>
 
 <xs:complexType name="T_expressionPtr">
-	<xs:all>
-		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="expressionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_listExpressionPtr">
@@ -49,21 +49,21 @@
 </xs:complexType>
 
 <xs:complexType name="T_functionTypePtr">
-	<xs:all>
-		<xs:element name="functionTypePtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="functionTypePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_RecTypeDefinitionPtr">
-	<xs:all>
-		<xs:element name="recTypeDefinitionPtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="recTypeDefinitionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_declarationStmtPtr">
-	<xs:all>
-		<xs:element name="declarationStmtPtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="declarationStmtPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_listDeclarationStmtPtr">
@@ -73,21 +73,21 @@
 </xs:complexType>
 
 <xs:complexType name="T_lambdaExprPtr">
-    <xs:all>
-        <xs:element name="lambdaExprPtr" type="T_nodePtr" minOccurs="1"/>
-    </xs:all>   
+    <xs:sequence>
+        <xs:element name="lambdaExprPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>   
 </xs:complexType>
 
 <xs:complexType name="T_lambdaDefinitionPtr">
-	<xs:all>
-		<xs:element name="lambdaDefinitionPtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="lambdaDefinitionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_statementPtr">
-	<xs:all>
-		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="statementPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_listStatementPtr">
@@ -97,15 +97,15 @@
 </xs:complexType>
 
 <xs:complexType name="T_typeVariablePtr">
-	<xs:all>
-		<xs:element name="typeVariablePtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>	
+	<xs:sequence>
+		<xs:element name="typeVariablePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>	
 </xs:complexType>
 
 <xs:complexType name="T_tupleTypePtr">
-	<xs:all>
-		<xs:element name="tupleTypePtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="tupleTypePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
 </xs:complexType>
 
 <!-- T_intTypeParams -->
@@ -235,306 +235,306 @@
 
 <!-- All IR Node -->
 <xs:complexType name="T_empty">
-	<xs:all>
+	<xs:sequence>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
-	</xs:all>
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_program">
-	<xs:all>
-		<xs:element name="expressions" type="T_listExpressionPtr" minOccurs="1"/>	
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="expressions" type="T_listExpressionPtr" minOccurs="1" maxOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 		<xs:attribute name="main" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_lambdaExpr">
-	<xs:all>
-		<xs:element name="type" type="T_functionTypePtr" minOccurs="1"/>
-		<xs:element name="variable" type="T_variablePtr" minOccurs="1"/>
-		<xs:element name="definition" type="T_lambdaDefinitionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_functionTypePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="variable" type="T_variablePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="definition" type="T_lambdaDefinitionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_jobExpr">
-	<xs:all>
-		<xs:element name="declarations" type="T_listDeclarationStmtPtr" minOccurs="1"/>
-		<xs:element name="guardedStatements" type="T_guardedStatements" minOccurs="1"/>		
-		<xs:element name="defaultStatement" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="threadNumRange" type="T_expressionPtr" minOccurs="1"/>		
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="declarations" type="T_listDeclarationStmtPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="guardedStatements" type="T_guardedStatements" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="defaultStatement" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="threadNumRange" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_callExpr">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="function" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="arguments" type="T_listExpressionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="function" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="arguments" type="T_listExpressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_castExpr">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_memberAccessExpr">
-	<xs:all>
+	<xs:sequence>
 		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="memberName" type="xs:string" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="memberName" type="xs:string" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_tupleProjectionExpr">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="index" type="xs:integer" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="index" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_vectorExpr">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="expressions" type="T_listExpressionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="expressions" type="T_listExpressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_namedCompositeExpr">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="members" type="T_members" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="members" type="T_members" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_unionExpr">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="member" type="T_member" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="member" type="T_member" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_declarationStmt">
-	<xs:all>
-		<xs:element name="variable" type="T_variablePtr" minOccurs="1"/>
-		<xs:element name="expression" type="T_expressionPtr" minOccurs="1"/>	
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="variable" type="T_variablePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="expression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_compoundStmt">
-	<xs:all>
-		<xs:element name="statements" type="T_listStatementPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="statements" type="T_listStatementPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_whileStmt">
-	<xs:all>
-		<xs:element name="condition" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="body" type="T_statementPtr" minOccurs="1"/>	
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="condition" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="body" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_switchStmt">
-	<xs:all>
-		<xs:element name="expression" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="cases" type="T_cases" minOccurs="1"/>
-		<xs:element name="defaultCase" type="T_statementPtr" minOccurs="1"/>		
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="expression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="cases" type="T_cases" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="defaultCase" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_ifStmt">
-	<xs:all>
-		<xs:element name="condition" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="thenBody" type="T_statementPtr" minOccurs="1"/>
-		<xs:element name="elseBody" type="T_statementPtr" minOccurs="1"/>		
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="condition" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="thenBody" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="elseBody" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_forStmt">
-	<xs:all>
-		<xs:element name="declaration" type="T_declarationStmtPtr" minOccurs="1"/>
-		<xs:element name="body" type="T_statementPtr" minOccurs="1"/>		
-		<xs:element name="step" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="end" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="declaration" type="T_declarationStmtPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="body" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="end" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>	
+		<xs:element name="step" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_returnStmt">
-	<xs:all>
-		<xs:element name="returnExpression" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="returnExpression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_recTypeDefinition">
-	<xs:all>
-		<xs:element name="definitions" type="T_recTypeDefs" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="definitions" type="T_recTypeDefs" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_recType">
-	<xs:all>
+	<xs:sequence>
+		<xs:element name="definition" type="T_RecTypeDefinitionPtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="typeVariable" type="T_typeVariablePtr" minOccurs="1" maxOccurs="1"/>
-		<xs:element name="definition" type="T_RecTypeDefinitionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_literal">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="value" type="xs:string" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_variable">
-	<xs:all>
-		<xs:element name="type" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="identifier" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_markerStmt">
-	<xs:all>
-		<xs:element name="subStatement" type="T_statementPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="subStatement" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="identifier" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_markerExpr">
-	<xs:all>
-		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="subExpression" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="identifier" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_typeVariable">
-	<xs:all>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 	<xs:attribute name="name" type="xs:string" use="required"/>
 </xs:complexType>
 	
 <xs:complexType name="T_tupleType">
-	<xs:all>
-		<xs:element name="elementTypeList" type="T_listTypePtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="elementTypeList" type="T_listTypePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_namedCompositeType">
-	<xs:all>
-		<xs:element name="entries" type="T_entries" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="entries" type="T_entries" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_genType">
-	<xs:all>
-		<xs:element name="baseType" type="T_typePtr" minOccurs="0"/>
-		<xs:element name="typeParams" type="T_listTypePtr" minOccurs="0"/>
-		<xs:element name="intTypeParams" type="T_intTypeParams" minOccurs="0"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="baseType" type="T_typePtr" minOccurs="0" maxOccurs="1"/>
+		<xs:element name="typeParams" type="T_listTypePtr" minOccurs="0" maxOccurs="1"/>
+		<xs:element name="intTypeParams" type="T_intTypeParams" minOccurs="0" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="familyName" type="xs:string" use="required"/>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_functionType"> 
-	<xs:all>
-		<xs:element name="argumentTypeList" type="T_listTypePtr" minOccurs="1"/>
-		<xs:element name="captureTypeList" type="T_listTypePtr" minOccurs="1"/>
-		<xs:element name="returnType" type="T_typePtr" minOccurs="1"/>
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="captureTypeList" type="T_listTypePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="argumentTypeList" type="T_listTypePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="returnType" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 
 <xs:complexType name="T_lambdaDefinition"> 
-	<xs:all>
-		<xs:element name="definitions" type="T_definitions" minOccurs="1"/>	
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="definitions" type="T_definitions" minOccurs="1" maxOccurs="1"/>	
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_lambda"> 
-	<xs:all>
-		<xs:element name="type" type="T_functionTypePtr" minOccurs="1"/>
-		<xs:element name="captureList" type="T_listVariablePtr" minOccurs="1"/>
-		<xs:element name="paramList" type="T_listVariablePtr" minOccurs="1"/>
-		<xs:element name="body" type="T_statementPtr" minOccurs="1"/>		
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_functionTypePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="captureList" type="T_listVariablePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="paramList" type="T_listVariablePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="body" type="T_statementPtr" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_captureInitExpr"> 
-	<xs:all>
-		<xs:element name="type" type="T_functionTypePtr" minOccurs="1"/>
-		<xs:element name="lambda" type="T_expressionPtr" minOccurs="1"/>
-		<xs:element name="values" type="T_listExpressionPtr" minOccurs="1"/>		
-		<xs:element name="annotations" type="T_annotations" minOccurs="0"/>	
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="type" type="T_functionTypePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="lambda" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="values" type="T_listExpressionPtr" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 
 <xs:complexType name="T_rootNode">
-	<xs:all>
-		<xs:element name="nodePtr" type="T_nodePtr" minOccurs="1"/>
-	</xs:all>
+	<xs:sequence>
+		<xs:element name="nodePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
 </xs:complexType>
 
 <xs:group name="G_nodeGroup">
