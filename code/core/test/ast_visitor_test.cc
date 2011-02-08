@@ -527,3 +527,78 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 	visitAllOnce(NodeAddress(ifStmt), limitA10);
 	EXPECT_EQ( 5, limitA10.counter);
 }
+
+
+class PruningVisitor : public ASTVisitor<bool,Address> {
+public:
+
+	int counter;
+	int depthLimit;
+
+	PruningVisitor(int depthLimit) : ASTVisitor<bool,Address>(true), counter(0), depthLimit(depthLimit) {};
+
+	bool visitNode(const NodeAddress& node) {
+		counter++;
+		return node.getDepth() < (std::size_t)depthLimit;
+	};
+
+	void reset() {
+		counter = 0;
+	}
+
+};
+
+TEST(ASTVisitor, RecursivePrunableVisitorTest) {
+
+	NodeManager manager;
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	// ------ test for addresses ----
+	PruningVisitor limitA(1);
+	PruningVisitor limitB(2);
+
+	limitA.reset();
+	visitAllPrunable(NodeAddress(ifStmt), limitA);
+	EXPECT_EQ ( 1, limitA.counter );
+
+	limitB.reset();
+	visitAllPrunable(NodeAddress(ifStmt), limitB);
+	EXPECT_EQ ( 4, limitB.counter );
+}
+
+
+TEST(ASTVisitor, VisitOncePrunableVisitorTest) {
+
+	NodeManager manager;
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	// ------ test for addresses ----
+	PruningVisitor limitA(1);
+	PruningVisitor limitB(2);
+
+	limitA.reset();
+	visitAllOncePrunable(NodeAddress(ifStmt), limitA);
+	EXPECT_EQ ( 1, limitA.counter );
+
+	limitB.reset();
+	visitAllOncePrunable(NodeAddress(ifStmt), limitB);
+	EXPECT_EQ ( 4, limitB.counter );
+
+	// check number of nodes when visiting all nodes
+	limitB.reset();
+	visitAllOnce(NodeAddress(ifStmt), limitB);
+	EXPECT_EQ( 5, limitB.counter);
+}
