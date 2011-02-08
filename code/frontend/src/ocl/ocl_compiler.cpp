@@ -127,7 +127,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
                 BASIC.getUInt4(), buildGetId(opl), idx);
     }*/
 
-    //TODO add test
+    // construct local variables
     core::VariablePtr idxVar = builder.variable(BASIC.getUInt4());
     core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
     core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
@@ -142,6 +142,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
 
     core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
 
+    // construct the cases for each idx
     core::CallExprPtr id0 = opl == OPL_GLOBAL ?
         builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx0(zero, boundaries),
             builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, zeroExpr), calcIdidx0(one, bfgo)))
@@ -164,6 +165,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::ReturnStmtPtr ret1 = builder.returnStmt(id1);
     core::ReturnStmtPtr ret2 = builder.returnStmt(id2);
 
+    // build switch
     vector<core::SwitchStmt::Case> cases;
 
     cases.push_back(std::make_pair(builder.uintLit(0), ret0));
@@ -172,6 +174,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
 
     core::SwitchStmtPtr swtch = builder.switchStmt(idxVar, cases);
 
+    // capture needed ranges
     core::ASTBuilder::CaptureInits capture;
     switch(opl) {
     case OPL_GLOBAL :
@@ -189,6 +192,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
         capture[boundaries] = localRange;
     }
 
+    // set the argument for the get__id function
     return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), swtch, capture, toVector(idxVar)), idx);
 }
 
@@ -276,10 +280,11 @@ private:
     core::CallExprPtr resolveNative(const string& name, size_t preambleLength, const core::TypePtr& type,
             const core::ExpressionPtr accuracyFct,const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
+/* moved to KernelMapper::resolveElement
         // transform arguments
         for_each(args, [&](core::ExpressionPtr arg){
             arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
-        });
+        });*/
 
         core::LiteralPtr literal;
         core::FunctionTypePtr fType = dynamic_pointer_cast<const core::FunctionType>(type); // default (=scalar) case
@@ -330,11 +335,12 @@ private:
     core::CastExprPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
 
+/* moved to KernelMapper::resolveElement
         // transform arguments
         for_each(args, [&](core::ExpressionPtr arg){
             arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
         });
-
+*/
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
             return builder.castExpr(ftype->getReturnType(), args.at(0));
         }
@@ -358,6 +364,12 @@ public:
             const core::ExpressionPtr& fun = call->getFunctionExpr();
             if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
                 const vector<core::ExpressionPtr>& args = call->getArguments();
+
+                for_each(args, [&](core::ExpressionPtr arg){
+                    arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
+                });
+
+
                 // reading parallel loop boundaries
                 if(literal->getValue() == "get_global_size") {
                     assert(args.size() == 1 && "Function get_global_size must have exactly 1 argument");
