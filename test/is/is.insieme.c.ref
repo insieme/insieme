@@ -185,10 +185,10 @@ void create_seq(void* _capture, double seed, double a) {
 			((k) = ((1<<16)/4));
 			{
 				for(int var_41 = 0; var_41 < (1<<20); var_41 += 1) {
-					((x) = call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23));
-					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
-					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
-					((x) = ((x)+call__insieme_funType_type_4(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){&randlc, 0, var_17}))), &var_22, &var_23)));
+					((x) = randlc(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_17}))), &var_22, &var_23));
+					((x) = ((x)+randlc(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_17}))), &var_22, &var_23)));
+					((x) = ((x)+randlc(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_17}))), &var_22, &var_23)));
+					((x) = ((x)+randlc(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_17}))), &var_22, &var_23)));
 					((((((((*var_17).key_array))[0]))[((unsigned int)((var_41)))])) = ((int)((((double)((k)))*(x)))));
 				};
 				((i) = (0+(((int)(ceil((((double)(((1<<20)-0)))/((double)(1))))))*1)));
@@ -421,7 +421,7 @@ double elapsed_time(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		double t = 0.0;
-		call__insieme_funType_type_8(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){&wtime, 0, var_72}))), &t);
+		wtime(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0, var_72}))), &t);
 		return (t);;
 	}
 }
@@ -433,7 +433,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_71 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((((*var_71).start))[0]))[((unsigned int)(n))])) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_71})))));
+		((((((((*var_71).start))[0]))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_71})))));
 	}
 }
 
@@ -446,7 +446,7 @@ void timer_stop(void* _capture, int n) {
 	{
 		double t = 0.0;
 		double now = 0.0;
-		((now) = call__insieme_funType_type_6(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){&elapsed_time, 0, var_82})))));
+		((now) = elapsed_time(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_82})))));
 		((t) = ((now)-(((((((*var_82).start))[0]))[((unsigned int)(n))]))));
 		((((((((*var_82).elapsed))[0]))[((unsigned int)(n))])) = ((((((((*var_82).elapsed))[0]))[((unsigned int)(n))]))+(t)));
 	}
@@ -641,26 +641,26 @@ int main(int argc, char** argv) {
 		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n", 0);
 		printf(" Size:  %d  (class %c)\n", (1<<20), 'W');
 		printf(" Iterations:   %d\n", 10);
-		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_clear, 0, &var_1}))), 0);
-		call__insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&create_seq, 0, &var_1}))), 314159265.00, 1220703125.00);
-		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), 1);
+		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 0);
+		create_seq(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, &var_1}))), 314159265.00, 1220703125.00);
+		rank(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 1);
 		((((var_1).passed_verification)) = 0);
 		if(('W'!='S')) {
 			printf("\n   iteration\n", 0);
 		};
-		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_start, 0, &var_1}))), 0);
+		timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 0);
 		{
 			for(int var_125 = 1; var_125 < (10+1); var_125 += 1) {
 				if(('W'!='S')) {
 					printf("        %d\n", (var_125));
 				};
-				call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&rank, 0, &var_1}))), (var_125));
+				rank(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), (var_125));
 			};
 			((iteration) = (1+(((int)(ceil((((double)(((10+1)-1)))/((double)(1))))))*1)));
 		};
-		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&timer_stop, 0, &var_1}))), 0);
-		((timecounter) = ((double)(call__insieme_funType_type_10(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){&timer_read, 0, &var_1}))), 0))));
-		call__insieme_funType_type_12(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){&full_verify, 0, &var_1}))));
+		timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 0);
+		((timecounter) = ((double)(timer_read(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0, &var_1}))), 0))));
+		full_verify(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0, &var_1}))));
 		if(((((var_1).passed_verification))!=((5*10)+1))) {
 			((((var_1).passed_verification)) = 0);
 		};

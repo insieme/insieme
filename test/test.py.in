@@ -2,8 +2,8 @@ import os, subprocess, shlex, sys, shutil, time
 
 INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 CFLAGS = "--std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
-LDFLAGS_ORG = "-lm -lpthread"
-LDFLAGS_RES = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
+LDFLAGS_ORG = "-lm -lpthread -g -pg"
+LDFLAGS_RES = "-lm -lpthread -g -pg -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 CC = "gcc"
 
 class bcolors:
