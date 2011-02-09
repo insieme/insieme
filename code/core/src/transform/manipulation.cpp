@@ -343,7 +343,8 @@ namespace {
 		}
 
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
-		bool visitLambda(const LambdaAddress&) {
+		//  - also prevents variables in LamdaDefinition from being inadvertently captured
+		bool visitLambdaExpr(const LambdaExprAddress&) {
 			return false;
 		}
 	};

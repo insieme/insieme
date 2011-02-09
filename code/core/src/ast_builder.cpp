@@ -284,7 +284,7 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 		loopVarType = static_pointer_cast<const RefType>(loopVarType)->getElementType();
 	}
 
-	// modify body to take vector iteration variable
+	// modify body to take iteration variable
 	auto pforLambdaParam = variable(loopVarType);
 
 	insieme::utils::map::PointerMap<NodePtr, NodePtr> modifications;
@@ -292,7 +292,9 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	modifications.insert(std::make_pair(deref(loopvar), pforLambdaParam));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
 
-	auto lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
+	CaptureInitExprPtr lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
+	//LOG(INFO) << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << lambda->getValues() 
+	//	<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << pforLambdaParam << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 	auto initExp = decl->getInitialization();
 
 	while (analysis::isCallOf(initExp, manager.basic.getRefVar()) || analysis::isCallOf(initExp, manager.basic.getRefNew())) {
