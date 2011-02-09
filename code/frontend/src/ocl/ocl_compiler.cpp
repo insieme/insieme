@@ -40,6 +40,7 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 
 #include "insieme/c_info/naming.h"
+#include "insieme/c_info/location.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
 
@@ -762,6 +763,7 @@ public:
                 bool workGroupSizeDefined = false;
 
                 auto cName = func->getAnnotation(c_info::CNameAnnotation::KEY);
+                auto sourceLoc = func->getAnnotation(c_info::CLocAnnotation::KEY);
                 auto funcAnnotation = element->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
 
                 if(!funcAnnotation)
@@ -1001,6 +1003,9 @@ public:
                     // put cname annotation to the new function if it was there before
                     if(cName)
                         newFunc->addAnnotation(cName);
+                    // put source location annotation to it if existent
+                    if(sourceLoc)
+                        newFunc->addAnnotation(sourceLoc);
 
                     return newFunc;
                 }
