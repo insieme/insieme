@@ -135,5 +135,5 @@ int main() {
 
     printf("pval=%8.2f\n", pv[jmax]);
 
-    printf("time=%8.2f sec\n", ticks/1000000.0f);
+    //printf("time=%8.2f sec\n", ticks/1000000.0f);
     }
