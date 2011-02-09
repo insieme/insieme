@@ -41,6 +41,7 @@
 #include "insieme/frontend/program.h"
 #include "insieme/driver/driver_config.h"
 #include "insieme/simple_backend/backend_convert.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 //#include <glog/logging.h>
 #include "insieme/utils/logging.h"
@@ -69,7 +70,7 @@ TEST(DriverTest, HelloWorldTest) {
 	program = prog.convert();
 	LOG(INFO) << "Done.";
 
-	LOG(INFO) << "Printing the IR: " << program;
+    LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
 	LOG(INFO) << "Converting IR to C...";
 
