@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/program.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/driver/driver_config.h"
@@ -69,7 +70,7 @@ TEST(OclDriverTest, KernelTest) {
 	program = prog.convert();
 	LOG(INFO) << "Done.";
 
-	LOG(INFO) << "Printing the IR: " << program;
+	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
 	LOG(INFO) << "Converting IR to OpenCL...";
 

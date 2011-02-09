@@ -482,7 +482,7 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 		<< join(", ", guardedStmts, [](std::ostream& out, const GuardedStmt& s) {
 	        out << format("(%s, %s)", s.first->toString().c_str(), s.second->toString().c_str());
 	    } )
-		<< ", " << *defaultStmt << ")";
+		<< (guardedStmts.empty()?"":", ") << "default: " << *defaultStmt << ")";
 	return out;
 }
 
