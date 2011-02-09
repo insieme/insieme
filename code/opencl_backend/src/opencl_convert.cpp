@@ -291,7 +291,6 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				for (auto&& iter = localOldValues.begin(); iter != localOldValues.end(); ++iter, ++iter2){
 					unsigned newName = (*iter)->getId(); 
 					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
-					
 					backwardVarNameMap.insert(std::make_pair(newName, oldName));
 					forwardVarNameMap.insert(std::make_pair(oldName, newName));
 					qualifierMap.insert(std::make_pair(newName, *iter));
@@ -340,6 +339,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				KernelFctAnnotationPtr an(new KernelFctAnnotation());
 				const LambdaPtr& lambda = newFunc->getLambda();
 				lambda->addAnnotation(an);
+				std::cout << printer::PrettyPrinter(lambda) << std::endl;				
 				
 				FunctionManager& funManager = cc.getFunctionManager();
 				getCodeStream() << funManager.getFunctionName(defCodePtr, newFunc);
@@ -363,11 +363,11 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 				newArgs.push_back(ptr->getArgument(1));
 				CallExprPtr call = builder.callExpr((fit->second)->getAnnotation(BuiltinFunctionAnnotation::KEY)->getBuiltinLiteral(), newArgs);
 				simple_backend::StmtConverter::visitCallExpr(call);
+				return;
 			}
 		}
 	} 
-	else
-		simple_backend::StmtConverter::visitCallExpr(ptr);	
+	simple_backend::StmtConverter::visitCallExpr(ptr);	
 }
 
 void OclStmtConvert::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
