@@ -372,19 +372,20 @@ public:
     : builder(astBuilder), kd(data) { };
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
-
-
+/*
+    if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
+        return element;//->substitute(builder.getNodeManager(), *this);
+    }
+*/
         if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(element)){
-//            std::cout << "found a call\n";
+//            std::cout << "found a call " << *call << std::endl;
+
+            call = core::static_pointer_cast<const core::CallExpr>(call->substitute(builder.getNodeManager(), *this));
+            std::cout << "new call " << *call << std::endl;
             const core::ExpressionPtr& fun = call->getFunctionExpr();
+            vector<core::ExpressionPtr> args = call->getArguments();
+
             if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
-                const vector<core::ExpressionPtr>& args = call->getArguments();
-
-                for_each(args, [&](core::ExpressionPtr arg){
-                    arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
-                });
-
-
                 // reading parallel loop boundaries
                 if(literal->getValue() == "get_global_size") {
                     assert(args.size() == 1 && "Function get_global_size must have exactly 1 argument");
@@ -464,14 +465,7 @@ public:
                 }
             }
 
-
-//        std::cout << "FUNCTION: " << call << std::endl;
-/*            const core::Node::ChildList& elems = call->getChildList();
-            for(size_t i = 0; i < elems.size(); ++i) {
-                std::cout << "child: " << elems.at(i) << std::endl;
-            }
-*/
-            return element->substitute(builder.getNodeManager(), *this);
+            return call;//element->substitute(builder.getNodeManager(), *this);
         }
 
         if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_CaptureInitExpr) {
