@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "../../../frontend/test/ocl_device.h"
+#include "ocl_device.h"
 
 #pragma insieme mark
 __kernel void constantMemArg(__constant double* c) {
@@ -62,7 +62,53 @@ __kernel void privateMemArg(short p) {
 
 
 #pragma insieme mark
-__kernel void allMemArg(__constant double* c, __global float* g, __local int* l, short p) {
-    int element = l[0];
+__kernel void allMemArg(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    ga[0] = (float)l[0];
 }
+
+#pragma insieme mark
+__kernel void simpleCalc(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    ga[pa] = c[pb] * l[gb[0]];
+}
+
+
+#pragma insieme mark
+__kernel void getId(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    uint gid = get_global_id(0);
+
+    ga[gid] = gid;
+}
+
+
+#pragma insieme mark
+__kernel void branch(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    if(pa == pb)
+        ga[0] = c[0];
+}
+
+/* future work
+#pragma insieme mark
+__kernel void access3D(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    uint gid[3];
+    gid[0] = get_global_id(0);
+    gid[1] = get_global_id(1);
+    gid[2] = get_global_id(2);
+    // gb is used to pass the offsets of the linearized 3D array ga and gb
+
+    ga[gid[0]] = c[gid[0] * gb[2] * gb[1] + gid[1] * gb[2] + gid[2]] + c[gid[0]];
+}
+
+#pragma insieme mark
+__kernel void localMem(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    uint gid = get_global_id(0);
+    uint lid = get_local_id(0);
+    __local int inKernelLocal[258];
+
+    l[lid] = c[gid];
+    inKernelLocal[lid-1] = gb[gid];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    ga[gid] = l[gid+1] + inKernelLocal[gid];
+}
+*/
 
