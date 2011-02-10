@@ -34,11 +34,13 @@
  * regarding third party software licenses.
  */
 
+#ifndef NO_INSIEME  // must be set when using the kernel function outside of the insieme compiler
 #include "ocl_device.h"
+#endif
 
 #pragma insieme mark
-__kernel void constantMemArg(__constant double* c) {
-    double element = c[0];
+__kernel void constantMemArg(__constant float* c) {
+    float element = c[0];
 }
 
 #pragma insieme mark
@@ -68,7 +70,7 @@ __kernel void allMemArg(__constant float* c, __global float* ga, __global int* g
 
 #pragma insieme mark
 __kernel void simpleCalc(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
-    ga[pa] = c[pb] * l[gb[0]];
+    ga[0] = 0;//c[pb] * l[gb[pa]];
 }
 
 
