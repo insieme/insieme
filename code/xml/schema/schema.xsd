@@ -252,7 +252,6 @@
 
 <xs:complexType name="T_lambdaExpr">
 	<xs:sequence>
-		<xs:element name="type" type="T_functionTypePtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="variable" type="T_variablePtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="definition" type="T_lambdaDefinitionPtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	

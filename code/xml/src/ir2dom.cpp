@@ -531,10 +531,6 @@ public:
 	void visitLambdaExpr(const LambdaExprPtr& cur) {
 		XmlElement lambdaExpr("lambdaExpr", doc);
 		rootElem << (lambdaExpr << XmlElement::Attribute("id", GET_ID(cur)));
-
-		XmlElement type("type", doc);
-		append(type, cur->getType(), "functionTypePtr");
-		lambdaExpr << type;
 		
 		XmlElement variable("variable", doc);
 		append(variable, cur->getVariable(), "variablePtr");

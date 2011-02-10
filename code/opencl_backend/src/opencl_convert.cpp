@@ -40,6 +40,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -357,7 +358,7 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 	if (ptr->getArguments().size()) {
 		// check for builtin literal (get_global_size, get_num_groups, ...)	
 		const VariablePtr& var = dynamic_pointer_cast<const Variable>(ptr->getArgument(0));
-		if (var){			
+		if (var){
 			unsigned firstVal = getVarName(backwardVarNameMap, var->getId());
 			auto&& fit = qualifierMap.find(firstVal);
 			if (fit != qualifierMap.end()) {
@@ -388,6 +389,49 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 					}
 					else
     					assert(false && "Error: OpenCL Backend can only translate getThreadGroup(0 | 1)" );
+				}
+			}
+		}
+		// check for get_local_id & get_global_id
+		const CaptureInitExprPtr& cap = dynamic_pointer_cast<const CaptureInitExpr>(ptr->getFunctionExpr());
+		if (cap){
+			const CompoundStmtPtr& comp = dynamic_pointer_cast<const CompoundStmt>
+						(dynamic_pointer_cast<const LambdaExpr>(cap->getLambda())->getBody());
+			if (comp){
+				int size = comp->getStatements().size();
+				if (size > 2) { // FIXME: improve the pattern :)
+					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
+					const DeclarationStmtPtr& dec2 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[1]);
+					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
+					
+					if (dec1 && dec2 && swt && 
+						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
+						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+					) {
+						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+						core::TypeList tList;
+						tList.push_back(t);
+						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
+						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
+						simple_backend::StmtConverter::visitCallExpr(call);
+						return;
+					}
+				}
+				else if (size > 1) { // FIXME: improve the pattern :)
+					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
+					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[1]);
+					
+					if (dec1 && swt && 
+						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+					) {
+						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+						core::TypeList tList;
+						tList.push_back(t);
+						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_local_id");
+						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
+						simple_backend::StmtConverter::visitCallExpr(call);
+						return;
+					}
 				}
 			}
 		}
