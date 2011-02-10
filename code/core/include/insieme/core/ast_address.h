@@ -476,40 +476,6 @@ protected:
 };
 
 /**
- * Allows to dynamically down-cast between addresses pointing to related types.
- *
- * @tparam B the type the resulting pointer should point to
- * @tparam T the type the given pointer is pointing to
- * @param src the pointer to be down-casted
- * @return the down-casted address pointing to the same location
- */
-//template<typename B, typename T>
-//inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynamic_address_cast(Address<T>& src) {
-//	if (dynamic_cast<B*>(&(*src))) {
-//		return *(reinterpret_cast<Address<B>* >(&src));
-//	}
-//	// return an invalid address (default constructed)
-//	return Address<B>();
-//}
-
-/**
- * Allows to dynamically down-cast between addresses pointing to related types.
- *
- * @tparam B the type the resulting pointer should point to
- * @tparam T the type the given pointer is pointing to
- * @param src the pointer to be down-casted
- * @return the down-casted address pointing to the same location
- */
-template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynamic_address_cast(Address<T> src) {
-	if (dynamic_cast<B*>(&(*src))) {
-		return Address<B>(*(reinterpret_cast<Address<B>* >(&src)));
-	}
-	// return an invalid address (default constructed)
-	return Address<B>();
-}
-
-/**
  * Allows to statically down-cast between addresses pointing to related types. Unlike for the dynamic cast, no runtime
  * checks will be conducted.
  *
@@ -526,6 +492,23 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>&>::type stat
 template<typename B, typename T>
 inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>&>::type static_address_cast(const Address<T>& src) {
 	return reinterpret_cast<const Address<B>&>(src);
+}
+
+/**
+ * Allows to dynamically down-cast between addresses pointing to related types.
+ *
+ * @tparam B the type the resulting pointer should point to
+ * @tparam T the type the given pointer is pointing to
+ * @param src the pointer to be down-casted
+ * @return the down-casted address pointing to the same location
+ */
+template<typename B, typename T>
+inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynamic_address_cast(const Address<T>& src) {
+	if (src && dynamic_cast<B*>(&(*src))) {
+		return Address<B>(static_address_cast<B>(src));
+	}
+	// return an invalid address (default constructed)
+	return Address<B>();
 }
 
 /**

@@ -47,8 +47,6 @@ void backward_column(int m) {
     
     // printf("column %d\n",m);
 
-    #pragma omp parallel
-    {
 	double pv_u, pv_m, pv_d;
     	double prob_u, prob_m, prob_d;
     	int i,j;
@@ -75,11 +73,9 @@ void backward_column(int m) {
 		// printf("rate = %f\n",rate[i]);
 		// printf("coupon = %f\n", coupon(m,rate[i],nomval));
 		// printf("pv = %f\n",pv[j]);
-		}
+	}
 
-	    }
-
-    }
+}
 
 int main() {
 
@@ -120,19 +116,24 @@ int main() {
         pv_1[j] = nomval;
         }
 
+    #pragma omp parallel
+    {
+
     for(m = mmax-1; m>=0; m--) {
 
         backward_column(m);
 
+	#pragma omp for
         for(j = 0; j<=2*jmax; j++) {
             pv_1[j] = pv[j];
             }
 
         }
+   }
 
     ticks = end_timer(begin);    
 
     printf("pval=%8.2f\n", pv[jmax]);
 
-    printf("time=%8.2f sec\n", ticks/1000000.0f);
+    //printf("time=%8.2f sec\n", ticks/1000000.0f);
     }

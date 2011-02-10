@@ -46,3 +46,19 @@ __kernel void hello(__global double* a, __local float* b, __global double* c, in
 	e = c[0] + b[0];
 	c[0] = e + f;
 }
+
+/*
+#include "ocl_device.h"
+
+#pragma insieme mark
+__kernel void hello(__global double* a, __local float* b, __local double* c, int d) {
+	//int i = get_global_id(0);
+	//int p = get_local_id(0);
+	int x = get_global_size(0);
+	int v = get_local_size(0);
+	int z = get_num_groups(0);
+	int r = get_global_offset(0);
+	int w = get_work_dimension(0);
+	int element = l[0];
+}
+*/

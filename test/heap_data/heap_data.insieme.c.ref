@@ -89,8 +89,8 @@ int main(int argc, char** argv) {
 			(memcpy(malloc(sizeof(char[10])), &((char[10]){}), sizeof(char[10])))
 		});
 		((((var_1).b)) = argv);
-		call__insieme_funType_type_0(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){&init, 0, &var_1}))));
-		printf("sum=%d\n", call__insieme_funType_type_2(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){&sum, 0, &var_1})))));
+		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))));
+		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, &var_1})))));
 	}
 }
 
