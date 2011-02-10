@@ -354,9 +354,10 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 
 void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 	ASTBuilder builder(ptr->getNodeManager());
-	if (ptr->getArguments().size()) {	
-		const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr->getArgument(0));
-		if (var){
+	if (ptr->getArguments().size()) {
+		// check for builtin literal (get_global_size, get_num_groups, ...)	
+		const VariablePtr& var = dynamic_pointer_cast<const Variable>(ptr->getArgument(0));
+		if (var){			
 			unsigned firstVal = getVarName(backwardVarNameMap, var->getId());
 			auto&& fit = qualifierMap.find(firstVal);
 			if (fit != qualifierMap.end()) {
@@ -369,8 +370,29 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 				}
 			}
 		}
+		// check for barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE)
+		const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(ptr->getArgument(0));
+		if (call) {
+			const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr());
+			if (lit) {
+				if (lit->getValue() == "getThreadGroup") {
+					const LiteralPtr& num = dynamic_pointer_cast<const Literal>(call->getArgument(0));
+					CodeStream& cStr = getCodeStream();
+					if (num->getValue() == "0") {
+						cStr << "barrier(CLK_LOCAL_MEM_FENCE)";
+						return;
+					}
+					else if (num->getValue() == "1") {
+						cStr << "barrier(CLK_GLOBAL_MEM_FENCE)";
+						return;
+					}
+					else
+    					assert(false && "Error: OpenCL Backend can only translate getThreadGroup(0 | 1)" );
+				}
+			}
+		}
 	}
-	simple_backend::StmtConverter::visitCallExpr(ptr);	
+	simple_backend::StmtConverter::visitCallExpr(ptr);
 }
 
 void OclStmtConvert::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
