@@ -182,7 +182,6 @@ private:
 
 		// handle scope limiting elements
 		switch(ptr->getNodeType()) {
-		case NT_JobExpr:
 		case NT_LambdaExpr:
 			// enters a new scope => variable will no longer occur
 			return ptr;
