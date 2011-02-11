@@ -19,6 +19,7 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_analysis_include_dir} )
+include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
 include_directories( ${insieme_opencl_backend_include_dir} )
 include_directories( ${insieme_c_info_include_dir} )
@@ -30,11 +31,11 @@ include_directories( ${insieme_xml_include_dir} )
 add_executable( main ${insieme_driver_srcs} )
 
 # add dependencies
-add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info )
+add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_simple_backend insieme_c_info insieme_transform )
 
 # register linked libraries
 target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_simple_backend 
-			    insieme_opencl_backend insieme_c_info insieme_xml insieme_analysis )
+			    insieme_opencl_backend insieme_c_info insieme_xml insieme_analysis insieme_transform )
 
 # add boost_program_options library
 target_link_libraries( main ${Boost_PROGRAM_OPTIONS_LIBRARY})
@@ -51,6 +52,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_core)
 	target_link_libraries(ut_${case_name} insieme_frontend)
+	target_link_libraries(ut_${case_name} insieme_transform)
 	target_link_libraries(ut_${case_name} insieme_simple_backend)
 	target_link_libraries(ut_${case_name} insieme_opencl_backend)
 	target_link_libraries(ut_${case_name} insieme_c_info)
