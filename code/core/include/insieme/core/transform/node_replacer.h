@@ -99,6 +99,24 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 		bool preservePtrAnnotationsWhenModified = false);
 
 /**
+ * Replaces all occurrences of the variables within the given map and the current scope by the element associated
+ * to them.
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param replacements the map mapping variables to their replacements
+ * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
+ * 				get a copy of the annotations of the original node by default, this feature is disabled
+ * 				and it should be used with care. In case on of the resulting nodes is already present
+ * 				within the manager, the present node and its version of the annotations will be preserved
+ * 				and returned.
+ */
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
+		bool preservePtrAnnotationsWhenModified = false);
+
+
+/**
  * Replaces the node specified by the given address and returns the root node of the modified tree.
  *
  * @param manager the manager to be used for maintaining node instances

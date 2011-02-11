@@ -322,6 +322,13 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		case NT_Variable:
 			info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
 			break;
+		case NT_CallExpr:
+			if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
+				info.location = VariableManager::HEAP;
+			} else {
+				info.location = VariableManager::STACK;
+			}
+			break;
 		default:
 			// default is a stack variable
 			info.location = VariableManager::STACK;
@@ -333,7 +340,7 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	// standard handling
 	CodeStream& cStr = getCodeStream();
-	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), cc.getNameManager().getVarName(var), true);
+	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), cc.getNameManager().getVarName(var), info.location == VariableManager::STACK);
 	//cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), true) << " " << nameGen.getVarName(var);
 
 	// check whether there is an initialization
@@ -348,8 +355,58 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		return;
 	}
 
-	// generate initializer expression
+	// start initialization
 	cStr << " = ";
+
+	// a special handling for initializing heap allocated structs (to avoid large stack allocated objects)
+	const RefTypePtr refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
+	if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
+
+		ASTBuilder builder(cc.getNodeManager());
+		const lang::BasicGenerator& basic = cc.getNodeManager().basic;
+
+		// start by allocating the required memory
+		const StructTypePtr structType = static_pointer_cast<const StructType>(refType->getElementType());
+		visit(builder.callExpr(basic.getRefNew(), builder.callExpr(basic.getUndefined(), basic.getTypeLiteral(structType))));
+
+		// initialize all the members
+		const ExpressionPtr& init = static_pointer_cast<const CallExpr>(ptr->getInitialization())->getArgument(0);
+		if (analysis::isCallOf(init, basic.getUndefined())) {
+			// that's it - no more work required
+			return;
+		}
+
+		// ensure init value is a struct
+		assert(init->getNodeType() == NT_StructExpr && "Initialization is not of proper type!");
+		const StructExprPtr& structValue = static_pointer_cast<const StructExpr>(init);
+
+		// init values, one after another
+		for_each(structValue->getMembers(), [&, this](const StructExpr::Member& cur) {
+
+			const Identifier& name = cur.first;
+			ExpressionPtr value = cur.second;
+
+			if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
+				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+			}
+
+			// skip vector initialization
+			if (analysis::isCallOf(value, basic.getVectorInitUniform()) || analysis::isCallOf(value, basic.getVectorInitUndefined())) {
+				// TODO: support init uniform
+				return;
+			}
+
+
+			// create assignment statement
+			cStr << ";\n";
+			this->visit(builder.callExpr(basic.getRefAssign(), builder.memberAccessExpr(builder.deref(var), name), value));
+		});
+
+		// done - default handling is not necessary
+		return;
+	}
+
+	// generate initializer expression
 	if (core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefVar())) {
 		// in case it is allocated on a stack, skip ref.var
 		CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
@@ -668,7 +725,7 @@ namespace detail {
 			// TODO: use pattern matching!
 
 			// check for vector init undefined and undefined
-			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || basic.isUndefined(initValue)) {
+			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || core::analysis::isCallOf(initValue, basic.getUndefined())) {
 				cStr << allocator << "(sizeof(" << typeName << "))";
 				return;
 			}

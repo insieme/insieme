@@ -1,9 +1,9 @@
 import os, subprocess, shlex, sys, shutil, time
 
-INSIEMEC='/home/klaus/insieme/build/code/driver/main'
-CFLAGS = "--std=c99 -I. -I/home/klaus/insieme/code/simple_backend/include/insieme/simple_backend/runtime"
+INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
+CFLAGS = "--std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
 LDFLAGS_ORG = "-lm -lpthread -g -pg"
-LDFLAGS_RES = "-lm -lpthread -g -pg -linsieme_simple_backend_runtime -L/home/klaus/insieme/build/code/simple_backend"
+LDFLAGS_RES = "-lm -lpthread -g -pg -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 CC = "gcc"
 runOcl = 0
 printErr = 0
@@ -153,7 +153,7 @@ def run_test_case(test_case_name):
 		
 		sys.stderr.write(" * Running output program...            ")
 		ldPath = os.getenv("LD_LIBRARY_PATH", "");
-		os.putenv("LD_LIBRARY_PATH", ldPath + ":/home/klaus/insieme/build/code/simple_backend");
+		os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 		start = time.time()
 		os.system("./{0} > {1}".format(test_exec, test_out))
 		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
@@ -226,7 +226,7 @@ def run_test_case(test_case_name):
 	return 0
 
 def main():
-	os.chdir('/home/klaus/insieme/test/')
+	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
 
 	#check for opencl flag
 	for arg in sys.argv[1:] :

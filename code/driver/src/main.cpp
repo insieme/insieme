@@ -51,6 +51,8 @@
 
 #include "insieme/analysis/cfg.h"
 
+#include "insieme/transform/ir_cleanup.h"
+
 #include "insieme/c_info/naming.h"
 
 #include "insieme/utils/container_utils.h"
@@ -241,6 +243,28 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			}
+
+			// do some cleanup
+			if (CommandLineOptions::Cleanup) {
+				LOG(INFO) << "================================ IR CLEANUP =====================================";
+				insieme::utils::Timer timer("ir.cleanup");
+				program = static_pointer_cast<const core::Program>(insieme::transform::cleanup(program));
+				timer.stop();
+				LOG(INFO) << timer;
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+				// IR statistics
+				LOG(INFO) << "============================ IR Statistics ======================================";
+				LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+				// check again
+				LOG(INFO) << "============================= Checking IR =======================================";
+				if(CommandLineOptions::CheckSema) {
+					checker();
+				}
+			}
+
 		}
 		if(!CommandLineOptions::LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";

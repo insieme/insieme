@@ -174,11 +174,11 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 
 		bool addPtr = false;
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
-		if(type->getNodeType() == core::NT_VectorType) {
-			type = builder.arrayType( builder.refType(type) );
-			fact.addDerefField(ident);
-			addPtr = true;
-		}
+//		if(type->getNodeType() == core::NT_VectorType) {
+//			type = builder.arrayType( builder.refType(type) );
+//			fact.addDerefField(ident);
+//			addPtr = true;
+//		}
 		core::RefTypePtr&& entryType = builder.refType( type );
 
 		if(it->second) {
