@@ -67,7 +67,7 @@ public:
 	void visitLambdaExpr(const core::LambdaExprPtr& func);
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& ptr);
 	void visitCallExpr(const core::CallExprPtr& ptr);
-
+	void appendHeaders(simple_backend::ConvertedCode* converted) { }
 };
 
 } // namespace ocl
