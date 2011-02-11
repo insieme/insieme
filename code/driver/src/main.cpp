@@ -275,14 +275,16 @@ int main(int argc, char** argv) {
             insieme::utils::Timer timer("OpenCL.Backend");
 
             LOG(INFO) << "========================= Converting to OpenCL ===============================";
-
+std::cout << "OCL flag set!\n";
 //TODO find the OpenCLChecker
 //			insieme::opencl_backend::OpenCLChecker oc;
 //			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
 
             if(!CommandLineOptions::Output.empty()) {
-                insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+std::cout << "NO output set\n";
+                insieme::backend::Rewriter::writeBack(program, insieme::backend::ocl::convert(program), CommandLineOptions::Output);
             } else {
+std::cout << "OPENCL output set\n";
                 auto converted = insieme::backend::ocl::convert(program);
                 LOG(INFO) << *converted;
             }
@@ -290,13 +292,16 @@ int main(int argc, char** argv) {
             timer.stop();
             LOG(INFO) << timer;
 		} else {
+std::cout << "Using standard backend\n";
 			insieme::utils::Timer timer("Simple.Backend");
 
 			LOG(INFO) << "========================== Converting to C++ =================================";
 
 			if(!CommandLineOptions::Output.empty()) {
-				insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+			    std::cout << "NO output set\n";
+				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
 			} else {
+			    std::cout << "OPENCL output set\n";
 				auto converted = insieme::simple_backend::convert(program);
 				LOG(INFO) << *converted;
 			}
