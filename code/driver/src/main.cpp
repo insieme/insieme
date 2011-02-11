@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
 
             if(!CommandLineOptions::Output.empty()) {
-                insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+                insieme::backend::Rewriter::writeBack(program, insieme::backend::ocl::convert(program), CommandLineOptions::Output);
             } else {
                 auto converted = insieme::backend::ocl::convert(program);
                 LOG(INFO) << *converted;
@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "========================== Converting to C++ =================================";
 
 			if(!CommandLineOptions::Output.empty()) {
-				insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
 			} else {
 				auto converted = insieme::simple_backend::convert(program);
 				LOG(INFO) << *converted;

@@ -153,7 +153,7 @@ bool Rewriter::CodeModification::operator<(const CodeModification& other) const 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								Rewriter
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFileName) {
+void Rewriter::writeBack(const ProgramPtr& program, const simple_backend::TargetCodePtr& converted, const std::string& insiemeFileName) {
 
 	CodeModificationList list;
 	const Program::EntryPointList& entryPoints = program->getEntryPoints();
@@ -190,7 +190,7 @@ void Rewriter::writeBack(const ProgramPtr& program, const std::string& insiemeFi
 
 	VLOG(1) << "==== Writing insieme file : " << insiemeFileName << " =================";
 	// Write the insieme file contaning the insieme handled code
-	auto converted = insieme::simple_backend::convert(program);
+//	auto converted = insieme::simple_backend::convert(program);
 	std::fstream outFile(insiemeFileName.c_str(), std::fstream::out | std::fstream::trunc);
 	outFile << *converted;
 

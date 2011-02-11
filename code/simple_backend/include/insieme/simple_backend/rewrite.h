@@ -41,6 +41,12 @@
 #include "insieme/core/program.h"
 
 namespace insieme {
+
+//forward delcaration of TargedCodePtr
+namespace simple_backend {
+    class TargetCode;
+    typedef std::shared_ptr<TargetCode> TargetCodePtr;
+}
 namespace backend {
 
 using namespace insieme::c_info;
@@ -91,7 +97,7 @@ public:
 
 	typedef std::set<CodeModification> CodeModificationList;
 
-	static void writeBack(const ProgramPtr& program, const std::string& insiemeFileName = "insieme.c");
+	static void writeBack(const ProgramPtr& program, const simple_backend::TargetCodePtr& converted, const std::string& insiemeFileName = "insieme.c");
 };
 
 
