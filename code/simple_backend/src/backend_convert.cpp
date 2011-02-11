@@ -402,8 +402,7 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			this->visit(builder.callExpr(basic.getRefAssign(), builder.memberAccessExpr(builder.deref(var), name), value));
 		});
 
-		// special handling for structs
-		//cStr << " ... special init ...";
+		// done - default handling is not necessary
 		return;
 	}
 
