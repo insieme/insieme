@@ -824,7 +824,7 @@ namespace formatting {
 
 		FormatTable res;
 
-		#include "insieme/simple_backend/format_spec_start.inl"
+		#include "insieme/simple_backend/format_spec_start.mac"
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = converter.getConversionContext().getNodeManager();
@@ -1006,7 +1006,7 @@ namespace formatting {
 				converter.getConversionContext().getJobManager().createPFor(converter.getCode(), call);
 		});
 
-		#include "insieme/simple_backend/format_spec_end.inl"
+		#include "insieme/simple_backend/format_spec_end.mac"
 
 		return res;
 	}

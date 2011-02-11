@@ -480,7 +480,7 @@ namespace detail {
 		NodeManager& manager = basic.getNodeManager();
 		ASTBuilder builder(manager);
 
-		#include "insieme/simple_backend/format_spec_start.inl"
+		#include "insieme/simple_backend/format_spec_start.mac"
 
 		{
 			TypePtr t = (manager).basic.getUInt4();
@@ -494,7 +494,7 @@ namespace detail {
 	//	ADD_FORMATTER_DETAIL(basic.getGetGroupSize(), false, { OUT("isbr_getGroupSize("); VISIT_ARG(0); OUT(")"); });
 
 
-		#include "insieme/simple_backend/format_spec_end.inl"
+		#include "insieme/simple_backend/format_spec_end.mac"
 
 		return res;
 
