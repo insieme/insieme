@@ -317,22 +317,28 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	info.location = VariableManager::NONE;
 	if (var->getType()->getNodeType() == NT_RefType) {
 
-		ExpressionPtr initialization = ptr->getInitialization();
-		switch (initialization->getNodeType()) {
-		case NT_Variable:
-			info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
-			break;
-		case NT_CallExpr:
-			if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
-				info.location = VariableManager::HEAP;
-			} else {
-				info.location = VariableManager::STACK;
-			}
-			break;
-		default:
-			// default is a stack variable
+		const RefTypePtr& refType = static_pointer_cast<const RefType>(var->getType());
+		if (refType->getElementType()->getNodeType() == NT_ArrayType) {
+			// this is a "pointer" in C - and a pointer is on the stack (pointing to the HEAP)
 			info.location = VariableManager::STACK;
-			break;
+		} else {
+			ExpressionPtr initialization = ptr->getInitialization();
+			switch (initialization->getNodeType()) {
+			case NT_Variable:
+				info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
+				break;
+			case NT_CallExpr:
+				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
+					info.location = VariableManager::HEAP;
+				} else {
+					info.location = VariableManager::STACK;
+				}
+				break;
+			default:
+				// default is a stack variable
+				info.location = VariableManager::STACK;
+				break;
+			}
 		}
 	}
 	varManager.addInfo(var, info);
@@ -340,8 +346,8 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	// standard handling
 	CodeStream& cStr = getCodeStream();
-	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), cc.getNameManager().getVarName(var), info.location == VariableManager::STACK);
-	//cStr << cc.getTypeMan().getTypeName(defCodePtr, var->getType(), true) << " " << nameGen.getVarName(var);
+	string varName = cc.getNameManager().getVarName(var);
+	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
 
 	// check whether there is an initialization
 	const ExpressionPtr& init = ptr->getInitialization();
@@ -359,7 +365,7 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	cStr << " = ";
 
 	// a special handling for initializing heap allocated structs (to avoid large stack allocated objects)
-	const RefTypePtr refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
+	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 	if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
 
 		ASTBuilder builder(cc.getNodeManager());
@@ -386,6 +392,7 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			const Identifier& name = cur.first;
 			ExpressionPtr value = cur.second;
 
+			// remove leading var/new calls
 			if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
 				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
 			}
@@ -396,11 +403,29 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 				return;
 			}
 
+			// start new line .. initialization of a member is required
+			cStr << ";\n";
+
+			// special treatement of vector initialization
+			if (value->getNodeType() == NT_VectorExpr) {
+
+				VectorTypePtr vectorType = static_pointer_cast<const VectorType>(static_pointer_cast<const VectorExpr>(value)->getType());
+				string elementName = cc.getTypeManager().getTypeName(defCodePtr, vectorType->getElementType(), true);
+
+				// init values using memcopy
+				cStr << "memcpy(&((*" << varName << ")." << name << "),&((" << elementName << "[])";
+				this->visit(value);
+				cStr << "), sizeof(";
+				cStr << elementName;
+				cStr << ") * " << vectorType->getSize();
+				cStr << ")";
+				return;
+			}
 
 			// create assignment statement
-			cStr << ";\n";
 			this->visit(builder.callExpr(basic.getRefAssign(), builder.memberAccessExpr(builder.deref(var), name), value));
 		});
+
 
 		// done - default handling is not necessary
 		return;

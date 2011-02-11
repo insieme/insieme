@@ -52,6 +52,24 @@ namespace analysis {
  */
 bool isCallOf(const NodePtr& candidate, const NodePtr& function);
 
+/**
+ * Tests whether the given node is representing a reference type to the given type.
+ *
+ * @param candidate the node to be tested
+ * @param type the type of the expected element
+ * @return true if so, false otherwise
+ */
+bool isRefOf(const NodePtr& candidate, const NodePtr& type);
+
+/**
+ * Tests whether the given node is representing a reference type to a type of the given kind.
+ *
+ * @param candidate the node to be tested
+ * @param kind the kind of the expected element
+ * @return true if so, false otherwise
+ */
+bool isRefOf(const NodePtr& candidate, const NodeType kind);
+
 
 } // end namespace utils
 } // end namespace core
