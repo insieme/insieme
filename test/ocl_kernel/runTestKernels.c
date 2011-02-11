@@ -27,11 +27,13 @@ void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth) {
 }
 
 int main(int argc, char* argv[]) {
-    char* kernelNames[] = { "allMemArg", "simpleCalc", "getId", "getSize", "branch", "access3D", "barriers" };
+    char* kernelFile = argc > 1 ? argv[1] : "ocl_kernel.c";
+    
+    char* kernelNames[] = { "allMemArg"};//, "simpleCalc", "getId", "getSize", "branch", "access3D", "barriers", "VectorAdd" };
 
     // set problem sizes
-    size_t nGroups = 4;
-    size_t width = 32 * nGroups;
+    size_t nGroups = 2;
+    size_t width = 8 * nGroups;
     size_t height = 4 * nGroups;
     size_t depth = 2 * nGroups;
     size_t nElem = width*height*depth;
@@ -104,7 +106,7 @@ int main(int argc, char* argv[]) {
 	CLCHECK(_errCode);
 	
 	// create the compute program
-	char *code = readFile(KERNEL);
+	char *code = readFile(kernelFile);
 	cl_program program = clCreateProgramWithSource(context, 1, (void*)&code, (intptr_t)NULL, errCode);
 	CLCHECK(_errCode);
 	free(code);	

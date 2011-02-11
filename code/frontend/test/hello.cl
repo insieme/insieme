@@ -36,29 +36,31 @@
 
 #include "ocl_device.h"
 
-float sum () {
-	return 42.0;
-}
-#pragma insieme mark
-__kernel void hello(__global double* a, __local float* b, __global double* c, int d) {
-	__local float e = sum();
-	__local float f = 1.0;
-	e = c[0] + b[0];
-	c[0] = e + f;
+uint toll(uint x){
+    return x;
 }
 
+
+#pragma insieme mark
+__kernel void hello(__global float* g, __local float* l, int i) {
+    float x;
+    __local float y;// = g;
+//    __global float4* p = (float4*)g;
+//    y = x;// = {i, i+0.5};
+
+//    x.x = 2.0f;
+
+    int gid = get_local_id(get_global_id(0));
+/*    uint lid = get_local_id(0);
+    l[lid] = g[gid];
+    l[2*lid] = g[gid+i];
 /*
-#include "ocl_device.h"
+    barrier(CLK_LOCAL_MEM_FENCE);
+    x.x = l[i];
+    x.y = native_sin(l[lid+i]);
 
-#pragma insieme mark
-__kernel void hello(__global double* a, __local float* b, __local double* c, int d) {
-	//int i = get_global_id(0);
-	//int p = get_local_id(0);
-	int x = get_global_size(0);
-	int v = get_local_size(0);
-	int z = get_num_groups(0);
-	int r = get_global_offset(0);
-	int w = get_work_dimension(0);
-	int element = l[0];
+    x = x+y;
+
+    g[gid] = x.x * x.y;*/
 }
-*/
+
