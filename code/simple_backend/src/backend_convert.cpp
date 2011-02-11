@@ -58,18 +58,11 @@ std::ostream& ConvertedCode::printTo(std::ostream& out) const {
 
 	// print some general header information ...
 	out << "// --- Generated Inspire Code ---\n";
-	out << "#include <alloca.h>" << std::endl;
-	out << "#include <stddef.h>" << std::endl;
-	out << "#include <stdlib.h>" << std::endl;
 
-	out << "#include <runtime.h>" << std::endl;
-
-
-	// add some macro definitions
-	out << "#define bool int" << std::endl;
-	out << "#define true 1" << std::endl;
-	out << "#define false 0" << std::endl;
-	out << "#define null 0" << std::endl;
+	// print headers
+	for_each(headers, [&](const string& cur) {
+		out << cur << std::endl;
+	});
 
 	// add code for entry points
 	for_each(getSource()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
@@ -81,8 +74,18 @@ std::ostream& ConvertedCode::printTo(std::ostream& out) const {
 }
 
 
+void ConvertedCode::addHeaderLine(const string& line) {
+	headers.push_back(line);
+}
+
 TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
+
 	ConvertedCode* converted = new ConvertedCode(prog);
+
+	// add headers
+	stmtConverter->appendHeaders(converted);
+
+	// convert the individual entry points
 	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
 
 		// create a fresh code fragment
@@ -96,6 +99,22 @@ TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
 		converted->addFragment(ep, fragment);
 	});
 	return TargetCodePtr(converted);
+}
+
+void StmtConverter::appendHeaders(ConvertedCode* converted) {
+	// add basic includes
+	converted->addHeaderLine("#include <alloca.h>");
+	converted->addHeaderLine("#include <stddef.h>");
+	converted->addHeaderLine("#include <stdlib.h>");
+
+	// add runtime header
+	converted->addHeaderLine("#include <runtime.h>");
+
+	// add some macro definitions
+	converted->addHeaderLine("#define bool int");
+	converted->addHeaderLine("#define true 1");
+	converted->addHeaderLine("#define false 0");
+	converted->addHeaderLine("#define null 0");
 }
 
 void StmtConverter::visitJobExpr(const JobExprPtr& ptr) {
@@ -157,7 +176,7 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 		}
 
 		// try generic build-in C operator handling
-		auto pos = formats.find(literalFun->getValue());
+		auto pos = formats.find(literalFun);
 		if (pos != formats.end()) {
 			pos->second->format(*this, cStr, ptr);
 			return;
@@ -662,158 +681,150 @@ bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
 
 
 
-namespace detail {
+namespace formatting {
 
-	namespace {
+	/**
+	 * A utility function to obtain the n-th argument within the given call expression.
+	 *
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the requested argument
+	 * @return the requested argument or a NULL pointer in case there is no such argument
+	 */
+	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
+		auto arguments = call->getArguments();
+		if (n < arguments.size()) {
+			return arguments[n];
+		}
+		return ExpressionPtr();
+	}
 
-		/**
-		 * A utility function to obtain the n-th argument within the given call expression.
-		 *
-		 * @param call the expression from which the argument should be extracted
-		 * @param n the index of the requested argument
-		 * @return the requested argument or a NULL pointer in case there is no such argument
-		 */
-		ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
-			auto arguments = call->getArguments();
-			if (n < arguments.size()) {
-				return arguments[n];
-			}
-			return ExpressionPtr();
+	/**
+	 * A utility function visiting the n-th argument of a call expression.
+	 *
+	 * @param converter the converter to be used for the actual conversion
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
+	 */
+	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
+		ExpressionPtr argument = getArgument(call, n);
+		if (argument) {
+			converter.convert(argument);
+		}
+	}
+}
+
+
+namespace {
+
+	ExpressionPtr evalLazy(const NodePtr& lazy) {
+
+		NodeManager& manager = lazy->getNodeManager();
+
+		ExpressionPtr exprPtr = dynamic_pointer_cast<const Expression>(lazy);
+		assert(exprPtr && "Lazy is not an expression!");
+
+		FunctionTypePtr funType = dynamic_pointer_cast<const FunctionType>(exprPtr->getType());
+		assert(funType && "Illegal lazy type!");
+
+		// form call expression
+		CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
+		return core::transform::tryInlineToExpr(manager, call);
+	}
+
+	void handleIncOperand(StmtConverter& converter, const NodePtr& target) {
+
+		assert(dynamic_pointer_cast<const Expression>(target) && "Operator must be an expression.");
+
+		// check whether a deref is required
+		CodeStream& stream = converter.getCodeStream();
+		stream << "(*";
+		converter.convert(target);
+		stream << ")";
+	}
+
+	void handleRefConstructor(StmtConverter& converter, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
+
+		// check input parameters
+		assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
+
+		// quick check for arrays => extra handling
+		const core::lang::BasicGenerator& basic = converter.getConversionContext().getLangBasic();
+		if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
+			core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
+
+			// vector creation is sufficient
+			converter.convert(initValue);
+			return;
 		}
 
-		/**
-		 * A utility function visiting the n-th argument of a call expression.
-		 *
-		 * @param converter the converter to be used for the actual conversion
-		 * @param call the expression from which the argument should be extracted
-		 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
-		 */
-		void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
-			ExpressionPtr argument = getArgument(call, n);
-			if (argument) {
-				converter.convert(argument);
-			}
+
+		// extract type
+		TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
+		string typeName = converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), type, true);
+
+		// use stack or heap allocator
+		string allocator = (isNew)?"malloc":"alloca";
+
+		// special handling of some initialization values
+		string stmt = toString(*initValue);
+
+		// TODO: use pattern matching!
+
+		// check for vector init undefined and undefined
+		if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || core::analysis::isCallOf(initValue, basic.getUndefined())) {
+			cStr << allocator << "(sizeof(" << typeName << "))";
+			return;
 		}
 
-		ExpressionPtr evalLazy(const NodePtr& lazy) {
+		if (isNew && core::analysis::isCallOf(initValue, basic.getVectorInitUniform())) {
+			NodePtr param = static_pointer_cast<const CallExpr>(initValue)->getArguments()[0];
 
-			NodeManager& manager = lazy->getNodeManager();
-
-			ExpressionPtr exprPtr = dynamic_pointer_cast<const Expression>(lazy);
-			assert(exprPtr && "Lazy is not an expression!");
-
-			FunctionTypePtr funType = dynamic_pointer_cast<const FunctionType>(exprPtr->getType());
-			assert(funType && "Illegal lazy type!");
-
-			// form call expression
-			CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
-			return core::transform::tryInlineToExpr(manager, call);
-		}
-
-		void handleIncOperand(StmtConverter& converter, const NodePtr& target) {
-
-			assert(dynamic_pointer_cast<const Expression>(target) && "Operator must be an expression.");
-
-			// check whether a deref is required
-			CodeStream& stream = converter.getCodeStream();
-			stream << "(*";
-			converter.convert(target);
-			stream << ")";
-		}
-
-		void handleRefConstructor(StmtConverter& converter, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
-
-			// check input parameters
-			assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
-
-			// quick check for arrays => extra handling
-			const core::lang::BasicGenerator& basic = converter.getConversionContext().getLangBasic();
-			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
-			    core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
-
-				// vector creation is sufficient
-				converter.convert(initValue);
-				return;
+			// iterate through multiple vector init uniform calls
+			while (core::analysis::isCallOf(param, basic.getVectorInitUniform())) {
+				param = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
 			}
 
-
-			// extract type
-			TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
-			string typeName = converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), type, true);
-
-			// use stack or heap allocator
-			string allocator = (isNew)?"malloc":"alloca";
-
-			// special handling of some initialization values
-			string stmt = toString(*initValue);
-
-			// TODO: use pattern matching!
-
-			// check for vector init undefined and undefined
-			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || core::analysis::isCallOf(initValue, basic.getUndefined())) {
-				cStr << allocator << "(sizeof(" << typeName << "))";
-				return;
-			}
-
-			if (isNew && core::analysis::isCallOf(initValue, basic.getVectorInitUniform())) {
-				NodePtr param = static_pointer_cast<const CallExpr>(initValue)->getArguments()[0];
-
-				// iterate through multiple vector init uniform calls
-				while (core::analysis::isCallOf(param, basic.getVectorInitUniform())) {
-					param = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
-				}
-
-				// innermost has to be a ref-var call with a literal 0
-				if (core::analysis::isCallOf(param, basic.getRefVar()) || core::analysis::isCallOf(param, basic.getRefNew())) {
-					const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
-					if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
-						string value = literal->getValue();
-						if (basic.isInitZero(literal) || value == "0" || value == "0.0" || value == "\0") {
-							cStr << "calloc(sizeof(" << typeName << "), 1)";
-							return;
-						}
-					}
-					if (core::analysis::isCallOf(refVar, basic.getInitZero())) {
+			// innermost has to be a ref-var call with a literal 0
+			if (core::analysis::isCallOf(param, basic.getRefVar()) || core::analysis::isCallOf(param, basic.getRefNew())) {
+				const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
+				if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
+					string value = literal->getValue();
+					if (basic.isInitZero(literal) || value == "0" || value == "0.0" || value == "\0") {
 						cStr << "calloc(sizeof(" << typeName << "), 1)";
 						return;
 					}
 				}
+				if (core::analysis::isCallOf(refVar, basic.getInitZero())) {
+					cStr << "calloc(sizeof(" << typeName << "), 1)";
+					return;
+				}
 			}
-
-			// TODO: use memset for other initializations => see memset!!
-
-			cStr << "memcpy(";
-			cStr << allocator << "(";
-			cStr << "sizeof(";
-			cStr << typeName;
-			cStr << ")), &((";
-			cStr << typeName;
-			cStr << ")";
-			converter.convert(initValue);
-			cStr << "), sizeof(";
-			cStr << typeName;
-			cStr << "))";
 		}
 
+		// TODO: use memset for other initializations => see memset!!
+
+		cStr << "memcpy(";
+		cStr << allocator << "(";
+		cStr << "sizeof(";
+		cStr << typeName;
+		cStr << ")), &((";
+		cStr << typeName;
+		cStr << ")";
+		converter.convert(initValue);
+		cStr << "), sizeof(";
+		cStr << typeName;
+		cStr << "))";
 	}
+}
 
 
-	FormatTable initFormatTable(const lang::BasicGenerator& basic) {
+namespace formatting {
+
+	FormatTable getBasicFormatTable(const lang::BasicGenerator& basic) {
 
 		FormatTable res;
 
-		#define OUT(Literal) cStr << Literal
-		#define ARG(N) getArgument(call, N)
-		#define VISIT_ARG(N) visitArgument(converter, call, N)
-		#define ADD_FORMATTER_DETAIL(Literal, Brackets, FORMAT) \
-					res.insert(std::make_pair(Literal->getValue(), make_formatter([&basic](StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) { \
-						if (Brackets) OUT("("); \
-						FORMAT \
-						if (Brackets) OUT(")"); \
-					} )))
-
-		#define ADD_FORMATTER(Literal, FORMAT) \
-					ADD_FORMATTER_DETAIL(Literal, true, FORMAT)
+		#include "insieme/simple_backend/format_spec_start.inl"
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = converter.getConversionContext().getNodeManager();
@@ -823,7 +834,6 @@ namespace detail {
 				OUT(" = ");
 				VISIT_ARG(1);
 		});
-
 
 		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(converter, cStr, ARG(0), false); });
 		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(converter, cStr, ARG(0), true); });
@@ -996,18 +1006,10 @@ namespace detail {
 				converter.getConversionContext().getJobManager().createPFor(converter.getCode(), call);
 		});
 
-		#undef ADD_FORMATTER
-		#undef ADD_FORMATTER_DETAIL
-		#undef OUT
-		#undef ARG
-		#undef VISIT_ARG
-
+		#include "insieme/simple_backend/format_spec_end.inl"
 
 		return res;
-
-
 	}
-
 }
 
 }

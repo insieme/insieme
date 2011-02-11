@@ -50,6 +50,9 @@ using namespace insieme::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
+namespace detail {
+	simple_backend::formatting::FormatTable getOCLFormatTable(const core::lang::BasicGenerator& basic);
+}
 
 TargetCodePtr convert(const ProgramPtr& source) {
 
@@ -60,7 +63,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	NodeManager& nodeManager = source->getNodeManager();
 	converter.setNodeManager(&nodeManager);
 
-	OclStmtConvert stmtConverter(converter);
+	OclStmtConvert stmtConverter(converter, detail::getOCLFormatTable(nodeManager.basic));
 	converter.setStmtConverter(&stmtConverter);
 
 	NameManager nameManager;
@@ -79,7 +82,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	return converter.convert(source);
 }
 
-OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
+OclStmtConvert::OclStmtConvert(Converter& conversionContext, const simple_backend::formatting::FormatTable& formats) : simple_backend::StmtConverter(conversionContext, formats) { }
 
 OclFunctionManager::OclFunctionManager(Converter& conversionContext) : FunctionManager(conversionContext) { }
 
@@ -463,6 +466,40 @@ void OclStmtConvert::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		}
 	}
 	StmtConverter::visitDeclarationStmt(ptr);
+}
+
+namespace detail {
+
+	simple_backend::formatting::FormatTable getOCLFormatTable(const core::lang::BasicGenerator& basic) {
+
+		// get basic stuff ...
+		simple_backend::formatting::FormatTable res = simple_backend::formatting::getBasicFormatTable(basic);
+
+		// ... and add OCL operators ...
+
+		NodeManager& manager = basic.getNodeManager();
+		ASTBuilder builder(manager);
+
+		#include "insieme/simple_backend/format_spec_start.inl"
+
+		{
+			TypePtr t = (manager).basic.getUInt4();
+			core::TypeList tList;
+			tList.push_back(t);
+			LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
+			ADD_FORMATTER(lit, { OUT("get_global_id("); VISIT_ARG(0); OUT(")"); });
+		}
+
+	//	ADD_FORMATTER_DETAIL(basic.getGetThreadId(), false, { OUT("isbr_getThreadId("); VISIT_ARG(0); OUT(")"); });
+	//	ADD_FORMATTER_DETAIL(basic.getGetGroupSize(), false, { OUT("isbr_getGroupSize("); VISIT_ARG(0); OUT(")"); });
+
+
+		#include "insieme/simple_backend/format_spec_end.inl"
+
+		return res;
+
+	}
+
 }
 
 } // namespace ocl
