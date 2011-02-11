@@ -70,14 +70,13 @@ __kernel void allMemArg(__constant float* c, __global float* ga, __global int* g
 
 #pragma insieme mark
 __kernel void simpleCalc(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
-    ga[0] = 0;//c[pb] * l[gb[pa]];
+    ga[pa] = c[pb] * l[gb[0]];
 }
 
 
 #pragma insieme mark
 __kernel void getId(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
     uint gid = get_global_id(0);
-
     ga[gid] = gid;
 }
 
