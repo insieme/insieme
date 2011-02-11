@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v1 =  var(struct{_x:= var(array.create.1D( new(vector.init.uniform( var(0.0), 131073)), 1)), x:= var(null), q:= var(array.create.1D( new(vector.init.uniform( var(0.0), 10)), 1)), start:= var(array.create.1D( new(vector.init.uniform( var(0.0), 64)), 1)), elapsed:= var(array.create.1D( new(vector.init.uniform( var(0.0), 64)), 1)), sec:= var(0-1)});
+        decl ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v1 =  new(struct{_x:= new(vector.init.uniform( var(0.0), 131073)), x:= var(null), q:= new(vector.init.uniform( var(0.0), 10)), start:= new(vector.init.uniform( var(0.0), 64)), elapsed:= new(vector.init.uniform( var(0.0), 64)), sec:= var(0-1)});
         decl ref<real<8>> v4 =  var(0.0);
         decl ref<real<8>> v5 =  var(0.0);
         decl ref<real<8>> v6 =  var(0.0);
@@ -35,7 +35,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         decl ref<int<4>> v33 =  var(1);
         decl ref<int<4>> v34 =  var(0);
         decl ref<vector<ref<char>,14>> v35 =  var(undefined(vector<ref<char>,14>));
-        v1.x := [v1._x[0][1]];
+        v1.x := [v1._x[1]];
         printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - EP Benchmark\n", varlist.pack(()));
         sprintf(v35, "%12.0f", varlist.pack((pow(2.0, 25+1))));
         {
@@ -111,19 +111,19 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             v22 := 0+ceil(2*int.lshift(1, 16)-0/1)*1;
         };
         v4 := log(sqrt(fabs(ite(1.0>1.0, fun()return 1.0, fun()return 1.0))));
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v70](int<4> v69){
-            v70.elapsed[0][v69] := 0.0;
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v70](int<4> v69){
+            v70.elapsed[v69] := 0.0;
         }(1);
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v70](int<4> v69){
-            v70.elapsed[0][v69] := 0.0;
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v70](int<4> v69){
+            v70.elapsed[v69] := 0.0;
         }(2);
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v70](int<4> v69){
-            v70.elapsed[0][v69] := 0.0;
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v70](int<4> v69){
+            v70.elapsed[v69] := 0.0;
         }(3);
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v73](int<4> v72){
-            v73.start[0][v72] := [v73]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v73](int<4> v72){
+            v73.start[v72] := [v73]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                 decl ref<real<8>> v75 =  var(0.0);
-                [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
                     gettimeofday([v78], null);
                     if(v77.sec<0) v77.sec := v78.tv_sec else { };
@@ -202,7 +202,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         v12 := 0.0;
         {
             for(decl ref<int<4>> v154 =  var(0) .. 10-1+1 : 1) {
-                v1.q[0][v154] := 0.0;
+                v1.q[v154] := 0.0;
             };
             v22 := 0+ceil(10-1+1-0/1)*1;
         };
@@ -286,10 +286,10 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         };
                         v91 := 1+ceil(100+1-1/1)*1;
                     };
-                    if(0==1) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v73](int<4> v72){
-                        v73.start[0][v72] := [v73]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                    if(0==1) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v73](int<4> v72){
+                        v73.start[v72] := [v73]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 =  var(0.0);
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
                                 gettimeofday([v78], null);
                                 if(v77.sec<0) v77.sec := v78.tv_sec else { };
@@ -330,13 +330,13 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                             v41 := 1+ceil(v37+1-1/1)*1;
                         };
                         v38[0] := v42;
-                    }(2*int.lshift(1, 16), [v84], 1220703125.0, v1._x[0]);
-                    if(0==1) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v98](int<4> v97){
+                    }(2*int.lshift(1, 16), [v84], 1220703125.0, v1._x);
+                    if(0==1) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v98](int<4> v97){
                         decl ref<real<8>> v99 =  var(0.0);
                         decl ref<real<8>> v100 =  var(0.0);
-                        v100 := [v98]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                        v100 := [v98]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 =  var(0.0);
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
                                 gettimeofday([v78], null);
                                 if(v77.sec<0) v77.sec := v78.tv_sec else { };
@@ -344,13 +344,13 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                             }([v75]);
                             return v75;
                         }();
-                        v99 := v100-v98.start[0][v97];
-                        v98.elapsed[0][v97] := v98.elapsed[0][v97]+v99;
+                        v99 := v100-v98.start[v97];
+                        v98.elapsed[v97] := v98.elapsed[v97]+v99;
                     }(3) else { };
-                    if(0==1) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v73](int<4> v72){
-                        v73.start[0][v72] := [v73]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                    if(0==1) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v73](int<4> v72){
+                        v73.start[v72] := [v73]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 =  var(0.0);
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
                                 gettimeofday([v78], null);
                                 if(v77.sec<0) v77.sec := v78.tv_sec else { };
@@ -376,12 +376,12 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         };
                         v91 := 0+ceil(int.lshift(1, 16)-0/1)*1;
                     };
-                    if(0==1) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v98](int<4> v97){
+                    if(0==1) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v98](int<4> v97){
                         decl ref<real<8>> v99 =  var(0.0);
                         decl ref<real<8>> v100 =  var(0.0);
-                        v100 := [v98]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                        v100 := [v98]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 =  var(0.0);
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
                                 gettimeofday([v78], null);
                                 if(v77.sec<0) v77.sec := v78.tv_sec else { };
@@ -389,8 +389,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                             }([v75]);
                             return v75;
                         }();
-                        v99 := v100-v98.start[0][v97];
-                        v98.elapsed[0][v97] := v98.elapsed[0][v97]+v99;
+                        v99 := v100-v98.start[v97];
+                        v98.elapsed[v97] := v98.elapsed[v97]+v99;
                     }(2) else { };
                 };
                 v26 := 1+ceil(v18+1-1/1)*1;
@@ -398,7 +398,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             {
                 {
                     for(decl ref<int<4>> v163 =  var(0) .. 10-1+1 : 1) 
-                        v1.q[0][v163] := v1.q[0][v163]+v94[v163]
+                        v1.q[v163] := v1.q[v163]+v94[v163]
                     ;
                     v91 := 0+ceil(10-1+1-0/1)*1;
                 };
@@ -406,16 +406,16 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         };
         {
             for(decl ref<int<4>> v164 =  var(0) .. 10-1+1 : 1) {
-                v16 := v16+v1.q[0][v164];
+                v16 := v16+v1.q[v164];
             };
             v22 := 0+ceil(10-1+1-0/1)*1;
         };
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v98](int<4> v97){
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v98](int<4> v97){
             decl ref<real<8>> v99 =  var(0.0);
             decl ref<real<8>> v100 =  var(0.0);
-            v100 := [v98]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+            v100 := [v98]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                 decl ref<real<8>> v75 =  var(0.0);
-                [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 =  var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>));
                     gettimeofday([v78], null);
                     if(v77.sec<0) v77.sec := v78.tv_sec else { };
@@ -423,11 +423,11 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 }([v75]);
                 return v75;
             }();
-            v99 := v100-v98.start[0][v97];
-            v98.elapsed[0][v97] := v98.elapsed[0][v97]+v99;
+            v99 := v100-v98.start[v97];
+            v98.elapsed[v97] := v98.elapsed[v97]+v99;
         }(1);
-        v13 := [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-            return v111.elapsed[0][v110];
+        v13 := [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+            return v111.elapsed[v110];
         }(1);
         v27 := 0;
         if(25==24) {
@@ -455,7 +455,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         printf("EP Benchmark Results: \nCPU Time = %10.4f\nN = 2^%5d\nNo. Gaussian Pairs = %15.0f\nSums = %25.15e %25.15e\nCounts:\n", varlist.pack((0.0, 25, v16, v11, v12)));
         {
             for(decl ref<int<4>> v175 =  var(0) .. 10-1+1 : 1) {
-                printf("%3d %15.0f\n", varlist.pack((v175, v1.q[0][v175])));
+                printf("%3d %15.0f\n", varlist.pack((v175, v1.q[v175])));
             };
             v22 := 0+ceil(10-1+1-0/1)*1;
         };
@@ -482,14 +482,14 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             printf("    RAND         = %s\n", varlist.pack((v143)));
         }("EP", 'W', 25+1, 0, 0, v27, v33, v13, v4, "Random numbers generated", v34, "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
         if(0==1) {
-            printf("Total time:     %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-                return v111.elapsed[0][v110];
+            printf("Total time:     %f", varlist.pack(([v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+                return v111.elapsed[v110];
             }(1))));
-            printf("Gaussian pairs: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-                return v111.elapsed[0][v110];
+            printf("Gaussian pairs: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+                return v111.elapsed[v110];
             }(2))));
-            printf("Random numbers: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-                return v111.elapsed[0][v110];
+            printf("Random numbers: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+                return v111.elapsed[v110];
             }(3))));
         } else { };
     }
@@ -501,7 +501,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v1 = ( var(struct{_x:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 131073))), 1))), x:=( var(null)), q:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 10))), 1))), start:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 64))), 1))), elapsed:=( var(array.create.1D(( new(vector.init.uniform(( var(0.0)), 64))), 1))), sec:=( var((CAST<int<4>>(0)-1)))}));
+        decl ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v1 = ( new(struct{_x:=( new(vector.init.uniform(( var(0.0)), 131073))), x:=( var(null)), q:=( new(vector.init.uniform(( var(0.0)), 10))), start:=( new(vector.init.uniform(( var(0.0)), 64))), elapsed:=( new(vector.init.uniform(( var(0.0)), 64))), sec:=( var((CAST<int<4>>(0)-1)))}));
         decl ref<real<8>> v4 = ( var(0.0));
         decl ref<real<8>> v5 = ( var(0.0));
         decl ref<real<8>> v6 = ( var(0.0));
@@ -534,7 +534,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         decl ref<int<4>> v33 = ( var(1));
         decl ref<int<4>> v34 = ( var(0));
         decl ref<vector<ref<char>,14>> v35 = ( var(undefined(vector<ref<char>,14>)));
-        (( *v1).x := [(( *(( *( *v1)._x)[0]))[CAST<uint<4>>(1)])]);
+        (( *v1).x := [(( *( *v1)._x)[CAST<uint<4>>(1)])]);
         printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - EP Benchmark\n", varlist.pack(()));
         sprintf(( *v35), "%12.0f", varlist.pack((pow(2.0, CAST<real<8>>((25+1))))));
         {
@@ -610,19 +610,19 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>(((2*int.lshift(1, 16))-0))/CAST<real<8>>(1))))*1)));
         };
         (v4 := log(sqrt(fabs(ite((1.0>1.0), fun()return 1.0, fun()return 1.0)))));
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v70](int<4> v69){
-            ((( *(( *( *v70).elapsed)[0]))[CAST<uint<4>>(v69)]) := 0.0);
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v70](int<4> v69){
+            ((( *( *v70).elapsed)[CAST<uint<4>>(v69)]) := 0.0);
         }(1);
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v70](int<4> v69){
-            ((( *(( *( *v70).elapsed)[0]))[CAST<uint<4>>(v69)]) := 0.0);
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v70](int<4> v69){
+            ((( *( *v70).elapsed)[CAST<uint<4>>(v69)]) := 0.0);
         }(2);
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v70](int<4> v69){
-            ((( *(( *( *v70).elapsed)[0]))[CAST<uint<4>>(v69)]) := 0.0);
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v70](int<4> v69){
+            ((( *( *v70).elapsed)[CAST<uint<4>>(v69)]) := 0.0);
         }(3);
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v73](int<4> v72){
-            ((( *(( *( *v73).start)[0]))[CAST<uint<4>>(v72)]) := [v73]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v73](int<4> v72){
+            ((( *( *v73).start)[CAST<uint<4>>(v72)]) := [v73]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                 decl ref<real<8>> v75 = ( var(0.0));
-                [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
                     gettimeofday([v78], null);
                     if((( *( *v77).sec)<0)) (( *v77).sec := CAST<int<4>>(( *( *v78).tv_sec))) else { };
@@ -701,7 +701,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         (v12 := 0.0);
         {
             for(decl ref<int<4>> v154 = ( var(0)) .. ((10-1)+1) : 1) {
-                ((( *(( *( *v1).q)[0]))[CAST<uint<4>>(( *v154))]) := 0.0);
+                ((( *( *v1).q)[CAST<uint<4>>(( *v154))]) := 0.0);
             };
             (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((10-1)+1)-0))/CAST<real<8>>(1))))*1)));
         };
@@ -785,10 +785,10 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         };
                         (v91 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((100+1)-1))/CAST<real<8>>(1))))*1)));
                     };
-                    if((0==1)) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v73](int<4> v72){
-                        ((( *(( *( *v73).start)[0]))[CAST<uint<4>>(v72)]) := [v73]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                    if((0==1)) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v73](int<4> v72){
+                        ((( *( *v73).start)[CAST<uint<4>>(v72)]) := [v73]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
                                 gettimeofday([v78], null);
                                 if((( *( *v77).sec)<0)) (( *v77).sec := CAST<int<4>>(( *( *v78).tv_sec))) else { };
@@ -829,13 +829,13 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                             (v41 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v37+1)-1))/CAST<real<8>>(1))))*1)));
                         };
                         ((v38[0]) := ( *v42));
-                    }((2*int.lshift(1, 16)), [v84], 1220703125.0, ( *(( *( *v1)._x)[0])));
-                    if((0==1)) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v98](int<4> v97){
+                    }((2*int.lshift(1, 16)), [v84], 1220703125.0, ( *( *v1)._x));
+                    if((0==1)) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v98](int<4> v97){
                         decl ref<real<8>> v99 = ( var(0.0));
                         decl ref<real<8>> v100 = ( var(0.0));
-                        (v100 := [v98]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                        (v100 := [v98]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
                                 gettimeofday([v78], null);
                                 if((( *( *v77).sec)<0)) (( *v77).sec := CAST<int<4>>(( *( *v78).tv_sec))) else { };
@@ -843,13 +843,13 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                             }([v75]);
                             return ( *v75);
                         }());
-                        (v99 := (( *v100)-( *(( *(( *( *v98).start)[0]))[CAST<uint<4>>(v97)]))));
-                        ((( *(( *( *v98).elapsed)[0]))[CAST<uint<4>>(v97)]) := (( *(( *(( *( *v98).elapsed)[0]))[CAST<uint<4>>(v97)]))+( *v99)));
+                        (v99 := (( *v100)-( *(( *( *v98).start)[CAST<uint<4>>(v97)]))));
+                        ((( *( *v98).elapsed)[CAST<uint<4>>(v97)]) := (( *(( *( *v98).elapsed)[CAST<uint<4>>(v97)]))+( *v99)));
                     }(3) else { };
-                    if((0==1)) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v73](int<4> v72){
-                        ((( *(( *( *v73).start)[0]))[CAST<uint<4>>(v72)]) := [v73]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                    if((0==1)) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v73](int<4> v72){
+                        ((( *( *v73).start)[CAST<uint<4>>(v72)]) := [v73]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
                                 gettimeofday([v78], null);
                                 if((( *( *v77).sec)<0)) (( *v77).sec := CAST<int<4>>(( *( *v78).tv_sec))) else { };
@@ -875,12 +875,12 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                         };
                         (v91 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                     };
-                    if((0==1)) [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v98](int<4> v97){
+                    if((0==1)) [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v98](int<4> v97){
                         decl ref<real<8>> v99 = ( var(0.0));
                         decl ref<real<8>> v100 = ( var(0.0));
-                        (v100 := [v98]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+                        (v100 := [v98]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                            [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                                 decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
                                 gettimeofday([v78], null);
                                 if((( *( *v77).sec)<0)) (( *v77).sec := CAST<int<4>>(( *( *v78).tv_sec))) else { };
@@ -888,8 +888,8 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                             }([v75]);
                             return ( *v75);
                         }());
-                        (v99 := (( *v100)-( *(( *(( *( *v98).start)[0]))[CAST<uint<4>>(v97)]))));
-                        ((( *(( *( *v98).elapsed)[0]))[CAST<uint<4>>(v97)]) := (( *(( *(( *( *v98).elapsed)[0]))[CAST<uint<4>>(v97)]))+( *v99)));
+                        (v99 := (( *v100)-( *(( *( *v98).start)[CAST<uint<4>>(v97)]))));
+                        ((( *( *v98).elapsed)[CAST<uint<4>>(v97)]) := (( *(( *( *v98).elapsed)[CAST<uint<4>>(v97)]))+( *v99)));
                     }(2) else { };
                 }</m>;
                 (v26 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *v18)+1)-1))/CAST<real<8>>(1))))*1)));
@@ -897,7 +897,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             <m id=5>{
                 {
                     for(decl ref<int<4>> v163 = ( var(0)) .. ((10-1)+1) : 1) 
-                        ((( *(( *( *v1).q)[0]))[CAST<uint<4>>(( *v163))]) := (( *(( *(( *( *v1).q)[0]))[CAST<uint<4>>(( *v163))]))+( *(( *v94)[CAST<uint<4>>(( *v163))]))))
+                        ((( *( *v1).q)[CAST<uint<4>>(( *v163))]) := (( *(( *( *v1).q)[CAST<uint<4>>(( *v163))]))+( *(( *v94)[CAST<uint<4>>(( *v163))]))))
                     ;
                     (v91 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((10-1)+1)-0))/CAST<real<8>>(1))))*1)));
                 };
@@ -905,16 +905,16 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         }</m>;
         {
             for(decl ref<int<4>> v164 = ( var(0)) .. ((10-1)+1) : 1) {
-                (v16 := (( *v16)+( *(( *(( *( *v1).q)[0]))[CAST<uint<4>>(( *v164))]))));
+                (v16 := (( *v16)+( *(( *( *v1).q)[CAST<uint<4>>(( *v164))]))));
             };
             (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((10-1)+1)-0))/CAST<real<8>>(1))))*1)));
         };
-        [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v98](int<4> v97){
+        [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v98](int<4> v97){
             decl ref<real<8>> v99 = ( var(0.0));
             decl ref<real<8>> v100 = ( var(0.0));
-            (v100 := [v98]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v74](){
+            (v100 := [v98]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v74](){
                 decl ref<real<8>> v75 = ( var(0.0));
-                [v74]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
+                [v74]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v77](array<ref<real<8>>,1> v76){
                     decl ref<struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>> v78 = ( var(undefined(struct<tv_sec:ref<int<8>>,tv_usec:ref<int<8>>>)));
                     gettimeofday([v78], null);
                     if((( *( *v77).sec)<0)) (( *v77).sec := CAST<int<4>>(( *( *v78).tv_sec))) else { };
@@ -922,11 +922,11 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
                 }([v75]);
                 return ( *v75);
             }());
-            (v99 := (( *v100)-( *(( *(( *( *v98).start)[0]))[CAST<uint<4>>(v97)]))));
-            ((( *(( *( *v98).elapsed)[0]))[CAST<uint<4>>(v97)]) := (( *(( *(( *( *v98).elapsed)[0]))[CAST<uint<4>>(v97)]))+( *v99)));
+            (v99 := (( *v100)-( *(( *( *v98).start)[CAST<uint<4>>(v97)]))));
+            ((( *( *v98).elapsed)[CAST<uint<4>>(v97)]) := (( *(( *( *v98).elapsed)[CAST<uint<4>>(v97)]))+( *v99)));
         }(1);
-        (v13 := [v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-            return ( *(( *(( *( *v111).elapsed)[0]))[CAST<uint<4>>(v110)]));
+        (v13 := [v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+            return ( *(( *( *v111).elapsed)[CAST<uint<4>>(v110)]));
         }(1));
         (v27 := 0);
         if((25==24)) {
@@ -954,7 +954,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
         printf("EP Benchmark Results: \nCPU Time = %10.4f\nN = 2^%5d\nNo. Gaussian Pairs = %15.0f\nSums = %25.15e %25.15e\nCounts:\n", varlist.pack((0.0, 25, ( *v16), ( *v11), ( *v12))));
         {
             for(decl ref<int<4>> v175 = ( var(0)) .. ((10-1)+1) : 1) {
-                printf("%3d %15.0f\n", varlist.pack((( *v175), ( *(( *(( *( *v1).q)[0]))[CAST<uint<4>>(( *v175))])))));
+                printf("%3d %15.0f\n", varlist.pack((( *v175), ( *(( *( *v1).q)[CAST<uint<4>>(( *v175))])))));
             };
             (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((10-1)+1)-0))/CAST<real<8>>(1))))*1)));
         };
@@ -981,14 +981,14 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
             printf("    RAND         = %s\n", varlist.pack((v143)));
         }("EP", 'W', (25+1), 0, 0, ( *v27), ( *v33), ( *v13), ( *v4), "Random numbers generated", ( *v34), "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
         if((0==1)) {
-            printf("Total time:     %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-                return ( *(( *(( *( *v111).elapsed)[0]))[CAST<uint<4>>(v110)]));
+            printf("Total time:     %f", varlist.pack(([v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+                return ( *(( *( *v111).elapsed)[CAST<uint<4>>(v110)]));
             }(1))));
-            printf("Gaussian pairs: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-                return ( *(( *(( *( *v111).elapsed)[0]))[CAST<uint<4>>(v110)]));
+            printf("Gaussian pairs: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+                return ( *(( *( *v111).elapsed)[CAST<uint<4>>(v110)]));
             }(2))));
-            printf("Random numbers: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<array<ref<vector<ref<real<8>>,131073>>,1>>,x:ref<array<ref<real<8>>,1>>,q:ref<array<ref<vector<ref<real<8>>,10>>,1>>,start:ref<array<ref<vector<ref<real<8>>,64>>,1>>,elapsed:ref<array<ref<vector<ref<real<8>>,64>>,1>>,sec:ref<int<4>>>> v111](int<4> v110){
-                return ( *(( *(( *( *v111).elapsed)[0]))[CAST<uint<4>>(v110)]));
+            printf("Random numbers: %f", varlist.pack(([v1]fun[ref<struct<_x:ref<vector<ref<real<8>>,131073>>,x:ref<array<ref<real<8>>,1>>,q:ref<vector<ref<real<8>>,10>>,start:ref<vector<ref<real<8>>,64>>,elapsed:ref<vector<ref<real<8>>,64>>,sec:ref<int<4>>>> v111](int<4> v110){
+                return ( *(( *( *v111).elapsed)[CAST<uint<4>>(v110)]));
             }(3))));
         } else { };
     }

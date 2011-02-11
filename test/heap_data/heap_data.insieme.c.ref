@@ -11,7 +11,7 @@
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    int(* a)[10];
+    int a[10];
     char(* b)[10];
 };
 
@@ -40,7 +40,7 @@ void init(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		for(int i = 0; i < 10; i += 1) {
-			((((((((*var_4).a))[0]))[((unsigned int)((i)))])) = (i));
+			((((((*var_4).a))[((unsigned int)((i)))])) = (i));
 		};
 	}
 }
@@ -75,7 +75,7 @@ int sum(void* _capture) {
 	{
 		int res = 0;
 		for(int i = 0; i < 10; i += 1) {
-			((res) = ((res)+(((((((*var_7).a))[0]))[((unsigned int)((i)))]))));
+			((res) = ((res)+(((((*var_7).a))[((unsigned int)((i)))]))));
 		};
 		return (res);;
 	}
@@ -85,12 +85,11 @@ int sum(void* _capture) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){(calloc(sizeof(int[10]), 1)),
-			(memcpy(malloc(sizeof(char[10])), &((char[10]){}), sizeof(char[10])))
-		});
-		((((var_1).b)) = argv);
-		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))));
-		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, &var_1})))));
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		((((*var_1).b)) = (memcpy(malloc(sizeof(char[10])), &((char[10]){}), sizeof(char[10]))));
+		((((*var_1).b)) = argv);
+		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))));
+		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, var_1})))));
 	}
 }
 

@@ -11,11 +11,11 @@
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    double(* _x)[131073];
+    double _x[131073];
     double* x;
-    double(* q)[10];
-    double(* start)[64];
-    double(* elapsed)[64];
+    double q[10];
+    double start[64];
+    double elapsed[64];
     int sec;
 };
 
@@ -131,7 +131,7 @@ void timer_clear(void* _capture, int n) {
 	struct __insieme_globals* var_70 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((((*var_70).elapsed))[0]))[((unsigned int)(n))])) = 0.0);
+		((((((*var_70).elapsed))[((unsigned int)(n))])) = 0.0);
 	}
 }
 
@@ -222,7 +222,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_73 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((((*var_73).start))[0]))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, var_73})))));
+		((((((*var_73).start))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, var_73})))));
 	}
 }
 
@@ -236,8 +236,8 @@ void timer_stop(void* _capture, int n) {
 		double t = 0.0;
 		double now = 0.0;
 		((now) = elapsed_time(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, var_98})))));
-		((t) = ((now)-(((((((*var_98).start))[0]))[((unsigned int)(n))]))));
-		((((((((*var_98).elapsed))[0]))[((unsigned int)(n))])) = ((((((((*var_98).elapsed))[0]))[((unsigned int)(n))]))+(t)));
+		((t) = ((now)-(((((*var_98).start))[((unsigned int)(n))]))));
+		((((((*var_98).elapsed))[((unsigned int)(n))])) = ((((((*var_98).elapsed))[((unsigned int)(n))]))+(t)));
 	}
 }
 
@@ -266,7 +266,7 @@ double timer_read(void* _capture, int n) {
 	struct __insieme_globals* var_111 = ((struct __insieme_funType_type_7*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		return (((((((*var_111).elapsed))[0]))[((unsigned int)(n))]));;
+		return (((((*var_111).elapsed))[((unsigned int)(n))]));;
 	}
 }
 
@@ -372,13 +372,9 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){(calloc(sizeof(double[131073]), 1)),
-			null,
-			(calloc(sizeof(double[10]), 1)),
-			(calloc(sizeof(double[64]), 1)),
-			(calloc(sizeof(double[64]), 1)),
-			(((int)(0))-1)
-		});
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		((((*var_1).x)) = null);
+		((((*var_1).sec)) = (((int)(0))-1));
 		double Mops = 0.0;
 		double t1 = 0.0;
 		double t2 = 0.0;
@@ -411,7 +407,7 @@ int main(int argc, char** argv) {
 		int nthreads = 1;
 		int verified = 0;
 		char size[14];
-		((((var_1).x)) = &((((((var_1)._x))[0]))[((unsigned int)(1))]));
+		((((*var_1).x)) = &((((*var_1)._x))[((unsigned int)(1))]));
 		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - EP Benchmark\n", 0);
 		sprintf((size), "%12.0f", pow(2.0, ((double)((25+1)))));
 		{
@@ -429,16 +425,16 @@ int main(int argc, char** argv) {
 		((((dum)[((unsigned int)(0))])) = randlc(&((dum)[((unsigned int)(1))]), (((dum)[((unsigned int)(2))]))));
 		{
 			for(int var_150 = 0; var_150 < (2*(1<<16)); var_150 += 1) {
-				((((((var_1).x))[((unsigned int)((var_150)))])) = (((double)(0))-1.0e99));
+				((((((*var_1).x))[((unsigned int)((var_150)))])) = (((double)(0))-1.0e99));
 			};
 			((i) = (0+(((int)(ceil((((double)(((2*(1<<16))-0)))/((double)(1))))))*1)));
 		};
 		((Mops) = log(sqrt(fabs((((1.0>1.0))?(1.0):(1.0))))));
-		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 1);
-		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 2);
-		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 3);
-		timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 1);
-		vranlc(0, &t1, 1220703125.0, (((var_1).x)));
+		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 1);
+		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 2);
+		timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 3);
+		timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 1);
+		vranlc(0, &t1, 1220703125.0, (((*var_1).x)));
 		((t1) = 1220703125.0);
 		{
 			for(int var_153 = 1; var_153 < ((16+1)+1); var_153 += 1) {
@@ -453,7 +449,7 @@ int main(int argc, char** argv) {
 		((sy) = 0.0);
 		{
 			for(int var_154 = 0; var_154 < ((10-1)+1); var_154 += 1) {
-				((((((((var_1).q))[0]))[((unsigned int)((var_154)))])) = 0.0);
+				((((((*var_1).q))[((unsigned int)((var_154)))])) = 0.0);
 			};
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
@@ -494,19 +490,19 @@ int main(int argc, char** argv) {
 						((i) = (1+(((int)(ceil((((double)(((100+1)-1)))/((double)(1))))))*1)));
 					};
 					if((0==1)) {
-						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 3);
+						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 3);
 					};
-					vranlc((2*(1<<16)), &t1, 1220703125.0, (((((var_1)._x))[0])));
+					vranlc((2*(1<<16)), &t1, 1220703125.0, (((*var_1)._x)));
 					if((0==1)) {
-						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 3);
+						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 3);
 					};
 					if((0==1)) {
-						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 2);
+						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 2);
 					};
 					{
 						for(int var_161 = 0; var_161 < (1<<16); var_161 += 1) {
-							((x1) = ((2.0*(((((var_1).x))[((unsigned int)((2*(var_161))))])))-1.0));
-							((x2) = ((2.0*(((((var_1).x))[((unsigned int)(((2*(var_161))+1)))])))-1.0));
+							((x1) = ((2.0*(((((*var_1).x))[((unsigned int)((2*(var_161))))])))-1.0));
+							((x2) = ((2.0*(((((*var_1).x))[((unsigned int)(((2*(var_161))+1)))])))-1.0));
 							((t1) = (((x1)*(x1))+((x2)*(x2))));
 							if(((t1)<=1.0)) {
 								((t2) = sqrt((((((double)(0))-2.0)*log((t1)))/(t1))));
@@ -521,7 +517,7 @@ int main(int argc, char** argv) {
 						((i) = (0+(((int)(ceil((((double)(((1<<16)-0)))/((double)(1))))))*1)));
 					};
 					if((0==1)) {
-						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 2);
+						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 2);
 					};
 				};
 				((k) = (1+(((int)(ceil((((double)((((np)+1)-1)))/((double)(1))))))*1)));
@@ -529,7 +525,7 @@ int main(int argc, char** argv) {
 			{
 				{
 					for(int var_163 = 0; var_163 < ((10-1)+1); var_163 += 1) {
-						((((((((var_1).q))[0]))[((unsigned int)((var_163)))])) = ((((((((var_1).q))[0]))[((unsigned int)((var_163)))]))+(((qq)[((unsigned int)((var_163)))]))));
+						((((((*var_1).q))[((unsigned int)((var_163)))])) = ((((((*var_1).q))[((unsigned int)((var_163)))]))+(((qq)[((unsigned int)((var_163)))]))));
 					};
 					((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 				};
@@ -537,12 +533,12 @@ int main(int argc, char** argv) {
 		};
 		{
 			for(int var_164 = 0; var_164 < ((10-1)+1); var_164 += 1) {
-				((gc) = ((gc)+(((((((var_1).q))[0]))[((unsigned int)((var_164)))]))));
+				((gc) = ((gc)+(((((*var_1).q))[((unsigned int)((var_164)))]))));
 			};
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
-		timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), 1);
-		((tm) = timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 1));
+		timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), 1);
+		((tm) = timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 1));
 		((nit) = 0);
 		if((25==24)) {
 			if(((fabs((((sx)-(((double)(0))-3.247834652034740e3))/(sx)))<=1.0e-8)&&__insieme_supp_9(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_10){0, 0, &sy})))))) {
@@ -569,15 +565,15 @@ int main(int argc, char** argv) {
 		printf("EP Benchmark Results: \nCPU Time = %10.4f\nN = 2^%5d\nNo. Gaussian Pairs = %15.0f\nSums = %25.15e %25.15e\nCounts:\n", 0.0, 25, (gc), (sx), (sy));
 		{
 			for(int var_175 = 0; var_175 < ((10-1)+1); var_175 += 1) {
-				printf("%3d %15.0f\n", (var_175), (((((((var_1).q))[0]))[((unsigned int)((var_175)))])));
+				printf("%3d %15.0f\n", (var_175), (((((*var_1).q))[((unsigned int)((var_175)))])));
 			};
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
 		c_print_results("EP", 'W', (25+1), 0, 0, (nit), (nthreads), (tm), (Mops), "Random numbers generated", (verified), "2.3", "03 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
 		if((0==1)) {
-			printf("Total time:     %f", timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 1));
-			printf("Gaussian pairs: %f", timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 2));
-			printf("Random numbers: %f", timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 3));
+			printf("Total time:     %f", timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 1));
+			printf("Gaussian pairs: %f", timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 2));
+			printf("Random numbers: %f", timer_read(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 3));
 		};
 	}
 }
