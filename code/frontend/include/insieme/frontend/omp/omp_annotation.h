@@ -64,6 +64,7 @@ DEFINE_TYPE(Schedule);
 DEFINE_TYPE(Collapse);
 DEFINE_TYPE(Default);
 DEFINE_TYPE(For);
+DEFINE_TYPE(Single);
 DEFINE_TYPE(Parallel);
 
 /**

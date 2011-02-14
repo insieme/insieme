@@ -62,6 +62,7 @@ class SemaVisitor : public core::AddressVisitor<bool> {
 
 	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
 	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
+	core::NodePtr handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP);
 
 public:
 	SemaVisitor(core::NodeManager& nm) : core::AddressVisitor<bool>(false), nodeMan(nm), build(nm) { }
