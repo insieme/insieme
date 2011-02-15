@@ -29,7 +29,7 @@ void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth) {
 int main(int argc, char* argv[]) {
     char* kernelFile = argc > 1 ? argv[1] : "ocl_kernel.c";
     
-    char* kernelNames[] = { "allMemArg"};//, "simpleCalc", "getId", "getSize", "branch", "access3D", "barriers", "VectorAdd" };
+    char* kernelNames[] = { "allMemArg", "simpleCalc" };//, "getId", "getSize", "branch"};//, "access3D", "barriers", "VectorAdd" };
 
     // set problem sizes
     size_t nGroups = 2;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     hgb = (int*)malloc(sizeof(int) * nElem);
     result = (float*)malloc(sizeof(float) * nElem);
     
-    initHostPtr(hc, height, width, depth, 0.0);
+    initHostPtr(hc, width/nGroups, height/nGroups, depth/nGroups, 0.0);
     initHostPtr(hga, height, width, depth, 1.25);
     initHostPtrInt(hgb, height, width, depth);
     
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
 	buildProgram(program, device, "-DNO_INSIEME");
 	
 	// allocate device memory
-    dc = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * nElem, hc, errCode);
+    dc = clCreateBuffer(context, CL_MEM_READ_ONLY /*| CL_MEM_COPY_HOST_PTR*/, sizeof(float) * nElem, /*hc*/NULL, errCode);
     CLCHECK(_errCode);
     dga = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * nElem, NULL, errCode);
     CLCHECK(_errCode);
@@ -125,11 +125,12 @@ int main(int argc, char* argv[]) {
 	for(size_t i = 0; i < (sizeof(kernelNames)/sizeof(char*)); ++i) {
 
 	    // copy data to mutable arrays
+	    CLCHECK(clEnqueueWriteBuffer(queue, dc, CL_TRUE, 0, sizeof(float) * nElem, hc, 0, NULL, NULL));
 	    CLCHECK(clEnqueueWriteBuffer(queue, dga, CL_TRUE, 0, sizeof(float) * nElem, hga, 0, NULL, NULL));
 	    CLCHECK(clEnqueueWriteBuffer(queue, dgb, CL_TRUE, 0, sizeof(int) * nElem, hgb, 0, NULL, NULL));
 	    
 	    // get kernel
-        printf("Running %s kernel... \n", kernelNames[i]);
+        printf("\nRunning %s kernel... \n", kernelNames[i]);
    	    cl_kernel kernel = clCreateKernel(program, kernelNames[i], errCode);
 	    CLCHECK(_errCode);
 	    

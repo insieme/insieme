@@ -65,12 +65,13 @@ __kernel void privateMemArg(short p) {
 
 #pragma insieme mark
 __kernel void allMemArg(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
-    ga[0] = (float)l[0];
+    ga[0] = (float)gb[0];
 }
 
 #pragma insieme mark
 __kernel void simpleCalc(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
-    ga[pa] = c[pb] * l[gb[0]];
+    l[gb[0]] = 3.3f;
+    ga[pa] = c[1];//l[gb[0]];
 }
 
 
@@ -133,5 +134,33 @@ __kernel void localMem(__constant float* c, __global float* ga, __global int* gb
     barrier(CLK_LOCAL_MEM_FENCE);
 
     ga[gid] = l[gid+1] + inKernelLocal[gid];
+}
+*/
+
+/*
+ * Copyright 1993-2009 NVIDIA Corporation.  All rights reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.
+ * Any use, reproduction, disclosure, or distribution of this software
+ * and related documentation without an express license agreement from
+ * NVIDIA Corporation is strictly prohibited.
+ *
+ */
+/*
+ // OpenCL Kernel Function for element by element vector addition
+__kernel void VectorAdd(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+    // get index into global data array
+    int iGID = get_global_id(0) ;
+    int iNumElements = gb[0]*gb[1]*gb[2];
+
+    // bound check (equivalent to the limit on a 'for' loop for standard/serial C code
+    if (iGID >= iNumElements)
+    {
+        return;
+    }
+
+    // add the vector elements
+    ga[iGID] = c[iGID] + gb[iGID];
 }
 */
