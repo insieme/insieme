@@ -71,7 +71,7 @@ __kernel void allMemArg(__constant float* c, __global float* ga, __global int* g
 #pragma insieme mark
 __kernel void simpleCalc(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
     l[gb[0]] = 3.3f;
-    ga[pa] = c[1];//l[gb[0]];
+    ga[pa] = c[1] * l[gb[0]];
 }
 
 

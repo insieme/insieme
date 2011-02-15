@@ -1,12 +1,4 @@
 // --- Generated Inspire Code ---
-#include <alloca.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <runtime.h>
-#define bool int
-#define true 1
-#define false 0
-#define null 0
 // --- Entry Point ---
 
 // start code fragment :: Definition of constantMemArg //
@@ -48,7 +40,7 @@ __kernel void privateMemArg(short p) {
 // start code fragment :: Definition of allMemArg //
 __kernel void allMemArg(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
-		(((ga[((unsigned int)(0))])) = ((l[((unsigned int)(0))])));
+		(((ga[((unsigned int)(0))])) = ((float)(((gb[((unsigned int)(0))])))));
 	}
 }
 
@@ -57,7 +49,8 @@ __kernel void allMemArg(__global float* c, __global float* ga, __global int* gb,
 // start code fragment :: Definition of simpleCalc //
 __kernel void simpleCalc(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
-		(((ga[((unsigned int)(pa))])) = (((c[((unsigned int)(pb))]))*((l[((unsigned int)(((gb[((unsigned int)(0))]))))]))));
+		(((l[((unsigned int)(((gb[((unsigned int)(0))]))))])) = 3.3f);
+		(((ga[((unsigned int)(pa))])) = (((c[((unsigned int)(1))]))*((l[((unsigned int)(((gb[((unsigned int)(0))]))))]))));
 	}
 }
 
@@ -73,27 +66,18 @@ __kernel void __insieme_supp_0(__global float* c, __global float* ga, __global i
 
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: get_global_size //
-unsigned int get_global_size(unsigned int);
-
-// start code fragment :: Prototype for external function: get_local_size //
-unsigned int get_local_size(unsigned int);
-
-// start code fragment :: Prototype for external function: get_num_groups //
-unsigned int get_num_groups(unsigned int);
-
 // start code fragment :: Definition of __insieme_supp_1 //
 __kernel void __insieme_supp_1(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
-		(((ga[((unsigned int)(0))])) = ((float)(get_global_size(((unsigned int)(0))))));
-		(((ga[((unsigned int)(1))])) = ((float)(get_global_size(((unsigned int)(1))))));
-		(((ga[((unsigned int)(2))])) = ((float)(get_global_size(((unsigned int)(2))))));
-		(((ga[((unsigned int)(3))])) = ((float)(get_local_size(((unsigned int)(0))))));
-		(((ga[((unsigned int)(4))])) = ((float)(get_local_size(((unsigned int)(1))))));
-		(((ga[((unsigned int)(5))])) = ((float)(get_local_size(((unsigned int)(2))))));
-		(((ga[((unsigned int)(6))])) = ((float)(get_num_groups(((unsigned int)(0))))));
-		(((ga[((unsigned int)(7))])) = ((float)(get_num_groups(((unsigned int)(1))))));
-		(((ga[((unsigned int)(8))])) = ((float)(get_num_groups(((unsigned int)(2))))));
+		(((ga[((unsigned int)(0))])) = ((float)((get_global_size(((unsigned int)(0)))))));
+		(((ga[((unsigned int)(1))])) = ((float)((get_global_size(((unsigned int)(1)))))));
+		(((ga[((unsigned int)(2))])) = ((float)((get_global_size(((unsigned int)(2)))))));
+		(((ga[((unsigned int)(3))])) = ((float)((get_local_size(((unsigned int)(0)))))));
+		(((ga[((unsigned int)(4))])) = ((float)((get_local_size(((unsigned int)(1)))))));
+		(((ga[((unsigned int)(5))])) = ((float)((get_local_size(((unsigned int)(2)))))));
+		(((ga[((unsigned int)(6))])) = ((float)((get_num_groups(((unsigned int)(0)))))));
+		(((ga[((unsigned int)(7))])) = ((float)((get_num_groups(((unsigned int)(1)))))));
+		(((ga[((unsigned int)(8))])) = ((float)((get_num_groups(((unsigned int)(2)))))));
 	}
 }
 
@@ -124,13 +108,10 @@ __kernel void __insieme_supp_2(__global float* c, __global float* ga, __global i
 
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: get_local_id //
-unsigned int get_local_id(unsigned int);
-
 // start code fragment :: Definition of __insieme_supp_3 //
 __kernel void __insieme_supp_3(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
-		unsigned int lid = get_local_id(((unsigned int)(0)));
+		unsigned int lid = (get_local_id(((unsigned int)(0))));
 		unsigned int gid = (get_global_id(((unsigned int)(0))));
 		(((l[((unsigned int)((lid)))])) = ((c[((unsigned int)((gid)))])));
 		barrier(CLK_LOCAL_MEM_FENCE);

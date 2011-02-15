@@ -50,8 +50,8 @@ int main(int argc, char* argv[]) {
     hgb = (int*)malloc(sizeof(int) * nElem);
     result = (float*)malloc(sizeof(float) * nElem);
     
-    initHostPtr(hc, width/nGroups, height/nGroups, depth/nGroups, 0.0);
-    initHostPtr(hga, height, width, depth, 1.25);
+    initHostPtr(hc, width/nGroups, height/nGroups, depth/nGroups, 0.0f);
+    initHostPtr(hga, height, width, depth, 1.25f);
     initHostPtrInt(hgb, height, width, depth);
     
     // device pointers
@@ -66,9 +66,9 @@ int main(int argc, char* argv[]) {
 	cl_uint numPlatforms;
 	CLCHECK(clGetPlatformIDs(numEntries, platforms,	&numPlatforms));
 	cl_platform_id platform = platforms[0];
-	if(argc > 1) {
-		cl_uint platformNum = atoi(argv[1]);
-		if(platformNum<0 || platformNum>numPlatforms) { fprintf(stderr, "Invalid platform selection\n"); exit(-1); }
+	if(argc > 2) {
+		cl_uint platformNum = atoi(argv[2]);
+		if(platformNum<0 || platformNum>numPlatforms) { fprintf(stderr, "Invalid platform selection: %i\n", platformNum); exit(-1); }
 		platform = platforms[platformNum];
 	}
 
@@ -78,9 +78,9 @@ int main(int argc, char* argv[]) {
 	cl_uint numDevices;
 	CLCHECK(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, numDevicesMax,	devices, &numDevices));
 	cl_device_id device = devices[0];
-	if(argc > 2) {
-		cl_uint deviceNum = atoi(argv[2]);
-		if(deviceNum<0 || deviceNum>numDevices) { fprintf(stderr, "Invalid device selection\n"); exit(-1); }
+	if(argc > 3) {
+		cl_uint deviceNum = atoi(argv[3]);
+		if(deviceNum<0 || deviceNum>numDevices) { fprintf(stderr, "Invalid device selection: %i\n", deviceNum); exit(-1); }
 		device = devices[deviceNum];
 	}
     
