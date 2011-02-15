@@ -39,6 +39,7 @@
 #include <cassert>
 #include <memory>
 #include <map>
+#include <exception>
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/identifier.h"
@@ -675,7 +676,6 @@ public:
 		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
 };
 
-
 class CallExpr : public Expression {
 	const ExpressionPtr functionExpr;
 	const vector<ExpressionPtr> arguments;
@@ -691,10 +691,16 @@ protected:
 	virtual OptionChildList getChildNodes() const;
 	
 public:
+	class ArgumentOutOfRangeException : public std::exception {
+		virtual const char* what() const throw() {
+			return "CallExpr argument request out of range.";
+		}
+	};
+
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getFunctionExpr() const { return functionExpr; }
-	const ExpressionPtr& getArgument(size_t pos) const { return arguments[pos]; }
+	const ExpressionPtr& getArgument(size_t pos) const;
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
 	// TODO: re-add with proper type inferencing of return type

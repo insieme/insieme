@@ -47,6 +47,12 @@ namespace analysis {
 
 
 bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
 	// check type of node => has to be a call expression
 	if (candidate->getNodeType() != NT_CallExpr) {
 		return false;
@@ -56,6 +62,37 @@ bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
 	return *(static_pointer_cast<const CallExpr>(candidate)->getFunctionExpr()) == *function;
 }
 
+bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
+	// check type of node
+	if (candidate->getNodeType() != NT_RefType) {
+		return false;
+	}
+
+	// check element type
+	return *(static_pointer_cast<const RefType>(candidate)->getElementType()) == *type;
+}
+
+bool isRefOf(const NodePtr& candidate, const NodeType kind) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
+	// check type of node
+	if (candidate->getNodeType() != NT_RefType) {
+		return false;
+	}
+
+	// check element type (kind)
+	return static_pointer_cast<const RefType>(candidate)->getElementType()->getNodeType() == kind;
+}
 
 } // end namespace utils
 } // end namespace core

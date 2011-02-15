@@ -63,13 +63,10 @@ __kernel void simpleCalc(__global float* c, __global float* ga, __global int* gb
 
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: get_global_id //
-unsigned int get_global_id(unsigned int);
-
 // start code fragment :: Definition of __insieme_supp_0 //
 __kernel void __insieme_supp_0(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
-		unsigned int gid = get_global_id(((unsigned int)(0)));
+		unsigned int gid = (get_global_id(((unsigned int)(0))));
 		(((ga[((unsigned int)((gid)))])) = ((float)((gid))));
 	}
 }
@@ -113,16 +110,13 @@ __kernel void branch(__global float* c, __global float* ga, __global int* gb, __
 
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: get_global_id //
-unsigned int get_global_id(unsigned int);
-
 // start code fragment :: Definition of __insieme_supp_2 //
 __kernel void __insieme_supp_2(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		unsigned int gid[3];
-		((((gid)[((unsigned int)(0))])) = get_global_id(((unsigned int)(0))));
-		((((gid)[((unsigned int)(1))])) = get_global_id(((unsigned int)(1))));
-		((((gid)[((unsigned int)(2))])) = get_global_id(((unsigned int)(2))));
+		((((gid)[((unsigned int)(0))])) = (get_global_id(((unsigned int)(0)))));
+		((((gid)[((unsigned int)(1))])) = (get_global_id(((unsigned int)(1)))));
+		((((gid)[((unsigned int)(2))])) = (get_global_id(((unsigned int)(2)))));
 		unsigned int gid3 = (((((((gid)[((unsigned int)(0))]))*((unsigned int)(((gb[((unsigned int)(2))])))))*((unsigned int)(((gb[((unsigned int)(1))])))))+((((gid)[((unsigned int)(1))]))*((unsigned int)(((gb[((unsigned int)(2))]))))))+(((gid)[((unsigned int)(2))])));
 		(((ga[((unsigned int)((gid3)))])) = ((c[((unsigned int)((gid3)))])));
 	}
@@ -133,14 +127,11 @@ __kernel void __insieme_supp_2(__global float* c, __global float* ga, __global i
 // start code fragment :: Prototype for external function: get_local_id //
 unsigned int get_local_id(unsigned int);
 
-// start code fragment :: Prototype for external function: get_global_id //
-unsigned int get_global_id(unsigned int);
-
 // start code fragment :: Definition of __insieme_supp_3 //
 __kernel void __insieme_supp_3(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		unsigned int lid = get_local_id(((unsigned int)(0)));
-		unsigned int gid = get_global_id(((unsigned int)(0)));
+		unsigned int gid = (get_global_id(((unsigned int)(0))));
 		(((l[((unsigned int)((lid)))])) = ((c[((unsigned int)((gid)))])));
 		barrier(CLK_LOCAL_MEM_FENCE);
 		(((ga[((unsigned int)((gid)))])) = ((l[((unsigned int)((lid)))])));

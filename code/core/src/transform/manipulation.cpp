@@ -367,7 +367,11 @@ namespace {
 		});
 
 		// replace arguments with mapped variables
-		for_each(passAsArguments, [&](VariablePtr& v) { v = static_pointer_cast<const Variable>(replacements[v]); });
+		for_each(passAsArguments, [&](VariablePtr& v) { 
+			if(replacements.find(v) != replacements.end()) {
+				v = static_pointer_cast<const Variable>(replacements[v]);
+			}
+		});
 
 		return replaceAll(manager, root, replacements, preservePtrAnnotationsWhenModified);
 	}

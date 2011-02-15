@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v1 =  var(struct{a:= var(0), b:= var(0)});
+        decl ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v1 =  new(struct{a:= var(0), b:= var(0)});
         v1.a := 1;
         v1.b := 2;
         printf("Min: %d\n", varlist.pack((ite(v1.a<v1.b, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v13]()return v13.a, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v11]()return v11.b))));
@@ -16,7 +16,7 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v1 = ( var(struct{a:=( var(0)), b:=( var(0))}));
+        decl ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v1 = ( new(struct{a:=( var(0)), b:=( var(0))}));
         (( *v1).a := 1);
         (( *v1).b := 2);
         printf("Min: %d\n", varlist.pack((ite((( *( *v1).a)<( *( *v1).b)), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v13]()return ( *( *v13).a), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v11]()return ( *( *v11).b)))));

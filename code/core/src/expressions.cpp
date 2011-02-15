@@ -549,6 +549,11 @@ std::ostream& CallExpr::printTo(std::ostream& out) const {
 	return out << *functionExpr << "(" << join(", ", arguments, print<deref<ExpressionPtr>>()) << ")";
 }
 
+const ExpressionPtr& CallExpr::getArgument(size_t pos) const {
+	if(pos >= arguments.size()) throw ArgumentOutOfRangeException();
+	return arguments[pos];
+}
+
 // TODO: re-add with proper result type inference (after everybody has switched to alternative)
 //CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 //	return manager.get(CallExpr(functionExpr, arguments));
@@ -1114,3 +1119,4 @@ MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpr
 MarkerExprPtr MarkerExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id) {
 	return manager.get(MarkerExpr(subExpression, id));
 }
+

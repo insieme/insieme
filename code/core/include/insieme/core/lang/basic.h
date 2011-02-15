@@ -82,6 +82,10 @@ public:
 	BasicGenerator(NodeManager& nm);
 	~BasicGenerator();
 
+	NodeManager& getNodeManager() const {
+		return nm;
+	}
+
 	enum Operator {
 	#define OPERATOR(_id, _str) \
 	_id,

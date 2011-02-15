@@ -50,7 +50,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	NodeManager& nodeManager = source->getNodeManager();
 	converter.setNodeManager(&nodeManager);
 
-	StmtConverter stmtConverter(converter);
+	StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
 	converter.setStmtConverter(&stmtConverter);
 
 	NameManager nameManager;

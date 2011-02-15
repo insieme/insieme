@@ -50,6 +50,9 @@ using namespace insieme::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
+namespace detail {
+	simple_backend::formatting::FormatTable getOCLFormatTable(const core::lang::BasicGenerator& basic);
+}
 
 TargetCodePtr convert(const ProgramPtr& source) {
 
@@ -60,7 +63,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	NodeManager& nodeManager = source->getNodeManager();
 	converter.setNodeManager(&nodeManager);
 
-	OclStmtConvert stmtConverter(converter);
+	OclStmtConvert stmtConverter(converter, detail::getOCLFormatTable(nodeManager.basic));
 	converter.setStmtConverter(&stmtConverter);
 
 	NameManager nameManager;
@@ -79,7 +82,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	return converter.convert(source);
 }
 
-OclStmtConvert::OclStmtConvert(Converter& conversionContext) : simple_backend::StmtConverter(conversionContext) { }
+OclStmtConvert::OclStmtConvert(Converter& conversionContext, const simple_backend::formatting::FormatTable& formats) : simple_backend::StmtConverter(conversionContext, formats) { }
 
 OclFunctionManager::OclFunctionManager(Converter& conversionContext) : FunctionManager(conversionContext) { }
 
@@ -463,6 +466,48 @@ void OclStmtConvert::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		}
 	}
 	StmtConverter::visitDeclarationStmt(ptr);
+}
+
+namespace detail {
+	simple_backend::formatting::FormatTable getOCLFormatTable(const core::lang::BasicGenerator& basic) {
+
+	// get basic stuff ...
+	simple_backend::formatting::FormatTable res = simple_backend::formatting::getBasicFormatTable(basic);
+
+	// ... and add OCL operators ...
+	NodeManager& manager = basic.getNodeManager();
+	ASTBuilder builder(manager);
+
+	#include "insieme/simple_backend/format_spec_start.mac"
+
+	{
+		TypePtr t = (manager).basic.getUInt4();
+		core::TypeList tList;
+		tList.push_back(t);
+		TypePtr t1 = (manager).basic.getInt4();
+		core::TypeList tList1;
+		LiteralPtr lit1 = builder.literal(builder.functionType(tList, t), "get_global_id");
+		LiteralPtr lit2 = builder.literal(builder.functionType(tList, t), "get_local_id");
+		LiteralPtr lit3 = builder.literal(builder.functionType(tList, t), "get_global_size");
+		LiteralPtr lit4 = builder.literal(builder.functionType(tList, t), "get_local_size");
+		LiteralPtr lit5 = builder.literal(builder.functionType(tList, t), "get_num_groups");
+		// FIXME: check for the prototype of this function.. why int get...()
+		LiteralPtr lit6 = builder.literal(builder.functionType(tList1, t1), "get_global_offset");
+		// FIXME: check for the prototype of this function.. why int get...() 
+		LiteralPtr lit7 = builder.literal(builder.functionType(tList1, t1), "get_work_dimension");
+		ADD_FORMATTER(lit1, { OUT("get_global_id("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(lit2, { OUT("get_local_id("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(lit3, { OUT("get_global_size("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(lit4, { OUT("get_local_size("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(lit5, { OUT("get_num_groups("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(lit6, { OUT("get_global_offset(");	VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(lit7, { OUT("get_work_dimension(");	VISIT_ARG(0); OUT(")"); });	
+	}
+
+	#include "insieme/simple_backend/format_spec_end.mac"
+	return res;
+}
+
 }
 
 } // namespace ocl

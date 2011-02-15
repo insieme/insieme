@@ -1,0 +1,14 @@
+
+
+#define OUT(Literal) cStr << Literal
+#define ARG(N) insieme::simple_backend::formatting::getArgument(call, N)
+#define VISIT_ARG(N) insieme::simple_backend::formatting::visitArgument(converter, call, N)
+#define ADD_FORMATTER_DETAIL(Literal, Brackets, FORMAT) \
+			res.insert(std::make_pair(Literal, insieme::simple_backend::formatting::make_formatter([&basic](StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) { \
+				if (Brackets) OUT("("); \
+				FORMAT \
+				if (Brackets) OUT(")"); \
+			} )))
+
+#define ADD_FORMATTER(Literal, FORMAT) \
+			ADD_FORMATTER_DETAIL(Literal, true, FORMAT)
