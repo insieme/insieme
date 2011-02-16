@@ -286,13 +286,18 @@ LITERAL(ArrayLengthND, "array.length.ND", "(array<'elem,#n>) -> vector<uint<8>,#
 LITERAL(ArraySubscript1D, "array.subscript.1D", "(array<'elem,1>, uint<8>) -> 'elem")
 LITERAL(ArraySubscriptND, "array.subscript.ND", "(array<'elem,#n>, vector<uint<8>,#a>) -> 'elem")
 
+LITERAL(ArrayRefElem1D, "array.ref.elem.1D", "(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
+LITERAL(ArrayRefElemND, "array.ref.elem.ND", "(ref<array<'elem,#n>>, vector<uint<8>,#a>) -> ref<'elem>")
+
+
 // function to copy an array 1D of type t and size m to an 1D array of type ref<vector<t,n> and size m/n
 LITERAL(ArrayElemToVec, "array.elem.to.vec", "(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
-GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction, VectorChgElem, VectorChgSingleElem)
+GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction)
 
+// deprecated
 LITERAL(VectorSubscript,      "vector.subscript",       "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform,    "vector.init.uniform",    "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitUndefined,  "vector.init.undefined",  "(intTypeParam<#a>) -> vector<'elem,#a>")
@@ -300,13 +305,21 @@ LITERAL(VectorPointwise,      "vector.pointwise",       "(('elem, 'elem) -> 'res
 LITERAL(VectorPointwiseUnary, "vector.pointwise.unary", "(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorReduction,      "vector.reduction",       "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        "vector.permute",         "(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
-// unused at the moment
-LITERAL(VectorChgElem,        "vector.chg.elem",        "(vector<'elem,#l>, vector<uint<#a>,#m>, vector<'elem,#m>) -> vector<'elem,#l>")
-LITERAL(VectorChgSingleElem,  "vector.chg.single.elem", "(vector<'elem,#l>, uint<#a>, 'elem) -> vector<'elem,#l>")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
-GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript)
+GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND)
+
+// Struct and Unions --------------------------------------------------------------------------------------------------------------
+// first argument has to be a struct or a union, 'b has to be the type of the requested member
+LITERAL(CompositeRefElem,      "composite.ref.elem",      "(ref<'a>, identifier, type<'b>) -> ref<'b>")
+LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
+
+// Tuple --------------------------------------------------------------------------------------------------------------
+// first argument has to be a tuple or a union, 'b has to be the type of the requested member
+LITERAL(TupleRefElem,      "tuple.ref.elem",      "(ref<'a>, uint<8>, type<'b>) -> ref<'b>")
+LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b")
+
 
 // Accuracy defining functions
 
