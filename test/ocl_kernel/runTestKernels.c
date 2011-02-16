@@ -27,11 +27,13 @@ void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth) {
 }
 
 int main(int argc, char* argv[]) {
-    char* kernelNames[] = { "allMemArg", "simpleCalc", "getId", "getSize", "branch", "access3D", "barriers" };
+    char* kernelFile = argc > 1 ? argv[1] : "ocl_kernel.c";
+    
+    char* kernelNames[] = { "allMemArg", "simpleCalc" };//, "getId", "getSize", "branch"};//, "access3D", "barriers", "VectorAdd" };
 
     // set problem sizes
-    size_t nGroups = 4;
-    size_t width = 32 * nGroups;
+    size_t nGroups = 2;
+    size_t width = 8 * nGroups;
     size_t height = 4 * nGroups;
     size_t depth = 2 * nGroups;
     size_t nElem = width*height*depth;
@@ -48,8 +50,8 @@ int main(int argc, char* argv[]) {
     hgb = (int*)malloc(sizeof(int) * nElem);
     result = (float*)malloc(sizeof(float) * nElem);
     
-    initHostPtr(hc, height, width, depth, 0.0);
-    initHostPtr(hga, height, width, depth, 1.25);
+    initHostPtr(hc, width/nGroups, height/nGroups, depth/nGroups, 0.0f);
+    initHostPtr(hga, height, width, depth, 1.25f);
     initHostPtrInt(hgb, height, width, depth);
     
     // device pointers
@@ -64,9 +66,9 @@ int main(int argc, char* argv[]) {
 	cl_uint numPlatforms;
 	CLCHECK(clGetPlatformIDs(numEntries, platforms,	&numPlatforms));
 	cl_platform_id platform = platforms[0];
-	if(argc > 1) {
-		cl_uint platformNum = atoi(argv[1]);
-		if(platformNum<0 || platformNum>numPlatforms) { fprintf(stderr, "Invalid platform selection\n"); exit(-1); }
+	if(argc > 2) {
+		cl_uint platformNum = atoi(argv[2]);
+		if(platformNum<0 || platformNum>numPlatforms) { fprintf(stderr, "Invalid platform selection: %i\n", platformNum); exit(-1); }
 		platform = platforms[platformNum];
 	}
 
@@ -76,9 +78,9 @@ int main(int argc, char* argv[]) {
 	cl_uint numDevices;
 	CLCHECK(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, numDevicesMax,	devices, &numDevices));
 	cl_device_id device = devices[0];
-	if(argc > 2) {
-		cl_uint deviceNum = atoi(argv[2]);
-		if(deviceNum<0 || deviceNum>numDevices) { fprintf(stderr, "Invalid device selection\n"); exit(-1); }
+	if(argc > 3) {
+		cl_uint deviceNum = atoi(argv[3]);
+		if(deviceNum<0 || deviceNum>numDevices) { fprintf(stderr, "Invalid device selection: %i\n", deviceNum); exit(-1); }
 		device = devices[deviceNum];
 	}
     
@@ -104,7 +106,7 @@ int main(int argc, char* argv[]) {
 	CLCHECK(_errCode);
 	
 	// create the compute program
-	char *code = readFile(KERNEL);
+	char *code = readFile(kernelFile);
 	cl_program program = clCreateProgramWithSource(context, 1, (void*)&code, (intptr_t)NULL, errCode);
 	CLCHECK(_errCode);
 	free(code);	
@@ -113,7 +115,7 @@ int main(int argc, char* argv[]) {
 	buildProgram(program, device, "-DNO_INSIEME");
 	
 	// allocate device memory
-    dc = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * nElem, hc, errCode);
+    dc = clCreateBuffer(context, CL_MEM_READ_ONLY /*| CL_MEM_COPY_HOST_PTR*/, sizeof(float) * nElem, /*hc*/NULL, errCode);
     CLCHECK(_errCode);
     dga = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * nElem, NULL, errCode);
     CLCHECK(_errCode);
@@ -123,11 +125,12 @@ int main(int argc, char* argv[]) {
 	for(size_t i = 0; i < (sizeof(kernelNames)/sizeof(char*)); ++i) {
 
 	    // copy data to mutable arrays
+	    CLCHECK(clEnqueueWriteBuffer(queue, dc, CL_TRUE, 0, sizeof(float) * nElem, hc, 0, NULL, NULL));
 	    CLCHECK(clEnqueueWriteBuffer(queue, dga, CL_TRUE, 0, sizeof(float) * nElem, hga, 0, NULL, NULL));
 	    CLCHECK(clEnqueueWriteBuffer(queue, dgb, CL_TRUE, 0, sizeof(int) * nElem, hgb, 0, NULL, NULL));
 	    
 	    // get kernel
-        printf("Running %s kernel... \n", kernelNames[i]);
+        printf("\nRunning %s kernel... \n", kernelNames[i]);
    	    cl_kernel kernel = clCreateKernel(program, kernelNames[i], errCode);
 	    CLCHECK(_errCode);
 	    
