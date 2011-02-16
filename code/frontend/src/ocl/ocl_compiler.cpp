@@ -114,20 +114,6 @@ core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionP
 }
 
 core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr idx){
-/*    switch(opl) {
-    case OPL_GLOBAL :
-        localRangeUsed = true;
-        return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), builder.callExpr(BASIC.getGetThreadId(), idx),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(localRange, idx),
-                builder.callExpr(BASIC.getGetThreadId(), idx)));
-    case OPL_GROUP :
-        return builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), idx);
-    //case OPL_LOCAL :
-    default:
-        return builder.callExpr(//BASIC.getUInt4(), BASIC.getGetThreadId(), idx);
-                BASIC.getUInt4(), buildGetId(opl), idx);
-    }*/
-
     // construct local variables
     core::VariablePtr idxVar = builder.variable(BASIC.getUInt4());
     core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
@@ -295,11 +281,6 @@ private:
     core::CallExprPtr resolveNative(const string& name, size_t preambleLength, const core::TypePtr& type,
             const core::ExpressionPtr accuracyFct,const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
-/* moved to KernelMapper::resolveElement
-        // transform arguments
-        for_each(args, [&](core::ExpressionPtr arg){
-            arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
-        });*/
 
         core::LiteralPtr literal;
         core::FunctionTypePtr fType = dynamic_pointer_cast<const core::FunctionType>(type); // default (=scalar) case
@@ -350,12 +331,6 @@ private:
     core::CastExprPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
 
-/* moved to KernelMapper::resolveElement
-        // transform arguments
-        for_each(args, [&](core::ExpressionPtr arg){
-            arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
-        });
-*/
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
             return builder.castExpr(ftype->getReturnType(), args.at(0));
         }
@@ -372,16 +347,16 @@ public:
     : builder(astBuilder), kd(data) { };
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
-/*
+
+    // stopp recursion at typpe level
     if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
         return element;//->substitute(builder.getNodeManager(), *this);
     }
-*/
+
         if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(element)){
 //            std::cout << "found a call " << *call << std::endl;
 
             call = core::static_pointer_cast<const core::CallExpr>(call->substitute(builder.getNodeManager(), *this));
-            std::cout << "new call " << *call << std::endl;
             const core::ExpressionPtr& fun = call->getFunctionExpr();
             vector<core::ExpressionPtr> args = call->getArguments();
 
@@ -1010,7 +985,7 @@ public:
                     newFunc->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
                     if(cName)
-                        newFunc->addAnnotation(cName);
+                        newFunc->getLambda()->addAnnotation(cName);
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);
@@ -1028,15 +1003,6 @@ public:
                 }
             );*/
 
-  //          newFuncType = func->substitute(*builder.getNodeManager(), kernelMapper);
-  //          core::FunctionTypePtr funcTy = builder.functionType( builder.tupleType(elemTy), retTy);
-
-
-            //add three parallel statements for the localRange
-//            core::JobExprPtr localZjob = builder.jobExpr(body);
-/*            core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, params, localZjob);
-
-            return newFunc;*/
         }
 
         return element->substitute(builder.getNodeManager(), *this);
