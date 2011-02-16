@@ -51,6 +51,8 @@
 
 #include "insieme/analysis/cfg.h"
 
+#include "insieme/transform/ir_cleanup.h"
+
 #include "insieme/c_info/naming.h"
 
 #include "insieme/utils/container_utils.h"
@@ -241,6 +243,28 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			}
+
+			// do some cleanup
+			if (CommandLineOptions::Cleanup) {
+				LOG(INFO) << "================================ IR CLEANUP =====================================";
+				insieme::utils::Timer timer("ir.cleanup");
+				program = static_pointer_cast<const core::Program>(insieme::transform::cleanup(program));
+				timer.stop();
+				LOG(INFO) << timer;
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+				// IR statistics
+				LOG(INFO) << "============================ IR Statistics ======================================";
+				LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+				// check again
+				LOG(INFO) << "============================= Checking IR =======================================";
+				if(CommandLineOptions::CheckSema) {
+					checker();
+				}
+			}
+
 		}
 		if(!CommandLineOptions::LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
@@ -281,7 +305,7 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
 
             if(!CommandLineOptions::Output.empty()) {
-                insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+                insieme::backend::Rewriter::writeBack(program, insieme::backend::ocl::convert(program), CommandLineOptions::Output);
             } else {
                 auto converted = insieme::backend::ocl::convert(program);
                 LOG(INFO) << *converted;
@@ -295,7 +319,7 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "========================== Converting to C++ =================================";
 
 			if(!CommandLineOptions::Output.empty()) {
-				insieme::backend::Rewriter::writeBack(program, CommandLineOptions::Output);
+				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
 			} else {
 				auto converted = insieme::simple_backend::convert(program);
 				LOG(INFO) << *converted;

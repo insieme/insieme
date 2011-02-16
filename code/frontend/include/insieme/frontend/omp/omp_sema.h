@@ -58,9 +58,11 @@ class SemaVisitor : public core::AddressVisitor<bool> {
 	bool visitNode(const core::NodeAddress& node);
 	bool visitCallExpr(const core::CallExprAddress& callExp);
 	bool visitMarkerStmt(const core::MarkerStmtAddress& mark);
+	bool visitMarkerExpr(const core::MarkerExprAddress& mark);
 
 	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
 	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
+	core::NodePtr handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP);
 
 public:
 	SemaVisitor(core::NodeManager& nm) : core::AddressVisitor<bool>(false), nodeMan(nm), build(nm) { }

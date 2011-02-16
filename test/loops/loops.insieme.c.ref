@@ -45,8 +45,8 @@ int func(int k) {
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){10
-		});
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		((((*var_1).N)) = 10);
 		int a = 10;
 		for(int idx = 0; idx < (a); idx += 1) {
 			printf("idx=%d", (idx));
@@ -54,16 +54,16 @@ int main(int argc, char** argv) {
 		for(int idx = (((int)(0))-(a)); idx < ((((int)(0))-0)+1); idx += 1) {
 			printf("idx=%d", (((int)(0))-(idx)));
 		};
-		for(int idx = (((int)(0))-(((var_1).N))); idx < (((int)(0))-0); idx += 1) {
+		for(int idx = (((int)(0))-(((*var_1).N))); idx < (((int)(0))-0); idx += 1) {
 			printf("idx=%d", (((int)(0))-(idx)));
 		};
 		{
 			int idx = (a);
-			while(((((var_1).N))>0)) {
+			while(((((*var_1).N))>0)) {
 				{
 					printf("idx=%d", (a));
 				};
-				((((var_1).N))--);
+				((((*var_1).N))--);
 			};
 		};
 		{

@@ -78,6 +78,12 @@ class VariableManager;
 class ConvertedCode : public TargetCode {
 
 	/**
+	 * A special list of headers to be included. This fragment will always be printed
+	 * before every other fragment.
+	 */
+	std::vector<string> headers;
+
+	/**
 	 * A map of code fragments this converted code is consisting of.
 	 */
 	utils::map::PointerMap<ExpressionPtr, CodePtr> codeFragments;
@@ -93,6 +99,11 @@ public:
 	 * This method allows to print the result to an output stream.
 	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	/**
+	 * Adds a header line to the generated code.
+	 */
+	void addHeaderLine(const string& line);
 
 	/**
 	 * Adds a code fragment to the internally maintained list of fragments.
@@ -248,7 +259,7 @@ public:
 
 
 
-namespace detail {
+namespace formatting {
 
 	/**
 	 * This class allows the conversion visitor to use special formats when printing the call of a specific function.
@@ -322,11 +333,30 @@ namespace detail {
 	}
 
 	// define a type for handling formatter
-	//typedef std::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
-	typedef std::unordered_map<string, FormatterPtr> FormatTable;
+	typedef utils::map::PointerMap<LiteralPtr, FormatterPtr> FormatTable;
 
-	// a forward declaration for a method assembling formater tables
-	FormatTable initFormatTable(const lang::BasicGenerator&);
+	/**
+	 * A utility function to obtain the n-th argument within the given call expression.
+	 *
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the requested argument
+	 * @return the requested argument or a NULL pointer in case there is no such argument
+	 */
+	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n);
+
+	/**
+	 * A utility function visiting the n-th argument of a call expression.
+	 *
+	 * @param converter the converter to be used for the actual conversion
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
+	 */
+	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n);
+
+	/**
+	 * Creates a list of formatters for basic C operators.
+	 */
+	FormatTable getBasicFormatTable(const lang::BasicGenerator& basic);
 
 }
 
@@ -349,19 +379,11 @@ private:
 	/**
 	 * The table handling operator specific formatting rules.
 	 */
-	detail::FormatTable formats;
-
-//	template<typename Functor>
-//	void runWithCodeStream(CodeStream& cs, Functor f) {
-//		CodeStream& oldCodeStream = cStr;
-//		cStr = cs;
-//		f();
-//		cs = oldCodeStream;
-//	}
+	const formatting::FormatTable formats;
 
 public:
 
-	StmtConverter(Converter& context) : ASTVisitor<>(false), cc(context), formats(detail::initFormatTable(context.getLangBasic())) { };
+	StmtConverter(Converter& context, const formatting::FormatTable& formats) : ASTVisitor<>(false), cc(context), formats(formats) { };
 
 	CodePtr getCode() const {
 		return defCodePtr;
@@ -374,6 +396,11 @@ public:
 	Converter& getConversionContext() const {
 		return cc;
 	}
+
+	/**
+	 * Requests this statement converter to add the necessary headers to the resulting code.
+	 */
+	virtual void appendHeaders(ConvertedCode* converted);
 
 	/**
 	 * Instructs this statement convert to process the given IR node and append

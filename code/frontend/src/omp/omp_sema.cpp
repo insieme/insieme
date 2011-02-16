@@ -86,30 +86,48 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 	const StatementAddress stmt = static_address_cast<const Statement>(mark.getAddressOfChild(0));
 	//LOG(INFO) << "marker on: \n" << *stmt;
 	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
-		LOG(INFO) << "omp annotation(s) on: \n" << *stmt;
-		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn){
+		LOG(INFO) << "omp statement annotation(s) on: \n" << *stmt;
+		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn) {
 			LOG(INFO) << "annotation: " << *subAnn;
 			NodePtr newNode;
 			if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
 				newNode = handleParallel(stmt, parAnn);
 			} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
 				newNode = handleFor(stmt, forAnn);
-			} else if(auto barrierAnn = std::dynamic_pointer_cast<Barrier>(subAnn)) {
-//				auto parent = mark.getParentNodeAddress();
-//				CompoundStmtPtr&& surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
-//				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
-//				StatementList replacements;
-//				replacements.push_back(build.barrier());
-//				replacements.push_back(mark->getSubStatement());
-//				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements, true));
-				return;
-			}
-			else assert(0 && "Unhandled OMP annotation.");
+			} else if(auto singleAnn = std::dynamic_pointer_cast<Single>(subAnn)) {
+				newNode = handleSingle(stmt, singleAnn);
+			} 
+			else assert(0 && "Unhandled OMP statement annotation.");
 			//LOG(INFO) << "Pre replace: " << *mark.getRootNode();
 			//LOG(INFO) << "Replace: " << *mark;
 			//LOG(INFO) << "   with: " << *newNode;
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, newNode, true));
 			//LOG(INFO) << "Post replace: " << replacement;
+		});
+		return false;
+	}
+	return true;
+}
+
+bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
+	const ExpressionAddress expr = static_address_cast<const Expression>(mark.getAddressOfChild(0));
+	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
+		LOG(INFO) << "omp expression annotation(s) on: \n" << *expr;
+		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn) {
+			LOG(INFO) << "annotation: " << *subAnn;
+
+			if(auto barrierAnn = std::dynamic_pointer_cast<Barrier>(subAnn)) {
+				auto parent = mark.getParentAddress();
+				CompoundStmtAddress surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
+				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
+				StatementList replacements;
+				replacements.push_back(build.barrier());
+				replacements.push_back(mark->getSubExpression());
+				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements, true));
+			} else if(auto singleAnn = std::dynamic_pointer_cast<Single>(subAnn)) {
+				replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, handleSingle(expr, singleAnn), true));
+			} 
+			else assert(0 && "Unhandled OMP expression annotation.");
 		});
 		return false;
 	}
@@ -142,6 +160,20 @@ NodePtr SemaVisitor::handleFor(const core::StatementAddress& stmt, const ForPtr&
 		replacements.push_back(build.barrier());
 	}
 	//LOG(INFO) << "for stmtNode:\n" << stmtNode;
+	return build.compoundStmt(replacements);
+}
+
+NodePtr SemaVisitor::handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP) {
+	auto stmtNode = stmt.getAddressedNode();
+	StatementList replacements;
+	// implement single as pfor with 1 item
+	auto pforLambdaParams = toVector(build.variable(nodeMan.basic.getInt4()));
+	auto body = transform::extractLambda(nodeMan, stmtNode, true, pforLambdaParams);
+	auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
+	replacements.push_back(pfor);
+	if(!singleP->hasNoWait()) {
+		replacements.push_back(build.barrier());
+	}
 	return build.compoundStmt(replacements);
 }
 

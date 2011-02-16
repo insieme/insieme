@@ -43,6 +43,7 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/iterator_utils.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -394,6 +395,79 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 }
 
+
+namespace {
+
+	/**
+	 * Prepares the loop body of a pfor loop for being processed. If possible, the loop body will be in-lined.
+	 */
+	core::StatementPtr prepareLoopBody(ASTBuilder& builder, const core::ExpressionPtr& body, const core::VariablePtr& inductionVar) {
+
+		// verify type of loop body
+		assert(body->getType()->getNodeType() == NT_FunctionType);
+
+		// to be inlined:
+		//		- a simple function
+		//		- a capture-init/function combination based on variables only
+
+		// handle simple function
+		if (body->getNodeType() == NT_LambdaExpr) {
+			LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(body);
+			if (!lambda->isRecursive()) {
+
+				// get body and replace parameter with induction variable
+				const VariablePtr& parameter = lambda->getParameterList()[0];
+				const NodePtr inlined = transform::replaceAll(builder.getNodeManager(), lambda->getBody(), parameter, inductionVar);
+				return static_pointer_cast<const Statement>(inlined);
+			}
+
+		} else if (body->getNodeType() == NT_CaptureInitExpr) {
+
+			CaptureInitExprPtr capture = static_pointer_cast<const CaptureInitExpr>(body);
+			if (capture->getLambda()->getNodeType() == NT_LambdaExpr) {
+
+				LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(capture->getLambda());
+				if (!lambda->isRecursive()) {
+
+					// collect initialization variables
+					utils::map::PointerMap<VariablePtr, VariablePtr> varMap;
+
+					// add function parameter (there is only one of those)
+					varMap.insert(std::make_pair(lambda->getParameterList()[0], inductionVar));
+
+					const CaptureInitExpr::Values& values = capture->getValues();
+					const Lambda::CaptureList& params = lambda->getCaptureList();
+
+					bool valid = values.size() == params.size();
+					// add values - param mapping
+					for (unsigned i=0; valid && i<values.size(); i++) {
+
+						// test value => has to be a variable
+						valid = valid && values[i]->getNodeType() == NT_Variable;
+						if (valid) {
+							varMap.insert(std::make_pair(params[i], static_pointer_cast<const Variable>(values[i])));
+						}
+					}
+
+					// replace all parameters by their value and return result
+					if (valid) {
+						const NodePtr inlined = transform::replaceVars(builder.getNodeManager(), lambda->getBody(), varMap);
+						return static_pointer_cast<const Statement>(inlined);
+					}
+				}
+			}
+
+		}
+
+		// handle capture initialization nodes + function
+
+
+		// default handling => just call loop body function
+		return builder.callExpr(body, inductionVar);
+	}
+}
+
+
 JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& body) {
 
 	// try lookup ..
@@ -411,7 +485,6 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 
 	// collect variables to be captured
 	vector<core::VariablePtr> varList = getVariablesToBeCaptured(body);
-
 
 	// create the capture struct
 	CodePtr captureStruct = std::make_shared<CodeFragment>("capture-struct for pfor-body " + name);
@@ -436,19 +509,38 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 
 	ASTBuilder builder(body->getNodeManager());
 
-	// TODO: improve this implementation by inlining the function body
+	// create function realizing the pfor-loop body capable of iterating over a range
 	funStream << "void " << name << "(const isbr_PForRange range) {" << CodeStream::indR << "\n";
 
 		// extract captured variables
+		NodeManager& manager = body->getNodeManager();
+		VariableManager& varManager = cc.getVariableManager();
+		utils::map::PointerMap<core::VariablePtr, core::VariablePtr> captureMap;
 		funStream << "// ----- captured variables -----\n";
 		for_each(varList, [&](const core::VariablePtr& var) {
+
+			// get local variable
+			core::VariablePtr localVar = builder.variable(var->getType());
+			captureMap.insert(std::make_pair(var, localVar));
+
+			// register location info for new variable
+			VariableManager::VariableInfo info;
+			info.location = VariableManager::HEAP;
+			varManager.addInfo(localVar, info);
+
+
 			string varName = cc.getNameManager().getName(var);
-			funStream << cc.getTypeManager().formatParamter(function, var->getType(), varName, false);
+			string localName = cc.getNameManager().getName(localVar);
+			funStream << cc.getTypeManager().formatParamter(function, var->getType(), localName, false);
 			funStream << " = ((" << structName << "*)(range.context))->" << varName << ";\n";
 		});
 
+
+		// replace captured variables within body expression
+		ExpressionPtr loopBody = static_pointer_cast<const core::Expression>(transform::replaceVars(manager, body, captureMap));
+
 		// add for-loop
-		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(body->getType())->getArgumentTypes()[0]);
+		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getArgumentTypes()[0]);
 		cc.getNameManager().setName(inductionVar, "__it");
 
 		funStream << "\n// ----- process iterations -----\n";
@@ -456,8 +548,8 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 		funStream << cc.getTypeManager().getTypeName(function, inductionVar->getType(), true);
 		funStream << " __it = range.start; __it<range.end; __it+=range.step) {" << CodeStream::indR << "\n";
 
-			ExpressionPtr call = builder.callExpr(body, inductionVar);
-			cc.getStmtConverter().convert(call, function);
+			// add loop body
+			cc.getStmtConverter().convert(prepareLoopBody(builder, loopBody, inductionVar), function);
 			funStream << ";";
 
 		funStream << CodeStream::indL << "\n";

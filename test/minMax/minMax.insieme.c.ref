@@ -21,13 +21,13 @@ int printf(char*, ...);
 // start code fragment :: Definition of main //
 int main() {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){0,
-			0
-		});
-		((((var_1).a)) = 1);
-		((((var_1).b)) = 2);
-		printf("Min: %d\n", ((((((var_1).a))<(((var_1).b))))?((((var_1).a))):((((var_1).b)))));
-		printf("Max: %d\n", ((((((var_1).a))>(((var_1).b))))?((((var_1).a))):((((var_1).b)))));
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		((((*var_1).a)) = 0);
+		((((*var_1).b)) = 0);
+		((((*var_1).a)) = 1);
+		((((*var_1).b)) = 2);
+		printf("Min: %d\n", ((((((*var_1).a))<(((*var_1).b))))?((((*var_1).a))):((((*var_1).b)))));
+		printf("Max: %d\n", ((((((*var_1).a))>(((*var_1).b))))?((((*var_1).a))):((((*var_1).b)))));
 	}
 }
 

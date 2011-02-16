@@ -11,11 +11,11 @@
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    double(* rate)[2001000];
-    double(* prob)[6003];
-    int(* succ)[6003];
-    double(* pv)[2001];
-    double(* pv_1)[2001];
+    double rate[2001000];
+    double prob[6003];
+    int succ[6003];
+    double pv[2001];
+    double pv_1[2001];
     double nomval;
     double dt;
 };
@@ -49,8 +49,8 @@ struct __insieme_expr_0 {
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
 	int* var_63;	 // Variable: v63
-	int* var_64;	 // Variable: v64
-	struct __insieme_globals* var_65;	 // Variable: v65
+	struct __insieme_globals* var_64;	 // Variable: v64
+	int* var_65;	 // Variable: v65
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
@@ -69,8 +69,8 @@ struct __insieme_funType_type_3 {
     void(*fun)(void*);
     const size_t size;
     int* p0;
-    int* p1;
-    struct __insieme_globals* p2;
+    struct __insieme_globals* p1;
+    int* p2;
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_4 //
@@ -104,22 +104,6 @@ struct capture__insieme_expr_6 {
 	int* i;
 };
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_8 //
-// Abstract prototype for lambdas of type __insieme_funType_type_8
-struct __insieme_funType_type_8 { 
-    void(*fun)(void*, int);
-    const size_t size;
-    double* p0;
-    double* p1;
-    double* p2;
-    int p3;
-    struct __insieme_globals* p4;
-    double* p5;
-    double* p6;
-    double* p7;
-    int* p8;
-};
-
 // start code fragment :: Prototype for external function: exp //
 double exp(double);
 
@@ -131,48 +115,31 @@ double coupon(int m, double r, double nomval) {
 }
 
 
-// start code fragment :: Definition of __insieme_supp_7 //
-void __insieme_supp_7(void* _capture, int var_48) {
-	// --------- Captured Stuff - Begin -------------
-	double* var_55 = ((struct __insieme_funType_type_8*)_capture)->p0;
-	double* var_53 = ((struct __insieme_funType_type_8*)_capture)->p1;
-	double* var_54 = ((struct __insieme_funType_type_8*)_capture)->p2;
-	int var_57 = ((struct __insieme_funType_type_8*)_capture)->p3;
-	struct __insieme_globals* var_56 = ((struct __insieme_funType_type_8*)_capture)->p4;
-	double* var_51 = ((struct __insieme_funType_type_8*)_capture)->p5;
-	double* var_52 = ((struct __insieme_funType_type_8*)_capture)->p6;
-	double* var_50 = ((struct __insieme_funType_type_8*)_capture)->p7;
-	int* var_49 = ((struct __insieme_funType_type_8*)_capture)->p8;
-	// --------- Captured Stuff -  End  -------------
-	{
-		((*var_52) = (((((((*var_56).prob))[0]))[((unsigned int)(((var_48*3)+2)))])));
-		((*var_51) = (((((((*var_56).prob))[0]))[((unsigned int)(((var_48*3)+1)))])));
-		((*var_50) = (((((((*var_56).prob))[0]))[((unsigned int)((var_48*3)))])));
-		((*var_55) = (((((((*var_56).pv_1))[0]))[((unsigned int)((((((((*var_56).succ))[0]))[((unsigned int)(((var_48*3)+2)))]))))])));
-		((*var_54) = (((((((*var_56).pv_1))[0]))[((unsigned int)((((((((*var_56).succ))[0]))[((unsigned int)(((var_48*3)+1)))]))))])));
-		((*var_53) = (((((((*var_56).pv_1))[0]))[((unsigned int)((((((((*var_56).succ))[0]))[((unsigned int)((var_48*3)))]))))])));
-		((*var_49) = ((((2*1000)+1)*var_57)+var_48));
-		((((((((*var_56).pv))[0]))[((unsigned int)(var_48))])) = (exp(((((double)(0))-(((((((*var_56).rate))[0]))[((unsigned int)((*var_49)))])))*(((*var_56).dt))))*(((((*var_50)*(*var_53))+((*var_51)*(*var_54)))+((*var_52)*(*var_55)))+coupon(var_57, (((((((*var_56).rate))[0]))[((unsigned int)((*var_49)))])), (((*var_56).nomval))))));
-	}
-}
-
-
 // start code fragment :: function for pfor-body __insieme_expr_6 //
 void __insieme_expr_6(const isbr_PForRange range) {
 	// ----- captured variables -----
-	double* pv_u = ((struct capture__insieme_expr_6*)(range.context))->pv_u;
-	double* pv_d = ((struct capture__insieme_expr_6*)(range.context))->pv_d;
-	double* pv_m = ((struct capture__insieme_expr_6*)(range.context))->pv_m;
-	int m = ((struct capture__insieme_expr_6*)(range.context))->m;
-	struct __insieme_globals* var_14 = ((struct capture__insieme_expr_6*)(range.context))->var_14;
-	double* prob_m = ((struct capture__insieme_expr_6*)(range.context))->prob_m;
-	double* prob_u = ((struct capture__insieme_expr_6*)(range.context))->prob_u;
-	double* prob_d = ((struct capture__insieme_expr_6*)(range.context))->prob_d;
-	int* i = ((struct capture__insieme_expr_6*)(range.context))->i;
+	double* var_66 = ((struct capture__insieme_expr_6*)(range.context))->pv_u;
+	double* var_67 = ((struct capture__insieme_expr_6*)(range.context))->pv_d;
+	double* var_68 = ((struct capture__insieme_expr_6*)(range.context))->pv_m;
+	int var_69 = ((struct capture__insieme_expr_6*)(range.context))->m;
+	struct __insieme_globals* var_70 = ((struct capture__insieme_expr_6*)(range.context))->var_14;
+	double* var_71 = ((struct capture__insieme_expr_6*)(range.context))->prob_m;
+	double* var_72 = ((struct capture__insieme_expr_6*)(range.context))->prob_u;
+	double* var_73 = ((struct capture__insieme_expr_6*)(range.context))->prob_d;
+	int* var_74 = ((struct capture__insieme_expr_6*)(range.context))->i;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_7(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_8){0, 0, &pv_u, &pv_d, &pv_m, m, var_14, &prob_m, &prob_u, &prob_d, &i}))), __it);
+		{
+			((*var_72) = (((((*var_70).prob))[((unsigned int)(((__it*3)+2)))])));
+			((*var_71) = (((((*var_70).prob))[((unsigned int)(((__it*3)+1)))])));
+			((*var_73) = (((((*var_70).prob))[((unsigned int)((__it*3)))])));
+			((*var_66) = (((((*var_70).pv_1))[((unsigned int)((((((*var_70).succ))[((unsigned int)(((__it*3)+2)))]))))])));
+			((*var_68) = (((((*var_70).pv_1))[((unsigned int)((((((*var_70).succ))[((unsigned int)(((__it*3)+1)))]))))])));
+			((*var_67) = (((((*var_70).pv_1))[((unsigned int)((((((*var_70).succ))[((unsigned int)((__it*3)))]))))])));
+			((*var_74) = ((((2*1000)+1)*var_69)+__it));
+			((((((*var_70).pv))[((unsigned int)(__it))])) = (exp(((((double)(0))-(((((*var_70).rate))[((unsigned int)((*var_74)))])))*(((*var_70).dt))))*(((((*var_73)*(*var_67))+((*var_71)*(*var_68)))+((*var_72)*(*var_66)))+coupon(var_69, (((((*var_70).rate))[((unsigned int)((*var_74)))])), (((*var_70).nomval))))));
+		};
 	}
 	
 }
@@ -202,30 +169,21 @@ void backward_column(void* _capture, int m) {
 }
 
 
-// start code fragment :: capture-struct for pfor-body __insieme_expr_9 //
-struct capture__insieme_expr_9 {
+// start code fragment :: capture-struct for pfor-body __insieme_expr_7 //
+struct capture__insieme_expr_7 {
 	struct __insieme_globals* var_45;
 };
 
-// start code fragment :: Definition of __insieme_supp_10 //
-void __insieme_supp_10(void* _capture, int var_60) {
-	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_61 = ((struct __insieme_funType_type_5*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
-	{
-		((((((((*var_61).pv_1))[0]))[((unsigned int)(var_60))])) = (((((((*var_61).pv))[0]))[((unsigned int)(var_60))])));
-	}
-}
-
-
-// start code fragment :: function for pfor-body __insieme_expr_9 //
-void __insieme_expr_9(const isbr_PForRange range) {
+// start code fragment :: function for pfor-body __insieme_expr_7 //
+void __insieme_expr_7(const isbr_PForRange range) {
 	// ----- captured variables -----
-	struct __insieme_globals* var_45 = ((struct capture__insieme_expr_9*)(range.context))->var_45;
+	struct __insieme_globals* var_76 = ((struct capture__insieme_expr_7*)(range.context))->var_45;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_10(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_45}))), __it);
+		{
+			((((((*var_76).pv_1))[((unsigned int)(__it))])) = (((((*var_76).pv))[((unsigned int)(__it))])));
+		};
 	}
 	
 }
@@ -234,8 +192,8 @@ void __insieme_expr_9(const isbr_PForRange range) {
 void __insieme_supp_2(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
 	int* var_43 = ((struct __insieme_funType_type_3*)_capture)->p0;
-	int* var_44 = ((struct __insieme_funType_type_3*)_capture)->p1;
-	struct __insieme_globals* var_45 = ((struct __insieme_funType_type_3*)_capture)->p2;
+	struct __insieme_globals* var_45 = ((struct __insieme_funType_type_3*)_capture)->p1;
+	int* var_44 = ((struct __insieme_funType_type_3*)_capture)->p2;
 	// --------- Captured Stuff -  End  -------------
 	{
 		{
@@ -243,7 +201,7 @@ void __insieme_supp_2(void* _capture) {
 				backward_column(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_45}))), (((int)(0))-(var_41)));
 				{
 					{
-						isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, ((2*1000)+1), 1, &((struct capture__insieme_expr_9){var_45})},&__insieme_expr_9);
+						isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, ((2*1000)+1), 1, &((struct capture__insieme_expr_7){var_45})},&__insieme_expr_7);
 						isbr_barrier(isbr_getThreadGroup(0));
 					};
 					((*var_43) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
@@ -260,8 +218,8 @@ void fun__insieme_expr_0(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
 	int* var_63 = ((struct __insieme_expr_0*)args)->var_63;
-	int* var_64 = ((struct __insieme_expr_0*)args)->var_64;
-	struct __insieme_globals* var_65 = ((struct __insieme_expr_0*)args)->var_65;
+	struct __insieme_globals* var_64 = ((struct __insieme_expr_0*)args)->var_64;
+	int* var_65 = ((struct __insieme_expr_0*)args)->var_65;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
 	__insieme_supp_2(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_3){0, 0, var_63, var_64, var_65}))));
@@ -280,36 +238,31 @@ long end_timer(long t_begin) {
 // start code fragment :: Definition of main //
 int main() {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){(calloc(sizeof(double[2001000]), 1)),
-			(calloc(sizeof(double[6003]), 1)),
-			(calloc(sizeof(int[6003]), 1)),
-			(calloc(sizeof(double[2001]), 1)),
-			(calloc(sizeof(double[2001]), 1)),
-			1000.0,
-			1.0
-		});
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		((((*var_1).nomval)) = 1000.0);
+		((((*var_1).dt)) = 1.0);
 		int m = 0;
 		int j = 0;
 		float ticks = 0.0;
-		((((((((var_1).succ))[0]))[((unsigned int)(2))])) = 2);
-		((((((((var_1).succ))[0]))[((unsigned int)(1))])) = 1);
-		((((((((var_1).succ))[0]))[((unsigned int)(0))])) = 0);
+		((((((*var_1).succ))[((unsigned int)(2))])) = 2);
+		((((((*var_1).succ))[((unsigned int)(1))])) = 1);
+		((((((*var_1).succ))[((unsigned int)(0))])) = 0);
 		{
 			for(int var_35 = 1; var_35 < (2*1000); var_35 += 1) {
-				((((((((var_1).succ))[0]))[((unsigned int)((((var_35)*3)+2)))])) = ((var_35)+1));
-				((((((((var_1).succ))[0]))[((unsigned int)((((var_35)*3)+1)))])) = (var_35));
-				((((((((var_1).succ))[0]))[((unsigned int)(((var_35)*3)))])) = ((var_35)-1));
+				((((((*var_1).succ))[((unsigned int)((((var_35)*3)+2)))])) = ((var_35)+1));
+				((((((*var_1).succ))[((unsigned int)((((var_35)*3)+1)))])) = (var_35));
+				((((((*var_1).succ))[((unsigned int)(((var_35)*3)))])) = ((var_35)-1));
 			};
 			((j) = (1+(((int)(ceil((((double)(((2*1000)-1)))/((double)(1))))))*1)));
 		};
-		((((((((var_1).succ))[0]))[((unsigned int)((((2*1000)*3)+2)))])) = (2*1000));
-		((((((((var_1).succ))[0]))[((unsigned int)((((2*1000)*3)+1)))])) = ((2*1000)-1));
-		((((((((var_1).succ))[0]))[((unsigned int)(((2*1000)*3)))])) = ((2*1000)-2));
+		((((((*var_1).succ))[((unsigned int)((((2*1000)*3)+2)))])) = (2*1000));
+		((((((*var_1).succ))[((unsigned int)((((2*1000)*3)+1)))])) = ((2*1000)-1));
+		((((((*var_1).succ))[((unsigned int)(((2*1000)*3)))])) = ((2*1000)-2));
 		{
 			for(int var_36 = 0; var_36 < ((2*1000)+1); var_36 += 1) {
-				((((((((var_1).prob))[0]))[((unsigned int)((((var_36)*3)+2)))])) = ((1.0/4.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
-				((((((((var_1).prob))[0]))[((unsigned int)((((var_36)*3)+1)))])) = ((1.0/2.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
-				((((((((var_1).prob))[0]))[((unsigned int)(((var_36)*3)))])) = ((1.0-(((((((var_1).prob))[0]))[((unsigned int)((((var_36)*3)+1)))])))-(((((((var_1).prob))[0]))[((unsigned int)((((var_36)*3)+2)))]))));
+				((((((*var_1).prob))[((unsigned int)((((var_36)*3)+2)))])) = ((1.0/4.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
+				((((((*var_1).prob))[((unsigned int)((((var_36)*3)+1)))])) = ((1.0/2.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
+				((((((*var_1).prob))[((unsigned int)(((var_36)*3)))])) = ((1.0-(((((*var_1).prob))[((unsigned int)((((var_36)*3)+1)))])))-(((((*var_1).prob))[((unsigned int)((((var_36)*3)+2)))]))));
 			};
 			((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 		};
@@ -317,7 +270,7 @@ int main() {
 			for(int var_38 = 0; var_38 < 1000; var_38 += 1) {
 				{
 					for(int var_37 = 0; var_37 < ((2*1000)+1); var_37 += 1) {
-						((((((((var_1).rate))[0]))[((unsigned int)(((((2*1000)+1)*(var_38))+(var_37))))])) = (((0.01+(0.05*(((double)((var_37)))/((double)(1000)))))+(0.03*(((double)((var_38)))/((double)(1000)))))*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
+						((((((*var_1).rate))[((unsigned int)(((((2*1000)+1)*(var_38))+(var_37))))])) = (((0.01+(0.05*(((double)((var_37)))/((double)(1000)))))+(0.03*(((double)((var_38)))/((double)(1000)))))*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
 					};
 					((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 				};
@@ -328,13 +281,13 @@ int main() {
 		double begin = ((double)(begin_timer()));
 		{
 			for(int var_39 = 0; var_39 < ((2*1000)+1); var_39 += 1) {
-				((((((((var_1).pv_1))[0]))[((unsigned int)((var_39)))])) = (((var_1).nomval)));
+				((((((*var_1).pv_1))[((unsigned int)((var_39)))])) = (((*var_1).nomval)));
 			};
 			((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 		};
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&j,&m,&var_1}),sizeof(struct __insieme_expr_0))));
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_expr_0)),&((struct __insieme_expr_0){sizeof(struct __insieme_expr_0),1,isbr_getMaxThreads(),&fun__insieme_expr_0,&j,var_1,&m}),sizeof(struct __insieme_expr_0))));
 		((ticks) = ((float)(end_timer(((long)((begin)))))));
-		printf("pval=%8.2f\n", (((((((var_1).pv))[0]))[((unsigned int)(1000))])));
+		printf("pval=%8.2f\n", (((((*var_1).pv))[((unsigned int)(1000))])));
 	}
 }
 

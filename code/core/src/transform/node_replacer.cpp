@@ -182,7 +182,63 @@ private:
 
 		// handle scope limiting elements
 		switch(ptr->getNodeType()) {
-		case NT_JobExpr:
+		case NT_LambdaExpr:
+			// enters a new scope => variable will no longer occur
+			return ptr;
+		default: { }
+		}
+
+		// recursive replacement has to be continued
+		NodePtr res = ptr->substitute(manager, *this);
+
+		// check whether something has changed ...
+		if (res == ptr) {
+			// => nothing changed
+			return ptr;
+		}
+
+		// restore annotations if requested
+		if (preservePtrAnnotationsWhenModified) {
+			res->setAnnotations(ptr->getAnnotations());
+		}
+
+		// done
+		return res;
+	}
+};
+
+class VariableMapReplacer : public NodeMapping {
+
+	NodeManager& manager;
+	const PointerMap<VariablePtr, VariablePtr>& replacements;
+	const bool preservePtrAnnotationsWhenModified;
+
+
+public:
+
+	VariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool preservePtrAnnotationsWhenModified)
+		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
+
+private:
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+		// check whether the element has been found
+		if (ptr->getNodeType() == NT_Variable) {
+			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
+			if(pos != replacements.end()) {
+				return pos->second;
+			}
+		}
+
+		// shortcut for types => will never be changed
+		if (ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// handle scope limiting elements
+		switch(ptr->getNodeType()) {
 		case NT_LambdaExpr:
 			// enters a new scope => variable will no longer occur
 			return ptr;
@@ -297,6 +353,12 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toRepla
 
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
 	auto mapper = ::VariableReplacer(mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
+	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+}
+
+
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+	auto mapper = ::VariableMapReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
 	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
 }
 

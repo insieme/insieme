@@ -52,26 +52,26 @@ namespace ocl {
 
 namespace {
 
-core::CallExprPtr KernelData::calcIdidx0(core::LiteralPtr& level, core::VariablePtr& boundaries){
+core::CallExprPtr KernelData::calcIdidx0(core::VariablePtr& threadId, core::VariablePtr& boundaries){
     core::ExpressionPtr one = builder.uintLit(1u);
     core::ExpressionPtr two = builder.uintLit(2u);
     return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(),
-               builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level),
+               builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), threadId,
                    vecAccess(boundaries, two)), vecAccess(boundaries, one));
 }
 
-core::CallExprPtr KernelData::calcIdidx1(core::LiteralPtr& level, core::VariablePtr& boundaries){
+core::CallExprPtr KernelData::calcIdidx1(core::VariablePtr& threadId, core::VariablePtr& boundaries){
     core::ExpressionPtr one = builder.uintLit(1u);
     core::ExpressionPtr two = builder.uintLit(2u);
     return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
-               builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level),
+               builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), threadId,
                    vecAccess(boundaries, two)), vecAccess(boundaries, one));
 }
 
-core::CallExprPtr KernelData::calcIdidx2(core::LiteralPtr& level, core::VariablePtr& boundaries){
+core::CallExprPtr KernelData::calcIdidx2(core::VariablePtr& threadId, core::VariablePtr& boundaries){
     core::ExpressionPtr two = builder.uintLit(2u);
     return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
-               builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), level), vecAccess(boundaries, two));
+               threadId, vecAccess(boundaries, two));
 }
 
 void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
@@ -140,27 +140,33 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::ExpressionPtr zeroExpr = zero;
     core::ExpressionPtr oneExpr = one;
     core::ExpressionPtr twoExpr = builder.uintLit(2);
+    core::VariablePtr localId = builder.variable(BASIC.getUInt4());//builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), zero);
+    core::VariablePtr groupId = builder.variable(BASIC.getUInt4());
+    core::DeclarationStmtPtr localDecl = builder.declarationStmt(localId, builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), zero));
+    core::DeclarationStmtPtr groupDecl = builder.declarationStmt(groupId, builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), one));
 
-    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
+
+//    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
+    core::VariablePtr& id = opl == OPL_GROUP ? groupId : localId;
 
     // construct the cases for each idx
     core::CallExprPtr id0 = opl == OPL_GLOBAL ?
-        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx0(zero, boundaries),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, zeroExpr), calcIdidx0(one, bfgo)))
+        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx0(localId, boundaries),
+            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, zeroExpr), calcIdidx0(groupId, bfgo)))
         :
-        calcIdidx0(level, boundaries);
+        calcIdidx0(id, boundaries);
 
     core::CallExprPtr id1 = opl == OPL_GLOBAL ?
-        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx1(zero, boundaries),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, oneExpr), calcIdidx1(one, bfgo)))
+        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx1(localId, boundaries),
+            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, oneExpr), calcIdidx1(groupId, bfgo)))
         :
-        calcIdidx1(level, boundaries);
+        calcIdidx1(id, boundaries);
 
     core::CallExprPtr id2 = opl == OPL_GLOBAL ?
-        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx2(zero, boundaries),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, twoExpr), calcIdidx1(one, bfgo)))
+        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx2(localId, boundaries),
+            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, twoExpr), calcIdidx1(groupId, bfgo)))
         :
-        calcIdidx2(level, boundaries);
+        calcIdidx2(id, boundaries);
 
     core::ReturnStmtPtr ret0 = builder.returnStmt(id0);
     core::ReturnStmtPtr ret1 = builder.returnStmt(id1);
@@ -175,7 +181,9 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
 
     core::SwitchStmtPtr swtch = builder.switchStmt(idxVar, cases);
 
-    // capture needed ranges
+    std::vector<core::StatementPtr> stmts;
+
+    // capture needed ranges and add variables as needed
     core::ASTBuilder::CaptureInits capture;
     switch(opl) {
     case OPL_GLOBAL :
@@ -183,18 +191,24 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
         numGroupsUsed = true;
         capture[bfgo] = numGroups;
         capture[boundaries] = localRange;
+        stmts.push_back(localDecl);
+        stmts.push_back(groupDecl);
         break;
     case OPL_GROUP :
         numGroupsUsed = true;
         capture[boundaries] = numGroups;
+        stmts.push_back(groupDecl);
         break;
     case OPL_LOCAL :
         localRangeUsed = true;
         capture[boundaries] = localRange;
+        stmts.push_back(localDecl);
     }
 
+    stmts.push_back(swtch);
+
     // set the argument for the get__id function
-    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), swtch, capture, toVector(idxVar)), idx);
+    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), builder.compoundStmt(stmts), capture, toVector(idxVar)), idx);
 }
 
 
@@ -358,19 +372,20 @@ public:
     : builder(astBuilder), kd(data) { };
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
-
-
+/*
+    if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
+        return element;//->substitute(builder.getNodeManager(), *this);
+    }
+*/
         if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(element)){
-//            std::cout << "found a call\n";
+//            std::cout << "found a call " << *call << std::endl;
+
+            call = core::static_pointer_cast<const core::CallExpr>(call->substitute(builder.getNodeManager(), *this));
+            std::cout << "new call " << *call << std::endl;
             const core::ExpressionPtr& fun = call->getFunctionExpr();
+            vector<core::ExpressionPtr> args = call->getArguments();
+
             if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
-                const vector<core::ExpressionPtr>& args = call->getArguments();
-
-                for_each(args, [&](core::ExpressionPtr arg){
-                    arg = core::dynamic_pointer_cast<const core::Expression>(arg->substitute(builder.getNodeManager(), *this));
-                });
-
-
                 // reading parallel loop boundaries
                 if(literal->getValue() == "get_global_size") {
                     assert(args.size() == 1 && "Function get_global_size must have exactly 1 argument");
@@ -450,14 +465,7 @@ public:
                 }
             }
 
-
-//        std::cout << "FUNCTION: " << call << std::endl;
-/*            const core::Node::ChildList& elems = call->getChildList();
-            for(size_t i = 0; i < elems.size(); ++i) {
-                std::cout << "child: " << elems.at(i) << std::endl;
-            }
-*/
-            return element->substitute(builder.getNodeManager(), *this);
+            return call;//element->substitute(builder.getNodeManager(), *this);
         }
 
         if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_CaptureInitExpr) {

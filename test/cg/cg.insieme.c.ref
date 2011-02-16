@@ -17,20 +17,20 @@ struct __insieme_globals {
     int lastrow;
     int firstcol;
     int lastcol;
-    int(* colidx)[637001];
-    int(* rowstr)[7002];
-    int(* iv)[14002];
-    int(* arow)[637001];
-    int(* acol)[637001];
-    double(* v)[7002];
-    double(* aelt)[637001];
-    double(* a)[637001];
-    double(* x)[7003];
-    double(* z)[7003];
-    double(* p)[7003];
-    double(* q)[7003];
-    double(* r)[7003];
-    double(* w)[7003];
+    int colidx[637001];
+    int rowstr[7002];
+    int iv[14002];
+    int arow[637001];
+    int acol[637001];
+    double v[7002];
+    double aelt[637001];
+    double a[637001];
+    double x[7003];
+    double z[7003];
+    double p[7003];
+    double q[7003];
+    double r[7003];
+    double w[7003];
     double amult;
     double tran;
     double d;
@@ -39,8 +39,8 @@ struct __insieme_globals {
     double rho0;
     double alpha;
     double beta;
-    double(* start)[64];
-    double(* elapsed)[64];
+    double start[64];
+    double elapsed[64];
     int sec;
 };
 
@@ -552,7 +552,7 @@ void timer_clear(void* _capture, int n) {
 	struct __insieme_globals* var_193 = ((struct __insieme_funType_type_7*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((((*var_193).elapsed))[0]))[((unsigned int)(n))])) = 0.0);
+		((((((*var_193).elapsed))[((unsigned int)(n))])) = 0.0);
 	}
 }
 
@@ -643,7 +643,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_196 = ((struct __insieme_funType_type_7*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((((*var_196).start))[0]))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0, var_196})))));
+		((((((*var_196).start))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0, var_196})))));
 	}
 }
 
@@ -657,8 +657,8 @@ void timer_stop(void* _capture, int n) {
 		double t = 0.0;
 		double now = 0.0;
 		((now) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0, var_209})))));
-		((t) = ((now)-(((((((*var_209).start))[0]))[((unsigned int)(n))]))));
-		((((((((*var_209).elapsed))[0]))[((unsigned int)(n))])) = ((((((((*var_209).elapsed))[0]))[((unsigned int)(n))]))+(t)));
+		((t) = ((now)-(((((*var_209).start))[((unsigned int)(n))]))));
+		((((((*var_209).elapsed))[((unsigned int)(n))])) = ((((((*var_209).elapsed))[((unsigned int)(n))]))+(t)));
 	}
 }
 
@@ -687,7 +687,7 @@ double timer_read(void* _capture, int n) {
 	struct __insieme_globals* var_214 = ((struct __insieme_funType_type_13*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		return (((((((*var_214).elapsed))[0]))[((unsigned int)(n))]));;
+		return (((((*var_214).elapsed))[((unsigned int)(n))]));;
 	}
 }
 
@@ -733,38 +733,22 @@ void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		struct __insieme_globals var_1 = ((struct __insieme_globals){0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			(calloc(sizeof(int[637001]), 1)),
-			(calloc(sizeof(int[7002]), 1)),
-			(calloc(sizeof(int[14002]), 1)),
-			(calloc(sizeof(int[637001]), 1)),
-			(calloc(sizeof(int[637001]), 1)),
-			(calloc(sizeof(double[7002]), 1)),
-			(calloc(sizeof(double[637001]), 1)),
-			(calloc(sizeof(double[637001]), 1)),
-			(calloc(sizeof(double[7003]), 1)),
-			(calloc(sizeof(double[7003]), 1)),
-			(calloc(sizeof(double[7003]), 1)),
-			(calloc(sizeof(double[7003]), 1)),
-			(calloc(sizeof(double[7003]), 1)),
-			(calloc(sizeof(double[7003]), 1)),
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			(calloc(sizeof(double[64]), 1)),
-			(calloc(sizeof(double[64]), 1)),
-			(((int)(0))-1)
-		});
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		((((*var_1).naa)) = 0);
+		((((*var_1).nzz)) = 0);
+		((((*var_1).firstrow)) = 0);
+		((((*var_1).lastrow)) = 0);
+		((((*var_1).firstcol)) = 0);
+		((((*var_1).lastcol)) = 0);
+		((((*var_1).amult)) = 0.0);
+		((((*var_1).tran)) = 0.0);
+		((((*var_1).d)) = 0.0);
+		((((*var_1).sum)) = 0.0);
+		((((*var_1).rho)) = 0.0);
+		((((*var_1).rho0)) = 0.0);
+		((((*var_1).alpha)) = 0.0);
+		((((*var_1).beta)) = 0.0);
+		((((*var_1).sec)) = (((int)(0))-1));
 		int i = 0;
 		int j = 0;
 		int k = 0;
@@ -780,10 +764,10 @@ int main(int argc, char** argv) {
 		int verified = 0;
 		double zeta_verify_value = 0.0;
 		double epsilon = 0.0;
-		((((var_1).firstrow)) = 1);
-		((((var_1).lastrow)) = 7000);
-		((((var_1).firstcol)) = 1);
-		((((var_1).lastcol)) = 7000);
+		((((*var_1).firstrow)) = 1);
+		((((*var_1).lastrow)) = 7000);
+		((((*var_1).firstcol)) = 1);
+		((((*var_1).lastcol)) = 7000);
 		if(((((7000==1400)&&(8==7))&&(15==15))&&(12.0==10.0))) {
 			((class) = 'S');
 			((zeta_verify_value) = 8.5971775078648);
@@ -805,79 +789,79 @@ int main(int argc, char** argv) {
 		printf("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - CG Benchmark\n", 0);
 		printf(" Size: %10d\n", 7000);
 		printf(" Iterations: %5d\n", 15);
-		((((var_1).naa)) = 7000);
-		((((var_1).nzz)) = (((7000*(8+1))*(8+1))+(7000*(8+2))));
-		((((var_1).tran)) = 314159265.0);
-		((((var_1).amult)) = 1220703125.0);
-		((zeta) = randlc(&((var_1).tran), (((var_1).amult))));
-		makea(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, &var_1}))), (((var_1).naa)), (((var_1).nzz)), (((((var_1).a))[0])), (((((var_1).colidx))[0])), (((((var_1).rowstr))[0])), 8, (((var_1).firstrow)), (((var_1).lastrow)), (((var_1).firstcol)), (((var_1).lastcol)), 1.0e-1, (((((var_1).arow))[0])), (((((var_1).acol))[0])), (((((var_1).aelt))[0])), (((((var_1).v))[0])), (((((var_1).iv))[0])), 12.0);
+		((((*var_1).naa)) = 7000);
+		((((*var_1).nzz)) = (((7000*(8+1))*(8+1))+(7000*(8+2))));
+		((((*var_1).tran)) = 314159265.0);
+		((((*var_1).amult)) = 1220703125.0);
+		((zeta) = randlc(&((*var_1).tran), (((*var_1).amult))));
+		makea(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))), (((*var_1).naa)), (((*var_1).nzz)), (((*var_1).a)), (((*var_1).colidx)), (((*var_1).rowstr)), 8, (((*var_1).firstrow)), (((*var_1).lastrow)), (((*var_1).firstcol)), (((*var_1).lastcol)), 1.0e-1, (((*var_1).arow)), (((*var_1).acol)), (((*var_1).aelt)), (((*var_1).v)), (((*var_1).iv)), 12.0);
 		{
 			{
-				for(int var_257 = 1; var_257 < ((((((var_1).lastrow))-(((var_1).firstrow)))+1)+1); var_257 += 1) {
+				for(int var_257 = 1; var_257 < ((((((*var_1).lastrow))-(((*var_1).firstrow)))+1)+1); var_257 += 1) {
 					{
-						for(int var_256 = (((((((var_1).rowstr))[0]))[((unsigned int)((var_257)))])); var_256 < (((((((var_1).rowstr))[0]))[((unsigned int)(((var_257)+1)))])); var_256 += 1) {
-							((((((((var_1).colidx))[0]))[((unsigned int)((var_256)))])) = (((((((((var_1).colidx))[0]))[((unsigned int)((var_256)))]))-(((var_1).firstcol)))+1));
+						for(int var_256 = (((((*var_1).rowstr))[((unsigned int)((var_257)))])); var_256 < (((((*var_1).rowstr))[((unsigned int)(((var_257)+1)))])); var_256 += 1) {
+							((((((*var_1).colidx))[((unsigned int)((var_256)))])) = (((((((*var_1).colidx))[((unsigned int)((var_256)))]))-(((*var_1).firstcol)))+1));
 						};
-						((k) = ((((((((var_1).rowstr))[0]))[((unsigned int)((var_257)))]))+(((int)(ceil((((double)(((((((((var_1).rowstr))[0]))[((unsigned int)(((var_257)+1)))]))-(((((((var_1).rowstr))[0]))[((unsigned int)((var_257)))])))))/((double)(1))))))*1)));
+						((k) = ((((((*var_1).rowstr))[((unsigned int)((var_257)))]))+(((int)(ceil((((double)(((((((*var_1).rowstr))[((unsigned int)(((var_257)+1)))]))-(((((*var_1).rowstr))[((unsigned int)((var_257)))])))))/((double)(1))))))*1)));
 					};
 				};
-				((j) = (1+(((int)(ceil((((double)((((((((var_1).lastrow))-(((var_1).firstrow)))+1)+1)-1)))/((double)(1))))))*1)));
+				((j) = (1+(((int)(ceil((((double)((((((((*var_1).lastrow))-(((*var_1).firstrow)))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
 				for(int var_258 = 1; var_258 < ((7000+1)+1); var_258 += 1) {
-					((((((((var_1).x))[0]))[((unsigned int)((var_258)))])) = 1.0);
+					((((((*var_1).x))[((unsigned int)((var_258)))])) = 1.0);
 				};
 				((i) = (1+(((int)(ceil((((double)((((7000+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			((zeta) = 0.0);
 			{
 				for(int var_261 = 1; var_261 < (1+1); var_261 += 1) {
-					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, &var_1}))), (((((var_1).colidx))[0])), (((((var_1).rowstr))[0])), (((((var_1).x))[0])), (((((var_1).z))[0])), (((((var_1).a))[0])), (((((var_1).p))[0])), (((((var_1).q))[0])), (((((var_1).r))[0])), (((((var_1).w))[0])), &rnorm);
+					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_1}))), (((*var_1).colidx)), (((*var_1).rowstr)), (((*var_1).x)), (((*var_1).z)), (((*var_1).a)), (((*var_1).p)), (((*var_1).q)), (((*var_1).r)), (((*var_1).w)), &rnorm);
 					{
 						((norm_temp11) = 0.0);
 						((norm_temp12) = 0.0);
 					};
 					{
-						for(int var_259 = 1; var_259 < ((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1); var_259 += 1) {
-							((norm_temp11) = ((norm_temp11)+((((((((var_1).x))[0]))[((unsigned int)((var_259)))]))*(((((((var_1).z))[0]))[((unsigned int)((var_259)))])))));
-							((norm_temp12) = ((norm_temp12)+((((((((var_1).z))[0]))[((unsigned int)((var_259)))]))*(((((((var_1).z))[0]))[((unsigned int)((var_259)))])))));
+						for(int var_259 = 1; var_259 < ((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1); var_259 += 1) {
+							((norm_temp11) = ((norm_temp11)+((((((*var_1).x))[((unsigned int)((var_259)))]))*(((((*var_1).z))[((unsigned int)((var_259)))])))));
+							((norm_temp12) = ((norm_temp12)+((((((*var_1).z))[((unsigned int)((var_259)))]))*(((((*var_1).z))[((unsigned int)((var_259)))])))));
 						};
-						((j) = (1+(((int)(ceil((((double)((((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
+						((j) = (1+(((int)(ceil((((double)((((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
 					};
 					((norm_temp12) = (1.0/sqrt((norm_temp12))));
 					{
-						for(int var_260 = 1; var_260 < ((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1); var_260 += 1) {
-							((((((((var_1).x))[0]))[((unsigned int)((var_260)))])) = ((norm_temp12)*(((((((var_1).z))[0]))[((unsigned int)((var_260)))]))));
+						for(int var_260 = 1; var_260 < ((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1); var_260 += 1) {
+							((((((*var_1).x))[((unsigned int)((var_260)))])) = ((norm_temp12)*(((((*var_1).z))[((unsigned int)((var_260)))]))));
 						};
-						((j) = (1+(((int)(ceil((((double)((((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
+						((j) = (1+(((int)(ceil((((double)((((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
 					};
 				};
 				((it) = (1+(((int)(ceil((((double)(((1+1)-1)))/((double)(1))))))*1)));
 			};
 			{
 				for(int var_262 = 1; var_262 < ((7000+1)+1); var_262 += 1) {
-					((((((((var_1).x))[0]))[((unsigned int)((var_262)))])) = 1.0);
+					((((((*var_1).x))[((unsigned int)((var_262)))])) = 1.0);
 				};
 				((i) = (1+(((int)(ceil((((double)((((7000+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			((zeta) = 0.0);
 		};
-		timer_clear(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 1);
-		timer_start(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 1);
+		timer_clear(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 1);
+		timer_start(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 1);
 		{
 			{
 				for(int var_265 = 1; var_265 < (15+1); var_265 += 1) {
-					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, &var_1}))), (((((var_1).colidx))[0])), (((((var_1).rowstr))[0])), (((((var_1).x))[0])), (((((var_1).z))[0])), (((((var_1).a))[0])), (((((var_1).p))[0])), (((((var_1).q))[0])), (((((var_1).r))[0])), (((((var_1).w))[0])), &rnorm);
+					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0, var_1}))), (((*var_1).colidx)), (((*var_1).rowstr)), (((*var_1).x)), (((*var_1).z)), (((*var_1).a)), (((*var_1).p)), (((*var_1).q)), (((*var_1).r)), (((*var_1).w)), &rnorm);
 					{
 						((norm_temp11) = 0.0);
 						((norm_temp12) = 0.0);
 					};
 					{
-						for(int var_263 = 1; var_263 < ((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1); var_263 += 1) {
-							((norm_temp11) = ((norm_temp11)+((((((((var_1).x))[0]))[((unsigned int)((var_263)))]))*(((((((var_1).z))[0]))[((unsigned int)((var_263)))])))));
-							((norm_temp12) = ((norm_temp12)+((((((((var_1).z))[0]))[((unsigned int)((var_263)))]))*(((((((var_1).z))[0]))[((unsigned int)((var_263)))])))));
+						for(int var_263 = 1; var_263 < ((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1); var_263 += 1) {
+							((norm_temp11) = ((norm_temp11)+((((((*var_1).x))[((unsigned int)((var_263)))]))*(((((*var_1).z))[((unsigned int)((var_263)))])))));
+							((norm_temp12) = ((norm_temp12)+((((((*var_1).z))[((unsigned int)((var_263)))]))*(((((*var_1).z))[((unsigned int)((var_263)))])))));
 						};
-						((j) = (1+(((int)(ceil((((double)((((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
+						((j) = (1+(((int)(ceil((((double)((((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
 					};
 					{
 						((norm_temp12) = (1.0/sqrt((norm_temp12))));
@@ -890,17 +874,17 @@ int main(int argc, char** argv) {
 						printf("    %5d       %20.14e%20.13e\n", (var_265), (rnorm), (zeta));
 					};
 					{
-						for(int var_264 = 1; var_264 < ((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1); var_264 += 1) {
-							((((((((var_1).x))[0]))[((unsigned int)((var_264)))])) = ((norm_temp12)*(((((((var_1).z))[0]))[((unsigned int)((var_264)))]))));
+						for(int var_264 = 1; var_264 < ((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1); var_264 += 1) {
+							((((((*var_1).x))[((unsigned int)((var_264)))])) = ((norm_temp12)*(((((*var_1).z))[((unsigned int)((var_264)))]))));
 						};
-						((j) = (1+(((int)(ceil((((double)((((((((var_1).lastcol))-(((var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
+						((j) = (1+(((int)(ceil((((double)((((((((*var_1).lastcol))-(((*var_1).firstcol)))+1)+1)-1)))/((double)(1))))))*1)));
 					};
 				};
 				((it) = (1+(((int)(ceil((((double)(((15+1)-1)))/((double)(1))))))*1)));
 			};
 		};
-		timer_stop(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, &var_1}))), 1);
-		((t) = timer_read(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0, &var_1}))), 1));
+		timer_stop(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0, var_1}))), 1);
+		((t) = timer_read(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0, var_1}))), 1));
 		printf(" Benchmark completed\n", 0);
 		((epsilon) = 1.0e-10);
 		if((((int)((class)))!='U')) {

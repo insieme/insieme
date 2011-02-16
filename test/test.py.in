@@ -5,6 +5,8 @@ CFLAGS = "--std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insiem
 LDFLAGS_ORG = "-lm -lpthread -g -pg"
 LDFLAGS_RES = "-lm -lpthread -g -pg -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 CC = "gcc"
+runOcl = 0
+printErr = 0
 
 class bcolors:
     HEADER = '\033[95m'
@@ -174,15 +176,71 @@ def run_test_case(test_case_name):
 			shutil.move(test_exec, "../#bin/")
 		
 		map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+
+	if runOcl & (test_case_name == "ocl_kernel"):
+		sys.stderr.write(" * Compiling OpenCL host program...                 ")
+
+	        ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
+							**{'CC':CC, 'CFLAGS':CFLAGS, 'LDFLAGS':os.path.expandvars(LDFLAGS_ORG), 'GCCFLAGS':os.path.expandvars(gccFlagsRef)})  
+						)
+		if(ret != None) :
+			sys.stderr.write("Failed to build OpenCL host program:\n" + ret + "\n")
+		    
+                if check_for_error(test_case_name, ret):
+                        os.chdir("../")
+                        return 1
+ 	
+                sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+
+                sys.stderr.write(" * Running input program...             ")
+		
+		ref_out = "ref.out"
+                start = time.time()
+
+		os.system("./host ocl_kernel.c > {0}".format( ref_out))
+
+                sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+
+		sys.stderr.write(" * Running output program...            ")
+
+		test_out = "test.out"	
+                start = time.time()
+
+		os.system("./host ocl_kernel.insieme.c > {0}".format( test_out))
+
+                sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+
+                sys.stderr.write(" * Checking generated program output... ")
+                if not check_diff(test_case_name, ref_out, test_out):
+                        os.chdir("../")
+                        return 1
+                sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
+
+
+		map(lambda x : os.remove(x), [ref_out, test_out])
+
 	
 	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
+
 	os.chdir("../")
 	return 0
 
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
+
+	#check for opencl flag
+	for arg in sys.argv[1:] :
+		if(arg == "--runOpenCL") :
+			global runOcl
+			runOcl = 1
+			sys.argv.remove(arg)
+		if(arg == "--printErrors") :
+			global printErr
+			printErr = 1
+			sys.argv.remove(arg)
+
 	tests = []
-	if len(sys.argv) > 1:
+	if len(sys.argv) > 1:		
 		# run the specified tests only
 		tests = sys.argv[1:]
 	elif os.path.exists('./test.cfg'):
