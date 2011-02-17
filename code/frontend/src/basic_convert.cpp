@@ -433,7 +433,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
         bool zeroInit = false;
 
         // check for annotations which would lead to a zero init annotation
-        if(var->getNodeType() == core::NT_ArrayType) {
+        if(var->getNodeType() == core::NT_ArrayType || var->getNodeType() == core::NT_VectorType) {
             if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
                 auto&& declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
                 for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();

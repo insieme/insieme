@@ -495,8 +495,18 @@ public:
                     if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
                         case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
-                            core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getInitZero(),
-                                BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
+                            core::ExpressionPtr init;
+                            core::TypePtr varType = decl->getVariable()->getType();
+                            core::NodeType derefType = tryDeref(decl->getVariable())->getType()->getNodeType();
+
+                            if(derefType == core::NT_ArrayType || derefType == core::NT_VectorType)
+                                init = builder.refVar(builder.callExpr(BASIC.getInitZero(), BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
+                            else if (varType->getNodeType() == core::NT_RefType)
+                                init = builder.refVar(builder.castExpr(tryDeref(decl->getVariable())->getType(), builder.intLit(0)));
+                            else {
+                                init = builder.castExpr(varType, builder.intLit(0));
+                            }
+
                             // store the variable in list, initialized with zero, will be declared in job shared var list
                             localVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
