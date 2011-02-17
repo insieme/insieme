@@ -330,7 +330,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
-				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc()),
+				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc() ),
 				convFact.convertType( GET_TYPE_PTR(intLit) )
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
