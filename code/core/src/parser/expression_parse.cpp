@@ -57,6 +57,7 @@
 // - error: <some callable> is not a class, struct or union in ph::bind --> check argument count and type
 // - other: use phoenix::bind and phoenix::construct instead of plain calls
 // ----------------------- - Peter
+// - error: has no member named ‘parse’ --> check your operators (>>!)
 
 namespace insieme {
 namespace core {
@@ -83,6 +84,11 @@ CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, Exp
 	return build.callExpr(callee, arguments);
 }
 
+LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
+    ASTBuilder build(nodeMan);
+    return build.intLit(0);
+}
+
 void callDepthCheck(bool reset, unsigned& callDepthCount) {
 	if(!reset) {
 		if(callDepthCount > 1000) throw ParseException();
@@ -97,6 +103,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	auto nManRef = ph::ref(nodeMan);
 	auto basicRef = ph::ref(nodeMan.basic);
 	
+	auto intTypeRef = ph::cref(nodeMan.basic.getInt4());
+
 	// RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 
 	// terminals, no skip parser
@@ -131,13 +139,28 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 		( qi::lit("CAST<") >> typeG->typeRule 
 		>> '>' >> '(' >> expressionRule >> ')' )					[ qi::_val = ph::bind(&CastExpr::get, nManRef, qi::_1, qi::_2) ];
 
+    // --------------------------------------------------------------------------------------
+    vectorExpr =
+        ( qi::lit("vector<") >>
+        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2) ]
+        >> qi::lit(">(") >> -(expressionRule                        [ ph::push_back(qi::_b, qi::_1) ]
+          % ',') >> ')' )                                           [ qi::_val = ph::bind(&VectorExpr::get, nManRef, qi::_a, qi::_b) ];
+	// --------------------------------------------------------------------------------------
+
+
 	expressionRule =
 		literalExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | vectorExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	opExpr														[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	variableExpr												[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  | castExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
-	  |	callExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
+	  |	callExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | qi::int_                                                    [ qi::_val = ph::bind(&buildIntLiteral, nManRef, qi::_1) ];
+                                                                      //(&Literal::parserGet, nManRef, intTypeRef, toString(qi::_1)) ];
 
+    // --------------------------------------------------------------------------------------
+    BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
+	// --------------------------------------------------------------------------------------
 	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
 	BOOST_SPIRIT_DEBUG_NODE(opExpr);
 	BOOST_SPIRIT_DEBUG_NODE(variableExpr);

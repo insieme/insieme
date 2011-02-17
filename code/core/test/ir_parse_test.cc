@@ -104,7 +104,7 @@ TEST(IRParser, TypeTests) {
 		EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(parser.parseType("(vector<'a,#l>, 'a)->'a"))->getArgumentTypes()[0]->getNodeType());
 	}
 }
-
+//#define TEST void fun
 TEST(IRParser, ExpressionTests) {
 
 	string testStr("testGenType");
@@ -122,6 +122,10 @@ TEST(IRParser, ExpressionTests) {
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
 	EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
+
+	auto vectorExpr = builder.vectorExpr(toVector<ExpressionPtr>(builder.intLit(0), builder.intLit(3)));
+    EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
+
 }
 
 TEST(IRParser, InteractiveTest) {
