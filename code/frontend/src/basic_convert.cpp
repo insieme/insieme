@@ -433,19 +433,21 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
         bool zeroInit = false;
 
         // check for annotations which would lead to a zero init annotation
-		if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
-		    auto&& declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
-		    for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
-		            I < declarationAnnotation->getAnnotationListEnd(); ++I) {
-		        if(ocl::AddressSpaceAnnotationPtr&& as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
-		            if(ocl::AddressSpaceAnnotation::addressSpace::LOCAL == as->getAddressSpace() ||
-		                    ocl::AddressSpaceAnnotation::addressSpace::PRIVATE == as->getAddressSpace()) {
-		                //TODO check why this fails:
-		                //assert(!definition->getInit() && "OpenCL local variables cannot have an initialization expression");
-		                zeroInit = true;
-		            }
-		        }
-		    }
+        if(var->getNodeType() == core::NT_ArrayType) {
+            if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
+                auto&& declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
+                for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
+                        I < declarationAnnotation->getAnnotationListEnd(); ++I) {
+                    if(ocl::AddressSpaceAnnotationPtr&& as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
+                        if(ocl::AddressSpaceAnnotation::addressSpace::LOCAL == as->getAddressSpace() ||
+                                ocl::AddressSpaceAnnotation::addressSpace::PRIVATE == as->getAddressSpace()) {
+                            //TODO check why this fails:
+                            //assert(!definition->getInit() && "OpenCL local variables cannot have an initialization expression");
+                            zeroInit = true;
+                        }
+                    }
+                }
+            }
 		}
 
 /*

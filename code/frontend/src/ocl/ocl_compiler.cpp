@@ -982,7 +982,7 @@ public:
 
                     // put opencl annotation to the new function for eventual future use
 
-                    newFunc->addAnnotation(funcAnnotation);
+                    newFunc->getLambda()->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
                     if(cName)
                         newFunc->getLambda()->addAnnotation(cName);
