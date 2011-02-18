@@ -814,7 +814,7 @@ namespace formatting {
 		#include "insieme/simple_backend/format_spec_start.mac"
 
 
-		ADD_FORMATTER(basic.getRefDeref(), { OUT("(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefDeref(), { OUT("*"); VISIT_ARG(0); });
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = converter.getConversionContext().getNodeManager();
