@@ -107,8 +107,7 @@ class ConversionFactory : public boost::noncopyable {
 		// but read from the map
 		bool isResolvingRecFuncBody;
 
-		// This variable points to the current mu variable representing the start of the
-		// recursion
+		// This variable points to the current mu variable representing the start of the recursion
 		core::VariablePtr currVar;
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,10 +127,10 @@ class ConversionFactory : public boost::noncopyable {
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// Keeps the type and initialization of the global variables within the entrypoint
+		// Keeps the type and initialization of the global variables within the entry point
 		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
 
-		// Gloabal and static variables
+		// Global and static variables
 		core::VariablePtr   globalVar;
 
 		// Set of the function which need access to global variables, every time such a function is converted
@@ -219,28 +218,88 @@ public:
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	~ConversionFactory();
 
+	// Getters & Setters
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::NodeManager& 	getNodeManager() const { return mgr; }
+	const Program& getProgram() const { return program; }
 
-	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
-
-	core::TypePtr 		convertType(const clang::Type* type);
-	core::StatementPtr 	convertStmt(const clang::Stmt* stmt) const;
-	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
-
-	core::NodePtr 	 		 convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
-	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
-	core::ExpressionPtr	 	 defaultInitVal(const core::TypePtr& type) const;
-	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const ;
-
-	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
-
-	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
+	/**
+	 * Force the current translation.
+	 * @param tu new translation unit
+	 */
 	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
 
-	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
+	/**
+	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
+	 * @return The statement to pragma multimap
+	 */
+	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 
-	const Program& getProgram() const { return program; }
+	/**
+	 * Entry point for converting clang types into an IR types
+	 * @param type is a clang type
+	 * @return the corresponding IR type
+	 */
+	core::TypePtr convertType(const clang::Type* type);
+
+	/**
+	 * Entry point for converting clang statements into IR statements
+	 * @param stmt is a clang statement of the AST
+	 * @return the corresponding IR statement
+	 */
+	core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
+
+	/**
+	 * Entry point for converting clang expressions to IR expressions
+	 * @param expr is a clang expression of the AST
+	 * @return the corresponding IR expression
+	 */
+	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
+
+	/**
+	 * Converts a function declaration into an IR lambda.
+	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
+	 * @param isEntryPoint determine if this function is an entry point of the generated IR
+	 * @return Converted lambda
+	 */
+	core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
+
+	/**
+	 * Converts variable declarations into IR an declaration statement. This method is also responsible
+	 * to map the generated IR variable with the translated variable declaration, so that later uses
+	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
+	 * @param varDecl a clang variable declaration
+	 * @return The IR translation of the variable declaration
+	 */
+	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
+
+	/**
+	 * Returns the default initialization value of the IR type passed as input.
+	 * @param type is the IR type
+	 * @return The default initialization value for the IR type
+	 */
+	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+
+	core::ExpressionPtr convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const ;
+
+	/**
+	 * Looks for eventual attributes attached to the clang variable declarations (used for OpenCL implementation)
+	 * and returns corresponding IR annotations to be attached to the IR corresponding declaration node.
+	 * @param varDecl clang Variable declaration AST node
+	 * @return IR annotation
+	 */
+	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
+
+	/**
+	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type
+	 * the same expression is returned.
+	 * @param expr IR expression which could be of ref or non-ref type
+	 * @return a non RefType IR expression
+	 */
+	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
+
+
+	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
 	void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
 

@@ -233,7 +233,7 @@ public:
 
 	node* getNode() const { return n; }
 
-	~val_single() { delete n; }
+	virtual ~val_single() { delete n; }
 };
 
 /**
@@ -251,7 +251,7 @@ struct val_pair: public node, public std::pair<node*, node*> {
 		return *this;
 	}
 
-	~val_pair() {
+	virtual ~val_pair() {
 		delete first;
 		delete second;
 	}

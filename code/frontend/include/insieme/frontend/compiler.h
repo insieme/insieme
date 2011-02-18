@@ -139,7 +139,7 @@ struct ClangParsingError: public std::logic_error {
 class ClangCompiler: boost::noncopyable {
 	struct ClangCompilerImpl;
 
-	std::auto_ptr<ClangCompilerImpl> pimpl;
+	ClangCompilerImpl* pimpl;
 public:
 	/**
 	 * Creates an empty compiler instance, usefull for test cases
