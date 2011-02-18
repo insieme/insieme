@@ -140,19 +140,9 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 
 	// special built in function handling -- TODO make more generic
 	if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
-		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
-		auto funName = literalFun->getValue();
-		//LOG(INFO) << "+++++++ val: " << funName << "\n";
-		//if (cc.basic.isRefDeref(literalFun)) {
-		if(funName == "ref.deref") {
 
-			// add operation
-			cStr << "(*";
-			visit(args.front());
-			cStr << ")";
-
-			return;
-		} if(cc.getLangBasic().isVarlistPack(funExp)) {
+		// special handling for var-list handling
+		if(cc.getLangBasic().isVarlistPack(funExp)) {
 			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
@@ -183,19 +173,16 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 		}
 	}
 
-	// TODO: gradually remove this -> literal handling should be sufficient
-	// generic built in C operator handling
-	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) {
-		string op = cOpAnn->getOperator();
-		cStr << "(";
-		visit(args.front());
-		cStr << " " << op << " ";
-		visit(args.back());
-		cStr << ")";
-		return;
+	// skip empty capture init expression
+	if (funExp->getNodeType() == NT_CaptureInitExpr) {
+		CaptureInitExprPtr cur = static_pointer_cast<const CaptureInitExpr>(funExp);
+		if (cur->getValues().empty()) {
+			// skip init expression
+			funExp = cur->getLambda();
+		}
 	}
 
-
+	// handle function based on the kind of function node
 	switch(funExp->getNodeType()) {
 
 		case NT_Literal: {
@@ -825,6 +812,9 @@ namespace formatting {
 		FormatTable res;
 
 		#include "insieme/simple_backend/format_spec_start.mac"
+
+
+		ADD_FORMATTER(basic.getRefDeref(), { OUT("*"); VISIT_ARG(0); });
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = converter.getConversionContext().getNodeManager();

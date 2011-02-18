@@ -74,6 +74,10 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> castExpr;
 
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> expressionRule;
+
+	// --------------------------------------------------------------------------------------
+	qi::rule<ParseIt, VectorExprPtr(), qi::locals<VectorTypePtr, ExpressionList>, qi::space_type> vectorExpr;
+    // --------------------------------------------------------------------------------------
 };
 
 }

@@ -64,7 +64,7 @@ class OclStmtConvert : public simple_backend::StmtConverter {
 	
 public:
 	OclStmtConvert(simple_backend::Converter& conversionContext, const simple_backend::formatting::FormatTable& formats);
-	void visitLambdaExpr(const core::LambdaExprPtr& func);
+	void visitLambdaExpr(const core::LambdaExprPtr& ptr);
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& ptr);
 	void visitCallExpr(const core::CallExprPtr& ptr);
 	void appendHeaders(simple_backend::ConvertedCode* converted) { }
