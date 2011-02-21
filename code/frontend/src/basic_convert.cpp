@@ -433,7 +433,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// lookup for the variable in the map
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 		assert(var);
-
+/* removed due to match OpenCL standard
         // flag to determine if a variable should be initialized with zeros instead of uninitialized
         bool zeroInit = false;
 
@@ -458,14 +458,14 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
                 }
             }
 		}
-
+*/
 /*
 		if(definition->getAnnotation().str() == "__local") {
 		    zeroInit = true;
 */
 
 		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), zeroInit);
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
 
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {

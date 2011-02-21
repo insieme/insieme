@@ -340,6 +340,21 @@ private:
         return NULL;
     }
 
+    // extract the argument of a call to refVar function
+    core::ExpressionPtr removeRefVar(core::DeclarationStmtPtr decl) {
+        core::ExpressionPtr oldInit = decl->getInitialization();
+        // write the variable with it's initialization to the place the declaration was
+        if(core::CallExprPtr initCall = core::dynamic_pointer_cast<const core::CallExpr>(oldInit)) {
+            // check if initCall calles the var() operation
+            core::ExpressionPtr argument = core::dynamic_pointer_cast<const core::Expression>(initCall->getArgument(0));
+            if( initCall == builder.refVar(argument) ) {
+                // set the argument of the var() operation as the new initialization statement
+                oldInit = argument;
+            }
+        }
+        return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), oldInit);
+    }
+
 public:
 
 
@@ -500,7 +515,7 @@ public:
                             core::NodeType derefType = tryDeref(decl->getVariable())->getType()->getNodeType();
 
                             if(derefType == core::NT_ArrayType || derefType == core::NT_VectorType)
-                                init = builder.refVar(builder.callExpr(BASIC.getInitZero(), BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
+                                init = builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
                             else if (varType->getNodeType() == core::NT_RefType)
                                 init = builder.refVar(builder.castExpr(tryDeref(decl->getVariable())->getType(), builder.intLit(0)));
                             else {
@@ -512,8 +527,9 @@ public:
 
                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                 return BASIC.getNoOp();
-                            else // write the variable with it's initialization to the place the declaration was
-                                return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), tryDeref(decl->getInitialization()));
+                            // write the variable with it's initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by it's argument
+                            return removeRefVar(decl);
                             break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {
@@ -521,15 +537,16 @@ public:
                             break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
-                            core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getInitZero(),
+                            core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getUndefined(),
                                  BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
                              // store the variable in list, initialized with zero, will be declared in global capture init list
                              globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
                              if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                  return BASIC.getNoOp();
-                             else // write the variable with it's initialization to the place the declaration was
-                                 return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), tryDeref(decl->getInitialization()));
+                             // write the variable with it's initialization to the place the declaration was
+                             // if it was a call to refVar, remove it and replace it by it's argument
+                             return removeRefVar(decl);
                              break;
                         }
                         case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
