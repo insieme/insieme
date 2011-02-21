@@ -432,8 +432,12 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
         // flag to determine if a variable should be initialized with zeros instead of uninitialized
         bool zeroInit = false;
 
+        core::NodeType kind = var->getNodeType();
+        if (kind == core::NT_RefType) {
+            kind = core::static_pointer_cast<const core::RefType>(var->getType())->getElementType()->getNodeType();
+        }
         // check for annotations which would lead to a zero init annotation
-        if(var->getNodeType() == core::NT_ArrayType || var->getNodeType() == core::NT_VectorType) {
+        if(kind == core::NT_ArrayType || kind == core::NT_VectorType) {
             if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
                 auto&& declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
                 for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
