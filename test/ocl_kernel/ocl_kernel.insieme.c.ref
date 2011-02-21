@@ -56,8 +56,8 @@ __kernel void simpleCalc(__global float* c, __global float* ga, __global int* gb
 
 // --- Entry Point ---
 
-// start code fragment :: Definition of __insieme_supp_0 //
-__kernel void __insieme_supp_0(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
+// start code fragment :: Definition of getId //
+__kernel void getId(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		unsigned int gid = (get_global_id(((unsigned int)(0))));
 		(((ga[((unsigned int)((gid)))])) = ((float)((gid))));
@@ -66,8 +66,8 @@ __kernel void __insieme_supp_0(__global float* c, __global float* ga, __global i
 
 // --- Entry Point ---
 
-// start code fragment :: Definition of __insieme_supp_1 //
-__kernel void __insieme_supp_1(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
+// start code fragment :: Definition of getSize //
+__kernel void getSize(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		(((ga[((unsigned int)(0))])) = ((float)((get_global_size(((unsigned int)(0)))))));
 		(((ga[((unsigned int)(1))])) = ((float)((get_global_size(((unsigned int)(1)))))));
@@ -94,8 +94,8 @@ __kernel void branch(__global float* c, __global float* ga, __global int* gb, __
 
 // --- Entry Point ---
 
-// start code fragment :: Definition of __insieme_supp_2 //
-__kernel void __insieme_supp_2(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
+// start code fragment :: Definition of access3D //
+__kernel void access3D(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		unsigned int gid[3];
 		((((gid)[((unsigned int)(0))])) = (get_global_id(((unsigned int)(0)))));
@@ -108,8 +108,8 @@ __kernel void __insieme_supp_2(__global float* c, __global float* ga, __global i
 
 // --- Entry Point ---
 
-// start code fragment :: Definition of __insieme_supp_3 //
-__kernel void __insieme_supp_3(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
+// start code fragment :: Definition of barriers //
+__kernel void barriers(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		unsigned int lid = (get_local_id(((unsigned int)(0))));
 		unsigned int gid = (get_global_id(((unsigned int)(0))));

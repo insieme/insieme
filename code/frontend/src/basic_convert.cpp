@@ -95,7 +95,12 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+
+	// Handling of the translation unit: we have to make sure to load the translation unit
+	// where the function is defined before starting the parser otherwise reading literals
+	// results in wrong values.
 	clang::idx::Entity&& funcEntity = clang::idx::Entity::get( const_cast<FunctionDecl*>(funcDecl), mProg.getClangProgram() );
 	std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = mProg.getClangIndexer().getDefinitionFor(funcEntity);
 	assert(ret.first && ret.second);
