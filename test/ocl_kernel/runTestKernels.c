@@ -12,15 +12,16 @@ void initHostPtr(float* arr, size_t height, size_t width, size_t depth, float va
     }
 }
 
-void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth) {
+void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth, size_t scale) {
     size_t counter = 0;
     for(size_t i = 0; i < height; ++i) {
         for(size_t j = 0; j < width; ++j) 
-            for(size_t k = 0; k < depth; ++k) 
+            for(size_t k = 0; k < depth; ++k) {
                 switch (counter%3) {
-                case 0: arr[i * width * depth + j * depth + k] = height;
-                case 1: arr[i * width * depth + j * depth + k] = width;
-                case 2: arr[i * width * depth + j * depth + k] = depth;
+                case 0: arr[i * width * depth + j * depth + k] = width/scale; break;
+                case 1: arr[i * width * depth + j * depth + k] = height/scale; break;
+                case 2: arr[i * width * depth + j * depth + k] = depth/scale; break;
+                }
                 ++counter;
             }
     }
@@ -29,7 +30,7 @@ void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth) {
 int main(int argc, char* argv[]) {
     char* kernelFile = argc > 1 ? argv[1] : "ocl_kernel.c";
     
-    char* kernelNames[] = { "allMemArg", "simpleCalc" };//, "getId", "getSize", "branch"};//, "access3D", "barriers", "VectorAdd" };
+    char* kernelNames[] = { "allMemArg", "simpleCalc" , "getId", "getSize", "branch", "access3D", "barriers", "VectorAdd" };
 
     // set problem sizes
     size_t nGroups = 2;
@@ -50,9 +51,9 @@ int main(int argc, char* argv[]) {
     hgb = (int*)malloc(sizeof(int) * nElem);
     result = (float*)malloc(sizeof(float) * nElem);
     
-    initHostPtr(hc, width/nGroups, height/nGroups, depth/nGroups, 0.0f);
+    initHostPtr(hc, width, height, depth, 0.0f);
     initHostPtr(hga, height, width, depth, 1.25f);
-    initHostPtrInt(hgb, height, width, depth);
+    initHostPtrInt(hgb, height, width, depth, 1);
     
     // device pointers
     cl_mem dc, dga, dgb;
@@ -115,7 +116,7 @@ int main(int argc, char* argv[]) {
 	buildProgram(program, device, "-DNO_INSIEME");
 	
 	// allocate device memory
-    dc = clCreateBuffer(context, CL_MEM_READ_ONLY /*| CL_MEM_COPY_HOST_PTR*/, sizeof(float) * nElem, /*hc*/NULL, errCode);
+    dc = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * nElem, hc, errCode);
     CLCHECK(_errCode);
     dga = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * nElem, NULL, errCode);
     CLCHECK(_errCode);
@@ -125,7 +126,7 @@ int main(int argc, char* argv[]) {
 	for(size_t i = 0; i < (sizeof(kernelNames)/sizeof(char*)); ++i) {
 
 	    // copy data to mutable arrays
-	    CLCHECK(clEnqueueWriteBuffer(queue, dc, CL_TRUE, 0, sizeof(float) * nElem, hc, 0, NULL, NULL));
+//	    CLCHECK(clEnqueueWriteBuffer(queue, dc, CL_TRUE, 0, sizeof(float) * nElem, hc, 0, NULL, NULL));
 	    CLCHECK(clEnqueueWriteBuffer(queue, dga, CL_TRUE, 0, sizeof(float) * nElem, hga, 0, NULL, NULL));
 	    CLCHECK(clEnqueueWriteBuffer(queue, dgb, CL_TRUE, 0, sizeof(int) * nElem, hgb, 0, NULL, NULL));
 	    

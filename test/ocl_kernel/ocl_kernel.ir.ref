@@ -1,12 +1,12 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v90, vector<uint<4>,3> v78, vector<uint<4>,3> v92){
-        decl vector<uint<4>,3> v91 = vector.pointwise(uint.div)(v78, v92);
-        parallel(job([vector.reduction(v91, 1, uint.mul)-vector.reduction(v91, 1, uint.mul)])[decl array<ref<real<4>>,1> v86 = v90, decl vector<uint<4>,3> v87 = v91, decl vector<uint<4>,3> v88 = v92]{
-            default: [v86, v88, v87]fun[array<ref<real<4>>,1> v84, vector<uint<4>,3> v85, vector<uint<4>,3> v79](){
-                parallel(job([vector.reduction(v85, 1, uint.mul)-vector.reduction(v85, 1, uint.mul)])[decl array<ref<real<4>>,1> v81 = v84, decl vector<uint<4>,3> v82 = v85]{
-                    default: [v81, v82]fun[array<ref<real<4>>,1> v1, vector<uint<4>,3> v80](){
+fun(array<ref<real<4>>,1> v100, vector<uint<4>,3> v88, vector<uint<4>,3> v102){
+        decl vector<uint<4>,3> v101 = vector.pointwise(uint.div)(v88, v102);
+        parallel(job([vector.reduction(v101, 1, uint.mul)-vector.reduction(v101, 1, uint.mul)])[decl array<ref<real<4>>,1> v96 = v100, decl vector<uint<4>,3> v97 = v101, decl vector<uint<4>,3> v98 = v102]{
+            default: [v98, v97, v96]fun[vector<uint<4>,3> v95, vector<uint<4>,3> v89, array<ref<real<4>>,1> v94](){
+                parallel(job([vector.reduction(v95, 1, uint.mul)-vector.reduction(v95, 1, uint.mul)])[decl array<ref<real<4>>,1> v91 = v94, decl vector<uint<4>,3> v92 = v95]{
+                    default: [v91, v92]fun[array<ref<real<4>>,1> v1, vector<uint<4>,3> v90](){
                         decl ref<real<4>> v2 =  var(v1[0]);
                     }
                 });
@@ -16,12 +16,12 @@ fun(array<ref<real<4>>,1> v90, vector<uint<4>,3> v78, vector<uint<4>,3> v92){
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v106, vector<uint<4>,3> v94, vector<uint<4>,3> v108){
-        decl vector<uint<4>,3> v107 = vector.pointwise(uint.div)(v94, v108);
-        parallel(job([vector.reduction(v107, 1, uint.mul)-vector.reduction(v107, 1, uint.mul)])[decl array<ref<real<4>>,1> v102 = v106, decl vector<uint<4>,3> v103 = v107, decl vector<uint<4>,3> v104 = v108]{
-            default: [v103, v102, v104]fun[vector<uint<4>,3> v95, array<ref<real<4>>,1> v100, vector<uint<4>,3> v101](){
-                parallel(job([vector.reduction(v101, 1, uint.mul)-vector.reduction(v101, 1, uint.mul)])[decl array<ref<real<4>>,1> v97 = v100, decl vector<uint<4>,3> v98 = v101]{
-                    default: [v97, v98]fun[array<ref<real<4>>,1> v5, vector<uint<4>,3> v96](){
+fun(array<ref<real<4>>,1> v116, vector<uint<4>,3> v104, vector<uint<4>,3> v118){
+        decl vector<uint<4>,3> v117 = vector.pointwise(uint.div)(v104, v118);
+        parallel(job([vector.reduction(v117, 1, uint.mul)-vector.reduction(v117, 1, uint.mul)])[decl array<ref<real<4>>,1> v112 = v116, decl vector<uint<4>,3> v113 = v117, decl vector<uint<4>,3> v114 = v118]{
+            default: [v114, v112, v113]fun[vector<uint<4>,3> v111, array<ref<real<4>>,1> v110, vector<uint<4>,3> v105](){
+                parallel(job([vector.reduction(v111, 1, uint.mul)-vector.reduction(v111, 1, uint.mul)])[decl array<ref<real<4>>,1> v107 = v110, decl vector<uint<4>,3> v108 = v111]{
+                    default: [v108, v107]fun[vector<uint<4>,3> v106, array<ref<real<4>>,1> v5](){
                         decl ref<real<4>> v6 =  var(v5[0]);
                     }
                 });
@@ -31,12 +31,12 @@ fun(array<ref<real<4>>,1> v106, vector<uint<4>,3> v94, vector<uint<4>,3> v108){
     }
 
 //  Entry Point: 
-fun(array<ref<int<4>>,1> v118, vector<uint<4>,3> v110, vector<uint<4>,3> v123){
-        decl vector<uint<4>,3> v122 = vector.pointwise(uint.div)(v110, v123);
-        parallel(job([vector.reduction(v122, 1, uint.mul)-vector.reduction(v122, 1, uint.mul)])[decl vector<uint<4>,3> v119 = v122, decl vector<uint<4>,3> v120 = v123]{
-            default: [v119, v120, v118]fun[vector<uint<4>,3> v111, vector<uint<4>,3> v117, array<ref<int<4>>,1> v116](){
-                parallel(job([vector.reduction(v117, 1, uint.mul)-vector.reduction(v117, 1, uint.mul)])[decl array<ref<int<4>>,1> v113 = v116, decl vector<uint<4>,3> v114 = v117]{
-                    default: [v114, v113]fun[vector<uint<4>,3> v112, array<ref<int<4>>,1> v9](){
+fun(array<ref<int<4>>,1> v128, vector<uint<4>,3> v120, vector<uint<4>,3> v133){
+        decl vector<uint<4>,3> v132 = vector.pointwise(uint.div)(v120, v133);
+        parallel(job([vector.reduction(v132, 1, uint.mul)-vector.reduction(v132, 1, uint.mul)])[decl vector<uint<4>,3> v129 = v132, decl vector<uint<4>,3> v130 = v133]{
+            default: [v130, v128, v129]fun[vector<uint<4>,3> v127, array<ref<int<4>>,1> v126, vector<uint<4>,3> v121](){
+                parallel(job([vector.reduction(v127, 1, uint.mul)-vector.reduction(v127, 1, uint.mul)])[decl array<ref<int<4>>,1> v123 = v126, decl vector<uint<4>,3> v124 = v127]{
+                    default: [v124, v123]fun[vector<uint<4>,3> v122, array<ref<int<4>>,1> v9](){
                         decl ref<int<4>> v10 =  var(v9[0]);
                     }
                 });
@@ -46,12 +46,12 @@ fun(array<ref<int<4>>,1> v118, vector<uint<4>,3> v110, vector<uint<4>,3> v123){
     }
 
 //  Entry Point: 
-fun(int<2> v132, vector<uint<4>,3> v125, vector<uint<4>,3> v137){
-        decl vector<uint<4>,3> v136 = vector.pointwise(uint.div)(v125, v137);
-        parallel(job([vector.reduction(v136, 1, uint.mul)-vector.reduction(v136, 1, uint.mul)])[decl vector<uint<4>,3> v133 = v136, decl vector<uint<4>,3> v134 = v137]{
-            default: [v132, v133, v134]fun[int<2> v128, vector<uint<4>,3> v126, vector<uint<4>,3> v131](){
-                parallel(job([vector.reduction(v131, 1, uint.mul)-vector.reduction(v131, 1, uint.mul)])[decl vector<uint<4>,3> v129 = v131]{
-                    default: [v128, v129]fun[int<2> v13, vector<uint<4>,3> v127](){
+fun(int<2> v142, vector<uint<4>,3> v135, vector<uint<4>,3> v147){
+        decl vector<uint<4>,3> v146 = vector.pointwise(uint.div)(v135, v147);
+        parallel(job([vector.reduction(v146, 1, uint.mul)-vector.reduction(v146, 1, uint.mul)])[decl vector<uint<4>,3> v143 = v146, decl vector<uint<4>,3> v144 = v147]{
+            default: [v143, v142, v144]fun[vector<uint<4>,3> v136, int<2> v138, vector<uint<4>,3> v141](){
+                parallel(job([vector.reduction(v141, 1, uint.mul)-vector.reduction(v141, 1, uint.mul)])[decl vector<uint<4>,3> v139 = v141]{
+                    default: [v138, v139]fun[int<2> v13, vector<uint<4>,3> v137](){
                         decl ref<int<2>> v14 =  var(v13);
                     }
                 });
@@ -61,12 +61,12 @@ fun(int<2> v132, vector<uint<4>,3> v125, vector<uint<4>,3> v137){
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v164, array<ref<real<4>>,1> v165, array<ref<int<4>>,1> v166, array<ref<real<4>>,1> v158, uint<4> v159, int<4> v160, vector<uint<4>,3> v139, vector<uint<4>,3> v168){
-        decl vector<uint<4>,3> v167 = vector.pointwise(uint.div)(v139, v168);
-        parallel(job([vector.reduction(v167, 1, uint.mul)-vector.reduction(v167, 1, uint.mul)])[decl array<ref<real<4>>,1> v155 = v164, decl array<ref<real<4>>,1> v156 = v165, decl array<ref<int<4>>,1> v157 = v166, decl vector<uint<4>,3> v161 = v167, decl vector<uint<4>,3> v162 = v168]{
-            default: [v156, v160, v162, v155, v161, v157, v159, v158]fun[array<ref<real<4>>,1> v151, int<4> v147, vector<uint<4>,3> v154, array<ref<real<4>>,1> v150, vector<uint<4>,3> v140, array<ref<int<4>>,1> v152, uint<4> v146, array<ref<real<4>>,1> v153](){
-                parallel(job([vector.reduction(v154, 1, uint.mul)-vector.reduction(v154, 1, uint.mul)])[decl array<ref<real<4>>,1> v142 = v150, decl array<ref<real<4>>,1> v143 = v151, decl array<ref<int<4>>,1> v144 = v152, decl array<ref<real<4>>,1> v145 = v153, decl vector<uint<4>,3> v148 = v154]{
-                    default: [v144, v143, v147, v142, v148, v146, v145]fun[array<ref<int<4>>,1> v19, array<ref<real<4>>,1> v18, int<4> v22, array<ref<real<4>>,1> v17, vector<uint<4>,3> v141, uint<4> v21, array<ref<real<4>>,1> v20](){
+fun(array<ref<real<4>>,1> v174, array<ref<real<4>>,1> v175, array<ref<int<4>>,1> v176, array<ref<real<4>>,1> v168, uint<4> v169, int<4> v170, vector<uint<4>,3> v149, vector<uint<4>,3> v178){
+        decl vector<uint<4>,3> v177 = vector.pointwise(uint.div)(v149, v178);
+        parallel(job([vector.reduction(v177, 1, uint.mul)-vector.reduction(v177, 1, uint.mul)])[decl array<ref<real<4>>,1> v165 = v174, decl array<ref<real<4>>,1> v166 = v175, decl array<ref<int<4>>,1> v167 = v176, decl vector<uint<4>,3> v171 = v177, decl vector<uint<4>,3> v172 = v178]{
+            default: [v170, v166, v169, v165, v172, v168, v171, v167]fun[int<4> v157, array<ref<real<4>>,1> v161, uint<4> v156, array<ref<real<4>>,1> v160, vector<uint<4>,3> v164, array<ref<real<4>>,1> v163, vector<uint<4>,3> v150, array<ref<int<4>>,1> v162](){
+                parallel(job([vector.reduction(v164, 1, uint.mul)-vector.reduction(v164, 1, uint.mul)])[decl array<ref<real<4>>,1> v152 = v160, decl array<ref<real<4>>,1> v153 = v161, decl array<ref<int<4>>,1> v154 = v162, decl array<ref<real<4>>,1> v155 = v163, decl vector<uint<4>,3> v158 = v164]{
+                    default: [v154, v153, v157, v152, v158, v156, v155]fun[array<ref<int<4>>,1> v19, array<ref<real<4>>,1> v18, int<4> v22, array<ref<real<4>>,1> v17, vector<uint<4>,3> v151, uint<4> v21, array<ref<real<4>>,1> v20](){
                         v18[0] := v19[0];
                     }
                 });
@@ -76,12 +76,12 @@ fun(array<ref<real<4>>,1> v164, array<ref<real<4>>,1> v165, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v195, array<ref<real<4>>,1> v196, array<ref<int<4>>,1> v197, array<ref<real<4>>,1> v189, uint<4> v190, int<4> v191, vector<uint<4>,3> v170, vector<uint<4>,3> v199){
-        decl vector<uint<4>,3> v198 = vector.pointwise(uint.div)(v170, v199);
-        parallel(job([vector.reduction(v198, 1, uint.mul)-vector.reduction(v198, 1, uint.mul)])[decl array<ref<real<4>>,1> v186 = v195, decl array<ref<real<4>>,1> v187 = v196, decl array<ref<int<4>>,1> v188 = v197, decl vector<uint<4>,3> v192 = v198, decl vector<uint<4>,3> v193 = v199]{
-            default: [v192, v187, v188, v193, v191, v190, v189, v186]fun[vector<uint<4>,3> v171, array<ref<real<4>>,1> v182, array<ref<int<4>>,1> v183, vector<uint<4>,3> v185, int<4> v178, uint<4> v177, array<ref<real<4>>,1> v184, array<ref<real<4>>,1> v181](){
-                parallel(job([vector.reduction(v185, 1, uint.mul)-vector.reduction(v185, 1, uint.mul)])[decl array<ref<real<4>>,1> v173 = v181, decl array<ref<real<4>>,1> v174 = v182, decl array<ref<int<4>>,1> v175 = v183, decl array<ref<real<4>>,1> v176 = v184, decl vector<uint<4>,3> v179 = v185]{
-                    default: [v179, v177, v176, v175, v174, v173, v178]fun[vector<uint<4>,3> v172, uint<4> v29, array<ref<real<4>>,1> v28, array<ref<int<4>>,1> v27, array<ref<real<4>>,1> v26, array<ref<real<4>>,1> v25, int<4> v30](){
+fun(array<ref<real<4>>,1> v205, array<ref<real<4>>,1> v206, array<ref<int<4>>,1> v207, array<ref<real<4>>,1> v199, uint<4> v200, int<4> v201, vector<uint<4>,3> v180, vector<uint<4>,3> v209){
+        decl vector<uint<4>,3> v208 = vector.pointwise(uint.div)(v180, v209);
+        parallel(job([vector.reduction(v208, 1, uint.mul)-vector.reduction(v208, 1, uint.mul)])[decl array<ref<real<4>>,1> v196 = v205, decl array<ref<real<4>>,1> v197 = v206, decl array<ref<int<4>>,1> v198 = v207, decl vector<uint<4>,3> v202 = v208, decl vector<uint<4>,3> v203 = v209]{
+            default: [v203, v198, v202, v201, v200, v196, v197, v199]fun[vector<uint<4>,3> v195, array<ref<int<4>>,1> v193, vector<uint<4>,3> v181, int<4> v188, uint<4> v187, array<ref<real<4>>,1> v191, array<ref<real<4>>,1> v192, array<ref<real<4>>,1> v194](){
+                parallel(job([vector.reduction(v195, 1, uint.mul)-vector.reduction(v195, 1, uint.mul)])[decl array<ref<real<4>>,1> v183 = v191, decl array<ref<real<4>>,1> v184 = v192, decl array<ref<int<4>>,1> v185 = v193, decl array<ref<real<4>>,1> v186 = v194, decl vector<uint<4>,3> v189 = v195]{
+                    default: [v189, v187, v186, v185, v184, v183, v188]fun[vector<uint<4>,3> v182, uint<4> v29, array<ref<real<4>>,1> v28, array<ref<int<4>>,1> v27, array<ref<real<4>>,1> v26, array<ref<real<4>>,1> v25, int<4> v30](){
                         v28[v27[0]] := 3.3f;
                         v26[v29] := v25[1]*v28[v27[0]];
                     }
@@ -92,19 +92,19 @@ fun(array<ref<real<4>>,1> v195, array<ref<real<4>>,1> v196, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v234, array<ref<real<4>>,1> v235, array<ref<int<4>>,1> v236, array<ref<real<4>>,1> v228, uint<4> v229, int<4> v230, vector<uint<4>,3> v201, vector<uint<4>,3> v238){
-        decl vector<uint<4>,3> v237 = vector.pointwise(uint.div)(v201, v238);
-        parallel(job([vector.reduction(v237, 1, uint.mul)-vector.reduction(v237, 1, uint.mul)])[decl array<ref<real<4>>,1> v225 = v234, decl array<ref<real<4>>,1> v226 = v235, decl array<ref<int<4>>,1> v227 = v236, decl vector<uint<4>,3> v231 = v237, decl vector<uint<4>,3> v232 = v238]{
-            default: [v226, v232, v225, v231, v227, v230, v228, v229]fun[array<ref<real<4>>,1> v220, vector<uint<4>,3> v224, array<ref<real<4>>,1> v219, vector<uint<4>,3> v223, array<ref<int<4>>,1> v221, int<4> v215, array<ref<real<4>>,1> v222, uint<4> v214](){
-                parallel(job([vector.reduction(v224, 1, uint.mul)-vector.reduction(v224, 1, uint.mul)])[decl array<ref<real<4>>,1> v210 = v219, decl array<ref<real<4>>,1> v211 = v220, decl array<ref<int<4>>,1> v212 = v221, decl array<ref<real<4>>,1> v213 = v222, decl vector<uint<4>,3> v216 = v223, decl vector<uint<4>,3> v217 = v224]{
-                    default: [v212, v215, v211, v210, v217, v216, v214, v213]fun[array<ref<int<4>>,1> v35, int<4> v38, array<ref<real<4>>,1> v34, array<ref<real<4>>,1> v33, vector<uint<4>,3> v203, vector<uint<4>,3> v202, uint<4> v37, array<ref<real<4>>,1> v36](){
-                        decl ref<uint<4>> v39 =  var([v202, v203]fun[vector<uint<4>,3> v206, vector<uint<4>,3> v205](uint<4> v204){
-                            decl uint<4> v207 = getThreadID(0);
-                            decl uint<4> v208 = getThreadID(1);
-                            switch(v204) {
-                                case 0: return v207/v205[2]/v205[1]+v205[0]*v208/v206[2]/v206[1]
-                                case 1: return v207/v205[2]%v205[1]+v205[1]*v208/v206[2]%v206[1]
-                                case 2: return v207%v205[2]+v205[2]*v208/v206[2]%v206[1]
+fun(array<ref<real<4>>,1> v244, array<ref<real<4>>,1> v245, array<ref<int<4>>,1> v246, array<ref<real<4>>,1> v238, uint<4> v239, int<4> v240, vector<uint<4>,3> v211, vector<uint<4>,3> v248){
+        decl vector<uint<4>,3> v247 = vector.pointwise(uint.div)(v211, v248);
+        parallel(job([vector.reduction(v247, 1, uint.mul)-vector.reduction(v247, 1, uint.mul)])[decl array<ref<real<4>>,1> v235 = v244, decl array<ref<real<4>>,1> v236 = v245, decl array<ref<int<4>>,1> v237 = v246, decl vector<uint<4>,3> v241 = v247, decl vector<uint<4>,3> v242 = v248]{
+            default: [v239, v237, v242, v236, v241, v240, v238, v235]fun[uint<4> v224, array<ref<int<4>>,1> v231, vector<uint<4>,3> v234, array<ref<real<4>>,1> v230, vector<uint<4>,3> v233, int<4> v225, array<ref<real<4>>,1> v232, array<ref<real<4>>,1> v229](){
+                parallel(job([vector.reduction(v234, 1, uint.mul)-vector.reduction(v234, 1, uint.mul)])[decl array<ref<real<4>>,1> v220 = v229, decl array<ref<real<4>>,1> v221 = v230, decl array<ref<int<4>>,1> v222 = v231, decl array<ref<real<4>>,1> v223 = v232, decl vector<uint<4>,3> v226 = v233, decl vector<uint<4>,3> v227 = v234]{
+                    default: [v222, v226, v225, v221, v220, v227, v224, v223]fun[array<ref<int<4>>,1> v35, vector<uint<4>,3> v212, int<4> v38, array<ref<real<4>>,1> v34, array<ref<real<4>>,1> v33, vector<uint<4>,3> v213, uint<4> v37, array<ref<real<4>>,1> v36](){
+                        decl ref<uint<4>> v39 =  var([v213, v212]fun[vector<uint<4>,3> v215, vector<uint<4>,3> v216](uint<4> v214){
+                            decl uint<4> v217 = getThreadID(0);
+                            decl uint<4> v218 = getThreadID(1);
+                            switch(v214) {
+                                case 0: return v217/v215[2]/v215[1]+v215[0]*v218/v216[2]/v216[1]
+                                case 1: return v217/v215[2]%v215[1]+v215[1]*v218/v216[2]%v216[1]
+                                case 2: return v217%v215[2]+v215[2]*v218/v216[2]%v216[1]
                                 default: { }
                             };
                         }(0));
@@ -117,21 +117,21 @@ fun(array<ref<real<4>>,1> v234, array<ref<real<4>>,1> v235, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v270, array<ref<real<4>>,1> v271, array<ref<int<4>>,1> v272, array<ref<real<4>>,1> v263, uint<4> v264, int<4> v265, vector<uint<4>,3> v273, vector<uint<4>,3> v275){
-        decl vector<uint<4>,3> v274 = vector.pointwise(uint.div)(v273, v275);
-        parallel(job([vector.reduction(v274, 1, uint.mul)-vector.reduction(v274, 1, uint.mul)])[decl array<ref<real<4>>,1> v260 = v270, decl array<ref<real<4>>,1> v261 = v271, decl array<ref<int<4>>,1> v262 = v272, decl vector<uint<4>,3> v266 = v273, decl vector<uint<4>,3> v267 = v274, decl vector<uint<4>,3> v268 = v275]{
-            default: [v268, v266, v260, v267, v264, v262, v263, v261, v265]fun[vector<uint<4>,3> v259, vector<uint<4>,3> v257, array<ref<real<4>>,1> v253, vector<uint<4>,3> v258, uint<4> v247, array<ref<int<4>>,1> v255, array<ref<real<4>>,1> v256, array<ref<real<4>>,1> v254, int<4> v248](){
-                parallel(job([vector.reduction(v259, 1, uint.mul)-vector.reduction(v259, 1, uint.mul)])[decl array<ref<real<4>>,1> v243 = v253, decl array<ref<real<4>>,1> v244 = v254, decl array<ref<int<4>>,1> v245 = v255, decl array<ref<real<4>>,1> v246 = v256, decl vector<uint<4>,3> v249 = v257, decl vector<uint<4>,3> v250 = v258, decl vector<uint<4>,3> v251 = v259]{
-                    default: [v248, v246, v250, v251, v247, v244, v243, v245, v249]fun[int<4> v47, array<ref<real<4>>,1> v45, vector<uint<4>,3> v241, vector<uint<4>,3> v242, uint<4> v46, array<ref<real<4>>,1> v43, array<ref<real<4>>,1> v42, array<ref<int<4>>,1> v44, vector<uint<4>,3> v240](){
-                        v43[0] := v240[0];
-                        v43[1] := v240[1];
-                        v43[2] := v240[2];
-                        v43[3] := v242[0];
-                        v43[4] := v242[1];
-                        v43[5] := v242[2];
-                        v43[6] := v241[0];
-                        v43[7] := v241[1];
-                        v43[8] := v241[2];
+fun(array<ref<real<4>>,1> v280, array<ref<real<4>>,1> v281, array<ref<int<4>>,1> v282, array<ref<real<4>>,1> v273, uint<4> v274, int<4> v275, vector<uint<4>,3> v283, vector<uint<4>,3> v285){
+        decl vector<uint<4>,3> v284 = vector.pointwise(uint.div)(v283, v285);
+        parallel(job([vector.reduction(v284, 1, uint.mul)-vector.reduction(v284, 1, uint.mul)])[decl array<ref<real<4>>,1> v270 = v280, decl array<ref<real<4>>,1> v271 = v281, decl array<ref<int<4>>,1> v272 = v282, decl vector<uint<4>,3> v276 = v283, decl vector<uint<4>,3> v277 = v284, decl vector<uint<4>,3> v278 = v285]{
+            default: [v270, v273, v277, v274, v276, v278, v271, v275, v272]fun[array<ref<real<4>>,1> v263, array<ref<real<4>>,1> v266, vector<uint<4>,3> v268, uint<4> v257, vector<uint<4>,3> v267, vector<uint<4>,3> v269, array<ref<real<4>>,1> v264, int<4> v258, array<ref<int<4>>,1> v265](){
+                parallel(job([vector.reduction(v269, 1, uint.mul)-vector.reduction(v269, 1, uint.mul)])[decl array<ref<real<4>>,1> v253 = v263, decl array<ref<real<4>>,1> v254 = v264, decl array<ref<int<4>>,1> v255 = v265, decl array<ref<real<4>>,1> v256 = v266, decl vector<uint<4>,3> v259 = v267, decl vector<uint<4>,3> v260 = v268, decl vector<uint<4>,3> v261 = v269]{
+                    default: [v259, v258, v256, v257, v254, v260, v253, v261, v255]fun[vector<uint<4>,3> v250, int<4> v47, array<ref<real<4>>,1> v45, uint<4> v46, array<ref<real<4>>,1> v43, vector<uint<4>,3> v251, array<ref<real<4>>,1> v42, vector<uint<4>,3> v252, array<ref<int<4>>,1> v44](){
+                        v43[0] := v250[0];
+                        v43[1] := v250[1];
+                        v43[2] := v250[2];
+                        v43[3] := v252[0];
+                        v43[4] := v252[1];
+                        v43[5] := v252[2];
+                        v43[6] := v251[0];
+                        v43[7] := v251[1];
+                        v43[8] := v251[2];
                     }
                 });
                 mergeAll();
@@ -140,12 +140,12 @@ fun(array<ref<real<4>>,1> v270, array<ref<real<4>>,1> v271, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v302, array<ref<real<4>>,1> v303, array<ref<int<4>>,1> v304, array<ref<real<4>>,1> v296, uint<4> v297, int<4> v298, vector<uint<4>,3> v277, vector<uint<4>,3> v306){
-        decl vector<uint<4>,3> v305 = vector.pointwise(uint.div)(v277, v306);
-        parallel(job([vector.reduction(v305, 1, uint.mul)-vector.reduction(v305, 1, uint.mul)])[decl array<ref<real<4>>,1> v293 = v302, decl array<ref<real<4>>,1> v294 = v303, decl array<ref<int<4>>,1> v295 = v304, decl vector<uint<4>,3> v299 = v305, decl vector<uint<4>,3> v300 = v306]{
-            default: [v297, v296, v294, v299, v295, v293, v300, v298]fun[uint<4> v284, array<ref<real<4>>,1> v291, array<ref<real<4>>,1> v289, vector<uint<4>,3> v278, array<ref<int<4>>,1> v290, array<ref<real<4>>,1> v288, vector<uint<4>,3> v292, int<4> v285](){
-                parallel(job([vector.reduction(v292, 1, uint.mul)-vector.reduction(v292, 1, uint.mul)])[decl array<ref<real<4>>,1> v280 = v288, decl array<ref<real<4>>,1> v281 = v289, decl array<ref<int<4>>,1> v282 = v290, decl array<ref<real<4>>,1> v283 = v291, decl vector<uint<4>,3> v286 = v292]{
-                    default: [v283, v282, v286, v281, v285, v284, v280]fun[array<ref<real<4>>,1> v53, array<ref<int<4>>,1> v52, vector<uint<4>,3> v279, array<ref<real<4>>,1> v51, int<4> v55, uint<4> v54, array<ref<real<4>>,1> v50](){
+fun(array<ref<real<4>>,1> v312, array<ref<real<4>>,1> v313, array<ref<int<4>>,1> v314, array<ref<real<4>>,1> v306, uint<4> v307, int<4> v308, vector<uint<4>,3> v287, vector<uint<4>,3> v316){
+        decl vector<uint<4>,3> v315 = vector.pointwise(uint.div)(v287, v316);
+        parallel(job([vector.reduction(v315, 1, uint.mul)-vector.reduction(v315, 1, uint.mul)])[decl array<ref<real<4>>,1> v303 = v312, decl array<ref<real<4>>,1> v304 = v313, decl array<ref<int<4>>,1> v305 = v314, decl vector<uint<4>,3> v309 = v315, decl vector<uint<4>,3> v310 = v316]{
+            default: [v309, v306, v310, v308, v304, v307, v303, v305]fun[vector<uint<4>,3> v288, array<ref<real<4>>,1> v301, vector<uint<4>,3> v302, int<4> v295, array<ref<real<4>>,1> v299, uint<4> v294, array<ref<real<4>>,1> v298, array<ref<int<4>>,1> v300](){
+                parallel(job([vector.reduction(v302, 1, uint.mul)-vector.reduction(v302, 1, uint.mul)])[decl array<ref<real<4>>,1> v290 = v298, decl array<ref<real<4>>,1> v291 = v299, decl array<ref<int<4>>,1> v292 = v300, decl array<ref<real<4>>,1> v293 = v301, decl vector<uint<4>,3> v296 = v302]{
+                    default: [v296, v293, v292, v291, v295, v294, v290]fun[vector<uint<4>,3> v289, array<ref<real<4>>,1> v53, array<ref<int<4>>,1> v52, array<ref<real<4>>,1> v51, int<4> v55, uint<4> v54, array<ref<real<4>>,1> v50](){
                         if(v54==v55) v51[0] := v50[0] else { };
                     }
                 });
@@ -155,40 +155,40 @@ fun(array<ref<real<4>>,1> v302, array<ref<real<4>>,1> v303, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v353, array<ref<real<4>>,1> v354, array<ref<int<4>>,1> v355, array<ref<real<4>>,1> v347, uint<4> v348, int<4> v349, vector<uint<4>,3> v308, vector<uint<4>,3> v357){
-        decl vector<uint<4>,3> v356 = vector.pointwise(uint.div)(v308, v357);
-        parallel(job([vector.reduction(v356, 1, uint.mul)-vector.reduction(v356, 1, uint.mul)])[decl array<ref<real<4>>,1> v344 = v353, decl array<ref<real<4>>,1> v345 = v354, decl array<ref<int<4>>,1> v346 = v355, decl vector<uint<4>,3> v350 = v356, decl vector<uint<4>,3> v351 = v357]{
-            default: [v344, v348, v347, v350, v351, v346, v349, v345]fun[array<ref<real<4>>,1> v338, uint<4> v333, array<ref<real<4>>,1> v341, vector<uint<4>,3> v342, vector<uint<4>,3> v343, array<ref<int<4>>,1> v340, int<4> v334, array<ref<real<4>>,1> v339](){
-                parallel(job([vector.reduction(v343, 1, uint.mul)-vector.reduction(v343, 1, uint.mul)])[decl array<ref<real<4>>,1> v329 = v338, decl array<ref<real<4>>,1> v330 = v339, decl array<ref<int<4>>,1> v331 = v340, decl array<ref<real<4>>,1> v332 = v341, decl vector<uint<4>,3> v335 = v342, decl vector<uint<4>,3> v336 = v343]{
-                    default: [v331, v333, v332, v330, v329, v336, v335, v334]fun[array<ref<int<4>>,1> v60, uint<4> v62, array<ref<real<4>>,1> v61, array<ref<real<4>>,1> v59, array<ref<real<4>>,1> v58, vector<uint<4>,3> v310, vector<uint<4>,3> v309, int<4> v63](){
+fun(array<ref<real<4>>,1> v363, array<ref<real<4>>,1> v364, array<ref<int<4>>,1> v365, array<ref<real<4>>,1> v357, uint<4> v358, int<4> v359, vector<uint<4>,3> v318, vector<uint<4>,3> v367){
+        decl vector<uint<4>,3> v366 = vector.pointwise(uint.div)(v318, v367);
+        parallel(job([vector.reduction(v366, 1, uint.mul)-vector.reduction(v366, 1, uint.mul)])[decl array<ref<real<4>>,1> v354 = v363, decl array<ref<real<4>>,1> v355 = v364, decl array<ref<int<4>>,1> v356 = v365, decl vector<uint<4>,3> v360 = v366, decl vector<uint<4>,3> v361 = v367]{
+            default: [v361, v357, v358, v356, v354, v360, v355, v359]fun[vector<uint<4>,3> v353, array<ref<real<4>>,1> v351, uint<4> v343, array<ref<int<4>>,1> v350, array<ref<real<4>>,1> v348, vector<uint<4>,3> v352, array<ref<real<4>>,1> v349, int<4> v344](){
+                parallel(job([vector.reduction(v353, 1, uint.mul)-vector.reduction(v353, 1, uint.mul)])[decl array<ref<real<4>>,1> v339 = v348, decl array<ref<real<4>>,1> v340 = v349, decl array<ref<int<4>>,1> v341 = v350, decl array<ref<real<4>>,1> v342 = v351, decl vector<uint<4>,3> v345 = v352, decl vector<uint<4>,3> v346 = v353]{
+                    default: [v341, v346, v343, v342, v340, v339, v345, v344]fun[array<ref<int<4>>,1> v60, vector<uint<4>,3> v320, uint<4> v62, array<ref<real<4>>,1> v61, array<ref<real<4>>,1> v59, array<ref<real<4>>,1> v58, vector<uint<4>,3> v319, int<4> v63](){
                         decl ref<vector<ref<uint<4>>,3>> v64 =  var(undefined(vector<ref<uint<4>>,3>));
-                        v64[0] := [v309, v310]fun[vector<uint<4>,3> v313, vector<uint<4>,3> v312](uint<4> v311){
-                            decl uint<4> v314 = getThreadID(0);
-                            decl uint<4> v315 = getThreadID(1);
-                            switch(v311) {
-                                case 0: return v314/v312[2]/v312[1]+v312[0]*v315/v313[2]/v313[1]
-                                case 1: return v314/v312[2]%v312[1]+v312[1]*v315/v313[2]%v313[1]
-                                case 2: return v314%v312[2]+v312[2]*v315/v313[2]%v313[1]
+                        v64[0] := [v319, v320]fun[vector<uint<4>,3> v323, vector<uint<4>,3> v322](uint<4> v321){
+                            decl uint<4> v324 = getThreadID(0);
+                            decl uint<4> v325 = getThreadID(1);
+                            switch(v321) {
+                                case 0: return v324/v322[2]/v322[1]+v322[0]*v325/v323[2]/v323[1]
+                                case 1: return v324/v322[2]%v322[1]+v322[1]*v325/v323[2]%v323[1]
+                                case 2: return v324%v322[2]+v322[2]*v325/v323[2]%v323[1]
                                 default: { }
                             };
                         }(0);
-                        v64[1] := [v309, v310]fun[vector<uint<4>,3> v319, vector<uint<4>,3> v318](uint<4> v317){
-                            decl uint<4> v320 = getThreadID(0);
-                            decl uint<4> v321 = getThreadID(1);
-                            switch(v317) {
-                                case 0: return v320/v318[2]/v318[1]+v318[0]*v321/v319[2]/v319[1]
-                                case 1: return v320/v318[2]%v318[1]+v318[1]*v321/v319[2]%v319[1]
-                                case 2: return v320%v318[2]+v318[2]*v321/v319[2]%v319[1]
+                        v64[1] := [v319, v320]fun[vector<uint<4>,3> v329, vector<uint<4>,3> v328](uint<4> v327){
+                            decl uint<4> v330 = getThreadID(0);
+                            decl uint<4> v331 = getThreadID(1);
+                            switch(v327) {
+                                case 0: return v330/v328[2]/v328[1]+v328[0]*v331/v329[2]/v329[1]
+                                case 1: return v330/v328[2]%v328[1]+v328[1]*v331/v329[2]%v329[1]
+                                case 2: return v330%v328[2]+v328[2]*v331/v329[2]%v329[1]
                                 default: { }
                             };
                         }(1);
-                        v64[2] := [v310, v309]fun[vector<uint<4>,3> v324, vector<uint<4>,3> v325](uint<4> v323){
-                            decl uint<4> v326 = getThreadID(0);
-                            decl uint<4> v327 = getThreadID(1);
-                            switch(v323) {
-                                case 0: return v326/v324[2]/v324[1]+v324[0]*v327/v325[2]/v325[1]
-                                case 1: return v326/v324[2]%v324[1]+v324[1]*v327/v325[2]%v325[1]
-                                case 2: return v326%v324[2]+v324[2]*v327/v325[2]%v325[1]
+                        v64[2] := [v319, v320]fun[vector<uint<4>,3> v335, vector<uint<4>,3> v334](uint<4> v333){
+                            decl uint<4> v336 = getThreadID(0);
+                            decl uint<4> v337 = getThreadID(1);
+                            switch(v333) {
+                                case 0: return v336/v334[2]/v334[1]+v334[0]*v337/v335[2]/v335[1]
+                                case 1: return v336/v334[2]%v334[1]+v334[1]*v337/v335[2]%v335[1]
+                                case 2: return v336%v334[2]+v334[2]*v337/v335[2]%v335[1]
                                 default: { }
                             };
                         }(2);
@@ -202,34 +202,81 @@ fun(array<ref<real<4>>,1> v353, array<ref<real<4>>,1> v354, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v398, array<ref<real<4>>,1> v399, array<ref<int<4>>,1> v400, array<ref<real<4>>,1> v392, uint<4> v393, int<4> v394, vector<uint<4>,3> v359, vector<uint<4>,3> v402){
-        decl vector<uint<4>,3> v401 = vector.pointwise(uint.div)(v359, v402);
-        parallel(job([vector.reduction(v401, 1, uint.mul)-vector.reduction(v401, 1, uint.mul)])[decl array<ref<real<4>>,1> v389 = v398, decl array<ref<real<4>>,1> v390 = v399, decl array<ref<int<4>>,1> v391 = v400, decl vector<uint<4>,3> v395 = v401, decl vector<uint<4>,3> v396 = v402]{
-            default: [v396, v395, v389, v392, v394, v391, v390, v393]fun[vector<uint<4>,3> v388, vector<uint<4>,3> v387, array<ref<real<4>>,1> v383, array<ref<real<4>>,1> v386, int<4> v379, array<ref<int<4>>,1> v385, array<ref<real<4>>,1> v384, uint<4> v378](){
-                parallel(job([vector.reduction(v388, 1, uint.mul)-vector.reduction(v388, 1, uint.mul)])[decl array<ref<real<4>>,1> v374 = v383, decl array<ref<real<4>>,1> v375 = v384, decl array<ref<int<4>>,1> v376 = v385, decl array<ref<real<4>>,1> v377 = v386, decl vector<uint<4>,3> v380 = v387, decl vector<uint<4>,3> v381 = v388]{
-                    default: [v379, v378, v375, v380, v376, v374, v377, v381]fun[int<4> v73, uint<4> v72, array<ref<real<4>>,1> v69, vector<uint<4>,3> v360, array<ref<int<4>>,1> v70, array<ref<real<4>>,1> v68, array<ref<real<4>>,1> v71, vector<uint<4>,3> v361](){
-                        decl ref<uint<4>> v74 =  var([v361]fun[vector<uint<4>,3> v363](uint<4> v362){
-                            decl uint<4> v365 = getThreadID(0);
-                            switch(v362) {
-                                case 0: return v365/v363[2]/v363[1]
-                                case 1: return v365/v363[2]%v363[1]
-                                case 2: return v365%v363[2]
+fun(array<ref<real<4>>,1> v408, array<ref<real<4>>,1> v409, array<ref<int<4>>,1> v410, array<ref<real<4>>,1> v402, uint<4> v403, int<4> v404, vector<uint<4>,3> v369, vector<uint<4>,3> v412){
+        decl vector<uint<4>,3> v411 = vector.pointwise(uint.div)(v369, v412);
+        parallel(job([vector.reduction(v411, 1, uint.mul)-vector.reduction(v411, 1, uint.mul)])[decl array<ref<real<4>>,1> v399 = v408, decl array<ref<real<4>>,1> v400 = v409, decl array<ref<int<4>>,1> v401 = v410, decl vector<uint<4>,3> v405 = v411, decl vector<uint<4>,3> v406 = v412]{
+            default: [v406, v402, v405, v404, v403, v401, v400, v399]fun[vector<uint<4>,3> v398, array<ref<real<4>>,1> v396, vector<uint<4>,3> v397, int<4> v389, uint<4> v388, array<ref<int<4>>,1> v395, array<ref<real<4>>,1> v394, array<ref<real<4>>,1> v393](){
+                parallel(job([vector.reduction(v398, 1, uint.mul)-vector.reduction(v398, 1, uint.mul)])[decl array<ref<real<4>>,1> v384 = v393, decl array<ref<real<4>>,1> v385 = v394, decl array<ref<int<4>>,1> v386 = v395, decl array<ref<real<4>>,1> v387 = v396, decl vector<uint<4>,3> v390 = v397, decl vector<uint<4>,3> v391 = v398]{
+                    default: [v389, v391, v388, v385, v386, v384, v387, v390]fun[int<4> v73, vector<uint<4>,3> v371, uint<4> v72, array<ref<real<4>>,1> v69, array<ref<int<4>>,1> v70, array<ref<real<4>>,1> v68, array<ref<real<4>>,1> v71, vector<uint<4>,3> v370](){
+                        decl ref<uint<4>> v74 =  var([v371]fun[vector<uint<4>,3> v373](uint<4> v372){
+                            decl uint<4> v375 = getThreadID(0);
+                            switch(v372) {
+                                case 0: return v375/v373[2]/v373[1]
+                                case 1: return v375/v373[2]%v373[1]
+                                case 2: return v375%v373[2]
                                 default: { }
                             };
                         }(0));
-                        decl ref<uint<4>> v75 =  var([v361, v360]fun[vector<uint<4>,3> v369, vector<uint<4>,3> v370](uint<4> v368){
-                            decl uint<4> v371 = getThreadID(0);
-                            decl uint<4> v372 = getThreadID(1);
-                            switch(v368) {
-                                case 0: return v371/v369[2]/v369[1]+v369[0]*v372/v370[2]/v370[1]
-                                case 1: return v371/v369[2]%v369[1]+v369[1]*v372/v370[2]%v370[1]
-                                case 2: return v371%v369[2]+v369[2]*v372/v370[2]%v370[1]
+                        decl ref<uint<4>> v75 =  var([v370, v371]fun[vector<uint<4>,3> v380, vector<uint<4>,3> v379](uint<4> v378){
+                            decl uint<4> v381 = getThreadID(0);
+                            decl uint<4> v382 = getThreadID(1);
+                            switch(v378) {
+                                case 0: return v381/v379[2]/v379[1]+v379[0]*v382/v380[2]/v380[1]
+                                case 1: return v381/v379[2]%v379[1]+v379[1]*v382/v380[2]%v380[1]
+                                case 2: return v381%v379[2]+v379[2]*v382/v380[2]%v380[1]
                                 default: { }
                             };
                         }(0));
-                        v71[v74] := v68[v75];
+                        v71[v74] := 7.0f;
                         barrier(getThreadGroup(0));
                         v69[v75] := v71[v74];
+                    }
+                });
+                mergeAll();
+            }
+        });
+    }
+
+//  Entry Point: 
+fun(array<ref<real<4>>,1> v459, array<ref<real<4>>,1> v460, array<ref<int<4>>,1> v461, array<ref<real<4>>,1> v453, uint<4> v454, int<4> v455, vector<uint<4>,3> v414, vector<uint<4>,3> v463){
+        decl vector<uint<4>,3> v462 = vector.pointwise(uint.div)(v414, v463);
+        parallel(job([vector.reduction(v462, 1, uint.mul)-vector.reduction(v462, 1, uint.mul)])[decl array<ref<real<4>>,1> v450 = v459, decl array<ref<real<4>>,1> v451 = v460, decl array<ref<int<4>>,1> v452 = v461, decl vector<uint<4>,3> v456 = v462, decl vector<uint<4>,3> v457 = v463]{
+            default: [v457, v456, v451, v454, v453, v452, v450, v455]fun[vector<uint<4>,3> v449, vector<uint<4>,3> v448, array<ref<real<4>>,1> v445, uint<4> v439, array<ref<real<4>>,1> v447, array<ref<int<4>>,1> v446, array<ref<real<4>>,1> v444, int<4> v440](){
+                parallel(job([vector.reduction(v449, 1, uint.mul)-vector.reduction(v449, 1, uint.mul)])[decl array<ref<real<4>>,1> v435 = v444, decl array<ref<real<4>>,1> v436 = v445, decl array<ref<int<4>>,1> v437 = v446, decl array<ref<real<4>>,1> v438 = v447, decl vector<uint<4>,3> v441 = v448, decl vector<uint<4>,3> v442 = v449]{
+                    default: [v441, v437, v436, v440, v438, v435, v442, v439]fun[vector<uint<4>,3> v415, array<ref<int<4>>,1> v80, array<ref<real<4>>,1> v79, int<4> v83, array<ref<real<4>>,1> v81, array<ref<real<4>>,1> v78, vector<uint<4>,3> v416, uint<4> v82](){
+                        decl ref<int<4>> v84 =  var([v415, v416]fun[vector<uint<4>,3> v419, vector<uint<4>,3> v418](uint<4> v417){
+                            decl uint<4> v420 = getThreadID(0);
+                            decl uint<4> v421 = getThreadID(1);
+                            switch(v417) {
+                                case 0: return v420/v418[2]/v418[1]+v418[0]*v421/v419[2]/v419[1]
+                                case 1: return v420/v418[2]%v418[1]+v418[1]*v421/v419[2]%v419[1]
+                                case 2: return v420%v418[2]+v418[2]*v421/v419[2]%v419[1]
+                                default: { }
+                            };
+                        }(0)*v80[1]*v80[2]+[v415, v416]fun[vector<uint<4>,3> v425, vector<uint<4>,3> v424](uint<4> v423){
+                            decl uint<4> v426 = getThreadID(0);
+                            decl uint<4> v427 = getThreadID(1);
+                            switch(v423) {
+                                case 0: return v426/v424[2]/v424[1]+v424[0]*v427/v425[2]/v425[1]
+                                case 1: return v426/v424[2]%v424[1]+v424[1]*v427/v425[2]%v425[1]
+                                case 2: return v426%v424[2]+v424[2]*v427/v425[2]%v425[1]
+                                default: { }
+                            };
+                        }(1)*v80[2]+[v416, v415]fun[vector<uint<4>,3> v430, vector<uint<4>,3> v431](uint<4> v429){
+                            decl uint<4> v432 = getThreadID(0);
+                            decl uint<4> v433 = getThreadID(1);
+                            switch(v429) {
+                                case 0: return v432/v430[2]/v430[1]+v430[0]*v433/v431[2]/v431[1]
+                                case 1: return v432/v430[2]%v430[1]+v430[1]*v433/v431[2]%v431[1]
+                                case 2: return v432%v430[2]+v430[2]*v433/v431[2]%v431[1]
+                                default: { }
+                            };
+                        }(2));
+                        decl ref<int<4>> v85 =  var(v80[0]*v80[1]*v80[2]-17);
+                        if(v84>=v85) {
+                            return unit;
+                        } else { };
+                        v79[v84] := v78[v84]+v80[v84];
                     }
                 });
                 mergeAll();
@@ -243,12 +290,12 @@ fun(array<ref<real<4>>,1> v398, array<ref<real<4>>,1> v399, array<ref<int<4>>,1>
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v90, vector<uint<4>,3> v78, vector<uint<4>,3> v92){
-        decl vector<uint<4>,3> v91 = vector.pointwise(uint.div)(v78, v92);
-        parallel(job(([vector.reduction(v91, 1, uint.mul)-vector.reduction(v91, 1, uint.mul)]))[decl array<ref<real<4>>,1> v86 = v90, decl vector<uint<4>,3> v87 = v91, decl vector<uint<4>,3> v88 = v92]{
-            default: [v86, v88, v87]fun[array<ref<real<4>>,1> v84, vector<uint<4>,3> v85, vector<uint<4>,3> v79](){
-                parallel(job(([vector.reduction(v85, 1, uint.mul)-vector.reduction(v85, 1, uint.mul)]))[decl array<ref<real<4>>,1> v81 = v84, decl vector<uint<4>,3> v82 = v85]{
-                    default: [v81, v82]fun[array<ref<real<4>>,1> v1, vector<uint<4>,3> v80](){
+fun(array<ref<real<4>>,1> v100, vector<uint<4>,3> v88, vector<uint<4>,3> v102){
+        decl vector<uint<4>,3> v101 = vector.pointwise(uint.div)(v88, v102);
+        parallel(job(([vector.reduction(v101, 1, uint.mul)-vector.reduction(v101, 1, uint.mul)]))[decl array<ref<real<4>>,1> v96 = v100, decl vector<uint<4>,3> v97 = v101, decl vector<uint<4>,3> v98 = v102]{
+            default: [v98, v97, v96]fun[vector<uint<4>,3> v95, vector<uint<4>,3> v89, array<ref<real<4>>,1> v94](){
+                parallel(job(([vector.reduction(v95, 1, uint.mul)-vector.reduction(v95, 1, uint.mul)]))[decl array<ref<real<4>>,1> v91 = v94, decl vector<uint<4>,3> v92 = v95]{
+                    default: [v91, v92]fun[array<ref<real<4>>,1> v1, vector<uint<4>,3> v90](){
                         decl ref<real<4>> v2 = ( var(( *(v1[CAST<uint<4>>(0)]))));
                     }
                 });
@@ -258,12 +305,12 @@ fun(array<ref<real<4>>,1> v90, vector<uint<4>,3> v78, vector<uint<4>,3> v92){
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v106, vector<uint<4>,3> v94, vector<uint<4>,3> v108){
-        decl vector<uint<4>,3> v107 = vector.pointwise(uint.div)(v94, v108);
-        parallel(job(([vector.reduction(v107, 1, uint.mul)-vector.reduction(v107, 1, uint.mul)]))[decl array<ref<real<4>>,1> v102 = v106, decl vector<uint<4>,3> v103 = v107, decl vector<uint<4>,3> v104 = v108]{
-            default: [v103, v102, v104]fun[vector<uint<4>,3> v95, array<ref<real<4>>,1> v100, vector<uint<4>,3> v101](){
-                parallel(job(([vector.reduction(v101, 1, uint.mul)-vector.reduction(v101, 1, uint.mul)]))[decl array<ref<real<4>>,1> v97 = v100, decl vector<uint<4>,3> v98 = v101]{
-                    default: [v97, v98]fun[array<ref<real<4>>,1> v5, vector<uint<4>,3> v96](){
+fun(array<ref<real<4>>,1> v116, vector<uint<4>,3> v104, vector<uint<4>,3> v118){
+        decl vector<uint<4>,3> v117 = vector.pointwise(uint.div)(v104, v118);
+        parallel(job(([vector.reduction(v117, 1, uint.mul)-vector.reduction(v117, 1, uint.mul)]))[decl array<ref<real<4>>,1> v112 = v116, decl vector<uint<4>,3> v113 = v117, decl vector<uint<4>,3> v114 = v118]{
+            default: [v114, v112, v113]fun[vector<uint<4>,3> v111, array<ref<real<4>>,1> v110, vector<uint<4>,3> v105](){
+                parallel(job(([vector.reduction(v111, 1, uint.mul)-vector.reduction(v111, 1, uint.mul)]))[decl array<ref<real<4>>,1> v107 = v110, decl vector<uint<4>,3> v108 = v111]{
+                    default: [v108, v107]fun[vector<uint<4>,3> v106, array<ref<real<4>>,1> v5](){
                         decl ref<real<4>> v6 = ( var(( *(v5[CAST<uint<4>>(0)]))));
                     }
                 });
@@ -273,12 +320,12 @@ fun(array<ref<real<4>>,1> v106, vector<uint<4>,3> v94, vector<uint<4>,3> v108){
     }
 
 //  Entry Point: 
-fun(array<ref<int<4>>,1> v118, vector<uint<4>,3> v110, vector<uint<4>,3> v123){
-        decl vector<uint<4>,3> v122 = vector.pointwise(uint.div)(v110, v123);
-        parallel(job(([vector.reduction(v122, 1, uint.mul)-vector.reduction(v122, 1, uint.mul)]))[decl vector<uint<4>,3> v119 = v122, decl vector<uint<4>,3> v120 = v123]{
-            default: [v119, v120, v118]fun[vector<uint<4>,3> v111, vector<uint<4>,3> v117, array<ref<int<4>>,1> v116](){
-                parallel(job(([vector.reduction(v117, 1, uint.mul)-vector.reduction(v117, 1, uint.mul)]))[decl array<ref<int<4>>,1> v113 = v116, decl vector<uint<4>,3> v114 = v117]{
-                    default: [v114, v113]fun[vector<uint<4>,3> v112, array<ref<int<4>>,1> v9](){
+fun(array<ref<int<4>>,1> v128, vector<uint<4>,3> v120, vector<uint<4>,3> v133){
+        decl vector<uint<4>,3> v132 = vector.pointwise(uint.div)(v120, v133);
+        parallel(job(([vector.reduction(v132, 1, uint.mul)-vector.reduction(v132, 1, uint.mul)]))[decl vector<uint<4>,3> v129 = v132, decl vector<uint<4>,3> v130 = v133]{
+            default: [v130, v128, v129]fun[vector<uint<4>,3> v127, array<ref<int<4>>,1> v126, vector<uint<4>,3> v121](){
+                parallel(job(([vector.reduction(v127, 1, uint.mul)-vector.reduction(v127, 1, uint.mul)]))[decl array<ref<int<4>>,1> v123 = v126, decl vector<uint<4>,3> v124 = v127]{
+                    default: [v124, v123]fun[vector<uint<4>,3> v122, array<ref<int<4>>,1> v9](){
                         decl ref<int<4>> v10 = ( var(( *(v9[CAST<uint<4>>(0)]))));
                     }
                 });
@@ -288,12 +335,12 @@ fun(array<ref<int<4>>,1> v118, vector<uint<4>,3> v110, vector<uint<4>,3> v123){
     }
 
 //  Entry Point: 
-fun(int<2> v132, vector<uint<4>,3> v125, vector<uint<4>,3> v137){
-        decl vector<uint<4>,3> v136 = vector.pointwise(uint.div)(v125, v137);
-        parallel(job(([vector.reduction(v136, 1, uint.mul)-vector.reduction(v136, 1, uint.mul)]))[decl vector<uint<4>,3> v133 = v136, decl vector<uint<4>,3> v134 = v137]{
-            default: [v132, v133, v134]fun[int<2> v128, vector<uint<4>,3> v126, vector<uint<4>,3> v131](){
-                parallel(job(([vector.reduction(v131, 1, uint.mul)-vector.reduction(v131, 1, uint.mul)]))[decl vector<uint<4>,3> v129 = v131]{
-                    default: [v128, v129]fun[int<2> v13, vector<uint<4>,3> v127](){
+fun(int<2> v142, vector<uint<4>,3> v135, vector<uint<4>,3> v147){
+        decl vector<uint<4>,3> v146 = vector.pointwise(uint.div)(v135, v147);
+        parallel(job(([vector.reduction(v146, 1, uint.mul)-vector.reduction(v146, 1, uint.mul)]))[decl vector<uint<4>,3> v143 = v146, decl vector<uint<4>,3> v144 = v147]{
+            default: [v143, v142, v144]fun[vector<uint<4>,3> v136, int<2> v138, vector<uint<4>,3> v141](){
+                parallel(job(([vector.reduction(v141, 1, uint.mul)-vector.reduction(v141, 1, uint.mul)]))[decl vector<uint<4>,3> v139 = v141]{
+                    default: [v138, v139]fun[int<2> v13, vector<uint<4>,3> v137](){
                         decl ref<int<2>> v14 = ( var(v13));
                     }
                 });
@@ -303,12 +350,12 @@ fun(int<2> v132, vector<uint<4>,3> v125, vector<uint<4>,3> v137){
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v164, array<ref<real<4>>,1> v165, array<ref<int<4>>,1> v166, array<ref<real<4>>,1> v158, uint<4> v159, int<4> v160, vector<uint<4>,3> v139, vector<uint<4>,3> v168){
-        decl vector<uint<4>,3> v167 = vector.pointwise(uint.div)(v139, v168);
-        parallel(job(([vector.reduction(v167, 1, uint.mul)-vector.reduction(v167, 1, uint.mul)]))[decl array<ref<real<4>>,1> v155 = v164, decl array<ref<real<4>>,1> v156 = v165, decl array<ref<int<4>>,1> v157 = v166, decl vector<uint<4>,3> v161 = v167, decl vector<uint<4>,3> v162 = v168]{
-            default: [v156, v160, v162, v155, v161, v157, v159, v158]fun[array<ref<real<4>>,1> v151, int<4> v147, vector<uint<4>,3> v154, array<ref<real<4>>,1> v150, vector<uint<4>,3> v140, array<ref<int<4>>,1> v152, uint<4> v146, array<ref<real<4>>,1> v153](){
-                parallel(job(([vector.reduction(v154, 1, uint.mul)-vector.reduction(v154, 1, uint.mul)]))[decl array<ref<real<4>>,1> v142 = v150, decl array<ref<real<4>>,1> v143 = v151, decl array<ref<int<4>>,1> v144 = v152, decl array<ref<real<4>>,1> v145 = v153, decl vector<uint<4>,3> v148 = v154]{
-                    default: [v144, v143, v147, v142, v148, v146, v145]fun[array<ref<int<4>>,1> v19, array<ref<real<4>>,1> v18, int<4> v22, array<ref<real<4>>,1> v17, vector<uint<4>,3> v141, uint<4> v21, array<ref<real<4>>,1> v20](){
+fun(array<ref<real<4>>,1> v174, array<ref<real<4>>,1> v175, array<ref<int<4>>,1> v176, array<ref<real<4>>,1> v168, uint<4> v169, int<4> v170, vector<uint<4>,3> v149, vector<uint<4>,3> v178){
+        decl vector<uint<4>,3> v177 = vector.pointwise(uint.div)(v149, v178);
+        parallel(job(([vector.reduction(v177, 1, uint.mul)-vector.reduction(v177, 1, uint.mul)]))[decl array<ref<real<4>>,1> v165 = v174, decl array<ref<real<4>>,1> v166 = v175, decl array<ref<int<4>>,1> v167 = v176, decl vector<uint<4>,3> v171 = v177, decl vector<uint<4>,3> v172 = v178]{
+            default: [v170, v166, v169, v165, v172, v168, v171, v167]fun[int<4> v157, array<ref<real<4>>,1> v161, uint<4> v156, array<ref<real<4>>,1> v160, vector<uint<4>,3> v164, array<ref<real<4>>,1> v163, vector<uint<4>,3> v150, array<ref<int<4>>,1> v162](){
+                parallel(job(([vector.reduction(v164, 1, uint.mul)-vector.reduction(v164, 1, uint.mul)]))[decl array<ref<real<4>>,1> v152 = v160, decl array<ref<real<4>>,1> v153 = v161, decl array<ref<int<4>>,1> v154 = v162, decl array<ref<real<4>>,1> v155 = v163, decl vector<uint<4>,3> v158 = v164]{
+                    default: [v154, v153, v157, v152, v158, v156, v155]fun[array<ref<int<4>>,1> v19, array<ref<real<4>>,1> v18, int<4> v22, array<ref<real<4>>,1> v17, vector<uint<4>,3> v151, uint<4> v21, array<ref<real<4>>,1> v20](){
                         ((v18[CAST<uint<4>>(0)]) := CAST<real<4>>(( *(v19[CAST<uint<4>>(0)]))));
                     }
                 });
@@ -318,12 +365,12 @@ fun(array<ref<real<4>>,1> v164, array<ref<real<4>>,1> v165, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v195, array<ref<real<4>>,1> v196, array<ref<int<4>>,1> v197, array<ref<real<4>>,1> v189, uint<4> v190, int<4> v191, vector<uint<4>,3> v170, vector<uint<4>,3> v199){
-        decl vector<uint<4>,3> v198 = vector.pointwise(uint.div)(v170, v199);
-        parallel(job(([vector.reduction(v198, 1, uint.mul)-vector.reduction(v198, 1, uint.mul)]))[decl array<ref<real<4>>,1> v186 = v195, decl array<ref<real<4>>,1> v187 = v196, decl array<ref<int<4>>,1> v188 = v197, decl vector<uint<4>,3> v192 = v198, decl vector<uint<4>,3> v193 = v199]{
-            default: [v192, v187, v188, v193, v191, v190, v189, v186]fun[vector<uint<4>,3> v171, array<ref<real<4>>,1> v182, array<ref<int<4>>,1> v183, vector<uint<4>,3> v185, int<4> v178, uint<4> v177, array<ref<real<4>>,1> v184, array<ref<real<4>>,1> v181](){
-                parallel(job(([vector.reduction(v185, 1, uint.mul)-vector.reduction(v185, 1, uint.mul)]))[decl array<ref<real<4>>,1> v173 = v181, decl array<ref<real<4>>,1> v174 = v182, decl array<ref<int<4>>,1> v175 = v183, decl array<ref<real<4>>,1> v176 = v184, decl vector<uint<4>,3> v179 = v185]{
-                    default: [v179, v177, v176, v175, v174, v173, v178]fun[vector<uint<4>,3> v172, uint<4> v29, array<ref<real<4>>,1> v28, array<ref<int<4>>,1> v27, array<ref<real<4>>,1> v26, array<ref<real<4>>,1> v25, int<4> v30](){
+fun(array<ref<real<4>>,1> v205, array<ref<real<4>>,1> v206, array<ref<int<4>>,1> v207, array<ref<real<4>>,1> v199, uint<4> v200, int<4> v201, vector<uint<4>,3> v180, vector<uint<4>,3> v209){
+        decl vector<uint<4>,3> v208 = vector.pointwise(uint.div)(v180, v209);
+        parallel(job(([vector.reduction(v208, 1, uint.mul)-vector.reduction(v208, 1, uint.mul)]))[decl array<ref<real<4>>,1> v196 = v205, decl array<ref<real<4>>,1> v197 = v206, decl array<ref<int<4>>,1> v198 = v207, decl vector<uint<4>,3> v202 = v208, decl vector<uint<4>,3> v203 = v209]{
+            default: [v203, v198, v202, v201, v200, v196, v197, v199]fun[vector<uint<4>,3> v195, array<ref<int<4>>,1> v193, vector<uint<4>,3> v181, int<4> v188, uint<4> v187, array<ref<real<4>>,1> v191, array<ref<real<4>>,1> v192, array<ref<real<4>>,1> v194](){
+                parallel(job(([vector.reduction(v195, 1, uint.mul)-vector.reduction(v195, 1, uint.mul)]))[decl array<ref<real<4>>,1> v183 = v191, decl array<ref<real<4>>,1> v184 = v192, decl array<ref<int<4>>,1> v185 = v193, decl array<ref<real<4>>,1> v186 = v194, decl vector<uint<4>,3> v189 = v195]{
+                    default: [v189, v187, v186, v185, v184, v183, v188]fun[vector<uint<4>,3> v182, uint<4> v29, array<ref<real<4>>,1> v28, array<ref<int<4>>,1> v27, array<ref<real<4>>,1> v26, array<ref<real<4>>,1> v25, int<4> v30](){
                         ((v28[CAST<uint<4>>(( *(v27[CAST<uint<4>>(0)])))]) := 3.3f);
                         ((v26[CAST<uint<4>>(v29)]) := (( *(v25[CAST<uint<4>>(1)]))*( *(v28[CAST<uint<4>>(( *(v27[CAST<uint<4>>(0)])))]))));
                     }
@@ -334,19 +381,19 @@ fun(array<ref<real<4>>,1> v195, array<ref<real<4>>,1> v196, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v234, array<ref<real<4>>,1> v235, array<ref<int<4>>,1> v236, array<ref<real<4>>,1> v228, uint<4> v229, int<4> v230, vector<uint<4>,3> v201, vector<uint<4>,3> v238){
-        decl vector<uint<4>,3> v237 = vector.pointwise(uint.div)(v201, v238);
-        parallel(job(([vector.reduction(v237, 1, uint.mul)-vector.reduction(v237, 1, uint.mul)]))[decl array<ref<real<4>>,1> v225 = v234, decl array<ref<real<4>>,1> v226 = v235, decl array<ref<int<4>>,1> v227 = v236, decl vector<uint<4>,3> v231 = v237, decl vector<uint<4>,3> v232 = v238]{
-            default: [v226, v232, v225, v231, v227, v230, v228, v229]fun[array<ref<real<4>>,1> v220, vector<uint<4>,3> v224, array<ref<real<4>>,1> v219, vector<uint<4>,3> v223, array<ref<int<4>>,1> v221, int<4> v215, array<ref<real<4>>,1> v222, uint<4> v214](){
-                parallel(job(([vector.reduction(v224, 1, uint.mul)-vector.reduction(v224, 1, uint.mul)]))[decl array<ref<real<4>>,1> v210 = v219, decl array<ref<real<4>>,1> v211 = v220, decl array<ref<int<4>>,1> v212 = v221, decl array<ref<real<4>>,1> v213 = v222, decl vector<uint<4>,3> v216 = v223, decl vector<uint<4>,3> v217 = v224]{
-                    default: [v212, v215, v211, v210, v217, v216, v214, v213]fun[array<ref<int<4>>,1> v35, int<4> v38, array<ref<real<4>>,1> v34, array<ref<real<4>>,1> v33, vector<uint<4>,3> v203, vector<uint<4>,3> v202, uint<4> v37, array<ref<real<4>>,1> v36](){
-                        decl ref<uint<4>> v39 = ( var([v202, v203]fun[vector<uint<4>,3> v206, vector<uint<4>,3> v205](uint<4> v204){
-                            decl uint<4> v207 = getThreadID(0);
-                            decl uint<4> v208 = getThreadID(1);
-                            switch(v204) {
-                                case 0: return (((v207/(v205[2]))/(v205[1]))+((v205[0])*((v208/(v206[2]))/(v206[1]))))
-                                case 1: return (((v207/(v205[2]))%(v205[1]))+((v205[1])*((v208/(v206[2]))%(v206[1]))))
-                                case 2: return ((v207%(v205[2]))+((v205[2])*((v208/(v206[2]))%(v206[1]))))
+fun(array<ref<real<4>>,1> v244, array<ref<real<4>>,1> v245, array<ref<int<4>>,1> v246, array<ref<real<4>>,1> v238, uint<4> v239, int<4> v240, vector<uint<4>,3> v211, vector<uint<4>,3> v248){
+        decl vector<uint<4>,3> v247 = vector.pointwise(uint.div)(v211, v248);
+        parallel(job(([vector.reduction(v247, 1, uint.mul)-vector.reduction(v247, 1, uint.mul)]))[decl array<ref<real<4>>,1> v235 = v244, decl array<ref<real<4>>,1> v236 = v245, decl array<ref<int<4>>,1> v237 = v246, decl vector<uint<4>,3> v241 = v247, decl vector<uint<4>,3> v242 = v248]{
+            default: [v239, v237, v242, v236, v241, v240, v238, v235]fun[uint<4> v224, array<ref<int<4>>,1> v231, vector<uint<4>,3> v234, array<ref<real<4>>,1> v230, vector<uint<4>,3> v233, int<4> v225, array<ref<real<4>>,1> v232, array<ref<real<4>>,1> v229](){
+                parallel(job(([vector.reduction(v234, 1, uint.mul)-vector.reduction(v234, 1, uint.mul)]))[decl array<ref<real<4>>,1> v220 = v229, decl array<ref<real<4>>,1> v221 = v230, decl array<ref<int<4>>,1> v222 = v231, decl array<ref<real<4>>,1> v223 = v232, decl vector<uint<4>,3> v226 = v233, decl vector<uint<4>,3> v227 = v234]{
+                    default: [v222, v226, v225, v221, v220, v227, v224, v223]fun[array<ref<int<4>>,1> v35, vector<uint<4>,3> v212, int<4> v38, array<ref<real<4>>,1> v34, array<ref<real<4>>,1> v33, vector<uint<4>,3> v213, uint<4> v37, array<ref<real<4>>,1> v36](){
+                        decl ref<uint<4>> v39 = ( var([v213, v212]fun[vector<uint<4>,3> v215, vector<uint<4>,3> v216](uint<4> v214){
+                            decl uint<4> v217 = getThreadID(0);
+                            decl uint<4> v218 = getThreadID(1);
+                            switch(v214) {
+                                case 0: return (((v217/(v215[2]))/(v215[1]))+((v215[0])*((v218/(v216[2]))/(v216[1]))))
+                                case 1: return (((v217/(v215[2]))%(v215[1]))+((v215[1])*((v218/(v216[2]))%(v216[1]))))
+                                case 2: return ((v217%(v215[2]))+((v215[2])*((v218/(v216[2]))%(v216[1]))))
                                 default: { }
                             };
                         }(CAST<uint<4>>(0))));
@@ -359,21 +406,21 @@ fun(array<ref<real<4>>,1> v234, array<ref<real<4>>,1> v235, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v270, array<ref<real<4>>,1> v271, array<ref<int<4>>,1> v272, array<ref<real<4>>,1> v263, uint<4> v264, int<4> v265, vector<uint<4>,3> v273, vector<uint<4>,3> v275){
-        decl vector<uint<4>,3> v274 = vector.pointwise(uint.div)(v273, v275);
-        parallel(job(([vector.reduction(v274, 1, uint.mul)-vector.reduction(v274, 1, uint.mul)]))[decl array<ref<real<4>>,1> v260 = v270, decl array<ref<real<4>>,1> v261 = v271, decl array<ref<int<4>>,1> v262 = v272, decl vector<uint<4>,3> v266 = v273, decl vector<uint<4>,3> v267 = v274, decl vector<uint<4>,3> v268 = v275]{
-            default: [v268, v266, v260, v267, v264, v262, v263, v261, v265]fun[vector<uint<4>,3> v259, vector<uint<4>,3> v257, array<ref<real<4>>,1> v253, vector<uint<4>,3> v258, uint<4> v247, array<ref<int<4>>,1> v255, array<ref<real<4>>,1> v256, array<ref<real<4>>,1> v254, int<4> v248](){
-                parallel(job(([vector.reduction(v259, 1, uint.mul)-vector.reduction(v259, 1, uint.mul)]))[decl array<ref<real<4>>,1> v243 = v253, decl array<ref<real<4>>,1> v244 = v254, decl array<ref<int<4>>,1> v245 = v255, decl array<ref<real<4>>,1> v246 = v256, decl vector<uint<4>,3> v249 = v257, decl vector<uint<4>,3> v250 = v258, decl vector<uint<4>,3> v251 = v259]{
-                    default: [v248, v246, v250, v251, v247, v244, v243, v245, v249]fun[int<4> v47, array<ref<real<4>>,1> v45, vector<uint<4>,3> v241, vector<uint<4>,3> v242, uint<4> v46, array<ref<real<4>>,1> v43, array<ref<real<4>>,1> v42, array<ref<int<4>>,1> v44, vector<uint<4>,3> v240](){
-                        ((v43[CAST<uint<4>>(0)]) := CAST<real<4>>((v240[CAST<uint<4>>(0)])));
-                        ((v43[CAST<uint<4>>(1)]) := CAST<real<4>>((v240[CAST<uint<4>>(1)])));
-                        ((v43[CAST<uint<4>>(2)]) := CAST<real<4>>((v240[CAST<uint<4>>(2)])));
-                        ((v43[CAST<uint<4>>(3)]) := CAST<real<4>>((v242[CAST<uint<4>>(0)])));
-                        ((v43[CAST<uint<4>>(4)]) := CAST<real<4>>((v242[CAST<uint<4>>(1)])));
-                        ((v43[CAST<uint<4>>(5)]) := CAST<real<4>>((v242[CAST<uint<4>>(2)])));
-                        ((v43[CAST<uint<4>>(6)]) := CAST<real<4>>((v241[CAST<uint<4>>(0)])));
-                        ((v43[CAST<uint<4>>(7)]) := CAST<real<4>>((v241[CAST<uint<4>>(1)])));
-                        ((v43[CAST<uint<4>>(8)]) := CAST<real<4>>((v241[CAST<uint<4>>(2)])));
+fun(array<ref<real<4>>,1> v280, array<ref<real<4>>,1> v281, array<ref<int<4>>,1> v282, array<ref<real<4>>,1> v273, uint<4> v274, int<4> v275, vector<uint<4>,3> v283, vector<uint<4>,3> v285){
+        decl vector<uint<4>,3> v284 = vector.pointwise(uint.div)(v283, v285);
+        parallel(job(([vector.reduction(v284, 1, uint.mul)-vector.reduction(v284, 1, uint.mul)]))[decl array<ref<real<4>>,1> v270 = v280, decl array<ref<real<4>>,1> v271 = v281, decl array<ref<int<4>>,1> v272 = v282, decl vector<uint<4>,3> v276 = v283, decl vector<uint<4>,3> v277 = v284, decl vector<uint<4>,3> v278 = v285]{
+            default: [v270, v273, v277, v274, v276, v278, v271, v275, v272]fun[array<ref<real<4>>,1> v263, array<ref<real<4>>,1> v266, vector<uint<4>,3> v268, uint<4> v257, vector<uint<4>,3> v267, vector<uint<4>,3> v269, array<ref<real<4>>,1> v264, int<4> v258, array<ref<int<4>>,1> v265](){
+                parallel(job(([vector.reduction(v269, 1, uint.mul)-vector.reduction(v269, 1, uint.mul)]))[decl array<ref<real<4>>,1> v253 = v263, decl array<ref<real<4>>,1> v254 = v264, decl array<ref<int<4>>,1> v255 = v265, decl array<ref<real<4>>,1> v256 = v266, decl vector<uint<4>,3> v259 = v267, decl vector<uint<4>,3> v260 = v268, decl vector<uint<4>,3> v261 = v269]{
+                    default: [v259, v258, v256, v257, v254, v260, v253, v261, v255]fun[vector<uint<4>,3> v250, int<4> v47, array<ref<real<4>>,1> v45, uint<4> v46, array<ref<real<4>>,1> v43, vector<uint<4>,3> v251, array<ref<real<4>>,1> v42, vector<uint<4>,3> v252, array<ref<int<4>>,1> v44](){
+                        ((v43[CAST<uint<4>>(0)]) := CAST<real<4>>((v250[CAST<uint<4>>(0)])));
+                        ((v43[CAST<uint<4>>(1)]) := CAST<real<4>>((v250[CAST<uint<4>>(1)])));
+                        ((v43[CAST<uint<4>>(2)]) := CAST<real<4>>((v250[CAST<uint<4>>(2)])));
+                        ((v43[CAST<uint<4>>(3)]) := CAST<real<4>>((v252[CAST<uint<4>>(0)])));
+                        ((v43[CAST<uint<4>>(4)]) := CAST<real<4>>((v252[CAST<uint<4>>(1)])));
+                        ((v43[CAST<uint<4>>(5)]) := CAST<real<4>>((v252[CAST<uint<4>>(2)])));
+                        ((v43[CAST<uint<4>>(6)]) := CAST<real<4>>((v251[CAST<uint<4>>(0)])));
+                        ((v43[CAST<uint<4>>(7)]) := CAST<real<4>>((v251[CAST<uint<4>>(1)])));
+                        ((v43[CAST<uint<4>>(8)]) := CAST<real<4>>((v251[CAST<uint<4>>(2)])));
                     }
                 });
                 mergeAll();
@@ -382,12 +429,12 @@ fun(array<ref<real<4>>,1> v270, array<ref<real<4>>,1> v271, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v302, array<ref<real<4>>,1> v303, array<ref<int<4>>,1> v304, array<ref<real<4>>,1> v296, uint<4> v297, int<4> v298, vector<uint<4>,3> v277, vector<uint<4>,3> v306){
-        decl vector<uint<4>,3> v305 = vector.pointwise(uint.div)(v277, v306);
-        parallel(job(([vector.reduction(v305, 1, uint.mul)-vector.reduction(v305, 1, uint.mul)]))[decl array<ref<real<4>>,1> v293 = v302, decl array<ref<real<4>>,1> v294 = v303, decl array<ref<int<4>>,1> v295 = v304, decl vector<uint<4>,3> v299 = v305, decl vector<uint<4>,3> v300 = v306]{
-            default: [v297, v296, v294, v299, v295, v293, v300, v298]fun[uint<4> v284, array<ref<real<4>>,1> v291, array<ref<real<4>>,1> v289, vector<uint<4>,3> v278, array<ref<int<4>>,1> v290, array<ref<real<4>>,1> v288, vector<uint<4>,3> v292, int<4> v285](){
-                parallel(job(([vector.reduction(v292, 1, uint.mul)-vector.reduction(v292, 1, uint.mul)]))[decl array<ref<real<4>>,1> v280 = v288, decl array<ref<real<4>>,1> v281 = v289, decl array<ref<int<4>>,1> v282 = v290, decl array<ref<real<4>>,1> v283 = v291, decl vector<uint<4>,3> v286 = v292]{
-                    default: [v283, v282, v286, v281, v285, v284, v280]fun[array<ref<real<4>>,1> v53, array<ref<int<4>>,1> v52, vector<uint<4>,3> v279, array<ref<real<4>>,1> v51, int<4> v55, uint<4> v54, array<ref<real<4>>,1> v50](){
+fun(array<ref<real<4>>,1> v312, array<ref<real<4>>,1> v313, array<ref<int<4>>,1> v314, array<ref<real<4>>,1> v306, uint<4> v307, int<4> v308, vector<uint<4>,3> v287, vector<uint<4>,3> v316){
+        decl vector<uint<4>,3> v315 = vector.pointwise(uint.div)(v287, v316);
+        parallel(job(([vector.reduction(v315, 1, uint.mul)-vector.reduction(v315, 1, uint.mul)]))[decl array<ref<real<4>>,1> v303 = v312, decl array<ref<real<4>>,1> v304 = v313, decl array<ref<int<4>>,1> v305 = v314, decl vector<uint<4>,3> v309 = v315, decl vector<uint<4>,3> v310 = v316]{
+            default: [v309, v306, v310, v308, v304, v307, v303, v305]fun[vector<uint<4>,3> v288, array<ref<real<4>>,1> v301, vector<uint<4>,3> v302, int<4> v295, array<ref<real<4>>,1> v299, uint<4> v294, array<ref<real<4>>,1> v298, array<ref<int<4>>,1> v300](){
+                parallel(job(([vector.reduction(v302, 1, uint.mul)-vector.reduction(v302, 1, uint.mul)]))[decl array<ref<real<4>>,1> v290 = v298, decl array<ref<real<4>>,1> v291 = v299, decl array<ref<int<4>>,1> v292 = v300, decl array<ref<real<4>>,1> v293 = v301, decl vector<uint<4>,3> v296 = v302]{
+                    default: [v296, v293, v292, v291, v295, v294, v290]fun[vector<uint<4>,3> v289, array<ref<real<4>>,1> v53, array<ref<int<4>>,1> v52, array<ref<real<4>>,1> v51, int<4> v55, uint<4> v54, array<ref<real<4>>,1> v50](){
                         if((v54==CAST<uint<4>>(v55))) ((v51[CAST<uint<4>>(0)]) := ( *(v50[CAST<uint<4>>(0)]))) else { };
                     }
                 });
@@ -397,40 +444,40 @@ fun(array<ref<real<4>>,1> v302, array<ref<real<4>>,1> v303, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v353, array<ref<real<4>>,1> v354, array<ref<int<4>>,1> v355, array<ref<real<4>>,1> v347, uint<4> v348, int<4> v349, vector<uint<4>,3> v308, vector<uint<4>,3> v357){
-        decl vector<uint<4>,3> v356 = vector.pointwise(uint.div)(v308, v357);
-        parallel(job(([vector.reduction(v356, 1, uint.mul)-vector.reduction(v356, 1, uint.mul)]))[decl array<ref<real<4>>,1> v344 = v353, decl array<ref<real<4>>,1> v345 = v354, decl array<ref<int<4>>,1> v346 = v355, decl vector<uint<4>,3> v350 = v356, decl vector<uint<4>,3> v351 = v357]{
-            default: [v344, v348, v347, v350, v351, v346, v349, v345]fun[array<ref<real<4>>,1> v338, uint<4> v333, array<ref<real<4>>,1> v341, vector<uint<4>,3> v342, vector<uint<4>,3> v343, array<ref<int<4>>,1> v340, int<4> v334, array<ref<real<4>>,1> v339](){
-                parallel(job(([vector.reduction(v343, 1, uint.mul)-vector.reduction(v343, 1, uint.mul)]))[decl array<ref<real<4>>,1> v329 = v338, decl array<ref<real<4>>,1> v330 = v339, decl array<ref<int<4>>,1> v331 = v340, decl array<ref<real<4>>,1> v332 = v341, decl vector<uint<4>,3> v335 = v342, decl vector<uint<4>,3> v336 = v343]{
-                    default: [v331, v333, v332, v330, v329, v336, v335, v334]fun[array<ref<int<4>>,1> v60, uint<4> v62, array<ref<real<4>>,1> v61, array<ref<real<4>>,1> v59, array<ref<real<4>>,1> v58, vector<uint<4>,3> v310, vector<uint<4>,3> v309, int<4> v63](){
+fun(array<ref<real<4>>,1> v363, array<ref<real<4>>,1> v364, array<ref<int<4>>,1> v365, array<ref<real<4>>,1> v357, uint<4> v358, int<4> v359, vector<uint<4>,3> v318, vector<uint<4>,3> v367){
+        decl vector<uint<4>,3> v366 = vector.pointwise(uint.div)(v318, v367);
+        parallel(job(([vector.reduction(v366, 1, uint.mul)-vector.reduction(v366, 1, uint.mul)]))[decl array<ref<real<4>>,1> v354 = v363, decl array<ref<real<4>>,1> v355 = v364, decl array<ref<int<4>>,1> v356 = v365, decl vector<uint<4>,3> v360 = v366, decl vector<uint<4>,3> v361 = v367]{
+            default: [v361, v357, v358, v356, v354, v360, v355, v359]fun[vector<uint<4>,3> v353, array<ref<real<4>>,1> v351, uint<4> v343, array<ref<int<4>>,1> v350, array<ref<real<4>>,1> v348, vector<uint<4>,3> v352, array<ref<real<4>>,1> v349, int<4> v344](){
+                parallel(job(([vector.reduction(v353, 1, uint.mul)-vector.reduction(v353, 1, uint.mul)]))[decl array<ref<real<4>>,1> v339 = v348, decl array<ref<real<4>>,1> v340 = v349, decl array<ref<int<4>>,1> v341 = v350, decl array<ref<real<4>>,1> v342 = v351, decl vector<uint<4>,3> v345 = v352, decl vector<uint<4>,3> v346 = v353]{
+                    default: [v341, v346, v343, v342, v340, v339, v345, v344]fun[array<ref<int<4>>,1> v60, vector<uint<4>,3> v320, uint<4> v62, array<ref<real<4>>,1> v61, array<ref<real<4>>,1> v59, array<ref<real<4>>,1> v58, vector<uint<4>,3> v319, int<4> v63](){
                         decl ref<vector<ref<uint<4>>,3>> v64 = ( var(undefined(vector<ref<uint<4>>,3>)));
-                        ((( *v64)[CAST<uint<4>>(0)]) := [v309, v310]fun[vector<uint<4>,3> v313, vector<uint<4>,3> v312](uint<4> v311){
-                            decl uint<4> v314 = getThreadID(0);
-                            decl uint<4> v315 = getThreadID(1);
-                            switch(v311) {
-                                case 0: return (((v314/(v312[2]))/(v312[1]))+((v312[0])*((v315/(v313[2]))/(v313[1]))))
-                                case 1: return (((v314/(v312[2]))%(v312[1]))+((v312[1])*((v315/(v313[2]))%(v313[1]))))
-                                case 2: return ((v314%(v312[2]))+((v312[2])*((v315/(v313[2]))%(v313[1]))))
+                        ((( *v64)[CAST<uint<4>>(0)]) := [v319, v320]fun[vector<uint<4>,3> v323, vector<uint<4>,3> v322](uint<4> v321){
+                            decl uint<4> v324 = getThreadID(0);
+                            decl uint<4> v325 = getThreadID(1);
+                            switch(v321) {
+                                case 0: return (((v324/(v322[2]))/(v322[1]))+((v322[0])*((v325/(v323[2]))/(v323[1]))))
+                                case 1: return (((v324/(v322[2]))%(v322[1]))+((v322[1])*((v325/(v323[2]))%(v323[1]))))
+                                case 2: return ((v324%(v322[2]))+((v322[2])*((v325/(v323[2]))%(v323[1]))))
                                 default: { }
                             };
                         }(CAST<uint<4>>(0)));
-                        ((( *v64)[CAST<uint<4>>(1)]) := [v309, v310]fun[vector<uint<4>,3> v319, vector<uint<4>,3> v318](uint<4> v317){
-                            decl uint<4> v320 = getThreadID(0);
-                            decl uint<4> v321 = getThreadID(1);
-                            switch(v317) {
-                                case 0: return (((v320/(v318[2]))/(v318[1]))+((v318[0])*((v321/(v319[2]))/(v319[1]))))
-                                case 1: return (((v320/(v318[2]))%(v318[1]))+((v318[1])*((v321/(v319[2]))%(v319[1]))))
-                                case 2: return ((v320%(v318[2]))+((v318[2])*((v321/(v319[2]))%(v319[1]))))
+                        ((( *v64)[CAST<uint<4>>(1)]) := [v319, v320]fun[vector<uint<4>,3> v329, vector<uint<4>,3> v328](uint<4> v327){
+                            decl uint<4> v330 = getThreadID(0);
+                            decl uint<4> v331 = getThreadID(1);
+                            switch(v327) {
+                                case 0: return (((v330/(v328[2]))/(v328[1]))+((v328[0])*((v331/(v329[2]))/(v329[1]))))
+                                case 1: return (((v330/(v328[2]))%(v328[1]))+((v328[1])*((v331/(v329[2]))%(v329[1]))))
+                                case 2: return ((v330%(v328[2]))+((v328[2])*((v331/(v329[2]))%(v329[1]))))
                                 default: { }
                             };
                         }(CAST<uint<4>>(1)));
-                        ((( *v64)[CAST<uint<4>>(2)]) := [v310, v309]fun[vector<uint<4>,3> v324, vector<uint<4>,3> v325](uint<4> v323){
-                            decl uint<4> v326 = getThreadID(0);
-                            decl uint<4> v327 = getThreadID(1);
-                            switch(v323) {
-                                case 0: return (((v326/(v324[2]))/(v324[1]))+((v324[0])*((v327/(v325[2]))/(v325[1]))))
-                                case 1: return (((v326/(v324[2]))%(v324[1]))+((v324[1])*((v327/(v325[2]))%(v325[1]))))
-                                case 2: return ((v326%(v324[2]))+((v324[2])*((v327/(v325[2]))%(v325[1]))))
+                        ((( *v64)[CAST<uint<4>>(2)]) := [v319, v320]fun[vector<uint<4>,3> v335, vector<uint<4>,3> v334](uint<4> v333){
+                            decl uint<4> v336 = getThreadID(0);
+                            decl uint<4> v337 = getThreadID(1);
+                            switch(v333) {
+                                case 0: return (((v336/(v334[2]))/(v334[1]))+((v334[0])*((v337/(v335[2]))/(v335[1]))))
+                                case 1: return (((v336/(v334[2]))%(v334[1]))+((v334[1])*((v337/(v335[2]))%(v335[1]))))
+                                case 2: return ((v336%(v334[2]))+((v334[2])*((v337/(v335[2]))%(v335[1]))))
                                 default: { }
                             };
                         }(CAST<uint<4>>(2)));
@@ -444,34 +491,81 @@ fun(array<ref<real<4>>,1> v353, array<ref<real<4>>,1> v354, array<ref<int<4>>,1>
     }
 
 //  Entry Point: 
-fun(array<ref<real<4>>,1> v398, array<ref<real<4>>,1> v399, array<ref<int<4>>,1> v400, array<ref<real<4>>,1> v392, uint<4> v393, int<4> v394, vector<uint<4>,3> v359, vector<uint<4>,3> v402){
-        decl vector<uint<4>,3> v401 = vector.pointwise(uint.div)(v359, v402);
-        parallel(job(([vector.reduction(v401, 1, uint.mul)-vector.reduction(v401, 1, uint.mul)]))[decl array<ref<real<4>>,1> v389 = v398, decl array<ref<real<4>>,1> v390 = v399, decl array<ref<int<4>>,1> v391 = v400, decl vector<uint<4>,3> v395 = v401, decl vector<uint<4>,3> v396 = v402]{
-            default: [v396, v395, v389, v392, v394, v391, v390, v393]fun[vector<uint<4>,3> v388, vector<uint<4>,3> v387, array<ref<real<4>>,1> v383, array<ref<real<4>>,1> v386, int<4> v379, array<ref<int<4>>,1> v385, array<ref<real<4>>,1> v384, uint<4> v378](){
-                parallel(job(([vector.reduction(v388, 1, uint.mul)-vector.reduction(v388, 1, uint.mul)]))[decl array<ref<real<4>>,1> v374 = v383, decl array<ref<real<4>>,1> v375 = v384, decl array<ref<int<4>>,1> v376 = v385, decl array<ref<real<4>>,1> v377 = v386, decl vector<uint<4>,3> v380 = v387, decl vector<uint<4>,3> v381 = v388]{
-                    default: [v379, v378, v375, v380, v376, v374, v377, v381]fun[int<4> v73, uint<4> v72, array<ref<real<4>>,1> v69, vector<uint<4>,3> v360, array<ref<int<4>>,1> v70, array<ref<real<4>>,1> v68, array<ref<real<4>>,1> v71, vector<uint<4>,3> v361](){
-                        decl ref<uint<4>> v74 = ( var([v361]fun[vector<uint<4>,3> v363](uint<4> v362){
-                            decl uint<4> v365 = getThreadID(0);
-                            switch(v362) {
-                                case 0: return ((v365/(v363[2]))/(v363[1]))
-                                case 1: return ((v365/(v363[2]))%(v363[1]))
-                                case 2: return (v365%(v363[2]))
+fun(array<ref<real<4>>,1> v408, array<ref<real<4>>,1> v409, array<ref<int<4>>,1> v410, array<ref<real<4>>,1> v402, uint<4> v403, int<4> v404, vector<uint<4>,3> v369, vector<uint<4>,3> v412){
+        decl vector<uint<4>,3> v411 = vector.pointwise(uint.div)(v369, v412);
+        parallel(job(([vector.reduction(v411, 1, uint.mul)-vector.reduction(v411, 1, uint.mul)]))[decl array<ref<real<4>>,1> v399 = v408, decl array<ref<real<4>>,1> v400 = v409, decl array<ref<int<4>>,1> v401 = v410, decl vector<uint<4>,3> v405 = v411, decl vector<uint<4>,3> v406 = v412]{
+            default: [v406, v402, v405, v404, v403, v401, v400, v399]fun[vector<uint<4>,3> v398, array<ref<real<4>>,1> v396, vector<uint<4>,3> v397, int<4> v389, uint<4> v388, array<ref<int<4>>,1> v395, array<ref<real<4>>,1> v394, array<ref<real<4>>,1> v393](){
+                parallel(job(([vector.reduction(v398, 1, uint.mul)-vector.reduction(v398, 1, uint.mul)]))[decl array<ref<real<4>>,1> v384 = v393, decl array<ref<real<4>>,1> v385 = v394, decl array<ref<int<4>>,1> v386 = v395, decl array<ref<real<4>>,1> v387 = v396, decl vector<uint<4>,3> v390 = v397, decl vector<uint<4>,3> v391 = v398]{
+                    default: [v389, v391, v388, v385, v386, v384, v387, v390]fun[int<4> v73, vector<uint<4>,3> v371, uint<4> v72, array<ref<real<4>>,1> v69, array<ref<int<4>>,1> v70, array<ref<real<4>>,1> v68, array<ref<real<4>>,1> v71, vector<uint<4>,3> v370](){
+                        decl ref<uint<4>> v74 = ( var([v371]fun[vector<uint<4>,3> v373](uint<4> v372){
+                            decl uint<4> v375 = getThreadID(0);
+                            switch(v372) {
+                                case 0: return ((v375/(v373[2]))/(v373[1]))
+                                case 1: return ((v375/(v373[2]))%(v373[1]))
+                                case 2: return (v375%(v373[2]))
                                 default: { }
                             };
                         }(CAST<uint<4>>(0))));
-                        decl ref<uint<4>> v75 = ( var([v361, v360]fun[vector<uint<4>,3> v369, vector<uint<4>,3> v370](uint<4> v368){
-                            decl uint<4> v371 = getThreadID(0);
-                            decl uint<4> v372 = getThreadID(1);
-                            switch(v368) {
-                                case 0: return (((v371/(v369[2]))/(v369[1]))+((v369[0])*((v372/(v370[2]))/(v370[1]))))
-                                case 1: return (((v371/(v369[2]))%(v369[1]))+((v369[1])*((v372/(v370[2]))%(v370[1]))))
-                                case 2: return ((v371%(v369[2]))+((v369[2])*((v372/(v370[2]))%(v370[1]))))
+                        decl ref<uint<4>> v75 = ( var([v370, v371]fun[vector<uint<4>,3> v380, vector<uint<4>,3> v379](uint<4> v378){
+                            decl uint<4> v381 = getThreadID(0);
+                            decl uint<4> v382 = getThreadID(1);
+                            switch(v378) {
+                                case 0: return (((v381/(v379[2]))/(v379[1]))+((v379[0])*((v382/(v380[2]))/(v380[1]))))
+                                case 1: return (((v381/(v379[2]))%(v379[1]))+((v379[1])*((v382/(v380[2]))%(v380[1]))))
+                                case 2: return ((v381%(v379[2]))+((v379[2])*((v382/(v380[2]))%(v380[1]))))
                                 default: { }
                             };
                         }(CAST<uint<4>>(0))));
-                        ((v71[CAST<uint<4>>(( *v74))]) := ( *(v68[CAST<uint<4>>(( *v75))])));
+                        ((v71[CAST<uint<4>>(( *v74))]) := 7.0f);
                         barrier(getThreadGroup(0));
                         ((v69[CAST<uint<4>>(( *v75))]) := ( *(v71[CAST<uint<4>>(( *v74))])));
+                    }
+                });
+                mergeAll();
+            }
+        });
+    }
+
+//  Entry Point: 
+fun(array<ref<real<4>>,1> v459, array<ref<real<4>>,1> v460, array<ref<int<4>>,1> v461, array<ref<real<4>>,1> v453, uint<4> v454, int<4> v455, vector<uint<4>,3> v414, vector<uint<4>,3> v463){
+        decl vector<uint<4>,3> v462 = vector.pointwise(uint.div)(v414, v463);
+        parallel(job(([vector.reduction(v462, 1, uint.mul)-vector.reduction(v462, 1, uint.mul)]))[decl array<ref<real<4>>,1> v450 = v459, decl array<ref<real<4>>,1> v451 = v460, decl array<ref<int<4>>,1> v452 = v461, decl vector<uint<4>,3> v456 = v462, decl vector<uint<4>,3> v457 = v463]{
+            default: [v457, v456, v451, v454, v453, v452, v450, v455]fun[vector<uint<4>,3> v449, vector<uint<4>,3> v448, array<ref<real<4>>,1> v445, uint<4> v439, array<ref<real<4>>,1> v447, array<ref<int<4>>,1> v446, array<ref<real<4>>,1> v444, int<4> v440](){
+                parallel(job(([vector.reduction(v449, 1, uint.mul)-vector.reduction(v449, 1, uint.mul)]))[decl array<ref<real<4>>,1> v435 = v444, decl array<ref<real<4>>,1> v436 = v445, decl array<ref<int<4>>,1> v437 = v446, decl array<ref<real<4>>,1> v438 = v447, decl vector<uint<4>,3> v441 = v448, decl vector<uint<4>,3> v442 = v449]{
+                    default: [v441, v437, v436, v440, v438, v435, v442, v439]fun[vector<uint<4>,3> v415, array<ref<int<4>>,1> v80, array<ref<real<4>>,1> v79, int<4> v83, array<ref<real<4>>,1> v81, array<ref<real<4>>,1> v78, vector<uint<4>,3> v416, uint<4> v82](){
+                        decl ref<int<4>> v84 = ( var(CAST<int<4>>((((([v415, v416]fun[vector<uint<4>,3> v419, vector<uint<4>,3> v418](uint<4> v417){
+                            decl uint<4> v420 = getThreadID(0);
+                            decl uint<4> v421 = getThreadID(1);
+                            switch(v417) {
+                                case 0: return (((v420/(v418[2]))/(v418[1]))+((v418[0])*((v421/(v419[2]))/(v419[1]))))
+                                case 1: return (((v420/(v418[2]))%(v418[1]))+((v418[1])*((v421/(v419[2]))%(v419[1]))))
+                                case 2: return ((v420%(v418[2]))+((v418[2])*((v421/(v419[2]))%(v419[1]))))
+                                default: { }
+                            };
+                        }(CAST<uint<4>>(0))*CAST<uint<4>>(( *(v80[CAST<uint<4>>(1)]))))*CAST<uint<4>>(( *(v80[CAST<uint<4>>(2)]))))+([v415, v416]fun[vector<uint<4>,3> v425, vector<uint<4>,3> v424](uint<4> v423){
+                            decl uint<4> v426 = getThreadID(0);
+                            decl uint<4> v427 = getThreadID(1);
+                            switch(v423) {
+                                case 0: return (((v426/(v424[2]))/(v424[1]))+((v424[0])*((v427/(v425[2]))/(v425[1]))))
+                                case 1: return (((v426/(v424[2]))%(v424[1]))+((v424[1])*((v427/(v425[2]))%(v425[1]))))
+                                case 2: return ((v426%(v424[2]))+((v424[2])*((v427/(v425[2]))%(v425[1]))))
+                                default: { }
+                            };
+                        }(CAST<uint<4>>(1))*CAST<uint<4>>(( *(v80[CAST<uint<4>>(2)])))))+[v416, v415]fun[vector<uint<4>,3> v430, vector<uint<4>,3> v431](uint<4> v429){
+                            decl uint<4> v432 = getThreadID(0);
+                            decl uint<4> v433 = getThreadID(1);
+                            switch(v429) {
+                                case 0: return (((v432/(v430[2]))/(v430[1]))+((v430[0])*((v433/(v431[2]))/(v431[1]))))
+                                case 1: return (((v432/(v430[2]))%(v430[1]))+((v430[1])*((v433/(v431[2]))%(v431[1]))))
+                                case 2: return ((v432%(v430[2]))+((v430[2])*((v433/(v431[2]))%(v431[1]))))
+                                default: { }
+                            };
+                        }(CAST<uint<4>>(2))))));
+                        decl ref<int<4>> v85 = ( var((((( *(v80[CAST<uint<4>>(0)]))*( *(v80[CAST<uint<4>>(1)])))*( *(v80[CAST<uint<4>>(2)])))-17)));
+                        if((( *v84)>=( *v85))) {
+                            return unit;
+                        } else { };
+                        ((v79[CAST<uint<4>>(( *v84))]) := (( *(v78[CAST<uint<4>>(( *v84))]))+CAST<real<4>>(( *(v80[CAST<uint<4>>(( *v84))])))));
                     }
                 });
                 mergeAll();

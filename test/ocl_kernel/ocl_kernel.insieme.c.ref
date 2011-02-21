@@ -113,9 +113,23 @@ __kernel void barriers(__global float* c, __global float* ga, __global int* gb, 
 	{
 		unsigned int lid = (get_local_id(((unsigned int)(0))));
 		unsigned int gid = (get_global_id(((unsigned int)(0))));
-		(((l[((unsigned int)((lid)))])) = ((c[((unsigned int)((gid)))])));
+		(((l[((unsigned int)((lid)))])) = 7.0f);
 		barrier(CLK_LOCAL_MEM_FENCE);
 		(((ga[((unsigned int)((gid)))])) = ((l[((unsigned int)((lid)))])));
+	}
+}
+
+// --- Entry Point ---
+
+// start code fragment :: Definition of VectorAdd //
+__kernel void VectorAdd(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
+	{
+		int iGID = ((int)((((((get_global_id(((unsigned int)(0))))*((unsigned int)(((gb[((unsigned int)(1))])))))*((unsigned int)(((gb[((unsigned int)(2))])))))+((get_global_id(((unsigned int)(1))))*((unsigned int)(((gb[((unsigned int)(2))]))))))+(get_global_id(((unsigned int)(2)))))));
+		int iNumElements = (((((gb[((unsigned int)(0))]))*((gb[((unsigned int)(1))])))*((gb[((unsigned int)(2))])))-17);
+		if(((iGID)>=(iNumElements))) {
+			return;;
+		};
+		(((ga[((unsigned int)((iGID)))])) = (((c[((unsigned int)((iGID)))]))+((float)(((gb[((unsigned int)((iGID)))]))))));
 	}
 }
 
