@@ -53,6 +53,10 @@
 using namespace insieme::core;
 using namespace insieme::core::parse;
 
+#ifndef TEST
+// avoiding warnings in eclipse, enabling auto completions
+#define TEST void fun
+#endif
 
 TEST(IRParser, TypeTests) {
 
@@ -104,7 +108,7 @@ TEST(IRParser, TypeTests) {
 		EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(parser.parseType("(vector<'a,#l>, 'a)->'a"))->getArgumentTypes()[0]->getNodeType());
 	}
 }
-//#define TEST void fun
+
 TEST(IRParser, ExpressionTests) {
 
 	string testStr("testGenType");
@@ -112,17 +116,40 @@ TEST(IRParser, ExpressionTests) {
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
+	// literal
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 	
+	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
 
+	// merge all
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
 	EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
 
+    // lambda using definition
+// TODO add statement to test once it is there
+    auto lambda = parser.parseExpression("fun int<4>:var in { int<4>:var = []()->int<4>{} }");
+    std::cout << "Lambda: " << lambda << std::endl;
+
+	// jobExpr
+	// needs something appropriate as argument
+//	auto parsedJob = parser.parseExpression("job< 0 >[]{default: 1}");
+//	std::cout << "JOB: " << parsedJob << std::endl;
+
+	// tupleExpr
+    std::vector<ExpressionPtr> exprVec;
+    exprVec.push_back(v);
+// TODO add another expression
+//    exprVec.push_back(callExpr);
+	auto builtTuple = builder.tupleExpr(exprVec);
+	auto parsedTuple = parser.parseExpression("tuple[int<4>:var]");
+	EXPECT_TRUE(!!builtTuple && !!parsedTuple && builtTuple->getType() == parsedTuple->getType());
+
+	// vectorExpr
 	auto vectorExpr = builder.vectorExpr(toVector<ExpressionPtr>(builder.intLit(0), builder.intLit(3)));
     EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
 
