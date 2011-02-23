@@ -58,6 +58,7 @@
 // - other: use phoenix::bind and phoenix::construct instead of plain calls
 // ----------------------- - Peter
 // - error: has no member named ‘parse’ --> check your operators (>>!)
+// is not a class, struct, or union type --> chek function name and argument list
 
 namespace insieme {
 namespace core {
@@ -86,7 +87,36 @@ CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, Exp
 
 LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
     ASTBuilder build(nodeMan);
-    return build.intLit(0);
+    return build.intLit(val);
+}
+
+JobExprPtr jobhelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
+        const GuardedStmts guardedStmts) {
+    return JobExpr::get(manager, defaultStmt, guardedStmts);
+}
+
+template<typename T, typename U>
+std::pair<T, U> makePair (T first, U second) {
+    return std::make_pair(first, second);
+}
+
+// TODO remove
+LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params) {
+// build a stmtExpr bc the builder cannot at the moment
+    ASTBuilder build(nodeMan);
+    vector<StatementPtr> stmts;
+    vector<TypePtr> captureTypes;
+    vector<TypePtr> paramTypes;
+    // construct function type
+    for_each(captureList, [&](const VariablePtr var) {
+        captureTypes.push_back(var->getType());
+    });
+    for_each(params, [&](const VariablePtr var) {
+        paramTypes.push_back(var->getType());
+    });
+
+//    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
+    return build.lambda(build.functionType(captureTypes, paramTypes, retType), captureList, params, build.compoundStmt(stmts));
 }
 
 void callDepthCheck(bool reset, unsigned& callDepthCount) {
@@ -140,25 +170,60 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 		>> '>' >> '(' >> expressionRule >> ')' )					[ qi::_val = ph::bind(&CastExpr::get, nManRef, qi::_1, qi::_2) ];
 
     // --------------------------------------------------------------------------------------
-    vectorExpr =
+	// TODO add Statement when done
+    lambda =
+        ( qi::lit("[") >> -(variableExpr                            [ ph::push_back(qi::_a, qi::_1) ]
+          % ',') >> ']' >> '(' >> -(variableExpr                    [ ph::push_back(qi::_b, qi::_1) ]
+          % ',') >> ')' >> qi::lit("->")
+        >> typeG->typeRule >> '{' >> /*statement >> */ '}')         [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_3, qi::_a, qi::_b/*, qi::_4*/ )];
+
+    lambdaDef =
+        ( qi::lit("{") >> +((variableExpr >> '=' >> lambda)         [ ph::insert(qi::_a, ph::bind(&makePair<VariablePtr, LambdaPtr>, qi::_1, qi::_2)) ]
+          % ',') >> '}')                                            [ qi::_val = ph::bind(&LambdaDefinition::get, nManRef, qi::_a) ];
+
+    lambdaExpr =
+        ( qi::lit("fun") >> variableExpr >> qi::lit("in") >>
+        lambdaDef)                                                  [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1, qi::_2) ]
+        | lambda                                                    [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1 ) ];
+
+//	TODO add declarationList once they are done
+    jobExpr =
+        ( qi::lit("job<") >> expressionRule >> '>' >> '['
+        >> /* delcarationList >> */ ']' >> '{'
+        >> *( qi::lit("if") >> expressionRule >> qi::lit("do")
+          >> expressionRule >> ')' )                                [ ph::push_back(qi::_a, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
+        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&jobhelp, nManRef, qi::_1, qi::_3, qi::_a ) ];
+
+	tupleExpr =
+        ( qi::lit("tuple[") >> -(expressionRule                     [ ph::push_back(qi::_a, qi::_1) ]
+          % ',') >> ']' )                                           [ qi::_val = ph::bind(&TupleExpr::get, nManRef, qi::_a) ];
+
+	vectorExpr =
         ( qi::lit("vector<") >>
         (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2) ]
-        >> qi::lit(">(") >> -(expressionRule                        [ ph::push_back(qi::_b, qi::_1) ]
+        >> '>' >> '(' >> -(expressionRule                           [ ph::push_back(qi::_b, qi::_1) ]
           % ',') >> ')' )                                           [ qi::_val = ph::bind(&VectorExpr::get, nManRef, qi::_a, qi::_b) ];
 	// --------------------------------------------------------------------------------------
 
 
 	expressionRule =
-		literalExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
-      | vectorExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+        lambdaExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | literalExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	opExpr														[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	variableExpr												[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
-	  | castExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	callExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+	  | castExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | jobExpr                                                     [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | tupleExpr                                                   [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | vectorExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | qi::int_                                                    [ qi::_val = ph::bind(&buildIntLiteral, nManRef, qi::_1) ];
-                                                                      //(&Literal::parserGet, nManRef, intTypeRef, toString(qi::_1)) ];
 
     // --------------------------------------------------------------------------------------
+    BOOST_SPIRIT_DEBUG_NODE(lambda);
+    BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
+    BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
+    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
+    BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
     BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
 	// --------------------------------------------------------------------------------------
 	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
