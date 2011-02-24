@@ -159,5 +159,11 @@ struct D1 {
 	int val;
 };
 
+void* malloc(int);
 
+int mem_alloc() {
+
+	#pragma test "ref<array<int<4>,1>> v1 = ref.new(array.create.1D(undefined(int<4>), uint.div(4, sizeof(int<4>))))"
+	int* a = malloc(4);
+}
 

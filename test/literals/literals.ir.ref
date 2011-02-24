@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<array<char,1>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf("Hello");
         printf("Hello %s\n", "World");
         printf("Integer:   %d\n", 14);
@@ -23,7 +23,7 @@ fun(int<4> v1, array<array<char,1>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<array<char,1>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf("Hello");
         printf("Hello %s\n", "World");
         printf("Integer:   %d\n", 14);

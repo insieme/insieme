@@ -151,11 +151,11 @@ core::ExpressionPtr handleMemAlloc(const core::ASTBuilder& builder, const core::
 					gen.getUnsignedIntDiv(), callExpr->getArguments().front(), getSizeOfType(builder, elemType)
 				);
 
-				assert(elemType->getNodeType() == core::NT_RefType);
-				elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
+				assert(elemType->getNodeType() != core::NT_RefType);
+				//elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
 
-				return builder.callExpr(type, gen.getArrayCreate1D(),
-						builder.refVar(builder.callExpr(elemType,gen.getUndefined(), gen.getTypeLiteral(elemType))), size);
+				return builder.refNew(builder.callExpr(type, gen.getArrayCreate1D(),
+						builder.callExpr(elemType, gen.getUndefined(), gen.getTypeLiteral(elemType)), size));
 			}
 		}
 	}
@@ -376,8 +376,7 @@ public:
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal( strValue,
 				// convFact.mgr.basic.getString()
-				convFact.getASTBuilder().vectorType(convFact.getASTBuilder().refType(convFact.mgr.basic.getChar()),
-						core::IntTypeParam::getConcreteIntParam(strValue.size()))
+				convFact.getASTBuilder().vectorType(convFact.mgr.basic.getChar(), core::IntTypeParam::getConcreteIntParam(strValue.size()))
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -482,7 +481,16 @@ public:
 			// collects the type of each argument of the expression
 			ExpressionList args;
 			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
-				core::ExpressionPtr&& arg = convFact.tryDeref( Visit( callExpr->getArg(argId) ) );
+				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+				// LOG(DEBUG) << *arg;
+				// LOG(DEBUG) << *arg->getType();
+				if(argId < funcTy->getArgumentTypes().size() && funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType) {
+					// LOG(DEBUG) << *funcTy->getArgumentTypes()[argId];
+					if(arg->getType()->getNodeType() != core::NT_RefType)
+						arg = builder.refVar(arg);
+				} else {
+					arg = convFact.tryDeref(arg);
+				}
 				args.push_back( arg );
 			}
 

@@ -306,6 +306,12 @@ public:
 
 		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+
+		// If the return type is of type vector or array we need to add a reference
+		// so that the semantics of C argument passing is mantained
+		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
+			retTy = this->convFact.builder.refType(retTy);
+
 		assert(retTy && "Function has no return type!");
 
 		core::TypeList argTypes;
@@ -323,7 +329,7 @@ public:
 			}
 		);
 
-		if( argTypes.size() == 1 && *argTypes.front() == *convFact.mgr.basic.getUnit()) {
+		if( argTypes.size() == 1 && convFact.mgr.basic.isUnit(argTypes.front())) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
