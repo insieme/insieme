@@ -375,8 +375,8 @@ public:
 		std::string&& strValue = GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc() );
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal( strValue,
-				// convFact.mgr.basic.getString()
-				convFact.getASTBuilder().vectorType(convFact.mgr.basic.getChar(), core::IntTypeParam::getConcreteIntParam(strValue.size()))
+				convFact.mgr.basic.getString()
+				// convFact.getASTBuilder().vectorType(convFact.mgr.basic.getChar(), core::IntTypeParam::getConcreteIntParam(strValue.size()))
 			);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
@@ -420,6 +420,11 @@ public:
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
 			return retExpr;
 
+		// If the subexpression is a string, remove the implicit casts
+		if(convFact.mgr.basic.isString(subExpr->getType())) {
+			return subExpr;
+		}
+
 		// if the subexpression is an array or a vector, remove all the C implicit casts
 		if( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType || nonRefExpr->getType()->getNodeType() == core::NT_VectorType )
 			return subExpr;
@@ -429,7 +434,7 @@ public:
 			subExpr = convFact.tryDeref(subExpr);
 		}
 
-        // Convert casts form scalars to vectors to vector init exrpessions
+		// Convert casts form scalars to vectors to vector init exrpessions
 		subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
 
         core::ExpressionPtr&& retExpr = type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr;
@@ -482,12 +487,10 @@ public:
 			ExpressionList args;
 			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
 				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				// LOG(DEBUG) << *arg;
-				// LOG(DEBUG) << *arg->getType();
+				LOG(DEBUG) << *arg;
+				LOG(DEBUG) << *arg->getType();
 				if(argId < funcTy->getArgumentTypes().size() && funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType) {
-					// LOG(DEBUG) << *funcTy->getArgumentTypes()[argId];
-					if(arg->getType()->getNodeType() != core::NT_RefType)
-						arg = builder.refVar(arg);
+					assert(arg->getType()->getNodeType() == core::NT_RefType);
 				} else {
 					arg = convFact.tryDeref(arg);
 				}
