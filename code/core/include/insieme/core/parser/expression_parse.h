@@ -42,6 +42,10 @@ namespace insieme {
 namespace core {
 namespace parse {
 
+typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
+typedef vector<VariablePtr> VariableList;
+typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > Definitions;
+
 // FW Declaration
 struct TypeGrammar;
 
@@ -70,12 +74,18 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> opExpr;
 	qi::rule<ParseIt, VariablePtr(), qi::space_type> variableExpr;
 	
-	qi::rule<ParseIt, ExpressionPtr(), qi::locals<ExpressionList>, qi::space_type> callExpr;
-	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> castExpr;
+	qi::rule<ParseIt, CallExprPtr(), qi::locals<ExpressionList>, qi::space_type> callExpr;
+	qi::rule<ParseIt, CastExprPtr(), qi::space_type> castExpr;
 
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> expressionRule;
 
 	// --------------------------------------------------------------------------------------
+    qi::rule<ParseIt, LambdaPtr(), qi::locals<VariableList, VariableList>, qi::space_type> lambda;
+    qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<Definitions>, qi::space_type> lambdaDef;
+    qi::rule<ParseIt, LambdaExprPtr(), qi::space_type> lambdaExpr;
+
+    qi::rule<ParseIt, JobExprPtr(), qi::locals</*vector<DeclarationStmt>,*/ GuardedStmts>, qi::space_type> jobExpr;
+    qi::rule<ParseIt, TupleExprPtr(), qi::locals<ExpressionList>, qi::space_type> tupleExpr;
 	qi::rule<ParseIt, VectorExprPtr(), qi::locals<VectorTypePtr, ExpressionList>, qi::space_type> vectorExpr;
     // --------------------------------------------------------------------------------------
 };
