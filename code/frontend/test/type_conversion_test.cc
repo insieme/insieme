@@ -131,7 +131,7 @@ TEST(TypeConversion, HandlePointerType) {
 
 	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("array<ref<int<4>>,1>", insiemeTy->toString());
+	EXPECT_EQ("array<int<4>,1>", insiemeTy->toString());
 
 	operator delete (intTy);
 }
@@ -196,7 +196,7 @@ TEST(TypeConversion, HandleStructType) {
 	// convert the type into an IR type
 	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<name:ref<array<ref<char>,1>>,age:ref<uint<2>>>", insiemeTy->toString());
+	EXPECT_EQ("struct<name:ref<array<char,1>>,age:ref<uint<2>>>", insiemeTy->toString());
 
 	operator delete (charTy);
 	operator delete (ushortTy);
@@ -232,7 +232,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.convertType( declType.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<array<ref<char>,1>>,age:ref<int<8>>,mate:ref<array<ref<'Person>,1>>>}", insiemeTy->toString());
+	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<array<char,1>>,age:ref<int<8>>,mate:ref<array<'Person,1>>>}", insiemeTy->toString());
 
 	operator delete (charTy);
 	operator delete (longTy);
@@ -287,22 +287,22 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declA).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'A.{'A=struct<b:ref<array<ref<'B>,1>>>, 'B=struct<c:ref<array<ref<'C>,1>>>, 'C=struct<b:ref<array<ref<'B>,1>>,a:ref<array<ref<'A>,1>>,d:ref<array<ref<struct<e:ref<array<ref<E>,1>>>>,1>>>}",
+	EXPECT_EQ("rec 'A.{'A=struct<b:ref<array<'B,1>>>, 'B=struct<c:ref<array<'C,1>>>, 'C=struct<b:ref<array<'B,1>>,a:ref<array<'A,1>>,d:ref<array<struct<e:ref<array<E,1>>>,1>>>}",
 			insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declB).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'B.{'A=struct<b:ref<array<ref<'B>,1>>>, 'B=struct<c:ref<array<ref<'C>,1>>>, 'C=struct<b:ref<array<ref<'B>,1>>,a:ref<array<ref<'A>,1>>,d:ref<array<ref<struct<e:ref<array<ref<E>,1>>>>,1>>>}",
+	EXPECT_EQ("rec 'B.{'A=struct<b:ref<array<'B,1>>>, 'B=struct<c:ref<array<'C,1>>>, 'C=struct<b:ref<array<'B,1>>,a:ref<array<'A,1>>,d:ref<array<struct<e:ref<array<E,1>>>,1>>>}",
 			insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declC).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'C.{'A=struct<b:ref<array<ref<'B>,1>>>, 'B=struct<c:ref<array<ref<'C>,1>>>, 'C=struct<b:ref<array<ref<'B>,1>>,a:ref<array<ref<'A>,1>>,d:ref<array<ref<struct<e:ref<array<ref<E>,1>>>>,1>>>}",
+	EXPECT_EQ("rec 'C.{'A=struct<b:ref<array<'B,1>>>, 'B=struct<c:ref<array<'C,1>>>, 'C=struct<b:ref<array<'B,1>>,a:ref<array<'A,1>>,d:ref<array<struct<e:ref<array<E,1>>>,1>>>}",
 			insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declD).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<e:ref<array<ref<E>,1>>>", insiemeTy->toString());
+	EXPECT_EQ("struct<e:ref<array<E,1>>>", insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declE).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
@@ -336,7 +336,7 @@ TEST(TypeConversion, HandleFunctionType) {
 		// convert into IR type
 		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("((real<8>,array<ref<real<4>>,1>)->int<4>)", insiemeTy->toString());
+		EXPECT_EQ("((real<8>,ref<array<real<4>,1>>)->int<4>)", insiemeTy->toString());
 	}
 	// check conversion of function with no prototype
 	// int f()
@@ -371,7 +371,7 @@ TEST(TypeConversion, HandleArrayType) {
 		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
 		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("vector<ref<int<4>>,8>", insiemeTy->toString());
+		EXPECT_EQ("vector<int<4>,8>", insiemeTy->toString());
 	}
 	operator delete (intTy);
 
@@ -381,7 +381,7 @@ TEST(TypeConversion, HandleArrayType) {
 		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
 		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("array<array<ref<char>,1>,1>", insiemeTy->toString());
+		EXPECT_EQ("array<array<char,1>,1>", insiemeTy->toString());
 	}
 	operator delete (charTy);
 

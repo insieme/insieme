@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+fun(int<4> v2, array<array<char,1>,1> v3){
         decl ref<struct<N:ref<int<4>>>> v1 =  new(struct{N:= var(10)});
         decl ref<int<4>> v4 =  var(10);
         for(decl ref<int<4>> v5 =  var(0) .. v4 : 1) {
@@ -69,7 +69,7 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
+fun(int<4> v2, array<array<char,1>,1> v3){
         decl ref<struct<N:ref<int<4>>>> v1 = ( new(struct{N:=( var(10))}));
         decl ref<int<4>> v4 = ( var(10));
         for(decl ref<int<4>> v5 = ( var(0)) .. ( *v4) : 1) {

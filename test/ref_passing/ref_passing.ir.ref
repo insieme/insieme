@@ -1,15 +1,15 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v6 =  var(v1);
         {
             decl ref<int<4>> v3 =  var(0);
-            fun(array<ref<int<4>>,1> v4){
-                return int.postInc(v4[0]);
+            fun(ref<array<int<4>,1>> v4){
+                return int.postInc(array.ref.elem.1D(v4, 0));
             }([v3]);
-            fun(array<ref<int<4>>,1> v4){
-                return int.postInc(v4[0]);
+            fun(ref<array<int<4>,1>> v4){
+                return int.postInc(array.ref.elem.1D(v4, 0));
             }([v6]);
             printf("%d\n", varlist.pack((v6)));
             v6 := v3;
@@ -23,15 +23,15 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v6 = ( var(v1));
         {
             decl ref<int<4>> v3 = ( var(0));
-            fun(array<ref<int<4>>,1> v4){
-                return int.postInc((v4[0]));
+            fun(ref<array<int<4>,1>> v4){
+                return int.postInc(array.ref.elem.1D(v4, 0));
             }([v3]);
-            fun(array<ref<int<4>>,1> v4){
-                return int.postInc((v4[0]));
+            fun(ref<array<int<4>,1>> v4){
+                return int.postInc(array.ref.elem.1D(v4, 0));
             }([v6]);
             printf("%d\n", varlist.pack((( *v6))));
             (v6 := ( *v3));

@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, array<array<char,1>,1> v2){
         printf("even(%d)?: %s\n", varlist.pack((12, ite(recFun v3 {
             v3 = fun(uint<4> v5){
                 return ite(v5==0, fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6(v7-1));
@@ -26,7 +26,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, array<array<char,1>,1> v2){
         printf("even(%d)?: %s\n", varlist.pack((12, ite(CAST<bool>(recFun v3 {
             v3 = fun(uint<4> v5){
                 return ite((v5==CAST<uint<4>>(0)), fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6((v7-CAST<uint<4>>(1))));

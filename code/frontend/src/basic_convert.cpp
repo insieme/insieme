@@ -233,17 +233,20 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 }
 
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
+	// Lookup the map of declared variable to see if the current
+	//  varDecl is already associated with an IR entity
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(varDecl);
 	if(fit != ctx.varDeclMap.end()) {
 		// variable found in the map.
 		return fit->second;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+	// We have to create an IR var to represent the current varDecl
 	QualType&& varTy = varDecl->getType();
 	core::TypePtr&& type = convertType( varTy.getTypePtr() );
-	if( !(varTy.isConstQualified() || isa<const clang::ParmVarDecl>(varDecl) )
-	//		|| (type->getNodeType() == core::NT_VectorType && !varTy.getTypePtr()->isExtVectorType()) Removed after discussion 20/12/2010
-	) {
+	if( !(varTy.isConstQualified() ||
+			(isa<const clang::ParmVarDecl>(varDecl) && type->getNodeType() != core::NT_VectorType && type->getNodeType() != core::NT_ArrayType)) ) {
 		// add a ref in the case of variables which are not const or declared as function parameters
 		type = builder.refType(type);
 	}

@@ -892,19 +892,18 @@ public:
 		}
 		// *a
 		case UO_Deref: {
-			subExpr = convFact.tryDeref(subExpr);
+			assert(subExpr->getType()->getNodeType() == core::NT_RefType && "Impossible to apply * operator to an R-Value");
+			const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(subExpr->getType())->getElementType();
+			if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) {
+				const core::TypePtr& subVecTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
 
-			if(subExpr->getType()->getNodeType() == core::NT_VectorType || subExpr->getType()->getNodeType() == core::NT_ArrayType) {
-				const core::SingleElementTypePtr& subTy = core::static_pointer_cast<const core::SingleElementType>(subExpr->getType());
-
-				core::LiteralPtr&& op = subExpr->getType()->getNodeType() == core::NT_VectorType ?
-						gen.getVectorSubscript() : gen.getArraySubscript1D();
-
-				subExpr = builder.callExpr( subTy->getElementType(),op, subExpr, builder.literal("0", gen.getUInt4()) );
+				subExpr = builder.callExpr(	builder.refType(subVecTy), gen.getArrayRefElem1D(), subExpr, builder.literal("0", gen.getUInt4()) );
+			} else {
+				subExpr = convFact.tryDeref(subExpr);
 			}
 			break;
 		}
-		// +a
+		// +assh
 		case UO_Plus:
 			// just return the subexpression
 			break;
@@ -1001,19 +1000,38 @@ public:
 		core::ExpressionPtr&& idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 
 		// BASE
-		core::ExpressionPtr&& base = convFact.tryDeref( Visit( baseExpr ) );
+		core::ExpressionPtr&& base = Visit( baseExpr );
 
-		// TODO: we need better checking for vector type
-		assert( (base->getType()->getNodeType() == core::NT_VectorType || base->getType()->getNodeType() == core::NT_ArrayType) &&
-				"Base expression of array subscript is not a vector/array type.");
+		core::TypePtr opType;
+		core::LiteralPtr op;
 
-		core::LiteralPtr&& op = base->getType()->getNodeType() == core::NT_VectorType ? gen.getVectorSubscript() : gen.getArraySubscript1D();
+		if(base->getType()->getNodeType() == core::NT_RefType) {
+			// The vector/array is an L-Value so we use the array.ref.elem
+			// operator to return a reference to the addressed memory location
+			const core::RefTypePtr& refSubTy = core::static_pointer_cast<const core::RefType>(base->getType());
 
-		// We are sure the type of base is either a vector or an array
-		const core::TypePtr& subTy = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
+			// TODO: we need better checking for vector type
+			assert( (refSubTy->getElementType()->getNodeType() == core::NT_VectorType || refSubTy->getElementType()->getNodeType() == core::NT_ArrayType) &&
+					"Base expression of array subscript is not a vector/array type.");
+
+			op = gen.getArrayRefElem1D();
+			opType = convFact.builder.refType(core::static_pointer_cast<const core::SingleElementType>(refSubTy->getElementType())->getElementType());
+
+		} else {
+			// The vector/array is an R-value (e.g. (int[2]){0,1}[1] )
+			// in this case the subscript returns an R-value so the array.subscript
+			// operator must be used
+
+			// TODO: we need better checking for vector type
+			assert( (base->getType()->getNodeType() == core::NT_VectorType || base->getType()->getNodeType() == core::NT_ArrayType) &&
+					"Base expression of array subscript is not a vector/array type.");
+
+			op = gen.getArraySubscript1D();
+			opType = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
+		}
 
 		core::ExpressionPtr&& retExpr =
-			convFact.builder.callExpr( subTy, op, base, convFact.builder.castExpr(gen.getUInt4(), idx) );
+				convFact.builder.callExpr( opType, op, base, convFact.builder.castExpr(gen.getUInt4(), idx) );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, arraySubExpr, convFact);
@@ -1076,6 +1094,7 @@ public:
 			core::ExpressionPtr&& retExpr = convFact.lookUpVariable(varDecl);
 			// handle eventual pragmas attached to the Clang node
 			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
+			END_LOG_EXPR_CONVERSION(retExpr);
 			return annotatedNode;
 		}
 		// todo: C++ check whether this is a reference to a class field, or method (function).
@@ -1156,8 +1175,8 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 		retExpr = builder.vectorExpr(elements);
 	}
 
-	// in the case the initexpr is used to initialize a struct/class we need to create a structExpr
-	// to initialize the structure
+	// in the case the initexpr is used to initialize a struct/class we need to
+	//  create a structExpr to initialize the structure
 	if(core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
 		core::StructExpr::Members members;
 		for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {

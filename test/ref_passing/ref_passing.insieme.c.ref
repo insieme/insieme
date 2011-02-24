@@ -9,10 +9,13 @@
 #define null 0
 // --- Entry Point ---
 
+// start code fragment :: Prototype for external function: array.ref.elem.1D //
+<?>'elem</?> array.ref.elem.1D(<?>'elem</?>*, unsigned long);
+
 // start code fragment :: Definition of f //
 int f(int* a) {
 	{
-		return (((a[0]))++);;
+		return ((*array.ref.elem.1D(a, 0))++);;
 	}
 }
 

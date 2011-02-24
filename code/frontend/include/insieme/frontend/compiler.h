@@ -130,8 +130,8 @@ struct ClangParsingError: public std::logic_error {
 	ClangParsingError(const std::string& file_name): std::logic_error(file_name) { }
 };
 
-// ------------------------------------ ClangCompiler ---------------------------
 
+// ------------------------------------ ClangCompiler ---------------------------
 /**
  * ClangCompiler is a wrapper class for the Clang compiler main interfaces. The main goal is to hide implementation
  * details to the client.
@@ -150,11 +150,37 @@ public:
 	 * Creates a compiler instance from an input file
 	 */
 	ClangCompiler(const std::string& file_name);
+
+	/**
+	 * Returns clang's ASTContext
+	 * @return
+	 */
 	clang::ASTContext& getASTContext() const;
+
+	/**
+	 * Returns clang's SourceManager
+	 * @return
+	 */
 	clang::SourceManager& getSourceManager() const;
+
+	/**
+	 * Returns clang's Prepocessor
+	 * @return
+	 */
 	clang::Preprocessor& getPreprocessor() const;
+
+	/**
+	 * Returns clang's Diagnostics
+	 * @return
+	 */
 	clang::Diagnostic& getDiagnostics() const;
+
+	/**
+	 * Returns clang's TargetInfo
+	 * @return
+	 */
 	clang::TargetInfo& getTargetInfo() const;
+
 	~ClangCompiler();
 };
 

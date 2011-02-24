@@ -334,15 +334,15 @@ void evil(int** anything) { }
 
 void vector_stmt_test() {
 
-	//#pragma test "decl ref<vector<ref<int<4>>,5>> v1 = ( var(vector.initUniform(( var(0)))))" // FIXME
+	#pragma test "decl ref<vector<int<4>,5>> v1 = ( var(undefined(vector<int<4>,5>)))"
 	int a[5];
 
 	#pragma test \
-	"(( *v1)[CAST<uint<4>>(0)])"
+	"array.ref.elem.1D(v1, CAST<uint<4>>(0))"
 	a[0];
 
 	#pragma test \
-	"((( *v1)[CAST<uint<4>>(0)]) := 1)"
+	"(array.ref.elem.1D(v1, CAST<uint<4>>(0)) := 1)"
 	a[0] = 1;
 
 	//#pragma test \
@@ -350,11 +350,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"((( *v1)[CAST<uint<4>>(0)])[CAST<uint<4>>(0)])"
+	"array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(0)), CAST<uint<4>>(0))"
 	b[0][0];
 
 	#pragma test \
-	"(((( *v1)[CAST<uint<4>>(1)])[CAST<uint<4>>(1)]) := 0)"
+	"(array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
 	b[1][1] = 0;
 
 	//#pragma test \
