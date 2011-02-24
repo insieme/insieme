@@ -666,41 +666,6 @@ bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
 
 
 
-
-
-namespace formatting {
-
-	/**
-	 * A utility function to obtain the n-th argument within the given call expression.
-	 *
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the requested argument
-	 * @return the requested argument or a NULL pointer in case there is no such argument
-	 */
-	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
-		auto arguments = call->getArguments();
-		if (n < arguments.size()) {
-			return arguments[n];
-		}
-		return ExpressionPtr();
-	}
-
-	/**
-	 * A utility function visiting the n-th argument of a call expression.
-	 *
-	 * @param converter the converter to be used for the actual conversion
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
-	 */
-	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
-		ExpressionPtr argument = getArgument(call, n);
-		if (argument) {
-			converter.convert(argument);
-		}
-	}
-}
-
-
 namespace {
 
 	ExpressionPtr evalLazy(const NodePtr& lazy) {
@@ -807,6 +772,38 @@ namespace {
 
 namespace formatting {
 
+
+	/**
+	 * A utility function to obtain the n-th argument within the given call expression.
+	 *
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the requested argument
+	 * @return the requested argument or a NULL pointer in case there is no such argument
+	 */
+	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
+		auto arguments = call->getArguments();
+		if (n < arguments.size()) {
+			return arguments[n];
+		}
+		return ExpressionPtr();
+	}
+
+	/**
+	 * A utility function visiting the n-th argument of a call expression.
+	 *
+	 * @param converter the converter to be used for the actual conversion
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
+	 */
+	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
+		ExpressionPtr argument = getArgument(call, n);
+		if (argument) {
+			converter.convert(argument);
+		}
+	}
+
+
+
 	FormatTable getBasicFormatTable(const lang::BasicGenerator& basic) {
 
 		FormatTable res;
@@ -871,6 +868,13 @@ namespace formatting {
 				if (isRef) OUT(")");
 		});
 
+		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
+				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
+				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
 
 		ADD_FORMATTER_DETAIL(basic.getVectorSubscript(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;
@@ -878,6 +882,15 @@ namespace formatting {
 				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
 				if (isRef) OUT(")");
 		});
+
+		ADD_FORMATTER_DETAIL(basic.getVectorRefProjection(), false, {
+				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
+
+		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
+
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
@@ -957,9 +970,9 @@ namespace formatting {
 		ADD_FORMATTER(basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
-		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
-		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
+
+		// string conversion
+		ADD_FORMATTER_DETAIL(basic.getStringToCharPointer(), false, { VISIT_ARG(0); });
 
 
 		ADD_FORMATTER(basic.getIfThenElse(), {
