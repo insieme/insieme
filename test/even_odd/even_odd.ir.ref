@@ -3,8 +3,8 @@
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v3 =  var(10);
-        printf("x=%d\n", varlist.pack((v3)));
-        printf("even(x)=%s\n", varlist.pack((ite(recFun v4 {
+        printf(string.asCharPointer("x=%d\n"), varlist.pack((v3)));
+        printf(string.asCharPointer("even(x)=%s\n"), varlist.pack((ite(recFun v4 {
             v4 = fun(uint<4> v6){
                 return ite(v6==0, fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7(v8-1));
             };
@@ -12,7 +12,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 return ite(v11==0, fun()return 0, [v4, v11]fun[((uint<4>)->int<4>) v12, uint<4> v13]()return v12(v13-1));
             };
         }(v3), fun()return "true", fun()return "false"))));
-        printf("odd(x)=%s\n", varlist.pack((ite(recFun v5 {
+        printf(string.asCharPointer("odd(x)=%s\n"), varlist.pack((ite(recFun v5 {
             v4 = fun(uint<4> v6){
                 return ite(v6==0, fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7(v8-1));
             };
@@ -31,8 +31,8 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v3 = ( var(10));
-        printf("x=%d\n", varlist.pack((( *v3))));
-        printf("even(x)=%s\n", varlist.pack((ite(CAST<bool>(recFun v4 {
+        printf(string.asCharPointer("x=%d\n"), varlist.pack((( *v3))));
+        printf(string.asCharPointer("even(x)=%s\n"), varlist.pack((ite(CAST<bool>(recFun v4 {
             v4 = fun(uint<4> v6){
                 return ite((v6==CAST<uint<4>>(0)), fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7((v8-CAST<uint<4>>(1))));
             };
@@ -40,7 +40,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 return ite((v11==CAST<uint<4>>(0)), fun()return 0, [v4, v11]fun[((uint<4>)->int<4>) v12, uint<4> v13]()return v12((v13-CAST<uint<4>>(1))));
             };
         }(CAST<uint<4>>(( *v3)))), fun()return "true", fun()return "false"))));
-        printf("odd(x)=%s\n", varlist.pack((ite(CAST<bool>(recFun v5 {
+        printf(string.asCharPointer("odd(x)=%s\n"), varlist.pack((ite(CAST<bool>(recFun v5 {
             v4 = fun(uint<4> v6){
                 return ite((v6==CAST<uint<4>>(0)), fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7((v8-CAST<uint<4>>(1))));
             };

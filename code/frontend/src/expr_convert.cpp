@@ -487,10 +487,14 @@ public:
 			ExpressionList args;
 			for(size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
 				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				LOG(DEBUG) << *arg;
-				LOG(DEBUG) << *arg->getType();
 				if(argId < funcTy->getArgumentTypes().size() && funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType) {
-					assert(arg->getType()->getNodeType() == core::NT_RefType);
+					if(arg->getType()->getNodeType() != core::NT_RefType) {
+						if( builder.getBasicGenerator().isString(arg->getType()) ) {
+							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
+						} else {
+							arg = builder.refVar(arg);
+						}
+					}
 				} else {
 					arg = convFact.tryDeref(arg);
 				}
@@ -895,10 +899,9 @@ public:
 			// we have to declare a variable holding the memory location for that value and replace every use of
 			// the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
 			core::ExpressionPtr&& expr = wrapVariable(unOp->getSubExpr());
-//			if(expr->getType()->getNodeType() == core::NT_RefType) {
-//				expr = builder.refVar( builder.deref(expr) );
-//			}
-			subExpr = builder.vectorExpr( toVector<core::ExpressionPtr>( expr ) );
+			assert(expr->getType()->getNodeType() == core::NT_RefType);
+
+			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToVector(),  expr );
 			break;
 		}
 		// *a

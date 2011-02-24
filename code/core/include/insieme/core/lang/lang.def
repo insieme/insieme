@@ -261,11 +261,12 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 GROUP(RefOp, RefVar, RefNew, RefDelete, RefAssign, RefDeref)
 
-LITERAL(RefVar,    "ref.var",    "('a) -> ref<'a>")
-LITERAL(RefNew,    "ref.new",    "('a) -> ref<'a>")
-LITERAL(RefDelete, "ref.delete", "(ref<'a>) -> unit")
-LITERAL(RefAssign, "ref.assign", "(ref<'a>,'a) -> unit")
-LITERAL(RefDeref,  "ref.deref",  "(ref<'a>) -> 'a")
+LITERAL(RefVar,    "ref.var",    			"('a) -> ref<'a>")
+LITERAL(RefNew,    "ref.new",    			"('a) -> ref<'a>")
+LITERAL(RefDelete, "ref.delete", 			"(ref<'a>) -> unit")
+LITERAL(RefAssign, "ref.assign", 			"(ref<'a>,'a) -> unit")
+LITERAL(RefDeref,  "ref.deref",  			"(ref<'a>) -> 'a")
+LITERAL(ScalarToVector, "scalar.to.vector", "(ref<'a>) -> ref<vector<'a,1>>")
 
 // General ------------------------------------------------------------------------------------------------------------
 
@@ -294,7 +295,6 @@ LITERAL(ArrayProjectionND, "array.projection.ND", "(array<'elem,#n>,vector<uint<
 
 LITERAL(ArrayRefProjection1D, "array.ref.projection.1D", "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
 LITERAL(ArrayRefProjectionND, "array.ref.projection.ND", "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
-
 
 // function to copy an array 1D of type t and size m to an 1D array of type ref<vector<t,n> and size m/n
 LITERAL(ArrayElemToVec, "array.elem.to.vec", "(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
@@ -332,7 +332,7 @@ LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b
 
 // Strings ------------------------------------------------------------------------------------------------------------
 
-LITERAL(StringToCharPointer, "string.asCharPointer", "(string) -> ref<array<char,1>>")
+LITERAL(StringToCharPointer, "string.as.char.pointer", "(string) -> ref<array<char,1>>")
 
 
 // Accuracy defining functions

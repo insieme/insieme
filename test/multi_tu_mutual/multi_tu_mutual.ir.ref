@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
-        printf("even(%d)?: %s\n", varlist.pack((12, ite(recFun v3 {
+        printf(string.asCharPointer("even(%d)?: %s\n"), varlist.pack((12, ite(recFun v3 {
             v3 = fun(uint<4> v5){
                 return ite(v5==0, fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6(v7-1));
             };
@@ -10,7 +10,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 return ite(v10==0, fun()return 0, [v3, v10]fun[((uint<4>)->int<4>) v11, uint<4> v12]()return v11(v12-1));
             };
         }(12), fun()return "true", fun()return "false"))));
-        printf("odd(%d)?: %s\n", varlist.pack((12, ite(recFun v4 {
+        printf(string.asCharPointer("odd(%d)?: %s\n"), varlist.pack((12, ite(recFun v4 {
             v3 = fun(uint<4> v5){
                 return ite(v5==0, fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6(v7-1));
             };
@@ -27,7 +27,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
-        printf("even(%d)?: %s\n", varlist.pack((12, ite(CAST<bool>(recFun v3 {
+        printf(string.asCharPointer("even(%d)?: %s\n"), varlist.pack((12, ite(CAST<bool>(recFun v3 {
             v3 = fun(uint<4> v5){
                 return ite((v5==CAST<uint<4>>(0)), fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6((v7-CAST<uint<4>>(1))));
             };
@@ -35,7 +35,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 return ite((v10==CAST<uint<4>>(0)), fun()return 0, [v3, v10]fun[((uint<4>)->int<4>) v11, uint<4> v12]()return v11((v12-CAST<uint<4>>(1))));
             };
         }(CAST<uint<4>>(12))), fun()return "true", fun()return "false"))));
-        printf("odd(%d)?: %s\n", varlist.pack((12, ite(CAST<bool>(recFun v4 {
+        printf(string.asCharPointer("odd(%d)?: %s\n"), varlist.pack((12, ite(CAST<bool>(recFun v4 {
             v3 = fun(uint<4> v5){
                 return ite((v5==CAST<uint<4>>(0)), fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6((v7-CAST<uint<4>>(1))));
             };
