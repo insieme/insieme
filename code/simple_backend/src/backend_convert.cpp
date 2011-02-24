@@ -827,6 +827,8 @@ namespace formatting {
 
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free(*"); VISIT_ARG(0); OUT(")"); });
 
+		ADD_FORMATTER(basic.getScalarToVector(), { VISIT_ARG(0); });
+
 		ADD_FORMATTER(basic.getArrayCreate1D(), {
 
 				// test whether the size is fixed to 1
