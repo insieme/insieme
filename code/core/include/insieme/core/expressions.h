@@ -67,10 +67,6 @@ class Expression : public Statement {
 	template<typename PT>
 	friend void basicExprTests(PT, const TypePtr&, const Node::ChildList& children = Node::ChildList());
 
-private:
-
-	virtual Expression* createCopyUsing(NodeMapping& mapper) const = 0;
-
 protected:	
 
 	/** The type of the expression. */
@@ -97,8 +93,6 @@ protected:
 public:
 
 	virtual ~Expression() {}
-
-	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	/** Retrieves the type of this expression. */
 	TypePtr getType() const { return type; }
