@@ -1,14 +1,14 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v3 =  var(fun(){
-            decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 =  var(undefined(struct<name:vector<ref<char>,30>,age:ref<uint<4>>>));
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<struct<name:vector<char,30>,age:ref<uint<4>>>> v3 =  var(fun(){
+            decl ref<struct<name:vector<char,30>,age:ref<uint<4>>>> v4 =  var(undefined(struct<name:vector<char,30>,age:ref<uint<4>>>));
             strcpy(v4.name, "John Doe");
             v4.age := 101;
         }());
-        return fun(struct<name:vector<ref<char>,30>,age:ref<uint<4>>> v6){
-            return v6.age>=10&&[v6]fun[struct<name:vector<ref<char>,30>,age:ref<uint<4>>> v7]()return v7.age<20;
+        return fun(struct<name:vector<char,30>,age:ref<uint<4>>> v6){
+            return v6.age>=10&&[v6]fun[struct<name:vector<char,30>,age:ref<uint<4>>> v7]()return v7.age<20;
         }(v3);
     }
 
@@ -18,14 +18,14 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v3 = ( var(fun(){
-            decl ref<struct<name:vector<ref<char>,30>,age:ref<uint<4>>>> v4 = ( var(undefined(struct<name:vector<ref<char>,30>,age:ref<uint<4>>>)));
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<struct<name:vector<char,30>,age:ref<uint<4>>>> v3 = ( var(fun(){
+            decl ref<struct<name:vector<char,30>,age:ref<uint<4>>>> v4 = ( var(undefined(struct<name:vector<char,30>,age:ref<uint<4>>>)));
             strcpy(( *v4).name, "John Doe");
             (( *v4).age := CAST<uint<4>>(101));
         }()));
-        return fun(struct<name:vector<ref<char>,30>,age:ref<uint<4>>> v6){
-            return ((( *v6.age)>=CAST<uint<4>>(10))&&[v6]fun[struct<name:vector<ref<char>,30>,age:ref<uint<4>>> v7]()return (( *v7.age)<CAST<uint<4>>(20)));
+        return fun(struct<name:vector<char,30>,age:ref<uint<4>>> v6){
+            return ((( *v6.age)>=CAST<uint<4>>(10))&&[v6]fun[struct<name:vector<char,30>,age:ref<uint<4>>> v7]()return (( *v7.age)<CAST<uint<4>>(20)));
         }(( *v3));
     }
 
