@@ -70,7 +70,7 @@ namespace core {
  * The base type for all type tokens. Type tokens are immutable instances of classes derived from this base
  * class and are used to represent the type of data elements and functions (generally types) within the IR.
  */
-class Type: public Node {
+class Type : public Node {
 
 	/**
 	 * The name of this type as a string (the result of the toString).
@@ -132,13 +132,6 @@ protected:
 	 * comparison.
 	 */
 	virtual bool equalsType(const Type& type) const = 0;
-
-private:
-
-	/**
-	 * Creates a modified version of this type using the given node mapper.
-	 */
-	virtual Type* createCopyUsing(NodeMapping& mapper) const = 0;
 
 };
 

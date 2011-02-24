@@ -93,6 +93,7 @@ private:
 
 		// restore annotations if requested
 		if (preservePtrAnnotationsWhenModified) {
+			// TODO: merge annotations - do not override!
 			res->setAnnotations(ptr->getAnnotations());
 		}
 
