@@ -61,7 +61,7 @@ namespace core {
 	}
 
 	std::ostream& Placeholder::printTo(std::ostream& out) const {
-		out << symbol;
+		return out << symbol;
 	}
 
 	/**
