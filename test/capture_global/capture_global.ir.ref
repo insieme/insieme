@@ -4,11 +4,11 @@
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         decl ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v1 =  new(struct{count:= var(0), reset_count:= var(1)});
         for(decl ref<int<4>> v12 =  var(0) .. 10 : 1) {
-            printf("count=%2d\n", varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v5](int<4> v4){
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v5](int<4> v4){
                 v5.count := v5.count+v4;
                 return v5.count;
             }(2))));
-            printf("count=%2d\n", varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v8](int<4> v7){
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v8](int<4> v7){
                 v8.count := v8.count+v7;
                 return v8.count;
             }(1))));
@@ -32,11 +32,11 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         decl ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v1 = ( new(struct{count:=( var(0)), reset_count:=( var(1))}));
         for(decl ref<int<4>> v12 = ( var(0)) .. 10 : 1) {
-            printf("count=%2d\n", varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v5](int<4> v4){
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v5](int<4> v4){
                 (( *v5).count := (( *( *v5).count)+v4));
                 return ( *( *v5).count);
             }(2))));
-            printf("count=%2d\n", varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v8](int<4> v7){
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:ref<int<4>>,reset_count:ref<int<4>>>> v8](int<4> v7){
                 (( *v8).count := (( *( *v8).count)+v7));
                 return ( *( *v8).count);
             }(1))));

@@ -398,7 +398,7 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 		return retExpr;
 	}
 
-	if(retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
+	if( retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
 		return builder.refVar( tryDeref(retExpr) );
 	}
 

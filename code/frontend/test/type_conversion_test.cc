@@ -196,7 +196,7 @@ TEST(TypeConversion, HandleStructType) {
 	// convert the type into an IR type
 	TypePtr insiemeTy = convFactory.convertType( type.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<name:ref<array<char,1>>,age:ref<uint<2>>>", insiemeTy->toString());
+	EXPECT_EQ("struct<name:array<char,1>,age:uint<2>>", insiemeTy->toString());
 
 	operator delete (charTy);
 	operator delete (ushortTy);
@@ -232,7 +232,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.convertType( declType.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'Person.{'Person=struct<name:ref<array<char,1>>,age:ref<int<8>>,mate:ref<array<'Person,1>>>}", insiemeTy->toString());
+	EXPECT_EQ("rec 'Person.{'Person=struct<name:array<char,1>,age:int<8>,mate:array<'Person,1>>}", insiemeTy->toString());
 
 	operator delete (charTy);
 	operator delete (longTy);
@@ -287,22 +287,22 @@ TEST(TypeConversion, HandleMutualRecursiveStructType) {
 
 	TypePtr insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declA).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'A.{'A=struct<b:ref<array<'B,1>>>, 'B=struct<c:ref<array<'C,1>>>, 'C=struct<b:ref<array<'B,1>>,a:ref<array<'A,1>>,d:ref<array<struct<e:ref<array<E,1>>>,1>>>}",
+	EXPECT_EQ("rec 'A.{'A=struct<b:array<'B,1>>, 'B=struct<c:array<'C,1>>, 'C=struct<b:array<'B,1>,a:array<'A,1>,d:array<struct<e:array<E,1>>,1>>}",
 			insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declB).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'B.{'A=struct<b:ref<array<'B,1>>>, 'B=struct<c:ref<array<'C,1>>>, 'C=struct<b:ref<array<'B,1>>,a:ref<array<'A,1>>,d:ref<array<struct<e:ref<array<E,1>>>,1>>>}",
+	EXPECT_EQ("rec 'B.{'A=struct<b:array<'B,1>>, 'B=struct<c:array<'C,1>>, 'C=struct<b:array<'B,1>,a:array<'A,1>,d:array<struct<e:array<E,1>>,1>>}",
 			insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declC).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("rec 'C.{'A=struct<b:ref<array<'B,1>>>, 'B=struct<c:ref<array<'C,1>>>, 'C=struct<b:ref<array<'B,1>>,a:ref<array<'A,1>>,d:ref<array<struct<e:ref<array<E,1>>>,1>>>}",
+	EXPECT_EQ("rec 'C.{'A=struct<b:array<'B,1>>, 'B=struct<c:array<'C,1>>, 'C=struct<b:array<'B,1>,a:array<'A,1>,d:array<struct<e:array<E,1>>,1>>}",
 			insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declD).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("struct<e:ref<array<E,1>>>", insiemeTy->toString());
+	EXPECT_EQ("struct<e:array<E,1>>", insiemeTy->toString());
 
 	insiemeTy = convFactory.convertType( clang.getASTContext().getTagDeclType(declE).getTypePtr() );
 	EXPECT_TRUE(insiemeTy);

@@ -22,8 +22,8 @@ char* strcpy(char*, char*);
 struct Person getPerson() {
 	{
 		struct Person res;
-		strcpy(((res).name), "John Doe");
-		((((res).age)) = ((unsigned int)(101)));
+		strcpy((&(&res.name)), "John Doe");
+		((*(&(&res.age))) = ((unsigned int)(101)));
 	}
 }
 
@@ -31,7 +31,7 @@ struct Person getPerson() {
 // start code fragment :: Definition of isTeenager //
 int isTeenager(struct Person person) {
 	{
-		return ((((person.age))>=((unsigned int)(10)))&&(((person.age))<((unsigned int)(20))));;
+		return (((person.age)>=((unsigned int)(10)))&&((person.age)<((unsigned int)(20))));;
 	}
 }
 

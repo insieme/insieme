@@ -642,25 +642,39 @@ public:
 		START_LOG_EXPR_CONVERSION(membExpr);
 		const core::ASTBuilder& builder = convFact.builder;
 
-		core::ExpressionPtr&& base = convFact.tryDeref( Visit(membExpr->getBase()) );
+		core::ExpressionPtr&& base = Visit(membExpr->getBase());
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
 			// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
-			base = convFact.tryDeref( Visit(membExpr->getBase()) );
+			assert( base->getType()->getNodeType() == core::NT_RefType);
 
-			if(base->getType()->getNodeType() == core::NT_VectorType || base->getType()->getNodeType() == core::NT_ArrayType ) {
+			const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(base->getType())->getElementType();
+			if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
 
-				core::LiteralPtr&& op = base->getType()->getNodeType() == core::NT_VectorType ?
-						gen.getVectorSubscript() : gen.getArraySubscript1D();
+				const core::SingleElementTypePtr& vecTy = core::static_pointer_cast<const core::SingleElementType>(subTy);
+				base = builder.callExpr( builder.refType(vecTy->getElementType()),
+										  gen.getArrayRefElem1D(),
+										  base,
+										  builder.literal("0", convFact.mgr.basic.getUInt8()) );
 
-				const core::SingleElementTypePtr& subTy = core::static_pointer_cast<const core::SingleElementType>(base->getType());
-				base = convFact.tryDeref( builder.callExpr( subTy->getElementType(), op, base, builder.literal("0", convFact.mgr.basic.getUInt8()) ) );
 			}
 		}
 
 		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
+		core::ExpressionPtr retExpr;
 
-		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(base, ident);
+		// we have a ref type we should use the struct.ref member access
+		if(base->getType()->getNodeType() == core::NT_RefType) {
+			const core::TypePtr& structTy = core::static_pointer_cast<const core::RefType>(base->getType())->getElementType();
+			assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType) &&
+					"Using a member access operation on a non struct/union type");
+			const core::TypePtr& memberTy = core::static_pointer_cast<const core::StructType>(structTy)->getTypeOfMember(ident);
+			retExpr = builder.callExpr( builder.refType(memberTy),
+					  gen.getCompositeRefElem(),
+					  toVector<core::ExpressionPtr>(base, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)) );
+		} else {
+			retExpr = builder.memberAccessExpr(base, ident);
+		}
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, membExpr, convFact);
 
