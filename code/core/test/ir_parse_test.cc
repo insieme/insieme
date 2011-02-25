@@ -132,8 +132,20 @@ TEST(IRParser, ExpressionTests) {
 
     // lambda using definition
 // TODO add statement to test once it is there
-    auto lambda = parser.parseExpression("fun int<4>:var in { int<4>:var = []()->int<4>{} }");
-    std::cout << "Lambda: " << lambda << std::endl;
+    auto lambda = dynamic_pointer_cast<const LambdaExpr>( parser.parseExpression(
+        "fun [uint<2>, real<4>](real<8>)->int<4>:lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{} }"));
+    EXPECT_TRUE(lambda != 0);
+    EXPECT_EQ( lambda->getCaptureList().size(), 2u );
+    EXPECT_EQ( lambda->getParameterList().size(), 1u);
+    EXPECT_FALSE( lambda->isRecursive() );
+    EXPECT_TRUE( lambda->getLambda()->isCapturing() );
+    EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
+            toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
+
+//TODO add nicer test for captureInitExpr
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>](real<8>)->int<4>:\
+            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{} }"));
+    EXPECT_TRUE(captureInit != 0);
 
 	// jobExpr
 	// needs something appropriate as argument
@@ -153,6 +165,20 @@ TEST(IRParser, ExpressionTests) {
 	auto vectorExpr = builder.vectorExpr(toVector<ExpressionPtr>(builder.intLit(0), builder.intLit(3)));
     EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
 
+    // structExpr
+    Identifier first("first");
+    Identifier second("second");
+    std::pair<Identifier, ExpressionPtr> elem1 = std::make_pair( first, builder.literal("F", manager.basic.getChar()));
+    std::pair<Identifier, ExpressionPtr> elem2 = std::make_pair( second, builder.literal("1", manager.basic.getInt4()));
+    auto structExpr = builder.structExpr(toVector(elem1, elem2));
+    EXPECT_EQ( structExpr, parser.parseExpression("struct{first:lit<char, F>, second: 1}"));
+
+    // unionExpr
+    std::pair<Identifier, TypePtr> elem3 = std::make_pair( first, manager.basic.getChar());
+    std::pair<Identifier, TypePtr> elem4 = std::make_pair( second, manager.basic.getInt4());
+
+    auto unionExpr = builder.unionExpr(builder.unionType(toVector(elem3, elem4)), first, builder.literal("1", manager.basic.getChar()));
+    EXPECT_EQ( unionExpr, parser.parseExpression("union< union< first:char, second:int<4> > >{ first:'1' }"));
 }
 
 TEST(IRParser, InteractiveTest) {

@@ -58,7 +58,7 @@
 // - other: use phoenix::bind and phoenix::construct instead of plain calls
 // ----------------------- - Peter
 // - error: has no member named ‘parse’ --> check your operators (>>!)
-// is not a class, struct, or union type --> chek function name and argument list
+// - error: is not a class, struct, or union type --> chek function name and argument list
 
 namespace insieme {
 namespace core {
@@ -85,6 +85,16 @@ CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, Exp
 	return build.callExpr(callee, arguments);
 }
 
+LiteralPtr buildCharLiteral(NodeManager& nodeMan, char val) {
+    ASTBuilder build(nodeMan);
+    return build.literal(nodeMan.basic.getChar(), toString(val));
+}
+
+LiteralPtr buildDoubleLiteral(NodeManager& nodeMan, double val) {
+    ASTBuilder build(nodeMan);
+    return build.literal(nodeMan.basic.getDouble(), toString(val));
+}
+
 LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
     ASTBuilder build(nodeMan);
     return build.intLit(val);
@@ -107,6 +117,7 @@ LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const Va
     vector<StatementPtr> stmts;
     vector<TypePtr> captureTypes;
     vector<TypePtr> paramTypes;
+
     // construct function type
     for_each(captureList, [&](const VariablePtr var) {
         captureTypes.push_back(var->getType());
@@ -151,6 +162,12 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	//void (Literal::*get)(NodeManager&, const TypePtr&, const string&) = &Literal::get;
 	// Fixed by adding parserGet to Literal, TODO should probably just remove one of the gets in Literal
 
+	// literals --------------------------------------------------------------------------------------------------------------------------
+	charLiteral =
+        ( qi::lit("'") >> qi::char_ >> "'")                         [ qi::_val = ph::bind(&buildCharLiteral, nManRef, qi::_1) ];
+
+	// -----------------------------------------------------------------------------------------------------------------------------------
+
 	literalExpr =
 		( qi::lit("lit<") >> typeG->typeRule >> ',' 
 		>> literalString >> '>' )									[ qi::_val = ph::bind(&Literal::parserGet, nManRef, qi::_1, qi::_2) ];
@@ -160,6 +177,10 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 
 	variableExpr =
 		( typeG->typeRule >> ':' >> typeG->identifier )				[ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
+
+    // specialized type to ensure type safety
+	funVarExpr =
+        ( typeG->functionType >> ':' >> typeG->identifier )         [ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
 
 	callExpr =
 		( qi::lit("(") >> expressionRule >> '(' >> -(expressionRule	[ ph::push_back(qi::_a, qi::_1) ]
@@ -178,13 +199,17 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
         >> typeG->typeRule >> '{' >> /*statement >> */ '}')         [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_3, qi::_a, qi::_b/*, qi::_4*/ )];
 
     lambdaDef =
-        ( qi::lit("{") >> +((variableExpr >> '=' >> lambda)         [ ph::insert(qi::_a, ph::bind(&makePair<VariablePtr, LambdaPtr>, qi::_1, qi::_2)) ]
+        ( qi::lit("{") >> +((funVarExpr >> '=' >> lambda)           [ ph::insert(qi::_a, ph::bind(&makePair<VariablePtr, LambdaPtr>, qi::_1, qi::_2)) ]
           % ',') >> '}')                                            [ qi::_val = ph::bind(&LambdaDefinition::get, nManRef, qi::_a) ];
 
     lambdaExpr =
-        ( qi::lit("fun") >> variableExpr >> qi::lit("in") >>
+        ( qi::lit("fun")  >> funVarExpr >> qi::lit("in") >>
         lambdaDef)                                                  [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1, qi::_2) ]
-        | lambda                                                    [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1 ) ];
+        | ( qi::lit("fun")  >> lambda )                             [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1 ) ];
+
+    captureInitExpr =
+        ( qi::lit("#") >> +( expressionRule                         [ ph::push_back(qi::_a, qi::_1) ]
+          % ',') >> '#' >> expressionRule)                          [ qi::_val = ph::bind(&CaptureInitExpr::get, nManRef, qi::_2, qi::_a ) ];
 
 //	TODO add declarationList once they are done
     jobExpr =
@@ -199,15 +224,29 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
           % ',') >> ']' )                                           [ qi::_val = ph::bind(&TupleExpr::get, nManRef, qi::_a) ];
 
 	vectorExpr =
-        ( qi::lit("vector<") >>
-        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2) ]
+        ( qi::lit("vector") >> '<' >>
+        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2 ) ]
         >> '>' >> '(' >> -(expressionRule                           [ ph::push_back(qi::_b, qi::_1) ]
-          % ',') >> ')' )                                           [ qi::_val = ph::bind(&VectorExpr::get, nManRef, qi::_a, qi::_b) ];
+          % ',') >> ')' )                                           [ qi::_val = ph::bind(&VectorExpr::get, nManRef, qi::_a, qi::_b ) ];
+
+	structExpr =
+        ( qi::lit("struct") >> '{' >> -(
+          (typeG->identifier >> ':' >> expressionRule )             [ ph::push_back(qi::_a, ph::bind(&makePair<Identifier, ExpressionPtr>, qi::_1, qi::_2 )) ]
+          % ',') >> '}' )                                           [ qi::_val = ph::bind(&StructExpr::get, nManRef, qi::_a ) ];
+
+//TODO change to general type to support recursive types
+// but first an adequate get method has to be implemented
+	unionExpr =
+        ( qi::lit("union") >> '<' >> typeG->unionType >> '>'
+        >> '{' >> typeG->identifier >> ':'
+        >> expressionRule >> '}' )                                  [ qi::_val = ph::bind(&UnionExpr::get, nManRef, qi::_1, qi::_2, qi::_3) ];
+
 	// --------------------------------------------------------------------------------------
 
 
 	expressionRule =
         lambdaExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | captureInitExpr                                             [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | literalExpr													[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	opExpr														[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 	  |	variableExpr												[ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
@@ -216,15 +255,22 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
       | jobExpr                                                     [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | tupleExpr                                                   [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | vectorExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | structExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | unionExpr                                                   [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | charLiteral                                                 [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+//need to change policy      | qi::double_                                                 [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1) ]
       | qi::int_                                                    [ qi::_val = ph::bind(&buildIntLiteral, nManRef, qi::_1) ];
 
     // --------------------------------------------------------------------------------------
+    BOOST_SPIRIT_DEBUG_NODE(charLiteral);
     BOOST_SPIRIT_DEBUG_NODE(lambda);
     BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
     BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
     BOOST_SPIRIT_DEBUG_NODE(jobExpr);
     BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
     BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
+    BOOST_SPIRIT_DEBUG_NODE(structExpr);
+    BOOST_SPIRIT_DEBUG_NODE(unionExpr);
 	// --------------------------------------------------------------------------------------
 	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
 	BOOST_SPIRIT_DEBUG_NODE(opExpr);
