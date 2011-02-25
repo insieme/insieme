@@ -4,7 +4,7 @@
 fun(){
         merge(parallel(job([1-inf]){
             default: []fun(){
-                printf("hello world\n", varlist.pack(()));
+                printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
             }
         }));
     }
@@ -18,7 +18,7 @@ fun(){
 fun(){
         merge(parallel(job(([1-inf])){
             default: []fun(){
-                printf("hello world\n", varlist.pack(()));
+                printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
             }
         }));
     }

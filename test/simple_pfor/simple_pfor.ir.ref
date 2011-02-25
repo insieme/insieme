@@ -3,13 +3,13 @@
 //  Entry Point: 
 fun(){
         decl ref<int<4>> v1 =  var(0);
-        decl ref<vector<ref<int<4>>,100>> v2 =  var(undefined(vector<ref<int<4>>,100>));
+        decl ref<vector<int<4>,100>> v2 =  var(undefined(vector<int<4>,100>));
         merge(parallel(job([1-inf]){
-            default: [v2, v1]fun[ref<vector<ref<int<4>>,100>> v9, ref<int<4>> v10](){
+            default: [v1, v2]fun[ref<int<4>> v10, ref<vector<int<4>,100>> v9](){
                 {
                     {
-                        pfor(getThreadGroup(0), 0, 100, 1, [v9]fun[ref<vector<ref<int<4>>,100>> v14](int<4> v13){
-                            v14[v13] := v13;
+                        pfor(getThreadGroup(0), 0, 100, 1, [v9]fun[ref<vector<int<4>,100>> v14](int<4> v13){
+                            array.ref.elem.1D(v14, v13) := v13;
                         });
                         barrier(getThreadGroup(0));
                     };
@@ -17,10 +17,10 @@ fun(){
                 };
             }
         }));
-        printf("After Loop: %d\n", varlist.pack((v1)));
+        printf(string.as.char.pointer("After Loop: %d\n"), varlist.pack((v1)));
         {
             for(decl ref<int<4>> v7 =  var(0) .. 100 : 1) {
-                printf("a[%d]=%d\n", varlist.pack((v7, v2[v7])));
+                printf(string.as.char.pointer("a[%d]=%d\n"), varlist.pack((v7, array.ref.elem.1D(v2, v7))));
             };
             v1 := 0+ceil(100-0/1)*1;
         };
@@ -34,13 +34,13 @@ fun(){
 //  Entry Point: 
 fun(){
         decl ref<int<4>> v1 = ( var(0));
-        decl ref<vector<ref<int<4>>,100>> v2 = ( var(undefined(vector<ref<int<4>>,100>)));
+        decl ref<vector<int<4>,100>> v2 = ( var(undefined(vector<int<4>,100>)));
         merge(parallel(job(([1-inf])){
-            default: [v2, v1]fun[ref<vector<ref<int<4>>,100>> v9, ref<int<4>> v10](){
+            default: [v1, v2]fun[ref<int<4>> v10, ref<vector<int<4>,100>> v9](){
                 {
                     {
-                        pfor(getThreadGroup(0), 0, 100, 1, [v9]fun[ref<vector<ref<int<4>>,100>> v14](int<4> v13){
-                            ((( *v14)[CAST<uint<4>>(v13)]) := v13);
+                        pfor(getThreadGroup(0), 0, 100, 1, [v9]fun[ref<vector<int<4>,100>> v14](int<4> v13){
+                            (array.ref.elem.1D(v14, CAST<uint<4>>(v13)) := v13);
                         });
                         barrier(getThreadGroup(0));
                     };
@@ -48,10 +48,10 @@ fun(){
                 };
             }
         }));
-        printf("After Loop: %d\n", varlist.pack((( *v1))));
+        printf(string.as.char.pointer("After Loop: %d\n"), varlist.pack((( *v1))));
         {
             for(decl ref<int<4>> v7 = ( var(0)) .. 100 : 1) {
-                printf("a[%d]=%d\n", varlist.pack((( *v7), ( *(( *v2)[CAST<uint<4>>(( *v7))])))));
+                printf(string.as.char.pointer("a[%d]=%d\n"), varlist.pack((( *v7), ( *array.ref.elem.1D(v2, CAST<uint<4>>(( *v7)))))));
             };
             (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));
         };

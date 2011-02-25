@@ -5,8 +5,8 @@ fun(){
         decl ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v1 =  new(struct{a:= var(0), b:= var(0)});
         v1.a := 1;
         v1.b := 2;
-        printf("Min: %d\n", varlist.pack((ite(v1.a<v1.b, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v13]()return v13.a, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v11]()return v11.b))));
-        printf("Max: %d\n", varlist.pack((ite(v1.a>v1.b, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v17]()return v17.a, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v15]()return v15.b))));
+        printf(string.as.char.pointer("Min: %d\n"), varlist.pack((ite(v1.a<v1.b, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v13]()return v13.a, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v11]()return v11.b))));
+        printf(string.as.char.pointer("Max: %d\n"), varlist.pack((ite(v1.a>v1.b, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v17]()return v17.a, [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v15]()return v15.b))));
     }
 
 
@@ -19,7 +19,7 @@ fun(){
         decl ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v1 = ( new(struct{a:=( var(0)), b:=( var(0))}));
         (( *v1).a := 1);
         (( *v1).b := 2);
-        printf("Min: %d\n", varlist.pack((ite((( *( *v1).a)<( *( *v1).b)), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v13]()return ( *( *v13).a), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v11]()return ( *( *v11).b)))));
-        printf("Max: %d\n", varlist.pack((ite((( *( *v1).a)>( *( *v1).b)), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v17]()return ( *( *v17).a), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v15]()return ( *( *v15).b)))));
+        printf(string.as.char.pointer("Min: %d\n"), varlist.pack((ite((( *( *v1).a)<( *( *v1).b)), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v13]()return ( *( *v13).a), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v11]()return ( *( *v11).b)))));
+        printf(string.as.char.pointer("Max: %d\n"), varlist.pack((ite((( *( *v1).a)>( *( *v1).b)), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v17]()return ( *( *v17).a), [v1]fun[ref<struct<a:ref<int<4>>,b:ref<int<4>>>> v15]()return ( *( *v15).b)))));
     }
 

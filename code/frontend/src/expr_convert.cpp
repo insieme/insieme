@@ -434,6 +434,7 @@ public:
 			subExpr = convFact.tryDeref(subExpr);
 		}
 
+		// LOG(DEBUG) << *subExpr << " -> " << *type;
 		// Convert casts form scalars to vectors to vector init exrpessions
 		subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
 
@@ -465,6 +466,7 @@ public:
 			subExpr = convFact.tryDeref(subExpr);
 		}
 
+		// LOG(DEBUG) << *subExpr << " -> " << *type;
 		// Convert casts form scalars to vectors to vector init exrpessions
 		subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
 
@@ -665,13 +667,21 @@ public:
 
 		// we have a ref type we should use the struct.ref member access
 		if(base->getType()->getNodeType() == core::NT_RefType) {
-			const core::TypePtr& structTy = core::static_pointer_cast<const core::RefType>(base->getType())->getElementType();
-			assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType) &&
-					"Using a member access operation on a non struct/union type");
-			const core::TypePtr& memberTy = core::static_pointer_cast<const core::StructType>(structTy)->getTypeOfMember(ident);
+			// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
+			core::TypePtr structTy = core::static_pointer_cast<const core::RefType>(base->getType())->getElementType();
+			assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType  ||
+					structTy->getNodeType() == core::NT_RecType) && "Using a member access operation on a non struct/union type");
+
+			// if the inner type is a RecType then we need to unroll it to get the contained composite type
+			if(structTy->getNodeType() == core::NT_RecType) {
+				structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(convFact.mgr);
+			}
+
+			const core::TypePtr& memberTy = core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 			retExpr = builder.callExpr( builder.refType(memberTy),
-					  gen.getCompositeRefElem(),
-					  toVector<core::ExpressionPtr>(base, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)) );
+						  gen.getCompositeRefElem(),
+						  toVector<core::ExpressionPtr>(base, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)) );
+
 		} else {
 			retExpr = builder.memberAccessExpr(base, ident);
 		}
