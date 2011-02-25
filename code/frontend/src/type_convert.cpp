@@ -500,8 +500,8 @@ public:
 					RecordDecl::field_iterator::value_type curr = *it;
 					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
 					// if the type is not const we have to add a ref because the value could be accessed and changed
-					if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
-						fieldType = convFact.builder.refType(fieldType);
+					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
+					//	fieldType = convFact.builder.refType(fieldType);
 
 					structElements.push_back( core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), fieldType ) );
 				}

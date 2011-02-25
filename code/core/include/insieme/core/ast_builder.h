@@ -111,7 +111,7 @@ public:
 #include "ast_builder.inl"
 
 	// Literals
-	LiteralPtr stringLit(const char* str) const;
+	LiteralPtr stringLit(const std::string& str) const;
     LiteralPtr intLit(const int val) const;
     LiteralPtr uintLit(const unsigned int val) const;
 

@@ -85,7 +85,7 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints,
 
 // ---------------------------- Convenience -------------------------------------
 
-LiteralPtr ASTBuilder::stringLit(const char* str) const {
+LiteralPtr ASTBuilder::stringLit(const string& str) const {
 	return literal(str, manager.basic.getString());
 }
 

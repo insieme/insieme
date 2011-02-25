@@ -127,12 +127,16 @@ struct Person { int weigth; int age; };
 void member_access_test() {
 	struct Person p;
 
-	#pragma test "( *v1).weigth"
+	#pragma test "composite.ref.elem(v1, weigth, int<4>)"
 	p.weigth;
 
+	// #pragma test "decl ref<array<struct<weigth:ref<int<4>>,age:ref<int<4>>>,1>> v1 = ( var(( *scalar.to.vector(v2))))"
 	struct Person* ptr = &p;
-	//#pragma test "( *(( *v1)[0])).age"
+	#pragma test "composite.ref.elem(array.ref.elem.1D(v1, 0), age, int<4>)"
 	ptr->age;
+
+	#pragma test "(composite.ref.elem(array.ref.elem.1D(v1, 0), age, int<4>) := 100)"
+	ptr->age = 100;
 }
 
 void if_stmt_test() {
