@@ -871,7 +871,7 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
-				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				OUT("&((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
