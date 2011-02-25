@@ -222,8 +222,8 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
         if(pimpl->nm.basic.isScalarType(subExpr->getType())) {
             // get vector element type without ref
             core::TypePtr elementType = vt->getElementType();
-            core::TypePtr targetType = (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
-                    dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
+            core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+                    //dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
             core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
                 pimpl->build.castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
@@ -239,12 +239,12 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
 
     // check for casts from salar pointers to vector pointers
     if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
-        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
-        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(refType->getElementType());
+//        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
+        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
         core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
         if(castedArray && vt ){
-            core::TypePtr elemTy = castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
-                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() : castedArray->getElementType();
+            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
+                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
 
             if(elemTy) {
                 // check if they have the same type
