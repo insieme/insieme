@@ -895,7 +895,7 @@ namespace formatting {
 
 
 		// struct operations
-		ADD_FORMATTER(basic.getCompositeRefElem(), { OUT("&("); VISIT_ARG(0); OUT("."); VISIT_ARG(1); OUT(")"); });
+		ADD_FORMATTER(basic.getCompositeRefElem(), { OUT("&((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")"); });
 		ADD_FORMATTER(basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
