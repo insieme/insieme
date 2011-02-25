@@ -212,6 +212,10 @@ LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
 	return pimpl->build.literal(literalType, toString(*type));
 }
 
+LiteralPtr BasicGenerator::getIdentifierLiteral(const core::Identifier& identifier) const {
+	return pimpl->build.literal(getIdentifier(), identifier.getName());
+}
+
 ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
     // Convert casts form scalars to vectors to vector init exrpessions
     if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {

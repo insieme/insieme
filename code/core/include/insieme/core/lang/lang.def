@@ -56,6 +56,7 @@ TYPE(Unit,   "unit")
 TYPE(Char,   "char")
 TYPE(WChar,  "wchar")
 TYPE(String, "string")
+TYPE(Identifier, "identifier")
 
 GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
 GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
