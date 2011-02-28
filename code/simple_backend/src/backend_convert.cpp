@@ -553,12 +553,26 @@ void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
 void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	CodeStream& cStr = getCodeStream();
 
-	if (ptr->getType()->getNodeType() == NT_RefType
-			&& cc.getVariableManager().getInfo(ptr).location == VariableManager::STACK) {
+//	if (ptr->getType()->getNodeType() == NT_RefType
+//			&& cc.getVariableManager().getInfo(ptr).location != VariableManager::HEAP) {
+//		cStr << "&";
+//	}
 
-		cStr << "&";
+	bool deref = true;
+	if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
+		TypePtr elementType = refType->getElementType();
+		NodeType nodeType =elementType->getNodeType();
+		if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
+			deref = false;
+		}
+
+		// mainly for local capture variables => those are not on the stack
+		if (deref && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
+			deref = false;
+		}
 	}
-	cStr << cc.getNameManager().getVarName(ptr);
+
+	cStr << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
 }
 
 void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
@@ -825,7 +839,7 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(converter, cStr, ARG(0), false); });
 		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(converter, cStr, ARG(0), true); });
 
-		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
 
 		ADD_FORMATTER(basic.getScalarToVector(), { VISIT_ARG(0); });
 
@@ -848,8 +862,8 @@ namespace formatting {
 				} else {
 
 					// ensure array is randomly initialized
-					assert(core::analysis::isCallOf(ARG(0), basic.getRefVar()) && "Non-ref initalization of arrays not supported yet!" );
-					ExpressionPtr initValue = static_pointer_cast<const CallExpr>(ARG(0))->getArguments()[0];
+					ExpressionPtr initValue = ARG(0);
+					assert(!core::analysis::isCallOf(initValue, basic.getRefVar()) && "Initialization of arrays based on ref-elements not supported yet!" );
 					assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
 
 					// all arrays are allocated on the HEAP
@@ -871,7 +885,7 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
-				OUT("&((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
+				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {

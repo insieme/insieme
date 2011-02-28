@@ -66,7 +66,7 @@ std::ostream& FunctionManager::appendFunctionParameter(std::ostream& out, CodePt
 	// register ref-based variable within the variable manager
 	if (param->getType()->getNodeType() == NT_RefType) {
 		VariableManager::VariableInfo info;
-		info.location = VariableManager::HEAP;
+		info.location = VariableManager::STACK;
 		(cc.getVariableManager()).addInfo(param, info);
 	}
 
@@ -98,7 +98,7 @@ CodePtr FunctionManager::resolve(const LiteralPtr& literal) {
 	assert(type && "Literal is not a function!");
 
 	const string& name = literal->getValue();
-	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name);
+	CodePtr protoType = std::make_shared<CodeFragment>("Prototype for external function: " + name + " ... type: " + literal->getType()->toString());
 	CodeStream& cs = protoType->getCodeStream();
 	TypeManager& typeManager = cc.getTypeManager();
 	cs << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
@@ -218,7 +218,10 @@ CodePtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	// create function code for lambda
 	CodePtr function = std::make_shared<CodeFragment>("Definition of " + name);
 	CodeStream& cs = function->getCodeStream();
+
+	// allows derived function managers to insert a function prefix
 	addFunctionPrefix(cs, lambda);
+
 	// write the function header
 	cs << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
 
