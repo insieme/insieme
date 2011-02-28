@@ -95,6 +95,11 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 	qi::rule<ParseIt, VectorExprPtr(), qi::locals<VectorTypePtr, ExpressionList>, qi::space_type> vectorExpr;
 	qi::rule<ParseIt, StructExprPtr(), qi::locals<Members>, qi::space_type> structExpr;
     qi::rule<ParseIt, UnionExprPtr(), qi::space_type> unionExpr;
+
+    qi::rule<ParseIt, MemberAccessExprPtr(), qi::space_type> memberAccessExpr;
+    qi::rule<ParseIt, TupleProjectionExprPtr(), qi::space_type> tupleProjectionExpr;
+    qi::rule<ParseIt, MarkerExprPtr(), qi::space_type> markerExpr;
+;
     // --------------------------------------------------------------------------------------
 };
 
