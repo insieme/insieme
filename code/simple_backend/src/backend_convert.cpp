@@ -429,9 +429,10 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			}
 
 			// create assignment statement
-			this->visit(builder.callExpr(basic.getRefAssign(), builder.memberAccessExpr(builder.deref(var), name), value));
+			auto target = builder.callExpr(basic.getCompositeRefElem(), var,
+					basic.getIdentifierLiteral(name), basic.getTypeLiteral(value->getType()));
+			this->visit(builder.callExpr(basic.getRefAssign(), target, value));
 		});
-
 
 		// done - default handling is not necessary
 		return;
