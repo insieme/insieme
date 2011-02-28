@@ -83,12 +83,7 @@ private:
 public:
 	CodeStream() : indentString("") { }
 
-	std::string getString() {
-		// defuglify code
-		std::string retval = ss.str();
-		boost::replace_all(retval, "*&", ""); // Hope this is safe
-		return retval; 
-	}
+	std::string getString();
 };
 
 template<typename T>
