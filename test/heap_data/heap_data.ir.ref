@@ -9,7 +9,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 array.ref.elem.1D(v4.a, v5) := v5;
             };
         }();
-        printf("sum=%d\n", varlist.pack(([v1]fun[ref<struct<a:ref<vector<int<4>,10>>,b:ref<array<vector<char,10>,1>>>> v7](){
+        printf(string.as.char.pointer("sum=%d\n"), varlist.pack(([v1]fun[ref<struct<a:ref<vector<int<4>,10>>,b:ref<array<vector<char,10>,1>>>> v7](){
             decl ref<int<4>> v8 =  var(0);
             for(decl ref<int<4>> v9 =  var(0) .. 10 : 1) {
                 v8 := v8+array.ref.elem.1D(v7.a, v9);
@@ -32,7 +32,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 (array.ref.elem.1D(( *v4).a, CAST<uint<4>>(( *v5))) := ( *v5));
             };
         }();
-        printf("sum=%d\n", varlist.pack(([v1]fun[ref<struct<a:ref<vector<int<4>,10>>,b:ref<array<vector<char,10>,1>>>> v7](){
+        printf(string.as.char.pointer("sum=%d\n"), varlist.pack(([v1]fun[ref<struct<a:ref<vector<int<4>,10>>,b:ref<array<vector<char,10>,1>>>> v7](){
             decl ref<int<4>> v8 = ( var(0));
             for(decl ref<int<4>> v9 = ( var(0)) .. 10 : 1) {
                 (v8 := (( *v8)+( *array.ref.elem.1D(( *v7).a, CAST<uint<4>>(( *v9))))));

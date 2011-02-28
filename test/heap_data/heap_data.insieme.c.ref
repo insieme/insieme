@@ -33,9 +33,6 @@ struct __insieme_funType_type_1 {
     struct __insieme_globals* p0;
 };
 
-// start code fragment :: Prototype for external function: array.ref.elem.1D //
-<?>'elem</?> array.ref.elem.1D(<?>'elem</?>*, unsigned long);
-
 // start code fragment :: Definition of init //
 void init(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
@@ -43,7 +40,7 @@ void init(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		for(int i = 0; i < 10; i += 1) {
-			((*array.ref.elem.1D(&((*var_4).a), ((unsigned int)((i))))) = (i));
+			((((((*var_4).a))[((unsigned int)((i)))])) = (i));
 		};
 	}
 }
@@ -78,7 +75,7 @@ int sum(void* _capture) {
 	{
 		int res = 0;
 		for(int i = 0; i < 10; i += 1) {
-			((res) = ((res)+(*array.ref.elem.1D(&((*var_7).a), ((unsigned int)((i)))))));
+			((res) = ((res)+(((((*var_7).a))[((unsigned int)((i)))]))));
 		};
 		return (res);;
 	}

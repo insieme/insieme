@@ -368,25 +368,30 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 
 core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const {
 	// get kind of initialized value
-	core::NodeType kind = type->getNodeType();
-	if (kind == core::NT_RefType) {
-		kind = core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType();
+	core::NodeType&& kind =
+		(type->getNodeType() != core::NT_RefType ?
+				type->getNodeType() : core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType());
+
+	if(!expr) {
+		// if no init expression is provided => use undefined for given set of types
+		if(kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType || kind == core::NT_VectorType) {
+			if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+				const core::TypePtr& res = refTy->getElementType();
+				return builder.refVar( builder.callExpr( res, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res) ) );
+			}
+			return builder.callExpr( type, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type));
+		} else {
+			return defaultInitVal(type);
+		}
 	}
 
-	// if no init expression is provided => use undefined for given set of types
-	if(!expr && (kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType || kind == core::NT_VectorType)) {
-		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-			const core::TypePtr& res = refTy->getElementType();
-			return builder.refVar( builder.callExpr( res, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res) ) );
-		}
-		return builder.callExpr( type, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type));
-	} else if (!expr)
-		return defaultInitVal(type);
-
+	// if an expression is provided as initializer first check if this is
+	// an initializer list which is used for arrays, structs and unions
 	if(const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
 		return convertInitializerList( listExpr, type );
 	}
 
+	// Convert the expression like any other expression
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
 	if(core::analysis::isCallOf(retExpr, mgr.basic.getArrayCreate1D())) {

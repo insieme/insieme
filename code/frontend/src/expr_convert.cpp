@@ -416,6 +416,11 @@ public:
 		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
+		// if the cast is to a aa pointer type and the subexpr is a 0 it should be replaced with a null literal
+		if(type->getNodeType() == core::NT_ArrayType && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+			return convFact.builder.castExpr( type, convFact.builder.getNodeManager().basic.getNull() );
+		}
+
 		// Mallocs/Allocs are replaced with ref.new expression
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
 			return retExpr;
@@ -430,15 +435,15 @@ public:
 			return subExpr;
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(!convFact.builder.getBasicGenerator().isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
-			subExpr = convFact.tryDeref(subExpr);
+		if(!convFact.builder.getBasicGenerator().isNull(nonRefExpr) && type->getNodeType() != core::NT_RefType) {
+			subExpr = nonRefExpr;
 		}
 
-		// LOG(DEBUG) << *subExpr << " -> " << *type;
+		LOG(DEBUG) << *subExpr << "(" << *subExpr->getType() << ") -> " << *type;
 		// Convert casts form scalars to vectors to vector init exrpessions
 		subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
 
-        core::ExpressionPtr&& retExpr = type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr;
+        core::ExpressionPtr&& retExpr = (type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr);
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}
@@ -450,12 +455,12 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
+
 		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
 		// replaced with a null literal
-		if(convFact.builder.getBasicGenerator().isNullPtr(type) &&
-				*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
-			return convFact.builder.getNodeManager().basic.getNull();
-		}
+//		if(convFact.builder.getBasicGenerator().isNullPtr(type) && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+//			return convFact.builder.getNodeManager().basic.getNull();
+//		}
 
 		// Mallocs/Allocs are replaced with ref.new expression
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
@@ -654,11 +659,7 @@ public:
 			if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
 
 				const core::SingleElementTypePtr& vecTy = core::static_pointer_cast<const core::SingleElementType>(subTy);
-				base = builder.callExpr( builder.refType(vecTy->getElementType()),
-										  gen.getArrayRefElem1D(),
-										  base,
-										  builder.literal("0", convFact.mgr.basic.getUInt8()) );
-
+				base = builder.callExpr( builder.refType(vecTy->getElementType()), gen.getArrayRefElem1D(), base, builder.uintLit(0));
 			}
 		}
 
