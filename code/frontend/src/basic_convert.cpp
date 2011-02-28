@@ -255,8 +255,13 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	if(varDecl->hasGlobalStorage()) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+
 		core::Identifier ident(varDecl->getNameAsString());
-		core::ExpressionPtr&& retExpr = builder.memberAccessExpr(tryDeref(ctx.globalVar), ident);
+
+		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
+		core::ExpressionPtr&& retExpr = builder.callExpr( builder.refType(memberTy), gen.getCompositeRefElem(),
+					toVector<core::ExpressionPtr>(ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)) );
 		auto fit = ctx.derefMap.find(ident);
 		if(fit != ctx.derefMap.end()) {
 			// there is an array wrapping this filed, add a [0] operation

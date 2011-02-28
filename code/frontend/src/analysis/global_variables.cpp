@@ -174,45 +174,31 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 
 		bool addPtr = false;
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
-//		if(type->getNodeType() == core::NT_VectorType) {
-//			type = builder.arrayType( builder.refType(type) );
-//			fact.addDerefField(ident);
-//			addPtr = true;
-//		}
-		core::RefTypePtr&& entryType = builder.refType( type );
-
 		if(it->second) {
 			// the variable is defined as extern, so we don't have to allocate memory for it
-			// just refear to the memory location someone else has initialized
-			entryType = builder.refType( entryType );
+			// just refer to the memory location someone else has initialized
+			type = builder.refType( type );
 		}
 
 		// add type to the global struct
-		entries.push_back( core::StructType::Entry( ident, entryType ) );
+		entries.push_back( core::StructType::Entry( ident, type ) );
 		// add initialization
 
 		// we have to initialize the value of this ref with the value of the extern
 		// variable which we assume will be visible from the entry point
 		core::ExpressionPtr initExpr;
 		if(it->second) {
-			initExpr = builder.literal(it->first->getNameAsString(), entryType);
+			initExpr = builder.literal(it->first->getNameAsString(), type);
 		} else {
 			if(it->first->getInit()) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
-				initExpr = fact.convertInitExpr(it->first->getInit(), entryType->getElementType(), false);
-				if(addPtr && !fact.getASTBuilder().getBasicGenerator().isNullPtr(entryType->getElementType())) {
-					initExpr = fact.getASTBuilder().callExpr(entryType, fact.getASTBuilder().getBasicGenerator().getArrayCreate1D(),
-							fact.getASTBuilder().refVar(initExpr),
-							fact.getASTBuilder().literal("1", fact.getASTBuilder().getBasicGenerator().getInt4()));
+				initExpr = fact.convertInitExpr(it->first->getInit(), type, false);
+				if(addPtr && !fact.getASTBuilder().getBasicGenerator().isNullPtr(type)) {
+					initExpr = fact.getASTBuilder().callExpr(type, fact.getASTBuilder().getBasicGenerator().getArrayCreate1D(),
+							initExpr, fact.getASTBuilder().literal("1", fact.getASTBuilder().getBasicGenerator().getInt4()));
 				}
 			} else {
-				initExpr = fact.defaultInitVal(entryType->getElementType());
-			}
-			// allocate vectors in the heap with ref.new
-			if(entryType->getElementType()->getNodeType() == core::NT_VectorType) {
-				initExpr = builder.callExpr(entryType, builder.getBasicGenerator().getRefNew(), initExpr);
-			} else {
-				initExpr = builder.callExpr(entryType, builder.getBasicGenerator().getRefVar(), initExpr);
+				initExpr = fact.defaultInitVal(type);
 			}
 		}
 		// default initialization
