@@ -409,6 +409,10 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	}
 
 	if( retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(retExpr->getType())->getElementType();
+		if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType)
+			return retExpr;
+
 		return builder.refVar( tryDeref(retExpr) );
 	}
 
