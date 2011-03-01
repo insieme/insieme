@@ -128,7 +128,7 @@ TEST(IRParser, ExpressionTests) {
 	// merge all
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
-	EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
+//    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
 
     // lambda using definition
 // TODO add statement to test once it is there
@@ -179,6 +179,20 @@ TEST(IRParser, ExpressionTests) {
 
     auto unionExpr = builder.unionExpr(builder.unionType(toVector(elem3, elem4)), first, builder.literal("1", manager.basic.getChar()));
     EXPECT_EQ( unionExpr, parser.parseExpression("union< union< first:char, second:int<4> > >{ first:'1' }"));
+
+    // memberAccessExpr
+    auto memberAccessExpr = builder.memberAccessExpr(structExpr, first);
+    EXPECT_EQ(memberAccessExpr, parser.parseExpression("(struct{first:lit<char, F>, second: 1}).first"));
+
+    // tupleProjectionExpr
+    auto builtTupleProjectionExpr = dynamic_pointer_cast<const TupleProjectionExpr>(builder.tupleProjectionExpr(builtTuple, 0));
+    auto parsedTupleProjectionExpr = dynamic_pointer_cast<const TupleProjectionExpr>(parser.parseExpression("(tuple[int<4>:v]).0"));
+    EXPECT_TRUE(!!builtTupleProjectionExpr && !! parsedTupleProjectionExpr);
+    EXPECT_EQ(builtTupleProjectionExpr->getIndex(), parsedTupleProjectionExpr->getIndex());
+    EXPECT_EQ(builtTupleProjectionExpr->getSubExpression()->getType(), parsedTupleProjectionExpr->getSubExpression()->getType());
+
+    auto markerExpr = builder.markerExpr(builder.intLit(42), 42);
+    EXPECT_EQ(markerExpr, parser.parseExpression("<me id = 42> 42 </me>"));
 }
 
 TEST(IRParser, InteractiveTest) {

@@ -571,6 +571,9 @@ void StmtConverter::visitVariable(const VariablePtr& ptr) {
 		if (deref && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
 			deref = false;
 		}
+	} else {
+		// no de-referencing required at all - since no reference is represented by this variable
+		deref = false;
 	}
 
 	cStr << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
@@ -826,7 +829,13 @@ namespace formatting {
 		#include "insieme/simple_backend/format_spec_start.mac"
 
 
-		ADD_FORMATTER(basic.getRefDeref(), { OUT("*"); VISIT_ARG(0); });
+		ADD_FORMATTER(basic.getRefDeref(), {
+				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
+				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+					OUT("*"); // for all other types, the address operator is needed (for arrays and vectors implicite)
+				}
+				VISIT_ARG(0);
+		});
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = converter.getConversionContext().getNodeManager();
@@ -910,7 +919,13 @@ namespace formatting {
 
 
 		// struct operations
-		ADD_FORMATTER(basic.getCompositeRefElem(), { OUT("&((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")"); });
+		ADD_FORMATTER(basic.getCompositeRefElem(), {
+				NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
+				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
+				}
+				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
+		});
 		ADD_FORMATTER(basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
