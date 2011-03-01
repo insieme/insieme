@@ -97,14 +97,17 @@ namespace conversion {
 
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+	/*
+	 * Handling of the translation unit: we have to make sure to load the translation unit
+	 * where the function is defined before starting the parser otherwise reading literals
+	 * results in wrong values.
+	 */
+	clang::idx::Entity&& funcEntity =
+			clang::idx::Entity::get( const_cast<FunctionDecl*>(funcDecl), mProg.getClangProgram() );
+	ConversionFactory::TranslationUnitPair&& ret = mProg.getClangIndexer().getDefinitionFor(funcEntity);
+	assert(ret.first && ret.second && "Translation unit for function not found");
 
-	// Handling of the translation unit: we have to make sure to load the translation unit
-	// where the function is defined before starting the parser otherwise reading literals
-	// results in wrong values.
-	clang::idx::Entity&& funcEntity = clang::idx::Entity::get( const_cast<FunctionDecl*>(funcDecl), mProg.getClangProgram() );
-	std::pair<FunctionDecl*, clang::idx::TranslationUnit*>&& ret = mProg.getClangIndexer().getDefinitionFor(funcEntity);
-	assert(ret.first && ret.second);
-
+	// Set the current translation unit to the one where funcDecl is defined
 	mFact.currTU = &mProg.getTranslationUnit(ret.second);
 
 	mFact.ctx.globalFuncMap.clear();
@@ -116,18 +119,20 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	if(mFact.ctx.globalStruct.first)
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 
-	const core::ExpressionPtr& expr = core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
-	core::ExpressionPtr lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(mFact.convertFunctionDecl(funcDecl, true));
+	const core::ExpressionPtr& expr =
+			core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
 	
-	// also a marker node is allowed if it contains a lambda expr
+	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
+
+	// A marker node is allowed if it contains a lambda expression
 	if(!lambdaExpr){
 	   lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
 	   
-	   if(lambdaExpr)
-    	   assert(dynamic_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr &&
-    	       "Conversion of function returned a marker expression which does not contain a lambda espression");
+	   if(lambdaExpr) {
+    	   assert(static_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr &&
+    	       "Conversion of function returned a marker expression which does not contain a lambda expression");
+	   }
     }
-	
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
 	
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
@@ -183,14 +188,18 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			//check if the declaration has attribute __private
 			if(sr == "__private") {
 				VLOG(2) << "           OpenCL address space __private";
-				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE ));
+				declAnnotation.push_back(
+					std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE )
+				);
 				continue;
 			}
 
 			//check if the declaration has attribute __local
 			if(sr == "__local") {
 				VLOG(2) << "           OpenCL address space __local";
-				declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL ));
+				declAnnotation.push_back(
+					std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL )
+				);
 				continue;
 			}
 
@@ -202,7 +211,9 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 
 				if(isa<const clang::ParmVarDecl>(varDecl) || varDecl->getType().getTypePtr()->isPointerType()) {
 					VLOG(2) << "           OpenCL address space __global";
-					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL ));
+					declAnnotation.push_back(
+						std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL )
+					);
 					continue;
 				}
 				ss << "Address space __global not allowed for local scalar variable";
@@ -213,7 +224,9 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 			if(sr == "__constant") {
 				if(isa<const clang::ParmVarDecl>(varDecl)) {
 					VLOG(2) << "           OpenCL address space __constant";
-					declAnnotation.push_back(std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT ));
+					declAnnotation.push_back(
+						std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT )
+					);
 					continue;
 				}
 				ss << "Address space __constant not allowed for local variable";
@@ -232,54 +245,66 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							Lookup Variable
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
-	// Lookup the map of declared variable to see if the current
-	//  varDecl is already associated with an IR entity
+	/*
+	 * Lookup the map of declared variable to see if the current
+	 * varDecl is already associated with an IR entity
+	 */
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(varDecl);
 	if(fit != ctx.varDeclMap.end()) {
-		// variable found in the map.
+		// variable found in the map
 		return fit->second;
 	}
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-	// We have to create an IR var to represent the current varDecl
+	/*
+	 * The variable has not been converted into IR variable yet, therefore
+	 * we create the IR variable and insert it to the map for successive lookups
+	 *
+	 * Conversion of the variable type
+	 */
 	QualType&& varTy = varDecl->getType();
-	core::TypePtr&& type = convertType( varTy.getTypePtr() );
+	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 	if( !(varTy.isConstQualified() ||
-			(isa<const clang::ParmVarDecl>(varDecl) && type->getNodeType() != core::NT_VectorType && type->getNodeType() != core::NT_ArrayType)) ) {
-		// add a ref in the case of variables which are not const or declared as function parameters
-		type = builder.refType(type);
+			(isa<const clang::ParmVarDecl>(varDecl) &&
+					irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType)
+		) ) {
+		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
+		irType = builder.refType( irType );
 	}
 
-	// check whether this is variable is defined as global or static
+	/*
+	 * Check whether this is variable is defined as global or static.
+	 * If static, it means the variable has been already defined in the global
+	 * data structure so we don't have to create an IR variable but access
+	 * (via the memberAccess operation) the relative member of the global data
+	 * structure
+	 */
 	if(varDecl->hasGlobalStorage()) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
-
 		core::Identifier ident(varDecl->getNameAsString());
-
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
-		core::ExpressionPtr&& retExpr = builder.callExpr( builder.refType(memberTy), gen.getCompositeRefElem(),
-				toVector<core::ExpressionPtr>(ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy))
+
+		assert(ctx.globalVar->getType()->getNodeType() == core::NT_RefType && "Global data structure passed as a non-ref");
+
+		return builder.callExpr(
+				builder.refType(memberTy),
+				gen.getCompositeRefElem(),
+				toVector<core::ExpressionPtr>( ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy) )
 			);
-//		auto fit = ctx.derefMap.find(ident);
-//		if(fit != ctx.derefMap.end()) {
-//			// there is an array wrapping this filed, add a [0] operation
-//			// the type is array<ref<vector<'a>>
-//			core::SingleElementTypePtr subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
-//			retExpr = builder.deref(retExpr);
-//			subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
-//
-//			return builder.callExpr( subTy->getElementType(),
-//					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
-//		}
-		return retExpr;
 	}
 
-	// variable is not in the map, create a new var and add it
-	core::VariablePtr&& var = builder.variable(type);
-	// add the var in the map
+	/*
+	 * The variable is not in the map and not defined as global (or static)
+	 * therefore we proceed with the creation of the IR variable and insert
+	 * it into the map for future lookups
+	 */
+	core::VariablePtr&& var = builder.variable( irType );
 	ctx.varDeclMap.insert( std::make_pair(varDecl, var) );
 
 	// Add the C name of this variable as annotation
@@ -354,7 +379,11 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy, mgr.basic.getVectorInitUniform(), initVal, mgr.basic.getIntTypeParamLiteral(vecTy->getSize()));
+		return builder.callExpr(vecTy,
+				mgr.basic.getVectorInitUniform(),
+				initVal,
+				mgr.basic.getIntTypeParamLiteral(vecTy->getSize())
+			);
     }
 
     // handle arrays initialization
@@ -376,16 +405,26 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	// get kind of initialized value
 	core::NodeType&& kind =
 		(type->getNodeType() != core::NT_RefType ?
-				type->getNodeType() : core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType());
+				type->getNodeType() :
+				core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType()
+			);
 
-	if(!expr) {
+	if (!expr) {
 		// if no init expression is provided => use undefined for given set of types
-		if(kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType || kind == core::NT_VectorType) {
+		if (kind == core::NT_StructType || kind == core::NT_UnionType ||
+				kind == core::NT_ArrayType || kind == core::NT_VectorType) {
 			if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 				const core::TypePtr& res = refTy->getElementType();
-				return builder.refVar( builder.callExpr( res, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res) ) );
+				return builder.refVar(
+					builder.callExpr( res,
+						(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()),
+						mgr.basic.getTypeLiteral(res)
+					)
+				);
 			}
-			return builder.callExpr( type, (zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type));
+			return builder.callExpr( type,
+				(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type)
+			);
 		} else {
 			return defaultInitVal(type);
 		}
@@ -410,7 +449,8 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	}
 
 	if( retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
-		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(retExpr->getType())->getElementType();
+		const core::TypePtr& subTy =
+				core::static_pointer_cast<const core::RefType>(retExpr->getType())->getElementType();
 		if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType)
 			return retExpr;
 
@@ -429,7 +469,8 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	// logging
 	VLOG(1) << "\n****************************************************************************************\n"
 			 << "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n"
-			 << "-> at location: (" << utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
+			 << "-> at location: (" << utils::location(varDecl->getLocation(),
+					 	 	 	 	   currTU->getCompiler().getSourceManager()) << "): ";
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang VarDecl: \n"
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
@@ -445,7 +486,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		if(definition->hasGlobalStorage()) {
 			// once we encounter static variables we do remove the declaration
-			return core::DeclarationStmtPtr();
+			throw GlobalVariableDeclarationException();
 		}
 
 		// lookup for the variable in the map
@@ -502,25 +543,21 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
     //check Attributes of the function definition
     ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
-    //TODO remove
-    if(node->hasAnnotation(c_info::CNameAnnotation::KEY))
-        return node;
-
-    if(funcDecl->hasAttrs()) {
+    if (funcDecl->hasAttrs()) {
         const clang::AttrVec attrVec = funcDecl->getAttrs();
 
-        for(AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+        for (AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
             if(AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I)) {
                 //get annotate string
                 llvm::StringRef sr = attr->getAnnotation();
 
                 //check if it is an OpenCL kernel function
-                if(sr == "__kernel") {
+                if (sr == "__kernel") {
                     VLOG(1) << "is OpenCL kernel function";
                     kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
                 }
             }
-            else if(ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
+            else if (ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I)) {
                 kernelAnnotation.push_back(std::make_shared<ocl::WorkGroupSizeAnnotation>(
                         attr->getXDim(), attr->getYDim(), attr->getZDim()) );
             }

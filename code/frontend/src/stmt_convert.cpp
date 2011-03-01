@@ -44,6 +44,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/statements.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/c_info/naming.h"
 #include "insieme/c_info/location.h"
@@ -133,25 +134,26 @@ public:
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
-			core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
-			if(retStmt) {
+			try {
+				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
 				// handle eventual OpenMP pragmas attached to the Clang node
 				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-				return StmtWrapper(annotatedNode );
+				return StmtWrapper( annotatedNode );
+			} catch(const GlobalVariableDeclarationException& err) {
+				return StmtWrapper();
 			}
-			return StmtWrapper();
 		}
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
 		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
 			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
-				if(retStmt) {
+				try {
+					core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 					// handle eventual OpenMP pragmas attached to the Clang node
 					core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
 					retList.push_back( annotatedNode );
-				}
+				} catch(const GlobalVariableDeclarationException& err) { }
 			}
 		return retList;
 	}
@@ -195,12 +197,16 @@ public:
 
 			StmtWrapper&& initExpr = Visit( forStmt->getInit() );
 			// induction variable for this loop
-			core::VariablePtr oldInductionVar;;
-			core::VariablePtr&& inductionVar = core::dynamic_pointer_cast<const core::Variable>(convFact.lookUpVariable(loopAnalysis.getInductionVar()));
-			if(isa<ParmVarDecl>(loopAnalysis.getInductionVar())) {
+			core::VariablePtr oldInductionVar;
+			core::VariablePtr&& inductionVar =
+					core::dynamic_pointer_cast<const core::Variable>( convFact.lookUpVariable(loopAnalysis.getInductionVar()) );
+
+			if( isa<ParmVarDecl>(loopAnalysis.getInductionVar()) ) {
 				auto fit = convFact.ctx.wrapRefMap.find(inductionVar);
 				if(fit == convFact.ctx.wrapRefMap.end()) {
-					fit = convFact.ctx.wrapRefMap.insert( std::make_pair(inductionVar, convFact.builder.variable(convFact.builder.refType(inductionVar->getType()))) ).first;
+					fit = convFact.ctx.wrapRefMap.insert(
+						std::make_pair(inductionVar, builder.variable(builder.refType(inductionVar->getType())))
+					).first;
 				}
 				oldInductionVar = inductionVar;
 				inductionVar = fit->second;
@@ -208,24 +214,26 @@ public:
 			assert(inductionVar && inductionVar->getType()->getNodeType() == core::NT_RefType);
 
 			if( !initExpr.isSingleStmt() ) {
-				assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				// we have a multiple declaration in the initialization part of the stmt, e.g.
-				//
-				//		for(int a,b=0; ...)
-				//
-				// to handle this situation we have to create an outer block in order to declare
-				// the variables which are not used as induction variable:
-				//
-				//		{
-				//			int a=0;
-				//			for(int b=0;...) { }
-				//		}
-				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) &&
+						"Not a declaration statement");
+				/*
+				 * We have a multiple declaration in the initialization part of the stmt, e.g.
+				 *
+				 * 		for(int a,b=0; ...)
+				 *
+				 * to handle this situation we have to create an outer block in order to declare
+				 * the variables which are not used as induction variable:
+				 *
+				 * 		{
+				 * 			int a=0;
+				 * 			for(int b=0;...) { }
+				 * 		}
+				 */
 				typedef std::function<bool (const core::StatementPtr&)> InductionVarFilterFunc;
 				InductionVarFilterFunc inductionVarFilter =
 					[ this, inductionVar ](const core::StatementPtr& curr) -> bool {
-						core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
+						core::DeclarationStmtPtr&& declStmt =
+								core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
 						assert(declStmt && "Not a declaration statement");
 						return declStmt->getVariable() == inductionVar;
 					};
@@ -233,48 +241,62 @@ public:
 				std::function<bool (const InductionVarFilterFunc& functor, const core::StatementPtr& curr)> negation =
 					[](std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr) -> bool { return !functor(curr); };
 
-				// we insert all the variable declarations (excluded the induction variable)
-				// before the body of the for loop
+				/*
+				 * we insert all the variable declarations (excluded the induction
+				 * variable) before the body of the for loop
+				 */
 				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt),
 						std::bind(negation, inductionVarFilter, std::placeholders::_1) );
 
 				// we now look for the declaration statement which contains the induction variable
 				std::vector<core::StatementPtr>::const_iterator fit =
-						std::find_if(initExpr.begin(), initExpr.end(), std::bind( inductionVarFilter, std::placeholders::_1));
+						std::find_if(initExpr.begin(), initExpr.end(),
+								std::bind( inductionVarFilter, std::placeholders::_1 )
+						);
+
 				assert(fit != initExpr.end() && "Induction variable not declared in the loop initialization expression");
 				// replace the initExpr with the declaration statement of the induction variable
 				initExpr = *fit;
 			}
 
 			assert(initExpr.isSingleStmt() && "Init expression for loop statement contains multiple statements");
-			// We are in the case where we are sure there is exactly 1 element in the
-			// initialization expression
-			core::DeclarationStmtPtr&& declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
+
+			// We are in the case where we are sure there is exactly 1 element in the initialization expression
+			core::DeclarationStmtPtr&& declStmt =
+					core::dynamic_pointer_cast<const core::DeclarationStmt>( initExpr.getSingleStmt() );
+
 			bool iteratorChanged = false;
 			core::VariablePtr newIndVar;
 			if( !declStmt ) {
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				// the init expression is not a declaration stmt, it could be a situation where
-				//	it is an assignment operation, eg:
-				//
-				//			for( i=exp; ...) { i... }
-				//
-				// In this case we have to replace the old induction variable with a new one
-				// and replace every occurrence of the old variable with the new one. Furthermore,
-				// to mantain the correct semantics of the code, the value of the old induction
-				// variable has to be restored when exiting the loop.
-				//
-				//			{
-				//				for(_i = init; _i < cond; _i += step) { _i... }
-				//				i = ceil((cond-init)/step) * step + init;
-				//			}
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				core::ExpressionPtr&& init = core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
-				assert(init && "Init statement for loop is not an expression");
+				/*
+				 * the init expression is not a declaration stmt, it could be a situation where
+				 * it is an assignment operation, eg:
+				 *
+				 * 		for( i=exp; ...) { i... }
+				 *
+				 * or, it is missing, or is a reference to a global variable.
+				 *
+				 * In this case we have to replace the old induction variable with a new one and
+				 * replace every occurrence of the old variable with the new one. Furthermore,
+				 * to maintain the correct semantics of the code, the value of the old induction
+				 * variable has to be restored when exiting the loop.
+				 *
+				 * 		{
+				 * 			for(_i = init; _i < cond; _i += step) { _i... }
+				 * 			i = ceil((cond-init)/step) * step + init;
+				 * 		}
+				 */
+				core::ExpressionPtr&& init =
+						core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
+
+				assert(init && "Initialization statement for loop is not an expression");
 
 				const core::TypePtr& varTy = inductionVar->getType();
-				// we create a new induction variable, we don't register it to the variable
-				// map as it will be valid only within this for statement
+
+				/*
+				 * we create a new induction variable, we don't register it to the variable
+				 * map as it will be valid only within this for statement
+				 */
 				newIndVar = builder.variable(varTy);
 
 				// we have to define a new induction variable for the loop and replace every
@@ -283,18 +305,18 @@ public:
 						<< " with variable: v" << newIndVar->getId();
 
 				// Initialize the value of the new induction variable with the value of the old one
-				if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init)) {
-					assert(callExpr && *callExpr->getFunctionExpr() == *convFact.mgr.basic.getRefAssign() &&
-							"Expression not handled in a forloop initialization statement!");
-					// we handle only the situation where the initExpr is an assignment
-					init = callExpr->getArguments()[1]; // getting RHS
-				}
-				else {
-					assert(init->getNodeType() == core::NT_Variable);
+				if( core::analysis::isCallOf(init, convFact.mgr.basic.getRefAssign()) ) {
+					init = core::static_pointer_cast<const core::CallExpr>(init)->getArguments()[1]; // getting RHS
+				} else if(init->getNodeType() != core::NT_Variable){
+					/*
+					 * the initialization variable is in a form which is not yet handled
+					 * therefore, the for loop is transformed into a while loop
+					 */
+					throw analysis::LoopNormalizationError();
 				}
 
 				// because the variable was coming from an input parameter, a deref of the new
-				// induction variable is necessary to mantain the correct semantics
+				// induction variable is necessary to maintain the correct semantics
 				core::ExpressionPtr&& replacement = (oldInductionVar ? builder.deref(newIndVar) : static_cast<core::ExpressionPtr>(newIndVar));
 
 				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
@@ -312,16 +334,17 @@ public:
 			assert(declStmt && "Failed conversion of loop init expression");
 
 			core::ExpressionPtr init = declStmt->getInitialization();
-			if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(init)) {
-				if(*callExpr->getFunctionExpr() == *builder.getBasicGenerator().getRefVar()) {
-					assert(callExpr->getArguments().size() == 1);
-					init = callExpr->getArguments()[0];
-				}
+			if(core::analysis::isCallOf(init, convFact.mgr.basic.getRefVar())) {
+				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(init);
+				assert(callExpr->getArguments().size() == 1);
+				init = callExpr->getArguments()[0];
+				assert(init->getType()->getNodeType() != core::NT_RefType &&
+					"Initialization value of induction variable must be of non-ref type");
 			}
 
 			if(loopAnalysis.isInverted()) {
 				// invert init value
-				core::ExpressionPtr&& invInitExpr = builder.invertSign(convFact.tryDeref(init)); // FIXME
+				core::ExpressionPtr&& invInitExpr = builder.invertSign( init );
 				declStmt = builder.declarationStmt( declStmt->getVariable(), builder.refVar(invInitExpr) );
 				assert(declStmt->getVariable()->getType()->getNodeType() == core::NT_RefType);
 
@@ -330,7 +353,21 @@ public:
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
 						inductionVar, true);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
+			} else {
+				const core::RefTypePtr& varTy =
+						core::static_pointer_cast<const core::RefType>(declStmt->getVariable()->getType());
+
+				// The ref induction variable
+				core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
+
+				core::NodePtr&& ret = core::transform::replaceAll(
+						builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
+						nonRefInductionVar, true
+					);
+				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
+				declStmt = builder.declarationStmt(nonRefInductionVar, init );
 			}
+
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
 			assert(irFor && "Created for statement is not valid");

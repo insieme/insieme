@@ -71,27 +71,35 @@ namespace analysis {
  */
 class GlobalVarCollector : public clang::RecursiveASTVisitor<GlobalVarCollector> {
 public:
-	// List of found global variables. The boolean value is used to decide whether the
-	// variable has to be initialized or it was defined as external and a reference
-	// to  the existing value has to be generated
+	/*
+	 * List of found global variables. The boolean value is used to decide whether the
+	 * variable has to be initialized or it was defined as external and a reference
+	 * to  the existing value has to be generated
+	 */
 	typedef std::map<const clang::VarDecl*, bool> GlobalVarVect;
 
 	typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
 
-	// Set of functions already visited, this avoid the solver to loop in the
-	// case of recursive function calls
+	/*
+	 * Set of functions already visited, this avoid the solver to loop in the
+	 * case of recursive function calls
+	 */
 	typedef std::set<const clang::FunctionDecl*> VisitedFuncSet;
 
 	// A call stack of functions created during the visit of the input code.
 	typedef std::stack<const clang::FunctionDecl*> FunctionStack;
 
-	// Set of functions which need access to global variables. This structure will
-	// be used to decide whether the data structure containing the global variables
-	// has to bo forwarded through this function via the capture list
+	/*
+	 * Set of functions which need access to global variables. This structure will
+	 * be used to decide whether the data structure containing the global variables
+	 * has to be forwarded through this function via the capture list
+	 */
 	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 
-	GlobalVarCollector(const clang::idx::TranslationUnit* currTU, clang::idx::Indexer& indexer, UseGlobalFuncMap& globalFuncMap) :
-		currTU(currTU), indexer(indexer), usingGlobals(globalFuncMap) { }
+	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
+
+	GlobalVarCollector(const clang::idx::TranslationUnit* currTU, clang::idx::Indexer& indexer,
+			UseGlobalFuncMap& globalFuncMap) : currTU(currTU), indexer(indexer), usingGlobals(globalFuncMap) { }
 
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
@@ -99,12 +107,23 @@ public:
 
 	void operator()(const clang::Decl* decl);
 
+	/**
+	 * Returns the list of collected global variables. For each variable
+	 * a boolean flag indicating if the variable needs to be initialized
+	 * or not (in the case the global variable is marked as external)
+	 */
 	const GlobalVarVect& getGlobals() const { return globals; }
+
+	/**
+	 * Returns the list of functions which needs access (directly or
+	 * indirectly) to the global struct which will be passed accordingly
+	 * @return
+	 */
 	const UseGlobalFuncMap& getUsingGlobals() const { return usingGlobals; }
 
 	void dump(std::ostream& out) const ;
 
-	std::pair<core::StructTypePtr, core::StructExprPtr> createGlobalStruct(conversion::ConversionFactory& fact) const;
+	GlobalStructPair createGlobalStruct(conversion::ConversionFactory& fact) const;
 
 private:
 	GlobalVarVect 	globals;
