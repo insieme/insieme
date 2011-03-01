@@ -846,11 +846,11 @@ namespace formatting {
 
 
 		ADD_FORMATTER(basic.getRefDeref(), {
-//				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-//				if (!(type == NT_ArrayType || type == NT_VectorType)) {
-//					OUT("*"); // for all other types, the deref operator is needed (for arrays and vectors implicite)
-//				}
-				OUT("*");
+				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
+				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+					OUT("*"); // for all other types, the deref operator is needed (for arrays and vectors implicite)
+				}
+				//OUT("*");
 				VISIT_ARG(0);
 		});
 
@@ -912,9 +912,18 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
+
+				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
+				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
+				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
+					OUT("&");
+				}
+
+				OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+
 //				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
 //				if (targetType->getElementType()->getNodeType() == NT_VectorType) {
-					OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+//					OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 //					return;
 //				}
 //
