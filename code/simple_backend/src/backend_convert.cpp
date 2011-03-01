@@ -321,6 +321,7 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	VariableManager& varManager = cc.getVariableManager();
 	VariableManager::VariableInfo info;
 	info.location = VariableManager::NONE;
+	bool isAllocatedOnHEAP = false;
 	if (var->getType()->getNodeType() == NT_RefType) {
 
 		const RefTypePtr& refType = static_pointer_cast<const RefType>(var->getType());
@@ -336,9 +337,12 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			case NT_CallExpr:
 				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
 					info.location = VariableManager::HEAP;
+					isAllocatedOnHEAP = true;
 				} else {
 					info.location = VariableManager::STACK;
 				}
+
+//				info.location = VariableManager::STACK;
 				break;
 			default:
 				// default is a stack variable
@@ -353,7 +357,8 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	// standard handling
 	CodeStream& cStr = getCodeStream();
 	string varName = cc.getNameManager().getVarName(var);
-	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
+//	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
+	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, !isAllocatedOnHEAP);
 
 	// check whether there is an initialization
 	const ExpressionPtr& init = ptr->getInitialization();
@@ -371,7 +376,9 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	cStr << " = ";
 
 	// a special handling for initializing heap allocated structs (to avoid large stack allocated objects)
-	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
+//	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
+
+	const RefTypePtr& refType = (isAllocatedOnHEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 	if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
 
 		ASTBuilder builder(cc.getNodeManager());
@@ -562,13 +569,15 @@ void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	bool deref = true;
 	if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
 		TypePtr elementType = refType->getElementType();
-		NodeType nodeType =elementType->getNodeType();
-		if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
+		NodeType nodeType = elementType->getNodeType();
+		if (nodeType == NT_VectorType || nodeType == NT_ArrayType) {
 			deref = false;
 		}
 
-		// mainly for local capture variables => those are not on the stack
+		// for local captured variables and HEAP data
 		if (deref && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
+			//no deref necessary in those cases - since a pointer is used to handle those
+			// TODO: restructure location field, determining whether something is a pointer or scalar
 			deref = false;
 		}
 	} else {
@@ -577,6 +586,13 @@ void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	}
 
 	cStr << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
+
+//	if (ptr->getType()->getNodeType() == NT_RefType && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
+//		cStr << "(*" << cc.getNameManager().getVarName(ptr) << ")";
+//		return;
+//	}
+
+//	cStr << cc.getNameManager().getVarName(ptr);
 }
 
 void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
@@ -830,10 +846,11 @@ namespace formatting {
 
 
 		ADD_FORMATTER(basic.getRefDeref(), {
-				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
-					OUT("*"); // for all other types, the address operator is needed (for arrays and vectors implicite)
-				}
+//				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
+//				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+//					OUT("*"); // for all other types, the deref operator is needed (for arrays and vectors implicite)
+//				}
+				OUT("*");
 				VISIT_ARG(0);
 		});
 
@@ -899,7 +916,7 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
-				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				OUT("/* totaly unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getVectorSubscript(), false, {
@@ -925,6 +942,7 @@ namespace formatting {
 					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
 				}
 				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
+//				OUT("&((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
 		});
 		ADD_FORMATTER(basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
 
