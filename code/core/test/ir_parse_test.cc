@@ -195,6 +195,46 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_EQ(markerExpr, parser.parseExpression("<me id = 42> 42 </me>"));
 }
 
+TEST(IRParser, StatementTests) {
+    NodeManager manager;
+    IRParser parser(manager);
+    ASTBuilder builder(manager);
+
+    // break statement
+    EXPECT_EQ(builder.breakStmt(), parser.parseStatement("break"));
+
+    // continue statement
+    EXPECT_EQ(builder.continueStmt(), parser.parseStatement("continue"));
+
+    // return statement
+    EXPECT_EQ(builder.returnStmt(builder.intLit(-1)), parser.parseStatement("return -1"));
+
+    // declaration statement
+    auto builtDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>
+        (builder.declarationStmt(builder.variable(manager.basic.getInt8()), builder.literal("42", manager.basic.getInt8())));
+    auto parsedDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>(parser.parseStatement("decl int<8>:var = 42"));
+    EXPECT_EQ(builtDeclarationStmt->getVariable()->getType(), parsedDeclarationStmt->getVariable()->getType());
+    EXPECT_EQ(builtDeclarationStmt->getInitialization(), parsedDeclarationStmt->getInitialization());
+
+    // compound statement
+    vector<StatementPtr> stmts;
+    // empty comound statement
+    EXPECT_EQ(builder.compoundStmt(stmts), parser.parseStatement("{}"));
+    stmts.push_back(builder.intLit(7));
+    stmts.push_back(builder.breakStmt());
+    stmts.push_back(builder.returnStmt(builder.intLit(0)));
+    auto compoundStmt = builder.compoundStmt(stmts); // CAUTION! will be reused later
+    EXPECT_EQ(compoundStmt, parser.parseStatement("{ 7; break; return 0 }"));
+
+    // while statement
+    auto whileStmt = builder.whileStmt(builder.intLit(1), compoundStmt);
+    EXPECT_EQ(whileStmt, parser.parseStatement("while(1){ 7; break; return 0 }"));
+
+    // for statement
+    auto forStmt = builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1));
+    EXPECT_EQ(forStmt, parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0 }" ));
+}
+
 TEST(IRParser, InteractiveTest) {
 
 	string testStr("testGenType");

@@ -90,7 +90,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 
     qi::rule<ParseIt, CaptureInitExprPtr(), qi::locals<std::vector<ExpressionPtr> >, qi::space_type> captureInitExpr;
 
-    qi::rule<ParseIt, JobExprPtr(), qi::locals</*vector<DeclarationStmt>,*/ GuardedStmts>, qi::space_type> jobExpr;
+    qi::rule<ParseIt, JobExprPtr(), qi::locals</*vector<DeclarationStmtPtr>,*/ GuardedStmts>, qi::space_type> jobExpr;
     qi::rule<ParseIt, TupleExprPtr(), qi::locals<ExpressionList>, qi::space_type> tupleExpr;
 	qi::rule<ParseIt, VectorExprPtr(), qi::locals<VectorTypePtr, ExpressionList>, qi::space_type> vectorExpr;
 	qi::rule<ParseIt, StructExprPtr(), qi::locals<Members>, qi::space_type> structExpr;
