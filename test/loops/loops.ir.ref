@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
-        decl ref<struct<N:ref<int<4>>>> v1 =  new(struct{N:= var(10)});
+        decl ref<struct<N:int<4>>> v1 =  new(struct{N:=10});
         decl ref<int<4>> v4 =  var(10);
         for(decl ref<int<4>> v5 =  var(0) .. v4 : 1) {
             printf(string.as.char.pointer("idx=%d"), varlist.pack((v5)));
@@ -10,16 +10,16 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         for(decl ref<int<4>> v6 =  var(0-v4) .. 0-0+1 : 1) {
             printf(string.as.char.pointer("idx=%d"), varlist.pack((0-v6)));
         };
-        for(decl ref<int<4>> v7 =  var(0-v1.N) .. 0-0 : 1) {
+        for(decl ref<int<4>> v7 =  var(0-composite.ref.elem(v1, N, int<4>)) .. 0-0 : 1) {
             printf(string.as.char.pointer("idx=%d"), varlist.pack((0-v7)));
         };
         {
             decl ref<int<4>> v8 =  var(v4);
-            while(v1.N>0) {
+            while(composite.ref.elem(v1, N, int<4>)>0) {
                 {
                     printf(string.as.char.pointer("idx=%d"), varlist.pack((v4)));
                 };
-                int.postDec(v1.N);
+                int.postDec(composite.ref.elem(v1, N, int<4>));
             };
         };
         {
@@ -70,7 +70,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
-        decl ref<struct<N:ref<int<4>>>> v1 = ( new(struct{N:=( var(10))}));
+        decl ref<struct<N:int<4>>> v1 = ( new(struct{N:=10}));
         decl ref<int<4>> v4 = ( var(10));
         for(decl ref<int<4>> v5 = ( var(0)) .. ( *v4) : 1) {
             printf(string.as.char.pointer("idx=%d"), varlist.pack((( *v5))));
@@ -78,16 +78,16 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         for(decl ref<int<4>> v6 = ( var((CAST<int<4>>(0)-( *v4)))) .. ((CAST<int<4>>(0)-0)+1) : 1) {
             printf(string.as.char.pointer("idx=%d"), varlist.pack(((CAST<int<4>>(0)-( *v6)))));
         };
-        for(decl ref<int<4>> v7 = ( var((CAST<int<4>>(0)-( *( *v1).N)))) .. (CAST<int<4>>(0)-0) : 1) {
+        for(decl ref<int<4>> v7 = ( var((CAST<int<4>>(0)-( *composite.ref.elem(v1, N, int<4>))))) .. (CAST<int<4>>(0)-0) : 1) {
             printf(string.as.char.pointer("idx=%d"), varlist.pack(((CAST<int<4>>(0)-( *v7)))));
         };
         {
             decl ref<int<4>> v8 = ( var(( *v4)));
-            while((( *( *v1).N)>0)) {
+            while((( *composite.ref.elem(v1, N, int<4>))>0)) {
                 {
                     printf(string.as.char.pointer("idx=%d"), varlist.pack((( *v4))));
                 };
-                int.postDec(( *v1).N);
+                int.postDec(composite.ref.elem(v1, N, int<4>));
             };
         };
         {

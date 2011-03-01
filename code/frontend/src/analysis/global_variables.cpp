@@ -106,7 +106,10 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 			// add the variable to the list of global vars (if not already there)
 			if(globals.find(varDecl) == globals.end()) {
 				if(varDecl->hasExternalStorage()) {
-					// look for the definition. If we find it it means we have access to the translation unit defining this variable
+					/*
+					 * look for the definition. If we find it it means we have
+					 * access to the translation unit defining this variable
+					 */
 					const VarDecl* def = varDecl->getDefinition();
 					if(!def) {
 						globals.insert( std::make_pair(varDecl, true) );
@@ -126,12 +129,16 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	FunctionDecl* funcDecl = callExpr->getDirectCallee();
 	const FunctionDecl *definition = NULL;
 
+	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
-		// use the clang indexer to lookup the definition for this function declarations
+		/*
+		 * if the function is not defined in this translation unit, maybe it is
+		 * defined in another we already loaded  use the clang indexer to lookup
+		 * the definition for this function declarations
+		 */
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
-		std::pair<FunctionDecl*, clang::idx::TranslationUnit*> ret = indexer.getDefinitionFor(funcEntity);
+		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
 		currTU = ret.second;
 	}
@@ -141,21 +148,24 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 		(*this)(definition);
 		funcStack.pop();
 
-		// if the called function access the global data structure
-		// also the current function has to be marked (otherwise the
-		// global structure will not correctly forwarded)
+		/*
+		 * if the called function access the global data structure also the current function
+		 * has to be marked (otherwise the global structure will not correctly forwarded)
+		 */
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
 	}
-
+	// reset the translation unit to the previous one
 	currTU = old;
-
 	return true;
 }
 
-// This function synthetize the global structure that will be used to hold the global variables used within the functions of the input program
-std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGlobalStruct(conversion::ConversionFactory& fact) const {
+/*
+ * This function synthetized the global structure that will be used to hold the
+ * global variables used within the functions of the input program.
+ */
+GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conversion::ConversionFactory& fact) const {
 	// no global variable found, we return an empty tuple
 	if(globals.empty())
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
@@ -167,16 +177,21 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		// get entry type and wrap it into a reference if necessary
 		auto fit = varTU.find(it->first);
 		assert(fit != varTU.end());
-		// in the case we have to resolve the initial value the current translation unit
-		// has to be set properly
+
+		/*
+		 * In the case we have to resolve the initial value the current translation
+		 * unit has to be set properly
+		 */
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
 		core::Identifier ident(it->first->getNameAsString());
 
 		bool addPtr = false;
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
 		if(it->second) {
-			// the variable is defined as extern, so we don't have to allocate memory for it
-			// just refer to the memory location someone else has initialized
+			/*
+			 * the variable is defined as extern, so we don't have to allocate memory
+			 * for it just refer to the memory location someone else has initialized
+			 */
 			type = builder.refType( type );
 		}
 
@@ -184,8 +199,10 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 		entries.push_back( core::StructType::Entry( ident, type ) );
 		// add initialization
 
-		// we have to initialize the value of this ref with the value of the extern
-		// variable which we assume will be visible from the entry point
+		/*
+		 * we have to initialize the value of this ref with the value of the extern
+		 * variable which we assume will be visible from the entry point
+		 */
 		core::ExpressionPtr initExpr;
 		if(it->second) {
 			initExpr = builder.literal(it->first->getNameAsString(), type);
@@ -193,9 +210,10 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 			if(it->first->getInit()) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
 				initExpr = fact.convertInitExpr(it->first->getInit(), type, false);
-				if(addPtr && !fact.getASTBuilder().getBasicGenerator().isNullPtr(type)) {
-					initExpr = fact.getASTBuilder().callExpr(type, fact.getASTBuilder().getBasicGenerator().getArrayCreate1D(),
-							initExpr, fact.getASTBuilder().literal("1", fact.getASTBuilder().getBasicGenerator().getInt4()));
+				if(addPtr && !builder.getBasicGenerator().isNullPtr(type)) {
+					initExpr = builder.callExpr(type, builder.getBasicGenerator().getArrayCreate1D(),
+						initExpr, builder.intLit(1)
+					);
 				}
 			} else {
 				initExpr = fact.defaultInitVal(type);
@@ -209,17 +227,18 @@ std::pair<core::StructTypePtr, core::StructExprPtr> GlobalVarCollector::createGl
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<c_info::CNameAnnotation>(std::string("__insieme_globals")) );
 	// set back the original TU
-	assert(currTU);
+	assert(currTU && "Lost reference to the translation unit");
 	fact.setTranslationUnit(fact.getProgram().getTranslationUnit(currTU));
+
 	return std::make_pair(structTy, builder.structExpr(structTy, members) );
 }
 
 void GlobalVarCollector::dump(std::ostream& out) const {
-	out << std::endl << "// ~~~~~~~~ GLOBAL VAR MAP" << std::endl;
+	out << std::endl << "// ~~~~~~~~ GLOBAL VAR MAP ~~~~~~~~ //" << std::endl;
 	out << "  SIZE:      " << globals.size() << std::endl;
 	out << "  GLOBALS:   " << join(", ", globals) << std::endl;
 	out << "  FUNCTIONS: " << join(" ,", usingGlobals) << std::endl;
-	out << "// ~~~~~~~~~~~~~~~~~~~~~~~~";
+	out << "// ~~~~~~~~~~~~~~~~~~~~~~~~ //";
 }
 
 } // end analysis namespace

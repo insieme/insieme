@@ -93,13 +93,17 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
 
-		// Maps a function with the variable which has been introduced to represent
-		// the function in the recursive definition
+		/*
+		 * Maps a function with the variable which has been introduced to represent
+		 * the function in the recursive definition
+		 */
 		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
 		RecVarExprMap recVarExprMap;
 
-		// When set this variable tells the frontend to resolve eventual recursive function call
-		// using the mu variables which has been previously placed in the recVarExprMap
+		/*
+		 * When set this variable tells the frontend to resolve eventual recursive function call
+		 * using the mu variables which has been previously placed in the recVarExprMap
+		 */
 		bool isRecSubFunc;
 
 		// It tells the frontend the body of a recursive function is being resolved and
@@ -127,25 +131,30 @@ class ConversionFactory : public boost::noncopyable {
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
 		// Keeps the type and initialization of the global variables within the entry point
-		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
+		GlobalStructPair globalStruct;
 
 		// Global and static variables
-		core::VariablePtr   globalVar;
+		core::VariablePtr globalVar;
 
-		// Set of the function which need access to global variables, every time such a function is converted
-		// the data structure containing global variables has to be correctly forwarded by using the capture list
+		/*
+		 * Set of the function which need access to global variables, every time such a
+		 * function is converted the data structure containing global variables has to
+		 * be correctly forwarded by using the capture list
+		 */
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
-		UseGlobalFuncMap	globalFuncMap;
+		UseGlobalFuncMap globalFuncMap;
 
-		// Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
-		// a new variable is created in function body and the value of the input parameter assigned to it
+		/*
+		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
+		 * a new variable is created in function body and the value of the input parameter assigned to it
+		 */
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
-		std::set<insieme::core::Identifier> derefMap;
-
-		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
+		ConversionContext() :
+			isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
 
 	ConversionContext 		ctx;
@@ -215,6 +224,9 @@ class ConversionFactory : public boost::noncopyable {
 
 	friend class ASTConverter;
 public:
+
+	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
+
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	~ConversionFactory();
 
@@ -280,7 +292,7 @@ public:
 	 */
 	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	core::ExpressionPtr convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const ;
+	core::ExpressionPtr convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const;
 
 	/**
 	 * Looks for eventual attributes attached to the clang variable declarations (used for OpenCL implementation)
@@ -307,9 +319,10 @@ public:
 	 * @return A call expression of a lambda enclosing the body
 	 */
 	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
+};
 
-	void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
-
+struct GlobalVariableDeclarationException: public std::runtime_error {
+	GlobalVariableDeclarationException() : std::runtime_error("") { }
 };
 
 // ------------------------------------ ASTConverter ---------------------------
@@ -323,7 +336,8 @@ class ASTConverter {
 	core::ProgramPtr    mProgram;
 
 public:
-	ASTConverter(core::NodeManager& mgr, Program& prog) : mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
+	ASTConverter(core::NodeManager& mgr, Program& prog) :
+		mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 
