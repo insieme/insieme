@@ -106,7 +106,7 @@ LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
     return build.intLit(val);
 }
 
-JobExprPtr jobhelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
+JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
         const GuardedStmts guardedStmts) {
     return JobExpr::get(manager, defaultStmt, guardedStmts);
 }
@@ -116,7 +116,6 @@ std::pair<T, U> makePair (T first, U second) {
     return std::make_pair(first, second);
 }
 
-// TODO remove
 LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params) {
 // build a stmtExpr bc the builder cannot at the moment
     ASTBuilder build(nodeMan);
@@ -223,7 +222,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
         >> /* delcarationList >> */ ']' >> '{'
         >> *( qi::lit("if") >> expressionRule >> qi::lit("do")
           >> expressionRule >> ')' )                                [ ph::push_back(qi::_a, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
-        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&jobhelp, nManRef, qi::_1, qi::_3, qi::_a ) ];
+        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&jobHelp, nManRef, qi::_1, qi::_3, qi::_a ) ];
 
 	tupleExpr =
         ( qi::lit("tuple[") >> -(expressionRule                     [ ph::push_back(qi::_a, qi::_1) ]
@@ -297,7 +296,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 //    BOOST_SPIRIT_DEBUG_NODE(unionExpr);
 //    BOOST_SPIRIT_DEBUG_NODE(memberAccessExpr);
 //    BOOST_SPIRIT_DEBUG_NODE(tupleProjectionExpr);
-    BOOST_SPIRIT_DEBUG_NODE(markerExpr);
+//    BOOST_SPIRIT_DEBUG_NODE(markerExpr);
 	// --------------------------------------------------------------------------------------
 /*	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
 	BOOST_SPIRIT_DEBUG_NODE(opExpr);
