@@ -417,7 +417,7 @@ public:
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
 		// if the cast is to a aa pointer type and the subexpr is a 0 it should be replaced with a null literal
-		if(type->getNodeType() == core::NT_ArrayType && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+		if( ( type->getNodeType() == core::NT_ArrayType ) && *subExpr == *convFact.builder.literal(subExpr->getType(),"0") ) {
 			return convFact.builder.castExpr( type, convFact.builder.getNodeManager().basic.getNull() );
 		}
 
@@ -458,9 +458,9 @@ public:
 
 		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
 		// replaced with a null literal
-//		if(convFact.builder.getBasicGenerator().isNullPtr(type) && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
-//			return convFact.builder.getNodeManager().basic.getNull();
-//		}
+		if(convFact.builder.getBasicGenerator().isNullPtr(type) && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+			return convFact.builder.getNodeManager().basic.getNull();
+		}
 
 		// Mallocs/Allocs are replaced with ref.new expression
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
@@ -531,6 +531,10 @@ public:
 				// free(): check whether this is a call to the free() function
 				if(funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
 					// in the case the free uses an input parameter
+					if(args[0]->getType()->getNodeType() == core::NT_RefType)
+						return builder.callExpr( builder.getBasicGenerator().getRefDelete(), args[0] );
+
+					// otherwise this is not a L-Value so it needs to be wrapped into a variable
 					return builder.callExpr( builder.getBasicGenerator().getRefDelete(), wrapVariable(callExpr->getArg(0)) );
 				}
 			}

@@ -164,12 +164,24 @@ public:
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
 		core::ExpressionPtr retExpr;
-		if(Expr* expr = retStmt->getRetValue())
-			retExpr = convFact.convertExpr( expr );
-		else
-			retExpr = convFact.builder.getBasicGenerator().getUnitConstant();
 
-		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.tryDeref(retExpr) );
+		core::TypePtr retTy;
+		if(Expr* expr = retStmt->getRetValue()) {
+			retExpr = convFact.convertExpr( expr );
+			retTy = convFact.convertType( expr->getType().getTypePtr() );
+		} else {
+			retExpr = convFact.builder.getBasicGenerator().getUnitConstant();
+			retTy = convFact.builder.getBasicGenerator().getUnit();
+		}
+
+		// arrays and vectors in C are always returned as reference, so the type of
+		// the return expression is of array (or vector) type we are sure we have
+		// to return a reference, in the other case we can safely deref the retExpr
+		if(retTy->getNodeType() != core::NT_ArrayType && retTy->getNodeType() != core::NT_VectorType) {
+			retExpr = convFact.tryDeref(retExpr);
+		}
+
+		core::StatementPtr&& ret = convFact.builder.returnStmt(retExpr);
 		// handle eventual OpenMP pragmas attached to the Clang node
 		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(ret, retStmt, convFact);
 
@@ -198,17 +210,17 @@ public:
 			StmtWrapper&& initExpr = Visit( forStmt->getInit() );
 			// induction variable for this loop
 			core::VariablePtr oldInductionVar;
-			core::VariablePtr&& inductionVar =
-					core::dynamic_pointer_cast<const core::Variable>( convFact.lookUpVariable(loopAnalysis.getInductionVar()) );
+			core::ExpressionPtr&& inductionVar = convFact.lookUpVariable(loopAnalysis.getInductionVar());
 
 			if( isa<ParmVarDecl>(loopAnalysis.getInductionVar()) ) {
-				auto fit = convFact.ctx.wrapRefMap.find(inductionVar);
+				const core::VariablePtr& indVar = core::static_pointer_cast<const core::Variable>(inductionVar);
+				auto fit = convFact.ctx.wrapRefMap.find(indVar);
 				if(fit == convFact.ctx.wrapRefMap.end()) {
 					fit = convFact.ctx.wrapRefMap.insert(
-						std::make_pair(inductionVar, builder.variable(builder.refType(inductionVar->getType())))
+						std::make_pair(indVar, builder.variable( builder.refType(inductionVar->getType()) ))
 					).first;
 				}
-				oldInductionVar = inductionVar;
+				oldInductionVar = indVar;
 				inductionVar = fit->second;
 			}
 			assert(inductionVar && inductionVar->getType()->getNodeType() == core::NT_RefType);
@@ -353,20 +365,21 @@ public:
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
 						inductionVar, true);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-			} else {
-				const core::RefTypePtr& varTy =
-						core::static_pointer_cast<const core::RefType>(declStmt->getVariable()->getType());
-
-				// The ref induction variable
-				core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
-
-				core::NodePtr&& ret = core::transform::replaceAll(
-						builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
-						nonRefInductionVar, true
-					);
-				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-				declStmt = builder.declarationStmt(nonRefInductionVar, init );
 			}
+//			else {
+//				const core::RefTypePtr& varTy =
+//						core::static_pointer_cast<const core::RefType>(declStmt->getVariable()->getType());
+//
+//				// The ref induction variable
+//				core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
+//
+//				core::NodePtr&& ret = core::transform::replaceAll(
+//						builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
+//						nonRefInductionVar, true
+//					);
+//				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
+//				declStmt = builder.declarationStmt(nonRefInductionVar, init );
+//			}
 
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
