@@ -912,7 +912,13 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
-				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
+//				if (targetType->getElementType()->getNodeType() == NT_VectorType) {
+					OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+//					return;
+//				}
+//
+//				OUT("&((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
