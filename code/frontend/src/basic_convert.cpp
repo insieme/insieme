@@ -261,18 +261,19 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
 		core::ExpressionPtr&& retExpr = builder.callExpr( builder.refType(memberTy), gen.getCompositeRefElem(),
-					toVector<core::ExpressionPtr>(ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)) );
-		auto fit = ctx.derefMap.find(ident);
-		if(fit != ctx.derefMap.end()) {
-			// there is an array wrapping this filed, add a [0] operation
-			// the type is array<ref<vector<'a>>
-			core::SingleElementTypePtr subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
-			retExpr = builder.deref(retExpr);
-			subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
-
-			return builder.callExpr( subTy->getElementType(),
-					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
-		}
+				toVector<core::ExpressionPtr>(ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy))
+			);
+//		auto fit = ctx.derefMap.find(ident);
+//		if(fit != ctx.derefMap.end()) {
+//			// there is an array wrapping this filed, add a [0] operation
+//			// the type is array<ref<vector<'a>>
+//			core::SingleElementTypePtr subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
+//			retExpr = builder.deref(retExpr);
+//			subTy = core::static_pointer_cast<const core::SingleElementType>(retExpr->getType());
+//
+//			return builder.callExpr( subTy->getElementType(),
+//					builder.getBasicGenerator().getArraySubscript1D(), retExpr, builder.literal("0", mgr.basic.getUInt4()) );
+//		}
 		return retExpr;
 	}
 

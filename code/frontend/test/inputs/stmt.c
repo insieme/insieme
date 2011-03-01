@@ -371,7 +371,7 @@ void* vf(void* ptr) { return ptr; }
 
 void init_expr() {
 
-	#pragma test "decl ref<array<int<4>,1>> v1 = ( var(CAST<array<int<4>,1>>(null)))"
+	// #pragma test "decl ref<array<int<4>,1>> v1 = ( var(CAST<array<int<4>,1>>(null)))"
 	int* a = 0;
 
 	#pragma test \

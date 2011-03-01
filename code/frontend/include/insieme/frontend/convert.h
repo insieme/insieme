@@ -131,19 +131,19 @@ class ConversionFactory : public boost::noncopyable {
 		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
 
 		// Global and static variables
-		core::VariablePtr   globalVar;
+		core::VariablePtr globalVar;
 
 		// Set of the function which need access to global variables, every time such a function is converted
 		// the data structure containing global variables has to be correctly forwarded by using the capture list
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
-		UseGlobalFuncMap	globalFuncMap;
+		UseGlobalFuncMap globalFuncMap;
 
 		// Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		// a new variable is created in function body and the value of the input parameter assigned to it
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
-		std::set<insieme::core::Identifier> derefMap;
+		// std::set<insieme::core::Identifier> derefMap;
 
 		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
@@ -308,7 +308,7 @@ public:
 	 */
 	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 
-	void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
+	// void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
 
 };
 

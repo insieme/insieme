@@ -558,7 +558,7 @@ public:
 
 			// If we are resolving the body of a recursive function we have to return the associated
 			// variable every time a function in the strongly connected graph of function calls
-			// is encountred.
+			// is encountered.
 			if(ctx.isResolvingRecFuncBody) {
 				// check if this type has a typevar already associated, in such case return it
 				ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
