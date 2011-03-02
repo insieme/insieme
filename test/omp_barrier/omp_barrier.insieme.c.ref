@@ -15,7 +15,7 @@ struct __insieme_expr_0 {
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
-	int* var_6;	 // Variable: v6
+	int* var_5;
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
@@ -26,7 +26,7 @@ struct __insieme_funType_type_1 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_1
-void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda) { return lambda->fun(lambda); }
+void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda) {  lambda->fun(lambda); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_3 //
 // Abstract prototype for lambdas of type __insieme_funType_type_3
@@ -36,18 +36,18 @@ struct __insieme_funType_type_3 {
     int* p0;
 };
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Definition of __insieme_supp_2 //
 void __insieme_supp_2(void* _capture) {
 	// --------- Captured Stuff - Begin -------------
-	int* var_4 = ((struct __insieme_funType_type_3*)_capture)->p0;
+	int* var_3 = ((struct __insieme_funType_type_3*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((*var_4)++);
+		((*var_3)++);
 		isbr_barrier(isbr_getThreadGroup(0));
-		printf("i: %d\n", (*var_4));
+		printf("i: %d\n", (*var_3));
 	}
 }
 
@@ -56,10 +56,10 @@ void __insieme_supp_2(void* _capture) {
 void fun__insieme_expr_0(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	int* var_6 = ((struct __insieme_expr_0*)args)->var_6;
+	int* var_5 = ((struct __insieme_expr_0*)args)->var_5;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_supp_2(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_3){0, 0, var_6}))));
+	__insieme_supp_2(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_3){0, 0,var_5}))));
 }
 
 // start code fragment :: Definition of main //

@@ -98,10 +98,10 @@ __kernel void branch(__global float* c, __global float* ga, __global int* gb, __
 __kernel void access3D(__global float* c, __global float* ga, __global int* gb, __local float* l, unsigned int pa, int pb) {
 	{
 		unsigned int gid[3];
-		((((gid)[((unsigned int)(0))])) = (get_global_id(((unsigned int)(0)))));
-		((((gid)[((unsigned int)(1))])) = (get_global_id(((unsigned int)(1)))));
-		((((gid)[((unsigned int)(2))])) = (get_global_id(((unsigned int)(2)))));
-		unsigned int gid3 = (((((((gid)[((unsigned int)(0))]))*((unsigned int)(((gb[((unsigned int)(2))])))))*((unsigned int)(((gb[((unsigned int)(1))])))))+((((gid)[((unsigned int)(1))]))*((unsigned int)(((gb[((unsigned int)(2))]))))))+(((gid)[((unsigned int)(2))])));
+		(((gid[((unsigned int)(0))])) = (get_global_id(((unsigned int)(0)))));
+		(((gid[((unsigned int)(1))])) = (get_global_id(((unsigned int)(1)))));
+		(((gid[((unsigned int)(2))])) = (get_global_id(((unsigned int)(2)))));
+		unsigned int gid3 = ((((((gid[((unsigned int)(0))]))*((unsigned int)(((gb[((unsigned int)(2))])))))*((unsigned int)(((gb[((unsigned int)(1))])))))+(((gid[((unsigned int)(1))]))*((unsigned int)(((gb[((unsigned int)(2))]))))))+((gid[((unsigned int)(2))])));
 		(((ga[((unsigned int)((gid3)))])) = ((c[((unsigned int)((gid3)))])));
 	}
 }
@@ -127,7 +127,7 @@ __kernel void VectorAdd(__global float* c, __global float* ga, __global int* gb,
 		int iGID = ((int)((((((get_global_id(((unsigned int)(0))))*((unsigned int)(((gb[((unsigned int)(1))])))))*((unsigned int)(((gb[((unsigned int)(2))])))))+((get_global_id(((unsigned int)(1))))*((unsigned int)(((gb[((unsigned int)(2))]))))))+(get_global_id(((unsigned int)(2)))))));
 		int iNumElements = (((((gb[((unsigned int)(0))]))*((gb[((unsigned int)(1))])))*((gb[((unsigned int)(2))])))-17);
 		if(((iGID)>=(iNumElements))) {
-			return;;
+			return unit;;
 		};
 		(((ga[((unsigned int)((iGID)))])) = (((c[((unsigned int)((iGID)))]))+((float)(((gb[((unsigned int)((iGID)))]))))));
 	}

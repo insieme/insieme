@@ -15,14 +15,14 @@ struct Person {
     unsigned int age;
 };
 
-// start code fragment :: Prototype for external function: strcpy //
+// start code fragment :: Prototype for external function: strcpy ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<char,1>>) //
 char* strcpy(char*, char*);
 
 // start code fragment :: Definition of getPerson //
 struct Person getPerson() {
 	{
 		struct Person res;
-		strcpy((&((res).name)), "John Doe");
+		strcpy((((res).name)), "John Doe");
 		((*(&((res).age))) = ((unsigned int)(101)));
 	}
 }

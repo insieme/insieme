@@ -23,7 +23,7 @@ struct Data {
     char(** s10)[4][3];
 };
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Definition of funArray //
@@ -45,7 +45,7 @@ char funPointer(char a, char* b, char** c, char*** d) {
 // start code fragment :: Definition of funStruct //
 char funStruct(struct Data data) {
 	{
-		return ((data.s1));;
+		return (data.s1);;
 	}
 }
 
@@ -57,16 +57,16 @@ int main(int argc, char** argv) {
 		char b1[5] = "Hallo";
 		char b2[5][3] = {"X", "Y", "Z"};
 		char b3[5][3][2];
-		char* c1 = (b1);
-		char** c2 = ((char**)(0));
-		char*** c3 = ((char***)(0));
+		char* c1 = b1;
+		char** c2 = ((char**)(null));
+		char*** c3 = ((char***)(null));
 		char(* d1)[3];
 		char(** d2)[3][2];
 		char(*** d3)[3][2][1];
 		char(*** d4)[3];
 		char(* d5)[3][2][1];
 		struct Data s;
-		((((s).s1)) = '#');
+		((*(&((s).s1))) = '#');
 		printf("size of s %d\n", sizeof(struct Data));
 		printf("size of b1 %d\n", (5*sizeof(char)));
 		printf("size of b2 %d\n", (5*(3*sizeof(char))));
@@ -79,15 +79,15 @@ int main(int argc, char** argv) {
 		printf("size of d3 %d\n", sizeof(char(***)[3][2][1]));
 		printf("size of d4 %d\n", sizeof(char(***)[3]));
 		printf("size of d5 %d\n", sizeof(char(*)[3][2][1]));
-		printf("Letter Array:   %c\n", ((int)(funArray((a1), (b1), (b2), (b3)))));
-		printf("Letter Pointer: %c\n", ((int)(funPointer((a1), (c1), (c2), (c3)))));
+		printf("Letter Array:   %c\n", ((int)(funArray((a1), b1, b2, b3))));
+		printf("Letter Pointer: %c\n", ((int)(funPointer((a1), c1, c2, c3))));
 		printf("Letter Struct:  %c\n", ((int)(funStruct((s)))));
-		char*** strings[5] = {"This", "is", "a", "little", "test"};
-		printf("String:  %s\n", (strings)[((unsigned int)(0))]);
-		printf("String:  %s\n", (strings)[((unsigned int)(1))]);
-		printf("String:  %s\n", (strings)[((unsigned int)(2))]);
-		printf("String:  %s\n", (strings)[((unsigned int)(3))]);
-		printf("String:  %s\n", (strings)[((unsigned int)(4))]);
+		char* strings[5] = {"This", "is", "a", "little", "test"};
+		printf("String:  %s\n", ((strings[((unsigned int)(0))])));
+		printf("String:  %s\n", ((strings[((unsigned int)(1))])));
+		printf("String:  %s\n", ((strings[((unsigned int)(2))])));
+		printf("String:  %s\n", ((strings[((unsigned int)(3))])));
+		printf("String:  %s\n", ((strings[((unsigned int)(4))])));
 		return 0;;
 	}
 }

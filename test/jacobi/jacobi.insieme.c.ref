@@ -9,13 +9,13 @@
 #define null 0
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: clock //
+// start code fragment :: Prototype for external function: clock ... type: (()->int<8>) //
 long clock();
 
-// start code fragment :: Prototype for external function: memset //
-<?>'a</?>* memset(<?>'a</?>*, int, unsigned long);
+// start code fragment :: Prototype for external function: memset ... type: ((ref<array<'a,1>>,int<4>,uint<8>)->ref<array<'a,1>>) //
+void* memset(void*, int, unsigned long);
 
-// start code fragment :: Prototype for external function: sin //
+// start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
 double sin(double);
 
 // start code fragment :: Definition of init_func //
@@ -26,13 +26,13 @@ double init_func(int x, int y) {
 }
 
 
-// start code fragment :: Prototype for external function: pow //
+// start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
 
-// start code fragment :: Prototype for external function: memcpy //
-<?>'a</?>* memcpy(<?>'a</?>*, <?>'a</?>*, unsigned long);
+// start code fragment :: Prototype for external function: memcpy ... type: ((ref<array<'a,1>>,ref<array<'a,1>>,uint<8>)->ref<array<'a,1>>) //
+void* memcpy(void*, void*, unsigned long);
 
-// start code fragment :: Prototype for external function: sqrt //
+// start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
 
 // start code fragment :: Definition of main //
@@ -47,10 +47,10 @@ int main(int argc, char** argv) {
 		float tmp[650][650];
 		float f[650][650];
 		float res[650][650];
-		memset(&u, 0, ((unsigned long)((650*650))));
-		memset(&f, 0, ((unsigned long)((650*650))));
+		memset(u, 0, ((unsigned long)((650*650))));
+		memset(f, 0, ((unsigned long)((650*650))));
 		for(int i = 0; i < 650; i += 1) for(int j = 0; j < 650; j += 1) {
-			(((&(&f[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((float)(init_func((i), (j)))));
+			((((f[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((float)(init_func((i), (j)))));
 		};
 		double comm_time = ((double)(0));
 		double comp_time = ((double)(0));
@@ -63,19 +63,19 @@ int main(int argc, char** argv) {
 		for(int it = 0; it < 10; it += 1) {
 			for(int i = 1; i < (650-1); i += 1) {
 				for(int j = 1; j < (650-1); j += 1) {
-					(((&(&tmp[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((float)(((((double)(1))/((double)(4)))*(((double)((((((&(&u[((unsigned int)(((i)-1)))])[((unsigned int)((j)))]))+((&(&u[((unsigned int)((i)))])[((unsigned int)(((j)+1)))])))+((&(&u[((unsigned int)((i)))])[((unsigned int)(((j)-1)))])))+((&(&u[((unsigned int)(((i)+1)))])[((unsigned int)((j)))])))))-((factor)*((double)(((&(&f[((unsigned int)((i)))])[((unsigned int)((j)))]))))))))));
+					((((tmp[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((u[((unsigned int)(((i)-1)))])[((unsigned int)((j)))]))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)+1)))])))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)-1)))])))+(((u[((unsigned int)(((i)+1)))])[((unsigned int)((j)))])))))-((factor)*((double)((((f[((unsigned int)((i)))])[((unsigned int)((j)))]))))))))));
 				};
 			};
-			memcpy(&u, &tmp, ((unsigned long)((650*650))));
+			memcpy(u, tmp, ((unsigned long)((650*650))));
 			for(int i = 1; i < (650-1); i += 1) {
 				for(int j = 1; j < (650-1); j += 1) {
-					(((&(&res[((unsigned int)((i)))])[((unsigned int)((j)))])) = (((((((&(&f[((unsigned int)((i)))])[((unsigned int)((j)))]))-(((float)(4))*((&(&u[((unsigned int)((i)))])[((unsigned int)((j)))]))))+((&(&u[((unsigned int)(((i)-1)))])[((unsigned int)((j)))])))+((&(&u[((unsigned int)(((i)+1)))])[((unsigned int)((j)))])))+((&(&u[((unsigned int)((i)))])[((unsigned int)(((j)-1)))])))+((&(&u[((unsigned int)((i)))])[((unsigned int)(((j)+1)))]))));
+					((((res[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((((((((f[((unsigned int)((i)))])[((unsigned int)((j)))]))-(((float)(4))*(((u[((unsigned int)((i)))])[((unsigned int)((j)))]))))+(((u[((unsigned int)(((i)-1)))])[((unsigned int)((j)))])))+(((u[((unsigned int)(((i)+1)))])[((unsigned int)((j)))])))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)-1)))])))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)+1)))]))));
 				};
 			};
 			double norm = ((double)(0));
 			for(int i = 1; i < (650-1); i += 1) {
 				for(int j = 1; j < (650-1); j += 1) {
-					((norm) = ((norm)+pow(((double)(((&(&res[((unsigned int)((i)))])[((unsigned int)((j)))])))), ((double)(2)))));
+					((norm) = ((norm)+pow(((double)((((res[((unsigned int)((i)))])[((unsigned int)((j)))])))), ((double)(2)))));
 				};
 			};
 			((resv) = (sqrt((norm))/((double)((650-1)))));

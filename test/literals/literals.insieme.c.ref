@@ -9,7 +9,7 @@
 #define null 0
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: (()->int<4>) //
 int printf();
 
 // start code fragment :: Definition of main //

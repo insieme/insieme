@@ -12,7 +12,6 @@
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
     int a[10];
-    char(* b)[10];
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_0 //
@@ -23,7 +22,7 @@ struct __insieme_funType_type_0 {
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_0
-void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) { return lambda->fun(lambda); }
+void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) {  lambda->fun(lambda); }
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_1 //
 // Abstract prototype for lambdas of type __insieme_funType_type_1
@@ -46,7 +45,7 @@ void init(void* _capture) {
 }
 
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Definitions for function type: __insieme_funType_type_2 //
@@ -86,10 +85,8 @@ int sum(void* _capture) {
 int main(int argc, char** argv) {
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((((*var_1).b)) = (memcpy(malloc(sizeof(char[10])), &((char[10]){}), sizeof(char[10]))));
-		((((*var_1).b)) = (*argv));
-		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0, var_1}))));
-		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0, var_1})))));
+		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))));
+		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0,var_1})))));
 	}
 }
 
