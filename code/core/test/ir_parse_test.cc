@@ -230,21 +230,42 @@ TEST(IRParser, StatementTests) {
     auto whileStmt = builder.whileStmt(builder.intLit(1), compoundStmt);
     EXPECT_EQ(whileStmt, parser.parseStatement("while(1){ 7; break; return 0 }"));
 
-    stmts.at(2) = builder.returnStmt(builtDeclarationStmt->getVariable());
-    compoundStmt = builder.compoundStmt(stmts);
-
     // for statement
     auto builtForStmt = dynamic_pointer_cast<const ForStmt>(builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1)));
-    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return int<4>:i }" ));
+    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0 }" ));
     EXPECT_TRUE(!!builtForStmt && !!parsedForStmt);
     EXPECT_EQ(builtForStmt->getStep(), parsedForStmt->getStep());
     EXPECT_EQ(builtForStmt->getEnd(), parsedForStmt->getEnd());
     EXPECT_EQ(builtForStmt->getDeclaration()->getInitialization(), parsedForStmt->getDeclaration()->getInitialization());
     EXPECT_EQ(builtForStmt->getDeclaration()->getVariable()->getType(), parsedForStmt->getDeclaration()->getVariable()->getType());
-    CompoundStmtPtr parsedBody = dynamic_pointer_cast<const CompoundStmt>(parsedForStmt->getBody());
-    EXPECT_TRUE(!!parsedBody && !!dynamic_pointer_cast<const ReturnStmt>((*parsedBody)[2]));
-    EXPECT_EQ(stmts[0], (*parsedBody)[0]);
-    EXPECT_EQ(stmts[1], (*parsedBody)[1]);
+    EXPECT_EQ(compoundStmt, parsedForStmt->getBody());
+
+    // if statement
+    auto ifStmt = builder.ifStmt(builder.intLit(0), compoundStmt);
+    EXPECT_EQ(ifStmt, parser.parseStatement("if(0) { 7; break; return 0 }"));
+    ifStmt = builder.ifStmt(builder.intLit(1), builder.returnStmt(builder.intLit(0)), builder.returnStmt(builder.intLit(-1)));
+    EXPECT_EQ(ifStmt, parser.parseStatement("if(1) return 0 else return -1"));
+
+    // switch statement
+    vector<std::pair<ExpressionPtr, StatementPtr> > cases;
+    auto switchStmt = builder.switchStmt(builder.intLit(42), cases);
+ //   EXPECT_EQ(switchStmt, parser.parseStatement("switch ( 42 ) {}"));
+
+    cases.push_back(std::make_pair(builder.intLit(0), builder.returnStmt(builder.intLit(0))));
+    cases.push_back(std::make_pair(builder.intLit(1), builder.returnStmt(builder.intLit(1))));
+    switchStmt = builder.switchStmt(builder.intLit(42), cases);
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch(42 ){case 0: return 0; case 1: return 1}"));
+
+    switchStmt = builder.switchStmt(builder.intLit(42), cases, builder.returnStmt(builder.intLit(42)));
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch( 42) {case 0: return 0;case 1: return 1 ; default: return 42}"));
+
+    cases.clear();
+    switchStmt = builder.switchStmt(builder.intLit(42), cases, builder.returnStmt(builder.intLit(42)));
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch (42){;default: return 42}")); // does it make any sense to support this?
+
+    // marker statement
+    auto markerStmt = builder.markerStmt(whileStmt, 7);
+    EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0 } </ms>"));
 }
 
 TEST(IRParser, InteractiveTest) {

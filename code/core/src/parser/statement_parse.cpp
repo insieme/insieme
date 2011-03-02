@@ -70,6 +70,29 @@ ForStmtPtr forHelp(NodeManager& nodeMan, Identifier id, ExpressionPtr start, Exp
     return ForStmt::get(nodeMan, loopVar, body, end, step);
 }
 
+IfStmtPtr ifHelp(NodeManager& nodeMan, const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody) {
+    if(elseBody)
+        return IfStmt::get(nodeMan, condition, body, *elseBody);
+
+    return IfStmt::get(nodeMan, condition, body);
+
+}
+
+SwitchStmtPtr switchHelp(NodeManager& nodeMan, const ExpressionPtr& switchExpr, const Cases& cases, const boost::optional<StatementPtr>& defaultCase) {
+    if(defaultCase)
+        return SwitchStmt::get(nodeMan, switchExpr, cases, *defaultCase);
+
+    return SwitchStmt::get(nodeMan, switchExpr, cases);
+}
+
+ProgramPtr mainProgramHelp(NodeManager& nodeMan, const ExpressionPtr& mainProg) {
+    return Program::create(nodeMan, toVector(mainProg), true);
+}
+/*
+ProgramPtr programHelp(const vector<ExpressionPtr>& entryPoints) {
+
+}
+*/
 StatementGrammar::StatementGrammar(NodeManager& nodeMan)
     : StatementGrammar::base_type(statementRule), typeG(new TypeGrammar(nodeMan)), exprG(new ExpressionGrammar(nodeMan)) {
 
@@ -105,6 +128,28 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
         >> exprG->expressionRule >> ':' >> exprG->expressionRule
         >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&forHelp, nManRef, qi::_1, qi::_2, qi::_3, qi::_4, qi::_5, exprG) ];
 
+    ifStmt =
+        (qi::lit("if") >> '(' >> exprG->expressionRule >> ')'
+        >> statementRule
+          >>  -(qi::lit("else") >> statementRule))                  [ qi::_val = ph::bind(&ifHelp, nManRef, qi::_1, qi::_2, qi::_3) ];
+
+    switchStmt =
+        (qi::lit("switch") >> '(' >> exprG->expressionRule >> ')'
+          >> '{' >> -( (qi::lit("case") >> exprG->expressionRule
+            >> ':' >> statementRule)                                [ ph::push_back(qi::_a, ph::bind(&makePair<ExpressionPtr, StatementPtr>, qi::_1, qi::_2)) ]
+              % ';') >> -( ';' >>
+        qi::lit("default") >> ':' >> statementRule ) >> '}' )  [ qi::_val = ph::bind(&switchHelp, nManRef, qi::_1, qi::_a, qi::_3) ];
+
+    markerStmt =
+        ('<' >> qi::lit("ms") >> qi::lit("id") >> '='
+        >> qi::ulong_long >> '>' >> statementRule >> '<'
+        >> '/' >> qi::lit("ms") >> '>')                            [ qi::_val = ph::bind(&MarkerStmt::get, nManRef, qi::_2, qi::_1) ];
+
+    program =
+        ( qi::lit("main") >> ':' >> exprG->expressionRule )        [ qi::_val = ph::bind(&mainProgramHelp, nManRef, qi::_1) ]
+        | +( exprG->expressionRule                                 [ ph::push_back(qi::_a, qi::_1) ]
+          % ',')                                                   [ qi::_val = ph::bind(&Program::create, nManRef, qi::_a, false) ];
+
     // -------------------------------------------------------------------------------------------------------------------
 
     statementRule =
@@ -115,6 +160,9 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
       | compoundStmt                                                [ qi::_val = ph::construct<StatementPtr>(qi::_1) ]
       | whileStmt                                                   [ qi::_val = ph::construct<StatementPtr>(qi::_1) ]
       | forStmt                                                     [ qi::_val = ph::construct<StatementPtr>(qi::_1) ]
+      | ifStmt                                                      [ qi::_val = ph::construct<StatementPtr>(qi::_1) ]
+      | switchStmt                                                  [ qi::_val = ph::construct<StatementPtr>(qi::_1) ]
+      | markerStmt                                                  [ qi::_val = ph::construct<StatementPtr>(qi::_1) ]
       | exprG->expressionRule                                       [ qi::_val = ph::construct<StatementPtr>(qi::_1) ];
 
 //    BOOST_SPIRIT_DEBUG_NODE(breakStmt);
@@ -123,7 +171,12 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
 //    BOOST_SPIRIT_DEBUG_NODE(declarationStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(compoundStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(whileStmt);
-    BOOST_SPIRIT_DEBUG_NODE(forStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(forStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(ifStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(switchStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(switchStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(markerStmt);
+    BOOST_SPIRIT_DEBUG_NODE(program);
 }
 
 StatementGrammar::~StatementGrammar() {

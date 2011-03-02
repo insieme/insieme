@@ -111,11 +111,6 @@ JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, co
     return JobExpr::get(manager, defaultStmt, guardedStmts);
 }
 
-template<typename T, typename U>
-std::pair<T, U> makePair (T first, U second) {
-    return std::make_pair(first, second);
-}
-
 LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params) {
 // build a stmtExpr bc the builder cannot at the moment
     ASTBuilder build(nodeMan);
@@ -256,8 +251,9 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
         >> qi::ulong_long )                                         [ qi::_val = ph::bind(&TupleProjectionExpr::get, nManRef, qi::_1, qi::_2) ];
 
     markerExpr =
-        ( '<' >> qi::lit("me id") >> '=' >> qi::ulong_long >> '>'
-        >> expressionRule >> '<' >> '/' >> qi::lit("me") >> '>')    [ qi::_val = ph::bind(&MarkerExpr::get, nManRef, qi::_2, qi::_1) ];
+        ( '<' >> qi::lit("me") >> qi::lit("id") >> '='
+        >> qi::ulong_long >> '>' >> expressionRule >> '<'
+        >> '/' >> qi::lit("me") >> '>')                            [ qi::_val = ph::bind(&MarkerExpr::get, nManRef, qi::_2, qi::_1) ];
 
     // --------------------------------------------------------------------------------------
 

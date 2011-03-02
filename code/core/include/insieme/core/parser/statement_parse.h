@@ -44,6 +44,7 @@ namespace core {
 namespace parse {
 
 typedef vector<StatementPtr> Stmts;
+typedef vector<std::pair<ExpressionPtr, StatementPtr> > Cases;
 
 // FW Declaration
 struct TypeGrammar;
@@ -65,7 +66,11 @@ struct StatementGrammar : public qi::grammar<ParseIt, StatementPtr(), qi::space_
     qi::rule<ParseIt, DeclarationStmtPtr(), qi::space_type> declarationStmt;
     qi::rule<ParseIt, WhileStmtPtr(), qi::space_type> whileStmt;
     qi::rule<ParseIt, ForStmtPtr(), qi::space_type> forStmt;
+    qi::rule<ParseIt, IfStmtPtr(), qi::space_type> ifStmt;
+    qi::rule<ParseIt, SwitchStmtPtr(), qi::locals<Cases>, qi::space_type> switchStmt;
+    qi::rule<ParseIt, MarkerStmtPtr(), qi::space_type> markerStmt;
 
+    qi::rule<ParseIt, ProgramPtr(), qi::locals<vector<ExpressionPtr> >, qi::space_type> program;
 };
 
 }
