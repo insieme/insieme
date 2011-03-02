@@ -1,15 +1,15 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<vector<ref<int<4>>,4>> v3 =  var([ var(1),  var(2),  var(3),  var(4)]);
-        printf("%d\n", varlist.pack((4*sizeof(int<4>))));
-        decl ref<array<ref<int<4>>,1>> v4 =  new(array.create.1D( var(undefined(int<4>)), 4*sizeof(int<4>)/sizeof(int<4>)));
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<vector<int<4>,4>> v3 =  var([ var(1),  var(2),  var(3),  var(4)]);
+        printf(string.as.char.pointer("%d\n"), varlist.pack((4*sizeof(int<4>))));
+        decl ref<array<int<4>,1>> v4 =  new(array.create.1D(undefined(int<4>), 4*sizeof(int<4>)/sizeof(int<4>)));
         memcpy(v4, v3, 4*sizeof(int<4>));
         for(decl ref<int<4>> v5 =  var(0) .. 4*sizeof(int<4>)/sizeof(int<4>) : 1) {
-            printf("%d, ", varlist.pack((v4[v5])));
+            printf(string.as.char.pointer("%d, "), varlist.pack((array.ref.elem.1D(v4, v5))));
         };
-        printf("\n", varlist.pack(()));
+        printf(string.as.char.pointer("\n"), varlist.pack(()));
          del(v4);
     }
 
@@ -19,15 +19,15 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
-        decl ref<vector<ref<int<4>>,4>> v3 = ( var([( var(1)), ( var(2)), ( var(3)), ( var(4))]));
-        printf("%d\n", varlist.pack(((4*sizeof(int<4>)))));
-        decl ref<array<ref<int<4>>,1>> v4 = ( new(array.create.1D(( var(undefined(int<4>))), ((4*sizeof(int<4>))/sizeof(int<4>)))));
-        memcpy(( *v4), ( *v3), (4*sizeof(int<4>)));
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<vector<int<4>,4>> v3 = ( var([( var(1)), ( var(2)), ( var(3)), ( var(4))]));
+        printf(string.as.char.pointer("%d\n"), varlist.pack(((4*sizeof(int<4>)))));
+        decl ref<array<int<4>,1>> v4 = ( new(array.create.1D(undefined(int<4>), ((4*sizeof(int<4>))/sizeof(int<4>)))));
+        memcpy(v4, v3, (4*sizeof(int<4>)));
         for(decl ref<int<4>> v5 = ( var(0)) .. ((4*sizeof(int<4>))/sizeof(int<4>)) : 1) {
-            printf("%d, ", varlist.pack((( *(( *v4)[CAST<uint<4>>(( *v5))])))));
+            printf(string.as.char.pointer("%d, "), varlist.pack((( *array.ref.elem.1D(v4, CAST<uint<4>>(( *v5)))))));
         };
-        printf("\n", varlist.pack(()));
+        printf(string.as.char.pointer("\n"), varlist.pack(()));
         ( del(v4));
     }
 

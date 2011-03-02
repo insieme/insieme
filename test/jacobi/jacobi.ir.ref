@@ -86,7 +86,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         (v5 := (CAST<real<8>>((( *v4)-( *v3)))/CAST<real<8>>(1000000l)));
         (v3 := clock());
         for(decl ref<int<4>> v28 = ( var(0)) .. 10 : 1) {
-            <m id=3>for(decl ref<int<4>> v22 = ( var(1)) .. (650-1) : 1) {
+            <m id=1>for(decl ref<int<4>> v22 = ( var(1)) .. (650-1) : 1) {
                 for(decl ref<int<4>> v21 = ( var(1)) .. (650-1) : 1) 
                     (array.ref.elem.1D(array.ref.elem.1D(v8, CAST<uint<4>>(( *v22))), CAST<uint<4>>(( *v21))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(array.ref.elem.1D(v7, CAST<uint<4>>((( *v22)-1))), CAST<uint<4>>(( *v21))))+( *array.ref.elem.1D(array.ref.elem.1D(v7, CAST<uint<4>>(( *v22))), CAST<uint<4>>((( *v21)+1)))))+( *array.ref.elem.1D(array.ref.elem.1D(v7, CAST<uint<4>>(( *v22))), CAST<uint<4>>((( *v21)-1)))))+( *array.ref.elem.1D(array.ref.elem.1D(v7, CAST<uint<4>>((( *v22)+1))), CAST<uint<4>>(( *v21))))))-(( *v20)*CAST<real<8>>(( *array.ref.elem.1D(array.ref.elem.1D(v9, CAST<uint<4>>(( *v22))), CAST<uint<4>>(( *v21))))))))))
                 ;
@@ -98,7 +98,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 ;
             };
             decl ref<real<8>> v25 = ( var(CAST<real<8>>(0)));
-            <m id=4>for(decl ref<int<4>> v27 = ( var(1)) .. (650-1) : 1) {
+            <m id=2>for(decl ref<int<4>> v27 = ( var(1)) .. (650-1) : 1) {
                 for(decl ref<int<4>> v26 = ( var(1)) .. (650-1) : 1) 
                     (v25 := (( *v25)+pow(CAST<real<8>>(( *array.ref.elem.1D(array.ref.elem.1D(v10, CAST<uint<4>>(( *v27))), CAST<uint<4>>(( *v26))))), CAST<real<8>>(2))))
                 ;
