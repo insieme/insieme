@@ -275,6 +275,22 @@ void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 	visitCaptureInitExprInternal(ptr, false);
 }
 
+namespace {
+
+	/**
+	 * Determines whether the given type is a reference of an array or vector type.
+	 * TODO: move this to a more general case, use it more often (especially within the backend_convert.cpp)
+	 */
+	const bool isVectorOrArrayRef(const TypePtr& type) {
+		if (type->getNodeType() != NT_RefType) {
+			return false;
+		}
+		const RefTypePtr& refType = static_pointer_cast<const RefType>(type);
+		NodeType nodeType = refType->getElementType()->getNodeType();
+		return nodeType == NT_VectorType || nodeType == NT_ArrayType;
+	}
+}
+
 void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
 
 	// resolve resulting type of expression
@@ -308,7 +324,8 @@ void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, 
 
 	// add captured parameters
 	for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-		cStr << ", ";
+//		cStr << ", ";
+		cStr << (isVectorOrArrayRef(cur->getType())?",&":",");
 		this->visit(cur);
 	});
 
