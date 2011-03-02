@@ -322,10 +322,19 @@ void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, 
 	 // TODO: add real size
 	cStr << ", 0";
 
+
 	// add captured parameters
 	for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
 //		cStr << ", ";
-		cStr << (isVectorOrArrayRef(cur->getType())?",&":",");
+		bool addAddressOperator = isVectorOrArrayRef(cur->getType());
+		if (addAddressOperator
+				&& cur->getNodeType() == NT_Variable
+				&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
+
+			addAddressOperator = false;
+		}
+		cStr << (addAddressOperator?",&":",");
+
 		this->visit(cur);
 	});
 
