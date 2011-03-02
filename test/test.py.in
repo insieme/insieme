@@ -2,8 +2,9 @@ import os, subprocess, shlex, sys, shutil, time
 
 INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 CFLAGS = "--std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
-LDFLAGS_ORG = "-lm -lpthread -g -pg"
-LDFLAGS_RES = "-lm -lpthread -g -pg -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
+LDFLAGS_ORG = "-lm -lpthread -g"
+LDFLAGS_RES = "-lm -lpthread -g -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
+#CC = "gcc -pedantic-errors -Wall"
 CC = "gcc"
 runOcl = 0
 printErr = 0
@@ -175,7 +176,8 @@ def run_test_case(test_case_name):
 				os.remove("../#bin/" + test_exec)
 			shutil.move(test_exec, "../#bin/")
 		
-		map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+		# map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+		map(lambda x : os.remove(x), [ref_out, test_out])
 
 	if runOcl & (test_case_name == "ocl_kernel"):
 		sys.stderr.write(" * Compiling OpenCL host program...                 ")

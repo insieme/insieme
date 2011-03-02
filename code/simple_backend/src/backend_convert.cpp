@@ -796,9 +796,9 @@ namespace {
 		cStr << typeName;
 		cStr << ")), &((";
 		cStr << typeName;
-		cStr << ")";
+		cStr << "[]){";
 		converter.convert(initValue);
-		cStr << "), sizeof(";
+		cStr << "}), sizeof(";
 		cStr << typeName;
 		cStr << "))";
 	}
