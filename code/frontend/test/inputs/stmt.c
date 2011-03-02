@@ -179,16 +179,16 @@ void for_stmt_test() {
 
 	// standard for loop
 	#pragma test \
-	"for(decl int<4> v2 = 0 .. 100 : 1) { { };}"
+	"for(decl ref<int<4>> v1 = ( var(0)) .. 100 : 1) { { };}"
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ for(decl int<4> v4 = 0 .. 100 : 1) { (v2 := v4); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));}"
+	"{ for(decl ref<int<4>> v3 = ( var(0)) .. 100 : 1) { (v2 := ( *v3)); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ for(decl int<4> v4 = ( *v2) .. 100 : 6) { (v2 := v4); }; (v1 := (( *v2)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v2)))/CAST<real<8>>(6))))*6)));}"
+	"{ for(decl ref<int<4>> v3 = ( var(( *v2))) .. 100 : 6) { (v2 := ( *v3)); }; (v1 := (( *v2)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v2)))/CAST<real<8>>(6))))*6)));}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
@@ -196,7 +196,7 @@ void for_stmt_test() {
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
-	"{ decl ref<int<4>> v3 = ( var(1)); decl ref<int<4>> v4 = ( var(2)); for(decl int<4> v5 = 0 .. 100 : 1) { (v2 := v5); };}"
+	"{ decl ref<int<4>> v3 = ( var(1)); decl ref<int<4>> v4 = ( var(2)); for(decl ref<int<4>> v1 = ( var(0)) .. 100 : 1) { (v2 := ( *v1)); };}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
