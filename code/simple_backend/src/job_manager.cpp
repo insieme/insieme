@@ -63,6 +63,19 @@ namespace {
 		return expression;
 	}
 
+	/**
+	 * Determines whether the given type is a reference of an array or vector type.
+	 * TODO: move this to a more general case, use it more often (especially within the backend_convert.cpp)
+	 */
+	const bool isVectorOrArrayRef(const TypePtr& type) {
+		if (type->getNodeType() != NT_RefType) {
+			return false;
+		}
+		const RefTypePtr& refType = static_pointer_cast<const RefType>(type);
+		NodeType nodeType = refType->getElementType()->getNodeType();
+		return nodeType == NT_VectorType || nodeType == NT_ArrayType;
+	}
+
 }
 
 
@@ -113,13 +126,13 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 		// local shared variables
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 			ExpressionPtr init = cur->getInitialization();
-			cStr << ",";
+			cStr << (isVectorOrArrayRef(init->getType())?",&":",");
 			converter.convert(init);
 		});
 
 		// auto-captured variables
 		for_each(info.capturedVars, [&](const core::VariablePtr& var) {
-			cStr << ",";
+			cStr << (isVectorOrArrayRef(var->getType())?",&":",");
 			converter.convert(var);
 		});
 
@@ -338,7 +351,6 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 			string varName = converter.getNameManager().getName(var);
 			structStream << "\n";
 			structStream <<  converter.getTypeManager().formatParamter(jobStruct, var->getType(), varName, false) << ";";
-			structStream << "\t // Variable: " << toString(*var);
 		});
 
 	structStream << CodeStream::indL << "\n";

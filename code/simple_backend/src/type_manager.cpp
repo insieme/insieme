@@ -243,7 +243,8 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	if (captures.empty()) {
 		out << "\n";
 		out << "// Type safe function for invoking lambdas of type " << name << "\n";
-		out << getTypeName(functorAndCaller, functionType->getReturnType());
+		string resultType = getTypeName(functorAndCaller, functionType->getReturnType());
+		out << resultType;
 		out << " " << callerName << "(struct " << name << "* lambda";
 		int i = 0;
 		if (!arguments.empty()) {
@@ -251,7 +252,9 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 				out << formatParamter(functorAndCaller, cur, format("p%d", ++i), true);
 			});
 		}
-		out << ") { return lambda->fun(lambda";
+		out << ") { ";
+		if (resultType != "void") out << "return";
+		out << " lambda->fun(lambda";
 		i = 0;
 		if (!arguments.empty()) {
 			out << ", " << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
@@ -315,7 +318,10 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
-	// special handling for void* type (array<ref<'a>>)
+	// special handling for void* type (array<ref<'a>,1> and array<'a,1>)
+	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
+		return toEntry("void*");
+	}
 	if(basic.isRefAlpha(ptr->getElementType())) {
 		return toEntry("void*");
 	}

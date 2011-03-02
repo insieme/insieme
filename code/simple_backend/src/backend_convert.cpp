@@ -106,6 +106,7 @@ void StmtConverter::appendHeaders(ConvertedCode* converted) {
 	converted->addHeaderLine("#include <alloca.h>");
 	converted->addHeaderLine("#include <stddef.h>");
 	converted->addHeaderLine("#include <stdlib.h>");
+	//converted->addHeaderLine("#include <string.h>");
 
 	// add runtime header
 	converted->addHeaderLine("#include <runtime.h>");
@@ -138,7 +139,7 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
 	assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
 
-	// special built in function handling -- TODO make more generic
+	// special built in function handling
 	if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
 
 		// special handling for var-list handling
@@ -919,7 +920,15 @@ namespace formatting {
 					OUT("&");
 				}
 
-				OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				// check whether input variable needs to be dereferenced
+				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
+				insertDeref = insertDeref && converter.getConversionContext().getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::HEAP;
+
+				if (insertDeref) {
+					OUT("((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
+				} else {
+					OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				}
 
 //				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
 //				if (targetType->getElementType()->getNodeType() == NT_VectorType) {
