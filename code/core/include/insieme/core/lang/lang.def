@@ -292,13 +292,18 @@ LITERAL(ArrayRefElem1D, "array.ref.elem.1D", "(ref<array<'elem,1>>, uint<8>) -> 
 LITERAL(ArrayRefElemND, "array.ref.elem.ND", "(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
 LITERAL(ArrayProjection1D, "array.projection.1D", "(array<'elem,1>,uint<8>,uint<8>) -> array<'elem,1>")
-LITERAL(ArrayProjectionND, "array.projection.ND", "(array<'elem,#n>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
+LITERAL(ArrayProjectionND, "array.projection.ND",
+						   "(array<'elem,#n>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
-LITERAL(ArrayRefProjection1D, "array.ref.projection.1D", "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
-LITERAL(ArrayRefProjectionND, "array.ref.projection.ND", "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
+LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
+							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
+
+LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
+							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
 // function to copy an array 1D of type t and size m to an 1D array of type ref<vector<t,n> and size m/n
-LITERAL(ArrayElemToVec, "array.elem.to.vec", "(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
+LITERAL(ArrayElemToVec, "array.elem.to.vec",
+						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
@@ -308,19 +313,22 @@ GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorP
 LITERAL(VectorSubscript,      "vector.subscript",       "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform,    "vector.init.uniform",    "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitUndefined,  "vector.init.undefined",  "(intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorPointwise,      "vector.pointwise",       "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
+LITERAL(VectorPointwise,      "vector.pointwise",
+							  "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorPointwiseUnary, "vector.pointwise.unary", "(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorReduction,      "vector.reduction",       "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        "vector.permute",         "(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
 
-LITERAL(VectorProjection, "vector.projection", "(vector<'elem,#n>,intTypeParam<#s>,intTypeParam<#m>) -> vector<'elem,#m>")
-LITERAL(VectorRefProjection, "vector.ref.projection", "(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
+LITERAL(VectorProjection, "vector.projection",
+						  "(vector<'elem,#n>,intTypeParam<#s>,intTypeParam<#m>) -> vector<'elem,#m>")
+LITERAL(VectorRefProjection, "vector.ref.projection",
+							 "(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
 GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND)
 
-// Struct and Unions --------------------------------------------------------------------------------------------------------------
+// Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
 LITERAL(CompositeRefElem,      "composite.ref.elem",      "(ref<'a>, identifier, type<'b>) -> ref<'b>")
 LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
@@ -377,7 +385,7 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->
 // TODO herbert
 
 
-// Range Handling ------------------------------------------------------------------------------------------------
+// Range Handling -----------------------------------------------------------------------------------------------------
 
 TYPE(JobRange, "JobRange")
 

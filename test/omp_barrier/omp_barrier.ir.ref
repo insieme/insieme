@@ -4,10 +4,10 @@
 fun(){
         decl ref<int<4>> v1 =  var(0);
         merge(parallel(job([1-inf]){
-            default: [v1]fun[ref<int<4>> v4](){
-                int.postInc(v4);
+            default: [v1]fun[ref<int<4>> v3](){
+                int.postInc(v3);
                 barrier(getThreadGroup(0));
-                printf("i: %d\n", varlist.pack((v4)));
+                printf(string.as.char.pointer("i: %d\n"), varlist.pack((v3)));
             }
         }));
     }
@@ -21,10 +21,10 @@ fun(){
 fun(){
         decl ref<int<4>> v1 = ( var(0));
         merge(parallel(job(([1-inf])){
-            default: [v1]fun[ref<int<4>> v4](){
-                int.postInc(v4);
+            default: [v1]fun[ref<int<4>> v3](){
+                int.postInc(v3);
                 barrier(getThreadGroup(0));
-                printf("i: %d\n", varlist.pack((( *v4))));
+                printf(string.as.char.pointer("i: %d\n"), varlist.pack((( *v3))));
             }
         }));
     }

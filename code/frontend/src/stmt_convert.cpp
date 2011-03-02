@@ -60,9 +60,10 @@ namespace fe = insieme::frontend;
 namespace {
 
 //------------------- StmtWrapper -------------------------------------------------------------
-// Utility class used as a return type for the StmtVisitor. It can store a list of statement
-// as conversion of a single C stmt can result in multiple IR statements.
-
+/*
+ * Utility class used as a return type for the StmtVisitor. It can store a list of statement
+ * as conversion of a single C stmt can result in multiple IR statements.
+ */
 struct StmtWrapper: public StatementList {
 	StmtWrapper(): StatementList() { }
 	StmtWrapper(const core::StatementPtr& stmt): StatementList() { push_back(stmt); }
