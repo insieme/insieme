@@ -776,8 +776,10 @@ public:
 		 * value of the last expression
 		 */
 		if ( binOp->getOpcode() == BO_Comma ) {
-			core::CompoundStmtPtr&& body =
-					builder.compoundStmt(toVector<core::StatementPtr>(lhs, builder.returnStmt(rhs)));
+
+			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs,
+					(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs)) )
+				);
 			core::ExpressionPtr&& lambdaExpr = convFact.createCallExpr(body, rhs->getType());
 			// create a CallExpression
 			return builder.callExpr(lambdaExpr, ExpressionList());
