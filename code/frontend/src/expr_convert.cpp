@@ -458,7 +458,7 @@ public:
 
 		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
 		// replaced with a null literal
-		if(convFact.builder.getBasicGenerator().isNullPtr(type) && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
+		if(( type->getNodeType() == core::NT_ArrayType ) && *subExpr == *convFact.builder.literal(subExpr->getType(),"0")) {
 			return convFact.builder.getNodeManager().basic.getNull();
 		}
 

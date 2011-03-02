@@ -251,7 +251,9 @@ public:
 					};
 
 				std::function<bool (const InductionVarFilterFunc& functor, const core::StatementPtr& curr)> negation =
-					[](std::function<bool (const core::StatementPtr&)> functor, const core::StatementPtr& curr) -> bool { return !functor(curr); };
+					[] (const InductionVarFilterFunc& functor, const core::StatementPtr& curr) -> bool {
+						return !functor(curr);
+					};
 
 				/*
 				 * we insert all the variable declarations (excluded the induction
@@ -266,7 +268,7 @@ public:
 								std::bind( inductionVarFilter, std::placeholders::_1 )
 						);
 
-				assert(fit != initExpr.end() && "Induction variable not declared in the loop initialization expression");
+				assert(fit!=initExpr.end() && "Induction variable not declared in the loop initialization expression");
 				// replace the initExpr with the declaration statement of the induction variable
 				initExpr = *fit;
 			}
@@ -329,7 +331,8 @@ public:
 
 				// because the variable was coming from an input parameter, a deref of the new
 				// induction variable is necessary to maintain the correct semantics
-				core::ExpressionPtr&& replacement = (oldInductionVar ? builder.deref(newIndVar) : static_cast<core::ExpressionPtr>(newIndVar));
+				core::ExpressionPtr&& replacement =
+						(oldInductionVar ? builder.deref(newIndVar) : static_cast<core::ExpressionPtr>(newIndVar));
 
 				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
 				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), inductionVar, replacement, true);
