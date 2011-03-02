@@ -211,8 +211,8 @@ TEST(IRParser, StatementTests) {
 
     // declaration statement
     auto builtDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>
-        (builder.declarationStmt(builder.variable(manager.basic.getInt8()), builder.literal("42", manager.basic.getInt8())));
-    auto parsedDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>(parser.parseStatement("decl int<8>:var = 42"));
+        (builder.declarationStmt(builder.variable(manager.basic.getInt4()), builder.literal("42", manager.basic.getInt4())));
+    auto parsedDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>(parser.parseStatement("decl int<4>:var = 42"));
     EXPECT_EQ(builtDeclarationStmt->getVariable()->getType(), parsedDeclarationStmt->getVariable()->getType());
     EXPECT_EQ(builtDeclarationStmt->getInitialization(), parsedDeclarationStmt->getInitialization());
 
@@ -230,9 +230,21 @@ TEST(IRParser, StatementTests) {
     auto whileStmt = builder.whileStmt(builder.intLit(1), compoundStmt);
     EXPECT_EQ(whileStmt, parser.parseStatement("while(1){ 7; break; return 0 }"));
 
+    stmts.at(2) = builder.returnStmt(builtDeclarationStmt->getVariable());
+    compoundStmt = builder.compoundStmt(stmts);
+
     // for statement
-    auto forStmt = builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1));
-    EXPECT_EQ(forStmt, parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0 }" ));
+    auto builtForStmt = dynamic_pointer_cast<const ForStmt>(builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1)));
+    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return int<4>:i }" ));
+    EXPECT_TRUE(!!builtForStmt && !!parsedForStmt);
+    EXPECT_EQ(builtForStmt->getStep(), parsedForStmt->getStep());
+    EXPECT_EQ(builtForStmt->getEnd(), parsedForStmt->getEnd());
+    EXPECT_EQ(builtForStmt->getDeclaration()->getInitialization(), parsedForStmt->getDeclaration()->getInitialization());
+    EXPECT_EQ(builtForStmt->getDeclaration()->getVariable()->getType(), parsedForStmt->getDeclaration()->getVariable()->getType());
+    CompoundStmtPtr parsedBody = dynamic_pointer_cast<const CompoundStmt>(parsedForStmt->getBody());
+    EXPECT_TRUE(!!parsedBody && !!dynamic_pointer_cast<const ReturnStmt>((*parsedBody)[2]));
+    EXPECT_EQ(stmts[0], (*parsedBody)[0]);
+    EXPECT_EQ(stmts[1], (*parsedBody)[1]);
 }
 
 TEST(IRParser, InteractiveTest) {
