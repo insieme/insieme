@@ -49,6 +49,14 @@ typedef std::vector<std::pair<Identifier, ExpressionPtr> > Members;
 // FW Declaration
 struct TypeGrammar;
 
+// helper function to be able to use std::make_pair along with ph::push_back
+
+template<typename T, typename U>
+std::pair<T, U> makePair (T first, U second) {
+    return std::make_pair(first, second);
+}
+
+
 class VariableTable {
 	NodeManager& nodeMan;
 	std::map<Identifier, VariablePtr> table;
