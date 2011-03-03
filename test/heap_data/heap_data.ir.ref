@@ -1,18 +1,17 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<a:ref<vector<ref<int<4>>,10>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v1 =  new(struct{a:= new(vector.init.uniform( var(0), 10)), b:= var(array.create.1D( new(vector.init.uniform( var('\0'), 10)), 1))});
-        v1.b := v3;
-        [v1]fun[ref<struct<a:ref<vector<ref<int<4>>,10>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v4](){
+fun(int<4> v2, ref<array<array<char,1>,1>> v3){
+        decl ref<struct<a:vector<int<4>,10>>> v1 =  new(struct{a:=vector.init.uniform(0, 10)});
+        [v1]fun[ref<struct<a:vector<int<4>,10>>> v4](){
             for(decl ref<int<4>> v5 =  var(0) .. 10 : 1) {
-                v4.a[v5] := v5;
+                array.ref.elem.1D(composite.ref.elem(v4, a, vector<int<4>,10>), v5) := v5;
             };
         }();
-        printf("sum=%d\n", varlist.pack(([v1]fun[ref<struct<a:ref<vector<ref<int<4>>,10>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v7](){
+        printf(string.as.char.pointer("sum=%d\n"), varlist.pack(([v1]fun[ref<struct<a:vector<int<4>,10>>> v7](){
             decl ref<int<4>> v8 =  var(0);
             for(decl ref<int<4>> v9 =  var(0) .. 10 : 1) {
-                v8 := v8+v7.a[v9];
+                v8 := v8+array.ref.elem.1D(composite.ref.elem(v7, a, vector<int<4>,10>), v9);
             };
             return v8;
         }())));
@@ -24,18 +23,17 @@ fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v2, array<ref<array<ref<char>,1>>,1> v3){
-        decl ref<struct<a:ref<vector<ref<int<4>>,10>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v1 = ( new(struct{a:=( new(vector.init.uniform(( var(0)), 10))), b:=( var(array.create.1D(( new(vector.init.uniform(( var('\0')), 10))), 1)))}));
-        (( *v1).b := v3);
-        [v1]fun[ref<struct<a:ref<vector<ref<int<4>>,10>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v4](){
+fun(int<4> v2, ref<array<array<char,1>,1>> v3){
+        decl ref<struct<a:vector<int<4>,10>>> v1 = ( new(struct{a:=vector.init.uniform(0, 10)}));
+        [v1]fun[ref<struct<a:vector<int<4>,10>>> v4](){
             for(decl ref<int<4>> v5 = ( var(0)) .. 10 : 1) {
-                ((( *( *v4).a)[CAST<uint<4>>(( *v5))]) := ( *v5));
+                (array.ref.elem.1D(composite.ref.elem(v4, a, vector<int<4>,10>), CAST<uint<4>>(( *v5))) := ( *v5));
             };
         }();
-        printf("sum=%d\n", varlist.pack(([v1]fun[ref<struct<a:ref<vector<ref<int<4>>,10>>,b:ref<array<ref<vector<ref<char>,10>>,1>>>> v7](){
+        printf(string.as.char.pointer("sum=%d\n"), varlist.pack(([v1]fun[ref<struct<a:vector<int<4>,10>>> v7](){
             decl ref<int<4>> v8 = ( var(0));
             for(decl ref<int<4>> v9 = ( var(0)) .. 10 : 1) {
-                (v8 := (( *v8)+( *(( *( *v7).a)[CAST<uint<4>>(( *v9))]))));
+                (v8 := (( *v8)+( *array.ref.elem.1D(composite.ref.elem(v7, a, vector<int<4>,10>), CAST<uint<4>>(( *v9))))));
             };
             return ( *v8);
         }())));

@@ -48,6 +48,13 @@ const CodeStream::IndR CodeStream::indR = CodeStream::IndR();
 const CodeStream::IndL CodeStream::indL = CodeStream::IndL();
 
 
+std::string CodeStream::getString() {
+	// defuglify code
+	std::string retval = ss.str();
+	boost::replace_all(retval, "*&", ""); // Hope this is safe
+	return retval;
+}
+
 CodePtr CodeFragment::addDependency( const std::string& name /*= "unnamed"*/ ) {
 	CodePtr newDep(new CodeFragment(name));
 	dependencies.push_back(newDep);

@@ -203,13 +203,12 @@ public:
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 		// we need to check if the element type for this not a vector (or array) type
-		if(!((core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
-				core::dynamic_pointer_cast<const core::ArrayType>(elemTy)) &&
-				!arrTy->getElementType().getTypePtr()->isExtVectorType())) {
-			elemTy = convFact.builder.refType(elemTy);
-		}
-		core::TypePtr&& retTy = convFact.builder.vectorType( elemTy, 
-			core::IntTypeParam::getConcreteIntParam(arrSize) );
+		// if(!((core::dynamic_pointer_cast<const core::VectorType>(elemTy) ||
+		//		core::dynamic_pointer_cast<const core::ArrayType>(elemTy)) &&
+		//		!arrTy->getElementType().getTypePtr()->isExtVectorType())) {
+		//	elemTy = convFact.builder.refType(elemTy);
+		// }
+		core::TypePtr&& retTy = convFact.builder.vectorType( elemTy, core::IntTypeParam::getConcreteIntParam(arrSize) );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -220,7 +219,7 @@ public:
 	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
 	// and the size is unspecified.
 	//
-	// The representation for such array will be: ref<array<ref<int<4>>>>
+	// The representation for such array will be: ref<array<int<4>>>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitIncompleteArrayType(IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
@@ -233,10 +232,10 @@ public:
 		assert(elemTy && "Conversion of array element type failed.");
 
 		// we need to check if the element type for this not a vector (or array) type
-		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
-				core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
-			elemTy = convFact.builder.refType(elemTy);
-		}
+		// if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) ||
+		//		core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+		//	elemTy = convFact.builder.refType(elemTy);
+		//}
 
 		core::TypePtr&& retTy = builder.arrayType( elemTy );
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -267,10 +266,9 @@ public:
 		assert(elemTy && "Conversion of array element type failed.");
 
 		// we need to check if the element type for this not a vector (or array) type
-		if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || 
-				core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
-			elemTy = convFact.builder.refType(elemTy);
-		}
+		// if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+		//	 elemTy = convFact.builder.refType(elemTy);
+		// }
 
 		core::TypePtr retTy = builder.arrayType( elemTy );
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -308,6 +306,12 @@ public:
 
 		const core::ASTBuilder& builder = convFact.builder;
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+
+		// If the return type is of type vector or array we need to add a reference
+		// so that the semantics of C argument passing is mantained
+		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
+			retTy = this->convFact.builder.refType(retTy);
+
 		assert(retTy && "Function has no return type!");
 
 		core::TypeList argTypes;
@@ -315,12 +319,17 @@ public:
 			[ &argTypes, this ] (const QualType& currArgType) {
 				this->convFact.ctx.isResolvingFunctionType = true;
 				core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
+
+				// If the argument is of type vector or array we need to add a reference
+				if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType)
+					argTy = this->convFact.builder.refType(argTy);
+
 				argTypes.push_back( argTy );
 				this->convFact.ctx.isResolvingFunctionType = false;
 			}
 		);
 
-		if( argTypes.size() == 1 && *argTypes.front() == *convFact.mgr.basic.getUnit()) {
+		if( argTypes.size() == 1 && convFact.mgr.basic.isUnit(argTypes.front())) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
@@ -491,8 +500,8 @@ public:
 					RecordDecl::field_iterator::value_type curr = *it;
 					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
 					// if the type is not const we have to add a ref because the value could be accessed and changed
-					if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
-						fieldType = convFact.builder.refType(fieldType);
+					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
+					//	fieldType = convFact.builder.refType(fieldType);
 
 					structElements.push_back( core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), fieldType ) );
 				}
@@ -583,12 +592,12 @@ public:
 
 		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
 		// ~~~~~ Handling of special cases ~~~~~~~
-		// void* -> array<ref<'a>>
-		if(*subTy == *convFact.mgr.basic.getUnit()) {
+		// void* -> array<'a>
+		if( convFact.mgr.basic.isUnit(subTy) ) {
 			subTy = convFact.mgr.basic.getAlpha();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr&& retTy = convFact.builder.arrayType( convFact.builder.refType(subTy) );
+		core::TypePtr&& retTy = convFact.builder.arrayType( subTy );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

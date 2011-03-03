@@ -71,6 +71,10 @@ using namespace clang;
 
 namespace {
 
+/*
+ * Instantiate the clang parser and sema to build the clang AST.
+ * Pragmas are stored during the parsing
+ */
 void parseClangAST(clang::Preprocessor &PP, clang::ASTConsumer *Consumer, clang::ASTContext &Ctx, bool CompleteTranslationUnit, PragmaList& PL) {
 	InsiemeSema S(PL, PP, Ctx, *Consumer, CompleteTranslationUnit);
 	Parser P(PP, S);
@@ -131,9 +135,15 @@ public:
 		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
 	}
 
+	// getters
 	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
+	const clang::Preprocessor& getPreprocessor() const { return getCompiler().getPreprocessor(); }
+
 	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
+	const clang::ASTContext& getASTContext() const { return getCompiler().getASTContext(); }
+
 	clang::Diagnostic& getDiagnostic() { return getCompiler().getDiagnostics(); }
+	const clang::Diagnostic& getDiagnostic() const { return getCompiler().getDiagnostics(); }
 
 	clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
 	clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
@@ -270,11 +280,11 @@ const core::ProgramPtr& Program::convert() {
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
-	LOG(utils::log::INFO) << "=== Adding Parallelism to sequential IR ===";
+	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
 	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
 	mProgram = addParallelism(mProgram, mMgr);
 	convertTimer.stop();
-	LOG(utils::log::INFO) << convertTimer;
+	LOG(INFO) << convertTimer;
 
 	return mProgram;
 }

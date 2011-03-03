@@ -106,6 +106,7 @@ void StmtConverter::appendHeaders(ConvertedCode* converted) {
 	converted->addHeaderLine("#include <alloca.h>");
 	converted->addHeaderLine("#include <stddef.h>");
 	converted->addHeaderLine("#include <stdlib.h>");
+	//converted->addHeaderLine("#include <string.h>");
 
 	// add runtime header
 	converted->addHeaderLine("#include <runtime.h>");
@@ -138,21 +139,11 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
 	assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
 
-	// special built in function handling -- TODO make more generic
+	// special built in function handling
 	if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
-		//LOG(INFO) << "+++++++ visitCallExpr dyncastLit\n";
-		auto funName = literalFun->getValue();
-		//LOG(INFO) << "+++++++ val: " << funName << "\n";
-		//if (cc.basic.isRefDeref(literalFun)) {
-		if(funName == "ref.deref") {
 
-			// add operation
-			cStr << "(*";
-			visit(args.front());
-			cStr << ")";
-
-			return;
-		} if(cc.getLangBasic().isVarlistPack(funExp)) {
+		// special handling for var-list handling
+		if(cc.getLangBasic().isVarlistPack(funExp)) {
 			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
@@ -183,19 +174,16 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 		}
 	}
 
-	// TODO: gradually remove this -> literal handling should be sufficient
-	// generic built in C operator handling
-	if(auto cOpAnn = funExp->getAnnotation(c_info::COpAnnotation::KEY)) {
-		string op = cOpAnn->getOperator();
-		cStr << "(";
-		visit(args.front());
-		cStr << " " << op << " ";
-		visit(args.back());
-		cStr << ")";
-		return;
+	// skip empty capture init expression
+	if (funExp->getNodeType() == NT_CaptureInitExpr) {
+		CaptureInitExprPtr cur = static_pointer_cast<const CaptureInitExpr>(funExp);
+		if (cur->getValues().empty()) {
+			// skip init expression
+			funExp = cur->getLambda();
+		}
 	}
 
-
+	// handle function based on the kind of function node
 	switch(funExp->getNodeType()) {
 
 		case NT_Literal: {
@@ -287,6 +275,22 @@ void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
 	visitCaptureInitExprInternal(ptr, false);
 }
 
+namespace {
+
+	/**
+	 * Determines whether the given type is a reference of an array or vector type.
+	 * TODO: move this to a more general case, use it more often (especially within the backend_convert.cpp)
+	 */
+	const bool isVectorOrArrayRef(const TypePtr& type) {
+		if (type->getNodeType() != NT_RefType) {
+			return false;
+		}
+		const RefTypePtr& refType = static_pointer_cast<const RefType>(type);
+		NodeType nodeType = refType->getElementType()->getNodeType();
+		return nodeType == NT_VectorType || nodeType == NT_ArrayType;
+	}
+}
+
 void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
 
 	// resolve resulting type of expression
@@ -318,9 +322,19 @@ void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, 
 	 // TODO: add real size
 	cStr << ", 0";
 
+
 	// add captured parameters
 	for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-		cStr << ", ";
+//		cStr << ", ";
+		bool addAddressOperator = isVectorOrArrayRef(cur->getType());
+		if (addAddressOperator
+				&& cur->getNodeType() == NT_Variable
+				&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
+
+			addAddressOperator = false;
+		}
+		cStr << (addAddressOperator?",&":",");
+
 		this->visit(cur);
 	});
 
@@ -334,6 +348,7 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	VariableManager& varManager = cc.getVariableManager();
 	VariableManager::VariableInfo info;
 	info.location = VariableManager::NONE;
+	bool isAllocatedOnHEAP = false;
 	if (var->getType()->getNodeType() == NT_RefType) {
 
 		const RefTypePtr& refType = static_pointer_cast<const RefType>(var->getType());
@@ -349,9 +364,12 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			case NT_CallExpr:
 				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
 					info.location = VariableManager::HEAP;
+					isAllocatedOnHEAP = true;
 				} else {
 					info.location = VariableManager::STACK;
 				}
+
+//				info.location = VariableManager::STACK;
 				break;
 			default:
 				// default is a stack variable
@@ -366,7 +384,8 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	// standard handling
 	CodeStream& cStr = getCodeStream();
 	string varName = cc.getNameManager().getVarName(var);
-	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
+//	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
+	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, !isAllocatedOnHEAP);
 
 	// check whether there is an initialization
 	const ExpressionPtr& init = ptr->getInitialization();
@@ -384,7 +403,9 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	cStr << " = ";
 
 	// a special handling for initializing heap allocated structs (to avoid large stack allocated objects)
-	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
+//	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
+
+	const RefTypePtr& refType = (isAllocatedOnHEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 	if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
 
 		ASTBuilder builder(cc.getNodeManager());
@@ -442,9 +463,10 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 			}
 
 			// create assignment statement
-			this->visit(builder.callExpr(basic.getRefAssign(), builder.memberAccessExpr(builder.deref(var), name), value));
+			auto target = builder.callExpr(basic.getCompositeRefElem(), var,
+					basic.getIdentifierLiteral(name), basic.getTypeLiteral(value->getType()));
+			this->visit(builder.callExpr(basic.getRefAssign(), target, value));
 		});
-
 
 		// done - default handling is not necessary
 		return;
@@ -566,12 +588,38 @@ void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
 void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	CodeStream& cStr = getCodeStream();
 
-	if (ptr->getType()->getNodeType() == NT_RefType
-			&& cc.getVariableManager().getInfo(ptr).location == VariableManager::STACK) {
+//	if (ptr->getType()->getNodeType() == NT_RefType
+//			&& cc.getVariableManager().getInfo(ptr).location != VariableManager::HEAP) {
+//		cStr << "&";
+//	}
 
-		cStr << "&";
+	bool deref = true;
+	if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
+		TypePtr elementType = refType->getElementType();
+		NodeType nodeType = elementType->getNodeType();
+		if (nodeType == NT_VectorType || nodeType == NT_ArrayType) {
+			deref = false;
+		}
+
+		// for local captured variables and HEAP data
+		if (deref && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
+			//no deref necessary in those cases - since a pointer is used to handle those
+			// TODO: restructure location field, determining whether something is a pointer or scalar
+			deref = false;
+		}
+	} else {
+		// no de-referencing required at all - since no reference is represented by this variable
+		deref = false;
 	}
-	cStr << cc.getNameManager().getVarName(ptr);
+
+	cStr << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
+
+//	if (ptr->getType()->getNodeType() == NT_RefType && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
+//		cStr << "(*" << cc.getNameManager().getVarName(ptr) << ")";
+//		return;
+//	}
+
+//	cStr << cc.getNameManager().getVarName(ptr);
 }
 
 void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
@@ -679,41 +727,6 @@ bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
 
 
 
-
-
-namespace formatting {
-
-	/**
-	 * A utility function to obtain the n-th argument within the given call expression.
-	 *
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the requested argument
-	 * @return the requested argument or a NULL pointer in case there is no such argument
-	 */
-	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
-		auto arguments = call->getArguments();
-		if (n < arguments.size()) {
-			return arguments[n];
-		}
-		return ExpressionPtr();
-	}
-
-	/**
-	 * A utility function visiting the n-th argument of a call expression.
-	 *
-	 * @param converter the converter to be used for the actual conversion
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
-	 */
-	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
-		ExpressionPtr argument = getArgument(call, n);
-		if (argument) {
-			converter.convert(argument);
-		}
-	}
-}
-
-
 namespace {
 
 	ExpressionPtr evalLazy(const NodePtr& lazy) {
@@ -809,9 +822,9 @@ namespace {
 		cStr << typeName;
 		cStr << ")), &((";
 		cStr << typeName;
-		cStr << ")";
+		cStr << "[]){";
 		converter.convert(initValue);
-		cStr << "), sizeof(";
+		cStr << "}), sizeof(";
 		cStr << typeName;
 		cStr << "))";
 	}
@@ -820,11 +833,53 @@ namespace {
 
 namespace formatting {
 
+
+	/**
+	 * A utility function to obtain the n-th argument within the given call expression.
+	 *
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the requested argument
+	 * @return the requested argument or a NULL pointer in case there is no such argument
+	 */
+	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
+		auto arguments = call->getArguments();
+		if (n < arguments.size()) {
+			return arguments[n];
+		}
+		return ExpressionPtr();
+	}
+
+	/**
+	 * A utility function visiting the n-th argument of a call expression.
+	 *
+	 * @param converter the converter to be used for the actual conversion
+	 * @param call the expression from which the argument should be extracted
+	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
+	 */
+	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
+		ExpressionPtr argument = getArgument(call, n);
+		if (argument) {
+			converter.convert(argument);
+		}
+	}
+
+
+
 	FormatTable getBasicFormatTable(const lang::BasicGenerator& basic) {
 
 		FormatTable res;
 
 		#include "insieme/simple_backend/format_spec_start.mac"
+
+
+		ADD_FORMATTER(basic.getRefDeref(), {
+				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
+				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+					OUT("*"); // for all other types, the deref operator is needed (for arrays and vectors implicite)
+				}
+				//OUT("*");
+				VISIT_ARG(0);
+		});
 
 		ADD_FORMATTER(basic.getRefAssign(), {
 				NodeManager& manager = converter.getConversionContext().getNodeManager();
@@ -838,7 +893,9 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(converter, cStr, ARG(0), false); });
 		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(converter, cStr, ARG(0), true); });
 
-		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
+
+		ADD_FORMATTER(basic.getScalarToVector(), { VISIT_ARG(0); });
 
 		ADD_FORMATTER(basic.getArrayCreate1D(), {
 
@@ -859,8 +916,8 @@ namespace formatting {
 				} else {
 
 					// ensure array is randomly initialized
-					assert(core::analysis::isCallOf(ARG(0), basic.getRefVar()) && "Non-ref initalization of arrays not supported yet!" );
-					ExpressionPtr initValue = static_pointer_cast<const CallExpr>(ARG(0))->getArguments()[0];
+					ExpressionPtr initValue = ARG(0);
+					assert(!core::analysis::isCallOf(initValue, basic.getRefVar()) && "Initialization of arrays based on ref-elements not supported yet!" );
 					assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
 
 					// all arrays are allocated on the HEAP
@@ -881,6 +938,36 @@ namespace formatting {
 				if (isRef) OUT(")");
 		});
 
+		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
+
+				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
+				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
+				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
+					OUT("&");
+				}
+
+				// check whether input variable needs to be dereferenced
+				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
+				insertDeref = insertDeref && converter.getConversionContext().getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::HEAP;
+
+				if (insertDeref) {
+					OUT("((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
+				} else {
+					OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				}
+
+//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
+//				if (targetType->getElementType()->getNodeType() == NT_VectorType) {
+//					OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+//					return;
+//				}
+//
+//				OUT("&((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
+				OUT("/* totaly unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
 
 		ADD_FORMATTER_DETAIL(basic.getVectorSubscript(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;
@@ -888,6 +975,26 @@ namespace formatting {
 				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
 				if (isRef) OUT(")");
 		});
+
+		ADD_FORMATTER_DETAIL(basic.getVectorRefProjection(), false, {
+				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
+
+		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
+		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
+
+
+		// struct operations
+		ADD_FORMATTER(basic.getCompositeRefElem(), {
+				NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
+				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
+				}
+				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
+//				OUT("&((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
+		});
+		ADD_FORMATTER(basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
 
 		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
@@ -967,9 +1074,9 @@ namespace formatting {
 		ADD_FORMATTER(basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
-		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
-		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
-		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
+
+		// string conversion
+		ADD_FORMATTER_DETAIL(basic.getStringToCharPointer(), false, { VISIT_ARG(0); });
 
 
 		ADD_FORMATTER(basic.getIfThenElse(), {

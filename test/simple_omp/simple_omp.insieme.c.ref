@@ -17,7 +17,7 @@ struct __insieme_expr_0 {
 	// ---- additional captured variables -----
 };
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->unit) //
 void printf(char*, ...);
 
 // start code fragment :: Definition of __insieme_supp_1 //

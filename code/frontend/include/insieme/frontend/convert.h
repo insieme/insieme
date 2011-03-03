@@ -93,13 +93,17 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
 
-		// Maps a function with the variable which has been introduced to represent
-		// the function in the recursive definition
+		/*
+		 * Maps a function with the variable which has been introduced to represent
+		 * the function in the recursive definition
+		 */
 		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
 		RecVarExprMap recVarExprMap;
 
-		// When set this variable tells the frontend to resolve eventual recursive function call
-		// using the mu variables which has been previously placed in the recVarExprMap
+		/*
+		 * When set this variable tells the frontend to resolve eventual recursive function call
+		 * using the mu variables which has been previously placed in the recVarExprMap
+		 */
 		bool isRecSubFunc;
 
 		// It tells the frontend the body of a recursive function is being resolved and
@@ -107,8 +111,7 @@ class ConversionFactory : public boost::noncopyable {
 		// but read from the map
 		bool isResolvingRecFuncBody;
 
-		// This variable points to the current mu variable representing the start of the
-		// recursion
+		// This variable points to the current mu variable representing the start of the recursion
 		core::VariablePtr currVar;
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,25 +131,30 @@ class ConversionFactory : public boost::noncopyable {
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// Keeps the type and initialization of the global variables within the entrypoint
-		std::pair<core::StructTypePtr, core::StructExprPtr> globalStruct;
+		typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
+		// Keeps the type and initialization of the global variables within the entry point
+		GlobalStructPair globalStruct;
 
-		// Gloabal and static variables
-		core::VariablePtr   globalVar;
+		// Global and static variables
+		core::VariablePtr globalVar;
 
-		// Set of the function which need access to global variables, every time such a function is converted
-		// the data structure containing global variables has to be correctly forwarded by using the capture list
+		/*
+		 * Set of the function which need access to global variables, every time such a
+		 * function is converted the data structure containing global variables has to
+		 * be correctly forwarded by using the capture list
+		 */
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
-		UseGlobalFuncMap	globalFuncMap;
+		UseGlobalFuncMap globalFuncMap;
 
-		// Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
-		// a new variable is created in function body and the value of the input parameter assigned to it
+		/*
+		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
+		 * a new variable is created in function body and the value of the input parameter assigned to it
+		 */
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
-		std::set<insieme::core::Identifier> derefMap;
-
-		ConversionContext(): isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
+		ConversionContext() :
+			isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
 
 	ConversionContext 		ctx;
@@ -216,34 +224,105 @@ class ConversionFactory : public boost::noncopyable {
 
 	friend class ASTConverter;
 public:
+
+	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
+
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	~ConversionFactory();
 
+	// Getters & Setters
 	const core::ASTBuilder& getASTBuilder() const { return builder; }
 	core::NodeManager& 	getNodeManager() const { return mgr; }
-
-	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
-
-	core::TypePtr 		convertType(const clang::Type* type);
-	core::StatementPtr 	convertStmt(const clang::Stmt* stmt) const;
-	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
-
-	core::NodePtr 	 		 convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
-	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* funcDecl);
-	core::ExpressionPtr	 	 defaultInitVal(const core::TypePtr& type) const;
-	core::ExpressionPtr 	 convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const ;
-
-	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
-
-	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
-	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
-
-	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
-
 	const Program& getProgram() const { return program; }
 
-	void addDerefField(const core::Identifier& val) { ctx.derefMap.insert(val); }
+	/**
+	 * Force the current translation.
+	 * @param tu new translation unit
+	 */
+	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
 
+	/**
+	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
+	 * @return The statement to pragma multimap
+	 */
+	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
+
+	/**
+	 * Entry point for converting clang types into an IR types
+	 * @param type is a clang type
+	 * @return the corresponding IR type
+	 */
+	core::TypePtr convertType(const clang::Type* type);
+
+	/**
+	 * Entry point for converting clang statements into IR statements
+	 * @param stmt is a clang statement of the AST
+	 * @return the corresponding IR statement
+	 */
+	core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
+
+	/**
+	 * Entry point for converting clang expressions to IR expressions
+	 * @param expr is a clang expression of the AST
+	 * @return the corresponding IR expression
+	 */
+	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
+
+	/**
+	 * Converts a function declaration into an IR lambda.
+	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
+	 * @param isEntryPoint determine if this function is an entry point of the generated IR
+	 * @return Converted lambda
+	 */
+	core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
+
+	/**
+	 * Converts variable declarations into IR an declaration statement. This method is also responsible
+	 * to map the generated IR variable with the translated variable declaration, so that later uses
+	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
+	 * @param varDecl a clang variable declaration
+	 * @return The IR translation of the variable declaration
+	 */
+	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
+
+	/**
+	 * Returns the default initialization value of the IR type passed as input.
+	 * @param type is the IR type
+	 * @return The default initialization value for the IR type
+	 */
+	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+
+	core::ExpressionPtr convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const;
+
+	/**
+	 * Looks for eventual attributes attached to the clang variable declarations (used for OpenCL implementation)
+	 * and returns corresponding IR annotations to be attached to the IR corresponding declaration node.
+	 * @param varDecl clang Variable declaration AST node
+	 * @return IR annotation
+	 */
+	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
+
+	/**
+	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type
+	 * the same expression is returned.
+	 * @param expr IR expression which could be of ref or non-ref type
+	 * @return a non RefType IR expression
+	 */
+	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
+
+	/**
+	 * Create a lambda with corresponding CallExpr from an IR statement creating the lazy evaluation semantics.
+	 * Variables used inside the body are captured using capture list.
+	 *
+	 * @param body the code which needs to be places inside a lambda
+	 * @param retTy the return type of the generated lambda expression
+	 * @return A call expression of a lambda enclosing the body
+	 */
+	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
+};
+
+struct GlobalVariableDeclarationException: public std::runtime_error {
+	GlobalVariableDeclarationException() : std::runtime_error("") { }
 };
 
 // ------------------------------------ ASTConverter ---------------------------
@@ -257,7 +336,8 @@ class ASTConverter {
 	core::ProgramPtr    mProgram;
 
 public:
-	ASTConverter(core::NodeManager& mgr, Program& prog) : mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
+	ASTConverter(core::NodeManager& mgr, Program& prog) :
+		mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
 
 	core::ProgramPtr getProgram() const { return mProgram; }
 

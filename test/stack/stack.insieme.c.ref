@@ -27,38 +27,38 @@ struct stack {
 struct stack* newStack() {
 	{
 		struct stack* res = (malloc(sizeof(struct stack)*(sizeof(struct stack)/sizeof(struct stack))));
-		((((((res)[0])).top)) = null);
-		return (res);;
+		((((((res[0])).top))) = (null));
+		return res;;
 	}
 }
 
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Definition of push //
 void push(struct stack* stack, int value) {
 	{
 		struct item* element = (malloc(sizeof(struct item)*(sizeof(struct item)/sizeof(struct item))));
-		((((((element)[0])).value)) = value);
-		((((((element)[0])).next)) = ((((stack[0])).top)));
-		(((((stack[0])).top)) = (element));
+		((*(&(((element[0])).value))) = value);
+		((((((element[0])).next))) = (((((stack[0])).top))));
+		((((((stack[0])).top))) = (element));
 	}
 }
 
 
-// start code fragment :: Prototype for external function: ceil //
+// start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
 
 // start code fragment :: Definition of pop //
 int pop(struct stack* stack) {
 	{
-		if((!((bool)(((((stack[0])).top)))))) {
+		if((!((bool)((((((stack[0])).top))))))) {
 			return (((int)(0))-1);;
 		};
 		struct item* tmp = ((((stack[0])).top));
-		int res = (((((tmp)[0])).value));
-		(((((stack[0])).top)) = (((((tmp)[0])).next)));
+		int res = (*(&(((tmp[0])).value)));
+		((((((stack[0])).top))) = (((((tmp[0])).next))));
 		( free(tmp));
 		return (res);;
 	}
@@ -68,15 +68,12 @@ int pop(struct stack* stack) {
 // start code fragment :: Definition of dumpStack //
 void dumpStack(struct stack* stack) {
 	{
-		struct stack* var_17 = stack;
-		{
-			while(((bool)((((((var_17)[0])).top))))) {
-				struct item* tmp = (((((var_17)[0])).top));
-				((((((var_17)[0])).top)) = (((((tmp)[0])).next)));
-				( free(tmp));
-			};
-			( free(var_17));
+		while(((bool)((((((stack[0])).top)))))) {
+			struct item* tmp = ((((stack[0])).top));
+			((((((stack[0])).top))) = (((((tmp[0])).next))));
+			( free(tmp));
 		};
+		( free(stack));
 	}
 }
 
@@ -88,19 +85,19 @@ int main() {
 		struct stack* stack;
 		((stack) = newStack());
 		{
-			for(int var_20 = 0; var_20 < 10; var_20 += 1) {
-				printf("Pushing %d\n", (var_20));
-				push((stack), (var_20));
+			for(int var_9 = 0; var_9 < 10; var_9 += 1) {
+				printf("Pushing %d\n", (var_9));
+				push(stack, (var_9));
 			};
 			((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
 		};
 		{
-			for(int var_21 = 0; var_21 < 5; var_21 += 1) {
-				printf("Poping  %d\n", pop((stack)));
+			for(int var_14 = 0; var_14 < 5; var_14 += 1) {
+				printf("Poping  %d\n", pop(stack));
 			};
 			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
-		dumpStack((stack));
+		dumpStack(stack);
 		return 0;;
 	}
 }

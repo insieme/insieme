@@ -12,31 +12,66 @@
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
     int N;
+    int i;
 };
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Prototype for external function: ceil //
+// start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
 
 // start code fragment :: Definition of func //
 int func(int k) {
 	{
-		int var_13 = k;
+		int var_14 = k;
 		{
 			{
-				for(int var_14 = (var_13); var_14 < 10; var_14 += 1) {
-					printf("k=%d\n", (var_14));
+				for(int var_15 = (var_14); var_15 < 10; var_15 += 1) {
+					printf("k=%d\n", (var_15));
 				};
-				((var_13) = ((var_13)+(((int)(ceil((((double)((10-(var_13))))/((double)(1))))))*1)));
+				((var_14) = ((var_14)+(((int)(ceil((((double)((10-(var_14))))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_15 = (((int)(0))-10); var_15 < ((((int)(0))-0)+1); var_15 += 1) {
-					printf("k=%d\n", (((int)(0))-(var_15)));
+				for(int var_16 = (((int)(0))-10); var_16 < ((((int)(0))-0)+1); var_16 += 1) {
+					printf("k=%d\n", (((int)(0))-(var_16)));
 				};
-				((var_13) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
+				((var_14) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 			};
+		};
+	}
+}
+
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_0 //
+// Abstract prototype for lambdas of type __insieme_funType_type_0
+struct __insieme_funType_type_0 { 
+    void(*fun)(void*);
+    const size_t size;
+};
+
+// Type safe function for invoking lambdas of type __insieme_funType_type_0
+void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) {  lambda->fun(lambda); }
+
+// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
+// Abstract prototype for lambdas of type __insieme_funType_type_1
+struct __insieme_funType_type_1 { 
+    void(*fun)(void*);
+    const size_t size;
+    struct __insieme_globals* p0;
+};
+
+// start code fragment :: Definition of func2 //
+void func2(void* _capture) {
+	// --------- Captured Stuff - Begin -------------
+	struct __insieme_globals* var_18 = ((struct __insieme_funType_type_1*)_capture)->p0;
+	// --------- Captured Stuff -  End  -------------
+	{
+		{
+			for(int var_19 = (((int)(0))-10); var_19 < ((((int)(0))-0)+1); var_19 += 1) {
+				printf("k=%d\n", (((int)(0))-(var_19)));
+			};
+			((*(&((*var_18).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 		};
 	}
 }
@@ -46,7 +81,8 @@ int func(int k) {
 int main(int argc, char** argv) {
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((((*var_1).N)) = 10);
+		((*(&((*var_1).N))) = 10);
+		((*(&((*var_1).i))) = 0);
 		int a = 10;
 		for(int idx = 0; idx < (a); idx += 1) {
 			printf("idx=%d", (idx));
@@ -54,21 +90,27 @@ int main(int argc, char** argv) {
 		for(int idx = (((int)(0))-(a)); idx < ((((int)(0))-0)+1); idx += 1) {
 			printf("idx=%d", (((int)(0))-(idx)));
 		};
-		for(int idx = (((int)(0))-(((*var_1).N))); idx < (((int)(0))-0); idx += 1) {
+		for(int idx = (((int)(0))-(*(&((*var_1).N)))); idx < (((int)(0))-0); idx += 1) {
 			printf("idx=%d", (((int)(0))-(idx)));
 		};
 		{
 			int idx = (a);
-			while(((((*var_1).N))>0)) {
+			while(((*(&((*var_1).N)))>0)) {
 				{
 					printf("idx=%d", (a));
 				};
-				((((*var_1).N))--);
+				((*(&((*var_1).N)))--);
 			};
 		};
 		{
-			for(int var_18 = 1; var_18 < 15; var_18 += 3) {
-				printf("a=%d\n", (var_18));
+			for(int var_9 = (((int)(0))-15); var_9 < ((((int)(0))-0)+1); var_9 += 3) {
+				printf("a=%d\n", (((int)(0))-(var_9)));
+			};
+			((a) = (15+(((int)(ceil((((double)((((((int)(0))-0)+1)-15)))/((double)(3))))))*3)));
+		};
+		{
+			for(int var_10 = 1; var_10 < 15; var_10 += 3) {
+				printf("a=%d\n", (var_10));
 			};
 			((a) = (1+(((int)(ceil((((double)((15-1)))/((double)(3))))))*3)));
 		};
@@ -89,6 +131,7 @@ int main(int argc, char** argv) {
 		};
 		printf("a=%d\n", (a));
 		func((a));
+		func2(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))));
 	}
 }
 

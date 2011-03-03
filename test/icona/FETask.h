@@ -100,7 +100,10 @@ public:
 
 	PetscInt *rows;
 	PetscScalar *values;
-
+	
+	typedef std::map<std::string, std::string> SolidSections;
+	typedef std::map<std::string, std::string>::iterator SolidSectionsIter;
+	
 private:
 	bool renumbered;
 	bool success;

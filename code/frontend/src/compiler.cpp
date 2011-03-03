@@ -129,9 +129,9 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	pimpl->clang.setInvocation(CI);
 
 	TargetOptions TO;
-	// fix the target architecture to be a 64 bit machine
+	// fix the target architecture to be a 64 bit machine:
+	// 		in this way we don't have differences between the size of integer/float types across architecture
 	TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
-	// TO.Triple = llvm::sys::getHostTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
 
 	pimpl->clang.createPreprocessor();
@@ -216,6 +216,7 @@ TargetInfo& 	ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTa
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
+	delete pimpl;
 }
 
 } // End fronend namespace

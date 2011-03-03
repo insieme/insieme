@@ -53,6 +53,10 @@
 using namespace insieme::core;
 using namespace insieme::core::parse;
 
+#ifndef TEST
+// avoiding warnings in eclipse, enabling auto completions
+#define TEST void fun
+#endif
 
 TEST(IRParser, TypeTests) {
 
@@ -112,16 +116,156 @@ TEST(IRParser, ExpressionTests) {
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
+	// literal
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 	
+	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
 
+	// merge all
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
-	EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
+//    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
+
+    // lambda using definition
+// TODO add statement to test once it is there
+    auto lambda = dynamic_pointer_cast<const LambdaExpr>( parser.parseExpression(
+        "fun [uint<2>, real<4>](real<8>)->int<4>:lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{} }"));
+    EXPECT_TRUE(lambda != 0);
+    EXPECT_EQ( lambda->getCaptureList().size(), 2u );
+    EXPECT_EQ( lambda->getParameterList().size(), 1u);
+    EXPECT_FALSE( lambda->isRecursive() );
+    EXPECT_TRUE( lambda->getLambda()->isCapturing() );
+    EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
+            toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
+
+//TODO add nicer test for captureInitExpr
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>](real<8>)->int<4>:\
+            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{} }"));
+    EXPECT_TRUE(captureInit != 0);
+
+	// jobExpr
+	// needs something appropriate as argument
+//	auto parsedJob = parser.parseExpression("job< 0 >[]{default: 1}");
+//	std::cout << "JOB: " << parsedJob << std::endl;
+
+	// tupleExpr
+    std::vector<ExpressionPtr> exprVec;
+    exprVec.push_back(v);
+// TODO add another expression
+//    exprVec.push_back(callExpr);
+	auto builtTuple = builder.tupleExpr(exprVec);
+	auto parsedTuple = parser.parseExpression("tuple[int<4>:var]");
+	EXPECT_TRUE(!!builtTuple && !!parsedTuple && builtTuple->getType() == parsedTuple->getType());
+
+	// vectorExpr
+	auto vectorExpr = builder.vectorExpr(toVector<ExpressionPtr>(builder.intLit(0), builder.intLit(3)));
+    EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
+
+    // structExpr
+    Identifier first("first");
+    Identifier second("second");
+    std::pair<Identifier, ExpressionPtr> elem1 = std::make_pair( first, builder.literal("F", manager.basic.getChar()));
+    std::pair<Identifier, ExpressionPtr> elem2 = std::make_pair( second, builder.literal("1", manager.basic.getInt4()));
+    auto structExpr = builder.structExpr(toVector(elem1, elem2));
+    EXPECT_EQ( structExpr, parser.parseExpression("struct{first:lit<char, F>, second: 1}"));
+
+    // unionExpr
+    std::pair<Identifier, TypePtr> elem3 = std::make_pair( first, manager.basic.getChar());
+    std::pair<Identifier, TypePtr> elem4 = std::make_pair( second, manager.basic.getInt4());
+
+    auto unionExpr = builder.unionExpr(builder.unionType(toVector(elem3, elem4)), first, builder.literal("1", manager.basic.getChar()));
+    EXPECT_EQ( unionExpr, parser.parseExpression("union< union< first:char, second:int<4> > >{ first:'1' }"));
+
+    // memberAccessExpr
+    auto memberAccessExpr = builder.memberAccessExpr(structExpr, first);
+    EXPECT_EQ(memberAccessExpr, parser.parseExpression("(struct{first:lit<char, F>, second: 1}).first"));
+
+    // tupleProjectionExpr
+    auto builtTupleProjectionExpr = dynamic_pointer_cast<const TupleProjectionExpr>(builder.tupleProjectionExpr(builtTuple, 0));
+    auto parsedTupleProjectionExpr = dynamic_pointer_cast<const TupleProjectionExpr>(parser.parseExpression("(tuple[int<4>:v]).0"));
+    EXPECT_TRUE(!!builtTupleProjectionExpr && !! parsedTupleProjectionExpr);
+    EXPECT_EQ(builtTupleProjectionExpr->getIndex(), parsedTupleProjectionExpr->getIndex());
+    EXPECT_EQ(builtTupleProjectionExpr->getSubExpression()->getType(), parsedTupleProjectionExpr->getSubExpression()->getType());
+
+    auto markerExpr = builder.markerExpr(builder.intLit(42), 42);
+    EXPECT_EQ(markerExpr, parser.parseExpression("<me id = 42> 42 </me>"));
+}
+
+TEST(IRParser, StatementTests) {
+    NodeManager manager;
+    IRParser parser(manager);
+    ASTBuilder builder(manager);
+
+    // break statement
+    EXPECT_EQ(builder.breakStmt(), parser.parseStatement("break"));
+
+    // continue statement
+    EXPECT_EQ(builder.continueStmt(), parser.parseStatement("continue"));
+
+    // return statement
+    EXPECT_EQ(builder.returnStmt(builder.intLit(-1)), parser.parseStatement("return -1"));
+
+    // declaration statement
+    auto builtDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>
+        (builder.declarationStmt(builder.variable(manager.basic.getInt4()), builder.literal("42", manager.basic.getInt4())));
+    auto parsedDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>(parser.parseStatement("decl int<4>:var = 42"));
+    EXPECT_EQ(builtDeclarationStmt->getVariable()->getType(), parsedDeclarationStmt->getVariable()->getType());
+    EXPECT_EQ(builtDeclarationStmt->getInitialization(), parsedDeclarationStmt->getInitialization());
+
+    // compound statement
+    vector<StatementPtr> stmts;
+    // empty comound statement
+    EXPECT_EQ(builder.compoundStmt(stmts), parser.parseStatement("{}"));
+    stmts.push_back(builder.intLit(7));
+    stmts.push_back(builder.breakStmt());
+    stmts.push_back(builder.returnStmt(builder.intLit(0)));
+    auto compoundStmt = builder.compoundStmt(stmts); // CAUTION! will be reused later
+    EXPECT_EQ(compoundStmt, parser.parseStatement("{ 7; break; return 0 }"));
+
+    // while statement
+    auto whileStmt = builder.whileStmt(builder.intLit(1), compoundStmt);
+    EXPECT_EQ(whileStmt, parser.parseStatement("while(1){ 7; break; return 0 }"));
+
+    // for statement
+    auto builtForStmt = dynamic_pointer_cast<const ForStmt>(builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1)));
+    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0 }" ));
+    EXPECT_TRUE(!!builtForStmt && !!parsedForStmt);
+    EXPECT_EQ(builtForStmt->getStep(), parsedForStmt->getStep());
+    EXPECT_EQ(builtForStmt->getEnd(), parsedForStmt->getEnd());
+    EXPECT_EQ(builtForStmt->getDeclaration()->getInitialization(), parsedForStmt->getDeclaration()->getInitialization());
+    EXPECT_EQ(builtForStmt->getDeclaration()->getVariable()->getType(), parsedForStmt->getDeclaration()->getVariable()->getType());
+    EXPECT_EQ(compoundStmt, parsedForStmt->getBody());
+
+    // if statement
+    auto ifStmt = builder.ifStmt(builder.intLit(0), compoundStmt);
+    EXPECT_EQ(ifStmt, parser.parseStatement("if(0) { 7; break; return 0 }"));
+    ifStmt = builder.ifStmt(builder.intLit(1), builder.returnStmt(builder.intLit(0)), builder.returnStmt(builder.intLit(-1)));
+    EXPECT_EQ(ifStmt, parser.parseStatement("if(1) return 0 else return -1"));
+
+    // switch statement
+    vector<std::pair<ExpressionPtr, StatementPtr> > cases;
+    auto switchStmt = builder.switchStmt(builder.intLit(42), cases);
+ //   EXPECT_EQ(switchStmt, parser.parseStatement("switch ( 42 ) {}"));
+
+    cases.push_back(std::make_pair(builder.intLit(0), builder.returnStmt(builder.intLit(0))));
+    cases.push_back(std::make_pair(builder.intLit(1), builder.returnStmt(builder.intLit(1))));
+    switchStmt = builder.switchStmt(builder.intLit(42), cases);
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch(42 ){case 0: return 0; case 1: return 1}"));
+
+    switchStmt = builder.switchStmt(builder.intLit(42), cases, builder.returnStmt(builder.intLit(42)));
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch( 42) {case 0: return 0;case 1: return 1 ; default: return 42}"));
+
+    cases.clear();
+    switchStmt = builder.switchStmt(builder.intLit(42), cases, builder.returnStmt(builder.intLit(42)));
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch (42){;default: return 42}")); // does it make any sense to support this?
+
+    // marker statement
+    auto markerStmt = builder.markerStmt(whileStmt, 7);
+    EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0 } </ms>"));
 }
 
 TEST(IRParser, InteractiveTest) {

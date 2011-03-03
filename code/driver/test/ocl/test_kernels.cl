@@ -118,7 +118,7 @@ __kernel void barriers(__constant float* c, __global float* ga, __global int* gb
     uint lid = get_local_id(0);
     uint gid = get_global_id(0);
 
-    l[lid] = (float)c[gid];
+    l[lid] = 7.0f;//(float)c[gid];
     barrier(CLK_LOCAL_MEM_FENCE);
     ga[gid] = l[lid];
 }
@@ -147,12 +147,13 @@ __kernel void localMem(__constant float* c, __global float* ga, __global int* gb
  * NVIDIA Corporation is strictly prohibited.
  *
  */
-/*
+
  // OpenCL Kernel Function for element by element vector addition
+#pragma insieme mark
 __kernel void VectorAdd(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
     // get index into global data array
-    int iGID = get_global_id(0) ;
-    int iNumElements = gb[0]*gb[1]*gb[2];
+    int iGID = get_global_id(0) * gb[1] * gb[2] + get_global_id(1) * gb[2] + get_global_id(2);
+    int iNumElements = gb[0] * gb[1] * gb[2] - 17;
 
     // bound check (equivalent to the limit on a 'for' loop for standard/serial C code
     if (iGID >= iNumElements)
@@ -163,4 +164,4 @@ __kernel void VectorAdd(__constant float* c, __global float* ga, __global int* g
     // add the vector elements
     ga[iGID] = c[iGID] + gb[iGID];
 }
-*/
+

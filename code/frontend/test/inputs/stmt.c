@@ -89,19 +89,19 @@ void unary_op_test() {
 	#pragma test "decl ref<int<4>> v1 = ( var(0))"
 	int a = 0;
 
-//	#pragma test "bool.not(a)" TODO
+	#pragma test "(!CAST<bool>(( *v1)))"
 	!a;
 
 	#pragma test "v1"
 	+a;
 
-//	#pragma test "a" TODO
+	#pragma test "(CAST<int<4>>(0)-( *v1))"
 	-a;
 
-	// #pragma test "decl ref<array<ref<int<4>>,1>> v2 = ( var(v1))"
+	// #pragma test "decl ref<array<int<4>,1>> v1 = ( var(( *scalar.to.vector(v2))))"
 	int* b = &a;
 
-	//#pragma test "(( *v1)[0])"
+	#pragma test "array.ref.elem.1D(v1, 0)"
 	*b;
 
 	#pragma test \
@@ -127,12 +127,17 @@ struct Person { int weigth; int age; };
 void member_access_test() {
 	struct Person p;
 
-	#pragma test "( *v1).weigth"
+	#pragma test "composite.ref.elem(v1, weigth, int<4>)"
 	p.weigth;
 
+	// #pragma test "decl ref<array<struct<weigth:int<4>,age:int<4>>,1>> v1 = ( var(( *scalar.to.vector(v2))))"
 	struct Person* ptr = &p;
-	//#pragma test "( *(( *v1)[0])).age"
+
+	#pragma test "composite.ref.elem(array.ref.elem.1D(v1, 0), age, int<4>)"
 	ptr->age;
+
+	#pragma test "(composite.ref.elem(array.ref.elem.1D(v1, 0), age, int<4>) := 100)"
+	ptr->age = 100;
 }
 
 void if_stmt_test() {
@@ -195,8 +200,8 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-//	#pragma test \
-//	"{ (v1 := 0); while((( *v2)>1)) { { }; [v1, v2]fun[ref<int<4>> v6, ref<int<4>> v7](){ [v6]fun[ref<int<4>> v4](){ decl int<4> v3 = ( *v4); (v4 := (( *v4)+CAST<int<4>>(1))); return v3; }(); return (v7 := (( *v7)/2)); }(); };}"
+	#pragma test \
+	"{ (v1 := 0); while((( *v2)>1)) { { }; [v1, v2]fun[ref<int<4>> v3, ref<int<4>> v4](){ int.postInc(v3); (v4 := (( *v4)/2)); }(); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -334,44 +339,51 @@ void evil(int** anything) { }
 
 void vector_stmt_test() {
 
-	//#pragma test "decl ref<vector<ref<int<4>>,5>> v1 = ( var(vector.initUniform(( var(0)))))" // FIXME
+	#pragma test "decl ref<vector<int<4>,5>> v1 = ( var(undefined(vector<int<4>,5>)))"
 	int a[5];
 
 	#pragma test \
-	"(( *v1)[CAST<uint<4>>(0)])"
+	"array.ref.elem.1D(v1, CAST<uint<4>>(0))"
 	a[0];
 
 	#pragma test \
-	"((( *v1)[CAST<uint<4>>(0)]) := 1)"
+	"(array.ref.elem.1D(v1, CAST<uint<4>>(0)) := 1)"
 	a[0] = 1;
 
-	//#pragma test \
-	"decl ref<vector<vector<ref<int<4>>,2>,2>> v1 = ( var(vector.initUniform(vector.initUniform(( var(0))))))"
+	#pragma test \
+	"decl ref<vector<vector<int<4>,3>,2>> v1 = ( var(undefined(vector<vector<int<4>,3>,2>)))"
 	int b[2][3];
 
 	#pragma test \
-	"((( *v1)[CAST<uint<4>>(0)])[CAST<uint<4>>(0)])"
+	"array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(0)), CAST<uint<4>>(0))"
 	b[0][0];
 
 	#pragma test \
-	"(((( *v1)[CAST<uint<4>>(1)])[CAST<uint<4>>(1)]) := 0)"
+	"(array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
 	b[1][1] = 0;
 
-	//#pragma test \
-	"recFun v3 <?>{v3=fun[](array<ref<array<ref<int<4>>,1>>,1> v2) {}}</?>(( *v1))"
+	#pragma test \
+	"fun(ref<array<array<int<4>,1>,1>> v2){ }(v1)"
 	evil(b);
 }
 
+void* vf(void* ptr) { return ptr; }
+
 void init_expr() {
 
+	// #pragma test "decl ref<array<int<4>,1>> v1 = ( var(CAST<array<int<4>,1>>(null)))"
 	int* a = 0;
+
 	#pragma test \
 	"([( var(1)), ( var(2)), ( var(3))][CAST<uint<4>>(1)])"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;
-	//#pragma test \
-	"(v1 := struct{weigth:=( var(10)), age:=( var(20))})"
+	#pragma test \
+	"(v1 := struct{weigth:=10, age:=20})"
 	p = (struct Person) {10, 20};
+
+	// #pragma test "fun(ref<array<'a,1>> v2){ return ( *v2);}(v1)"
+	vf(a);
 
 }

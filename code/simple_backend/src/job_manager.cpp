@@ -63,6 +63,19 @@ namespace {
 		return expression;
 	}
 
+	/**
+	 * Determines whether the given type is a reference of an array or vector type.
+	 * TODO: move this to a more general case, use it more often (especially within the backend_convert.cpp)
+	 */
+	const bool isVectorOrArrayRef(const TypePtr& type) {
+		if (type->getNodeType() != NT_RefType) {
+			return false;
+		}
+		const RefTypePtr& refType = static_pointer_cast<const RefType>(type);
+		NodeType nodeType = refType->getElementType()->getNodeType();
+		return nodeType == NT_VectorType || nodeType == NT_ArrayType;
+	}
+
 }
 
 
@@ -113,13 +126,13 @@ void JobManager::createJob(const CodePtr& context, const core::JobExprPtr& job) 
 		// local shared variables
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 			ExpressionPtr init = cur->getInitialization();
-			cStr << ",";
+			cStr << (isVectorOrArrayRef(init->getType())?",&":",");
 			converter.convert(init);
 		});
 
 		// auto-captured variables
 		for_each(info.capturedVars, [&](const core::VariablePtr& var) {
-			cStr << ",";
+			cStr << (isVectorOrArrayRef(var->getType())?",&":",");
 			converter.convert(var);
 		});
 
@@ -194,9 +207,15 @@ namespace {
 	class VariableCollector : public core::ASTVisitor<> {
 
 		/**
+		 * A set of variables to be excluded.
+		 */
+		const utils::set::PointerSet<core::VariablePtr>& excluded;
+
+		/**
 		 * A reference to the resulting list of variables.
 		 */
 		vector<core::VariablePtr>& list;
+
 
 	public:
 
@@ -204,7 +223,7 @@ namespace {
 		 * Creates a new instance of this visitor based on the given list of variables.
 		 * @param list the list to be filled by this collector.
 		 */
-		VariableCollector(vector<core::VariablePtr>& list) : core::ASTVisitor<>(false), list(list) {}
+		VariableCollector(const utils::set::PointerSet<core::VariablePtr>& excluded, vector<core::VariablePtr>& list) : core::ASTVisitor<>(false), excluded(excluded), list(list) {}
 
 	protected:
 
@@ -214,7 +233,7 @@ namespace {
 		 */
 		void visitVariable(const core::VariablePtr& var) {
 			// collect this variable
-			if (!contains(list, var)) {
+			if (excluded.find(var) == excluded.end() && !contains(list, var)) {
 				list.push_back(var);
 			}
 		}
@@ -254,11 +273,12 @@ namespace {
 	 * Collects a list of variables to be captures by a job for proper initialization
 	 * of the various job branches.
 	 */
-	vector<core::VariablePtr> getVariablesToBeCaptured(const core::ExpressionPtr& job) {
+	vector<core::VariablePtr> getVariablesToBeCaptured(const core::ExpressionPtr& job, const utils::set::PointerSet<VariablePtr>& excluded = utils::set::PointerSet<VariablePtr>()) {
+
 		vector<core::VariablePtr> res;
 
 		// collect all variables potentially captured by this job
-		VariableCollector collector(res);
+		VariableCollector collector(excluded, res);
 		collector.visit(job);
 
 		return res;
@@ -290,8 +310,14 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 	string structName = "struct " + name;
 	string funName = "fun" + name;
 
+	// obtain list of local variable declarations (those must not be captured)
+	utils::set::PointerSet<VariablePtr> varsInJobScope;
+	for_each(job->getLocalDecls(), [&](const DeclarationStmtPtr& cur) {
+		varsInJobScope.insert(cur->getVariable());
+	});
+
 	// collect list of captured variables
-	vector<core::VariablePtr> varList = getVariablesToBeCaptured(job);
+	vector<core::VariablePtr> varList = getVariablesToBeCaptured(job, varsInJobScope);
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> mapping;
 	for_each(varList, [&](const core::VariablePtr& var) {
 		mapping.insert(std::make_pair(var, builder.variable(var->getType())));
@@ -325,7 +351,6 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 			string varName = converter.getNameManager().getName(var);
 			structStream << "\n";
 			structStream <<  converter.getTypeManager().formatParamter(jobStruct, var->getType(), varName, false) << ";";
-			structStream << "\t // Variable: " << toString(*var);
 		});
 
 	structStream << CodeStream::indL << "\n";

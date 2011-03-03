@@ -57,7 +57,6 @@ typedef std::set<core::VariablePtr, lt_ident> VarSet;
 
 /**
  * Returns the list of variables referenced within an expression.
- *
  * This class is used when a code block needs to be transformed into a function
  */
 struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {

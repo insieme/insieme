@@ -15,19 +15,19 @@ struct __insieme_globals {
     int b;
 };
 
-// start code fragment :: Prototype for external function: printf //
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Definition of main //
 int main() {
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((((*var_1).a)) = 0);
-		((((*var_1).b)) = 0);
-		((((*var_1).a)) = 1);
-		((((*var_1).b)) = 2);
-		printf("Min: %d\n", ((((((*var_1).a))<(((*var_1).b))))?((((*var_1).a))):((((*var_1).b)))));
-		printf("Max: %d\n", ((((((*var_1).a))>(((*var_1).b))))?((((*var_1).a))):((((*var_1).b)))));
+		((*(&((*var_1).a))) = 0);
+		((*(&((*var_1).b))) = 0);
+		((*(&((*var_1).a))) = 1);
+		((*(&((*var_1).b))) = 2);
+		printf("Min: %d\n", ((((*(&((*var_1).a)))<(*(&((*var_1).b)))))?((*(&((*var_1).a)))):((*(&((*var_1).b))))));
+		printf("Max: %d\n", ((((*(&((*var_1).a)))>(*(&((*var_1).b)))))?((*(&((*var_1).a)))):((*(&((*var_1).b))))));
 	}
 }
 

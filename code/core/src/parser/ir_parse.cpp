@@ -37,6 +37,7 @@
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/parser/expression_parse.h"
+#include "insieme/core/parser/statement_parse.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -74,6 +75,17 @@ ExpressionPtr IRParser::parseExpression(const std::string& input) {
 	return result;
 }
 
+StatementPtr IRParser::parseStatement(const std::string& input) {
+    StatementPtr result;
+    StatementGrammar stmtGrammar(nodeMan);
+    auto startIt = input.cbegin(), endIt = input.cend();
+    bool parse_result = qi::phrase_parse(startIt, endIt, stmtGrammar, qi::space, result);
+    parse_result = parse_result && (startIt == endIt);
+    if(!parse_result) throw ParseException();
+    return result;
+//    return ReturnStmt::get(nodeMan, parseExpression("0"));
+}
+
 TypePtr parseType(NodeManager& nodeMan, const string& input) {
 	IRParser parser(nodeMan);
 	return parser.parseType(input);
@@ -81,6 +93,10 @@ TypePtr parseType(NodeManager& nodeMan, const string& input) {
 ExpressionPtr parseExpression(NodeManager& nodeMan, const string& input) {
 	IRParser parser(nodeMan);
 	return parser.parseExpression(input);
+}
+StatementPtr parseStatement(NodeManager& nodeMan, const string& input) {
+    IRParser parser(nodeMan);
+    return parser.parseStatement(input);
 }
 
 } // namespace parse 

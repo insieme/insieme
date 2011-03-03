@@ -243,7 +243,8 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	if (captures.empty()) {
 		out << "\n";
 		out << "// Type safe function for invoking lambdas of type " << name << "\n";
-		out << getTypeName(functorAndCaller, functionType->getReturnType());
+		string resultType = getTypeName(functorAndCaller, functionType->getReturnType());
+		out << resultType;
 		out << " " << callerName << "(struct " << name << "* lambda";
 		int i = 0;
 		if (!arguments.empty()) {
@@ -251,7 +252,9 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 				out << formatParamter(functorAndCaller, cur, format("p%d", ++i), true);
 			});
 		}
-		out << ") { return lambda->fun(lambda";
+		out << ") { ";
+		if (resultType != "void") out << "return";
+		out << " lambda->fun(lambda";
 		i = 0;
 		if (!arguments.empty()) {
 			out << ", " << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
@@ -273,9 +276,14 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 
 	// special handling for void* type
 	if (ArrayTypePtr arrayType = dynamic_pointer_cast<const ArrayType>(ptr->getElementType())) {
-		if (basic.isRefAlpha(arrayType->getElementType())) {
+		if ((arrayType->getElementType()->getNodeType() == NT_TypeVariable)
+				|| (basic.isRefAlpha(arrayType->getElementType()))) {
+
 			return toEntry("void*");
 		}
+	}
+	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
+		return toEntry("void*");
 	}
 	if(basic.isRefAlpha(ptr)) {
 		return toEntry("void*");
@@ -310,7 +318,10 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
-	// special handling for void* type (array<ref<'a>>)
+	// special handling for void* type (array<ref<'a>,1> and array<'a,1>)
+	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
+		return toEntry("void*");
+	}
 	if(basic.isRefAlpha(ptr->getElementType())) {
 		return toEntry("void*");
 	}
@@ -349,11 +360,11 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 		type = arrayType->getElementType();
 		kind = type->getNodeType();
 
-		// discard embedded reference type
-		if (kind == NT_RefType) {
-			type = static_pointer_cast<const RefType>(type)->getElementType();
-			kind = type->getNodeType();
-		}
+//		// discard embedded reference type
+//		if (kind == NT_RefType) {
+//			type = static_pointer_cast<const RefType>(type)->getElementType();
+//			kind = type->getNodeType();
+//		}
 	}
 
 	// count vectors
@@ -368,32 +379,51 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 		type = vectorType->getElementType();
 		kind = type->getNodeType();
 
-		// discard embedded reference type
-		if (kind == NT_RefType) {
-			type = static_pointer_cast<const RefType>(type)->getElementType();
+//		// discard embedded reference type
+//		if (kind == NT_RefType) {
+//			type = static_pointer_cast<const RefType>(type)->getElementType();
+//			kind = type->getNodeType();
+//		}
+	}
+
+	// consider case where arrays are embedded within vectors
+	bool vectorOfArrays = false;
+	if (kind == NT_ArrayType && arrayCount == 0) {
+		vectorOfArrays = true;
+		while(kind == NT_ArrayType) {
+			ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
+
+			// check type of dimension
+			IntTypeParam dim = arrayType->getDimension();
+			if (dim.getType() != IntTypeParam::CONCRETE) {
+				return toEntry("[[ Unsupported generic array types ]]");
+			}
+			arrayCount += dim.getValue();
+
+			type = arrayType->getElementType();
 			kind = type->getNodeType();
 		}
 	}
-
 	// check for a mixed node
-	if (kind == NT_ArrayType || kind == NT_RefType) {
-		// mixed mode ... just finish counting and use stars
-		while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
-			refCount++;
-			type = static_pointer_cast<const SingleElementType>(type)->getElementType();
-			kind = type->getNodeType();
-		}
-
-		// sum up references
-		refCount += arrayCount + vectorCount;
-
-		// reset array and vector counts (if mixed, everything is done via ref)
-		arrayCount = 0;
-		vectorCount = 0;
-
-		// make an assertion on the result
-		assert(refCount > 0 && "RefCount should be larger than 0!");
-	}
+	assert(kind != NT_VectorType && kind != NT_RefType && kind != NT_ArrayType && "Mixed array/vector/ref mode not supported yet!");
+//	if (kind == NT_VectorType || kind == NT_RefType) {
+//		// mixed mode ... just finish counting and use stars
+//		while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
+//			refCount++;
+//			type = static_pointer_cast<const SingleElementType>(type)->getElementType();
+//			kind = type->getNodeType();
+//		}
+//
+//		// sum up references
+//		refCount += arrayCount + vectorCount;
+//
+//		// reset array and vector counts (if mixed, everything is done via ref)
+//		arrayCount = 0;
+//		vectorCount = 0;
+//
+//		// make an assertion on the result
+//		assert(refCount > 0 && "RefCount should be larger than 0!");
+//	}
 
 
 	// reduce number of references if declaring a C array (implicit in C)
@@ -401,11 +431,19 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 
 	// reduce ref-count by 1 (since outermost is implicit in C) - except for pure vectors
 	refCount -= (ptr->getNodeType() != NT_VectorType)?1:0;
+	if (refCount < 0) {
+		// not sub-zero value allowed
+		refCount = 0;
+	}
 
 	// create type declaration
 	Entry elementType = resolveType(type);
 	string prefix = elementType.lValueName;
-	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
+//	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
+//		prefix += "(";
+//	}
+	bool requiresInnerParenthesis = !vectorOfArrays && (refCount + arrayCount > 0) && vectorCount > 0;
+	if (requiresInnerParenthesis) {
 		prefix += "(";
 	}
 	for (int i=0; i<refCount; i++) {
@@ -414,9 +452,13 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 	for (int i=0; i<arrayCount; i++) {
 		prefix += "*";
 	}
-	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
+//	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
+//		postfix = ")" + postfix;
+//	}
+	if (requiresInnerParenthesis) {
 		postfix = ")" + postfix;
 	}
+//	postfix =  postfix + "\t/*" + toString(*ptr) + format(" => refCount=%d, arrayCount=%d, vectorCount=%d */", refCount, arrayCount, vectorCount);
 	//return prefix + " " + name + postfix;
 	if (ptr->getNodeType() == NT_VectorType || ptr->getNodeType() == NT_ArrayType) {
 		// special treatement for C vectors

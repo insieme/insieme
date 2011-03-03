@@ -3,8 +3,8 @@
 //  Entry Point: 
 fun(){
         merge(parallel(job([1-inf]){
-            default: fun(){
-                printf("hello world\n", varlist.pack(()));
+            default: []fun(){
+                printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
             }
         }));
     }
@@ -17,8 +17,8 @@ fun(){
 //  Entry Point: 
 fun(){
         merge(parallel(job(([1-inf])){
-            default: fun(){
-                printf("hello world\n", varlist.pack(()));
+            default: []fun(){
+                printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
             }
         }));
     }

@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         return fun(int<4> v3, int<4> v4){
             return fun(int<4> v5){
                 return v5-1;
@@ -15,7 +15,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         return fun(int<4> v3, int<4> v4){
             return (fun(int<4> v5){
                 return (v5-1);

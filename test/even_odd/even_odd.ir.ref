@@ -1,10 +1,10 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v3 =  var(10);
-        printf("x=%d\n", varlist.pack((v3)));
-        printf("even(x)=%s\n", varlist.pack((ite(recFun v4 {
+        printf(string.as.char.pointer("x=%d\n"), varlist.pack((v3)));
+        printf(string.as.char.pointer("even(x)=%s\n"), varlist.pack((ite(recFun v4 {
             v4 = fun(uint<4> v6){
                 return ite(v6==0, fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7(v8-1));
             };
@@ -12,7 +12,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
                 return ite(v11==0, fun()return 0, [v4, v11]fun[((uint<4>)->int<4>) v12, uint<4> v13]()return v12(v13-1));
             };
         }(v3), fun()return "true", fun()return "false"))));
-        printf("odd(x)=%s\n", varlist.pack((ite(recFun v5 {
+        printf(string.as.char.pointer("odd(x)=%s\n"), varlist.pack((ite(recFun v5 {
             v4 = fun(uint<4> v6){
                 return ite(v6==0, fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7(v8-1));
             };
@@ -29,10 +29,10 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v3 = ( var(10));
-        printf("x=%d\n", varlist.pack((( *v3))));
-        printf("even(x)=%s\n", varlist.pack((ite(CAST<bool>(recFun v4 {
+        printf(string.as.char.pointer("x=%d\n"), varlist.pack((( *v3))));
+        printf(string.as.char.pointer("even(x)=%s\n"), varlist.pack((ite(CAST<bool>(recFun v4 {
             v4 = fun(uint<4> v6){
                 return ite((v6==CAST<uint<4>>(0)), fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7((v8-CAST<uint<4>>(1))));
             };
@@ -40,7 +40,7 @@ fun(int<4> v1, array<ref<array<ref<char>,1>>,1> v2){
                 return ite((v11==CAST<uint<4>>(0)), fun()return 0, [v4, v11]fun[((uint<4>)->int<4>) v12, uint<4> v13]()return v12((v13-CAST<uint<4>>(1))));
             };
         }(CAST<uint<4>>(( *v3)))), fun()return "true", fun()return "false"))));
-        printf("odd(x)=%s\n", varlist.pack((ite(CAST<bool>(recFun v5 {
+        printf(string.as.char.pointer("odd(x)=%s\n"), varlist.pack((ite(CAST<bool>(recFun v5 {
             v4 = fun(uint<4> v6){
                 return ite((v6==CAST<uint<4>>(0)), fun()return 1, [v5, v6]fun[((uint<4>)->int<4>) v7, uint<4> v8]()return v7((v8-CAST<uint<4>>(1))));
             };

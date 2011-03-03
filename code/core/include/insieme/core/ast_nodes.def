@@ -236,6 +236,11 @@ AST_TERMINAL(MarkerExpr, Expression)
 AST_TERMINAL(MarkerStmt, Statement)
 
 
+//
+// --- Placeholder ---
+//
+AST_TERMINAL(Placeholder, Node)
+
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 
 // --- Cleaning up Macro definitions ---

@@ -42,8 +42,20 @@ namespace insieme {
 namespace core {
 namespace parse {
 
+typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
+typedef vector<VariablePtr> VariableList;
+typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > Definitions;
+typedef std::vector<std::pair<Identifier, ExpressionPtr> > Members;
 // FW Declaration
 struct TypeGrammar;
+
+// helper function to be able to use std::make_pair along with ph::push_back
+
+template<typename T, typename U>
+std::pair<T, U> makePair (T first, U second) {
+    return std::make_pair(first, second);
+}
+
 
 class VariableTable {
 	NodeManager& nodeMan;
@@ -69,11 +81,34 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 	qi::rule<ParseIt, LiteralPtr(), qi::space_type> literalExpr;
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> opExpr;
 	qi::rule<ParseIt, VariablePtr(), qi::space_type> variableExpr;
+    qi::rule<ParseIt, VariablePtr(), qi::space_type> funVarExpr;
 	
-	qi::rule<ParseIt, ExpressionPtr(), qi::locals<ExpressionList>, qi::space_type> callExpr;
-	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> castExpr;
+	qi::rule<ParseIt, CallExprPtr(), qi::locals<ExpressionList>, qi::space_type> callExpr;
+	qi::rule<ParseIt, CastExprPtr(), qi::space_type> castExpr;
 
 	qi::rule<ParseIt, ExpressionPtr(), qi::space_type> expressionRule;
+
+	// literals -----------------------------------------------------------------------------
+	qi::rule<ParseIt, LiteralPtr(), qi::space_type> charLiteral;
+
+	// --------------------------------------------------------------------------------------
+    qi::rule<ParseIt, LambdaPtr(), qi::locals<VariableList, VariableList>, qi::space_type> lambda;
+    qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<Definitions>, qi::space_type> lambdaDef;
+    qi::rule<ParseIt, LambdaExprPtr(), qi::space_type> lambdaExpr;
+
+    qi::rule<ParseIt, CaptureInitExprPtr(), qi::locals<std::vector<ExpressionPtr> >, qi::space_type> captureInitExpr;
+
+    qi::rule<ParseIt, JobExprPtr(), qi::locals</*vector<DeclarationStmtPtr>,*/ GuardedStmts>, qi::space_type> jobExpr;
+    qi::rule<ParseIt, TupleExprPtr(), qi::locals<ExpressionList>, qi::space_type> tupleExpr;
+	qi::rule<ParseIt, VectorExprPtr(), qi::locals<VectorTypePtr, ExpressionList>, qi::space_type> vectorExpr;
+	qi::rule<ParseIt, StructExprPtr(), qi::locals<Members>, qi::space_type> structExpr;
+    qi::rule<ParseIt, UnionExprPtr(), qi::space_type> unionExpr;
+
+    qi::rule<ParseIt, MemberAccessExprPtr(), qi::space_type> memberAccessExpr;
+    qi::rule<ParseIt, TupleProjectionExprPtr(), qi::space_type> tupleProjectionExpr;
+    qi::rule<ParseIt, MarkerExprPtr(), qi::space_type> markerExpr;
+;
+    // --------------------------------------------------------------------------------------
 };
 
 }

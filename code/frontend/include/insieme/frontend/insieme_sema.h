@@ -58,8 +58,8 @@ class MatchMap;
 // ------------------------------------ InsiemeSema ---------------------------
 
 /**
- * This purpose of this class is to overload the behavior of clang parser in a way every time an AST node is created, pending pragmas are correctly associated
- * to it.
+ * This purpose of this class is to overload the behavior of clang parser in a way every time an AST node is created,
+ * pending pragmas are correctly associated to it.
  */
 class InsiemeSema: public clang::Sema{
 	class InsiemeSemaImpl;

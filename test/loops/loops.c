@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 int N = 10;
+int i;
 
 int func(int k) {
 	
@@ -13,6 +14,13 @@ int func(int k) {
 		printf("k=%d\n", k);
 	}
 	
+}
+
+int i;
+void func2() {
+	for(i=10; i>=0; i--) {
+		printf("k=%d\n", i);
+	}
 }
 
 int main(int argc, char* argv[]) {
@@ -35,6 +43,10 @@ int main(int argc, char* argv[]) {
 		printf("idx=%d", a);
 	}
 	
+	for(a=15;a>=0;a-=3) {
+		printf("a=%d\n", a);
+	}
+
 	for(a=1;a<15;a+=3) {
 		printf("a=%d\n", a);
 	}
@@ -53,5 +65,6 @@ int main(int argc, char* argv[]) {
 	printf("a=%d\n", a);
 	
 	func(a);
+	func2();
 	
 }
