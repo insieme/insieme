@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/core/parser/ir_parse.h"
+//#include "insieme/core/parser/expression_parse_part.h"
+#include "insieme/core/parser/statement_parse.h"
 
 namespace insieme {
 namespace core {
@@ -46,36 +48,40 @@ typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
 typedef vector<VariablePtr> VariableList;
 typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > Definitions;
 typedef std::vector<std::pair<Identifier, ExpressionPtr> > Members;
+
 // FW Declaration
 struct TypeGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
-
 template<typename T, typename U>
 std::pair<T, U> makePair (T first, U second) {
     return std::make_pair(first, second);
 }
 
-
 class VariableTable {
-	NodeManager& nodeMan;
-	std::map<Identifier, VariablePtr> table;
+    NodeManager& nodeMan;
+    std::map<Identifier, VariablePtr> table;
 
 public:
-	VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
+    VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
 
-	VariablePtr get(const TypePtr& typ, const Identifier& id);
+    VariablePtr get(const TypePtr& typ, const Identifier& id);
 };
 
 struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {
 	TypeGrammar *typeG; // pointer for weak coupling
+//	ExpressionGrammarPart *exprGpart;
+	StatementGrammar* stmtG;
 	VariableTable varTab;
+	bool deleteStmtG;
 	
-	ExpressionGrammar(NodeManager& nodeMan);
+	ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar = NULL);
 	~ExpressionGrammar();
 
 	// terminal rules, no skip parsing
+    qi::rule<ParseIt, string(), qi::locals<string>, qi::space_type> exprString;
 	qi::rule<ParseIt, string()> literalString;
+    qi::rule<ParseIt, string(), string, qi::space_type> anyString;
 
 	// nonterminal rules with skip parsing
 	qi::rule<ParseIt, LiteralPtr(), qi::space_type> literalExpr;
@@ -107,7 +113,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
     qi::rule<ParseIt, MemberAccessExprPtr(), qi::space_type> memberAccessExpr;
     qi::rule<ParseIt, TupleProjectionExprPtr(), qi::space_type> tupleProjectionExpr;
     qi::rule<ParseIt, MarkerExprPtr(), qi::space_type> markerExpr;
-;
+
     // --------------------------------------------------------------------------------------
 };
 

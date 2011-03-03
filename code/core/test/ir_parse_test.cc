@@ -119,21 +119,22 @@ TEST(IRParser, ExpressionTests) {
 	// literal
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
-	
+
 	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
-
+/*
 	// merge all
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
 //    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
-
+*/
     // lambda using definition
 // TODO add statement to test once it is there
     auto lambda = dynamic_pointer_cast<const LambdaExpr>( parser.parseExpression(
-        "fun [uint<2>, real<4>](real<8>)->int<4>:lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{} }"));
+        "fun [uint<2>, real<4>](real<8>)->int<4>:lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4> {\
+            { break} } }"));
     EXPECT_TRUE(lambda != 0);
     EXPECT_EQ( lambda->getCaptureList().size(), 2u );
     EXPECT_EQ( lambda->getParameterList().size(), 1u);
@@ -141,10 +142,11 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_TRUE( lambda->getLambda()->isCapturing() );
     EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
             toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
+    EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
 
 //TODO add nicer test for captureInitExpr
     auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>](real<8>)->int<4>:\
-            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{} }"));
+            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
 
 	// jobExpr

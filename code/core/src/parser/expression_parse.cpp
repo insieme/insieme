@@ -69,20 +69,20 @@ namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
 VariablePtr VariableTable::get(const TypePtr& typ, const Identifier& id) {
-	auto entry = table.find(id);
-	if(entry != table.end()) {
-		assert(entry->second->getType() == typ);
-		return entry->second;
-	}
-	VariablePtr newVar = Variable::get(nodeMan, typ);
-	table[id] = newVar;
-	return newVar;
+    auto entry = table.find(id);
+    if(entry != table.end()) {
+        assert(entry->second->getType() == typ);
+        return entry->second;
+    }
+    VariablePtr newVar = Variable::get(nodeMan, typ);
+    table[id] = newVar;
+    return newVar;
 }
 
 CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, ExpressionList arguments) {
-	//TODO determine return type by inference (arguments may be empty!)
-	ASTBuilder build(nodeMan);
-	return build.callExpr(callee, arguments);
+    //TODO determine return type by inference (arguments may be empty!)
+    ASTBuilder build(nodeMan);
+    return build.callExpr(callee, arguments);
 }
 
 LiteralPtr buildCharLiteral(NodeManager& nodeMan, char val) {
@@ -111,10 +111,11 @@ JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, co
     return JobExpr::get(manager, defaultStmt, guardedStmts);
 }
 
-LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params) {
-// build a stmtExpr bc the builder cannot at the moment
+LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params, const StatementPtr& body ) {
+//std::cout << "BODY: " << body << std::endl;
+    // build a stmtExpr bc the builder cannot at the moment
     ASTBuilder build(nodeMan);
-    vector<StatementPtr> stmts;
+//    vector<StatementPtr> stmts;
     vector<TypePtr> captureTypes;
     vector<TypePtr> paramTypes;
 
@@ -127,7 +128,7 @@ LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const Va
     });
 
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
-    return build.lambda(build.functionType(captureTypes, paramTypes, retType), captureList, params, build.compoundStmt(stmts));
+    return build.lambda(build.functionType(captureTypes, paramTypes, retType), captureList, params, body);
 }
 
 void callDepthCheck(bool reset, unsigned& callDepthCount) {
@@ -138,8 +139,23 @@ void callDepthCheck(bool reset, unsigned& callDepthCount) {
 	}
 }
 
-ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan) 
-	: ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
+
+string buildString(string s) {
+    return s;
+}
+
+ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar)
+	: ExpressionGrammar::base_type(expressionRule)/*, exprGpart(new ExpressionGrammarPart(nodeMan))*/, varTab(nodeMan) {
+
+    typeG = new TypeGrammar(nodeMan);
+    if(stmtGrammar == NULL) {
+        stmtG = new StatementGrammar(nodeMan);
+        deleteStmtG = true;
+    }
+    else {
+        stmtG = stmtGrammar;
+        deleteStmtG = true;
+    }
 
 	auto nManRef = ph::ref(nodeMan);
 	auto basicRef = ph::ref(nodeMan.basic);
@@ -149,8 +165,12 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	// RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 
 	// terminals, no skip parser
+    exprString =
+        (+(qi::char_ - "}")                                         [ ph::push_back(qi::_a, qi::_1) ]
+          )                                                         [ qi::_val =  ph::bind(&buildString, qi::_a) ];
 
-	literalString = 
+
+	literalString = //exprGpart->literalString;
 		*(qi::char_ - ">");
 	
 	// nonterminals, skip parser 
@@ -163,16 +183,16 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	// Fixed by adding parserGet to Literal, TODO should probably just remove one of the gets in Literal
 
 	// literals --------------------------------------------------------------------------------------------------------------------------
-	charLiteral =
+	charLiteral = //exprGpart->charLiteral;
         ( qi::lit("'") >> qi::char_ >> "'")                         [ qi::_val = ph::bind(&buildCharLiteral, nManRef, qi::_1) ];
 
 	// -----------------------------------------------------------------------------------------------------------------------------------
 
-	literalExpr =
-		( qi::lit("lit<") >> typeG->typeRule >> ',' 
+	literalExpr = //exprGpart->literalExpr;
+		( qi::lit("lit<") >> typeG->typeRule >> ','
 		>> literalString >> '>' )									[ qi::_val = ph::bind(&Literal::parserGet, nManRef, qi::_1, qi::_2) ];
 
-	opExpr =
+	opExpr = //exprGpart->opExpr;
 		( qi::lit("op<") >> literalString >> '>' )					[ qi::_val = ph::bind(&lang::BasicGenerator::getLiteral, basicRef, qi::_1) ];
 
 	variableExpr =
@@ -182,12 +202,12 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 	funVarExpr =
         ( typeG->functionType >> ':' >> typeG->identifier )         [ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
 
-	callExpr =
+	callExpr = //exprGpart->callExpr;
 		( qi::lit("(") >> expressionRule >> '(' >> -(expressionRule	[ ph::push_back(qi::_a, qi::_1) ]
 		  % ',') >> ')' >> ')' )									[ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_a) ];
 
-	castExpr =
-		( qi::lit("CAST<") >> typeG->typeRule 
+	castExpr = //exprGpart->castExpr;
+		( qi::lit("CAST<") >> typeG->typeRule
 		>> '>' >> '(' >> expressionRule >> ')' )					[ qi::_val = ph::bind(&CastExpr::get, nManRef, qi::_1, qi::_2) ];
 
     // --------------------------------------------------------------------------------------
@@ -196,7 +216,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
         ( qi::lit("[") >> -(variableExpr                            [ ph::push_back(qi::_a, qi::_1) ]
           % ',') >> ']' >> '(' >> -(variableExpr                    [ ph::push_back(qi::_b, qi::_1) ]
           % ',') >> ')' >> qi::lit("->")
-        >> typeG->typeRule >> '{' >> /*statement >> */ '}')         [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_3, qi::_a, qi::_b/*, qi::_4*/ )];
+        >> typeG->typeRule >> '{' >> stmtG->statementRule
+        >> '}')                                                     [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_3, qi::_a, qi::_b, qi::_4 )];
 
     lambdaDef =
         ( qi::lit("{") >> +((funVarExpr >> '=' >> lambda)           [ ph::insert(qi::_a, ph::bind(&makePair<VariablePtr, LambdaPtr>, qi::_1, qi::_2)) ]
@@ -241,16 +262,15 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
         >> '{' >> typeG->identifier >> ':'
         >> expressionRule >> '}' )                                  [ qi::_val = ph::bind(&UnionExpr::get, nManRef, qi::_1, qi::_2, qi::_3) ];
 
-//TODO find a way to avoid recursion without surrounding brackets
-    memberAccessExpr =
+    memberAccessExpr = //exprGpart->memberAccessExpr;
         ( '(' >> expressionRule >> qi::lit(").")
         >> typeG->identifier )                                      [ qi::_val = ph::bind(&MemberAccessExpr::get, nManRef, qi::_1, qi::_2) ];
 
-    tupleProjectionExpr =
+    tupleProjectionExpr = //exprGpart->tupleProjectionExpr;
         ( '(' >> expressionRule >> qi::lit(").")
         >> qi::ulong_long )                                         [ qi::_val = ph::bind(&TupleProjectionExpr::get, nManRef, qi::_1, qi::_2) ];
 
-    markerExpr =
+    markerExpr = //exprGpart->markerExpr;
         ( '<' >> qi::lit("me") >> qi::lit("id") >> '='
         >> qi::ulong_long >> '>' >> expressionRule >> '<'
         >> '/' >> qi::lit("me") >> '>')                            [ qi::_val = ph::bind(&MarkerExpr::get, nManRef, qi::_2, qi::_1) ];
@@ -280,21 +300,22 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
       | qi::int_                                                    [ qi::_val = ph::bind(&buildIntLiteral, nManRef, qi::_1) ];
 
     // --------------------------------------------------------------------------------------
-//    BOOST_SPIRIT_DEBUG_NODE(charLiteral);
-//    BOOST_SPIRIT_DEBUG_NODE(lambda);
-//    BOOST_SPIRIT_DEBUG_NODE(captureInitExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
-//    BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(structExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(unionExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(memberAccessExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(tupleProjectionExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(markerExpr);
+/*	BOOST_SPIRIT_DEBUG_NODE(literalString);
+	BOOST_SPIRIT_DEBUG_NODE(charLiteral);
+    BOOST_SPIRIT_DEBUG_NODE(lambda);
+    BOOST_SPIRIT_DEBUG_NODE(captureInitExpr);
+    BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
+    BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
+    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
+    BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
+    BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
+    BOOST_SPIRIT_DEBUG_NODE(structExpr);
+    BOOST_SPIRIT_DEBUG_NODE(unionExpr);
+    BOOST_SPIRIT_DEBUG_NODE(memberAccessExpr);
+    BOOST_SPIRIT_DEBUG_NODE(tupleProjectionExpr);
+    BOOST_SPIRIT_DEBUG_NODE(markerExpr);
 	// --------------------------------------------------------------------------------------
-/*	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
+	BOOST_SPIRIT_DEBUG_NODE(literalExpr);
 	BOOST_SPIRIT_DEBUG_NODE(opExpr);
 	BOOST_SPIRIT_DEBUG_NODE(variableExpr);
 	BOOST_SPIRIT_DEBUG_NODE(callExpr);
@@ -304,6 +325,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan)
 
 ExpressionGrammar::~ExpressionGrammar() {
 	delete typeG;
+	if(deleteStmtG)
+	    delete stmtG;
 }
 
 } // namespace parse 
