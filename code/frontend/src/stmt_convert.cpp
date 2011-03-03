@@ -59,7 +59,7 @@ namespace fe = insieme::frontend;
 
 namespace {
 
-//------------------- StmtWrapper -------------------------------------------------------------
+//-------------------------------------------- StmtWrapper ------------------------------------------------------------
 /*
  * Utility class used as a return type for the StmtVisitor. It can store a list of statement
  * as conversion of a single C stmt can result in multiple IR statements.
@@ -78,14 +78,18 @@ struct StmtWrapper: public StatementList {
 
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
 core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const StatementList& stmtVect) {
-	if( stmtVect.size() == 1 )
+	if ( stmtVect.size() == 1 )
 		return stmtVect.front();
 	return builder.compoundStmt(stmtVect);
 }
 
-core::ExpressionPtr makeOperation(const core::ASTBuilder& builder, const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs,
-		const core::lang::BasicGenerator::Operator& op) {
-	return builder.callExpr(lhs->getType(), builder.getBasicGenerator().getOperator(lhs->getType(), op), toVector<core::ExpressionPtr>(lhs, rhs));
+core::ExpressionPtr makeOperation(const core::ASTBuilder& builder, const core::ExpressionPtr& lhs,
+								  const core::ExpressionPtr& rhs,	const core::lang::BasicGenerator::Operator& op) {
+	return builder.callExpr(
+			lhs->getType(), 												// return type
+			builder.getBasicGenerator().getOperator(lhs->getType(), op), 	// get the oprtator
+			toVector<core::ExpressionPtr>(lhs, rhs) 						// LHS and RHS of the operation
+		);
 }
 
 }
@@ -94,9 +98,9 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 							Printing macros for statements
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 										  Printing macros for statements
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define FORWARD_VISITOR_CALL(StmtTy) \
 	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(stmt) ); }
 
@@ -105,7 +109,8 @@ namespace conversion {
 	assert(convFact.currTU); \
 	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
-			 << "-> at location: (" << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
+			 << "-> at location: (" \
+			 << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang statement:\n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
@@ -117,11 +122,9 @@ namespace conversion {
 	VLOG(1) << "\t" << *stmt;
 
 
-//#############################################################################
-//
+//---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER
-//
-//############################################################################
+//---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 	ConversionFactory& convFact;
 
@@ -134,27 +137,28 @@ public:
 	// In clang a declstmt is represented as a list of VarDecl
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
-		if( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
+		if ( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
 			try {
-				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
+				core::DeclarationStmtPtr&& retStmt =
+						convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
 				// handle eventual OpenMP pragmas attached to the Clang node
 				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
 				return StmtWrapper( annotatedNode );
-			} catch(const GlobalVariableDeclarationException& err) {
+			} catch ( const GlobalVariableDeclarationException& err ) {
 				return StmtWrapper();
 			}
 		}
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
-		for(clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it)
-			if( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
+		for ( clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
+			if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 				try {
 					core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 					// handle eventual OpenMP pragmas attached to the Clang node
 					core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
 					retList.push_back( annotatedNode );
-				} catch(const GlobalVariableDeclarationException& err) { }
+				} catch ( const GlobalVariableDeclarationException& err ) { }
 			}
 		return retList;
 	}
@@ -167,7 +171,7 @@ public:
 		core::ExpressionPtr retExpr;
 
 		core::TypePtr retTy;
-		if(Expr* expr = retStmt->getRetValue()) {
+		if ( Expr* expr = retStmt->getRetValue() ) {
 			retExpr = convFact.convertExpr( expr );
 			retTy = convFact.convertType( expr->getType().getTypePtr() );
 		} else {
@@ -175,10 +179,11 @@ public:
 			retTy = convFact.builder.getBasicGenerator().getUnit();
 		}
 
-		// arrays and vectors in C are always returned as reference, so the type of
-		// the return expression is of array (or vector) type we are sure we have
-		// to return a reference, in the other case we can safely deref the retExpr
-		if(retTy->getNodeType() != core::NT_ArrayType && retTy->getNodeType() != core::NT_VectorType) {
+		/*
+		 * arrays and vectors in C are always returned as reference, so the type of the return expression is of array
+		 * (or vector) type we are sure we have to return a reference, in the other case we can safely deref the retExpr
+		 */
+		if ( retTy->getNodeType() != core::NT_ArrayType && retTy->getNodeType() != core::NT_VectorType ) {
 			retExpr = convFact.tryDeref(retExpr);
 		}
 
@@ -213,10 +218,10 @@ public:
 			core::VariablePtr oldInductionVar;
 			core::ExpressionPtr&& inductionVar = convFact.lookUpVariable(loopAnalysis.getInductionVar());
 
-			if( isa<ParmVarDecl>(loopAnalysis.getInductionVar()) ) {
+			if ( isa<ParmVarDecl>(loopAnalysis.getInductionVar()) ) {
 				const core::VariablePtr& indVar = core::static_pointer_cast<const core::Variable>(inductionVar);
 				auto fit = convFact.ctx.wrapRefMap.find(indVar);
-				if(fit == convFact.ctx.wrapRefMap.end()) {
+				if ( fit == convFact.ctx.wrapRefMap.end() ) {
 					fit = convFact.ctx.wrapRefMap.insert(
 						std::make_pair(indVar, builder.variable( builder.refType(inductionVar->getType()) ))
 					).first;
@@ -226,7 +231,7 @@ public:
 			}
 			assert(inductionVar && inductionVar->getType()->getNodeType() == core::NT_RefType);
 
-			if( !initExpr.isSingleStmt() ) {
+			if ( !initExpr.isSingleStmt() ) {
 				assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) &&
 						"Not a declaration statement");
 				/*
@@ -282,7 +287,7 @@ public:
 
 			bool iteratorChanged = false;
 			core::VariablePtr newIndVar;
-			if( !declStmt ) {
+			if ( !declStmt ) {
 				/*
 				 * the init expression is not a declaration stmt, it could be a situation where
 				 * it is an assignment operation, eg:
@@ -320,9 +325,9 @@ public:
 						<< " with variable: v" << newIndVar->getId();
 
 				// Initialize the value of the new induction variable with the value of the old one
-				if( core::analysis::isCallOf(init, convFact.mgr.basic.getRefAssign()) ) {
+				if ( core::analysis::isCallOf(init, convFact.mgr.basic.getRefAssign()) ) {
 					init = core::static_pointer_cast<const core::CallExpr>(init)->getArguments()[1]; // getting RHS
-				} else if(init->getNodeType() != core::NT_Variable){
+				} else if ( init->getNodeType() != core::NT_Variable ) {
 					/*
 					 * the initialization variable is in a form which is not yet handled
 					 * therefore, the for loop is transformed into a while loop
@@ -336,9 +341,14 @@ public:
 						(oldInductionVar ? builder.deref(newIndVar) : static_cast<core::ExpressionPtr>(newIndVar));
 
 				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
-				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), inductionVar, replacement, true);
-				if(oldInductionVar)
-					ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), oldInductionVar, replacement, true);
+				core::NodePtr&& ret = core::transform::replaceAll(
+						builder.getNodeManager(), body.getSingleStmt(), inductionVar, replacement, true
+					);
+				if ( oldInductionVar ) {
+					ret = core::transform::replaceAll(
+						builder.getNodeManager(), body.getSingleStmt(), oldInductionVar, replacement, true
+					);
+				}
 
 				// replace the body with the newly modified one
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
@@ -350,7 +360,7 @@ public:
 			assert(declStmt && "Failed conversion of loop init expression");
 
 			core::ExpressionPtr init = declStmt->getInitialization();
-			if(core::analysis::isCallOf(init, convFact.mgr.basic.getRefVar())) {
+			if ( core::analysis::isCallOf(init, convFact.mgr.basic.getRefVar()) ) {
 				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(init);
 				assert(callExpr->getArguments().size() == 1);
 				init = callExpr->getArguments()[0];
@@ -358,7 +368,7 @@ public:
 					"Initialization value of induction variable must be of non-ref type");
 			}
 
-			if(loopAnalysis.isInverted()) {
+			if ( loopAnalysis.isInverted() ) {
 				// invert init value
 				core::ExpressionPtr&& invInitExpr = builder.invertSign( init );
 				declStmt = builder.declarationStmt( declStmt->getVariable(), builder.refVar(invInitExpr) );
@@ -366,8 +376,12 @@ public:
 
 				// invert the sign of the loop index in body of the loop
 				core::ExpressionPtr&& inductionVar = builder.invertSign(builder.deref(declStmt->getVariable()));
-				core::NodePtr&& ret = core::transform::replaceAll(builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
-						inductionVar, true);
+				core::NodePtr&& ret = core::transform::replaceAll(
+						builder.getNodeManager(),
+						body.getSingleStmt(),
+						builder.deref(declStmt->getVariable()),
+						inductionVar, true
+					);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 			}
 //			else {
@@ -393,10 +407,13 @@ public:
 			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irFor, forStmt, convFact);
 			retStmt.push_back( annotatedNode );
 
-			if(iteratorChanged) {
-				// in the case we replace the loop iterator with a temporary variable,
-				// we have to assign the final value of the iterator to the old variable
-				// so we don't change the semantics of the code
+			if ( iteratorChanged ) {
+				/*
+				 * in the case we replace the loop iterator with a temporary variable, we have to assign the final value
+				 * of the iterator to the old variable so we don't change the semantics of the code:
+				 *
+				 * 		i.e: oldIter = ceil((cond-init)/step) * step + init;
+				 */
 				core::TypePtr iterType = (inductionVar->getType()->getNodeType() == core::NT_RefType) ?
 						core::static_pointer_cast<const core::RefType>(inductionVar->getType())->getElementType() :
 						inductionVar->getType();
@@ -404,8 +421,10 @@ public:
 				core::ExpressionPtr&& cond = convFact.tryDeref(loopAnalysis.getCondExpr());
 				core::ExpressionPtr&& step = convFact.tryDeref(loopAnalysis.getIncrExpr());
 
-				core::FunctionTypePtr&& ceilTy =
-						builder.functionType(toVector<core::TypePtr>(convFact.mgr.basic.getDouble()), convFact.mgr.basic.getDouble());
+				core::FunctionTypePtr&& ceilTy = builder.functionType(
+						toVector<core::TypePtr>(convFact.mgr.basic.getDouble()),
+						convFact.mgr.basic.getDouble()
+					);
 
 				core::ExpressionPtr&& finalVal =
 					makeOperation(builder,
@@ -432,29 +451,31 @@ public:
 					);
 
 				retStmt.push_back( builder.callExpr( convFact.mgr.basic.getUnit(),
-						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal ));
+						convFact.mgr.basic.getRefAssign(), inductionVar, finalVal )
+					);
 
 			}
 
-		} catch(const analysis::LoopNormalizationError& e) {
+		} catch ( const analysis::LoopNormalizationError& e ) {
+			// The for loop cannot be normalized into an IR loop, therefore we create a while stmt
 
 			Stmt* initStmt = forStmt->getInit();
-			// if there is no initialization stmt, we transform the ForStmt into a WhileStmt
 			if( initStmt ) {
 				StmtWrapper init = Visit( forStmt->getInit() );
 				std::copy(init.begin(), init.end(), std::back_inserter(retStmt));
 			}
 
 			if( VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
-				assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				// the for loop has a variable declared in the condition part, e.g.
-				//
-				// 		for(...; int a = f(); ...)
-				//
-				// to handle this kind of situation we have to move the declaration
-				// outside the loop body inside a new context
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				assert(forStmt->getCond() == NULL &&
+						"ForLoop condition cannot be a variable declaration and an expression");
+				/*
+				 * the for loop has a variable declared in the condition part, e.g.
+				 *
+				 * 		for(...; int a = f(); ...)
+				 *
+				 * to handle this kind of situation we have to move the declaration  outside the loop body inside a
+				 * new context
+				 */
 				Expr* expr = condVarDecl->getInit();
 				condVarDecl->setInit(NULL); // set the expression to null (temporarely)
 				core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
@@ -464,27 +485,28 @@ public:
 				retStmt.push_back( declStmt );
 			}
 
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// analysis of loop structure failed, we have to build a while statement
-			//
-			//		for(init; cond; step) { body }
-			//
-			// Will be translated in the following while statement structure:
-			//
-			//		{
-			//			init;
-			//			while(cond) {
-			//				{ body }
-			//				step;
-			//			}
-			//		}
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+			/*
+			 * analysis of loop structure failed, we have to build a while statement:
+			 *
+			 * 		for(init; cond; step) { body }
+			 *
+			 * Will be translated in the following while statement structure:
+			 *
+			 * 		{
+			 * 			init;
+			 * 			while(cond) {
+			 * 				{ body }
+			 * 				step;
+			 * 			}
+			 * 		}
+			 */
 			core::StatementPtr&& whileStmt = builder.whileStmt(
 				convFact.convertExpr( forStmt->getCond() ), // cond
 				forStmt->getInc() ?
-					builder.compoundStmt( toVector<core::StatementPtr>( tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) ) ) :
-					tryAggregateStmts(builder, body)
+					builder.compoundStmt( toVector<core::StatementPtr>(
+							tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
+						)
+					: tryAggregateStmts(builder, body)
 				);
 
 			// handle eventual pragmas attached to the Clang node
@@ -493,7 +515,9 @@ public:
 
 		    clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
 		    pp.Diag(forStmt->getLocStart(),
-		    		pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, std::string("For loop converted into while loop, cause: ") + e.what() ));
+		    		pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning,
+		    				std::string("For loop converted into while loop, cause: ") + e.what() )
+		    			);
 		}
 		retStmt = tryAggregateStmts(builder, retStmt);
 
@@ -514,18 +538,21 @@ public:
 		assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
 
 		core::ExpressionPtr condExpr;
-		if( const VarDecl* condVarDecl = ifStmt->getConditionVariable() ) {
-			assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// we are in the situation where a variable is declared in the if condition, i.e.:
-			//		if(int a = exp) { }
-			//
-			// this will be converted into the following IR representation:
-			// 		{
-			//			int a = exp;
-			//			if(cast<bool>(a)){ }
-			//		}
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		if ( const VarDecl* condVarDecl = ifStmt->getConditionVariable() ) {
+			assert(ifStmt->getCond() == NULL &&
+					"IfStmt condition cannot contains both a variable declaration and an expression");
+			/*
+			 * we are in the situation where a variable is declared in the if condition, i.e.:
+			 *
+			 * 		if(int a = exp) { }
+			 *
+			 * this will be converted into the following IR representation:
+			 *
+			 * 		{
+			 * 			int a = exp;
+			 * 			if(cast<bool>(a)){ }
+			 * 		}
+			 */
 			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
 
@@ -545,7 +572,7 @@ public:
 
 		core::StatementPtr elseBody;
 		// check for else statement
-		if(Stmt* elseStmt = ifStmt->getElse()) {
+		if ( Stmt* elseStmt = ifStmt->getElse() ) {
 			elseBody = tryAggregateStmts( builder, Visit( elseStmt ) );
 		} else {
 			// create an empty compound statement in the case there is no else stmt
@@ -583,22 +610,22 @@ public:
 		assert(body && "Couldn't convert body of the WhileStmt");
 
 		core::ExpressionPtr condExpr;
-		if( VarDecl* condVarDecl = whileStmt->getConditionVariable() ) {
+		if ( VarDecl* condVarDecl = whileStmt->getConditionVariable() ) {
 			assert(whileStmt->getCond() == NULL &&
 					"WhileStmt condition cannot contains both a variable declaration and an expression");
 
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// we are in the situation where a variable is declared in the if condition, i.e.:
-			//
-			//		 while(int a = expr) { }
-			//
-			// this will be converted into the following IR representation:
-			//
-			// 		{
-			//			int a = 0;
-			//			while(a = expr){ }
-			//		}
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			/*
+			 * we are in the situation where a variable is declared in the if condition, i.e.:
+			 *
+			 * 		while(int a = expr) { }
+			 *
+			 * this will be converted into the following IR representation:
+			 *
+			 * 		{
+			 * 			int a = 0;
+			 * 			while(a = expr){ }
+			 * 		}
+			 */
 			Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null (temporarily)
 			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
@@ -606,7 +633,6 @@ public:
 
 			retStmt.push_back( declStmt );
 			// the expression will be an a = expr
-			// core::ExpressionPtr&& condExpr = convFact.convertExpr(expr);
 			assert(false && "WhileStmt with a declaration of a condition variable not supported");
 		} else {
 			const Expr* cond = whileStmt->getCond();
@@ -616,7 +642,7 @@ public:
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 
 		condExpr = convFact.tryDeref(condExpr);
-		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
+		if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
 			// add cast to bool FIXME
 			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
 		}
@@ -652,13 +678,12 @@ public:
 		core::ExpressionPtr&& condExpr = convFact.tryDeref( convFact.convertExpr( cond ) );
 		assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
 
-		if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
-			// add cast to bool FIXME
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+		if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
+			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME: conversion to bool
 		}
 
 		StatementList stmts;
-		if(core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body)) {
+		if ( core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body) ) {
 			std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
 		}
 		stmts.push_back(builder.whileStmt(condExpr, body));
@@ -686,9 +711,10 @@ public:
 		StmtWrapper retStmt;
 
 		VLOG(2) << "{ Visit SwitchStmt }";
-		core::ExpressionPtr condExpr(NULL);
-		if( const VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
-			assert(switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
+		core::ExpressionPtr condExpr;
+		if ( const VarDecl* condVarDecl = switchStmt->getConditionVariable() ) {
+			assert(switchStmt->getCond() == NULL &&
+					"SwitchStmt condition cannot contains both a variable declaration and an expression");
 
 			core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 			retStmt.push_back( declStmt );
@@ -703,25 +729,26 @@ public:
 			// we create a variable to store the value of the condition for this switch
 			core::VariablePtr&& condVar = builder.variable(convFact.mgr.basic.getInt4());
 			// int condVar = condExpr;
-			core::DeclarationStmtPtr&& declVar = builder.declarationStmt(condVar, builder.castExpr(convFact.mgr.basic.getInt4(), condExpr));
+			core::DeclarationStmtPtr&& declVar =
+					builder.declarationStmt(condVar, builder.castExpr(convFact.mgr.basic.getInt4(), condExpr));
 			retStmt.push_back(declVar);
 
 			condExpr = condVar;
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// this Switch stamtement has a body, i.e.:
-		//
-		// 		switch(e) {
-		// 	 		{ body }
-		// 	 		case x:...
-		// 		}
-		//
-		// As the IR doens't allow a body to be represented inside the switch stmt
-		// we bring this code outside after the declaration of the eventual conditional
-		// variable.
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		/*
+		 * this Switch stamtement has a body, i.e.:
+		 *
+		 * 		switch(e) {
+		 * 			{ body }
+		 * 			case x:...
+		 * 		}
+		 *
+		 * As the IR doens't allow a body to be represented inside the switch stmt we bring this code outside after the
+		 * declaration of the eventual conditional variable.
+		 *
+		 */
 		vector<core::SwitchStmt::Case> cases;
 		// marks the beginning of a case expression
 		vector<std::pair<core::ExpressionPtr,size_t>> caseExprs;
@@ -742,20 +769,22 @@ public:
 				[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
 					std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
 					std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
-					cases.push_back( core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList )) );
+					cases.push_back(
+							core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList ))
+						);
 				}
 			);
-			if(isDefault) {
+			if ( isDefault ) {
 				std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
 				std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
 				defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
 			}
 		};
 
-		for(auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
+		for ( auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it ) {
 			Stmt* curr = *it;
 			// statements which are before the first case.
-			if(!caseStart && !isa<SwitchCase>(curr)) {
+			if ( !caseStart && !isa<SwitchCase>(curr) ) {
 				StmtWrapper&& visitedStmt = this->Visit(curr);
 				// append these statements before the switch statement
 				std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
@@ -763,38 +792,45 @@ public:
 			}
 			// we encounter a case statement
 			caseStart=true;
-			while( CaseStmt* caseStmt = dyn_cast<CaseStmt>(curr) ) {
-				caseExprs.push_back( std::make_pair(this->convFact.convertExpr( caseStmt->getLHS() ), caseStmts.size()) );
+			while ( CaseStmt* caseStmt = dyn_cast<CaseStmt>(curr) ) {
+				caseExprs.push_back(
+						std::make_pair(this->convFact.convertExpr( caseStmt->getLHS() ), caseStmts.size())
+					);
 
 				core::StatementPtr subStmt;
-				if( const Expr* rhs = caseStmt->getRHS() ) {
+				if ( const Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
 					subStmt = this->convFact.convertExpr( rhs );
-				} else if( Stmt* sub = caseStmt->getSubStmt() ) {
+				} else if ( Stmt* sub = caseStmt->getSubStmt() ) {
 					// if the sub statement is a case, skip until the end of the loop
-					if( isa<SwitchCase>(sub) ) {
+					if ( isa<SwitchCase>(sub) ) {
 						curr = sub;
 						continue;
 					}
 
 					subStmt = tryAggregateStmts( this->convFact.builder, this->Visit( const_cast<Stmt*>(sub) ) );
-					// if the sub-statement is a BreakStmt we have to replace it with a noOp and remember to reset the caseStmts
-					if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
+					/*
+					 * if the sub-statement is a BreakStmt we have to replace it with a noOp and remember to reset the
+					 * caseStmts
+					 */
+					if ( core::dynamic_pointer_cast<const core::BreakStmt>(subStmt) ) {
 						subStmt = convFact.mgr.basic.getNoOp();
 						breakEncountred = true;
 					}
 				}
-				// add the statements defined by this case to the list of
-				// statements which has to executed by this case
+
+				// add the statements defined by this case to the list of statements which has to executed by this case
 				caseStmts.push_back(subStmt);
 				break;
 			}
 
-			if(const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(curr)) {
+			if ( const DefaultStmt* defCase = dyn_cast<const DefaultStmt>(curr) ) {
 				isDefault = true;
 				defaultStart = caseStmts.size();
 
-				core::StatementPtr&& subStmt = tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
+				core::StatementPtr&& subStmt =
+						tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
+
 				if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
 					subStmt = convFact.mgr.basic.getNoOp();
 					breakEncountred = true;
@@ -802,23 +838,26 @@ public:
 				caseStmts.push_back(subStmt);
 			}
 
-			// if the current statement is a break, or we encountred a break in the current case
-			// we create a new case and add to the list of cases for this switch statement
-			if(breakEncountred || isa<const BreakStmt>(curr)) {
+			/*
+			 * if the current statement is a break, or we encountred a break in the current case we create a new case
+			 * and add to the list of cases for this switch statement
+			 */
+			if ( breakEncountred || isa<const BreakStmt>(curr) ) {
 				addCase();
 				// clear the list of statements collected until now
 				caseExprs.clear();
 				caseStmts.clear();
 
 				breakEncountred = false;
-			} else if(!isa<SwitchCase>(curr)) {
+			} else if ( !isa<SwitchCase>(curr) ) {
 				StmtWrapper&& visitedStmt = Visit( const_cast<Stmt*>(curr));
 				std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(caseStmts));
 			}
 		}
 		// we still have some statement pending
-		if(!caseStmts.empty())
+		if ( !caseStmts.empty() ) {
 			addCase();
+		}
 
 		// initialize the default case with an empty compoundstmt
 		core::StatementPtr&& irNode = builder.switchStmt(condExpr, cases, defStmt);
@@ -834,8 +873,10 @@ public:
 		return retStmt;
 	}
 
-	// as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error in the case
-	// the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the visitor is not called on his subnodes
+	/*
+	 * as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error in the case the
+	 * visitor visits one of these nodes, the VisitSwitchStmt has to make sure the visitor is not called on his subnodes
+	 */
 	StmtWrapper VisitSwitchCase(SwitchCase* caseStmt) { assert(false && "Visitor is visiting a 'case' stmt"); }
 
 	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) { return StmtWrapper( convFact.builder.breakStmt() ); }
@@ -849,9 +890,13 @@ public:
 		vector<core::StatementPtr> stmtList;
 		std::for_each( compStmt->body_begin(), compStmt->body_end(),
 			[ &stmtList, this ] (Stmt* stmt) {
-				// A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted in multiple
-				// StatementPtr because an initialization list such as: int a,b=1; is converted into the following sequence of statements:
-				// int<a> a = 0; int<4> b = 1;
+				/*
+				 * A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted
+				 * in multiple  StatementPtr because an initialization list such as: int a,b=1; is converted into the
+				 * following sequence of statements:
+				 *
+				 * 		int<a> a = 0; int<4> b = 1;
+				 */
 				StmtWrapper&& convertedStmt = this->Visit(stmt);
 				std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 			}

@@ -75,7 +75,8 @@ namespace {
  * Instantiate the clang parser and sema to build the clang AST.
  * Pragmas are stored during the parsing
  */
-void parseClangAST(clang::Preprocessor &PP, clang::ASTConsumer *Consumer, clang::ASTContext &Ctx, bool CompleteTranslationUnit, PragmaList& PL) {
+void parseClangAST(clang::Preprocessor &PP, clang::ASTConsumer *Consumer, clang::ASTContext &Ctx,
+				   bool CompleteTranslationUnit, PragmaList& PL) {
 	InsiemeSema S(PL, PP, Ctx, *Consumer, CompleteTranslationUnit);
 	Parser P(PP, S);
 	PP.EnterMainSourceFile();
@@ -117,10 +118,10 @@ public:
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
 		// register 'test' pragma
-		TestPragma::registerPragmaHandler(mClang.getPreprocessor());
+		TestPragma::registerPragmaHandler( mClang.getPreprocessor() );
 
 		// register 'insieme' pragma
-		InsiemePragma::registerPragmaHandler(mClang.getPreprocessor());
+		InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
 
 		clang::ASTConsumer emptyCons;
 		parseClangAST(mClang.getPreprocessor(), &emptyCons, mClang.getASTContext(), true, mPragmaList);
@@ -165,7 +166,8 @@ struct Program::ProgramImpl {
 	ProgramImpl() : mIdx(mProg), mAnalyzer(mProg, mIdx), mCallGraph(mProg) { }
 };
 
-Program::Program(core::NodeManager& mgr): pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(mgr) ) { }
+Program::Program(core::NodeManager& mgr):
+	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(mgr) ) { }
 
 Program::~Program() {
 	delete pimpl;
@@ -237,7 +239,8 @@ std::pair<PragmaPtr, TranslationUnitPtr> Program::PragmaIterator::operator*() co
 
 namespace {
 /**
- * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations. Those annotations will be translated to parallel constructs
+ * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations.
+ * Those annotations will be translated to parallel constructs
  */
 core::ProgramPtr addParallelism(const core::ProgramPtr& prog, core::NodeManager& mgr) {
     ocl::Compiler oclCompiler(prog, mgr);

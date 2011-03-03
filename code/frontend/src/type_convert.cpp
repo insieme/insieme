@@ -71,7 +71,8 @@ namespace frontend {
 namespace utils {
 
 template <>
-void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type, const DependencyGraph<const clang::Type*>::VertexTy& v) {
+void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
+												 const DependencyGraph<const clang::Type*>::VertexTy& v) {
 	using namespace clang;
 
 	assert(isa<const TagType>(type));
@@ -96,9 +97,9 @@ void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type, const 
 
 namespace conversion {
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 							Printing macros for statements
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 											Printing macros for statements
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
@@ -116,11 +117,9 @@ namespace conversion {
 	VLOG(1) << "\t" << *type;
 
 
-//#############################################################################
-//
-//							CLANG TYPE CONVERTER
-//
-//############################################################################
+//---------------------------------------------------------------------------------------------------------------------
+//											CLANG TYPE CONVERTER
+//---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
 	ConversionFactory& convFact;
 
@@ -202,13 +201,16 @@ public:
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
+
 		// we need to check if the element type for this not a vector (or array) type
 		// if(!((core::dynamic_pointer_cast<const core::VectorType>(elemTy) ||
 		//		core::dynamic_pointer_cast<const core::ArrayType>(elemTy)) &&
 		//		!arrTy->getElementType().getTypePtr()->isExtVectorType())) {
 		//	elemTy = convFact.builder.refType(elemTy);
 		// }
-		core::TypePtr&& retTy = convFact.builder.vectorType( elemTy, core::IntTypeParam::getConcreteIntParam(arrSize) );
+
+		core::TypePtr&& retTy =
+				convFact.builder.vectorType( elemTy, core::IntTypeParam::getConcreteIntParam(arrSize) );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -477,7 +479,9 @@ public:
 					}
 
 					// we create a TypeVar for each type in the mutual dependence
-					convFact.ctx.recVarMap.insert( std::make_pair(tagType, convFact.builder.typeVariable(recDecl->getName())) );
+					convFact.ctx.recVarMap.insert(
+							std::make_pair(tagType, convFact.builder.typeVariable(recDecl->getName()))
+						);
 
 					// when a subtype is resolved we aspect to already have these variables in the map
 					if(!convFact.ctx.isRecSubType) {
@@ -486,7 +490,9 @@ public:
 								const TagType* tagTy = dyn_cast<const TagType>(ty);
 								assert(tagTy && "Type is not of TagType type");
 
-								this->convFact.ctx.recVarMap.insert( std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName())) );
+								this->convFact.ctx.recVarMap.insert(
+										std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName()))
+									);
 							}
 						);
 					}
@@ -503,7 +509,9 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
-					structElements.push_back( core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), fieldType ) );
+					structElements.push_back(
+							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), fieldType )
+						);
 				}
 
 				// build a struct or union IR type
@@ -517,7 +525,8 @@ public:
 
 					// we have to create a recursive type
 					ConversionContext::TypeRecVarMap::const_iterator tit = convFact.ctx.recVarMap.find(tagType);
-					assert(tit != convFact.ctx.recVarMap.end() && "Recursive type has not TypeVar associated to himself");
+					assert(tit != convFact.ctx.recVarMap.end() &&
+							"Recursive type has not TypeVar associated to himself");
 					core::TypeVariablePtr recTypeVar = tit->second;
 
 					core::RecTypeDefinition::RecTypeDefs definitions;
