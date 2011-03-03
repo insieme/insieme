@@ -1,8 +1,0 @@
-
-
-#undef ADD_FORMATTER
-#undef ADD_FORMATTER_DETAIL
-#undef OUT
-#undef ARG
-#undef VISIT_ARG
-

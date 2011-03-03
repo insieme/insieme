@@ -106,6 +106,9 @@ void StmtConverter::appendHeaders(ConvertedCode* converted) {
 	converted->addHeaderLine("#include <alloca.h>");
 	converted->addHeaderLine("#include <stddef.h>");
 	converted->addHeaderLine("#include <stdlib.h>");
+
+	// including this header will result into problems on a 32 bit system
+	//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme
 	//converted->addHeaderLine("#include <string.h>");
 
 	// add runtime header
@@ -144,7 +147,6 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 
 		// special handling for var-list handling
 		if(cc.getLangBasic().isVarlistPack(funExp)) {
-			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
 				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
@@ -161,8 +163,6 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 			}
 
 			functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
-			//DLOG(INFO) << cStr.getString();
-			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
 			return;
 		}
 
@@ -319,13 +319,13 @@ void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, 
 		visit(ptr->getLambda());
 	}
 
-	 // TODO: add real size
-	cStr << ", 0";
-
+	// add size of struct
+	cStr << ", sizeof(" << details.functorName << ")";
 
 	// add captured parameters
 	for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-//		cStr << ", ";
+
+		// TODO: handle capture variables uniformely
 		bool addAddressOperator = isVectorOrArrayRef(cur->getType());
 		if (addAddressOperator
 				&& cur->getNodeType() == NT_Variable
@@ -369,7 +369,6 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 					info.location = VariableManager::STACK;
 				}
 
-//				info.location = VariableManager::STACK;
 				break;
 			default:
 				// default is a stack variable
@@ -384,7 +383,6 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	// standard handling
 	CodeStream& cStr = getCodeStream();
 	string varName = cc.getNameManager().getVarName(var);
-//	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
 	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, !isAllocatedOnHEAP);
 
 	// check whether there is an initialization
@@ -401,9 +399,6 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	// start initialization
 	cStr << " = ";
-
-	// a special handling for initializing heap allocated structs (to avoid large stack allocated objects)
-//	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 
 	const RefTypePtr& refType = (isAllocatedOnHEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 	if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
@@ -588,11 +583,6 @@ void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
 void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	CodeStream& cStr = getCodeStream();
 
-//	if (ptr->getType()->getNodeType() == NT_RefType
-//			&& cc.getVariableManager().getInfo(ptr).location != VariableManager::HEAP) {
-//		cStr << "&";
-//	}
-
 	bool deref = true;
 	if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
 		TypePtr elementType = refType->getElementType();
@@ -613,13 +603,6 @@ void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	}
 
 	cStr << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
-
-//	if (ptr->getType()->getNodeType() == NT_RefType && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
-//		cStr << "(*" << cc.getNameManager().getVarName(ptr) << ")";
-//		return;
-//	}
-
-//	cStr << cc.getNameManager().getVarName(ptr);
 }
 
 void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
@@ -869,8 +852,9 @@ namespace formatting {
 
 		FormatTable res;
 
-		#include "insieme/simple_backend/format_spec_start.mac"
+		#include "insieme/simple_backend/format_spec_start.inc"
 
+		// TODO: move this to an extra formatting file
 
 		ADD_FORMATTER(basic.getRefDeref(), {
 				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
@@ -955,14 +939,6 @@ namespace formatting {
 				} else {
 					OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 				}
-
-//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-//				if (targetType->getElementType()->getNodeType() == NT_VectorType) {
-//					OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
-//					return;
-//				}
-//
-//				OUT("&((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
@@ -980,7 +956,6 @@ namespace formatting {
 				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
-		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
 		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
 		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
 
@@ -992,7 +967,6 @@ namespace formatting {
 					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
 				}
 				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
-//				OUT("&((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
 		});
 		ADD_FORMATTER(basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
 
@@ -1113,7 +1087,7 @@ namespace formatting {
 				converter.getConversionContext().getJobManager().createPFor(converter.getCode(), call);
 		});
 
-		#include "insieme/simple_backend/format_spec_end.mac"
+		#include "insieme/simple_backend/format_spec_end.inc"
 
 		return res;
 	}

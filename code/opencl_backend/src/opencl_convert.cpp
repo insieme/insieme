@@ -488,7 +488,7 @@ namespace detail {
 	NodeManager& manager = basic.getNodeManager();
 	ASTBuilder builder(manager);
 
-	#include "insieme/simple_backend/format_spec_start.mac"
+	#include "insieme/simple_backend/format_spec_start.inc"
 
 	{
 		TypePtr t = (manager).basic.getUInt4();
@@ -514,7 +514,7 @@ namespace detail {
 		ADD_FORMATTER(lit7, { OUT("get_work_dimension(");	VISIT_ARG(0); OUT(")"); });	
 	}
 
-	#include "insieme/simple_backend/format_spec_end.mac"
+	#include "insieme/simple_backend/format_spec_end.inc"
 	return res;
 }
 
