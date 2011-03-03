@@ -60,6 +60,8 @@
 #include "insieme/simple_backend/function_manager.h"
 #include "insieme/simple_backend/job_manager.h"
 
+#include "insieme/simple_backend/formatting/operator_formatting.h"
+
 namespace insieme {
 namespace simple_backend {
 
@@ -226,139 +228,6 @@ public:
 
 };
 
-class VariableManager {
-
-public:
-
-	enum MemoryLocation {
-		NONE, 	/* < in case the variable is not referencing a memory cell */
-		STACK, 	/* < the variable references a memory cell on the stack */
-		HEAP 	/* < the variable references a memory cell on the heap */
-	};
-
-	struct VariableInfo {
-		MemoryLocation location;
-	};
-
-private:
-
-	typedef std::unordered_map<VariablePtr, VariableInfo, hash_target<VariablePtr>, equal_target<VariablePtr>> VariableInfoMap;
-
-	VariableInfoMap variableMap;
-
-public:
-
-	VariableManager() : variableMap() {};
-
-	const VariableInfo& getInfo(const VariablePtr& variable) const;
-	void addInfo(const VariablePtr& variable, const VariableInfo& info);
-	void removeInfo(const VariablePtr& variable);
-	bool hasInfoFor(const VariablePtr& variable) const;
-
-};
-
-
-
-namespace formatting {
-
-	/**
-	 * This class allows the conversion visitor to use special formats when printing the call of a specific function.
-	 * For instance, this formatter allows to write the add operation + in infix notation.
-	 */
-	class Formatter {
-	public:
-
-		/**
-		 * Performs the actual code formating. This method is pure abstract and
-		 * has to be implemented within sub-classes.
-		 *
-		 * @param converter the converter and its context using this formatter
-		 * @param call the call expression to be handled
-		 */
-		virtual void format(StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) =0;
-
-	};
-
-	/**
-	 * Since formatter instances are polymorthic, they need to be handled via pointer or
-	 * references. Further, the memory management needs to be considered. Therefore, formatter
-	 * should be passed using this pointer type, which is based on a shared pointer.
-	 */
-	typedef std::shared_ptr<Formatter> FormatterPtr;
-
-	/**
-	 * The Lambda Formatter is a concrete generic implementation of the Formatter class. It uses
-	 * a lambda expression passed in during the construction to format the actual output.
-	 */
-	template<typename Lambda>
-	class LambdaFormatter : public Formatter {
-
-		/**
-		 * The lambda used to perform the formatting.
-		 */
-		Lambda lambda;
-
-	public:
-
-		/**
-		 * Creates a new instance of this type printing the given literal using the
-		 * given lambda during the formating.
-		 *
-		 * @param literal the literal to be handled by this formatter
-		 * @param lambda the lambda performing the actual formatting
-		 */
-		LambdaFormatter(Lambda lambda) : lambda(lambda) {}
-
-		/**
-		 * Conducts the actual formatting of the given call expression.
-		 *
-		 * @param converter the converter and its context using this formatter
-		 * @param call the call expression to be handled
-		 */
-		virtual void format(StmtConverter& converter, CodeStream& cStr, const CallExprPtr& call) {
-			lambda(converter, cStr, call);
-		}
-	};
-
-	/**
-	 * A utility function to create LiteralFormatter instances without the need of
-	 * specifying generic types. Those types will be inferred automatically.
-	 *
-	 * @param literal the literal to be handled by the requested formatter
-	 * @return a new formatter handling the call expressions using the given lambda
-	 */
-	template<typename Lambda>
-	FormatterPtr make_formatter(Lambda lambda) {
-		return std::make_shared<LambdaFormatter<Lambda>>(lambda);
-	}
-
-	// define a type for handling formatter
-	typedef utils::map::PointerMap<LiteralPtr, FormatterPtr> FormatTable;
-
-	/**
-	 * A utility function to obtain the n-th argument within the given call expression.
-	 *
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the requested argument
-	 * @return the requested argument or a NULL pointer in case there is no such argument
-	 */
-	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n);
-
-	/**
-	 * A utility function visiting the n-th argument of a call expression.
-	 *
-	 * @param converter the converter to be used for the actual conversion
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
-	 */
-	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n);
-
-	/**
-	 * Creates a list of formatters for basic C operators.
-	 */
-	FormatTable getBasicFormatTable(const lang::BasicGenerator& basic);
-
-}
 
 /** Central simple_backend conversion class, visits IR nodes and generates C code accordingly.
  ** */

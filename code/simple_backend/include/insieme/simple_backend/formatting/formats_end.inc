@@ -34,6 +34,10 @@
  * regarding third party software licenses.
  */
 
+/**
+ * Undefines the definition made within the format_spec_start.inc
+ */
+
 #undef ADD_FORMATTER
 #undef ADD_FORMATTER_DETAIL
 #undef OUT

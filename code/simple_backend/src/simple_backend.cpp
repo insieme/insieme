@@ -37,6 +37,7 @@
 #include "insieme/simple_backend/simple_backend.h"
 
 #include "insieme/simple_backend/backend_convert.h"
+#include "insieme/simple_backend/variable_manager.h"
 
 namespace insieme {
 namespace simple_backend {

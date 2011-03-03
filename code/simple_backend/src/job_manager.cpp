@@ -37,6 +37,7 @@
 #include "insieme/simple_backend/job_manager.h"
 
 #include "insieme/simple_backend/backend_convert.h"
+#include "insieme/simple_backend/variable_manager.h"
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
