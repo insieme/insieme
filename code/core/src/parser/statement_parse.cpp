@@ -94,7 +94,9 @@ ProgramPtr programHelp(const vector<ExpressionPtr>& entryPoints) {
 }
 */
 StatementGrammar::StatementGrammar(NodeManager& nodeMan)
-    : StatementGrammar::base_type(statementRule), typeG(new TypeGrammar(nodeMan)), exprG(new ExpressionGrammar(nodeMan)) {
+    : StatementGrammar::base_type(statementRule), typeG(new TypeGrammar(nodeMan))/*, exprG(new ExpressionGrammar(nodeMan))*/ {
+
+    exprG = new ExpressionGrammar(nodeMan, this);
 
     auto nManRef = ph::ref(nodeMan);
     auto basicRef = ph::ref(nodeMan.basic);

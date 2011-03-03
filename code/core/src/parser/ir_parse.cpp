@@ -83,7 +83,6 @@ StatementPtr IRParser::parseStatement(const std::string& input) {
     parse_result = parse_result && (startIt == endIt);
     if(!parse_result) throw ParseException();
     return result;
-//    return ReturnStmt::get(nodeMan, parseExpression("0"));
 }
 
 TypePtr parseType(NodeManager& nodeMan, const string& input) {

@@ -54,7 +54,6 @@ struct StatementGrammar : public qi::grammar<ParseIt, StatementPtr(), qi::space_
     TypeGrammar *typeG;        // pointer for weak coupling
     ExpressionGrammar *exprG;  // pointer for weak coupling
 
-
     StatementGrammar(NodeManager& nodeMan);
     ~StatementGrammar();
 
