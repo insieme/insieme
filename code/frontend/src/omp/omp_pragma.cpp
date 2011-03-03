@@ -146,7 +146,8 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	auto if_expr 		   	= kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;
 
 	// default(shared | none)
-	auto def			   	= Tok<clang::tok::kw_default>() >> l_paren >> ( kwd("shared") | kwd("none") )["default"] >> r_paren;
+	auto def			   	= Tok<clang::tok::kw_default>() >> l_paren >>
+							  ( kwd("shared") | kwd("none") )["default"] >> r_paren;
 
 	// identifier *(, identifier)
 	auto identifier_list   	= identifier >> *(~comma >> identifier);
@@ -161,10 +162,12 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> identifier_list["lastprivate"] >> r_paren;
 
 	// + or - or * or & or | or ^ or && or ||
-	auto op 			  	= tok::plus | tok::minus | tok::star | tok::amp | tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
+	auto op 			  	= tok::plus | tok::minus | tok::star | tok::amp |
+							  tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
 
 	// reduction(operator: list)
-	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >> identifier_list["reduction"] >> r_paren;
+	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >>
+							  identifier_list["reduction"] >> r_paren;
 
 	auto parallel_clause =  ( 	// if(scalar-expression)
 								if_expr
@@ -191,7 +194,8 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 							|	lastprivate_clause
 							|	reduction_clause
 								// schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
-							|	(kwd("schedule") >> l_paren >> kind["schedule"] >> !( comma >> expr["chunk_size"] ) >> r_paren)
+							|	(kwd("schedule") >> l_paren >> kind["schedule"] >>
+									!( comma >> expr["chunk_size"] ) >> r_paren)
 								// collapse( expr )
 							|	(kwd("collapse") >> l_paren >> expr["collapse"] >> r_paren)
 								// nowait
@@ -215,7 +219,8 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	auto sections_clause_list = !(sections_clause >> *( !comma >> sections_clause ));
 
 	// [clause[ [, ]clause] ...] new-line
-	auto parallel_for_clause_list = (parallel_clause | for_clause | sections_clause) >> *( !comma >> (parallel_clause | for_clause | sections_clause) );
+	auto parallel_for_clause_list = (parallel_clause | for_clause | sections_clause) >>
+										*( !comma >> (parallel_clause | for_clause | sections_clause) );
 
 	auto parallel_clause_list = !( 	(Tok<clang::tok::kw_for>("for") >> !parallel_for_clause_list)
 								 |  (kwd("sections") >> !parallel_for_clause_list)
@@ -259,59 +264,87 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// Add an handler for pragma omp parallel:
 	// #pragma omp parallel [clause[ [, ]clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaParallel>(pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaParallel>(
+			pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp")
+		);
 
 	// omp for
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFor>(pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFor>(
+			pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp")
+		);
 
 	// #pragma omp sections [clause[[,] clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSections>(pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSections>(
+			pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp")
+		);
 
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSection>(pp.getIdentifierInfo("section"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSection>(
+			pp.getIdentifierInfo("section"), tok::eom, "omp")
+		);
 
 	// omp single
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSingle>(pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSingle>(
+			pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp")
+		);
 
 	// #pragma omp task [clause[[,] clause] ...] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTask>(pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTask>(
+			pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp")
+		);
 
 	// #pragma omp master new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaMaster>(pp.getIdentifierInfo("master"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaMaster>(
+			pp.getIdentifierInfo("master"), tok::eom, "omp")
+		);
 
 	// #pragma omp critical [(name)] new-line
-	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaCritical>(pp.getIdentifierInfo("critical"),
-					!(l_paren >> identifier >> r_paren) >> tok::eom, "omp"));
+	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaCritical>(
+			pp.getIdentifierInfo("critical"), !(l_paren >> identifier >> r_paren) >> tok::eom, "omp")
+		);
 
 	//#pragma omp barrier new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaBarrier>(pp.getIdentifierInfo("barrier"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaBarrier>(
+			pp.getIdentifierInfo("barrier"), tok::eom, "omp")
+		);
 
 	// #pragma omp taskwait newline
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTaskWait>(pp.getIdentifierInfo("taskwait"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTaskWait>(
+			pp.getIdentifierInfo("taskwait"), tok::eom, "omp")
+		);
 
 	// #pragma omp atimic newline
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaAtomic>(pp.getIdentifierInfo("atomic"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaAtomic>(
+			pp.getIdentifierInfo("atomic"), tok::eom, "omp")
+		);
 
 	// #pragma omp flush [(list)] new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFlush>(pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFlush>(
+			pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp")
+		);
 
 	// #pragma omp ordered new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaOrdered>(pp.getIdentifierInfo("ordered"), tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaOrdered>(
+			pp.getIdentifierInfo("ordered"), tok::eom, "omp")
+		);
 
 	// #pragma omp threadprivate(list) new-line
-	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaThreadPrivate>(pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp"));
+	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaThreadPrivate>(
+			pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp")
+		);
 }
 
-core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
+core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& irNode, const clang::Stmt* clangNode,
+										conversion::ConversionFactory& fact) {
 	return ::attachOmpAnnotation(irNode, clangNode, fact);
 }
 
-core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact) {
+core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+									   conversion::ConversionFactory& fact) {
 	return ::attachOmpAnnotation(irNode, clangNode, fact);
 }
 
-OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name, const MatchMap& mmap):
-	Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
-
+OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name,
+					 const MatchMap& mmap): Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
 	if(VLOG_IS_ON(2)) {
 		VLOG(2) << "~~~PRAGMA~~~" << std::endl;
 		for(MatchMap::const_iterator i = mmap.begin(), e = mmap.end(); i!=e; ++i) {
@@ -389,7 +422,8 @@ ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionF
 	return std::make_shared<Reduction>(op, handleIdentifierList(mmap, "reduction", fact));
 }
 
-core::ExpressionPtr handleSingleExpression(const MatchMap& mmap,  const std::string& key, conversion::ConversionFactory& fact) {
+core::ExpressionPtr handleSingleExpression(const MatchMap& mmap, const std::string& key,
+										   conversion::ConversionFactory& fact) {
 
 	auto fit = mmap.find(key);
 	if(fit == mmap.end())
@@ -548,7 +582,8 @@ AnnotationPtr OmpPragmaFor::toAnnotation(conversion::ConversionFactory& fact) co
 	// check for nowait keyword
 	bool noWait = hasKeyword(map, "nowait");
 
-	return std::make_shared<For>( privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, collapseClause, noWait );
+	return std::make_shared<For>( privateClause, firstPrivateClause, lastPrivateClause,
+								  reductionClause, scheduleClause, collapseClause, noWait );
 }
 
 // Translate a pragma omp section into a OmpSection annotation
@@ -573,7 +608,9 @@ AnnotationPtr OmpPragmaSections::toAnnotation(conversion::ConversionFactory& fac
 	return std::make_shared<Sections>( privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait );
 }
 
-AnnotationPtr OmpPragmaSection::toAnnotation(conversion::ConversionFactory& fact) const { return std::make_shared<Section>( ); }
+AnnotationPtr OmpPragmaSection::toAnnotation(conversion::ConversionFactory& fact) const {
+	return std::make_shared<Section>( );
+}
 
 // OmpSingle
 // private(list)

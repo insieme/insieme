@@ -888,9 +888,11 @@ public:
 		case BO_Assign:
 		{
 			baseOp = BO_Assign;
-			// poor C codes assign value to function parameters, this is not allowed here as input parameters
-			// are of non REF type. What we need to do is introduce a declaration for these variables
-			// and use the created variable on the stack instead of the input parameters
+			/*
+			 * poor C codes assign value to function parameters, this is not allowed here as input parameters are of
+			 * non REF type. What we need to do is introduce a declaration for these variables and use the created
+			 * variable on the stack instead of the input parameters
+			 */
 			lhs = wrapVariable(binOp->getLHS());
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>

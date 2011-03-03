@@ -40,8 +40,8 @@ namespace insieme {
 namespace frontend {
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap) :
-	Pragma(startLoc, endLoc, type) {
+TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+					   const std::string& type, MatchMap const& mmap) : Pragma(startLoc, endLoc, type) {
 
 	MatchMap::const_iterator fit = mmap.find("expected");
 	if(fit != mmap.end()) {
@@ -50,15 +50,16 @@ TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::Sourc
 }
 
 void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
-	pp.AddPragmaHandler(
-		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom)
+	pp.AddPragmaHandler(PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
+			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom )
 	);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-InsiemePragma::InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
-	Pragma(startLoc, endLoc, type){ }
+InsiemePragma::InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
+							 const std::string& type, MatchMap const& mmap): Pragma(startLoc, endLoc, type){ }
+
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	// define a PragmaNamespace for insieme
@@ -67,11 +68,15 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 	// Add an handler for insieme mark pargma:
 	// #pragma insieme mark new-line
-	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(pp.getIdentifierInfo("mark"), tok::eom, "insieme"));
+	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
+			pp.getIdentifierInfo("mark"), tok::eom, "insieme")
+		);
 
 	// Add an handler for insieme ignore pragma:
 	// #pragma insieme ignore new-line
-	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(pp.getIdentifierInfo("ignore"), tok::eom, "insieme"));
+	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
+			pp.getIdentifierInfo("ignore"), tok::eom, "insieme")
+		);
 }
 
 } // end frontend namespace

@@ -226,9 +226,9 @@ bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStac
 		ParserProxy::get().EnterTokenStream(PP);
 		PP.LookAhead(1); // THIS IS CRAZY BUT IT WORKS
 		if (getMapName().size())
-			mmap[getMapName()].push_back(
-					ValueUnionPtr(new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context))
-			);
+			mmap[getMapName()].push_back( ValueUnionPtr(
+				new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context)
+			));
 		return true;
 	}
 	PP.Backtrack();
@@ -270,18 +270,20 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& 
 	Sema& A = ParserProxy::get().getParser()->getActions();
 	switch (tok) {
 	case clang::tok::numeric_constant:
-		mmap[map_str].push_back(
-				ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).takeAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)) );
+		mmap[map_str].push_back(ValueUnionPtr(
+			new ValueUnion(A.ActOnNumericConstant(token).takeAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context))
+		);
 		break;
 	case clang::tok::identifier: {
 		UnqualifiedId Name;
 		CXXScopeSpec ScopeSpec;
 		Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
 
-		mmap[map_str].push_back(
-				ValueUnionPtr(new ValueUnion(A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
-						&static_cast<clang::Sema&>(A).Context))
-				);
+		mmap[map_str].push_back(ValueUnionPtr(
+			new ValueUnion(
+				A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+				&static_cast<clang::Sema&>(A).Context)
+			));
 		break;
 	}
 	default: {
