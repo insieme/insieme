@@ -239,6 +239,10 @@ def main():
 			global printErr
 			printErr = 1
 			sys.argv.remove(arg)
+		if arg == "--clean" :
+			for test in [test_case for test_case in open('test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]:
+				os.remove("./{0}/*.ref".format(test))
+			sys.argv.remove(arg)
 
 	tests = []
 	if len(sys.argv) > 1:		
