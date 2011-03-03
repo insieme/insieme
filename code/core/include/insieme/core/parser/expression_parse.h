@@ -73,6 +73,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 //	ExpressionGrammarPart *exprGpart;
 	StatementGrammar* stmtG;
 	VariableTable varTab;
+	bool deleteStmtG;
 	
 	ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar = NULL);
 	~ExpressionGrammar();

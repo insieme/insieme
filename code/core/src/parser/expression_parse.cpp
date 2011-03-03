@@ -148,10 +148,14 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 	: ExpressionGrammar::base_type(expressionRule)/*, exprGpart(new ExpressionGrammarPart(nodeMan))*/, varTab(nodeMan) {
 
     typeG = new TypeGrammar(nodeMan);
-    if(stmtGrammar == NULL)
+    if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar(nodeMan);
-    else
+        deleteStmtG = true;
+    }
+    else {
         stmtG = stmtGrammar;
+        deleteStmtG = true;
+    }
 
 	auto nManRef = ph::ref(nodeMan);
 	auto basicRef = ph::ref(nodeMan.basic);
@@ -321,8 +325,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 
 ExpressionGrammar::~ExpressionGrammar() {
 	delete typeG;
-// todo add flag if delete stmtG
-//	delete stmtG;
+	if(deleteStmtG)
+	    delete stmtG;
 }
 
 } // namespace parse 

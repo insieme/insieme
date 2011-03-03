@@ -145,10 +145,10 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
 
 //TODO add nicer test for captureInitExpr
-/*    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>](real<8>)->int<4>:\
-            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{ fu } }"));
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>](real<8>)->int<4>:\
+            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
-*/
+
 	// jobExpr
 	// needs something appropriate as argument
 //	auto parsedJob = parser.parseExpression("job< 0 >[]{default: 1}");
