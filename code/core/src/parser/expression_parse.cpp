@@ -154,7 +154,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
     }
     else {
         stmtG = stmtGrammar;
-        deleteStmtG = true;
+        deleteStmtG = false;
     }
 
 	auto nManRef = ph::ref(nodeMan);
