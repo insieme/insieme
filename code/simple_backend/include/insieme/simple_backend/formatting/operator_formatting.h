@@ -38,6 +38,8 @@
 
 #include <memory>
 
+#include "insieme/simple_backend/code_management.h"
+
 #include "insieme/utils/map_utils.h"
 
 /**
@@ -66,7 +68,6 @@ namespace insieme {
 	}
 	namespace simple_backend {
 		class StmtConverter;
-		class CodeStream;
 	}
 }
 
@@ -89,7 +90,7 @@ namespace formatting {
 		 * @param converter the converter and its context using this formatter
 		 * @param call the call expression to be handled
 		 */
-		virtual void format(StmtConverter& converter, CodeStream& cStr, const core::CallExprPtr& call) =0;
+		virtual void format(StmtConverter& converter, const core::CallExprPtr& call) =0;
 
 	};
 
@@ -129,8 +130,8 @@ namespace formatting {
 		 * @param converter the converter and its context using this formatter
 		 * @param call the call expression to be handled
 		 */
-		virtual void format(StmtConverter& converter, CodeStream& cStr, const core::CallExprPtr& call) {
-			lambda(converter, cStr, call);
+		virtual void format(StmtConverter& converter, const core::CallExprPtr& call) {
+			lambda(converter, call);
 		}
 	};
 

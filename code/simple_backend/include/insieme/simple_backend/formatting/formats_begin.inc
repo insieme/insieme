@@ -38,13 +38,28 @@
  * This include file defines some macros simplifying the specification of formats to print operators.
  */
 
+/**
+ * A macro obtaining a reference to the stmt converter using the formatter.
+ */
+#define STMT_CONVERTER converter
+
+/**
+ * A macro obtaining a constant referece to the current code fragment.
+ */
+#define CODE STMT_CONVERTER.getCurrentCodeFragment()
+
+/**
+ * A macro obtaining the conversion context.
+ */
+#define CONTEXT STMT_CONVERTER.getConversionContext()
+
 
 /**
  * This macro can be used within the format specifiaction to print literals.
  * 
  * @param Literal the literal to be printed
  */
-#define OUT(Literal) cStr << Literal
+#define OUT(Literal) STMT_CONVERTER.getCurrentCodeFragment() << Literal
 
 /**
  * This macro allows to access an argument of the call to be processed by the formatter. 
@@ -72,7 +87,7 @@
  * @param FORMAT the function body realizing the formatting 
  */
 #define ADD_FORMATTER_DETAIL(table, Literal, Brackets, FORMAT) \
-			table.insert(std::make_pair(Literal, insieme::simple_backend::formatting::make_formatter([&basic](insieme::simple_backend::StmtConverter& converter, insieme::simple_backend::CodeStream& cStr, const insieme::core::CallExprPtr& call) { \
+			table.insert(std::make_pair(Literal, insieme::simple_backend::formatting::make_formatter([&basic](insieme::simple_backend::StmtConverter& STMT_CONVERTER, const insieme::core::CallExprPtr& call) { \
 				if (Brackets) OUT("("); \
 				FORMAT \
 				if (Brackets) OUT(")"); \

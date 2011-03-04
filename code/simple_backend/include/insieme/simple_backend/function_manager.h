@@ -63,23 +63,23 @@ protected:
 	/**
 	 * A map linking lambda nodes to prototype declarations within the program code.
 	 */
-	utils::map::PointerMap<core::LambdaPtr, CodePtr> prototypes;
+	utils::map::PointerMap<core::LambdaPtr, CodeFragmentPtr> prototypes;
 
 	/**
 	 * A map linking Lambda expressions (recursive or non-recursive) to closure definitions and
 	 * functions.
 	 */
-	utils::map::PointerMap<core::LambdaPtr, CodePtr> functions;
+	utils::map::PointerMap<core::LambdaPtr, CodeFragmentPtr> functions;
 
 	/**
 	 * A map linking external function literals to their prototypes.
 	 */
-	utils::map::PointerMap<core::LiteralPtr, CodePtr> externalFunctions;
+	utils::map::PointerMap<core::LiteralPtr, CodeFragmentPtr> externalFunctions;
 
 	/**
 	 * A set accumulating all handled lambda definitions.
 	 */
-	utils::map::PointerMap<core::LambdaDefinitionPtr, CodePtr> functionGroup;
+	utils::map::PointerMap<core::LambdaDefinitionPtr, CodeFragmentPtr> functionGroup;
 
 public:
 
@@ -99,17 +99,17 @@ public:
 	 * @param context the code fragment the given external function call should be appended to.
 	 * @param external the literal representing the external function.
 	 */
-	string getFunctionName(const CodePtr& context, const core::LiteralPtr& external);
+	string getFunctionName(const CodeFragmentPtr& context, const core::LiteralPtr& external);
 
-	string getFunctionName(const CodePtr& context, const core::LambdaExprPtr& lambda);
+	string getFunctionName(const CodeFragmentPtr& context, const core::LambdaExprPtr& lambda);
 
 protected:
-	virtual std::ostream& appendFunctionParameter(std::ostream& out, CodePtr& context, const VariablePtr& param);
-	virtual void addFunctionPrefix(CodeStream& cs, const core::LambdaPtr& lambda) { }
-	virtual CodePtr resolve(const LambdaDefinitionPtr& definition);
-	virtual CodePtr resolve(const LambdaPtr& lambda);
+	virtual void appendFunctionParameter(const CodeFragmentPtr& fragment, const VariablePtr& param);
+	virtual void addFunctionPrefix(const CodeFragmentPtr& fragment, const core::LambdaPtr& lambda) { }
+	virtual CodeFragmentPtr resolve(const LambdaDefinitionPtr& definition);
+	virtual CodeFragmentPtr resolve(const LambdaPtr& lambda);
 
-	virtual CodePtr resolve(const LiteralPtr& literal);
+	virtual CodeFragmentPtr resolve(const LiteralPtr& literal);
 };
 
 

@@ -36,7 +36,8 @@
 
 #pragma once
 
-#include "insieme/simple_backend/backend_convert.h"
+#include "insieme/simple_backend/statement_converter.h"
+#include "insieme/simple_backend/function_manager.h"
 
 namespace insieme {
 namespace backend {
@@ -47,8 +48,9 @@ simple_backend::TargetCodePtr convert(const core::ProgramPtr& source);
 class OclFunctionManager : public simple_backend::FunctionManager {
 public:
 	OclFunctionManager(simple_backend::Converter& conversionContext);
-	std::ostream& appendFunctionParameter(std::ostream& out, simple_backend::CodePtr& context, const core::VariablePtr& param);
-	void addFunctionPrefix(simple_backend::CodeStream& cs, const core::LambdaPtr& lambda);
+
+	virtual void appendFunctionParameter(const simple_backend::CodeFragmentPtr& fragment, const core::VariablePtr& param);
+	virtual void addFunctionPrefix(const simple_backend::CodeFragmentPtr& fragment, const core::LambdaPtr& lambda);
 };
 
 typedef std::map<unsigned, unsigned> varNameMapType;
@@ -67,7 +69,7 @@ public:
 	void visitLambdaExpr(const core::LambdaExprPtr& ptr);
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& ptr);
 	void visitCallExpr(const core::CallExprPtr& ptr);
-	void appendHeaders(simple_backend::ConvertedCode* converted) { }
+	virtual vector<string> getHeaderDefinitions() { return vector<string>(); }
 };
 
 } // namespace ocl

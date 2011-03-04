@@ -36,42 +36,51 @@
 
 #include "insieme/simple_backend/simple_backend.h"
 
+#include "insieme/core/program.h"
+#include "insieme/core/ast_node.h"
+
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/variable_manager.h"
+#include "insieme/simple_backend/statement_converter.h"
+#include "insieme/simple_backend/type_manager.h"
+#include "insieme/simple_backend/function_manager.h"
+#include "insieme/simple_backend/job_manager.h"
+
+#include "insieme/simple_backend/formatting/operator_formatting.h"
 
 namespace insieme {
 namespace simple_backend {
 
-TargetCodePtr convert(const ProgramPtr& source) {
+	TargetCodePtr convert(const core::ProgramPtr& source) {
 
-	// create and set up the converter
-	Converter converter;
+		// create and set up the converter
+		Converter converter;
 
-	// Prepare managers
-	NodeManager& nodeManager = source->getNodeManager();
-	converter.setNodeManager(&nodeManager);
+		// Prepare managers
+		core::NodeManager& nodeManager = source->getNodeManager();
+		converter.setNodeManager(&nodeManager);
 
-	StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-	converter.setStmtConverter(&stmtConverter);
+		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
+		converter.setStmtConverter(&stmtConverter);
 
-	NameManager nameManager;
-	converter.setNameManager(&nameManager);
+		NameManager nameManager;
+		converter.setNameManager(&nameManager);
 
-	TypeManager typeManager(nameManager);
-	converter.setTypeManager(&typeManager);
+		TypeManager typeManager(nameManager);
+		converter.setTypeManager(&typeManager);
 
-	VariableManager variableManager;
-	converter.setVariableManager(&variableManager);
+		VariableManager variableManager;
+		converter.setVariableManager(&variableManager);
 
-	FunctionManager functionManager(converter);
-	converter.setFunctionManager(&functionManager);
+		FunctionManager functionManager(converter);
+		converter.setFunctionManager(&functionManager);
 
-	JobManager jobManager(converter);
-	converter.setJobManager(&jobManager);
+		JobManager jobManager(converter);
+		converter.setJobManager(&jobManager);
 
-	// conduct conversion
-	return converter.convert(source);
-}
+		// conduct conversion
+		return converter.convert(source);
+	}
 
 
 } // end namespace simple_backend

@@ -59,8 +59,8 @@ class JobManager {
 	struct JobInfo {
 		string structName;			// the name of the struct holding local variables
 		string funName;				// the name of the function to be executed
-		CodePtr structDefinition;	// the definition of the job struct
-		CodePtr jobFunction;		// the definition of the function computing the job
+		CodeFragmentPtr structDefinition;	// the definition of the job struct
+		CodeFragmentPtr jobFunction;		// the definition of the function computing the job
 		vector<core::VariablePtr> capturedVars; 	// the variables to be captured within the job branches
 
 		/**
@@ -69,8 +69,8 @@ class JobManager {
 		JobInfo(
 				const string& structName,
 				const string& funName,
-				CodePtr& structDef,
-				CodePtr& funDef,
+				CodeFragmentPtr& structDef,
+				CodeFragmentPtr& funDef,
 				const vector<core::VariablePtr>& capturedVars)
 			:
 				structName(structName),
@@ -86,15 +86,15 @@ class JobManager {
 	struct PForBodyInfo {
 		string functionName;		// the name of the function realizing the body
 		string captureStructName;	// the name of the struct containing the captured variables
-		CodePtr funDefinition;		// the definition of the function
-		CodePtr captureStruct;		// the definition of the capture struct
+		CodeFragmentPtr funDefinition;		// the definition of the function
+		CodeFragmentPtr captureStruct;		// the definition of the capture struct
 		vector<core::VariablePtr> capturedVars; 	// the variables to be captured for this parallel for
 
 		PForBodyInfo(
 				const string& functionName,
 				const string& captureStructName,
-				const CodePtr& funDefinition,
-				const CodePtr& captureStruct,
+				const CodeFragmentPtr& funDefinition,
+				const CodeFragmentPtr& captureStruct,
 				const vector<core::VariablePtr> capturedVars)
 			:
 				functionName(functionName),
@@ -133,12 +133,12 @@ public:
 	 * @param context the context this job should be created in
 	 * @param job the job to be created
 	 */
-	void createJob(const CodePtr& context, const core::JobExprPtr& job);
+	void createJob(const CodeFragmentPtr& context, const core::JobExprPtr& job);
 
 	/**
 	 * Creates a call to the pfor-runtime function based on the given call expression.
 	 */
-	void createPFor(const CodePtr& context, const core::ExpressionPtr& pforCall);
+	void createPFor(const CodeFragmentPtr& context, const core::ExpressionPtr& pforCall);
 
 private:
 

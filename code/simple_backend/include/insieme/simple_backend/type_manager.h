@@ -71,10 +71,10 @@ public:
 		string rValueName;
 		string declPattern;
 		string paramPattern;
-		CodePtr definition;
+		CodeFragmentPtr definition;
 
 		Entry() : lValueName(), rValueName(), declPattern(), paramPattern(), definition() { }
-		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodePtr& definition)
+		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodeFragmentPtr& definition)
 			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),  definition(definition) { }
 	};
 
@@ -84,10 +84,10 @@ public:
 	struct FunctionTypeEntry {
 		string functorName;
 		string callerName;
-		CodePtr functorAndCaller;
+		CodeFragmentPtr functorAndCaller;
 
 		FunctionTypeEntry() { }
-		FunctionTypeEntry(const string& functorName, const string& callerName, const CodePtr& functorAndCaller)
+		FunctionTypeEntry(const string& functorName, const string& callerName, const CodeFragmentPtr& functorAndCaller)
 			: functorName(functorName), callerName(callerName), functorAndCaller(functorAndCaller) { }
 	};
 
@@ -118,7 +118,7 @@ public:
 	 * @param a flag allowing the user to indicate whether the type definition is required for a declaration statement or for not
 	 * @return the token to be used within a C program to describe this type
 	 */
-	string getTypeName(const CodePtr& context, const core::TypePtr& type, bool decl = false);
+	string getTypeName(const CodeFragmentPtr& context, const core::TypePtr& type, bool decl = false);
 
 	/**
 	 * Obtains a entry maintained for the given type. In case the type has been used before, the same
@@ -130,7 +130,7 @@ public:
 	 * @param type the type to be resolved
 	 * @return the entry summarizing the information required for representing the given type within C
 	 */
-	const Entry getTypeEntry(const CodePtr& context, const core::TypePtr& type);
+	const Entry getTypeEntry(const CodeFragmentPtr& context, const core::TypePtr& type);
 
 	/**
 	 * Formats the a parameter with the given type and name within the given context. This might be used
@@ -141,7 +141,7 @@ public:
 	 * @param name the name of the resulting parameter
 	 * @param a flag allowing the user to indicate whether the type definition is required for a declaration statement or for not
 	 */
-	string formatParamter(CodePtr& context, const core::TypePtr& type, const string& name, bool decl = false);
+	string formatParamter(const CodeFragmentPtr& context, const core::TypePtr& type, const string& name, bool decl = false);
 
 	/**
 	 * Obtains information regarding the given function type. The resulting entry contains
