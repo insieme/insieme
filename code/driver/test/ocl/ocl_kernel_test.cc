@@ -52,7 +52,6 @@
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
-using namespace insieme::c_info;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 using namespace insieme::utils::log;
