@@ -35,12 +35,17 @@
  */
 
 #include "insieme/opencl_backend/opencl_convert.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
-#include "insieme/core/ast_builder.h"
+
 #include "insieme/utils/logging.h"
-#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/container_utils.h"
+
+#include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/frontend/ocl/ocl_annotations.h"
+
+#include "insieme/simple_backend/variable_manager.h"
 
 namespace insieme {
 namespace backend {
@@ -488,7 +493,7 @@ namespace detail {
 	NodeManager& manager = basic.getNodeManager();
 	ASTBuilder builder(manager);
 
-	#include "insieme/simple_backend/format_spec_start.mac"
+	#include "insieme/simple_backend/formatting/formats_begin.inc"
 
 	{
 		TypePtr t = (manager).basic.getUInt4();
@@ -505,16 +510,16 @@ namespace detail {
 		LiteralPtr lit6 = builder.literal(builder.functionType(tList1, t1), "get_global_offset");
 		// FIXME: check for the prototype of this function.. why int get...() 
 		LiteralPtr lit7 = builder.literal(builder.functionType(tList1, t1), "get_work_dimension");
-		ADD_FORMATTER(lit1, { OUT("get_global_id("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lit2, { OUT("get_local_id("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lit3, { OUT("get_global_size("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lit4, { OUT("get_local_size("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lit5, { OUT("get_num_groups("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lit6, { OUT("get_global_offset(");	VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(lit7, { OUT("get_work_dimension(");	VISIT_ARG(0); OUT(")"); });	
+		ADD_FORMATTER(res, lit1, { OUT("get_global_id("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit2, { OUT("get_local_id("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit3, { OUT("get_global_size("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit4, { OUT("get_local_size("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit5, { OUT("get_num_groups("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit6, { OUT("get_global_offset(");	VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit7, { OUT("get_work_dimension(");	VISIT_ARG(0); OUT(")"); });
 	}
 
-	#include "insieme/simple_backend/format_spec_end.mac"
+	#include "insieme/simple_backend/formatting/formats_end.inc"
 	return res;
 }
 

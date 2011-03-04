@@ -1,4 +1,4 @@
-
+#include <stdio.h>
 
 //typedef int bool;
 #define bool int

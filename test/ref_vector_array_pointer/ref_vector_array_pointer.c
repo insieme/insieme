@@ -65,6 +65,11 @@ int main(int argc, char* argv[]) {
 	char(*** d4)[3];
 	char(* d5)[3][2][1];
 
+	// mixed constructs (2)
+	char* e1[3];
+	char** e2[2][3];
+	char*** e3[1][2][3];
+
 	// within a struct
 	Data s;
 	s.s1 = '#';
@@ -84,6 +89,10 @@ int main(int argc, char* argv[]) {
 	printf("size of d3 %d\n", sizeof(d3));
 	printf("size of d4 %d\n", sizeof(d4));
 	printf("size of d5 %d\n", sizeof(d5));
+
+	printf("size of e1 %d\n", sizeof(e1));
+	printf("size of e2 %d\n", sizeof(e2));
+	printf("size of e3 %d\n", sizeof(e3));
 
 	printf("Letter Array:   %c\n", funArray(a1, b1, b2, b3));
 	printf("Letter Pointer: %c\n", funPointer(a1, c1, c2, c3));

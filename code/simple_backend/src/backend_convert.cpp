@@ -36,6 +36,8 @@
 
 #include "insieme/simple_backend/backend_convert.h"
 
+#include "insieme/simple_backend/variable_manager.h"
+
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -106,6 +108,9 @@ void StmtConverter::appendHeaders(ConvertedCode* converted) {
 	converted->addHeaderLine("#include <alloca.h>");
 	converted->addHeaderLine("#include <stddef.h>");
 	converted->addHeaderLine("#include <stdlib.h>");
+
+	// including this header will result into problems on a 32 bit system
+	//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme
 	//converted->addHeaderLine("#include <string.h>");
 
 	// add runtime header
@@ -144,7 +149,6 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 
 		// special handling for var-list handling
 		if(cc.getLangBasic().isVarlistPack(funExp)) {
-			//DLOG(INFO) << cStr.getString();
 			// if the arguments are a tuple expression, use the expressions within the tuple ...
 			if (args.size() == 1) { // should actually be implicit if all checks are satisfied
 				if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
@@ -161,8 +165,6 @@ void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 			}
 
 			functionalJoin([&]{ this->getCodeStream() << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
-			//DLOG(INFO) << cStr.getString();
-			//LOG(INFO) << "\n=========================== " << args.front() << " ---->> " << args.back() << "\n";
 			return;
 		}
 
@@ -319,13 +321,13 @@ void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, 
 		visit(ptr->getLambda());
 	}
 
-	 // TODO: add real size
-	cStr << ", 0";
-
+	// add size of struct
+	cStr << ", sizeof(" << details.functorName << ")";
 
 	// add captured parameters
 	for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-//		cStr << ", ";
+
+		// TODO: handle capture variables uniformely
 		bool addAddressOperator = isVectorOrArrayRef(cur->getType());
 		if (addAddressOperator
 				&& cur->getNodeType() == NT_Variable
@@ -369,7 +371,6 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 					info.location = VariableManager::STACK;
 				}
 
-//				info.location = VariableManager::STACK;
 				break;
 			default:
 				// default is a stack variable
@@ -384,7 +385,6 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 	// standard handling
 	CodeStream& cStr = getCodeStream();
 	string varName = cc.getNameManager().getVarName(var);
-//	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, info.location == VariableManager::STACK);
 	cStr << cc.getTypeManager().formatParamter(defCodePtr, var->getType(), varName, !isAllocatedOnHEAP);
 
 	// check whether there is an initialization
@@ -401,9 +401,6 @@ void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 
 	// start initialization
 	cStr << " = ";
-
-	// a special handling for initializing heap allocated structs (to avoid large stack allocated objects)
-//	const RefTypePtr& refType = (info.location == VariableManager::HEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 
 	const RefTypePtr& refType = (isAllocatedOnHEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 	if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
@@ -588,11 +585,6 @@ void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
 void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	CodeStream& cStr = getCodeStream();
 
-//	if (ptr->getType()->getNodeType() == NT_RefType
-//			&& cc.getVariableManager().getInfo(ptr).location != VariableManager::HEAP) {
-//		cStr << "&";
-//	}
-
 	bool deref = true;
 	if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
 		TypePtr elementType = refType->getElementType();
@@ -613,13 +605,6 @@ void StmtConverter::visitVariable(const VariablePtr& ptr) {
 	}
 
 	cStr << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
-
-//	if (ptr->getType()->getNodeType() == NT_RefType && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
-//		cStr << "(*" << cc.getNameManager().getVarName(ptr) << ")";
-//		return;
-//	}
-
-//	cStr << cc.getNameManager().getVarName(ptr);
 }
 
 void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {
@@ -695,429 +680,6 @@ void StmtConverter::visitMarkerStmt(const MarkerStmtPtr& ptr) {
 }
 
 
-
-// -------------------------------- Variable Manager -----------------------------------------
-
-const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
-	auto pos = variableMap.find(variable);
-	if(pos == variableMap.end()) {
-		LOG(INFO) << "v" << variable->getId();
-	}
-	assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
-	return (*pos).second;
-}
-
-void VariableManager::addInfo(const VariablePtr& variable, const VariableManager::VariableInfo& info) {
-	auto res = variableMap.insert(std::make_pair(variable, info));
-	if (res.second) {
-		return;
-	}
-	variableMap.erase(res.first);
-	res = variableMap.insert(std::make_pair(variable,info));
-	assert(res.second && "Replacement failed!");
-}
-
-void VariableManager::removeInfo(const VariablePtr& variable) {
-	variableMap.erase(variable);
-}
-
-bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
-	return variableMap.find(variable) != variableMap.end();
-}
-
-
-
-namespace {
-
-	ExpressionPtr evalLazy(const NodePtr& lazy) {
-
-		NodeManager& manager = lazy->getNodeManager();
-
-		ExpressionPtr exprPtr = dynamic_pointer_cast<const Expression>(lazy);
-		assert(exprPtr && "Lazy is not an expression!");
-
-		FunctionTypePtr funType = dynamic_pointer_cast<const FunctionType>(exprPtr->getType());
-		assert(funType && "Illegal lazy type!");
-
-		// form call expression
-		CallExprPtr call = CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<ExpressionPtr>());
-		return core::transform::tryInlineToExpr(manager, call);
-	}
-
-	void handleIncOperand(StmtConverter& converter, const NodePtr& target) {
-
-		assert(dynamic_pointer_cast<const Expression>(target) && "Operator must be an expression.");
-
-		// check whether a deref is required
-		CodeStream& stream = converter.getCodeStream();
-		stream << "(*";
-		converter.convert(target);
-		stream << ")";
-	}
-
-	void handleRefConstructor(StmtConverter& converter, CodeStream& cStr, const NodePtr& initValue, bool isNew) {
-
-		// check input parameters
-		assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
-
-		// quick check for arrays => extra handling
-		const core::lang::BasicGenerator& basic = converter.getConversionContext().getLangBasic();
-		if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
-			core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
-
-			// vector creation is sufficient
-			converter.convert(initValue);
-			return;
-		}
-
-
-		// extract type
-		TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
-		string typeName = converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), type, true);
-
-		// use stack or heap allocator
-		string allocator = (isNew)?"malloc":"alloca";
-
-		// special handling of some initialization values
-		string stmt = toString(*initValue);
-
-		// TODO: use pattern matching!
-
-		// check for vector init undefined and undefined
-		if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || core::analysis::isCallOf(initValue, basic.getUndefined())) {
-			cStr << allocator << "(sizeof(" << typeName << "))";
-			return;
-		}
-
-		if (isNew && core::analysis::isCallOf(initValue, basic.getVectorInitUniform())) {
-			NodePtr param = static_pointer_cast<const CallExpr>(initValue)->getArguments()[0];
-
-			// iterate through multiple vector init uniform calls
-			while (core::analysis::isCallOf(param, basic.getVectorInitUniform())) {
-				param = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
-			}
-
-			// innermost has to be a ref-var call with a literal 0
-			if (core::analysis::isCallOf(param, basic.getRefVar()) || core::analysis::isCallOf(param, basic.getRefNew())) {
-				const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
-				if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
-					string value = literal->getValue();
-					if (basic.isInitZero(literal) || value == "0" || value == "0.0" || value == "\0") {
-						cStr << "calloc(sizeof(" << typeName << "), 1)";
-						return;
-					}
-				}
-				if (core::analysis::isCallOf(refVar, basic.getInitZero())) {
-					cStr << "calloc(sizeof(" << typeName << "), 1)";
-					return;
-				}
-			}
-		}
-
-		// TODO: use memset for other initializations => see memset!!
-
-		cStr << "memcpy(";
-		cStr << allocator << "(";
-		cStr << "sizeof(";
-		cStr << typeName;
-		cStr << ")), &((";
-		cStr << typeName;
-		cStr << "[]){";
-		converter.convert(initValue);
-		cStr << "}), sizeof(";
-		cStr << typeName;
-		cStr << "))";
-	}
-}
-
-
-namespace formatting {
-
-
-	/**
-	 * A utility function to obtain the n-th argument within the given call expression.
-	 *
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the requested argument
-	 * @return the requested argument or a NULL pointer in case there is no such argument
-	 */
-	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
-		auto arguments = call->getArguments();
-		if (n < arguments.size()) {
-			return arguments[n];
-		}
-		return ExpressionPtr();
-	}
-
-	/**
-	 * A utility function visiting the n-th argument of a call expression.
-	 *
-	 * @param converter the converter to be used for the actual conversion
-	 * @param call the expression from which the argument should be extracted
-	 * @param n the index of the argument to be visited; in case there is no such argument, nothing will be visited
-	 */
-	void visitArgument(StmtConverter& converter, const CallExprPtr& call, unsigned n) {
-		ExpressionPtr argument = getArgument(call, n);
-		if (argument) {
-			converter.convert(argument);
-		}
-	}
-
-
-
-	FormatTable getBasicFormatTable(const lang::BasicGenerator& basic) {
-
-		FormatTable res;
-
-		#include "insieme/simple_backend/format_spec_start.mac"
-
-
-		ADD_FORMATTER(basic.getRefDeref(), {
-				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
-					OUT("*"); // for all other types, the deref operator is needed (for arrays and vectors implicite)
-				}
-				//OUT("*");
-				VISIT_ARG(0);
-		});
-
-		ADD_FORMATTER(basic.getRefAssign(), {
-				NodeManager& manager = converter.getConversionContext().getNodeManager();
-				ExpressionPtr target = static_pointer_cast<const Expression>(ARG(0));
-				TypePtr valueType = static_pointer_cast<const RefType>(target->getType())->getElementType();
-				converter.convert(CallExpr::get(manager, valueType, basic.getRefDeref(), toVector<ExpressionPtr>(target)));
-				OUT(" = ");
-				VISIT_ARG(1);
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getRefVar(), false, { handleRefConstructor(converter, cStr, ARG(0), false); });
-		ADD_FORMATTER_DETAIL(basic.getRefNew(), false, { handleRefConstructor(converter, cStr, ARG(0), true); });
-
-		ADD_FORMATTER(basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
-
-		ADD_FORMATTER(basic.getScalarToVector(), { VISIT_ARG(0); });
-
-		ADD_FORMATTER(basic.getArrayCreate1D(), {
-
-				// test whether the size is fixed to 1
-				if (ARG(1)->getNodeType() == NT_Literal && static_pointer_cast<const Literal>(ARG(1))->getValue() == "1") {
-					// special handling of arrays with a single element
-					ASTBuilder builder(call->getNodeManager());
-					NodePtr init = ARG(0);
-					if (core::analysis::isCallOf(init, basic.getRefVar())) {
-						init = builder.refNew(static_pointer_cast<const CallExpr>(init)->getArguments()[0]);
-						converter.convert(init);
-					} else if (core::analysis::isCallOf(init, basic.getRefNew())) {
-						converter.convert(init);
-					} else {
-						converter.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
-					}
-
-				} else {
-
-					// ensure array is randomly initialized
-					ExpressionPtr initValue = ARG(0);
-					assert(!core::analysis::isCallOf(initValue, basic.getRefVar()) && "Initialization of arrays based on ref-elements not supported yet!" );
-					assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
-
-					// all arrays are allocated on the HEAP
-					OUT("malloc(");
-					OUT("sizeof(");
-					TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
-					OUT(converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), type, true));
-					OUT(")*");
-					VISIT_ARG(1);
-					OUT(")");
-				}
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getArraySubscript1D(), false, {
-				bool isRef = call->getType()->getNodeType() == NT_RefType;
-				if (isRef) OUT("&(");
-				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
-				if (isRef) OUT(")");
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getArrayRefElem1D(), false, {
-
-				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
-				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
-					OUT("&");
-				}
-
-				// check whether input variable needs to be dereferenced
-				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
-				insertDeref = insertDeref && converter.getConversionContext().getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::HEAP;
-
-				if (insertDeref) {
-					OUT("((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
-				} else {
-					OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
-				}
-
-//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-//				if (targetType->getElementType()->getNodeType() == NT_VectorType) {
-//					OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
-//					return;
-//				}
-//
-//				OUT("&((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getArrayRefProjection1D(), false, {
-				OUT("/* totaly unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getVectorSubscript(), false, {
-				bool isRef = call->getType()->getNodeType() == NT_RefType;
-				if (isRef) OUT("&(");
-				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
-				if (isRef) OUT(")");
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getVectorRefProjection(), false, {
-				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
-		});
-
-		//ADD_FORMATTER(basic.getVectorInitUniform(), { OUT("{"); VISIT_ARG(0); OUT("}"); });
-		ADD_FORMATTER_DETAIL(basic.getVectorInitUniform(), false, { OUT("{}"); });
-		ADD_FORMATTER_DETAIL(basic.getVectorInitUndefined(), false, { OUT("{}"); });
-
-
-		// struct operations
-		ADD_FORMATTER(basic.getCompositeRefElem(), {
-				NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
-					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
-				}
-				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
-//				OUT("&((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
-		});
-		ADD_FORMATTER(basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getUnsignedIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getUnsignedIntAnd(), { VISIT_ARG(0); OUT("&"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntOr(), { VISIT_ARG(0); OUT("|"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntNot(), { OUT("~"); VISIT_ARG(0); });
-
-		ADD_FORMATTER(basic.getUnsignedIntLShift(), { VISIT_ARG(0); OUT("<<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntRShift(), { VISIT_ARG(0); OUT(">>"); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getUnsignedIntPreInc(), { OUT("++"); handleIncOperand(converter, ARG(0)); });
-		ADD_FORMATTER(basic.getUnsignedIntPostInc(), { handleIncOperand(converter, ARG(0)); OUT("++"); });
-		ADD_FORMATTER(basic.getUnsignedIntPreDec(), { OUT("--"); handleIncOperand(converter, ARG(0)); });
-		ADD_FORMATTER(basic.getUnsignedIntPostDec(), { handleIncOperand(converter, ARG(0)); OUT("--"); });
-
-
-		ADD_FORMATTER(basic.getSignedIntAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntMul(), { VISIT_ARG(0); OUT("*"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntDiv(), { VISIT_ARG(0); OUT("/"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntMod(), { VISIT_ARG(0); OUT("%"); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getSignedIntLShift(), { VISIT_ARG(0); OUT("<<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntRShift(), { VISIT_ARG(0); OUT(">>"); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getSignedIntPreInc(), { OUT("++"); handleIncOperand(converter, ARG(0)); });
-		ADD_FORMATTER(basic.getSignedIntPostInc(), { handleIncOperand(converter, ARG(0)); OUT("++"); });
-		ADD_FORMATTER(basic.getSignedIntPreDec(), { OUT("--"); handleIncOperand(converter, ARG(0)); });
-		ADD_FORMATTER(basic.getSignedIntPostDec(), { handleIncOperand(converter, ARG(0)); OUT("--"); });
-
-		ADD_FORMATTER(basic.getSignedIntAnd(), { VISIT_ARG(0); OUT("&"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntOr(), { VISIT_ARG(0); OUT("|"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntXor(), { VISIT_ARG(0); OUT("^"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); VISIT_ARG(0); });
-
-		ADD_FORMATTER(basic.getBoolLAnd(), { VISIT_ARG(0); OUT("&&"); converter.convert(evalLazy(ARG(1))); });
-		ADD_FORMATTER(basic.getBoolLOr(), { VISIT_ARG(0); OUT("||"); converter.convert(evalLazy(ARG(1))); });
-		ADD_FORMATTER(basic.getBoolNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); VISIT_ARG(0); });
-
-		ADD_FORMATTER(basic.getCharNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getCharEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getCharGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getCharGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getCharLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getCharLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getUnsignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getUnsignedIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getSignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getSignedIntLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
-
-		ADD_FORMATTER(basic.getRealEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
-		ADD_FORMATTER(basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
-
-
-		// string conversion
-		ADD_FORMATTER_DETAIL(basic.getStringToCharPointer(), false, { VISIT_ARG(0); });
-
-
-		ADD_FORMATTER(basic.getIfThenElse(), {
-				OUT("("); VISIT_ARG(0); OUT(")?(");
-				converter.convert(evalLazy(ARG(1)));
-				OUT("):(");
-				converter.convert(evalLazy(ARG(2)));
-				OUT(")");
-		});
-
-		ADD_FORMATTER_DETAIL(basic.getSizeof(), false, {
-				OUT("sizeof(");
-				GenericTypePtr type = dynamic_pointer_cast<const GenericType>(
-						static_pointer_cast<const Expression>(ARG(0))->getType()
-				);
-				assert(type && "Illegal argument to sizeof operator");
-				TypePtr target = type->getTypeParameter()[0];
-				OUT(converter.getConversionContext().getTypeManager().getTypeName(converter.getCode(), target, true));
-				OUT(")");
-		});
-
-
-		// handle parallel operators
-		ADD_FORMATTER_DETAIL(basic.getParallel(), false, { OUT("isbr_parallel("); VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER_DETAIL(basic.getMerge(), false, { OUT("isbr_merge("); VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER_DETAIL(basic.getBarrier(), false, { OUT("isbr_barrier("); VISIT_ARG(0); OUT(")"); });
-
-		ADD_FORMATTER_DETAIL(basic.getGetThreadGroup(), false, { OUT("isbr_getThreadGroup("); VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER_DETAIL(basic.getGetThreadId(), false, { OUT("isbr_getThreadId("); VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER_DETAIL(basic.getGetGroupSize(), false, { OUT("isbr_getGroupSize("); VISIT_ARG(0); OUT(")"); });
-
-
-		ADD_FORMATTER_DETAIL(basic.getPFor(), false, {
-				converter.getConversionContext().getJobManager().createPFor(converter.getCode(), call);
-		});
-
-		#include "insieme/simple_backend/format_spec_end.mac"
-
-		return res;
-	}
-}
 
 }
 }

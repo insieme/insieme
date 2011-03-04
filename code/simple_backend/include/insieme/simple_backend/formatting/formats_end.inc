@@ -34,49 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/simple_backend/simple_backend.h"
+/**
+ * Undefines the definition made within the format_spec_start.inc
+ */
 
-#include "insieme/simple_backend/backend_convert.h"
-#include "insieme/simple_backend/variable_manager.h"
+#undef ADD_FORMATTER
+#undef ADD_FORMATTER_DETAIL
+#undef OUT
+#undef ARG
+#undef VISIT_ARG
 
-namespace insieme {
-namespace simple_backend {
-
-TargetCodePtr convert(const ProgramPtr& source) {
-
-	// create and set up the converter
-	Converter converter;
-
-	// Prepare managers
-	NodeManager& nodeManager = source->getNodeManager();
-	converter.setNodeManager(&nodeManager);
-
-	StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-	converter.setStmtConverter(&stmtConverter);
-
-	NameManager nameManager;
-	converter.setNameManager(&nameManager);
-
-	TypeManager typeManager(nameManager);
-	converter.setTypeManager(&typeManager);
-
-	VariableManager variableManager;
-	converter.setVariableManager(&variableManager);
-
-	FunctionManager functionManager(converter);
-	converter.setFunctionManager(&functionManager);
-
-	JobManager jobManager(converter);
-	converter.setJobManager(&jobManager);
-
-	// conduct conversion
-	return converter.convert(source);
-}
-
-
-} // end namespace simple_backend
-} // end namespace insieme
-
-std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::TargetCode& code) {
-	return code.printTo(out);
-}

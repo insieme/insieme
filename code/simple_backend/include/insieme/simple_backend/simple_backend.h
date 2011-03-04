@@ -67,39 +67,39 @@ TargetCodePtr convert(const core::ProgramPtr& source);
  */
 class TargetCode {
 
-	/**
-	 * The IR code representation this target code is based on.
-	 */
-	const core::ProgramPtr source;
+		/**
+		 * The IR code representation this target code is based on.
+		 */
+		const core::ProgramPtr source;
 
-protected:
+	protected:
 
-	/**
-	 * A protected constructor for this class to be used by derived versions.
-	 */
-	TargetCode(const core::ProgramPtr& source) : source(source) {}
+		/**
+		 * A protected constructor for this class to be used by derived versions.
+		 */
+		TargetCode(const core::ProgramPtr& source) : source(source) {}
 
-public:
+	public:
 
-	/**
-	 * A virtual default constructor allowing subclasses to be properly destroyed.
-	 */
-	virtual ~TargetCode() {}
+		/**
+		 * A virtual default constructor allowing subclasses to be properly destroyed.
+		 */
+		virtual ~TargetCode() {}
 
-	/**
-	 * Obtains the source
-	 */
-	const core::ProgramPtr& getSource() const {
-		return source;
-	}
+		/**
+		 * Obtains the source
+		 */
+		const core::ProgramPtr& getSource() const {
+			return source;
+		}
 
-	/**
-	 * Requests this code to be printed into the given output stream.
-	 *
-	 * @param out the stream to be printed to.
-	 * @return a reference to the given output stream.
-	 */
-	virtual std::ostream& printTo(std::ostream& out) const =0;
+		/**
+		 * Requests this code to be printed into the given output stream.
+		 *
+		 * @param out the stream to be printed to.
+		 * @return a reference to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const =0;
 };
 
 

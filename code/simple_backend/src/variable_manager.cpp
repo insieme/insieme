@@ -34,49 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/simple_backend/simple_backend.h"
-
-#include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/variable_manager.h"
+
+#include "insieme/core/expressions.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace simple_backend {
 
-TargetCodePtr convert(const ProgramPtr& source) {
+	using namespace core;
 
-	// create and set up the converter
-	Converter converter;
+	// -------------------------------- Variable Manager -----------------------------------------
 
-	// Prepare managers
-	NodeManager& nodeManager = source->getNodeManager();
-	converter.setNodeManager(&nodeManager);
+	const VariableManager::VariableInfo& VariableManager::getInfo(const VariablePtr& variable) const {
+		auto pos = variableMap.find(variable);
+		if(pos == variableMap.end()) {
+			LOG(INFO) << "Illegal access to variable v" << variable->getId();
+		}
+		assert(pos != variableMap.end() && "Tried to look up undefined Variable!");
+		return (*pos).second;
+	}
 
-	StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-	converter.setStmtConverter(&stmtConverter);
+	void VariableManager::addInfo(const VariablePtr& variable, const VariableManager::VariableInfo& info) {
+		auto res = variableMap.insert(std::make_pair(variable, info));
+		if (res.second) {
+			return;
+		}
+		variableMap.erase(res.first);
+		res = variableMap.insert(std::make_pair(variable,info));
+		assert(res.second && "Replacement failed!");
+	}
 
-	NameManager nameManager;
-	converter.setNameManager(&nameManager);
+	void VariableManager::removeInfo(const VariablePtr& variable) {
+		variableMap.erase(variable);
+	}
 
-	TypeManager typeManager(nameManager);
-	converter.setTypeManager(&typeManager);
-
-	VariableManager variableManager;
-	converter.setVariableManager(&variableManager);
-
-	FunctionManager functionManager(converter);
-	converter.setFunctionManager(&functionManager);
-
-	JobManager jobManager(converter);
-	converter.setJobManager(&jobManager);
-
-	// conduct conversion
-	return converter.convert(source);
-}
+	bool VariableManager::hasInfoFor(const VariablePtr& variable) const {
+		return variableMap.find(variable) != variableMap.end();
+	}
 
 
 } // end namespace simple_backend
 } // end namespace insieme
-
-std::ostream& operator<<(std::ostream& out, const insieme::simple_backend::TargetCode& code) {
-	return code.printTo(out);
-}
