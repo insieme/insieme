@@ -222,8 +222,10 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 		out << ", " << join(", ", arguments, elementPrinter);
 	}
 	out << ");\n";
+
 	// add field for size of concrete type
-	out << "    const size_t size;\n";
+	// NOTE: disabled since not used anywhere
+	// out << "    const size_t size;\n";
 
 
 
