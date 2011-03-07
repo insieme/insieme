@@ -39,6 +39,8 @@
 #include "insieme/core/ast_visitor.h"
 #include "insieme/utils/set_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace transform {
 
@@ -46,85 +48,126 @@ using namespace insieme::core;
 
 namespace {
 
-	// TODO: split elimination of refs and arrays ... one after another
+// TODO: split elimination of refs and arrays ... one after another
 
-	bool isArrayType(const TypePtr& cur) {
+bool isArrayType(const TypePtr& cur) {
 
-		// check for null pointer
-		if (!cur) {
-			return false;
-		}
-
-		// accept pure array type
-		if (cur->getNodeType() == NT_ArrayType) {
-			return true;
-		}
-
-		// also accept ref/array combination
-		if ((cur->getNodeType() == NT_RefType && static_pointer_cast<const RefType>(cur)->getElementType()->getNodeType() == NT_ArrayType)) {
-			return true;
-		}
+	// check for null pointer
+	if (!cur) {
 		return false;
 	}
 
-
-	core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
-
-		// Step 1) search list of structs containing arrays as elements
-		utils::set::PointerSet<StructTypePtr> structs;
-
-		// search for the property
-		visitAllOnce(node, makeLambdaPtrVisitor([&](const NodePtr& cur){
-			if (cur->getNodeType() != NT_StructType) {
-				return;
-			}
-
-			StructTypePtr type = static_pointer_cast<const StructType>(cur);
-			if (any(type->getEntries(), [](const StructType::Entry& cur)->bool { return isArrayType(cur.second); })) {
-				structs.insert(type);
-				return;
-			}
-
-		}, true));
-
-		// Step 2) collect addresses of nodes accessing array types
-		utils::set::PointerSet<MemberAccessExprAddress> accesses;
-		{
-			visitAllNodes(NodeAddress(node), [&](const NodeAddress& cur){
-				if (cur->getNodeType() != NT_MemberAccessExpr) {
-					return;
-				}
-
-				MemberAccessExprAddress access = static_address_cast<const MemberAccessExpr>(cur);
-
-				TypePtr type = access->getSubExpression()->getType();
-				if (type->getNodeType() != NT_StructType) {
-					return;
-				}
-
-				StructTypePtr structType = static_pointer_cast<const StructType>(type);
-				if (isArrayType(structType->getTypeOfMember(access->getMemberName()))) {
-					accesses.insert(access);
-				}
-
-			}, false);
-		}
-
-		//
-
-		// print list of structs
-		for_each(structs, [](const StructTypePtr& cur) {
-			std::cout << "Current struct: " << *cur << std::endl;
-		});
-
-		for_each(accesses, [](const MemberAccessExprAddress& cur) {
-			std::cout << "Access: " << *cur << " @ " << cur << std::endl;
-		});
-
-		return node;
+	// accept pure array type
+	if (cur->getNodeType() == NT_ArrayType) {
+		return true;
 	}
 
+	// also accept ref/array combination
+	if ((cur->getNodeType() == NT_RefType && static_pointer_cast<const RefType>(cur)->getElementType()->getNodeType() == NT_ArrayType)) {
+		return true;
+	}
+	return false;
 }
+
+
+core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
+
+	// Step 1) search list of structs containing arrays as elements
+	utils::set::PointerSet<StructTypePtr> structs;
+
+	// search for the property
+	visitAllOnce(node, makeLambdaPtrVisitor([&](const NodePtr& cur){
+		if (cur->getNodeType() != NT_StructType) {
+			return;
+		}
+
+		StructTypePtr type = static_pointer_cast<const StructType>(cur);
+		if (any(type->getEntries(), [](const StructType::Entry& cur)->bool { return isArrayType(cur.second); })) {
+			structs.insert(type);
+			return;
+		}
+
+	}, true));
+
+	// Step 2) collect addresses of nodes accessing array types
+	utils::set::PointerSet<MemberAccessExprAddress> accesses;
+	{
+		visitAllNodes(NodeAddress(node), [&](const NodeAddress& cur){
+			if (cur->getNodeType() != NT_MemberAccessExpr) {
+				return;
+			}
+
+			MemberAccessExprAddress access = static_address_cast<const MemberAccessExpr>(cur);
+
+			TypePtr type = access->getSubExpression()->getType();
+			if (type->getNodeType() != NT_StructType) {
+				return;
+			}
+
+			StructTypePtr structType = static_pointer_cast<const StructType>(type);
+			if (isArrayType(structType->getTypeOfMember(access->getMemberName()))) {
+				accesses.insert(access);
+			}
+
+		}, false);
+	}
+
+	//
+
+	// print list of structs
+	for_each(structs, [](const StructTypePtr& cur) {
+		std::cout << "Current struct: " << *cur << std::endl;
+	});
+
+	for_each(accesses, [](const MemberAccessExprAddress& cur) {
+		std::cout << "Access: " << *cur << " @ " << cur << std::endl;
+	});
+
+	return node;
+}
+
+struct LoopCollector : public core::ASTVisitor<void> {
+	typedef std::vector<ForStmtPtr> LoopList;
+
+	LoopCollector() : core::ASTVisitor<void>(false) { }
+
+	void visitForStmt( const ForStmtPtr& forStmt ) {
+		visit(forStmt->getBody());
+
+		loops.push_back(forStmt);
+	}
+
+	LoopList operator()(const NodePtr& root) {
+		visit(root);
+		return loops;
+	}
+
+	void visitNode(const core::NodePtr& node) {
+		std::for_each(node->getChildList().begin(), node->getChildList().end(),
+			[ this ] (core::NodePtr curr){
+				this->visit(curr);
+			});
+	}
+
+private:
+	LoopList loops;
+};
+
+core::NodePtr normalizeLoops(const core::NodePtr& node) {
+
+	LoopCollector lc;
+	LoopCollector::LoopList&& loops = lc(node);
+
+	LOG(DEBUG) << loops.size();
+	std::for_each(loops.begin(), loops.end(), [](const ForStmtPtr& cur){
+		LOG(DEBUG) << *cur;
+	} );
+
+	return node;
+}
+
+
+} // end anonymous namespace
 
 
 core::NodePtr cleanup(const core::NodePtr& node) {
@@ -134,6 +177,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	// remove unnecessary array indirections
 //	res = removePseudoArraysInStructs(res);
+	res = normalizeLoops(res);
 
 	// done
 	return res;

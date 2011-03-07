@@ -58,7 +58,9 @@ using namespace insieme::frontend;
 namespace {
 void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
 	std::vector<std::string> list;
-	std::transform(errs.begin(), errs.end(), back_inserter(list), [](const ParserStack::Error& pe) { return pe.expected; });
+	std::transform(errs.begin(), errs.end(), back_inserter(list),
+			[](const ParserStack::Error& pe) { return pe.expected; }
+		);
 
 	ss << boost::join(list, " | ");
 	ss << std::endl;
@@ -70,7 +72,7 @@ namespace frontend {
 
 // ------------------------------------ ValueUnion ---------------------------
 ValueUnion::~ValueUnion() {
-	if(ptrOwner && is<clang::Stmt*>()) {
+	if ( ptrOwner && is<clang::Stmt*>() ) {
 		assert(clangCtx && "Invalid ASTContext associated with this element.");
 		clangCtx->Deallocate(get<Stmt*>());
 	}
@@ -81,10 +83,11 @@ ValueUnion::~ValueUnion() {
 std::string ValueUnion::toStr() const {
 	std::string ret;
 	llvm::raw_string_ostream rs(ret);
-	if(is<Stmt*>())
+	if ( is<Stmt*>() ) {
 		get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
-	else
+	} else {
 		rs << *get<std::string*>();
+	}
 	return rs.str();
 }
 
@@ -112,8 +115,8 @@ void ParserStack::addExpected(size_t recordId, const Error& pe) { mRecords[recor
 void ParserStack::discardRecord(size_t recordId) { mRecords[recordId] = LocErrorList(); }
 
 size_t ParserStack::getFirstValidRecord() {
-	for(size_t i=0; i<mRecords.size(); ++i)
-		if(!mRecords[i].empty()) return i;
+	for ( size_t i=0; i<mRecords.size(); ++i )
+		if ( !mRecords[i].empty() ) return i;
 	assert(false);
 }
 
@@ -147,7 +150,7 @@ void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Pars
 	ss << "at location (" << Line(errLoc, pp.getSourceManager()) << ":" << Column(errLoc, pp.getSourceManager()) << ") ";
 	bool first = true;
 	do {
-		if(!errStack.getRecord(err).empty() && errStack.getRecord(err).front().loc == errLoc) {
+		if ( !errStack.getRecord(err).empty() && errStack.getRecord(err).front().loc == errLoc ) {
 			!first && ss << "\t";
 
 			reportRecord(ss, errStack.getRecord(err), pp.getSourceManager());

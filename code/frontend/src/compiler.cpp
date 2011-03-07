@@ -186,7 +186,9 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	if(enableCpp) {
 		LO.CPlusPlus = 1; 	// set C++ 98 support
 		LO.CXXOperatorNames = 1;
-		if(CommandLineOptions::STD == "c++0x") LO.CPlusPlus0x = 1; // set C++0x support
+		if(CommandLineOptions::STD == "c++0x") {
+			LO.CPlusPlus0x = 1; // set C++0x support
+		}
 		LO.RTTI = 1;
 		LO.Exceptions = 1;
 	}

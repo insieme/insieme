@@ -189,7 +189,7 @@ struct node {
 	 */
 	concat operator>>(node const& n) const;
 	/**
-	 * The sematincs of the unary operator * is repetitions. *(n1) means that node n1 can be repeated from 0 to an infinite amount of times.
+	 * The semantics of the unary operator * is repetitions. *(n1) means that node n1 can be repeated from 0 to an infinite amount of times.
 	 */
 	star operator*() const;
 	/**
