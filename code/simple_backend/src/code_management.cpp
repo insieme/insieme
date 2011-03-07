@@ -44,26 +44,28 @@
 namespace insieme {
 namespace simple_backend {
 
-const CodeStream::IndR CodeStream::indR = CodeStream::IndR();
-const CodeStream::IndL CodeStream::indL = CodeStream::IndL();
+const CodeBuffer::IndR CodeBuffer::indR = CodeBuffer::IndR();
+const CodeBuffer::IndL CodeBuffer::indL = CodeBuffer::IndL();
 
 
-std::string CodeStream::getString() {
+std::string CodeBuffer::toString() {
 	// defuglify code
 	std::string retval = ss.str();
-	boost::replace_all(retval, "*&", ""); // Hope this is safe
+	boost::replace_all(retval, "*&", "");
 	return retval;
 }
 
-CodePtr CodeFragment::addDependency( const std::string& name /*= "unnamed"*/ ) {
-	CodePtr newDep(new CodeFragment(name));
-	dependencies.push_back(newDep);
-	return newDep;
+
+CodeFragmentPtr CodeFragment::createNew(const std::string& name) {
+	return CodeFragmentPtr(new CodeFragment(name, false));
 }
 
-void CodeFragment::addDependency(const CodePtr& dep) {
+CodeFragmentPtr CodeFragment::createNewDummy(const std::string& name) {
+	return CodeFragmentPtr(new CodeFragment(name, true));
+}
+
+void CodeFragment::addDependency(const CodeFragmentPtr& dep) {
 	dependencies.push_back(dep);
-	//std::cout << "Added dependency " << dep->getName() << " to " << getName() << std::endl;
 }
 
 
@@ -71,14 +73,14 @@ namespace depResolve {
 
 	using namespace boost;
 
-	typedef adjacency_list<vecS, vecS, directedS, property<vertex_name_t, CodePtr>> Graph;
+	typedef adjacency_list<vecS, vecS, directedS, property<vertex_name_t, CodeFragmentPtr>> Graph;
 	typedef graph_traits<Graph>::vertex_descriptor Vertex;
 	typedef std::map<CodeFragment*, Vertex> CodeVertexMap;
 
-	void addDeps(const CodePtr& cur, Graph& g, CodeVertexMap& vmap) {
+	void addDeps(const CodeFragmentPtr& cur, Graph& g, CodeVertexMap& vmap) {
 		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
 		
-		auto vertexGen = [&g, &vmap, &codePtrMap](const CodePtr& ptr) -> Vertex {
+		auto vertexGen = [&g, &vmap, &codePtrMap](const CodeFragmentPtr& ptr) -> Vertex {
 			Vertex v;
 			auto insertionResult = vmap.insert(std::make_pair(&(*ptr), Vertex()));
 			if(insertionResult.second) {
@@ -92,7 +94,7 @@ namespace depResolve {
 		};
 		Vertex u = vertexGen(cur);
 
-		for_each(cur->getDependencies(), [&](const CodePtr& dep) {
+		for_each(cur->getDependencies(), [&](const CodeFragmentPtr& dep) {
 			Vertex v = vertexGen(dep);
 			add_edge(u, v, g);
 			addDeps(dep, g, vmap);
@@ -103,7 +105,7 @@ namespace depResolve {
 	/** Internal helper function that resolves all dependencies of the input code fragment to a flat list.
 	 ** Fails in case of circular dependencies.
 	 ** */
-	void resolve(const CodePtr& code, std::vector<CodePtr>& result) {
+	void resolve(const CodeFragmentPtr& code, std::vector<CodeFragmentPtr>& result) {
 
 		Graph g;
 		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
@@ -128,13 +130,13 @@ namespace depResolve {
 } // namespace simple_backend
 } // namespace insieme
 
-std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodePtr& cp) {
-	std::vector<insieme::simple_backend::CodePtr> flatDeps;
+std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodeFragmentPtr& cp) {
+	std::vector<insieme::simple_backend::CodeFragmentPtr> flatDeps;
 	insieme::simple_backend::depResolve::resolve(cp, flatDeps);
-	for_each(flatDeps, [&os](const insieme::simple_backend::CodePtr& cur) {
+	for_each(flatDeps, [&os](const insieme::simple_backend::CodeFragmentPtr& cur) {
 		if (!cur->isDummy()) {
 			os << "\n// start code fragment :: " << cur->getName() << " //\n";
-			os << cur->getCodeStream().getString();
+			os << cur->getCodeBuffer().toString();
 		}
 	});
 	return os;

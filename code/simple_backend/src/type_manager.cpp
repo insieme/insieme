@@ -48,10 +48,10 @@ namespace simple_backend {
 using namespace insieme::core;
 
 TypeManager::Entry toEntry(string name) {
-	return TypeManager::Entry(name, name, name + " %s", name + " %s", CodePtr());
+	return TypeManager::Entry(name, name, name + " %s", name + " %s", CodeFragmentPtr());
 }
 
-string TypeManager::formatParamter(CodePtr& context, const TypePtr& paramType, const string& name, bool decl) {
+string TypeManager::formatParamter(const CodeFragmentPtr& context, const TypePtr& paramType, const string& name, bool decl) {
 
 	// obtain type entry
 	const Entry& entry = getTypeEntry(context, paramType);
@@ -60,7 +60,7 @@ string TypeManager::formatParamter(CodePtr& context, const TypePtr& paramType, c
 	return format((decl)?entry.declPattern.c_str():entry.paramPattern.c_str(), name.c_str());
 }
 
-const TypeManager::Entry TypeManager::getTypeEntry(const CodePtr& context, const core::TypePtr& type) {
+const TypeManager::Entry TypeManager::getTypeEntry(const CodeFragmentPtr& context, const core::TypePtr& type) {
 
 	// resolve given type
 	const TypeManager::Entry& entry = resolveType(type);
@@ -74,7 +74,7 @@ const TypeManager::Entry TypeManager::getTypeEntry(const CodePtr& context, const
 	return entry;
 }
 
-string TypeManager::getTypeName(const CodePtr& context, const core::TypePtr& type, bool decl) {
+string TypeManager::getTypeName(const CodeFragmentPtr& context, const core::TypePtr& type, bool decl) {
 
 	// obtain type entry
 	TypeManager::Entry entry = getTypeEntry(context, type);
@@ -204,8 +204,8 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	string functorName = "struct " + name;
 	string callerName = "call" + name;
 
-	CodePtr functorAndCaller(new CodeFragment(string("Definitions for function type: ") + name));
-	CodeStream& out = functorAndCaller->getCodeStream();
+	CodeFragmentPtr functorAndCaller = CodeFragment::createNew("Definitions for function type: " + name);
+	CodeBuffer& out = functorAndCaller->getCodeBuffer();
 
 	auto elementPrinter = [&](std::ostream& out, const TypePtr& cur) {
 		out << getTypeName(functorAndCaller, cur, true);
@@ -496,18 +496,17 @@ TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTyp
 	string name = nameGenerator.getName(ptr, "userdefined_type");
 
 	// create a new code fragment for the struct definition
-	CodePtr cptr(new CodeFragment(string("type_declaration_") + name));
-	CodeStream& out = cptr->getCodeStream();
+	CodeFragmentPtr code = CodeFragment::createNew("type_declaration_" + name);
 
 	// add struct definition
-	out << prefix << " " << name << " { \n";
+	code << prefix << " " << name << " { \n";
 	for_each(ptr->getEntries(), [&, this](const NamedCompositeType::Entry& entry) {
-		out << "    " << formatParamter(cptr, entry.second, entry.first.getName(), true) << ";\n";
+		code << "    " << formatParamter(code, entry.second, entry.first.getName(), true) << ";\n";
 	});
-	out << "};\n";
+	code << "};\n";
 
 	string typeName = prefix + " " + name;
-	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", cptr);
+	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", code);
 }
 
 TypeManager::Entry TypeManager::resolveUnionType(const UnionTypePtr& ptr) {
@@ -532,7 +531,7 @@ TypeManager::Entry TypeManager::resolveRecType(const core::RecTypePtr& ptr) {
 void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr) {
 
 	// create dummy code group depending on all prototype definitions
-	CodePtr group = std::make_shared<CodeFragment>("Dummy fragment for recursive type group", true);
+	CodeFragmentPtr group = CodeFragment::createNewDummy("Dummy fragment for recursive type group");
 
 	NodeManager& manager = ptr->getNodeManager();
 
@@ -554,8 +553,8 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 			assert(false && "Cannot support recursive type which isn't a struct or union!");
 		}
 
-		CodePtr prototype = std::make_shared<CodeFragment>("Prototype of " + name);
-		prototype->getCodeStream() << name << ";\n";
+		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name);
+		prototype << name << ";\n";
 
 		this->typeDefinitions.insert(std::make_pair(type, Entry(name, name, name + " %s", name + " %s", prototype)));
 

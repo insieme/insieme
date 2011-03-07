@@ -38,9 +38,13 @@
  * Undefines the definition made within the format_spec_start.inc
  */
 
-#undef ADD_FORMATTER
-#undef ADD_FORMATTER_DETAIL
+#undef CODE
+#undef CONTEXT
+#undef STMT_CONVERTER
+
 #undef OUT
 #undef ARG
 #undef VISIT_ARG
 
+#undef ADD_FORMATTER
+#undef ADD_FORMATTER_DETAIL
