@@ -327,7 +327,7 @@ void makea(void* _capture, int n, int nz, double* a, int* colidx, int* rowstr, i
 		{
 			for(int var_113 = 1; var_113 < (n+1); var_113 += 1) {
 				((nzv) = nonzer);
-				sprnvc(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0,var_63}))), n, (nzv), v, iv, (&(colidx[((unsigned int)(0))])), (&(colidx[((unsigned int)(n))])));
+				sprnvc(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, sizeof(struct __insieme_funType_type_3),var_63}))), n, (nzv), v, iv, (&(colidx[((unsigned int)(0))])), (&(colidx[((unsigned int)(n))])));
 				vecset(n, v, iv, (&nzv), (var_113), 0.5);
 				{
 					for(int var_112 = 1; var_112 < ((nzv)+1); var_112 += 1) {
@@ -631,7 +631,7 @@ double elapsed_time(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		double t = 0.0;
-		wtime(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_197}))), (&t));
+		wtime(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_197}))), (&t));
 		return (t);;
 	}
 }
@@ -643,7 +643,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_196 = ((struct __insieme_funType_type_7*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((*var_196).start))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0,var_196})))));
+		((((((*var_196).start))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, sizeof(struct __insieme_funType_type_9),var_196})))));
 	}
 }
 
@@ -656,7 +656,7 @@ void timer_stop(void* _capture, int n) {
 	{
 		double t = 0.0;
 		double now = 0.0;
-		((now) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0,var_209})))));
+		((now) = elapsed_time(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, sizeof(struct __insieme_funType_type_9),var_209})))));
 		((t) = ((now)-(((((*var_209).start))[((unsigned int)(n))]))));
 		((((((*var_209).elapsed))[((unsigned int)(n))])) = ((((((*var_209).elapsed))[((unsigned int)(n))]))+(t)));
 	}
@@ -794,7 +794,7 @@ int main(int argc, char** argv) {
 		((*(&((*var_1).tran))) = 314159265.0);
 		((*(&((*var_1).amult))) = 1220703125.0);
 		((zeta) = randlc(((&((*var_1).tran))), (*(&((*var_1).amult)))));
-		makea(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), (*(&((*var_1).naa))), (*(&((*var_1).nzz))), (((*var_1).a)), (((*var_1).colidx)), (((*var_1).rowstr)), 8, (*(&((*var_1).firstrow))), (*(&((*var_1).lastrow))), (*(&((*var_1).firstcol))), (*(&((*var_1).lastcol))), 1.0e-1, (((*var_1).arow)), (((*var_1).acol)), (((*var_1).aelt)), (((*var_1).v)), (((*var_1).iv)), 12.0);
+		makea(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), (*(&((*var_1).naa))), (*(&((*var_1).nzz))), (((*var_1).a)), (((*var_1).colidx)), (((*var_1).rowstr)), 8, (*(&((*var_1).firstrow))), (*(&((*var_1).lastrow))), (*(&((*var_1).firstcol))), (*(&((*var_1).lastcol))), 1.0e-1, (((*var_1).arow)), (((*var_1).acol)), (((*var_1).aelt)), (((*var_1).v)), (((*var_1).iv)), 12.0);
 		{
 			{
 				for(int var_154 = 1; var_154 < ((((*(&((*var_1).lastrow)))-(*(&((*var_1).firstrow))))+1)+1); var_154 += 1) {
@@ -816,7 +816,7 @@ int main(int argc, char** argv) {
 			((zeta) = 0.0);
 			{
 				for(int var_190 = 1; var_190 < (1+1); var_190 += 1) {
-					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0,var_1}))), (((*var_1).colidx)), (((*var_1).rowstr)), (((*var_1).x)), (((*var_1).z)), (((*var_1).a)), (((*var_1).p)), (((*var_1).q)), (((*var_1).r)), (((*var_1).w)), (&rnorm));
+					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, sizeof(struct __insieme_funType_type_5),var_1}))), (((*var_1).colidx)), (((*var_1).rowstr)), (((*var_1).x)), (((*var_1).z)), (((*var_1).a)), (((*var_1).p)), (((*var_1).q)), (((*var_1).r)), (((*var_1).w)), (&rnorm));
 					{
 						((norm_temp11) = 0.0);
 						((norm_temp12) = 0.0);
@@ -846,12 +846,12 @@ int main(int argc, char** argv) {
 			};
 			((zeta) = 0.0);
 		};
-		timer_clear(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0,var_1}))), 1);
-		timer_start(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0,var_1}))), 1);
+		timer_clear(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, sizeof(struct __insieme_funType_type_7),var_1}))), 1);
+		timer_start(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, sizeof(struct __insieme_funType_type_7),var_1}))), 1);
 		{
 			{
 				for(int var_207 = 1; var_207 < (15+1); var_207 += 1) {
-					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0,var_1}))), (((*var_1).colidx)), (((*var_1).rowstr)), (((*var_1).x)), (((*var_1).z)), (((*var_1).a)), (((*var_1).p)), (((*var_1).q)), (((*var_1).r)), (((*var_1).w)), (&rnorm));
+					conj_grad(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, sizeof(struct __insieme_funType_type_5),var_1}))), (((*var_1).colidx)), (((*var_1).rowstr)), (((*var_1).x)), (((*var_1).z)), (((*var_1).a)), (((*var_1).p)), (((*var_1).q)), (((*var_1).r)), (((*var_1).w)), (&rnorm));
 					{
 						((norm_temp11) = 0.0);
 						((norm_temp12) = 0.0);
@@ -883,8 +883,8 @@ int main(int argc, char** argv) {
 				((it) = (1+(((int)(ceil((((double)(((15+1)-1)))/((double)(1))))))*1)));
 			};
 		};
-		timer_stop(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0,var_1}))), 1);
-		((t) = timer_read(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0,var_1}))), 1));
+		timer_stop(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, sizeof(struct __insieme_funType_type_7),var_1}))), 1);
+		((t) = timer_read(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, sizeof(struct __insieme_funType_type_13),var_1}))), 1));
 		printf(" Benchmark completed\n", 0);
 		((epsilon) = 1.0e-10);
 		if((((int)((class)))!='U')) {

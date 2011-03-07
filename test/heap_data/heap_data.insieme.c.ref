@@ -85,8 +85,8 @@ int sum(void* _capture) {
 int main(int argc, char** argv) {
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))));
-		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0,var_1})))));
+		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))));
+		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, sizeof(struct __insieme_funType_type_3),var_1})))));
 	}
 }
 

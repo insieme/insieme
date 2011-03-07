@@ -177,19 +177,21 @@ template<clang::tok::TokenKind T> struct Tok;
 struct node {
 
 	/**
-	 * This method consumes token from the input stream (using the clang lexer and tokenizer) and try to match with the current node.
-	 * If the read token matches the node definition, true is returned otherwise false. The MatchMap object contains the map of value
-	 * derived during the parsing.
+	 * This method consumes token from the input stream (using the clang lexer and tokenizer) and try to match with the
+	 * current node. If the read token matches the node definition, true is returned otherwise false. The MatchMap
+	 * object contains the map of value derived during the parsing.
 	 */
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const = 0;
 	virtual node* copy() const = 0;
 
 	/**
-	 * The semantics of the >> operator is redefined to implement "followed-by". n1 >> n2 means that node n1 is followed by node n2.
+	 * The semantics of the >> operator is redefined to implement "followed-by". n1 >> n2 means that node n1 is followed
+	 * by node n2.
 	 */
 	concat operator>>(node const& n) const;
 	/**
-	 * The semantics of the unary operator * is repetitions. *(n1) means that node n1 can be repeated from 0 to an infinite amount of times.
+	 * The semantics of the unary operator * is repetitions. *(n1) means that node n1 can be repeated from 0 to an
+	 * infinite amount of times.
 	 */
 	star operator*() const;
 	/**
@@ -197,13 +199,14 @@ struct node {
 	 */
 	choice operator|(node const& n) const;
 	/**
-	 * The semantics of operator ! is that the following node is optional. !n1 matches either if n1 is found or no tokens are available
-	 * from the input stream.
+	 * The semantics of operator ! is that the following node is optional. !n1 matches either if n1 is found or no
+	 * tokens are available from the input stream.
 	 */
 	option operator!() const;
 
 	/**
-	 * Each node can be decorated with a name which states to which name the parsed value should be associated in the outcoming map.
+	 * Each node can be decorated with a name which states to which name the parsed value should be associated in the
+	 * outgoing map.
 	 */
 	virtual node& operator[](const std::string& map_name) = 0;
 
@@ -294,8 +297,9 @@ struct star: public val_single<star> {
 };
 
 /**
- * A MappableNode is a node which, once matched, will be stored in the matcher map. The class owns the key (mapName) value and a special
- * flag which is used in such cases where a token has to be excluded from the map (e.g. this is usefull for punctuation tokens).
+ * A MappableNode is a node which, once matched, will be stored in the matcher map. The class owns the key (mapName)
+ * value and a special flag which is used in such cases where a token has to be excluded from the map (e.g. this is
+ * useful for punctuation tokens).
  */
 template <class T>
 class MappableNode: public node {
@@ -322,8 +326,9 @@ public:
 };
 
 /**
- * This node matches an expression, due to the complexity of defining a regular expression which can map C/C++ expressions, the clang Parser
- * is used directly. NOTICE: a comma separated value list will be consumed by this node as it is a regular C expression.
+ * This node matches an expression, due to the complexity of defining a regular expression which can map C/C++
+ * expressions, the clang Parser is used directly. NOTICE: a comma separated value list will be consumed by this node
+ * as it is a regular C expression.
  */
 struct expr_p: public MappableNode<expr_p> {
 	expr_p() { }
@@ -365,7 +370,8 @@ struct kwd: public Tok<clang::tok::identifier> {
 	std::string kw;
 
 	kwd(std::string const& kw) : Tok<clang::tok::identifier>(), kw(kw) { }
-	kwd(std::string const& kw, std::string const& map_str, bool addToMap=true) : Tok<clang::tok::identifier>(map_str, addToMap), kw(kw) { }
+	kwd(std::string const& kw, std::string const& map_str, bool addToMap=true) :
+		Tok<clang::tok::identifier>(map_str, addToMap), kw(kw) { }
 
 	node* copy() const { return new kwd(kw, getMapName(), isAddToMap()); }
 	kwd operator~() const { return kwd(kw, getMapName(), false); }

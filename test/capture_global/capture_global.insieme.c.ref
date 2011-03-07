@@ -98,10 +98,10 @@ int main(int argc, char** argv) {
 		((*(&((*var_1).count))) = 0);
 		((*(&((*var_1).reset_count))) = 1);
 		for(int i = 0; i < 10; i += 1) {
-			printf("count=%2d\n", inc(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 2));
-			printf("count=%2d\n", dec(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 1));
+			printf("count=%2d\n", inc(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 2));
+			printf("count=%2d\n", dec(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 1));
 			if(((i)==5)) {
-				reset(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0,var_1}))));
+				reset(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, sizeof(struct __insieme_funType_type_3),var_1}))));
 			};
 		};
 		return 0;;

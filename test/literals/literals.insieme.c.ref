@@ -9,13 +9,13 @@
 #define null 0
 // --- Entry Point ---
 
-// start code fragment :: Prototype for external function: printf ... type: (()->int<4>) //
-int printf();
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
 
 // start code fragment :: Definition of main //
 int main(int argc, char** argv) {
 	{
-		printf("Hello");
+		printf("Hello", 0);
 		printf("Hello %s\n", "World");
 		printf("Integer:   %d\n", 14);
 		printf("Float:     %f\n", 0.54);

@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
 		};
 		printf("a=%d\n", (a));
 		func((a));
-		func2(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))));
+		func2(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))));
 	}
 }
 

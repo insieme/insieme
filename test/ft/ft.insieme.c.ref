@@ -637,7 +637,7 @@ void cffts1(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 							};
 							((j) = (0+(((int)(ceil((((double)(((*(&((*var_123).fftblock)))-0)))/((double)(1))))))*1)));
 						};
-						cfftz(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0,var_123}))), is, ((logd[((unsigned int)(0))])), ((d[((unsigned int)(0))])), y0, y1);
+						cfftz(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, sizeof(struct __insieme_funType_type_13),var_123}))), is, ((logd[((unsigned int)(0))])), ((d[((unsigned int)(0))])), y0, y1);
 						{
 							for(int var_186 = 0; var_186 < (*(&((*var_123).fftblock))); var_186 += 1) {
 								{
@@ -693,7 +693,7 @@ void cffts2(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 							};
 							((j) = (0+(((int)(ceil((((double)((((d[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
 						};
-						cfftz(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0,var_196}))), is, ((logd[((unsigned int)(1))])), ((d[((unsigned int)(1))])), y0, y1);
+						cfftz(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, sizeof(struct __insieme_funType_type_13),var_196}))), is, ((logd[((unsigned int)(1))])), ((d[((unsigned int)(1))])), y0, y1);
 						{
 							for(int var_206 = 0; var_206 < ((d[((unsigned int)(1))])); var_206 += 1) {
 								{
@@ -749,7 +749,7 @@ void cffts3(void* _capture, int is, int* d, struct dcomplex(* x)[128][128], stru
 							};
 							((k) = (0+(((int)(ceil((((double)((((d[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
 						};
-						cfftz(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, 0,var_216}))), is, ((logd[((unsigned int)(2))])), ((d[((unsigned int)(2))])), y0, y1);
+						cfftz(((struct __insieme_funType_type_12*)(&((struct __insieme_funType_type_13){0, sizeof(struct __insieme_funType_type_13),var_216}))), is, ((logd[((unsigned int)(2))])), ((d[((unsigned int)(2))])), y0, y1);
 						{
 							for(int var_226 = 0; var_226 < ((d[((unsigned int)(2))])); var_226 += 1) {
 								{
@@ -781,13 +781,13 @@ void fft(void* _capture, int dir, struct dcomplex(* x1)[128][128], struct dcompl
 		struct dcomplex y0[128][18];
 		struct dcomplex y1[128][18];
 		if((dir==1)) {
-			cffts1(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_114}))), 1, ((((*var_114).dims))[((unsigned int)(0))]), x1, x1, y0, y1);
-			cffts2(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_114}))), 1, ((((*var_114).dims))[((unsigned int)(1))]), x1, x1, y0, y1);
-			cffts3(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_114}))), 1, ((((*var_114).dims))[((unsigned int)(2))]), x1, x2, y0, y1);
+			cffts1(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_114}))), 1, ((((*var_114).dims))[((unsigned int)(0))]), x1, x1, y0, y1);
+			cffts2(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_114}))), 1, ((((*var_114).dims))[((unsigned int)(1))]), x1, x1, y0, y1);
+			cffts3(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_114}))), 1, ((((*var_114).dims))[((unsigned int)(2))]), x1, x2, y0, y1);
 		} else {
-			cffts3(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_114}))), (((int)(0))-1), ((((*var_114).dims))[((unsigned int)(2))]), x1, x1, y0, y1);
-			cffts2(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_114}))), (((int)(0))-1), ((((*var_114).dims))[((unsigned int)(1))]), x1, x1, y0, y1);
-			cffts1(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, 0,var_114}))), (((int)(0))-1), ((((*var_114).dims))[((unsigned int)(0))]), x1, x2, y0, y1);
+			cffts3(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_114}))), (((int)(0))-1), ((((*var_114).dims))[((unsigned int)(2))]), x1, x1, y0, y1);
+			cffts2(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_114}))), (((int)(0))-1), ((((*var_114).dims))[((unsigned int)(1))]), x1, x1, y0, y1);
+			cffts1(((struct __insieme_funType_type_10*)(&((struct __insieme_funType_type_11){0, sizeof(struct __insieme_funType_type_11),var_114}))), (((int)(0))-1), ((((*var_114).dims))[((unsigned int)(0))]), x1, x2, y0, y1);
 		};
 	}
 }
@@ -867,7 +867,7 @@ double elapsed_time(void* _capture) {
 	// --------- Captured Stuff -  End  -------------
 	{
 		double t = 0.0;
-		wtime(((struct __insieme_funType_type_16*)(&((struct __insieme_funType_type_17){0, 0,var_234}))), (&t));
+		wtime(((struct __insieme_funType_type_16*)(&((struct __insieme_funType_type_17){0, sizeof(struct __insieme_funType_type_17),var_234}))), (&t));
 		return (t);;
 	}
 }
@@ -879,7 +879,7 @@ void timer_start(void* _capture, int n) {
 	struct __insieme_globals* var_233 = ((struct __insieme_funType_type_1*)_capture)->p0;
 	// --------- Captured Stuff -  End  -------------
 	{
-		((((((*var_233).start))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_14*)(&((struct __insieme_funType_type_15){0, 0,var_233})))));
+		((((((*var_233).start))[((unsigned int)(n))])) = elapsed_time(((struct __insieme_funType_type_14*)(&((struct __insieme_funType_type_15){0, sizeof(struct __insieme_funType_type_15),var_233})))));
 	}
 }
 
@@ -892,7 +892,7 @@ void timer_stop(void* _capture, int n) {
 	{
 		double t = 0.0;
 		double now = 0.0;
-		((now) = elapsed_time(((struct __insieme_funType_type_14*)(&((struct __insieme_funType_type_15){0, 0,var_243})))));
+		((now) = elapsed_time(((struct __insieme_funType_type_14*)(&((struct __insieme_funType_type_15){0, sizeof(struct __insieme_funType_type_15),var_243})))));
 		((t) = ((now)-(((((*var_243).start))[((unsigned int)(n))]))));
 		((((((*var_243).elapsed))[((unsigned int)(n))])) = ((((((*var_243).elapsed))[((unsigned int)(n))]))+(t)));
 	}
@@ -966,7 +966,7 @@ void evolve(void* _capture, struct dcomplex(* u0)[128][128], struct dcomplex(* u
 					for(int var_266 = 0; var_266 < ((d[((unsigned int)(1))])); var_266 += 1) {
 						{
 							for(int var_265 = 0; var_265 < ((d[((unsigned int)(0))])); var_265 += 1) {
-								__insieme_supp_20(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_21){0, 0,&u0,&u1,t,&indexmap,var_252,&var_265,&var_266,&var_267}))));
+								__insieme_supp_20(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_21){0, sizeof(struct __insieme_funType_type_21),&u0,&u1,t,&indexmap,var_252,&var_265,&var_266,&var_267}))));
 							};
 							((i) = (0+(((int)(ceil((((double)((((d[((unsigned int)(0))]))-0)))/((double)(1))))))*1)));
 						};
@@ -1051,7 +1051,7 @@ void checksum(void* _capture, int i, struct dcomplex(* u1)[128][128], int* d) {
 					if((((r)>=(((((*var_272).ystart))[((unsigned int)(0))])))&&((r)<=(((((*var_272).yend))[((unsigned int)(0))]))))) {
 						((s) = (((5*(var_296))%32)+1));
 						if((((s)>=(((((*var_272).zstart))[((unsigned int)(0))])))&&((s)<=(((((*var_272).zend))[((unsigned int)(0))]))))) {
-							__insieme_supp_24(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_25){0, 0,&u1,var_272,&q,&r,&s,&chk}))));
+							__insieme_supp_24(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_25){0, sizeof(struct __insieme_funType_type_25),&u1,var_272,&q,&r,&s,&chk}))));
 						};
 					};
 				};
@@ -1284,8 +1284,8 @@ void print_timers(void* _capture) {
 		char* tstrings[7] = {"          total ", "          setup ", "            fft ", "         evolve ", "       checksum ", "         fftlow ", "        fftcopy "};
 		{
 			for(int var_387 = 0; var_387 < 7; var_387 += 1) {
-				if((timer_read(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){0, 0,var_384}))), (var_387))!=0.0)) {
-					printf("timer %2d(%16s( :%10.6f\n", (var_387), ((tstrings[((unsigned int)((var_387)))])), timer_read(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){0, 0,var_384}))), (var_387)));
+				if((timer_read(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){0, sizeof(struct __insieme_funType_type_29),var_384}))), (var_387))!=0.0)) {
+					printf("timer %2d(%16s( :%10.6f\n", (var_387), ((tstrings[((unsigned int)((var_387)))])), timer_read(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){0, sizeof(struct __insieme_funType_type_29),var_384}))), (var_387)));
 				};
 			};
 			((i) = (0+(((int)(ceil((((double)((7-0)))/((double)(1))))))*1)));
@@ -1312,75 +1312,75 @@ int main(int argc, char** argv) {
 		char class = '\0';
 		{
 			for(int var_15 = 0; var_15 < 7; var_15 += 1) {
-				timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), (var_15));
+				timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), (var_15));
 			};
 			((i) = (0+(((int)(ceil((((double)((7-0)))/((double)(1))))))*1)));
 		};
-		setup(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0,var_1}))));
+		setup(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, sizeof(struct __insieme_funType_type_3),var_1}))));
 		{
-			compute_indexmap(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0,var_1}))), (((*var_1).indexmap)), ((((*var_1).dims))[((unsigned int)(2))]));
+			compute_indexmap(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, sizeof(struct __insieme_funType_type_5),var_1}))), (((*var_1).indexmap)), ((((*var_1).dims))[((unsigned int)(2))]));
 			{
-				compute_initial_conditions(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0,var_1}))), (((*var_1).u1)), ((((*var_1).dims))[((unsigned int)(0))]));
-				fft_init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), ((((((*var_1).dims))[((unsigned int)(0))])[((unsigned int)(0))])));
+				compute_initial_conditions(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, sizeof(struct __insieme_funType_type_7),var_1}))), (((*var_1).u1)), ((((*var_1).dims))[((unsigned int)(0))]));
+				fft_init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), ((((((*var_1).dims))[((unsigned int)(0))])[((unsigned int)(0))])));
 			};
-			fft(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0,var_1}))), 1, (((*var_1).u1)), (((*var_1).u0)));
+			fft(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, sizeof(struct __insieme_funType_type_9),var_1}))), 1, (((*var_1).u1)), (((*var_1).u0)));
 		};
 		{
 			for(int var_231 = 0; var_231 < 7; var_231 += 1) {
-				timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), (var_231));
+				timer_clear(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), (var_231));
 			};
 			((i) = (0+(((int)(ceil((((double)((7-0)))/((double)(1))))))*1)));
 		};
-		timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 0);
+		timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 0);
 		if((0==1)) {
-			timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 1);
+			timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 1);
 		};
 		{
-			compute_indexmap(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, 0,var_1}))), (((*var_1).indexmap)), ((((*var_1).dims))[((unsigned int)(2))]));
+			compute_indexmap(((struct __insieme_funType_type_4*)(&((struct __insieme_funType_type_5){0, sizeof(struct __insieme_funType_type_5),var_1}))), (((*var_1).indexmap)), ((((*var_1).dims))[((unsigned int)(2))]));
 			{
-				compute_initial_conditions(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, 0,var_1}))), (((*var_1).u1)), ((((*var_1).dims))[((unsigned int)(0))]));
-				fft_init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), ((((((*var_1).dims))[((unsigned int)(0))])[((unsigned int)(0))])));
+				compute_initial_conditions(((struct __insieme_funType_type_6*)(&((struct __insieme_funType_type_7){0, sizeof(struct __insieme_funType_type_7),var_1}))), (((*var_1).u1)), ((((*var_1).dims))[((unsigned int)(0))]));
+				fft_init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), ((((((*var_1).dims))[((unsigned int)(0))])[((unsigned int)(0))])));
 			};
 			if((0==1)) {
-				timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 1);
+				timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 1);
 			};
 			if((0==1)) {
-				timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 2);
+				timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 2);
 			};
-			fft(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0,var_1}))), 1, (((*var_1).u1)), (((*var_1).u0)));
+			fft(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, sizeof(struct __insieme_funType_type_9),var_1}))), 1, (((*var_1).u1)), (((*var_1).u0)));
 			if((0==1)) {
-				timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 2);
+				timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 2);
 			};
 			{
 				for(int var_298 = 1; var_298 < ((*(&((*var_1).niter)))+1); var_298 += 1) {
 					if((0==1)) {
-						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 3);
+						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 3);
 					};
-					evolve(((struct __insieme_funType_type_18*)(&((struct __insieme_funType_type_19){0, 0,var_1}))), (((*var_1).u0)), (((*var_1).u1)), (var_298), (((*var_1).indexmap)), ((((*var_1).dims))[((unsigned int)(0))]));
+					evolve(((struct __insieme_funType_type_18*)(&((struct __insieme_funType_type_19){0, sizeof(struct __insieme_funType_type_19),var_1}))), (((*var_1).u0)), (((*var_1).u1)), (var_298), (((*var_1).indexmap)), ((((*var_1).dims))[((unsigned int)(0))]));
 					if((0==1)) {
-						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 3);
-					};
-					if((0==1)) {
-						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 2);
-					};
-					fft(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, 0,var_1}))), (((int)(0))-1), (((*var_1).u1)), (((*var_1).u2)));
-					if((0==1)) {
-						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 2);
+						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 3);
 					};
 					if((0==1)) {
-						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 4);
+						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 2);
 					};
-					checksum(((struct __insieme_funType_type_22*)(&((struct __insieme_funType_type_23){0, 0,var_1}))), (var_298), (((*var_1).u2)), ((((*var_1).dims))[((unsigned int)(0))]));
+					fft(((struct __insieme_funType_type_8*)(&((struct __insieme_funType_type_9){0, sizeof(struct __insieme_funType_type_9),var_1}))), (((int)(0))-1), (((*var_1).u1)), (((*var_1).u2)));
 					if((0==1)) {
-						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 4);
+						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 2);
+					};
+					if((0==1)) {
+						timer_start(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 4);
+					};
+					checksum(((struct __insieme_funType_type_22*)(&((struct __insieme_funType_type_23){0, sizeof(struct __insieme_funType_type_23),var_1}))), (var_298), (((*var_1).u2)), ((((*var_1).dims))[((unsigned int)(0))]));
+					if((0==1)) {
+						timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 4);
 					};
 				};
 				((iter) = (1+(((int)(ceil((((double)((((*(&((*var_1).niter)))+1)-1)))/((double)(1))))))*1)));
 			};
-			verify(((struct __insieme_funType_type_26*)(&((struct __insieme_funType_type_27){0, 0,var_1}))), 128, 128, 32, (*(&((*var_1).niter))), (&verified), (&class));
+			verify(((struct __insieme_funType_type_26*)(&((struct __insieme_funType_type_27){0, sizeof(struct __insieme_funType_type_27),var_1}))), 128, 128, 32, (*(&((*var_1).niter))), (&verified), (&class));
 		};
-		timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, 0,var_1}))), 0);
-		((total_time) = timer_read(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){0, 0,var_1}))), 0));
+		timer_stop(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))), 0);
+		((total_time) = timer_read(((struct __insieme_funType_type_28*)(&((struct __insieme_funType_type_29){0, sizeof(struct __insieme_funType_type_29),var_1}))), 0));
 		if(((total_time)!=0.0)) {
 			((mflops) = (((1.0e-6*((double)(524288)))*((14.8157+(7.19641*log(((double)(524288)))))+((5.23518+(7.21113*log(((double)(524288)))))*((double)((*(&((*var_1).niter))))))))/(total_time)));
 		} else {
@@ -1388,7 +1388,7 @@ int main(int argc, char** argv) {
 		};
 		c_print_results("FT", (class), 128, 128, 32, (*(&((*var_1).niter))), (nthreads), (total_time), (mflops), "          floating point", (verified), "2.3", "02 Dec 2010", "cc", "cc", "-lm", "-I../common", "-O3 ", "-lm", "randdp");
 		if((0==1)) {
-			print_timers(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, 0,var_1}))));
+			print_timers(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0, sizeof(struct __insieme_funType_type_3),var_1}))));
 		};
 	}
 }
