@@ -124,12 +124,12 @@ TEST(IRParser, ExpressionTests) {
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var")); 
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
-/*
+
 	// merge all
 	auto mergeAll = manager.basic.getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
-//    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
-*/
+    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
+
     // lambda using definition
 // TODO add statement to test once it is there
     auto lambda = dynamic_pointer_cast<const LambdaExpr>( parser.parseExpression(
@@ -145,14 +145,20 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
 
 //TODO add nicer test for captureInitExpr
-    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>](real<8>)->int<4>:\
-            lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4>{ continue } }"));
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
+            lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
 
 	// jobExpr
 	// needs something appropriate as argument
-//	auto parsedJob = parser.parseExpression("job< 0 >[]{default: 1}");
-//	std::cout << "JOB: " << parsedJob << std::endl;
+    vector<std::pair<ExpressionPtr, ExpressionPtr> > guardedStmts;
+
+    auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \
+            default: # uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
+            lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }}"));
+    std::cout << "JOB: " << parsedJob << std::endl;
+    EXPECT_TRUE(parsedJob != 0);
+    EXPECT_EQ(builder.callExpr(manager.basic.getLiteral("MinRange"), builder.uintLit(2)), parsedJob->getThreadNumRange());
 
 	// tupleExpr
     std::vector<ExpressionPtr> exprVec;

@@ -1,0 +1,19 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        printf(string.as.char.pointer("Size of int: %d\n"), varlist.pack((sizeof(int<4>))));
+        return 0;
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        printf(string.as.char.pointer("Size of int: %d\n"), varlist.pack((sizeof(int<4>))));
+        return 0;
+    }
+

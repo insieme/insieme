@@ -22,7 +22,6 @@ struct __insieme_expr_0 {
 // Abstract prototype for lambdas of type __insieme_funType_type_1
 struct __insieme_funType_type_1 { 
     void(*fun)(void*);
-    const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_1
@@ -32,7 +31,6 @@ void call__insieme_funType_type_1(struct __insieme_funType_type_1* lambda) {  la
 // Abstract prototype for lambdas of type __insieme_funType_type_3
 struct __insieme_funType_type_3 { 
     void(*fun)(void*);
-    const size_t size;
     int* p0;
 };
 
@@ -59,7 +57,7 @@ void fun__insieme_expr_0(isbr_JobArgs* args) {
 	int* var_5 = ((struct __insieme_expr_0*)args)->var_5;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_supp_2(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_3){0, sizeof(struct __insieme_funType_type_3),var_5}))));
+	__insieme_supp_2(((struct __insieme_funType_type_1*)(&((struct __insieme_funType_type_3){0,var_5}))));
 }
 
 // start code fragment :: Definition of main //

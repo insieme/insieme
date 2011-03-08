@@ -47,7 +47,6 @@ int func(int k) {
 // Abstract prototype for lambdas of type __insieme_funType_type_0
 struct __insieme_funType_type_0 { 
     void(*fun)(void*);
-    const size_t size;
 };
 
 // Type safe function for invoking lambdas of type __insieme_funType_type_0
@@ -57,7 +56,6 @@ void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) {  la
 // Abstract prototype for lambdas of type __insieme_funType_type_1
 struct __insieme_funType_type_1 { 
     void(*fun)(void*);
-    const size_t size;
     struct __insieme_globals* p0;
 };
 
@@ -131,7 +129,7 @@ int main(int argc, char** argv) {
 		};
 		printf("a=%d\n", (a));
 		func((a));
-		func2(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0, sizeof(struct __insieme_funType_type_1),var_1}))));
+		func2(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0,var_1}))));
 	}
 }
 
