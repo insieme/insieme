@@ -68,7 +68,8 @@ namespace cfg {
 struct Element : public core::StatementPtr {
 	enum Type { None, CtrlCond, LoopInit, LoopIncrement };
 
-	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) : core::StatementPtr (stmt), type(type) { }
+	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) :
+		core::StatementPtr (stmt), type(type) { }
 	const Type& getType() const { return type; }
 private:
 	Type type;
