@@ -36,38 +36,26 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/program.h"
 #include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
 namespace core {
 namespace parse {
 
-typedef vector<StatementPtr> Stmts;
-typedef vector<std::pair<ExpressionPtr, StatementPtr> > Cases;
-
 // FW Declaration
 struct TypeGrammar;
 struct ExpressionGrammar;
+struct StatementGrammar;
 
-struct StatementGrammar : public qi::grammar<ParseIt, StatementPtr(), qi::space_type> {
-    TypeGrammar *typeG;        // pointer for weak coupling
-    ExpressionGrammar *exprG;  // pointer for weak coupling
+struct ProgramGrammar : public qi::grammar<ParseIt, ProgramPtr(), qi::space_type> {
+    ExpressionGrammar *exprG;   // pointer for weak coupling
 
-    StatementGrammar(NodeManager& nodeMan);
-    ~StatementGrammar();
+    ProgramGrammar(NodeManager& nodeMan);
+    ~ProgramGrammar();
 
-    qi::rule<ParseIt, StatementPtr(), qi::space_type> statementRule;
-    qi::rule<ParseIt, BreakStmtPtr(), qi::space_type> breakStmt;
-    qi::rule<ParseIt, ContinueStmtPtr(), qi::space_type> continueStmt;
-    qi::rule<ParseIt, ReturnStmtPtr(), qi::space_type> returnStmt;
-    qi::rule<ParseIt, CompoundStmtPtr(), qi::locals<Stmts>,  qi::space_type> compoundStmt;
-    qi::rule<ParseIt, DeclarationStmtPtr(), qi::space_type> declarationStmt;
-    qi::rule<ParseIt, WhileStmtPtr(), qi::space_type> whileStmt;
-    qi::rule<ParseIt, ForStmtPtr(), qi::space_type> forStmt;
-    qi::rule<ParseIt, IfStmtPtr(), qi::space_type> ifStmt;
-    qi::rule<ParseIt, SwitchStmtPtr(), qi::locals<Cases>, qi::space_type> switchStmt;
-    qi::rule<ParseIt, MarkerStmtPtr(), qi::space_type> markerStmt;
+    qi::rule<ParseIt, ProgramPtr(), qi::space_type> programRule;
+    qi::rule<ParseIt, ProgramPtr(), qi::locals<vector<ExpressionPtr> >, qi::space_type> program;
 
 };
 

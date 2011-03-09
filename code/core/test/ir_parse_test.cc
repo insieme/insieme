@@ -134,7 +134,7 @@ TEST(IRParser, ExpressionTests) {
 // TODO add statement to test once it is there
     auto lambda = dynamic_pointer_cast<const LambdaExpr>( parser.parseExpression(
         "fun [uint<2>, real<4>](real<8>)->int<4>:lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4> {\
-            { break} } }"));
+            { break; } } }"));
     EXPECT_TRUE(lambda != 0);
     EXPECT_EQ( lambda->getCaptureList().size(), 2u );
     EXPECT_EQ( lambda->getParameterList().size(), 1u);
@@ -156,7 +156,7 @@ TEST(IRParser, ExpressionTests) {
     auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \
             default: # uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }}"));
-    std::cout << "JOB: " << parsedJob << std::endl;
+//    std::cout << "JOB: " << parsedJob << std::endl;
     EXPECT_TRUE(parsedJob != 0);
     EXPECT_EQ(builder.callExpr(manager.basic.getLiteral("MinRange"), builder.uintLit(2)), parsedJob->getThreadNumRange());
 
@@ -232,15 +232,15 @@ TEST(IRParser, StatementTests) {
     stmts.push_back(builder.breakStmt());
     stmts.push_back(builder.returnStmt(builder.intLit(0)));
     auto compoundStmt = builder.compoundStmt(stmts); // CAUTION! will be reused later
-    EXPECT_EQ(compoundStmt, parser.parseStatement("{ 7; break; return 0 }"));
+    EXPECT_EQ(compoundStmt, parser.parseStatement("{ 7; break; return 0; }"));
 
     // while statement
     auto whileStmt = builder.whileStmt(builder.intLit(1), compoundStmt);
-    EXPECT_EQ(whileStmt, parser.parseStatement("while(1){ 7; break; return 0 }"));
+    EXPECT_EQ(whileStmt, parser.parseStatement("while(1){ 7; break; return 0; }"));
 
     // for statement
     auto builtForStmt = dynamic_pointer_cast<const ForStmt>(builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1)));
-    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0 }" ));
+    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0; }" ));
     EXPECT_TRUE(!!builtForStmt && !!parsedForStmt);
     EXPECT_EQ(builtForStmt->getStep(), parsedForStmt->getStep());
     EXPECT_EQ(builtForStmt->getEnd(), parsedForStmt->getEnd());
@@ -250,7 +250,7 @@ TEST(IRParser, StatementTests) {
 
     // if statement
     auto ifStmt = builder.ifStmt(builder.intLit(0), compoundStmt);
-    EXPECT_EQ(ifStmt, parser.parseStatement("if(0) { 7; break; return 0 }"));
+    EXPECT_EQ(ifStmt, parser.parseStatement("if(0) { 7; break; return 0; }"));
     ifStmt = builder.ifStmt(builder.intLit(1), builder.returnStmt(builder.intLit(0)), builder.returnStmt(builder.intLit(-1)));
     EXPECT_EQ(ifStmt, parser.parseStatement("if(1) return 0 else return -1"));
 
@@ -262,18 +262,41 @@ TEST(IRParser, StatementTests) {
     cases.push_back(std::make_pair(builder.intLit(0), builder.returnStmt(builder.intLit(0))));
     cases.push_back(std::make_pair(builder.intLit(1), builder.returnStmt(builder.intLit(1))));
     switchStmt = builder.switchStmt(builder.intLit(42), cases);
-    EXPECT_EQ(switchStmt, parser.parseStatement("switch(42 ){case 0: return 0; case 1: return 1}"));
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch(42 ){case 0: return 0 case 1: return 1}"));
 
     switchStmt = builder.switchStmt(builder.intLit(42), cases, builder.returnStmt(builder.intLit(42)));
-    EXPECT_EQ(switchStmt, parser.parseStatement("switch( 42) {case 0: return 0;case 1: return 1 ; default: return 42}"));
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch( 42) {case 0: return 0 case 1: return 1 default: return 42}"));
 
     cases.clear();
     switchStmt = builder.switchStmt(builder.intLit(42), cases, builder.returnStmt(builder.intLit(42)));
-    EXPECT_EQ(switchStmt, parser.parseStatement("switch (42){;default: return 42}")); // does it make any sense to support this?
+    EXPECT_EQ(switchStmt, parser.parseStatement("switch (42){default: return 42}")); // does it make any sense to support this?
 
     // marker statement
     auto markerStmt = builder.markerStmt(whileStmt, 7);
-    EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0 } </ms>"));
+    EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0; } </ms>"));
+}
+
+TEST(IRParser, ProgramTest) {
+    NodeManager manager;
+    IRParser parser(manager);
+    ASTBuilder builder(manager);
+
+    // program with main
+    ProgramPtr mainProg = parser.parseProgram("main: # uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
+            mainfct in { [uint<2>, real<4>]()->int<4>:mainfct = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }");
+
+    EXPECT_TRUE(mainProg->isMain());
+    EXPECT_FALSE(mainProg->hasAnnotations());
+    EXPECT_EQ(1, mainProg->getEntryPoints().size());
+
+    // multiple entry points
+    ProgramPtr mep = parser.parseProgram("fun [uint<2>](real<8>)->int<4>:f1 in { [uint<2>](real<8>)->int<4>:f1 = [uint<2>:c1](real<8>:p)->int<4> {\
+            { return 0; } } }, fun []()->unit:f2 in{[]()->unit:f2=[]()->unit {{ break; }}}");
+
+    EXPECT_FALSE(mep->isMain());
+    EXPECT_FALSE(mep->hasAnnotations());
+    EXPECT_EQ(2, mep->getEntryPoints().size());
+
 }
 
 TEST(IRParser, InteractiveTest) {

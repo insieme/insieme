@@ -35,7 +35,7 @@
  */
 
 #include "insieme/core/parser/expression_parse.h"
-
+#include "insieme/core/parser/statement_parse.h"
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/lang/basic.h"
@@ -104,13 +104,6 @@ LiteralPtr buildNat(NodeManager& nodeMan, uint64_t val) {
 LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
     ASTBuilder build(nodeMan);
     return build.intLit(val);
-}
-
-JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
-        const GuardedStmts guardedStmts, const vector<DeclarationStmtPtr>& localDecls) {
-std::cout << "\nthreadNumRange " << threadNumRange << "\ndefaultStmt " << defaultStmt << "\nguardedStmts" << guardedStmts << "\nlocalDecls " << localDecls << std::endl;
-
-    return JobExpr::get(manager, threadNumRange, defaultStmt, guardedStmts, localDecls);
 }
 
 LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params, const StatementPtr& body ) {
@@ -235,8 +228,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
         >> -(stmtG->declarationStmt                                 [ ph::push_back(qi::_a, qi::_1) ]
           % ',') >> ']' >> '{'
         >> *( qi::lit("if") >> expressionRule >> qi::lit("do")
-          >> expressionRule )                                [ ph::push_back(qi::_b, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
-        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&jobHelp, nManRef, qi::_1, qi::_4, qi::_b, qi::_a ) ];
+          >> expressionRule )                                       [ ph::push_back(qi::_b, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
+        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&JobExpr::get, nManRef, qi::_1, qi::_4, qi::_b, qi::_a ) ];
 
     tupleExpr =
         ( qi::lit("tuple[") >> -(expressionRule                     [ ph::push_back(qi::_a, qi::_1) ]

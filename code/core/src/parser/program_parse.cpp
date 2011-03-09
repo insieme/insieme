@@ -34,42 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/parser/statement_parse.h"
+#include "insieme/core/parser/expression_parse.h"
+#include "insieme/core/parser/program_parse.h"
+#include "insieme/core/parser/type_parse.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/ast_builder.h"
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/parser/ir_parse.h"
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/support_ascii.hpp>
+#include <boost/spirit/include/phoenix.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
 
 namespace insieme {
 namespace core {
 namespace parse {
 
-typedef vector<StatementPtr> Stmts;
-typedef vector<std::pair<ExpressionPtr, StatementPtr> > Cases;
+namespace qi = boost::spirit::qi;
+namespace ascii = boost::spirit::ascii;
+namespace ph = boost::phoenix;
 
-// FW Declaration
-struct TypeGrammar;
-struct ExpressionGrammar;
+ProgramPtr mainProgramHelp(NodeManager& nodeMan, const ExpressionPtr& mainProg) {
+    return Program::create(nodeMan, toVector(mainProg), true);
+}
 
-struct StatementGrammar : public qi::grammar<ParseIt, StatementPtr(), qi::space_type> {
-    TypeGrammar *typeG;        // pointer for weak coupling
-    ExpressionGrammar *exprG;  // pointer for weak coupling
+ProgramGrammar::ProgramGrammar(NodeManager& nodeMan) : ProgramGrammar::base_type(programRule),
+        exprG(new ExpressionGrammar(nodeMan)) {
 
-    StatementGrammar(NodeManager& nodeMan);
-    ~StatementGrammar();
+    auto nManRef = ph::ref(nodeMan);
+    auto basicRef = ph::ref(nodeMan.basic);
 
-    qi::rule<ParseIt, StatementPtr(), qi::space_type> statementRule;
-    qi::rule<ParseIt, BreakStmtPtr(), qi::space_type> breakStmt;
-    qi::rule<ParseIt, ContinueStmtPtr(), qi::space_type> continueStmt;
-    qi::rule<ParseIt, ReturnStmtPtr(), qi::space_type> returnStmt;
-    qi::rule<ParseIt, CompoundStmtPtr(), qi::locals<Stmts>,  qi::space_type> compoundStmt;
-    qi::rule<ParseIt, DeclarationStmtPtr(), qi::space_type> declarationStmt;
-    qi::rule<ParseIt, WhileStmtPtr(), qi::space_type> whileStmt;
-    qi::rule<ParseIt, ForStmtPtr(), qi::space_type> forStmt;
-    qi::rule<ParseIt, IfStmtPtr(), qi::space_type> ifStmt;
-    qi::rule<ParseIt, SwitchStmtPtr(), qi::locals<Cases>, qi::space_type> switchStmt;
-    qi::rule<ParseIt, MarkerStmtPtr(), qi::space_type> markerStmt;
 
-};
+    program =
+        ( qi::lit("main") >> ':' >> exprG->expressionRule )        [ qi::_val = ph::bind(&mainProgramHelp, nManRef, qi::_1) ]
+        | +( exprG->expressionRule                                 [ ph::push_back(qi::_a, qi::_1) ]
+          % ',')                                                   [ qi::_val = ph::bind(&Program::create, nManRef, qi::_a, false) ];
+
+    programRule =
+        program                                                    [ qi::_val = ph::construct<ProgramPtr>(qi::_1) ];
+
+
+    BOOST_SPIRIT_DEBUG_NODE(programRule);
+}
+
+ProgramGrammar::~ProgramGrammar() {
+    delete exprG;
+}
 
 }
 }

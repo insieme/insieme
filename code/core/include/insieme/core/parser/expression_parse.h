@@ -37,8 +37,6 @@
 #pragma once
 
 #include "insieme/core/parser/ir_parse.h"
-//#include "insieme/core/parser/expression_parse_part.h"
-#include "insieme/core/parser/statement_parse.h"
 
 namespace insieme {
 namespace core {
@@ -51,6 +49,7 @@ typedef std::vector<std::pair<Identifier, ExpressionPtr> > Members;
 
 // FW Declaration
 struct TypeGrammar;
+struct StatementGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
 template<typename T, typename U>

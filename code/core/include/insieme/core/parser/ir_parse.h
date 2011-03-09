@@ -72,12 +72,20 @@ TypePtr parseType(NodeManager& nodeMan, const string& input);
 ExpressionPtr parseExpression(NodeManager& nodeMan, const string& input);
 
 /** A helper function for parsing an IR statement.
- ** If more than one expression should be parsed it is better to generate a parser object and call the parseExpression method
+ ** If more than one statements should be parsed it is better to generate a parser object and call the parseStatement method
  ** @param nodeMan the NodeManager the generated nodes will be added to
- ** @param input the string representation of the IR expression to be parsed
+ ** @param input the string representation of the IR statement to be parsed
  ** @return a pointer to an AST node representing the generated statement
  **/
 StatementPtr parseStatement(NodeManager& nodeMan, const string& input);
+
+/** A helper function for parsing an IR program.
+ ** If more than one program should be parsed it is better to generate a parser object and call the parseProgram method
+ ** @param nodeMan the NodeManager the generated nodes will be added to
+ ** @param input the string representation of the IR program to be parsed
+ ** @return a pointer to an AST node representing the generated program
+ **/
+ProgramPtr parseProgram(NodeManager& nodeMan, const string& input);
 
 
 namespace qi = boost::spirit::qi;
@@ -92,6 +100,7 @@ public:
 	TypePtr parseType(const std::string& input);
 	ExpressionPtr parseExpression(const std::string& input);
 	StatementPtr parseStatement(const std::string& input);
+	ProgramPtr parseProgram(const std::string& input);
 };
 
 } // namespace parse 
