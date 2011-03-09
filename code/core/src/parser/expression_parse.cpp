@@ -35,7 +35,7 @@
  */
 
 #include "insieme/core/parser/expression_parse.h"
-
+#include "insieme/core/parser/statement_parse.h"
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/lang/basic.h"
@@ -106,13 +106,6 @@ LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
     return build.intLit(val);
 }
 
-JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
-        const GuardedStmts guardedStmts, const vector<DeclarationStmtPtr>& localDecls) {
-std::cout << "\nthreadNumRange " << threadNumRange << "\ndefaultStmt " << defaultStmt << "\nguardedStmts" << guardedStmts << "\nlocalDecls " << localDecls << std::endl;
-
-    return JobExpr::get(manager, threadNumRange, defaultStmt, guardedStmts, localDecls);
-}
-
 LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params, const StatementPtr& body ) {
 //std::cout << "BODY: " << body << std::endl;
     // build a stmtExpr bc the builder cannot at the moment
@@ -132,6 +125,21 @@ LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const Va
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
     return build.lambda(build.functionType(captureTypes, paramTypes, retType), captureList, params, body);
 }
+
+JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
+        const GuardedStmts guardedStmts, const vector<DeclarationStmtPtr>& localDecls) {
+    if(!dynamic_pointer_cast<const LambdaExpr>(defaultStmt) && !dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)) {
+        throw ParseException();
+    }
+    for_each(guardedStmts, [&](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
+        //TODO add check for guard
+        if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const CaptureInitExpr>(guardedStmt.second))
+            throw ParseException();
+    });
+
+    return JobExpr::get(manager, threadNumRange, defaultStmt, guardedStmts, localDecls);
+}
+
 
 void callDepthCheck(bool reset, unsigned& callDepthCount) {
     if(!reset) {
@@ -235,7 +243,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
         >> -(stmtG->declarationStmt                                 [ ph::push_back(qi::_a, qi::_1) ]
           % ',') >> ']' >> '{'
         >> *( qi::lit("if") >> expressionRule >> qi::lit("do")
-          >> expressionRule )                                [ ph::push_back(qi::_b, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
+          >> expressionRule )                                       [ ph::push_back(qi::_b, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
         >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&jobHelp, nManRef, qi::_1, qi::_4, qi::_b, qi::_a ) ];
 
     tupleExpr =
