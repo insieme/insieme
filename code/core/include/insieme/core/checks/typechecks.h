@@ -49,6 +49,9 @@ enum {
 	EC_TYPE_INVALID_RETURN_TYPE,
 	EC_TYPE_INVALID_FUNCTION_TYPE,
 
+	EC_TYPE_INVALID_RETURN_VALUE_TYPE,
+	EC_TYPE_MISSING_RETURN_STMT,
+
 	EC_TYPE_INVALID_INITIALIZATION_EXPR,
 
 	EC_TYPE_INVALID_CONDITION_EXPR,
@@ -62,6 +65,11 @@ enum {
 	EC_TYPE_ILLEGAL_CAST,
 
 	EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD,
+
+	EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
+	EC_TYPE_NO_SUCH_MEMBER,
+	EC_TYPE_INVALID_TYPE_OF_MEMBER,
+	EC_TYPE_INVALID_IDENTIFIER,
 };
 
 /**
@@ -81,10 +89,15 @@ SIMPLE_CHECK(Keyword, GenericType, true);
 
 SIMPLE_CHECK(CallExprType, CallExpr, false);
 SIMPLE_CHECK(FunctionType, LambdaExpr, false);
+SIMPLE_CHECK(ReturnType, Lambda, false);
+
 SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
 SIMPLE_CHECK(IfConditionType, IfStmt, false);
 SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
 SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
+
+SIMPLE_CHECK(MemberAccessNodeElementType, MemberAccessExpr, false);
+SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
 
 SIMPLE_CHECK(BuiltInLiteral, Literal, false);
 

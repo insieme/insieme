@@ -1,0 +1,36 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+// --- Entry Point ---
+
+// start code fragment :: Definition of f //
+int f(int* a) {
+	{
+		return (((a[0]))++);;
+	}
+}
+
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: Definition of main //
+int main(int argc, char** argv) {
+	{
+		int var_6 = argc;
+		{
+			int a = 0;
+			f((&a));
+			f((&var_6));
+			printf("%d\n", (var_6));((var_6) = (a));
+			printf("%d\n", (var_6));
+		};
+	}
+}
+

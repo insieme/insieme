@@ -34,47 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/ir_checks.h"
+#pragma once
 
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/checks/typechecks.h"
+#include <inttypes.h>
 
+/* ------------------------------ data structures ----- */
 
-namespace insieme {
-namespace core {
-namespace checks {
+#define irt_errcode uint32;
 
 
-	CheckPtr getFullCheck() {
+/* ------------------------------ operations ----- */
 
-		std::vector<CheckPtr> checks;
-		checks.push_back(make_check<KeywordCheck>());
-		checks.push_back(make_check<CallExprTypeCheck>());
-		checks.push_back(make_check<FunctionTypeCheck>());
-		checks.push_back(make_check<ReturnTypeCheck>());
-		checks.push_back(make_check<DeclarationStmtTypeCheck>());
-		checks.push_back(make_check<WhileConditionTypeCheck>());
-		checks.push_back(make_check<IfConditionTypeCheck>());
-		checks.push_back(make_check<SwitchExpressionTypeCheck>());
-		checks.push_back(make_check<MemberAccessElementTypeCheck>());
-		checks.push_back(make_check<MemberAccessNodeElementTypeCheck>());
-		checks.push_back(make_check<BuiltInLiteralCheck>());
-		checks.push_back(make_check<RefCastCheck>());
-		checks.push_back(make_check<CastCheck>());
-
-		checks.push_back(make_check<UndeclaredVariableCheck>());
-
-		// assemble the IR check list
-		CheckPtr recursive = makeVisitOnce(combine(checks));
-
-		return combine(
-				toVector<CheckPtr>(
-					recursive,
-					make_check<DeclaredOnceCheck>()
-				)
-		);
-	}
-
-} // end namespace check
-} // end namespace core
-} // end namespace insieme

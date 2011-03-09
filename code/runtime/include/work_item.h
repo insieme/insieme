@@ -34,47 +34,42 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/ir_checks.h"
+#pragma once
 
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/checks/typechecks.h"
+#include <inttypes.h>
+
+/* ------------------------------ data structures ----- */
+
+typedef union _irt_work_item_id {
+	uint64 id;
+	struct {
+		uint16 node;
+		uint16 thread;
+		uint32 index;
+	};
+} irt_work_item_id;
+
+typedef struct _irt_work_item_range {
+	int64 begin, end, step;
+} irt_work_item_range;
+
+typedef struct _irt_work_item {
+	irt_work_item_id id;
+	irt_work_item_range range;
+	irt_implementation_id impl_id;
+	irt_work_group* group;
+	unsigned priority; // ?
+} irt_work_item;
 
 
-namespace insieme {
-namespace core {
-namespace checks {
+/* ------------------------------ operations ----- */
 
+irt_errcode irt_wi_create(irt_work_item** out_wi);
+irt_errcode irt_wi_destroy(irt_work_item* wi);
 
-	CheckPtr getFullCheck() {
+irt_errcode irt_wi_enqueue(irt_work_item* wi);
+irt_errcode irt_wi_enqueue_remote(irt_work_item* wi, irt_worker* worker);
 
-		std::vector<CheckPtr> checks;
-		checks.push_back(make_check<KeywordCheck>());
-		checks.push_back(make_check<CallExprTypeCheck>());
-		checks.push_back(make_check<FunctionTypeCheck>());
-		checks.push_back(make_check<ReturnTypeCheck>());
-		checks.push_back(make_check<DeclarationStmtTypeCheck>());
-		checks.push_back(make_check<WhileConditionTypeCheck>());
-		checks.push_back(make_check<IfConditionTypeCheck>());
-		checks.push_back(make_check<SwitchExpressionTypeCheck>());
-		checks.push_back(make_check<MemberAccessElementTypeCheck>());
-		checks.push_back(make_check<MemberAccessNodeElementTypeCheck>());
-		checks.push_back(make_check<BuiltInLiteralCheck>());
-		checks.push_back(make_check<RefCastCheck>());
-		checks.push_back(make_check<CastCheck>());
+irt_errcode irt_wi_yield();
 
-		checks.push_back(make_check<UndeclaredVariableCheck>());
-
-		// assemble the IR check list
-		CheckPtr recursive = makeVisitOnce(combine(checks));
-
-		return combine(
-				toVector<CheckPtr>(
-					recursive,
-					make_check<DeclaredOnceCheck>()
-				)
-		);
-	}
-
-} // end namespace check
-} // end namespace core
-} // end namespace insieme
+irt_errcode irt_wi_split(irt_work_item* wi, uint32 elements; irt_work_item** out_wis);

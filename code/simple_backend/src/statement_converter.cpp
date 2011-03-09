@@ -545,7 +545,8 @@ namespace simple_backend {
 		}
 
 		// add size of struct
-		currentCodeFragment << ", sizeof(" << details.functorName << ")";
+		// NOTE: disabled since not used anywhere
+		// currentCodeFragment << ", sizeof(" << details.functorName << ")";
 
 		// add captured parameters
 		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {

@@ -9,14 +9,18 @@
 extern int printf(char *, ...);
 
 int count = 0;
+int a[50];
+
 
 int inc(int step) {
+	a[step]++;
 	count += step;
 	return count;
 }
 
 int dec(int step) {
-	count += step;
+	a[step]--;
+	count -= step;
 	return count;
 }
 

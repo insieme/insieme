@@ -37,6 +37,7 @@
 #include "insieme/core/checks/typechecks.h"
 
 #include "insieme/core/type_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -157,6 +158,43 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	return res;
 }
 
+
+OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
+	OptionalMessageList res;
+
+	// obtain return type of lambda
+	const TypePtr& returnType = address->getType()->getReturnType();
+
+	// search for all return statements and check type
+	visitAllPrunable(address, makeLambdaAddressVisitor([&](const NodeAddress& cur)->bool {
+
+		// check whether it is a a return statement
+		if (cur->getNodeType() != NT_ReturnStmt) {
+			// abort if this node is a expression or type
+			NodeCategory category = cur->getNodeCategory();
+			return !(category == NC_Type || category == NC_Expression);
+		}
+
+		const ReturnStmtAddress& returnStmt = static_address_cast<const ReturnStmt>(cur);
+		const TypePtr& actualType = returnStmt->getReturnExpr()->getType();
+		if (returnType != actualType) {
+			add(res, Message(cur,
+				EC_TYPE_INVALID_RETURN_VALUE_TYPE,
+				format("Invalid return type - expected: %s, actual: %s",
+						toString(*returnType).c_str(),
+						toString(*actualType).c_str()),
+				Message::ERROR));
+		}
+
+		return false;
+	}, false));
+
+
+	// EC_TYPE_MISSING_RETURN_STMT,
+
+	return res;
+}
+
 OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 
 	NodeManager manager;
@@ -228,6 +266,131 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 						Message::ERROR));
 	}
 	return res;
+}
+
+
+namespace {
+
+
+	OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const Identifier& identifier, const TypePtr& elementType, bool isRefVersion) {
+
+		OptionalMessageList res;
+
+		// check whether it is a struct at all
+		TypePtr exprType = structExpr->getType();
+		if (isRefVersion) {
+			if (exprType->getNodeType() == NT_RefType) {
+				// extract element type
+				exprType = static_pointer_cast<const RefType>(exprType)->getElementType();
+			} else {
+				// invalid argument => handled by argument check
+				return res;
+			}
+		}
+
+		// check whether it is a composite type
+		const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
+		if (!compositeType) {
+			add(res, Message(address,
+					EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
+					format("Cannot access member of non-named-composed type %s of type %s",
+							toString(*structExpr).c_str(),
+							toString(*exprType).c_str()),
+					Message::ERROR));
+			return res;
+		}
+
+		// get member type
+		const TypePtr& resultType = compositeType->getTypeOfMember(identifier);
+		if (!resultType) {
+			add(res, Message(address,
+					EC_TYPE_NO_SUCH_MEMBER,
+					format("No member %s within composed type %s",
+							identifier.getName().c_str(),
+							toString(*compositeType).c_str()),
+					Message::ERROR));
+			return res;
+		}
+
+		// check for correct member type
+		if (elementType != resultType) {
+			add(res, Message(address,
+					EC_TYPE_INVALID_TYPE_OF_MEMBER,
+					format("Invalid type of extracted member %s - expected %s",
+							toString(*resultType).c_str(),
+							toString(*elementType).c_str()),
+					Message::ERROR));
+			return res;
+		}
+
+		// no problems found
+		return res;
+	}
+
+
+}
+
+OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAddress& address) {
+	const NodeManager& manager = address->getNodeManager();
+	OptionalMessageList res;
+
+	// check whether it is a call to the member access expression
+	bool isMemberAccess = analysis::isCallOf(address.getAddressedNode(), manager.basic.getCompositeMemberAccess());
+	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.basic.getCompositeRefElem());
+	if (!isMemberAccess && !isMemberReferencing) {
+		// no matching case
+		return res;
+	}
+
+	if (address->getArguments().size() != 3) {
+		// incorrect function usage => let function check provide errors
+		return res;
+	}
+
+	// extract parameters
+	const ExpressionPtr& structExpr = address->getArgument(0);
+	const ExpressionPtr& identifierExpr = address->getArgument(1);
+	const TypePtr& elementType = address->getArgument(2)->getType();
+
+	// check identifier literal
+	if (identifierExpr->getNodeType() != NT_Literal) {
+		add(res, Message(address,
+				EC_TYPE_INVALID_IDENTIFIER,
+				format("Invalid identifier expression %s - not a constant.",
+						toString(*identifierExpr).c_str()),
+				Message::ERROR));
+		return res;
+	}
+
+	// check type literal
+	TypePtr resultType;
+	if (GenericTypePtr genType = dynamic_pointer_cast<const GenericType>(elementType)) {
+		if (genType->getFamilyName() != "type" || genType->getTypeParameter().size() != 1) {
+			// invalid argument => leaf issues to argument type checker
+			return res;
+		}
+
+		// retrieve type
+		resultType = genType->getTypeParameter()[0];
+
+	} else {
+		// invalid arguments => argument type checker will handle it
+		return res;
+	}
+
+	// extract the value of the literal
+	const LiteralPtr& identifierLiteral = static_pointer_cast<const Literal>(identifierExpr);
+
+	// use common check routine
+	return checkMemberAccess(address, structExpr, identifierLiteral->getValue(), resultType, isMemberReferencing);
+
+}
+
+
+
+OptionalMessageList MemberAccessNodeElementTypeCheck::visitMemberAccessExpr(const MemberAccessExprAddress& address) {
+	// delegate request to common implementation
+	return checkMemberAccess(address, address->getSubExpression(), address->getMemberName(), address->getType(), false);
 }
 
 OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& address) {
