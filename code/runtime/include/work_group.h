@@ -51,10 +51,15 @@ typedef union _irt_work_group_id {
 
 typedef struct _irt_work_group {
 	irt_work_group_id id;
-	/* TODO */
+	bool distributed;			// starts at false, set to true if part of the group is not on the same shared memory node
+	irt_worker_id coordinator;  // only set if distributed == true
+	/* implementation stuff */
 } irt_work_group;
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_wg_create(irt_work_group* out_wg);
+irt_errcode irt_wg_create(irt_work_group** out_wg);
+irt_errcode irt_wg_destroy(irt_work_group* wg);
+
+irt_errcode irt_wg_barrier(irt_work_group* wg, irt_barrier_id barrier);

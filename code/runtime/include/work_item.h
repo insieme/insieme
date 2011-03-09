@@ -72,4 +72,6 @@ irt_errcode irt_wi_enqueue_remote(irt_work_item* wi, irt_worker* worker);
 
 irt_errcode irt_wi_yield();
 
-irt_errcode irt_wi_split(irt_work_item* wi, uint32 elements; irt_work_item** out_wis);
+irt_errcode irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
+irt_errcode irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);
+irt_errcode irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis);

@@ -51,11 +51,14 @@ typedef union _irt_data_item_id {
 
 typedef struct _irt_data_item {
 	irt_data_item_id id;
-	/* TODO */
+	irt_type_id type_id; 
+	uint32 dimensions;
+	uint64 *sizes;				// should be stored at this position
  } irt_data_item;
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_di_create(irt_data_item** out_di, /* additional params */);
+irt_errcode irt_di_create(irt_type_id tid, uint32 dimensions, uint64* sizes, irt_data_item** out_di);
+irt_errcode irt_di_destroy(irt_data_item* di);
 
