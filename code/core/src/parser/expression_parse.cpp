@@ -126,6 +126,21 @@ LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const Va
     return build.lambda(build.functionType(captureTypes, paramTypes, retType), captureList, params, body);
 }
 
+JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
+        const GuardedStmts guardedStmts, const vector<DeclarationStmtPtr>& localDecls) {
+    if(!dynamic_pointer_cast<const LambdaExpr>(defaultStmt) && !dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)) {
+        throw ParseException();
+    }
+    for_each(guardedStmts, [&](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
+        //TODO add check for guard
+        if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const CaptureInitExpr>(guardedStmt.second))
+            throw ParseException();
+    });
+
+    return JobExpr::get(manager, threadNumRange, defaultStmt, guardedStmts, localDecls);
+}
+
+
 void callDepthCheck(bool reset, unsigned& callDepthCount) {
     if(!reset) {
         if(callDepthCount > 1000) throw ParseException();
@@ -229,7 +244,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
           % ',') >> ']' >> '{'
         >> *( qi::lit("if") >> expressionRule >> qi::lit("do")
           >> expressionRule )                                       [ ph::push_back(qi::_b, ph::bind(&makePair<ExpressionPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
-        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&JobExpr::get, nManRef, qi::_1, qi::_4, qi::_b, qi::_a ) ];
+        >> qi::lit("default:") >> expressionRule >> '}' )           [ qi::_val = ph::bind(&jobHelp, nManRef, qi::_1, qi::_4, qi::_b, qi::_a ) ];
 
     tupleExpr =
         ( qi::lit("tuple[") >> -(expressionRule                     [ ph::push_back(qi::_a, qi::_1) ]
