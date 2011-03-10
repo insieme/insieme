@@ -43,10 +43,14 @@
 
 namespace insieme {
 namespace analysis {
+
 class CFG;
+
 namespace cfg {
+
 class Block;
 class Terminator;
+
 } // end cfg namespace
 } // end analysis namespace
 } // end insieme namespace
@@ -62,8 +66,8 @@ namespace analysis {
 namespace cfg {
 
 /**
- * Element - Represents a top-level expression in a basic block.
- * A type is included to distinguish expression from terminal nodes.
+ * Element - Represents a top-level expression in a basic block. A type is included to distinguish expression from
+ * terminal nodes.
  */
 struct Element : public core::StatementPtr {
 	enum Type { None, CtrlCond, LoopInit, LoopIncrement };
@@ -76,19 +80,18 @@ private:
 };
 
 /**
- * Terminator: The terminator represents the type of control-flow that occurs
- * at the end of the basic block.  The terminator is a StatementPtr referring
- * to an AST node that has control-flow: if-statements, breaks, loops, etc.
- * If the control-flow is conditional, the condition expression will appear
- * within the set of statements in the block (usually the last statement).
+ * Terminator - The terminator represents the type of control-flow that occurs at the end of the basic block.  The
+ * terminator is a StatementPtr referring to an AST node that has control-flow: if-statements, breaks, loops, etc.
+ * If the control-flow is conditional, the condition expression will appear within the set of statements in the block
+ * (usually the last statement).
  */
 struct Terminator : public Element {
 	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : Element(stmt) { }
 };
 
 /**
- * Edge: An edge interconnects two CFG Blocks. An edge can contain an expression which
- * determines the condition under which the path is taken.
+ * Edge: An edge interconnects two CFG Blocks. An edge can contain an expression which determines the condition under
+ * which the path is taken.
  */
 struct Edge {
 	std::string label; // fixme: replace the string label with an expression
@@ -104,10 +107,13 @@ typedef std::shared_ptr<CFG> CFGPtr;
  * CFG: represents the graph built from IR. Boost.Graph is used as internal representation.
  */
 class CFG {
-
+public:
 	// Each node of the boost::graph is mapped to a CFGBlock.
 	struct NodeProperty {
 		const cfg::Block* block;
+		boost::default_color_type color;
+		size_t id;
+
 		NodeProperty(const cfg::Block* block=NULL) : block(block) { }
 	};
 
@@ -116,7 +122,7 @@ class CFG {
 		EdgeProperty() { }
 		EdgeProperty(const cfg::Edge& edge) : edge(edge) { }
 	};
-
+private:
 	/**
 	 * Utility class for the production of a DOT graph from the boost::graph.
 	 *
@@ -161,23 +167,35 @@ public:
 	// The CFG will be internally represented by an adjacency list (we cannot use an adjacency matrix because the number
 	// of nodes in the graph is not known before hand), the CFG is a directed graph node and edge property classes
 	// are used to represent control flow blocks and edges properties
-	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS, NodeProperty, EdgeProperty> 		ControlFlowGraph;
+	typedef boost::adjacency_list<boost::listS,
+								  boost::listS,
+								  boost::bidirectionalS,
+								  NodeProperty,
+								  EdgeProperty> ControlFlowGraph;
 
-	typedef typename boost::property_map<CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::*>::type 		NodePropertyMapTy;
-	typedef typename boost::property_map<CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::*>::const_type ConstNodePropertyMapTy;
+	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::type
+			NodePropertyMapTy;
 
-	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::*>::type 				EdgePropertyMapTy;
-	typedef typename boost::property_map<CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::*>::const_type 		ConstEdgePropertyMapTy;
+	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::const_type
+			ConstNodePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 		VertexTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator     	VertexIterator;
+	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::type
+			EdgePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 		EdgeTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 		OutEdgeIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 		InEdgeIterator;
+	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::const_type
+			ConstEdgePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator  								AdjacencyIterator;
-	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph, VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor VertexTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   VertexIterator;
+
+	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor EdgeTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator OutEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator InEdgeIterator;
+
+	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator AdjacencyIterator;
+
+	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
+															 VertexTy, InEdgeIterator>::type InvAdjacencyIterator;
 
 
 	CFG() { }
@@ -225,7 +243,7 @@ public:
 	/**
 	 * Returns the number of CFG Blocks in this graph.
 	 */
-	size_t getSize() { return num_vertices(graph); }
+	size_t getSize() const  { return num_vertices(graph); }
 
 	/**
 	 * Returns the entry block of the CFG.
@@ -249,6 +267,7 @@ public:
 
 private:
 	ControlFlowGraph	graph;
+	size_t				currId;
 };
 
 namespace cfg {

@@ -76,9 +76,7 @@ namespace core = insieme::core;
 namespace xml = insieme::xml;
 namespace analysis = insieme::analysis;
 
-
 bool checkForHashCollisions(const ProgramPtr& program);
-
 
 int main(int argc, char** argv) {
 
@@ -332,7 +330,6 @@ int main(int argc, char** argv) {
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error while parsing input file: " << e.what() << endl;
 	}
-
 }
 
 // ------------------------------------------------------------------------------------------------------------------
