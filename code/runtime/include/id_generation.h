@@ -36,26 +36,13 @@
 
 #pragma once
 
-#include <inttypes.h>
+IRT_MAKE_ID_TYPE(__type) \
+typedef union _##__type##_id {
+	uint64 id;
+	struct {
+		uint16 node;
+		uint16 thread;
+		uint32 index;
+	};
+} ##__type##_id;
 
-#include "id_generation.h"
-
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(irt_work_group);
-
-typedef struct _irt_work_group {
-	irt_work_group_id id;
-	bool distributed;			// starts at false, set to true if part of the group is not on the same shared memory node
-	irt_worker_id coordinator;  // only set if distributed == true
-	/* implementation stuff */
-	uint32 local_mem_count;
-} irt_work_group;
-
-
-/* ------------------------------ operations ----- */
-
-irt_errcode irt_wg_create(irt_work_group** out_wg);
-irt_errcode irt_wg_destroy(irt_work_group* wg);
-
-irt_errcode irt_wg_barrier(irt_work_group* wg, irt_barrier_id barrier);

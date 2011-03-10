@@ -45,3 +45,5 @@
 
 /* ------------------------------ operations ----- */
 
+#define IRT_ERRCHECK(_arg) _arg
+

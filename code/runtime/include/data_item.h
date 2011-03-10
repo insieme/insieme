@@ -38,16 +38,11 @@
 
 #include <inttypes.h>
 
+#include "id_generation.h"
+
 /* ------------------------------ data structures ----- */
 
-typedef union _irt_data_item_id {
-	uint64 id;
-	struct {
-		uint16 node;
-		uint16 thread;
-		uint32 index;
-	};
-} irt_data_item_id;
+IRT_MAKE_ID_TYPE(irt_data_item);
 
 typedef struct _irt_data_item {
 	irt_data_item_id id;
