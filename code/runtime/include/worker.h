@@ -38,18 +38,13 @@
 
 #include <types.h>
 
+#include "id_generation.h"
+
 /* ------------------------------ data structures ----- */
 
 typedef uint64 irt_affinity_mask;
 
-typedef union _irt_worker_id {
-	uint64 id;
-	struct {
-		uint16 node;
-		uint16 thread;
-		uint32 index;
-	};
-} irt_worker_id;
+IRT_MAKE_ID_TYPE(irt_worker);
 
 typedef struct _irt_worker {
 	irt_worker_id id;
