@@ -1078,7 +1078,6 @@ public:
 		START_LOG_EXPR_CONVERSION(condOp);
 		const core::ASTBuilder& builder = convFact.builder;
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
-		assert(!condOp->getSaveExpr() && "Conditional operation with 'gcc save' expession not supperted.");
 
 		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());

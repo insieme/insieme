@@ -187,7 +187,7 @@ public:
 		PragmaHandler(name->getName().str()), pragma_matcher(pragma_matcher.copy()), base_name(base_name) {
 	}
 
-	void HandlePragma(clang::Preprocessor& PP, clang::Token &FirstToken) {
+	void HandlePragma(clang::Preprocessor& PP, clang::PragmaIntroducerKind kind, clang::Token &FirstToken) {
 		// '#' symbol is 1 position before
 		clang::SourceLocation&& startLoc = ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
 

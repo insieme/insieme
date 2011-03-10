@@ -51,7 +51,7 @@ TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::Sourc
 
 void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	pp.AddPragmaHandler(PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
-			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eom )
+			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eod )
 	);
 }
 
@@ -69,13 +69,13 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	// Add an handler for insieme mark pargma:
 	// #pragma insieme mark new-line
 	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
-			pp.getIdentifierInfo("mark"), tok::eom, "insieme")
+			pp.getIdentifierInfo("mark"), tok::eod, "insieme")
 		);
 
 	// Add an handler for insieme ignore pragma:
 	// #pragma insieme ignore new-line
 	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
-			pp.getIdentifierInfo("ignore"), tok::eom, "insieme")
+			pp.getIdentifierInfo("ignore"), tok::eod, "insieme")
 		);
 }
 

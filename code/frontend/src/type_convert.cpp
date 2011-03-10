@@ -130,7 +130,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitBuiltinType(BuiltinType* buldInTy) {
+	core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
 		const core::lang::BasicGenerator& gen = convFact.mgr.basic;
 		
@@ -145,7 +145,7 @@ public:
 		case BuiltinType::Char32:		return gen.getInt4();
 		case BuiltinType::Char_S:
 		case BuiltinType::SChar:		return gen.getChar();
-		case BuiltinType::WChar:		return gen.getWChar();
+		// case BuiltinType::WChar:		return gen.getWChar();
 
 		// integer types
 		case BuiltinType::UShort:		return gen.getUInt2();
@@ -168,7 +168,6 @@ public:
 		case BuiltinType::NullPtr:		
 		case BuiltinType::Overload:
 		case BuiltinType::Dependent:
-		case BuiltinType::UndeducedAuto:
 		default:
 			throw "type not supported"; //todo introduce exception class
 		}
@@ -178,7 +177,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								COMPLEX TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitComplexType(ComplexType* bulinTy) {
+	core::TypePtr VisitComplexType(const ComplexType* bulinTy) {
 		assert(false && "ComplexType not yet handled!");
 	}
 
@@ -192,7 +191,7 @@ public:
 	//
 	// The IR representation for such array will be: vector<ref<int<4>>,404>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitConstantArrayType(ConstantArrayType* arrTy) {
+	core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
@@ -223,7 +222,7 @@ public:
 	//
 	// The representation for such array will be: ref<array<int<4>>>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitIncompleteArrayType(IncompleteArrayType* arrTy) {
+	core::TypePtr VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
@@ -257,7 +256,7 @@ public:
 	//
 	// he representation for such array will be: array<ref<int<4>>>( expr() )
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitVariableArrayType(VariableArrayType* arrTy) {
+	core::TypePtr VisitVariableArrayType(const VariableArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
@@ -291,7 +290,7 @@ public:
 	// template instantiation occurs, at which point this will become either
 	// a ConstantArrayType or a VariableArrayType.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitDependentSizedArrayType(DependentSizedArrayType* arrTy) {
+	core::TypePtr VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
 		assert(false && "DependentSizedArrayType not yet handled!");
 	}
 
@@ -303,7 +302,7 @@ public:
 	// having a single void argument. Such a type can have an exception
 	// specification, but this specification is not part of the canonical type.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitFunctionProtoType(FunctionProtoType* funcTy) {
+	core::TypePtr VisitFunctionProtoType(const FunctionProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION(funcTy);
 
 		const core::ASTBuilder& builder = convFact.builder;
@@ -349,7 +348,7 @@ public:
 	// Represents a K&R-style 'int foo()' function, which has no information
 	// available about its arguments.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitFunctionNoProtoType(FunctionNoProtoType* funcTy) {
+	core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION( funcTy );
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
 		assert(retTy && "Function has no return type!");
@@ -365,7 +364,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 							EXTENDEND VECTOR TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitExtVectorType(ExtVectorType* vecTy) {
+	core::TypePtr VisitExtVectorType(const ExtVectorType* vecTy) {
        // get vector datatype
         const QualType qt = vecTy->getElementType();
         const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
@@ -382,7 +381,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 								TYPEDEF TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypedefType(TypedefType* typedefType) {
+	core::TypePtr VisitTypedefType(const TypedefType* typedefType) {
 		START_LOG_TYPE_CONVERSION( typedefType );
 
         core::TypePtr&& subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
@@ -396,7 +395,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 								TYPE OF TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypeOfType(TypeOfType* typeOfType) {
+	core::TypePtr VisitTypeOfType(const TypeOfType* typeOfType) {
 		START_LOG_TYPE_CONVERSION(typeOfType);
 		core::TypePtr retTy = convFact.mgr.basic.getUnit();
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -406,7 +405,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 							TYPE OF EXPRESSION TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypeOfExprType(TypeOfExprType* typeOfType) {
+	core::TypePtr VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
 		START_LOG_TYPE_CONVERSION( typeOfType );
 		core::TypePtr&& retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -416,7 +415,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTagType(TagType* tagType) {
+	core::TypePtr VisitTagType(const TagType* tagType) {
 		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
@@ -589,17 +588,27 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ELABORATED TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitElaboratedType(ElaboratedType* elabType) {
+	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType) {
 		assert(false && "ElaboratedType not yet handled!");
 	}
 
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							   PAREN TYPE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitParenType(const ParenType* parenTy) {
+		START_LOG_TYPE_CONVERSION(parenTy);
+		core::TypePtr&& retTy = Visit( parenTy->getInnerType().getTypePtr() );
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							POINTER TYPE (FIXME)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitPointerType(PointerType* pointerTy) {
+	core::TypePtr VisitPointerType(const PointerType* pointerTy) {
 		START_LOG_TYPE_CONVERSION(pointerTy);
 
-		core::TypePtr&& subTy = Visit(pointerTy->getPointeeType().getTypePtr());
+		core::TypePtr&& subTy = Visit( pointerTy->getPointeeType().getTypePtr() );
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> array<'a>
 		if( convFact.mgr.basic.isUnit(subTy) ) {
@@ -614,7 +623,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						REFERENCE TYPE (FIXME)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitReferenceType(ReferenceType* refTy) {
+	core::TypePtr VisitReferenceType(const ReferenceType* refTy) {
 		return convFact.builder.refType( Visit( refTy->getPointeeType().getTypePtr()) );
 	}
 

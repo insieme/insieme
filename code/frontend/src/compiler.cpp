@@ -54,8 +54,9 @@
 #include "clang/Basic/TargetInfo.h"
 
 #include "llvm/LLVMContext.h"
-#include "llvm/System/Host.h"
-#include "llvm/System/Path.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+// #include "llvm/System/Host.h"
+// #include "llvm/System/Path.h"
 
 #include "llvm/Config/config.h"
 
@@ -101,7 +102,7 @@ namespace {
 void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOptions& diagOpts) {
 	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
 	// cppcheck-suppress exceptNew
-	Diagnostic* diags = new Diagnostic(diagClient);
+	Diagnostic* diags = new Diagnostic(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ), diagClient);
 	// clang will take care of memory deallocation of diags
 	clang.setDiagnostics(diags);
 }
@@ -117,11 +118,11 @@ struct ClangCompiler::ClangCompilerImpl {
 };
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
-	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
+	// pimpl->clang.setLLVMContext(new llvm::LLVMContext);
 
 	setDiagnosticClient(pimpl->clang, pimpl->diagOpts);
 	pimpl->clang.createFileManager();
-	pimpl->clang.createSourceManager();
+	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
 	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
@@ -139,7 +140,7 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 }
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
-	pimpl->clang.setLLVMContext(new llvm::LLVMContext);
+	// pimpl->clang.setLLVMContext(new llvm::LLVMContext);
 
 	// set diagnostic options for the error reporting
 	pimpl->diagOpts.ShowLocation = 1;
@@ -150,7 +151,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	setDiagnosticClient(pimpl->clang, pimpl->diagOpts);
 
 	pimpl->clang.createFileManager();
-	pimpl->clang.createSourceManager();
+	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
 	pimpl->clang.InitializeSourceManager(file_name);
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
@@ -194,7 +195,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	}
 
 	// Enable OpenCL
-	LO.OpenCL = 1;
+	// LO.OpenCL = 1;
 	LO.AltiVec = 1;
 	LO.LaxVectorConversions = 1;
 

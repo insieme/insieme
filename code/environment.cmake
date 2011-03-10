@@ -86,7 +86,7 @@ endif()
 # Full (?) list of clang libraries
 # TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
 set(clang_LList
-    clangBasic clangChecker clangSema clangIndex clangDriver clangAST
+    clangBasic clangSema clangIndex clangDriver clangAST
     clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
     clangParse clangSerialization
 )
@@ -105,7 +105,7 @@ if(MSVC)
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-    set(llvm_LList  LLVM-2.8rc )
+    set(llvm_LList  LLVM-2.9svn )
     set(clang_LList clang ${clang_LList})
 endif(MSVC)
 

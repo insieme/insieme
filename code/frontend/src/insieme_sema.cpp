@@ -213,7 +213,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 								);
 
 					std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-					std::for_each(CS->body_begin(), CS->body_end(), [] (Stmt*& curr) { curr->Retain(); });
+					// Removed after porting to Clang 2.9
+					// std::for_each(CS->body_begin(), CS->body_end(), [] (Stmt*& curr) { operator delete (curr); });
 					CompoundStmt::body_iterator it = newCS->body_begin();
 					for (size_t i = 0; i < CS->size(); ++i, ++it)
 						;

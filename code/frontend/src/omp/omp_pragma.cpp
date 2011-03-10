@@ -265,71 +265,71 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	// Add an handler for pragma omp parallel:
 	// #pragma omp parallel [clause[ [, ]clause] ...] new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaParallel>(
-			pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eom, "omp")
+			pp.getIdentifierInfo("parallel"), parallel_clause_list >> tok::eod, "omp")
 		);
 
 	// omp for
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFor>(
-			pp.getIdentifierInfo("for"), for_clause_list >> tok::eom, "omp")
+			pp.getIdentifierInfo("for"), for_clause_list >> tok::eod, "omp")
 		);
 
 	// #pragma omp sections [clause[[,] clause] ...] new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSections>(
-			pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eom, "omp")
+			pp.getIdentifierInfo("sections"), sections_clause_list >> tok::eod, "omp")
 		);
 
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSection>(
-			pp.getIdentifierInfo("section"), tok::eom, "omp")
+			pp.getIdentifierInfo("section"), tok::eod, "omp")
 		);
 
 	// omp single
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSingle>(
-			pp.getIdentifierInfo("single"), single_clause_list >> tok::eom, "omp")
+			pp.getIdentifierInfo("single"), single_clause_list >> tok::eod, "omp")
 		);
 
 	// #pragma omp task [clause[[,] clause] ...] new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTask>(
-			pp.getIdentifierInfo("task"), task_clause_list >> tok::eom, "omp")
+			pp.getIdentifierInfo("task"), task_clause_list >> tok::eod, "omp")
 		);
 
 	// #pragma omp master new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaMaster>(
-			pp.getIdentifierInfo("master"), tok::eom, "omp")
+			pp.getIdentifierInfo("master"), tok::eod, "omp")
 		);
 
 	// #pragma omp critical [(name)] new-line
 	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaCritical>(
-			pp.getIdentifierInfo("critical"), !(l_paren >> identifier >> r_paren) >> tok::eom, "omp")
+			pp.getIdentifierInfo("critical"), !(l_paren >> identifier >> r_paren) >> tok::eod, "omp")
 		);
 
 	//#pragma omp barrier new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaBarrier>(
-			pp.getIdentifierInfo("barrier"), tok::eom, "omp")
+			pp.getIdentifierInfo("barrier"), tok::eod, "omp")
 		);
 
 	// #pragma omp taskwait newline
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaTaskWait>(
-			pp.getIdentifierInfo("taskwait"), tok::eom, "omp")
+			pp.getIdentifierInfo("taskwait"), tok::eod, "omp")
 		);
 
 	// #pragma omp atimic newline
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaAtomic>(
-			pp.getIdentifierInfo("atomic"), tok::eom, "omp")
+			pp.getIdentifierInfo("atomic"), tok::eod, "omp")
 		);
 
 	// #pragma omp flush [(list)] new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFlush>(
-			pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eom, "omp")
+			pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eod, "omp")
 		);
 
 	// #pragma omp ordered new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaOrdered>(
-			pp.getIdentifierInfo("ordered"), tok::eom, "omp")
+			pp.getIdentifierInfo("ordered"), tok::eod, "omp")
 		);
 
 	// #pragma omp threadprivate(list) new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaThreadPrivate>(
-			pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eom, "omp")
+			pp.getIdentifierInfo("threadprivate"), threadprivate_clause >> tok::eod, "omp")
 		);
 }
 

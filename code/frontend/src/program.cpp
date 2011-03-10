@@ -72,22 +72,21 @@ using namespace clang;
 namespace {
 
 /*
- * Instantiate the clang parser and sema to build the clang AST.
- * Pragmas are stored during the parsing
+ * Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
  */
-void parseClangAST(clang::Preprocessor &PP, clang::ASTConsumer *Consumer, clang::ASTContext &Ctx,
-				   bool CompleteTranslationUnit, PragmaList& PL) {
-	InsiemeSema S(PL, PP, Ctx, *Consumer, CompleteTranslationUnit);
-	Parser P(PP, S);
-	PP.EnterMainSourceFile();
+void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL) {
+	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
+
+	Parser P(comp.getPreprocessor(), S);
+	comp.getPreprocessor().EnterMainSourceFile();
 
 	P.Initialize();
 	ParserProxy::init(&P);
-	Consumer->Initialize(Ctx);
+	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
 		SC->InitializeSema(S);
 
-	if (ExternalASTSource *External = Ctx.getExternalSource()) {
+	if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
 		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
 			ExternalSema->InitializeSema(S);
 		External->StartTranslationUnit(Consumer);
@@ -97,7 +96,7 @@ void parseClangAST(clang::Preprocessor &PP, clang::ASTConsumer *Consumer, clang:
 	while(!P.ParseTopLevelDecl(ADecl))
 		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
 
-	Consumer->HandleTranslationUnit(Ctx);
+	Consumer->HandleTranslationUnit(comp.getASTContext());
 	ParserProxy::discard();
 
 	S.dump();
@@ -124,7 +123,7 @@ public:
 		InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
 
 		clang::ASTConsumer emptyCons;
-		parseClangAST(mClang.getPreprocessor(), &emptyCons, mClang.getASTContext(), true, mPragmaList);
+		parseClangAST(mClang, &emptyCons, true, mPragmaList);
 
 		if( mClang.getDiagnostics().hasErrorOccurred() ) {
 			// errors are always fatal!

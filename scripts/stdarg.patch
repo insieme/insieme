@@ -1,0 +1,23 @@
+*** stdarg_orig.h	2011-03-10 20:08:12.000000000 +0100
+--- stdarg.h	2011-03-10 21:16:20.536569000 +0100
+***************
+*** 26,34 ****
+  #ifndef __STDARG_H
+  #define __STDARG_H
+  
+! #ifndef _VA_LIST
+  typedef __builtin_va_list va_list;
+! #define _VA_LIST
+  #endif
+  #define va_start(ap, param) __builtin_va_start(ap, param)
+  #define va_end(ap)          __builtin_va_end(ap)
+--- 26,34 ----
+  #ifndef __STDARG_H
+  #define __STDARG_H
+  
+! #ifndef _VA_LIST_DEFINED
+  typedef __builtin_va_list va_list;
+! #define _VA_LIST_DEFINED
+  #endif
+  #define va_start(ap, param) __builtin_va_start(ap, param)
+  #define va_end(ap)          __builtin_va_end(ap)
