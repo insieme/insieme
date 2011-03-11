@@ -74,8 +74,8 @@ struct __insieme_globals {
     double d[33][33][5][5];
     double ce[5][13];
     double maxtime;
-    double start[64];
     double elapsed[64];
+    double start[64];
     int sec;
 };
 

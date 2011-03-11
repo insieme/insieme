@@ -28,8 +28,8 @@ struct __insieme_globals {
     int ie2;
     int ie3;
     double s;
-    double start[64];
     double elapsed[64];
+    double start[64];
     int sec;
 };
 
