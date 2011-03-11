@@ -146,8 +146,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void createBlock() {
 		// if we already have a block allocated and the block is empty we return it
-		if ( isPending || (currBlock && currBlock->empty()) )
+		if ( isPending || (currBlock && currBlock->empty()) ) {
+			isPending = true;
 			return;
+		}
 
 		// we have to make sure the currBlock is not containing elements already
 		assert( !isPending && !currBlock && "CFG block lost during CFG creation" );
@@ -156,12 +158,19 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void appendPendingBlock() {
+		// In the case the currBlock is pending and not empty we add it to the Graph and connect it
+		// with the successive node in the CFG
 		if ( isPending && currBlock && !currBlock->empty() ) {
 			CFG::VertexTy&& node = cfg.addBlock(currBlock);
 			cfg.addEdge(node, succ);
 			succ = node;
 			currBlock = NULL;
 			isPending = false;
+		}
+
+		if( isPending ) {
+			delete currBlock;
+			currBlock = NULL;
 		}
 
 		if ( !isPending && currBlock ) {
@@ -284,6 +293,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg.addEdge(src, sink, cfg::Edge("F")); // FIXME
 
 		succ = src;
+		isPending = false;
 	}
 
 	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
@@ -380,10 +390,19 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void completeGraph() {
-		if (entry == succ)
+
+		if( isPending && currBlock && currBlock->empty()) {
+			delete currBlock;
+			currBlock = NULL;
+		}
+
+		if (entry == succ) {
 			return;
-		if (currBlock)
+		}
+
+		if (isPending) {
 			appendPendingBlock();
+		}
 
 		cfg.addEdge(entry, succ);
 		succ = entry;
