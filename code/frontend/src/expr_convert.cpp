@@ -724,7 +724,7 @@ public:
 			}
 		}
 
-		core::Identifier&& ident = membExpr->getMemberDecl()->getNameAsString();
+		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
 		core::ExpressionPtr retExpr;
 
 		// we have a ref type we should use the struct.ref member access

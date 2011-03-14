@@ -39,7 +39,6 @@
 #include <string>
 
 #include "insieme/core/int_type_param.h"
-#include "insieme/core/identifier.h"
 #include <boost/utility.hpp>
 
 namespace insieme {
@@ -47,6 +46,8 @@ namespace core {
 	
 class NodeManager;
 template<class T> class Pointer;
+class Identifier;
+typedef Pointer<const Identifier> IdentifierPtr;
 class Type;
 typedef Pointer<const Type> TypePtr;
 class Expression;
@@ -125,7 +126,7 @@ public:
 	LiteralPtr getTypeLiteral(const TypePtr& type) const;
 
 	// a factory method for a identifier literal
-	LiteralPtr getIdentifierLiteral(const core::Identifier& identifier) const;
+	LiteralPtr getIdentifierLiteral(const core::IdentifierPtr& identifier) const;
 
 	// a method generating a vector init expression form a scalar
 	ExpressionPtr scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const;

@@ -14,8 +14,8 @@ struct __insieme_globals {
     double _x[131073];
     double* x;
     double q[10];
-    double start[64];
     double elapsed[64];
+    double start[64];
     int sec;
 };
 

@@ -346,7 +346,7 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 		case insieme::core::NT_ChannelType:
 		case insieme::core::NT_RefType:  {
 			const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
-			boost::hash_combine(seed, type->getFamilyName().getName());
+			boost::hash_combine(seed, type->getFamilyName());
 			for_each(type->getIntTypeParameter(), [&](const core::IntTypeParam& cur) {
 				boost::hash_combine(seed, insieme::core::hash_value(cur));
 			});
@@ -355,7 +355,7 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 		case insieme::core::NT_Variable:     { boost::hash_combine(seed, static_pointer_cast<const Variable>(cur)->getId()); break; }
 		case insieme::core::NT_TypeVariable: { boost::hash_combine(seed, static_pointer_cast<const TypeVariable>(cur)->getVarName()); break; }
 		case insieme::core::NT_Literal:      { boost::hash_combine(seed, static_pointer_cast<const Literal>(cur)->getValue()); break; }
-		case insieme::core::NT_MemberAccessExpr:      { boost::hash_combine(seed, static_pointer_cast<const MemberAccessExpr>(cur)->getMemberName().getName()); break; }
+		case insieme::core::NT_MemberAccessExpr:      { boost::hash_combine(seed, static_pointer_cast<const MemberAccessExpr>(cur)->getMemberName()->getName()); break; }
 		default: {}
 	}
 }

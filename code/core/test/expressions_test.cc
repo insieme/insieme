@@ -274,19 +274,21 @@ TEST(ExpressionsTest, MemberAccessExpr) {
 
 	StructExpr::Members members;
 
+	IdentifierPtr idA = Identifier::get(manager,"a");
+	IdentifierPtr idB = Identifier::get(manager,"b");
 	TypePtr typeA = GenericType::get(manager, "typeA");
 	TypePtr typeB = GenericType::get(manager, "typeB");
-	members.push_back(StructExpr::Member("a", Literal::get(manager, typeA, "1")));
-	members.push_back(StructExpr::Member("b", Literal::get(manager, typeB, "2")));
+	members.push_back(StructExpr::Member(idA, Literal::get(manager, typeA, "1")));
+	members.push_back(StructExpr::Member(idB, Literal::get(manager, typeB, "2")));
 	StructExprPtr data = StructExpr::get(manager, members);
 
-	MemberAccessExprPtr access = MemberAccessExpr::get(manager, data, "a");
+	MemberAccessExprPtr access = MemberAccessExpr::get(manager, data, idA);
 	EXPECT_EQ(*typeA, *access->getType());
 
-	MemberAccessExprPtr access2 = MemberAccessExpr::get(manager, data, "b");
+	MemberAccessExprPtr access2 = MemberAccessExpr::get(manager, data, idB);
 	EXPECT_EQ(*typeB, *access2->getType());
 
-	MemberAccessExprPtr access3 = MemberAccessExpr::get(manager, data, "a");
+	MemberAccessExprPtr access3 = MemberAccessExpr::get(manager, data, idA);
 	EXPECT_EQ(*typeA, *access3->getType());
 
 	EXPECT_NE(access, access2);
@@ -297,9 +299,9 @@ TEST(ExpressionsTest, MemberAccessExpr) {
 	EXPECT_EQ ("(struct{a=1, b=2}.b)", toString(*access2));
 
 	// check hash codes, children and cloning
-	basicExprTests(access, typeA, toVector<NodePtr>(data));
-	basicExprTests(access2, typeB, toVector<NodePtr>(data));
-	basicExprTests(access3, typeA, toVector<NodePtr>(data));
+	basicExprTests(access, typeA, toVector<NodePtr>(data, idA));
+	basicExprTests(access2, typeB, toVector<NodePtr>(data, idB));
+	basicExprTests(access3, typeA, toVector<NodePtr>(data, idA));
 }
 
 TEST(ExpressionsTest, TupleProjectionExpr) {

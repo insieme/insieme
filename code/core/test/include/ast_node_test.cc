@@ -71,16 +71,18 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 		case insieme::core::NT_ChannelType:
 		case insieme::core::NT_RefType:  {
 			const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
-			hash_combine(seed, type->getFamilyName().getName());
+			hash_combine(seed, type->getFamilyName());
 			for_each(type->getIntTypeParameter(), [&](const core::IntTypeParam& cur) {
 				hash_combine(seed, insieme::core::hash_value(cur));
 			});
 			break;
 		}
+		case insieme::core::NT_StructType:   { hash_combine(seed, "struct"); break; }
+		case insieme::core::NT_UnionType:    { hash_combine(seed, "union"); break; }
+		case insieme::core::NT_Identifier:   { hash_combine(seed, static_pointer_cast<const Identifier>(cur)->getName()); break; }
 		case insieme::core::NT_Variable:     { hash_combine(seed, static_pointer_cast<const Variable>(cur)->getId()); break; }
 		case insieme::core::NT_TypeVariable: { hash_combine(seed, static_pointer_cast<const TypeVariable>(cur)->getVarName()); break; }
 		case insieme::core::NT_Literal:      { hash_combine(seed, static_pointer_cast<const Literal>(cur)->getValue()); break; }
-		case insieme::core::NT_MemberAccessExpr:      { hash_combine(seed, static_pointer_cast<const MemberAccessExpr>(cur)->getMemberName().getName()); break; }
 		case insieme::core::NT_TupleProjectionExpr:   { hash_combine(seed, static_pointer_cast<const TupleProjectionExpr>(cur)->getIndex()); break; }
 		case insieme::core::NT_MarkerExpr:   { hash_combine(seed, static_pointer_cast<const MarkerExpr>(cur)->getID()); break; }
 		case insieme::core::NT_MarkerStmt:   { hash_combine(seed, static_pointer_cast<const MarkerStmt>(cur)->getID()); break; }
@@ -92,12 +94,12 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 hash_t computeHashChildOnly(const NodePtr& cur) {
 
 	// special treatment for named composite types (for simplicity reasons)
-	if (auto type = dynamic_pointer_cast<const NamedCompositeType>(cur)) {
-		return type->hash();
-	}
-	if (auto expr = dynamic_pointer_cast<const StructExpr>(cur)) {
-		return expr->hash();
-	}
+//	if (auto type = dynamic_pointer_cast<const NamedCompositeType>(cur)) {
+//		return type->hash();
+//	}
+//	if (auto expr = dynamic_pointer_cast<const StructExpr>(cur)) {
+//		return expr->hash();
+//	}
 
 
 	hash_t seed = 0;

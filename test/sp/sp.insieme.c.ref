@@ -128,8 +128,8 @@ struct __insieme_globals {
     double q[36];
     double ue[5][36];
     double buf[5][36];
-    double start[64];
     double elapsed[64];
+    double start[64];
     int sec;
 };
 

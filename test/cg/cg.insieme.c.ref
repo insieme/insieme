@@ -39,8 +39,8 @@ struct __insieme_globals {
     double rho0;
     double alpha;
     double beta;
-    double start[64];
     double elapsed[64];
+    double start[64];
     int sec;
 };
 

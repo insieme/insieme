@@ -126,8 +126,8 @@ struct __insieme_globals {
     double tmp1;
     double tmp2;
     double tmp3;
-    double start[64];
     double elapsed[64];
+    double start[64];
     int sec;
 };
 

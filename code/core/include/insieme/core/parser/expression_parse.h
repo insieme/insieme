@@ -38,6 +38,8 @@
 
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/utils/map_utils.h"
+
 namespace insieme {
 namespace core {
 namespace parse {
@@ -45,7 +47,7 @@ namespace parse {
 typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
 typedef vector<VariablePtr> VariableList;
 typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > Definitions;
-typedef std::vector<std::pair<Identifier, ExpressionPtr> > Members;
+typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 
 // FW Declaration
 struct TypeGrammar;
@@ -59,14 +61,13 @@ std::pair<T, U> makePair (T first, U second) {
 
 class VariableTable {
     NodeManager& nodeMan;
-    std::map<Identifier, VariablePtr> table;
+    utils::map::PointerMap<IdentifierPtr, VariablePtr> table;
 
 public:
     VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
 
-    VariablePtr get(const TypePtr& typ, const Identifier& id);
-
     VariablePtr lookup(const Identifier& id);
+    VariablePtr get(const TypePtr& typ, const IdentifierPtr& id);
 };
 
 struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {

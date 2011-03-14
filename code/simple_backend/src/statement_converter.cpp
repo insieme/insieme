@@ -235,7 +235,7 @@ namespace simple_backend {
 			// init values, one after another
 			for_each(structValue->getMembers(), [&, this](const StructExpr::Member& cur) {
 
-				const Identifier& name = cur.first;
+				const IdentifierPtr& name = cur.first;
 				ExpressionPtr value = cur.second;
 
 				// remove leading var/new calls
@@ -259,7 +259,7 @@ namespace simple_backend {
 					string elementName = cc.getTypeManager().getTypeName(code, vectorType->getElementType(), true);
 
 					// init values using memcopy
-					code << "memcpy(&((*" << varName << ")." << name << "),&((" << elementName << "[])";
+					code << "memcpy(&((*" << varName << ")." << *name << "),&((" << elementName << "[])";
 					this->visit(value);
 					code << "), sizeof(";
 					code << elementName;
@@ -623,7 +623,7 @@ namespace simple_backend {
 		}
 		code << "(";
 		visit(ptr->getSubExpression());
-		code << "." << ptr->getMemberName() << ")";
+		code << "." << *ptr->getMemberName() << ")";
 	}
 
 	void StmtConverter::visitStructExpr(const StructExprPtr& ptr) {

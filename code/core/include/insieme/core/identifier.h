@@ -40,43 +40,84 @@
 #include <ostream>
 #include <boost/functional/hash.hpp>
 
+#include "insieme/core/ast_node.h"
+
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/instance_manager.h"
-
-using std::string;
 
 namespace insieme {
 namespace core {
 
-class Identifier : public insieme::utils::HashableImmutableData<Identifier> {
 
-	// TODO: replace with flyweight!
-	string name;
+	/**
+	 * A special kind of node representing names wherever necessary within the INSPIRE representation.
+	 */
+	class Identifier : public Node {
 
-public:
-	Identifier() : HashableImmutableData<Identifier>(boost::hash_value(string("UNKNOWN_IDENT"))), name(string("UNKNOWN_IDENT")) {}
+		/**
+		 * The name this identifier is representing.
+		 */
+		const string name;
 
-	Identifier(const char* name) : HashableImmutableData<Identifier>(boost::hash_value(string(name))), name(string(name)) {}
+		/**
+		 * Creates a new identifier based on the given name.
+		 */
+		Identifier(const string& name);
 
-	Identifier(const string& name) : HashableImmutableData<Identifier>(boost::hash_value(name)), name(name) {}
+	public:
 
-protected:
+		/**
+		 * An abstract factory method to obtain references to identifier nodes.
+		 *
+		 * @param manager the manager the resulting identifier should be associated to
+		 * @param name the name to be represented by the identifier
+		 * @return a pointer to the requested node
+		 */
+		static IdentifierPtr get(NodeManager& manager, const string& name);
 
-	virtual bool equals(const Identifier& other) const {
-		// compare names
-		return name == other.name;
-	}
+	private:
 
-public:
+		/**
+		 * Creates a copy of this node using the given mapper.
+		 *
+		 * @param mapper the mapper to to be used for the copying process (will be ignored by this implementation)
+		 * @return a pointer to a clone of this identifier node.
+		 */
+		virtual Node* createCopyUsing(NodeMapping& mapper) const {
+			return new Identifier(name);
+		}
 
-	const string& getName() const {
-		return name;
-	}
+	protected:
 
-	bool operator<(const Identifier& other) const {
-		return name.compare(other.name) < 0;
-	}
-};
+		/**
+		 * Obtains an empty child list.
+		 */
+		virtual OptionChildList getChildNodes() const {
+			return std::make_shared<ChildList>();
+		}
+
+		/**
+		 * Compares this node with the given node.
+		 */
+		bool equals(const Node& other) const;
+
+	public:
+
+		/**
+		 * Prints the name of this identifier to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << name;
+		}
+
+		/**
+		 * Obtains the name of this identifier.
+		 */
+		const string& getName() const {
+			return name;
+		}
+
+	};
 
 } // end namespace core
 } // end namespace insieme

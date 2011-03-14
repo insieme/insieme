@@ -318,29 +318,7 @@ private:
 	 * @param manager the manager which should maintain all referenced nodes
 	 * @return a clone of this instance referencing elements maintained exclusively by the given manager
 	 */
-	const Node* cloneTo(NodeManager& manager) const {
-		// NOTE: this method is performing the all-AST-node work, the rest is done by createCloneUsing(...)
-
-		// check whether cloning is necessary
-		if (this->manager == &manager) {
-			return this;
-		}
-
-		// trigger the creation of a clone
-		auto cloner = makeLambdaMapper([&manager](unsigned, const NodePtr& ptr) {
-					return clonePtr(manager, ptr);
-				});
-		Node* res = createCopyUsing(cloner);
-
-		// update manager
-		res->manager = &manager;
-
-		// copy annotations
-		res->setAnnotations(getAnnotations());
-
-		// done
-		return res;
-	}
+	const Node* cloneTo(NodeManager& manager) const;
 
 	/**
 	 * A virtual method to be implemented by sub-classes to realize the actual creation of

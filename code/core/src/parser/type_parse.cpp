@@ -61,12 +61,12 @@ namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
 namespace {
-	Identifier makeId(char start, const vector<char>& tail) {
-		return Identifier(string(&start, &start+1) + string(tail.begin(), tail.end()));
+	IdentifierPtr makeId(NodeManager& manager, char start, const vector<char>& tail) {
+		return Identifier::get(manager, string(&start, &start+1) + string(tail.begin(), tail.end()));
 	}
-	Identifier makePrefixId(char start, const Identifier& ident) {
-		return Identifier(string(&start, &start+1) + ident.getName());
-	}
+//	IdentifierPtr makePrefixId(NodeManager& manager, char start, const IdentifierPtr& ident) {
+//		return Identifier::get(manager, string(&start, &start+1) + ident->getName());
+//	}
 }
 
 TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule) {
@@ -78,7 +78,7 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 	// terminals, no skip parser
 
 	identifier = 
-		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = ph::bind(&makeId, qi::_1, qi::_2) ];
+		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = ph::bind(&makeId, nManRef, qi::_1, qi::_2) ];
 	
 	typeVarLabel =
 		( qi::char_('\'') >> identifier )							[ qi::_val = ph::bind(&TypeVariable::getFromId, nManRef, qi::_2) ];
@@ -119,7 +119,7 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 		% ',' )
 		>> -qi::char_(',') >> -( intTypeParam						[ ph::push_back(qi::_c, qi::_1) ]
 		% ',' )
-		>> '>') )													[ qi::_val = ph::bind(&GenericType::get, nManRef, qi::_a, qi::_b, qi::_c, TypePtr()) ];
+		>> '>') )													[ qi::_val = ph::bind(&GenericType::getFromID, nManRef, qi::_a, qi::_b, qi::_c, TypePtr()) ];
 
 	tupleType =
 		( qi::char_('(') >> -( typeRule								[ ph::push_back(qi::_a, qi::_1) ]
@@ -135,11 +135,11 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 
 
 	structType =
-		( qi::lit("struct<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<Identifier,TypePtr>>(qi::_1, qi::_2)) ]
+		( qi::lit("struct<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<IdentifierPtr,TypePtr>>(qi::_1, qi::_2)) ]
 		% ',' ) >> '>' )											[ qi::_val = ph::bind(&StructType::get, nManRef, qi::_a) ];
 
 	unionType =
-		( qi::lit("union<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<Identifier,TypePtr>>(qi::_1, qi::_2)) ]
+		( qi::lit("union<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<IdentifierPtr,TypePtr>>(qi::_1, qi::_2)) ]
 		% ',' ) >> '>' )											[ qi::_val = ph::bind(&UnionType::get, nManRef, qi::_a) ];
 
 	typeRule = 
