@@ -68,7 +68,7 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-VariablePtr VariableTable::get(const TypePtr& typ, const Identifier& id) {
+VariablePtr VariableTable::get(const TypePtr& typ, const IdentifierPtr& id) {
     auto entry = table.find(id);
     if(entry != table.end()) {
         assert(entry->second->getType() == typ);
@@ -258,7 +258,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 
     structExpr =
         ( qi::lit("struct") >> '{' >> -(
-          (typeG->identifier >> ':' >> expressionRule )             [ ph::push_back(qi::_a, ph::bind(&makePair<Identifier, ExpressionPtr>, qi::_1, qi::_2 )) ]
+          (typeG->identifier >> ':' >> expressionRule )             [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2 )) ]
           % ',') >> '}' )                                           [ qi::_val = ph::bind(&StructExpr::get, nManRef, qi::_a ) ];
 
 //TODO change to general type to support recursive types

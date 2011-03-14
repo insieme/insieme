@@ -93,8 +93,8 @@ TypeVariablePtr TypeVariable::get(NodeManager& manager, const string& name) {
 	return manager.get(TypeVariable(name));
 }
 
-TypeVariablePtr TypeVariable::getFromId(NodeManager& manager, const Identifier& id) {
-	return manager.get(TypeVariable(id.getName()));
+TypeVariablePtr TypeVariable::getFromId(NodeManager& manager, const IdentifierPtr& id) {
+	return manager.get(TypeVariable(id->getName()));
 }
 
 bool TypeVariable::equalsType(const Type& type) const {
@@ -226,7 +226,7 @@ bool FunctionType::equalsType(const Type& type) const {
 
 namespace {
 
-	static std::size_t hashGenericType(std::size_t hashSeed, const Identifier& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intTypeParams, const TypePtr& baseType) {
+	static std::size_t hashGenericType(std::size_t hashSeed, const string& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intTypeParams, const TypePtr& baseType) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, hashSeed);
 		boost::hash_combine(seed, name);
@@ -240,7 +240,7 @@ namespace {
 /**
  * Creates an new generic type instance based on the given parameters.
  */
-GenericType::GenericType(const Identifier& name,
+GenericType::GenericType(const string& name,
 		const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intTypeParams,
 		const TypePtr& baseType)
@@ -252,7 +252,7 @@ GenericType::GenericType(const Identifier& name,
 		baseType(isolate(baseType)) { }
 
 
-GenericType::GenericType(NodeType nodeType, std::size_t hashSeed, const Identifier& name,
+GenericType::GenericType(NodeType nodeType, std::size_t hashSeed, const string& name,
 		const vector<TypePtr>& typeParams,
 		const vector<IntTypeParam>& intTypeParams,
 		const TypePtr& baseType)
@@ -282,13 +282,23 @@ GenericType* GenericType::createCopyUsing(NodeMapping& mapper) const {
  * @param baseType		the base type of this generic type
  */
 GenericTypePtr GenericType::get(NodeManager& manager,
-			const Identifier& name,
+			const string& name,
 			const vector<TypePtr>& typeParams,
 			const vector<IntTypeParam>& intTypeParams,
 			const TypePtr& baseType) {
 
 	// create resulting data element
 	return manager.get(GenericType(name, typeParams, intTypeParams, baseType));
+}
+
+GenericTypePtr GenericType::getFromID(NodeManager& manager,
+			const IdentifierPtr& name,
+			const vector<TypePtr>& typeParams,
+			const vector<IntTypeParam>& intTypeParams,
+			const TypePtr& baseType) {
+
+	// create result using alternative get
+	return get(manager, name->getName(), typeParams, intTypeParams, baseType);
 }
 
 /**
@@ -510,7 +520,7 @@ namespace {
 		boost::hash_combine(seed, hashSeed);
 		boost::hash_combine(seed, prefix);
 		for_each(entries, [&seed](const NamedCompositeType::Entry& cur) {
-			boost::hash_combine(seed, cur.first.getName());
+			boost::hash_combine(seed, *cur.first);
 			boost::hash_combine(seed, *cur.second);
 		});
 		return seed;
@@ -535,7 +545,9 @@ NamedCompositeType::Entries copyEntriesUsing(NodeMapping& mapper, unsigned offse
 	NamedCompositeType::Entries res;
 	std::transform(entries.cbegin(), entries.cend(), back_inserter(res),
 		[&mapper, &offset](const NamedCompositeType::Entry& cur) {
-			return NamedCompositeType::Entry(cur.first, mapper.map(offset++, cur.second));
+			IdentifierPtr name = mapper.map(offset++, cur.first);
+			TypePtr type = mapper.map(offset++, cur.second);
+			return NamedCompositeType::Entry(name, type);
 	});
 	return res;
 }
@@ -555,15 +567,18 @@ NamedCompositeType::NamedCompositeType(NodeType nodeType, std::size_t hashSeed, 
 
 Node::OptionChildList NamedCompositeType::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	projectToSecond(entries.cbegin(), entries.cend(), back_inserter(*res));
+	for_each(entries, [&](const Entry& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
+	});
 	return res;
 }
 
-const TypePtr NamedCompositeType::getTypeOfMember(const Identifier& member) const {
+const TypePtr NamedCompositeType::getTypeOfMember(const IdentifierPtr& member) const {
 	// search for member with the given name ...
 	for (auto it = entries.begin(); it != entries.end(); it++) {
 		const Entry& cur = *it;
-		if (cur.first == member) {
+		if (*cur.first == *member) {
 			return cur.second;
 		}
 	}
@@ -573,7 +588,7 @@ const TypePtr NamedCompositeType::getTypeOfMember(const Identifier& member) cons
 bool NamedCompositeType::equalsType(const Type& type) const {
 	const NamedCompositeType& other = static_cast<const NamedCompositeType&>(type);
 	return ::equals(entries, other.entries, [](const Entry& a, const Entry& b) {
-		return a.first == b.first && *a.second == *b.second;
+		return *a.first == *b.first && *a.second == *b.second;
 	});
 }
 
@@ -583,7 +598,7 @@ std::ostream& NamedCompositeType::printTypeTo(std::ostream& out) const {
 	out << ((getNodeType() == NT_UnionType)?"union<":"struct<");
 
 	out << join(",", entries, [](std::ostream& out, const Entry& cur) {
-		out << cur.first.getName() << ":" << *cur.second;
+		out << *cur.first << ":" << *cur.second;
 	});
 
 	return out << ">";

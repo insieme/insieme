@@ -196,7 +196,7 @@ public:
 	 * @param id the identifier defining the name of the resulting type variable
 	 * @return the requested type instance managed by the given manager
 	 */
-	static TypeVariablePtr getFromId(NodeManager& manager, const Identifier& id);
+	static TypeVariablePtr getFromId(NodeManager& manager, const IdentifierPtr& id);
 
 	/**
 	 * Prints a string-representation of this type to the given output stream.
@@ -428,7 +428,7 @@ class GenericType: public Type {
 	/**
 	 * The name of this generic type.
 	 */
-	const Identifier familyName;
+	const string familyName;
 
 	/**
 	 * The list of type parameters being part of this type specification.
@@ -457,7 +457,7 @@ protected:
 	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 	 * @param baseType		the base type of this generic type
 	 */
-	GenericType(const Identifier& name,
+	GenericType(const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
@@ -475,7 +475,7 @@ protected:
 	 */
 	GenericType(NodeType nodeType,
 			std::size_t hashSeed,
-			const Identifier& name,
+			const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
@@ -506,7 +506,24 @@ public:
 	 * @param baseType		the base type of this generic type
 	 */
 	static GenericTypePtr get(NodeManager& manager,
-			const Identifier& name,
+			const string& name,
+			const vector<TypePtr>& typeParams = vector<TypePtr> (),
+			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const TypePtr& baseType = NULL);
+
+	/**
+	 * This method provides a static factory method for this type of node. It will return
+	 * a generic type pointer pointing toward a variable with the given name maintained by the
+	 * given manager.
+	 *
+	 * @param manager		the manager to be used for creating the node (memory management)
+	 * @param name 			the name of the new type (only the prefix)
+	 * @param typeParams	the type parameters of this type, concrete or variable
+	 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+	 * @param baseType		the base type of this generic type
+	 */
+	static GenericTypePtr getFromID(NodeManager& manager,
+			const IdentifierPtr& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
 			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
 			const TypePtr& baseType = NULL);
@@ -514,7 +531,7 @@ public:
 	/**
 	 * Obtains the family name of this generic type.
 	 */
-	const Identifier& getFamilyName() const {
+	const string& getFamilyName() const {
 		return familyName;
 	}
 
@@ -737,7 +754,7 @@ public:
 	/**
 	 * Defines the type used for representing a element entry.
 	 */
-	typedef std::pair<Identifier, TypePtr> Entry;
+	typedef std::pair<IdentifierPtr, TypePtr> Entry;
 
 	/**
 	 * The type used to represent a list of element entries.
@@ -790,7 +807,7 @@ public:
 	 * Retrieves the type of a member of this struct or a null pointer if there is no
 	 * such entry.
 	 */
-	const TypePtr getTypeOfMember(const Identifier& member) const;
+	const TypePtr getTypeOfMember(const IdentifierPtr& member) const;
 
 	/**
 	 * Prints a string-representation of this type to the given output stream.

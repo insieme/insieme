@@ -246,6 +246,11 @@ namespace {
 				} \
 
 
+		PRINT(Identifier, {
+				// identifiers can be directly printed
+				out << *node;
+		});
+
 		PRINT(Type, {
 				// types can be handled easilly ...
 				out << *node;
@@ -525,7 +530,8 @@ namespace {
 
 		PRINT(StructExpr, {
 				out << "struct{" << ::join(", ", node->getMembers(), [&](std::ostream& out, const StructExpr::Member& cur) {
-					out << cur.first << ":=";
+					this->visit(cur.first);
+					out << ":=";
 					this->visit(cur.second);
 				}) << "}";
 		});

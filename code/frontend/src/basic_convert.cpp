@@ -282,7 +282,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
-		core::Identifier ident(varDecl->getNameAsString());
+		core::IdentifierPtr ident = builder.identifier(varDecl->getNameAsString());
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
 
 		assert(ctx.globalVar->getType()->getNodeType() == core::NT_RefType &&

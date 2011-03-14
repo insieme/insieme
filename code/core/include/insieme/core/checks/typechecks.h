@@ -96,7 +96,6 @@ SIMPLE_CHECK(IfConditionType, IfStmt, false);
 SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
 SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
 
-SIMPLE_CHECK(MemberAccessNodeElementType, MemberAccessExpr, false);
 SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
 
 SIMPLE_CHECK(BuiltInLiteral, Literal, false);

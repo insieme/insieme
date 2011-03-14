@@ -63,7 +63,7 @@ CompoundStmtPtr compoundHelp(NodeManager& nodeMan, Stmts stmts) {
     return CompoundStmt::get(nodeMan, stmts);
 }
 
-ForStmtPtr forHelp(NodeManager& nodeMan, Identifier id, ExpressionPtr start, ExpressionPtr end, ExpressionPtr step, StatementPtr body,
+ForStmtPtr forHelp(NodeManager& nodeMan, IdentifierPtr id, ExpressionPtr start, ExpressionPtr end, ExpressionPtr step, StatementPtr body,
         ExpressionGrammar* exprG) {
     ASTBuilder builder(nodeMan);
     DeclarationStmtPtr loopVar = builder.declarationStmt(exprG->varTab.get(start->getType(), id), start);

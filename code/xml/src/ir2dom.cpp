@@ -96,7 +96,7 @@ public:
 	void visitGenericType(const GenericTypePtr& cur) {
 		XmlElement genType("genType", doc);
 		genType << XmlElement::Attribute("id", GET_ID(cur))
-				<< XmlElement::Attribute("familyName", cur->getFamilyName().getName());
+				<< XmlElement::Attribute("familyName", cur->getFamilyName());
 		rootElem << genType;
 
 		if (const TypePtr& base = cur->getBaseType()) {
@@ -177,7 +177,7 @@ public:
 			[this, &entries](const NamedCompositeType::Entry& curr) {
 				XmlElement entry("entry", this->doc);
 				XmlElement id("id", this->doc);
-				id.setText((curr.first).getName());
+				id.setText((curr.first)->getName());
 				entry << id;
 
 				this->append(entry, curr.second, "typePtr");
@@ -381,7 +381,7 @@ public:
 				members << member;
 
 				XmlElement id("id", this->doc);
-				id.setText(curr.first.getName());
+				id.setText(curr.first->getName());
 				member << id;
 
 				this->append(member, curr.second, "expressionPtr");
@@ -404,7 +404,7 @@ public:
 		unionExpr << member;
 		
 		XmlElement id("id", doc);
-		id.setText(cur->getMemberName().getName());
+		id.setText(cur->getMemberName()->getName());
 		member << id;
 		
 		append(member, cur->getMember(), "expressionPtr");
@@ -606,7 +606,7 @@ public:
 		memberAccessExpr << subExpression;
 		
 		XmlElement memberName("memberName",doc);
-		memberName.setText(cur->getMemberName().getName());
+		memberName.setText(cur->getMemberName()->getName());
 		memberAccessExpr << memberName;
 
 		visitAnnotations(cur->getAnnotations(), memberAccessExpr);

@@ -174,16 +174,16 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
 
     // structExpr
-    Identifier first("first");
-    Identifier second("second");
-    std::pair<Identifier, ExpressionPtr> elem1 = std::make_pair( first, builder.literal("F", manager.basic.getChar()));
-    std::pair<Identifier, ExpressionPtr> elem2 = std::make_pair( second, builder.literal("1", manager.basic.getInt4()));
+    IdentifierPtr first = Identifier::get(manager, "first");
+    IdentifierPtr second = Identifier::get(manager, "second");
+    std::pair<IdentifierPtr, ExpressionPtr> elem1 = std::make_pair( first, builder.literal("F", manager.basic.getChar()));
+    std::pair<IdentifierPtr, ExpressionPtr> elem2 = std::make_pair( second, builder.literal("1", manager.basic.getInt4()));
     auto structExpr = builder.structExpr(toVector(elem1, elem2));
     EXPECT_EQ( structExpr, parser.parseExpression("struct{first:lit<char, F>, second: 1}"));
 
     // unionExpr
-    std::pair<Identifier, TypePtr> elem3 = std::make_pair( first, manager.basic.getChar());
-    std::pair<Identifier, TypePtr> elem4 = std::make_pair( second, manager.basic.getInt4());
+    std::pair<IdentifierPtr, TypePtr> elem3 = std::make_pair( first, manager.basic.getChar());
+    std::pair<IdentifierPtr, TypePtr> elem4 = std::make_pair( second, manager.basic.getInt4());
 
     auto unionExpr = builder.unionExpr(builder.unionType(toVector(elem3, elem4)), first, builder.literal("1", manager.basic.getChar()));
     EXPECT_EQ( unionExpr, parser.parseExpression("union< union< first:char, second:int<4> > >{ first:'1' }"));

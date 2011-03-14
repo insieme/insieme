@@ -166,18 +166,22 @@ TEST(MemberAccessElementTypeCheck, Basic) {
 	TypePtr typeB = builder.genericType("typeB");
 	TypePtr typeC = builder.genericType("typeC");
 
+	IdentifierPtr identA = builder.identifier("a");
+	IdentifierPtr identB = builder.identifier("b");
+	IdentifierPtr identC = builder.identifier("c");
+
 	NamedCompositeType::Entries entries;
-	entries.push_back(NamedCompositeType::Entry("a", typeA));
-	entries.push_back(NamedCompositeType::Entry("b", typeB));
+	entries.push_back(NamedCompositeType::Entry(identA, typeA));
+	entries.push_back(NamedCompositeType::Entry(identB, typeB));
 
 	TypePtr structType = builder.structType(entries);
 	VariablePtr var = builder.variable(structType);
 	VariablePtr var2 = builder.variable(typeA);
 
-	ExpressionPtr ok = builder.callExpr(fun, var, basic.getIdentifierLiteral("a"), basic.getTypeLiteral(typeA));
-	ExpressionPtr err1 = builder.callExpr(fun, var, basic.getIdentifierLiteral("a"), basic.getTypeLiteral(typeB));
-	ExpressionPtr err2 = builder.callExpr(fun, var, basic.getIdentifierLiteral("c"), basic.getTypeLiteral(typeB));
-	ExpressionPtr err3 = builder.callExpr(fun, var2, basic.getIdentifierLiteral("a"), basic.getTypeLiteral(typeA));
+	ExpressionPtr ok = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
+	ExpressionPtr err1 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeB));
+	ExpressionPtr err2 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identC), basic.getTypeLiteral(typeB));
+	ExpressionPtr err3 = builder.callExpr(fun, var2, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
 	ExpressionPtr err4 = builder.callExpr(fun, var2, var, basic.getTypeLiteral(typeA));
 
 
@@ -210,10 +214,13 @@ TEST(MemberAccessElementTypeCheck, References) {
 	TypePtr typeRefB = builder.refType(typeB);
 	TypePtr typeRefC = builder.refType(typeC);
 
+	IdentifierPtr identA = builder.identifier("a");
+	IdentifierPtr identB = builder.identifier("b");
+	IdentifierPtr identC = builder.identifier("c");
 
 	NamedCompositeType::Entries entries;
-	entries.push_back(NamedCompositeType::Entry("a", typeA));
-	entries.push_back(NamedCompositeType::Entry("b", typeB));
+	entries.push_back(NamedCompositeType::Entry(identA, typeA));
+	entries.push_back(NamedCompositeType::Entry(identB, typeB));
 
 	TypePtr structType = builder.structType(entries);
 	TypePtr structRefType = builder.refType(structType);
@@ -221,10 +228,10 @@ TEST(MemberAccessElementTypeCheck, References) {
 	VariablePtr var = builder.variable(structRefType);
 	VariablePtr var2 = builder.variable(typeRefA);
 
-	ExpressionPtr ok = builder.callExpr(fun, var, basic.getIdentifierLiteral("a"), basic.getTypeLiteral(typeA));
-	ExpressionPtr err1 = builder.callExpr(fun, var, basic.getIdentifierLiteral("a"), basic.getTypeLiteral(typeB));
-	ExpressionPtr err2 = builder.callExpr(fun, var, basic.getIdentifierLiteral("c"), basic.getTypeLiteral(typeB));
-	ExpressionPtr err3 = builder.callExpr(fun, var2, basic.getIdentifierLiteral("a"), basic.getTypeLiteral(typeA));
+	ExpressionPtr ok = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
+	ExpressionPtr err1 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeB));
+	ExpressionPtr err2 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identC), basic.getTypeLiteral(typeB));
+	ExpressionPtr err3 = builder.callExpr(fun, var2, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
 	ExpressionPtr err4 = builder.callExpr(fun, var2, var, basic.getTypeLiteral(typeA));
 
 

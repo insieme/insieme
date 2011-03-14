@@ -235,7 +235,7 @@ namespace simple_backend {
 			// init values, one after another
 			for_each(structValue->getMembers(), [&, this](const StructExpr::Member& cur) {
 
-				const Identifier& name = cur.first;
+				const IdentifierPtr& name = cur.first;
 				ExpressionPtr value = cur.second;
 
 				// remove leading var/new calls

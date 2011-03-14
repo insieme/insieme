@@ -57,7 +57,6 @@ namespace checks {
 		checks.push_back(make_check<IfConditionTypeCheck>());
 		checks.push_back(make_check<SwitchExpressionTypeCheck>());
 		checks.push_back(make_check<MemberAccessElementTypeCheck>());
-		checks.push_back(make_check<MemberAccessNodeElementTypeCheck>());
 		checks.push_back(make_check<BuiltInLiteralCheck>());
 		checks.push_back(make_check<RefCastCheck>());
 		checks.push_back(make_check<CastCheck>());

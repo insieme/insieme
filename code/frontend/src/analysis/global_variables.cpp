@@ -183,7 +183,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 		 * unit has to be set properly
 		 */
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
-		core::Identifier ident(it->first->getNameAsString());
+		core::IdentifierPtr ident = builder.identifier(it->first->getNameAsString());
 
 		bool addPtr = false;
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());

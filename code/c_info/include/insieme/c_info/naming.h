@@ -50,19 +50,17 @@ namespace c_info {
  ** for example with structs, unions or functions.
  ** */
 class CNameAnnotation : public core::Annotation {
-	const core::Identifier ident;
+	const string name;
 
 public:
 	static const core::StringKey<CNameAnnotation> KEY;
 
-	CNameAnnotation(const core::Identifier& ident) : core::Annotation(), ident(ident) { }
-	CNameAnnotation(const std::string& name) : core::Annotation(), ident(name) { }
+	CNameAnnotation(const std::string& name) : core::Annotation(), name(name) { }
 
-	const core::Identifier& getIdent() const { return ident; }
-	const std::string& getName() const { return ident.getName(); }
+	const std::string& getName() const { return name; }
 	const std::string getAnnotationName() const {return "CNameAnnotation";}
 
-	const std::string toString() const { return ident.getName(); }
+	const std::string toString() const { return name; }
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
 };
