@@ -259,7 +259,7 @@ namespace simple_backend {
 					string elementName = cc.getTypeManager().getTypeName(code, vectorType->getElementType(), true);
 
 					// init values using memcopy
-					code << "memcpy(&((*" << varName << ")." << name << "),&((" << elementName << "[])";
+					code << "memcpy(&((*" << varName << ")." << *name << "),&((" << elementName << "[])";
 					this->visit(value);
 					code << "), sizeof(";
 					code << elementName;
