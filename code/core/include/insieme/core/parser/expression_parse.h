@@ -65,6 +65,8 @@ public:
     VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
 
     VariablePtr get(const TypePtr& typ, const Identifier& id);
+
+    VariablePtr lookup(const Identifier& id);
 };
 
 struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {
@@ -87,7 +89,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
     qi::rule<ParseIt, VariablePtr(), qi::space_type> variableExpr;
     qi::rule<ParseIt, VariablePtr(), qi::space_type> funVarExpr;
 
-    qi::rule<ParseIt, CallExprPtr(), qi::locals<ExpressionList>, qi::space_type> callExpr;
+    qi::rule<ParseIt, CallExprPtr(), qi::locals<ExpressionPtr, ExpressionList>, qi::space_type> callExpr;
     qi::rule<ParseIt, CastExprPtr(), qi::space_type> castExpr;
 
     qi::rule<ParseIt, ExpressionPtr(), qi::space_type> expressionRule;

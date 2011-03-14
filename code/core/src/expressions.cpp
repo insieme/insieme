@@ -337,7 +337,7 @@ std::size_t hashUnionExpr(size_t seed, const Identifier& memberName, const Expre
 	return seed;
 }
 
-UnionExpr::UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
+UnionExpr::UnionExpr(const TypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
 	: Expression(NT_UnionExpr, type, ::hashUnionExpr(HS_UnionExpr, memberName, member)), memberName(memberName), member(isolate(member)) { }
 
 UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
@@ -365,7 +365,7 @@ std::ostream& UnionExpr::printTo(std::ostream& out) const {
 	return out << "<?>I owe you a union print!</?>";
 }
 
-UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member) {
+UnionExprPtr UnionExpr::get(NodeManager& manager, const TypePtr& type, const Identifier& memberName, const ExpressionPtr& member) {
 	return manager.get(UnionExpr(type, memberName, member));
 }
 

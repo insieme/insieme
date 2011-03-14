@@ -618,7 +618,7 @@ class UnionExpr : public Expression {
 	const Identifier memberName;
 	const ExpressionPtr member;
 
-	UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
+	UnionExpr(const TypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
 	virtual UnionExpr* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -629,7 +629,7 @@ public:
 	const Identifier& getMemberName() const { return memberName; }
 	const ExpressionPtr& getMember() const { return member; }
 	virtual std::ostream& printTo(std::ostream& out) const;
-	static UnionExprPtr get(NodeManager& manager, const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
+	static UnionExprPtr get(NodeManager& manager, const TypePtr& type, const Identifier& memberName, const ExpressionPtr& member);
 };
 
 

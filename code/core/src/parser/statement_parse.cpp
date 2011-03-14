@@ -156,7 +156,7 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
 //    BOOST_SPIRIT_DEBUG_NODE(breakStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(continueStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(returnStmt);
-//    BOOST_SPIRIT_DEBUG_NODE(declarationStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(declarationStmt );
 //    BOOST_SPIRIT_DEBUG_NODE(compoundStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(whileStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(forStmt);
