@@ -623,7 +623,7 @@ namespace simple_backend {
 		}
 		code << "(";
 		visit(ptr->getSubExpression());
-		code << "." << ptr->getMemberName() << ")";
+		code << "." << *ptr->getMemberName() << ")";
 	}
 
 	void StmtConverter::visitStructExpr(const StructExprPtr& ptr) {
