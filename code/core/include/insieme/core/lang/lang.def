@@ -274,6 +274,7 @@ LITERAL(ScalarToVector, "scalar.to.vector", "(ref<'a>) -> ref<vector<'a,1>>")
 LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
 LITERAL(InitZero, "initZero", "(type<'a>) -> 'a")
 LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")
+LITERAL(IntTypeParamToInt, "int.type.param.to.int", "(intTypeParam<#n>)->int<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
