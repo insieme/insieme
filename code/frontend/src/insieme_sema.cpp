@@ -56,10 +56,12 @@ typedef std::list<PragmaPtr> PendingPragmaList;
 
 namespace {
 
+// It returns true if the source location SL is inside the range defined by SR
 bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
 	return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 }
 
+// It returns true if the source location SL is after the range defined by SR
 bool isAfterRange(SourceRange SR, SourceLocation SL, clang::SourceManager const& sm) {
 	return Line(SR, sm).second <= Line(SL, sm);
 }
@@ -67,7 +69,7 @@ bool isAfterRange(SourceRange SR, SourceLocation SL, clang::SourceManager const&
 void EraseMatchedPragmas(PendingPragmaList& pending, PragmaList& matched) {
 	for ( PragmaList::iterator I = matched.begin(), E = matched.end(); I != E; ++I ) {
 		std::list<PragmaPtr>::iterator it = std::find(pending.begin(), pending.end(), *I);
-		assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas!");
+		assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas");
 		pending.erase(it);
 	}
 }
@@ -203,32 +205,32 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 					P->setStatement(Prev);
 					// add pragma to the list of matched pragmas
 					matched.push_back(P);
-				} else {
-					// add a ';' (NullStmt) before the end of the block in order to associate the pragma
-					Stmt** stmts = new Stmt*[CS->size() + 1];
-
-					CompoundStmt* newCS =
-							new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(),
-									CS->getSourceRange().getEnd()
-								);
-
-					std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-					// Removed after porting to Clang 2.9
-					std::for_each(CS->body_begin(), CS->body_end(), [&Context] (Stmt*& curr) { Context.Deallocate(curr); });
-					newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
-					P->setStatement( *newCS->body_rbegin() );
-					matched.push_back(P);
-
-					// transfer the ownership of the statement
-					CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
-					oldStmt->setStmts(Context, NULL, 0);
-					ret = newCS;
-					CS = newCS;
-
-					// destroy the old compound stmt
-					Context.Deallocate(oldStmt);
-					delete[] stmts;
+					break;
 				}
+
+				// add a ';' (NullStmt) before the end of the block in order to associate the pragma
+				Stmt** stmts = new Stmt*[CS->size() + 1];
+
+				CompoundStmt* newCS =
+						new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(),
+								CS->getSourceRange().getEnd()
+							);
+
+				std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
+				std::for_each(CS->body_begin(), CS->body_end(), [&Context] (Stmt*& curr) { Context.Deallocate(curr); });
+				newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
+				P->setStatement( *newCS->body_rbegin() );
+				matched.push_back(P);
+
+				// transfer the ownership of the statement
+				CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
+				oldStmt->setStmts(Context, NULL, 0);
+				ret = newCS;
+				CS = newCS;
+
+				// destroy the old compound stmt
+				Context.Deallocate(oldStmt);
+				delete[] stmts;
 				break;
 			}
 			if ( I == E && Line(Prev->getLocStart(), SourceMgr) > Line(P->getEndLocation(), SourceMgr) ) {
@@ -373,8 +375,10 @@ clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D)
 		return ret;
 	}
 
-//	DLOG(INFO) << utils::Line(ret->getSourceRange().getBegin(), SourceMgr) << ":" << utils::Column(ret->getSourceRange().getBegin(), SourceMgr) << ", " <<
-//	  			  utils::Line(ret->getSourceRange().getEnd(), SourceMgr) << ":" << utils::Column(ret->getSourceRange().getEnd(), SourceMgr) << std::endl;
+//	DLOG(INFO) << utils::Line(ret->getSourceRange().getBegin(), SourceMgr) << ":" <<
+//				  utils::Column(ret->getSourceRange().getBegin(), SourceMgr) << ", " <<
+//	  			  utils::Line(ret->getSourceRange().getEnd(), SourceMgr) << ":" <<
+//				  utils::Column(ret->getSourceRange().getEnd(), SourceMgr) << std::endl;
 
 	PragmaList matched;
 	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
@@ -419,14 +423,12 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 
 void InsiemeSema::dump() {
 //Visual Studios 2010 fix: Release mode (without debug) evaluates DLOG(INFO) to "(void) 0"
-#ifndef NDEBUG
 	if(VLOG_IS_ON(2)) {
 		VLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 		std::for_each(pimpl->pragma_list.begin(), pimpl->pragma_list.end(),
 				[ &SourceMgr ](const PragmaPtr& pragma) { pragma->dump(LOG_STREAM(INFO), SourceMgr); }
 			);
 	}
-#endif
 }
 
 } // End frontend namespace
