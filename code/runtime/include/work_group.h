@@ -49,7 +49,7 @@ typedef struct _irt_work_group {
 	bool distributed;			// starts at false, set to true if part of the group is not on the same shared memory node
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
-	uint32 local_mem_count;
+	uint32 local_member_count;
 } irt_work_group;
 
 
