@@ -118,14 +118,13 @@ TEST(IRParser, ExpressionTests) {
 	ASTBuilder builder(manager);
 
 	// literal
-std::cout << "hallo\n";
+    EXPECT_EQ(builder.intLit(42), parser.parseExpression("42"));
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
-std::cout << "du\n";
+
 	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var"));
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
-
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
 
 	// merge all
@@ -148,7 +147,7 @@ std::cout << "du\n";
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
 
     // captureInitExpr
-    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("# uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
 
@@ -156,7 +155,7 @@ std::cout << "du\n";
     vector<std::pair<ExpressionPtr, ExpressionPtr> > guardedStmts;
 
     auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \
-            default: # uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
+            default: [ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }}"));
     EXPECT_TRUE(parsedJob != 0);
     EXPECT_EQ(builder.callExpr(manager.basic.getLiteral("MinRange"), builder.uintLit(2)), parsedJob->getThreadNumRange());
@@ -282,13 +281,12 @@ TEST(IRParser, StatementTests) {
     EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0; } </ms>"));
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
-    std::cout << "aösf\n";
-    std::cout << printer::PrettyPrinter(tmp) << std::endl;
+//    std::cout << printer::PrettyPrinter(tmp) << std::endl;
 
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("\
         fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>  {\
-           return # fct # fun [('elem, 'elem) -> 'res:fct2](vector<'elem,#l>:a, vector<'elem,#l>:b) -> vector<'res, #l>{ { \
+           return [ fct ] fun [('elem, 'elem) -> 'res:fct2](vector<'elem,#l>:a, vector<'elem,#l>:b) -> vector<'res, #l>{ { \
                decl ref<vector<'res,#l>>:result = (op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>)))); \
                 for(i = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
                      (op<ref.assign>((op<array.ref.elem.1D>(result, int<4>:i)), (fct((op<vector.subscript>(a,int<4>:i)), (op<vector.subscript>(b,int<4>:i))))) );\
@@ -296,7 +294,7 @@ TEST(IRParser, StatementTests) {
            } }\
         } ");
 //(op<ref.assign>((op<array.ref.elem.1D>(result, int<4>:i)), fct((op<vector.subscript>(a,int<4>:i)), (op<vector.subscript>(b,int<4>:i)))) )
-    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
+//    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 
 }
 
@@ -306,7 +304,7 @@ TEST(IRParser, ProgramTest) {
     ASTBuilder builder(manager);
 
     // program with main
-    ProgramPtr mainProg = parser.parseProgram("main: # uint<2>:a, real<4>:b # fun [uint<2>, real<4>]()->int<4>:\
+    ProgramPtr mainProg = parser.parseProgram("main: [ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             mainfct in { [uint<2>, real<4>]()->int<4>:mainfct = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }");
 
     EXPECT_TRUE(mainProg->isMain());
@@ -320,7 +318,6 @@ TEST(IRParser, ProgramTest) {
     EXPECT_FALSE(mep->isMain());
     EXPECT_FALSE(mep->hasAnnotations());
     EXPECT_EQ(2u, mep->getEntryPoints().size());
-
 }
 
 TEST(IRParser, InteractiveTest) {

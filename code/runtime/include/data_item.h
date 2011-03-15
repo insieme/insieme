@@ -48,7 +48,7 @@ typedef struct _irt_data_item {
 	irt_data_item_id id;
 	irt_type_id type_id; 
 	uint32 dimensions;
-	uint64 *sizes;				// should be stored at this position
+	uint64 *sizes;				// should be stored after this position
  } irt_data_item;
 
 

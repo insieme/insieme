@@ -48,6 +48,31 @@ namespace insieme {
 namespace core {
 namespace parse {
 
+// variable table implementation, used by ExpressionGrammar and ExpressionGrammarPart
+VariablePtr VariableTable::get(const TypePtr& typ, const IdentifierPtr& id) {
+    auto entry = table.find(id);
+    if(entry != table.end()) {
+        assert(entry->second->getType() == typ);
+        return entry->second;
+    }
+    VariablePtr newVar = Variable::get(nodeMan, typ);
+    table[id] = newVar;
+
+    return newVar;
+}
+
+VariablePtr VariableTable::lookup(const IdentifierPtr& id) {
+    auto entry = table.find(id);
+
+    if(entry == table.end()) {
+        std::cerr << "Variable '" << id << "' not defined.\n";
+        throw ParseException();
+    }
+
+    return entry->second;
+}
+
+
 namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
