@@ -508,8 +508,10 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
+					core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+
 					structElements.push_back(
-							core::NamedCompositeType::Entry(core::Identifier(curr->getNameAsString()), fieldType )
+							core::NamedCompositeType::Entry(id, fieldType )
 						);
 				}
 

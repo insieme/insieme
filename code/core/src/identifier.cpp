@@ -38,6 +38,48 @@
 
 using namespace insieme::core;
 
+
+namespace insieme {
+namespace core {
+
+	namespace {
+
+		std::size_t hashIdentifier(const string& name) {
+			size_t seed = 0;
+			boost::hash_combine(seed, HS_Identifier);
+			boost::hash_combine(seed, name);
+			return seed;
+		}
+
+	}
+
+
+	Identifier::Identifier(const string& name)
+		: Node(NT_Identifier, NC_Support, hashIdentifier(name)), name(name) { };
+
+
+	IdentifierPtr Identifier::get(NodeManager& manager, const string& name) {
+		return manager.get(Identifier(name));
+	}
+
+	bool Identifier::equals(const Node& other) const {
+		if (this == &other) {
+			return true;
+		}
+
+		if (other.getNodeType() != NT_Identifier) {
+			return false;
+		}
+
+		// compare names
+		return name == static_cast<const Identifier&>(other).name;
+	}
+
+}
+}
+
+
+
 // ---------------------------------------------- Utility Functions ------------------------------------
 
 namespace std {

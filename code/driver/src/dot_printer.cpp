@@ -197,7 +197,7 @@ void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 			out << (cur.isConcrete() ? insieme::utils::numeric_cast<std::string>(cur.getValue()) : ""+cur.getSymbol());
 		}) << ">";
 	}
-	TypeNode genNode(NODE_ID(genTy), "\"" + genTy->getFamilyName().getName() + " " + ss.str() + "\"");
+	TypeNode genNode(NODE_ID(genTy), "\"" + genTy->getFamilyName() + " " + ss.str() + "\"");
 	checkSemanticErrors(errors, genNode, genTy);
 	builder->addNode(genNode);
 
@@ -238,7 +238,7 @@ void ASTPrinter::visitNamedCompositeType(const NamedCompositeTypePtr& compTy) {
 
 	std::for_each(compTy->getEntries().begin(), compTy->getEntries().end(),
 		[ this, compTy ](const NamedCompositeType::Entry& cur){
-			this->builder->addLink( DotLink(NODE_ID(compTy), NODE_ID(cur.second), cur.first.getName()) );
+			this->builder->addLink( DotLink(NODE_ID(compTy), NODE_ID(cur.second), cur.first->getName()) );
 			// TODO: VISIT ANNOTATIONS IN THE POINTER
 	});
 	visitAnnotationList(*builder, NODE_ID(compTy), compTy->getAnnotations());

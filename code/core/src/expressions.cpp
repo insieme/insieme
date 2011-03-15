@@ -259,7 +259,9 @@ namespace {
 		unsigned index = offset;
 		std::transform(members.cbegin(), members.cend(), std::back_inserter(res),
 				[&mapper, &index](const StructExpr::Member& m) {
-					return StructExpr::Member(m.first, mapper.map(index++, m.second));
+					IdentifierPtr name = mapper.map(index++, m.first);
+					ExpressionPtr value = mapper.map(index++, m.second);
+					return StructExpr::Member(name, value);
 		});
 		return res;
 	}
@@ -277,12 +279,13 @@ namespace {
 		return entries;
 	}
 
-	std::size_t hashStructMember(const StructExpr::Members& members) {
+	std::size_t hashStructMember(const StructTypePtr& type, const StructExpr::Members& members) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, HS_StructExpr);
+		boost::hash_combine(seed, *type);
 		for_each(members, [&](const StructExpr::Member& m) {
-			boost::hash_combine(seed, m.first.getName());
-			boost::hash_combine(seed, m.second->hash());
+			boost::hash_combine(seed, *m.first);
+			boost::hash_combine(seed, *m.second);
 		});
 		return seed;
 	}
@@ -292,7 +295,7 @@ namespace {
 // ------------------------------------- StructExpr ---------------------------------
 
 StructExpr::StructExpr(const StructTypePtr& type, const Members& members)
-	: Expression(NT_StructExpr, type, ::hashStructMember(members)), members(isolateMembers(members)) { }
+	: Expression(NT_StructExpr, type, ::hashStructMember(type, members)), members(isolateMembers(members)) { }
 
 StructExpr* StructExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new StructExpr(static_pointer_cast<const StructType>(mapper.map(0, type)), copyMembersUsing(mapper, 1, members));
@@ -302,21 +305,24 @@ bool StructExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const StructExpr& rhs = static_cast<const StructExpr&>(expr);
 	return ::equals(members, rhs.members, [](const Member& l, const Member& r) {
-		return l.first == r.first && *l.second == *r.second;
+		return *l.first == *r.first && *l.second == *r.second;
 	});
 }
 
 Node::OptionChildList StructExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
-	std::transform(members.cbegin(), members.cend(), back_inserter(*res), extractSecond<Member>());
+	for_each(members, [&](const Member& cur) {
+		res->push_back(cur.first);
+		res->push_back(cur.second);
+	});
 	return res;
 }
 
 std::ostream& StructExpr::printTo(std::ostream& out) const {
 	// print struct using member - value pairs
 	out << "struct{" << join(", ", members, [](std::ostream& out, const Member& cur) {
-		out << cur.first << "=" << *cur.second;
+		out << *cur.first << "=" << *cur.second;
 	}) << "}";
 	return out;
 }
@@ -331,13 +337,13 @@ StructExprPtr StructExpr::get(NodeManager& manager, const StructTypePtr& type, c
 
 // ------------------------------------- UnionExpr ---------------------------------
 
-std::size_t hashUnionExpr(size_t seed, const Identifier& memberName, const ExpressionPtr& member) {
-	boost::hash_combine(seed, memberName);
-	boost::hash_combine(seed, member);
+std::size_t hashUnionExpr(size_t seed, const IdentifierPtr& memberName, const ExpressionPtr& member) {
+	boost::hash_combine(seed, *memberName);
+	boost::hash_combine(seed, *member);
 	return seed;
 }
 
-UnionExpr::UnionExpr(const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member)
+UnionExpr::UnionExpr(const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member)
 	: Expression(NT_UnionExpr, type, ::hashUnionExpr(HS_UnionExpr, memberName, member)), memberName(memberName), member(isolate(member)) { }
 
 UnionExpr* UnionExpr::createCopyUsing(NodeMapping& mapper) const {
@@ -349,12 +355,13 @@ bool UnionExpr::equalsExpr(const Expression& expr) const {
 	const UnionExpr& other = static_cast<const UnionExpr&>(expr);
 
 	// check element name and expression
-	return memberName == other.memberName && *member == *other.member;
+	return *memberName == *other.memberName && *member == *other.member;
 }
 
 Node::OptionChildList UnionExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
+	res->push_back(memberName);
 	res->push_back(member);
 	return res;
 }
@@ -362,10 +369,10 @@ Node::OptionChildList UnionExpr::getChildNodes() const {
 std::ostream& UnionExpr::printTo(std::ostream& out) const {
 	// TODO fugly
 	//out << "union(" << join(", ", members, [](const Member& m) { return format("%s: %s", m.first.getName().c_str(), toString(*m.second).c_str()); }) << ")";
-	return out << "<?>I owe you a union print!</?>";
+	return out << "<?>I owe you a union print! - peter</?>";
 }
 
-UnionExprPtr UnionExpr::get(NodeManager& manager, const UnionTypePtr& type, const Identifier& memberName, const ExpressionPtr& member) {
+UnionExprPtr UnionExpr::get(NodeManager& manager, const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member) {
 	return manager.get(UnionExpr(type, memberName, member));
 }
 
@@ -968,7 +975,7 @@ std::ostream& CaptureInitExpr::printTo(std::ostream& out) const {
 
 namespace {
 
-	TypePtr getMemberType(const ExpressionPtr& subExpression, const Identifier& member) {
+	TypePtr getMemberType(const ExpressionPtr& subExpression, const IdentifierPtr& member) {
 		TypePtr type = subExpression->getType();
 		if (type->getNodeType() == NT_RecType) {
 			type = static_pointer_cast<const RecType>(type)->unroll(type->getNodeManager());
@@ -980,41 +987,42 @@ namespace {
 		return res;
 	}
 
-	std::size_t hashMemberAccess(const ExpressionPtr& subExpression, const Identifier& member) {
+	std::size_t hashMemberAccess(const ExpressionPtr& subExpression, const IdentifierPtr& member) {
 		std::size_t res = 0;
 		boost::hash_combine(res, HS_MemberAccessExpr);
-		boost::hash_combine(res, member.getName());
 		boost::hash_combine(res, subExpression->hash());
+		boost::hash_combine(res, member->hash());
 		return res;
 	}
 }
 
-MemberAccessExpr::MemberAccessExpr( const ExpressionPtr& subExpression, const Identifier& member)
+MemberAccessExpr::MemberAccessExpr( const ExpressionPtr& subExpression, const IdentifierPtr& member)
 	: Expression(NT_MemberAccessExpr, getMemberType(subExpression, member), hashMemberAccess(subExpression, member)),
-	  subExpression(isolate(subExpression)), member(member) {}
+	  subExpression(isolate(subExpression)), member(isolate(member)) {}
 
 MemberAccessExpr* MemberAccessExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new MemberAccessExpr(mapper.map(0, subExpression), member);
+	return new MemberAccessExpr(mapper.map(0, subExpression), mapper.map(1, member));
 }
 
 
 bool MemberAccessExpr::equalsExpr(const Expression& expr) const {
 	// conversion is guaranteed by base operator==
 	const MemberAccessExpr& rhs = static_cast<const MemberAccessExpr&>(expr);
-	return (*rhs.subExpression == *subExpression && rhs.member == member);
+	return (*rhs.subExpression == *subExpression && *rhs.member == *member);
 }
 
 Node::OptionChildList MemberAccessExpr::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(subExpression);
+	res->push_back(member);
 	return res;
 }
 
 std::ostream& MemberAccessExpr::printTo(std::ostream& out) const {
-	return out << "(" << *subExpression << "." << member << ")";
+	return out << "(" << *subExpression << "." << *member << ")";
 }
 
-MemberAccessExprPtr MemberAccessExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const Identifier& member) {
+MemberAccessExprPtr MemberAccessExpr::get(NodeManager& manager, const ExpressionPtr& subExpression, const IdentifierPtr& member) {
 	return manager.get(MemberAccessExpr(subExpression, member));
 }
 

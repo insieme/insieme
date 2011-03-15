@@ -47,96 +47,121 @@ using namespace insieme::core;
 namespace insieme {
 namespace core {
 
-IntTypeParam NodeMapping::mapParam(const IntTypeParam& param) {
-	return param;
-}
-
-vector<IntTypeParam> NodeMapping::mapParam(const vector<IntTypeParam>& list) {
-	// check whether there are manipulations
-	if (!manipulatesIntTypeParameter) {
-		return list;
+	IntTypeParam NodeMapping::mapParam(const IntTypeParam& param) {
+		return param;
 	}
 
-	// apply transformation
-	return ::transform(list, [&](const IntTypeParam& cur) {
-		return this->mapParam(cur);
-	});
-}
-
-const Node::ChildList& Node::getChildList() const {
-	if (!children) {
-		children = getChildNodes();
-	}
-	return *children;
-}
-
-NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper, bool preevaluate) const {
-
-	// pre-evaluated all mappings and check for changes
-	if (preevaluate) {
-
-		// use child list mapper to check for changes
-		transform::ChildListMapping listMapper(getChildList(), mapper);
-		if (!listMapper.isDifferent()) {
-			return NodePtr(this);
+	vector<IntTypeParam> NodeMapping::mapParam(const vector<IntTypeParam>& list) {
+		// check whether there are manipulations
+		if (!manipulatesIntTypeParameter) {
+			return list;
 		}
 
-		// use list-based mapper
-		return substitute(manager, listMapper, false);
+		// apply transformation
+		return ::transform(list, [&](const IntTypeParam& cur) {
+			return this->mapParam(cur);
+		});
 	}
 
-	// create a version having everything substituted
-	Node* node = createCopyUsing(mapper);
-
-	// obtain element within the manager
-	NodePtr res = manager.get(node);
-
-	// free temporary instance
-	delete node;
-
-	// return instance maintained within manager
-	return res;
-}
-
-void* Node::operator new(size_t size) {
-	return ::operator new(size);
-}
-
-void Node::operator delete(void* ptr) {
-	return ::operator delete(ptr);
-}
-
-
-bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
-
-	// check identity (under-approximation)
-	if (nodeA == nodeB) {
-		return true;
+	const Node::ChildList& Node::getChildList() const {
+		if (!children) {
+			children = getChildNodes();
+		}
+		return *children;
 	}
 
-	// check structure (over-approximation)
-	if (*nodeA!=*nodeB) {
-		return false;
+	const Node* Node::cloneTo(NodeManager& manager) const {
+		// NOTE: this method is performing the all-AST-node work, the rest is done by createCloneUsing(...)
+
+		// check whether cloning is necessary
+		if (this->manager == &manager) {
+			return this;
+		}
+
+		// trigger the creation of a clone
+		auto cloner = makeLambdaMapper([&manager](unsigned, const NodePtr& ptr) {
+					return clonePtr(manager, ptr);
+				});
+		Node* res = createCopyUsing(cloner);
+
+		// update manager
+		res->manager = &manager;
+
+		// copy annotations
+		res->setAnnotations(getAnnotations());
+
+		// done
+		return res;
 	}
 
-	// check annotations of pointer and nodes ...
-	if (!hasSameAnnotations(*nodeA, *nodeB)) {
-		return false;
+
+	NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper, bool preevaluate) const {
+
+		// pre-evaluated all mappings and check for changes
+		if (preevaluate) {
+
+			// use child list mapper to check for changes
+			transform::ChildListMapping listMapper(getChildList(), mapper);
+			if (!listMapper.isDifferent()) {
+				return NodePtr(this);
+			}
+
+			// use list-based mapper
+			return substitute(manager, listMapper, false);
+		}
+
+		// create a version having everything substituted
+		Node* node = createCopyUsing(mapper);
+
+		// obtain element within the manager
+		NodePtr res = manager.get(node);
+
+		// free temporary instance
+		delete node;
+
+		// return instance maintained within manager
+		return res;
 	}
 
-	// check annotations of references
-	auto listA = nodeA->getChildList();
-	auto listB = nodeB->getChildList();
-	return all(
-			make_paired_iterator(listA.begin(), listB.begin()),
-			make_paired_iterator(listA.end(), listB.end()),
+	void* Node::operator new(size_t size) {
+		return ::operator new(size);
+	}
 
-			[](const std::pair<NodePtr, NodePtr>& cur) {
+	void Node::operator delete(void* ptr) {
+		return ::operator delete(ptr);
+	}
 
-		// make a recursive call
-		return equalsWithAnnotations(cur.first, cur.second);
-	});
-}
+
+	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
+
+		// check identity (under-approximation)
+		if (nodeA == nodeB) {
+			return true;
+		}
+
+		// check structure (over-approximation)
+		if (*nodeA!=*nodeB) {
+			return false;
+		}
+
+		// check annotations of pointer and nodes ...
+		if (!hasSameAnnotations(*nodeA, *nodeB)) {
+			return false;
+		}
+
+		// check annotations of references
+		auto listA = nodeA->getChildList();
+		auto listB = nodeB->getChildList();
+		return all(
+				make_paired_iterator(listA.begin(), listB.begin()),
+				make_paired_iterator(listA.end(), listB.end()),
+
+				[](const std::pair<NodePtr, NodePtr>& cur) {
+
+			// make a recursive call
+			return equalsWithAnnotations(cur.first, cur.second);
+		});
+	}
 
 } // end namespace core
 } // end namespace insieme

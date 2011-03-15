@@ -63,7 +63,7 @@ CompoundStmtPtr compoundHelp(NodeManager& nodeMan, Stmts stmts) {
     return CompoundStmt::get(nodeMan, stmts);
 }
 
-ForStmtPtr forHelp(NodeManager& nodeMan, Identifier id, ExpressionPtr start, ExpressionPtr end, ExpressionPtr step, StatementPtr body,
+ForStmtPtr forHelp(NodeManager& nodeMan, IdentifierPtr id, ExpressionPtr start, ExpressionPtr end, ExpressionPtr step, StatementPtr body,
         ExpressionGrammar* exprG) {
     ASTBuilder builder(nodeMan);
     DeclarationStmtPtr loopVar = builder.declarationStmt(exprG->varTab.get(start->getType(), id), start);
@@ -156,7 +156,7 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
 //    BOOST_SPIRIT_DEBUG_NODE(breakStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(continueStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(returnStmt);
-//    BOOST_SPIRIT_DEBUG_NODE(declarationStmt);
+//    BOOST_SPIRIT_DEBUG_NODE(declarationStmt );
 //    BOOST_SPIRIT_DEBUG_NODE(compoundStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(whileStmt);
 //    BOOST_SPIRIT_DEBUG_NODE(forStmt);

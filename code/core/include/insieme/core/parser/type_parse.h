@@ -47,7 +47,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, TypePtr(), qi::space_type> {
 	TypeGrammar(NodeManager& nodeMan);
 
 	// terminal rules, no skip parsing
-	qi::rule<ParseIt, Identifier()> identifier;
+	qi::rule<ParseIt, IdentifierPtr()> identifier;
 	qi::rule<ParseIt, TypePtr()> typeVarLabel;
 	qi::rule<ParseIt, IntTypeParam()> intTypeParamLabel;
 
@@ -62,7 +62,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, TypePtr(), qi::space_type> {
 	qi::rule<ParseIt, TupleTypePtr(), qi::locals<vector<TypePtr>>, qi::space_type> tupleType;
 	qi::rule<ParseIt, StructTypePtr(), qi::locals<StructType::Entries>, qi::space_type> structType;
 	qi::rule<ParseIt, UnionTypePtr(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
-	qi::rule<ParseIt, TypePtr(), qi::locals<Identifier, vector<TypePtr>, vector<IntTypeParam>>, qi::space_type> genericType;
+	qi::rule<ParseIt, TypePtr(), qi::locals<IdentifierPtr, vector<TypePtr>, vector<IntTypeParam>>, qi::space_type> genericType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeRule;
 };
 

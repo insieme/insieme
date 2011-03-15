@@ -190,7 +190,7 @@ private:
 		NamedCompositeType::Entries entryVec;
 		XmlElementList&& entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
 		for(auto iter = entries.begin(), end = entries.end(); iter != end; ++iter) {
-			Identifier&& ident = iter->getFirstChildByName("id")->getText();
+			IdentifierPtr&& ident = Identifier::get(mgr, iter->getFirstChildByName("id")->getText());
 			TypePtr&& el = createNode<Type>(*iter, "typePtr");
 			entryVec.push_back( NamedCompositeType::Entry(ident, el) );
 		}
@@ -310,7 +310,7 @@ public:
 
 		StructExpr::Members membVec;
 		for(auto iter = membs.begin(), end = membs.end(); iter != end; ++iter) {
-			Identifier&& ident = iter->getFirstChildByName("id")->getText();
+			IdentifierPtr&& ident = Identifier::get(mgr, iter->getFirstChildByName("id")->getText());
 			ExpressionPtr&& expr = createNode<Expression>(*iter, "expressionPtr");
 			membVec.push_back( StructExpr::Member(ident, expr) );
 		}
@@ -319,7 +319,7 @@ public:
 
 	NodePtr handle_unionExpr(const XmlElement& elem) {
 		UnionTypePtr&& typeT = createNode<UnionType>(elem, "type", "typePtr");
-		Identifier&& ident = elem.getFirstChildByName("member")->getFirstChildByName("id")->getText();
+		IdentifierPtr&& ident = Identifier::get(mgr, elem.getFirstChildByName("member")->getFirstChildByName("id")->getText());
 		ExpressionPtr&& expr = createNode<Expression>(elem, "member", "expressionPtr");
 
 		return createIrNode<UnionExpr>(elem, typeT, ident, expr);
@@ -444,7 +444,7 @@ public:
 	
 	NodePtr handle_memberAccessExpr(const XmlElement& elem) {
 		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
-		Identifier&& ident = elem.getFirstChildByName("memberName")->getText();
+		IdentifierPtr&& ident = Identifier::get(mgr, elem.getFirstChildByName("memberName")->getText());
 		return createIrNode<MemberAccessExpr>(elem, expr, ident);
 	}
 	

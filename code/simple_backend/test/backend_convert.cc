@@ -72,7 +72,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	auto mainBody = build.compoundStmt(invocation);
 	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
 
-	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
+	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>("main"));
 
 	return build.createProgram(toVector<ExpressionPtr>(mainLambda));
 }

@@ -224,8 +224,8 @@ TEST(XmlTest, FunctionTypeTest) {
 TEST(XmlTest, StructTypeTest) {
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	IdentifierPtr identA = Identifier::get(manager, "a");
+	IdentifierPtr identB = Identifier::get(manager, "b");
 
 	DummyAnnotationPtr dummy_an(new DummyAnnotation("typeA n"));
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("typeB n"));
@@ -270,8 +270,8 @@ TEST(XmlTest, StructTypeTest) {
 TEST(XmlTest, UnionTypeTest) {
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	IdentifierPtr identA = Identifier::get(manager, "a");
+	IdentifierPtr identB = Identifier::get(manager, "b");
 
 	DummyAnnotationPtr dummy_an(new DummyAnnotation("typeA n"));
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("typeB n"));
@@ -761,8 +761,8 @@ TEST(XmlTest, DeclarationStmtTest) {
 TEST(XmlTest, StructExprTest) {
 	NodeManager manager;
 
-	Identifier ident1("j");
-	Identifier ident2("k");
+	IdentifierPtr ident1 = Identifier::get(manager, "j");
+	IdentifierPtr ident2 = Identifier::get(manager, "k");
 	
 	vector<StructExpr::Member> vecA;
 	
@@ -804,7 +804,7 @@ TEST(XmlTest, StructExprTest) {
 TEST(XmlTest, UnionExprTest) {
 	NodeManager manager;
 	
-	Identifier identC("c");
+	IdentifierPtr identC = Identifier::get(manager, "c");
 	LiteralPtr literalC = Literal::get(manager, manager.basic.getInt4(), "10");
 	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("litC n"));
 	literalC->addAnnotation(dummy_lCn);
@@ -1136,7 +1136,7 @@ TEST(XmlTest, ProgramTest) {
 TEST(XmlTest, MemberAccessExprTest) {
 	NodeManager manager;
 
-	Identifier ident1("a");
+	IdentifierPtr ident1 = Identifier::get(manager, "a");
 	
 	vector<StructExpr::Member> vecA;
 	

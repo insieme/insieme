@@ -136,13 +136,17 @@ struct CFGBuilder: public ASTVisitor< void > {
 	// static insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr> cfgMap;
 
 	CFGBuilder(CFG& cfg) :
-			ASTVisitor<void>(false),
-			cfg(cfg),
-			currBlock(NULL),
-			isPending(false),
-			entry( cfg.addBlock( new cfg::Block ) ),
-			exit( cfg.addBlock( new cfg::Block ) ),
-			succ(exit) { }
+		ASTVisitor<void>(false),
+		cfg(cfg),
+		currBlock(NULL),
+		isPending(false),
+		entry( cfg.addBlock( new cfg::Block ) ),
+		exit( cfg.addBlock( new cfg::Block ) ),
+		succ(exit)
+	{
+		cfg.setEntry( entry );
+		cfg.setExit( exit );
+	}
 
 	void createBlock() {
 		// if we already have a block allocated and the block is empty we return it
@@ -158,8 +162,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void appendPendingBlock() {
-		// In the case the currBlock is pending and not empty we add it to the Graph and connect it
-		// with the successive node in the CFG
+		// In the case the currBlock is pending and not empty we add it to the Graph and connect it with the successive
+		// node in the CFG
 		if ( isPending && currBlock && !currBlock->empty() ) {
 			CFG::VertexTy&& node = cfg.addBlock(currBlock);
 			cfg.addEdge(node, succ);
@@ -181,7 +185,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitIfStmt(const IfStmtPtr& ifStmt) {
 		cfg::Block* ifBlock = new cfg::Block;
 		ifBlock->appendElement( cfg::Element(ifStmt->getCondition(), cfg::Element::CtrlCond) );
-		ifBlock->setTerminal(ifStmt);
+		ifBlock->terminator() = ifStmt;
 		CFG::VertexTy&& src = cfg.addBlock( ifBlock );
 
 		// the current node needs to be append to the graph (if not empty)
@@ -212,7 +216,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
-		currBlock->setTerminal(continueStmt);
+		currBlock->terminator() = continueStmt;
 		succ = scopeStack.getContinueTarget().entry;
 	}
 
@@ -220,7 +224,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
-		currBlock->setTerminal(breakStmt);
+		currBlock->terminator() = breakStmt;
 		succ = scopeStack.getBreakTarget().exit;
 	}
 
@@ -228,7 +232,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
-		currBlock->setTerminal(retStmt);
+		currBlock->terminator() = retStmt;
 		currBlock->appendElement( cfg::Element(retStmt->getReturnExpr()) );
 		succ = scopeStack.getEnclosingLambda().exit;
 	}
@@ -239,7 +243,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitForStmt(const ForStmtPtr& forStmt) {
 		cfg::Block* forBlock = new cfg::Block;
-		forBlock->setTerminal(forStmt);
+		forBlock->terminator() = forStmt;
 		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
 		CFG::VertexTy&& src = cfg.addBlock( forBlock );
 
@@ -274,7 +278,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
 		cfg::Block* whileBlock = new cfg::Block;
 		whileBlock->appendElement( cfg::Element(whileStmt->getCondition()) );
-		whileBlock->setTerminal(whileStmt);
+		whileBlock->terminator() = whileStmt;
 		CFG::VertexTy&& src = cfg.addBlock( whileBlock );
 
 		// the current node needs to be append to the graph (if not empty)
@@ -299,7 +303,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
 		cfg::Block* switchBlock = new cfg::Block;
 		switchBlock->appendElement( cfg::Element(switchStmt->getSwitchExpr()) );
-		switchBlock->setTerminal(switchStmt);
+		switchBlock->terminator() = switchStmt;
 		CFG::VertexTy&& src = cfg.addBlock( switchBlock );
 
 		// the current node needs to be appendend to the graph (if not empty)
@@ -437,7 +441,7 @@ CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
 
 CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	CFG::VertexTy&& v = boost::add_vertex(CFG::NodeProperty(block), graph);
-	block->setBlockID(v);
+	block->blockId() = v;
 	boost::property_map< CFG::ControlFlowGraph, size_t CFG::NodeProperty::* >::type&& blockID =
 			get(&CFG::NodeProperty::id, graph);
 	put(blockID, v, currId++);
@@ -474,23 +478,25 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block) {
 	if(!block.empty()) {
 		out << "[shape=box,label=\"";
-		out << "[B" << block.getBlockID() << "]\\l";
+		out << "[B" << block.blockId() << "]\\l";
 		size_t num = 0;
 		std::for_each(block.stmt_begin(), block.stmt_end(), [ &out, &num ](const insieme::analysis::cfg::Element& curr) {
 			out << num++ << ": ";
 			switch(curr.getType()) {
 			case cfg::Element::None:
-				out << printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 );
+				out << printer::PrettyPrinter( *curr, 1<<5 );
 				break;
 			case cfg::Element::CtrlCond:
-				out << printer::PrettyPrinter( static_pointer_cast<const Statement>(curr), 1<<5 ) << " <CTRL>";
+				out << printer::PrettyPrinter( *curr, 1<<5 ) << " <CTRL>";
 				break;
 			case cfg::Element::LoopInit: {
-				out << printer::PrettyPrinter( static_pointer_cast<const ForStmt>(curr)->getDeclaration(), 1<<5 ) << " <LOOP_INIT>";
+				out << printer::PrettyPrinter(
+						static_pointer_cast<const ForStmt>(*curr)->getDeclaration(), 1<<5
+					) << " <LOOP_INIT>";
 				break;
 			}
 			case cfg::Element::LoopIncrement: {
-				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
+				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(*curr);
 				out << printer::PrettyPrinter(forStmt->getDeclaration()->getVariable()) << " += "
 				    << printer::PrettyPrinter( forStmt->getStep(), 1<<5 ) << " <LOOP_INC>";
 				break;
@@ -500,13 +506,13 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 			}
 			out << "\\l";
 		});
-		if(!!block.getTerminator())
-			out << "T: " << block.getTerminator();
+		if(block.hasTerminator())
+			out << "T: " << block.terminator();
 
 		return out << "\"]";
 	}
 	// assert(block.getBlockID() == 0 || block.getBlockID() == 1); // entry and exit block are the only allowed empty blocks
-	return out << "[shape=diamond,label=\""<< (block.getBlockID() == 0 ? "ENTRY" : "EXIT") << "\"]";
+	return out << "[shape=diamond,label=\""<< (block.blockId() == 0 ? "ENTRY" : "EXIT") << "\"]";
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Terminator& term) {

@@ -82,7 +82,6 @@ TEST(TypeTest, NodeManagerGetAllBug ) {
 	TypePtr typeB = GenericType::get(manager, "B");
 	TypePtr typeR = GenericType::get(manager, "R");
 
-	Identifier ident = "funA";
 	TypeList list;
 	list.push_back(typeA);
 	list.push_back(typeB);
@@ -370,12 +369,26 @@ TEST(TypeTest, RecType) {
 	basicTypeTests(typeY, true, toList(toVector<NodePtr>(varY, definition)));
 }
 
+
+namespace {
+
+	Node::ChildList extractChildren(const NamedCompositeType::Entries& entries) {
+		Node::ChildList res;
+		for_each(entries, [&](const NamedCompositeType::Entry& cur) {
+			res.push_back(cur.first);
+			res.push_back(cur.second);
+		});
+		return res;
+	}
+
+}
+
 TEST(TypeTest, StructType) {
 
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	IdentifierPtr identA = Identifier::get(manager, "a");
+	IdentifierPtr identB = Identifier::get(manager, "b");
 
 	StructType::Entries entriesA;
 	entriesA.push_back(StructType::Entry(identA, GenericType::get(manager, "A")));
@@ -406,27 +419,9 @@ TEST(TypeTest, StructType) {
 	EXPECT_NO_THROW ( StructType::get(manager, entriesD) );
 
 	// perform basic type tests
-	vector<TypePtr> typeListA;
-	std::transform(entriesA.cbegin(), entriesA.cend(), back_inserter(typeListA),
-		[](const StructType::Entry& cur) {
-			return cur.second;
-	});
-
-	vector<TypePtr> typeListB;
-	std::transform(entriesB.cbegin(), entriesB.cend(), back_inserter(typeListB),
-		[](const StructType::Entry& cur) {
-			return cur.second;
-	});
-
-	vector<TypePtr> typeListC;
-	std::transform(entriesC.cbegin(), entriesC.cend(), back_inserter(typeListC),
-		[](const StructType::Entry& cur) {
-			return cur.second;
-	});
-
-	basicTypeTests(structA, true, toList(typeListA));
-	basicTypeTests(structB, true, toList(typeListB));
-	basicTypeTests(structC, false, toList(typeListC));
+	basicTypeTests(structA, true, extractChildren(entriesA));
+	basicTypeTests(structB, true, extractChildren(entriesB));
+	basicTypeTests(structC, false, extractChildren(entriesC));
 }
 
 TEST(TypeTest, RecStructType) {
@@ -435,8 +430,8 @@ TEST(TypeTest, RecStructType) {
 
 	// TODO: test whether order of definitions is important ... (it should not)
 
-	Identifier identA("a");
-	Identifier identB("b");
+	IdentifierPtr identA = Identifier::get(manager, "a");
+	IdentifierPtr identB = Identifier::get(manager, "b");
 
 	// create a simple recursive type uX.X (no actual type)
 	TypeVariablePtr varX = TypeVariable::get(manager, "X");
@@ -494,8 +489,8 @@ TEST(TypeTest, UnionType) {
 
 	NodeManager manager;
 
-	Identifier identA("a");
-	Identifier identB("b");
+	IdentifierPtr identA = Identifier::get(manager, "a");
+	IdentifierPtr identB = Identifier::get(manager, "b");
 
 	UnionType::Entries entriesA;
 	entriesA.push_back(UnionType::Entry(identA, GenericType::get(manager, "A")));
@@ -516,27 +511,9 @@ TEST(TypeTest, UnionType) {
 
 
 	// perform basic type tests
-	vector<TypePtr> typeListA;
-	std::transform(entriesA.cbegin(), entriesA.cend(), back_inserter(typeListA),
-		[](const UnionType::Entry& cur) {
-			return cur.second;
-	});
-
-	vector<TypePtr> typeListB;
-	std::transform(entriesB.cbegin(), entriesB.cend(), back_inserter(typeListB),
-		[](const UnionType::Entry& cur) {
-			return cur.second;
-	});
-
-	vector<TypePtr> typeListC;
-	std::transform(entriesC.cbegin(), entriesC.cend(), back_inserter(typeListC),
-		[](const UnionType::Entry& cur) {
-			return cur.second;
-	});
-
-	basicTypeTests(unionA, true, toList(typeListA));
-	basicTypeTests(unionB, true, toList(typeListB));
-	basicTypeTests(unionC, false, toList(typeListC));
+	basicTypeTests(unionA, true, extractChildren(entriesA));
+	basicTypeTests(unionB, true, extractChildren(entriesB));
+	basicTypeTests(unionC, false, extractChildren(entriesC));
 }
 
 TEST(TypeTest, ArrayType) {

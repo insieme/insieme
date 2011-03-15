@@ -41,6 +41,8 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
 
+#include <iterator>
+
 namespace insieme {
 namespace analysis {
 
@@ -69,13 +71,16 @@ namespace cfg {
  * Element - Represents a top-level expression in a basic block. A type is included to distinguish expression from
  * terminal nodes.
  */
-struct Element : public core::StatementPtr {
+struct Element {
 	enum Type { None, CtrlCond, LoopInit, LoopIncrement };
 
-	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) :
-		core::StatementPtr (stmt), type(type) { }
+	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) : stmt(stmt), type(type) { }
+	void operator=(const Element& other) { stmt = other.stmt; type = other.type; }
+
 	const Type& getType() const { return type; }
+	const core::StatementPtr& operator*() const { return stmt; }
 private:
+	core::StatementPtr stmt;
 	Type type;
 };
 
@@ -85,8 +90,10 @@ private:
  * If the control-flow is conditional, the condition expression will appear within the set of statements in the block
  * (usually the last statement).
  */
-struct Terminator : public Element {
-	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : Element(stmt) { }
+struct Terminator : public core::StatementPtr {
+	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : core::StatementPtr(stmt) { }
+
+	void operator=(const core::StatementPtr& other) { core::StatementPtr::operator=(other); }
 };
 
 /**
@@ -185,18 +192,46 @@ public:
 	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::const_type
 			ConstEdgePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor VertexTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   VertexIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 					VertexTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   					VertexIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor EdgeTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator OutEdgeIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator InEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 					EdgeTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 					OutEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 					InEdgeIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator AdjacencyIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator 					AdjacencyIterator;
 
 	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
-															 VertexTy, InEdgeIterator>::type InvAdjacencyIterator;
+															 VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
 
+
+	/**
+	 * This iterator transforms iterators returned by boost::Graph iterating through vertex indexes into an iterator
+	 * iterating through cfg::Blocks. Makes traversing of the CFG easier.
+	 */
+	template <class IterT>
+	class CFGBlockIterator: public std::iterator<std::forward_iterator_tag, const cfg::Block> {
+		// reference to the CFG the iterator belongs to
+		const CFG* cfg;
+		IterT iter, end;
+	public:
+		CFGBlockIterator(const CFG* cfg, const IterT& start, const IterT& end) : cfg(cfg), iter(start), end(end) { }
+		CFGBlockIterator(const IterT& end) : cfg(NULL), iter(end), end(end) { }
+
+		// increment this iterator only if we are not at the end
+		void operator++() {
+			assert(iter != end && "Incrementing an invalid iterator");
+			++iter;
+		}
+		// checks whether 2 iterators are equals
+		bool operator==(const CFGBlockIterator<IterT>& other) const { return iter == other.iter; }
+
+		// Returns a reference to the block referenced by this iterator
+		const cfg::Block& operator*() const {
+			assert(iter != end && cfg && "Iterator out of scope!");
+			return cfg->getBlock(*iter);
+		}
+	};
 
 	CFG() { }
 	~CFG();
@@ -248,14 +283,33 @@ public:
 	/**
 	 * Returns the entry block of the CFG.
 	 */
-	VertexTy getEntry() const { return *(boost::vertices(graph).first); }
+	VertexTy getEntry() const { return entry; }
 
-	std::pair<AdjacencyIterator, AdjacencyIterator> getSuccessors(const VertexTy& v) const {
-		return adjacent_vertices(v, graph);
+	void setEntry(const CFG::VertexTy& v) { entry = v; }
+
+	/**
+	 * Returns the exit block of the CFG.
+	 */
+	VertexTy getExit() const { return exit; }
+
+	void setExit(const CFG::VertexTy& v) { exit = v; }
+
+	CFGBlockIterator<AdjacencyIterator> successors_begin(const VertexTy& v) const {
+		std::pair<AdjacencyIterator, AdjacencyIterator>&& adjIt = adjacent_vertices(v, graph);
+		return CFGBlockIterator<AdjacencyIterator>(this, adjIt.first, adjIt.second);
 	}
 
-	std::pair<InvAdjacencyIterator, InvAdjacencyIterator> getPrevious(const VertexTy& v) const {
-		return inv_adjacent_vertices(v, graph);
+	CFGBlockIterator<AdjacencyIterator> successors_end(const VertexTy& v) const {
+		return CFGBlockIterator<AdjacencyIterator>( adjacent_vertices(v, graph).second );
+	}
+
+	CFGBlockIterator<InvAdjacencyIterator> predecessors_begin(const VertexTy& v) const {
+		std::pair<InvAdjacencyIterator, InvAdjacencyIterator>&& adjIt = inv_adjacent_vertices(v, graph);
+		return CFGBlockIterator<InvAdjacencyIterator>(this, adjIt.first, adjIt.second);
+	}
+
+	CFGBlockIterator<InvAdjacencyIterator> predecessors_end(const VertexTy& v) const {
+		return CFGBlockIterator<InvAdjacencyIterator>( inv_adjacent_vertices(v, graph).second );
 	}
 
 	/**
@@ -268,12 +322,12 @@ public:
 private:
 	ControlFlowGraph	graph;
 	size_t				currId;
+	VertexTy			entry, exit;
 };
 
 namespace cfg {
 /**
- * Block - Represents a single basic block in a source-level CFG.
- *  It consists of:
+ * Block - Represents a single basic block in a source-level CFG. It consists of:
  *
  *  (1) A set of statements/expressions (which may contain subexpressions).
  *  (2) A "terminator" statement (not in the set of statements).
@@ -289,9 +343,10 @@ struct Block {
 	/// Appends a statement to an existing CFGBlock
 	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
 
-	/// Set a terminal element for this block
-	void setTerminal(const core::StatementPtr& stmt) { term = stmt; }
-	const Terminator& getTerminator() const { return term; }
+	/// Setters and getters for the terminator element
+	const Terminator& terminator() const { return term; }
+	Terminator& terminator() { return term; }
+
 	bool hasTerminator() const { return !!term; }
 
 	/// Returns the number of elements inside this block
@@ -299,9 +354,14 @@ struct Block {
 	/// Returns true of the block is empty
 	bool empty() const { return stmtList.empty() && !term; }
 
-	void setBlockID(const CFG::VertexTy& vid) { id = vid; }
-	const CFG::VertexTy& getBlockID() const { return id; }
+	// Setters/Getters for the block ID
+	const CFG::VertexTy& blockId() const { return id; }
+	operator CFG::VertexTy() const { return id; }
+	CFG::VertexTy& blockId() { return id; }
 
+	bool operator==(const Block& other) const {
+		return id == other.id;
+	}
 	/// Returns an iterator through the statements contained in this block
 	const_iterator stmt_begin() const { return stmtList.rbegin(); }
 	const_iterator stmt_end() const { return stmtList.rend(); }

@@ -41,7 +41,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
             return array.ref.elem.1D(v25, 3);
         }(v3, v7, v8, v9))));
         printf(string.as.char.pointer("Letter Struct:  %c\n"), varlist.pack((fun(struct<s1:char,s2:array<char,1>,s3:vector<char,5>,s4:vector<vector<char,3>,5>,s5:array<char,1>,s6:array<array<char,1>,1>,s7:array<vector<char,4>,1>,s8:array<vector<vector<char,3>,4>,1>,s9:array<array<vector<char,4>,1>,1>,s10:array<array<vector<vector<char,3>,4>,1>,1>> v29){
-            return v29.s1;
+            return v29.AP(s1);
         }(v18))));
         decl ref<vector<array<char,1>,5>> v31 =  var([ var("This"),  var("is"),  var("a"),  var("little"),  var("test")]);
         printf(string.as.char.pointer("String:  %s\n"), varlist.pack((array.ref.elem.1D(v31, 0))));
@@ -98,7 +98,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
             return ( *array.ref.elem.1D(v25, CAST<uint<4>>(3)));
         }(( *v3), v7, v8, v9)))));
         printf(string.as.char.pointer("Letter Struct:  %c\n"), varlist.pack((CAST<int<4>>(fun(struct<s1:char,s2:array<char,1>,s3:vector<char,5>,s4:vector<vector<char,3>,5>,s5:array<char,1>,s6:array<array<char,1>,1>,s7:array<vector<char,4>,1>,s8:array<vector<vector<char,3>,4>,1>,s9:array<array<vector<char,4>,1>,1>,s10:array<array<vector<vector<char,3>,4>,1>,1>> v29){
-            return v29.s1;
+            return v29.AP(s1);
         }(( *v18))))));
         decl ref<vector<array<char,1>,5>> v31 = ( var([( var("This")), ( var("is")), ( var("a")), ( var("little")), ( var("test"))]));
         printf(string.as.char.pointer("String:  %s\n"), varlist.pack((( *array.ref.elem.1D(v31, CAST<uint<4>>(0))))));

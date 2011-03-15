@@ -272,7 +272,7 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 namespace {
 
 
-	OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const Identifier& identifier, const TypePtr& elementType, bool isRefVersion) {
+	OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const IdentifierPtr& identifier, const TypePtr& elementType, bool isRefVersion) {
 
 		OptionalMessageList res;
 
@@ -306,7 +306,7 @@ namespace {
 			add(res, Message(address,
 					EC_TYPE_NO_SUCH_MEMBER,
 					format("No member %s within composed type %s",
-							identifier.getName().c_str(),
+							toString(*identifier).c_str(),
 							toString(*compositeType).c_str()),
 					Message::ERROR));
 			return res;
@@ -331,7 +331,7 @@ namespace {
 }
 
 OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAddress& address) {
-	const NodeManager& manager = address->getNodeManager();
+	NodeManager& manager = address->getNodeManager();
 	OptionalMessageList res;
 
 	// check whether it is a call to the member access expression
@@ -380,18 +380,13 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 
 	// extract the value of the literal
 	const LiteralPtr& identifierLiteral = static_pointer_cast<const Literal>(identifierExpr);
+	const IdentifierPtr memberName = Identifier::get(manager, identifierLiteral->getValue());
 
 	// use common check routine
-	return checkMemberAccess(address, structExpr, identifierLiteral->getValue(), resultType, isMemberReferencing);
+	return checkMemberAccess(address, structExpr, memberName, resultType, isMemberReferencing);
 
 }
 
-
-
-OptionalMessageList MemberAccessNodeElementTypeCheck::visitMemberAccessExpr(const MemberAccessExprAddress& address) {
-	// delegate request to common implementation
-	return checkMemberAccess(address, address->getSubExpression(), address->getMemberName(), address->getType(), false);
-}
 
 OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& address) {
 

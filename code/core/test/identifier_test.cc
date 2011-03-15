@@ -43,19 +43,22 @@
 
 #include "insieme/utils/container_utils.h"
 
+#include "ast_node_test.cc"
+
 using namespace insieme::core;
 
 TEST(TypeTest, DuplicateTest) {
+	NodeManager manager;
 
 	// check names
-	Identifier identA("A");
-	EXPECT_EQ ("A" , identA.getName());
+	IdentifierPtr identA = Identifier::get(manager, "A");
+	EXPECT_EQ ("A" , identA->getName());
 
-	Identifier identB("B");
-	EXPECT_EQ ("B" , identB.getName());
+	IdentifierPtr identB = Identifier::get(manager, "B");
+	EXPECT_EQ ("B" , identB->getName());
 
-	Identifier identA2("A");
-	EXPECT_EQ ("A" , identA2.getName());
+	IdentifierPtr identA2 = Identifier::get(manager, "A");
+	EXPECT_EQ ("A" , identA2->getName());
 
 	// check equality operator
 	EXPECT_NE ( identA, identB );
@@ -68,35 +71,26 @@ TEST(TypeTest, DuplicateTest) {
 
 	// check hash
 	boost::hash<Identifier> hasher;
-	Identifier all[] = {identA, identB, identA2};
+	IdentifierPtr all[] = {identA, identB, identA2};
 	for (int i=0; i<3; i++) {
 		for (int j=0; j<3; j++) {
-			Identifier a = all[i];
-			Identifier b = all[j];
-			EXPECT_EQ ( a == b, hasher(a) == hasher(b));
+			IdentifierPtr a = all[i];
+			IdentifierPtr b = all[j];
+			EXPECT_EQ ( *a == *b, hasher(*a) == hasher(*b));
 		}
 	}
-
-
 
 	// Tests whether hash function for identifiers is properly working
 
 	// create list of identifiers
-	vector<Identifier> identifier;
-	identifier.push_back(Identifier("A"));
-	identifier.push_back(Identifier("B"));
+	vector<IdentifierPtr> identifier;
+	identifier.push_back(Identifier::get(manager, "A"));
+	identifier.push_back(Identifier::get(manager, "B"));
 	EXPECT_FALSE ( hasDuplicates(identifier) );
 
-	identifier.push_back(Identifier("A"));
+	identifier.push_back(Identifier::get(manager, "A"));
 	EXPECT_TRUE ( hasDuplicates(identifier) );
 
-}
-
-TEST(TypeTest, HashCodeTest) {
-
-	Identifier identA("a");
-	Identifier identB(std::string("a"));
-
-	EXPECT_EQ (identA.hash(), identB.hash());
-
+	basicNodeTests(identA);
+	basicNodeTests(identB);
 }
