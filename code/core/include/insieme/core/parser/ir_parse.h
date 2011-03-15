@@ -49,6 +49,18 @@ namespace insieme {
 namespace core {
 namespace parse {
 
+// table holding all variables including their identifiers
+class VariableTable {
+    NodeManager& nodeMan;
+    utils::map::PointerMap<IdentifierPtr, VariablePtr> table;
+
+public:
+    VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
+
+    VariablePtr get(const TypePtr& typ, const IdentifierPtr& id);
+    VariablePtr lookup(const IdentifierPtr& id);
+};
+
 class ParseException : std::exception {
 	const char* what() const throw() {
 		return "IR Parsing failed";
