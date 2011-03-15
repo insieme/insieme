@@ -335,39 +335,6 @@ int main(int argc, char** argv) {
 // ------------------------------------------------------------------------------------------------------------------
 //                                     Hash code evaluation
 // ------------------------------------------------------------------------------------------------------------------
-typedef std::size_t hash_t;
-
-void hash_node(hash_t& seed, const NodePtr& cur) {
-	boost::hash_combine(seed, cur->getNodeType());
-	switch(cur->getNodeType()) {
-		case insieme::core::NT_GenericType:
-		case insieme::core::NT_ArrayType:
-		case insieme::core::NT_VectorType:
-		case insieme::core::NT_ChannelType:
-		case insieme::core::NT_RefType:  {
-			const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
-			boost::hash_combine(seed, type->getFamilyName());
-			for_each(type->getIntTypeParameter(), [&](const core::IntTypeParam& cur) {
-				boost::hash_combine(seed, insieme::core::hash_value(cur));
-			});
-			break;
-		}
-		case insieme::core::NT_Variable:     { boost::hash_combine(seed, static_pointer_cast<const Variable>(cur)->getId()); break; }
-		case insieme::core::NT_TypeVariable: { boost::hash_combine(seed, static_pointer_cast<const TypeVariable>(cur)->getVarName()); break; }
-		case insieme::core::NT_Literal:      { boost::hash_combine(seed, static_pointer_cast<const Literal>(cur)->getValue()); break; }
-		case insieme::core::NT_MemberAccessExpr:      { boost::hash_combine(seed, static_pointer_cast<const MemberAccessExpr>(cur)->getMemberName()->getName()); break; }
-		default: {}
-	}
-}
-
-hash_t computeHash(const NodePtr& cur) {
-	hash_t seed = 0;
-	hash_node(seed, cur);
-	for_each(cur->getChildList(), [&](const NodePtr& child) {
-		boost::hash_combine(seed, computeHash(child));
-	});
-	return seed;
-}
 
 
 bool checkForHashCollisions(const ProgramPtr& program) {

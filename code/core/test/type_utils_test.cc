@@ -76,24 +76,24 @@ TEST(TypeUtils, Substitution) {
 	TypeVariablePtr varA = builder.typeVariable("A");
 	TypeVariablePtr varB = builder.typeVariable("B");
 
-	IntTypeParam paramVarX = IntTypeParam::getVariableIntParam('x');
-	IntTypeParam paramVarY = IntTypeParam::getVariableIntParam('y');
+	VariableIntTypeParamPtr paramVarX = builder.variableIntTypeParam('x');
+	VariableIntTypeParamPtr paramVarY = builder.variableIntTypeParam('y');
 
 	TypePtr constType = builder.genericType("constType");
-	IntTypeParam constParam = IntTypeParam::getConcreteIntParam(15);
+	IntTypeParamPtr constParam = builder.concreteIntTypeParam(15);
 
-	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA), toVector<IntTypeParam>(paramVarX));
-	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB), toVector<IntTypeParam>(paramVarX, paramVarY));
-	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB), toVector<IntTypeParam>(paramVarY, paramVarY));
+	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA), toVector<IntTypeParamPtr>(paramVarX));
+	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB), toVector<IntTypeParamPtr>(paramVarX, paramVarY));
+	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB), toVector<IntTypeParamPtr>(paramVarY, paramVarY));
 
 
 	EXPECT_EQ("'A", toString(*varA));
 	EXPECT_EQ("'B", toString(*varB));
-	EXPECT_EQ("#x", toString(paramVarX));
-	EXPECT_EQ("#y", toString(paramVarY));
+	EXPECT_EQ("#x", toString(*paramVarX));
+	EXPECT_EQ("#y", toString(*paramVarY));
 
 	EXPECT_EQ("constType", toString(*constType));
-	EXPECT_EQ("15", toString(constParam));
+	EXPECT_EQ("15", toString(*constParam));
 
 	EXPECT_EQ("type<'A,#x>", toString(*typeA));
 	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*typeB));
@@ -192,7 +192,7 @@ TEST(TypeUtils, Substitution) {
 	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>)}", toString(subA.getMapping()));
 	EXPECT_EQ("{}", toString(subA.getIntTypeParamMapping()));
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getMapping()));
-	EXPECT_EQ("{#x=15}", toString(subB.getIntTypeParamMapping()));
+	EXPECT_EQ("{AP(#x)=AP(15)}", toString(subB.getIntTypeParamMapping()));
 
 	Substitution combinedAA = Substitution::compose(manager, subA, subA);
 	Substitution combinedAB = Substitution::compose(manager, subA, subB);
@@ -204,9 +204,9 @@ TEST(TypeUtils, Substitution) {
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
 
 	EXPECT_EQ("{}", toString(combinedAA.getIntTypeParamMapping()));
-	EXPECT_EQ("{#x=15}", toString(combinedAB.getIntTypeParamMapping()));
-	EXPECT_EQ("{#x=15}", toString(combinedBA.getIntTypeParamMapping()));
-	EXPECT_EQ("{#x=15}", toString(combinedBB.getIntTypeParamMapping()));
+	EXPECT_EQ("{AP(#x)=AP(15)}", toString(combinedAB.getIntTypeParamMapping()));
+	EXPECT_EQ("{AP(#x)=AP(15)}", toString(combinedBA.getIntTypeParamMapping()));
+	EXPECT_EQ("{AP(#x)=AP(15)}", toString(combinedBB.getIntTypeParamMapping()));
 }
 
 TEST(TypeUtils, Unification) {
@@ -301,9 +301,9 @@ TEST(TypeUtils, Matching) {
 
 	TypePtr specializedType = builder.genericType("type", toVector<TypePtr>(constType));
 
-	TypePtr genIntTypeA = builder.genericType("type", toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
-	TypePtr genIntTypeB = builder.genericType("type", toVector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('b')));
-	TypePtr specIntType = builder.genericType("type", toVector<TypePtr>(), toVector(IntTypeParam::getConcreteIntParam(123)));
+	TypePtr genIntTypeA = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
+	TypePtr genIntTypeB = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'b')));
+	TypePtr specIntType = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 123)));
 
 
 	// case: one side is a variable
@@ -427,9 +427,9 @@ TEST(TypeUtils, IntParamUnification) {
 	ASTBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
-	TypePtr typeAx = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getVariableIntParam('x')));
-	TypePtr typeA3 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(3)));
-	TypePtr typeA4 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(4)));
+	TypePtr typeAx = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'x')));
+	TypePtr typeA3 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 3)));
+	TypePtr typeA4 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 4)));
 
 	EXPECT_PRED2(unifyable, typeA3, typeAx);
 	EXPECT_PRED2(notUnifable, typeA3, typeA4);
@@ -439,8 +439,8 @@ TEST(TypeUtils, IntParamUnification) {
 	EXPECT_EQ(*typeA3, *res.applyTo(manager, typeAx));
 }
 
-typedef std::unordered_set<TypeVariablePtr, hash_target<TypeVariablePtr>, equal_target<TypeVariablePtr>> VariableSet;
-typedef std::unordered_set<IntTypeParam, boost::hash<IntTypeParam>> ParamSet;
+typedef utils::set::PointerSet<TypeVariablePtr> VariableSet;
+typedef utils::set::PointerSet<IntTypeParamPtr> ParamSet;
 
 VariableSet getTypeVariables(const TypePtr& ptr) {
 	VariableSet res;
@@ -455,13 +455,8 @@ VariableSet getTypeVariables(const TypePtr& ptr) {
 ParamSet getParamVariables(const TypePtr& ptr) {
 	ParamSet res;
 	visitAllNodesOnce(ptr, [&res](const NodePtr& node) {
-		if (node->getNodeType() == NT_GenericType) {
-			GenericTypePtr genType = static_pointer_cast<const GenericType>(node);
-			for_each(genType->getIntTypeParameter(), [&res](const IntTypeParam& cur) {
-				if (cur.getType() == IntTypeParam::VARIABLE) {
-					res.insert(cur);
-				}
-			});
+		if (node->getNodeType() == NT_VariableIntTypeParam) {
+			res.insert(static_pointer_cast<const IntTypeParam>(node));
 		}
 	}, true);
 	return res;
@@ -539,7 +534,7 @@ TEST(TypeUtils, VariableSubstitutionBug) {
 	ASTBuilder builder(manager);
 
 	TypePtr intType = manager.basic.getUInt4();
-	TypePtr vectorType = builder.vectorType(intType, IntTypeParam::getConcreteIntParam(8));
+	TypePtr vectorType = builder.vectorType(intType, builder.concreteIntTypeParam(8));
 	TypePtr funType = parse::parseType(manager, "(vector<'elem,#l>,'res,('elem,'res)->'res)->'res");
 	EXPECT_TRUE(funType);
 
@@ -610,7 +605,7 @@ TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
 	ExpressionPtr res = builder.callExpr(basic.getArrayCreate1D(), element, size);
 
 	// check infered type
-	TypePtr resType = builder.arrayType(elementType, IntTypeParam::getConcreteIntParam(1));
+	TypePtr resType = builder.arrayType(elementType, builder.concreteIntTypeParam(1));
 	EXPECT_EQ(*resType, *res->getType());
 
 }

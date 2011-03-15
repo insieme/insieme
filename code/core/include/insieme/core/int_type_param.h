@@ -40,234 +40,237 @@
 #include <vector>
 #include <limits>
 
-#include "insieme/utils/string_utils.h"
+#include "insieme/core/ast_node.h"
+
+#include "insieme/utils/instance_manager.h"
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
 namespace insieme {
 namespace core {
 
-using std::string;
-using std::vector;
-
-/**
- * Instances of this class represent the integer-type parameters.
- *
- * The type system supports two types of generic type parameters - other types (or variables) and integers.
- * Integer parameters may be concrete values, variables (equal to type variables) or the infinite sigh.
- */
-class IntTypeParam {
-public:
 	/**
-	 * An enumeration to determine the actual type of the integer parameter.
+	 * Instances of this class represent the integer-type parameters.
+	 *
+	 * The type system supports two types of generic type parameters - other types and integers.
+	 * Integer parameters may be concrete values, variables (equal to type variables) or the infinite.
 	 */
-	typedef enum {
-		VARIABLE, CONCRETE, INFINITE
-	} Type;
+	class IntTypeParam : public Node {
+
+	protected:
+
+		/**
+		 * A constructor for this kind of node.
+		 *
+		 * @param nodeType the actual type this node is representing
+		 * @param hash the hash code for the resulting node
+		 */
+		IntTypeParam(NodeType nodeType, std::size_t hash)
+			: Node(nodeType, NC_Support, hash) {};
+
+
+		/**
+		 * Since no int-type parameters has any child nodes, this method produces an empty child list.
+		 *
+		 * @return an empty child list
+		 */
+		virtual OptionChildList getChildNodes() const {
+			// not int type parameter has a child node
+			return std::make_shared<ChildList>();
+		}
+
+	public:
+
+		/**
+		 * A virtual less-than operator allowing to compare int type parameters.
+		 */
+		virtual bool operator<(const IntTypeParam& other) const =0;
+
+	};
+
 
 	/**
-	 * A predefined int-type-parameter constant representing the value 0
+	 * A node type representing concrete int-type parameters.
 	 */
-	static const IntTypeParam ZERO;
+	class ConcreteIntTypeParam : public IntTypeParam {
 
-	/**
-	 * A predefined int-type-parameter constant representing the value 1
-	 */
-	static const IntTypeParam ONE;
-
-	/**
-	 * A predefined int-type-parameter constant representing an infinite value.
-	 */
-	static const IntTypeParam INF;
-
-private:
-
-	/**
-	 * The type of the parameter represented by this instance.
-	 * 3 bits for compilers with unsigned enum
-	 */
-	Type type :3;
-
-	union {
 		/**
 		 * The value represented by the concrete type parameter.
 		 */
-		std::size_t value;
+		const std::size_t value;
 
 		/**
-		 * The symbol used for the integer type variable.
+		 * A constructor for this type of int type parameters accepting the value
+		 * to be represented.
+		 *
+		 * @param value the value to be represented.
 		 */
-		char symbol;
+		ConcreteIntTypeParam(std::size_t value);
+
+	private:
+
+		/**
+		 * Creates a copy of this node using the given mapper.
+		 *
+		 * @param mapper the mapper to to be used for the copying process (will be ignored by this implementation)
+		 * @return a pointer to a clone of this int type parameter node.
+		 */
+		virtual Node* createCopyUsing(NodeMapping& mapper) const {
+			return new ConcreteIntTypeParam(value);
+		}
+
+	protected:
+
+		/**
+		 * Compares this node with the given node.
+		 */
+		bool equals(const Node& other) const;
+
+	public:
+
+		/**
+		 * A static factory method for instances of this type.
+		 */
+		static ConcreteIntTypeParamPtr get(NodeManager& manager, std::size_t value);
+
+		/**
+		 * Prints the name of this identifier to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << value;
+		}
+
+		/**
+		 * Obtains the value of this concrete int-type parameter.
+		 */
+		std::size_t getValue() const {
+			return value;
+		}
+
+		/**
+		 * Compares this concrete int type parameter with other int type parameters.
+		 */
+		virtual bool operator<(const IntTypeParam& other) const;
+
 	};
 
-private:
-
 	/**
-	 * A private constructor to create a variable integer type parameter.
-	 * The constructor is private to enforce the usage of static factory methods.
-	 *
-	 * @param symbol the symbol to be used for the integer type variable
+	 * A node type representing variable int-type parameters.
 	 */
-	IntTypeParam(const char symbol) : type(VARIABLE), symbol(symbol) {
-	}
+	class VariableIntTypeParam : public IntTypeParam {
 
-	/**
-	 * A private constructor to create a concrete integer type parameter.
-	 * The constructor is private to enforce the usage of static factory methods.
-	 *
-	 * @param value the value to be used for the concrete integer type parameter
-	 */
-	IntTypeParam(const std::size_t value) : type(CONCRETE), value(value) {}
+		/**
+		 * The symbol used to represent this integer type variable.
+		 */
+		const char symbol;
 
-	/**
-	 * A private constructor to create a infinite integer type parameter.
-	 * The constructor is private to enforce the usage of static factory methods.
-	 */
-	IntTypeParam(const Type) :	type(INFINITE), value(0) {
-	}
+		/**
+		 * A constructor for this type of int type parameters accepting the value
+		 * to be represented.
+		 *
+		 * @param symbol the symbol to be used to represent the resulting variable
+		 */
+		VariableIntTypeParam(const char symbol);
 
-public:
-	IntTypeParam() : type(CONCRETE), value(std::numeric_limits<int>::max()) { }
+	private:
 
-	/**
-	 * A factory method to obtain a integer type parameter variable.
-	 *
-	 * @param symbol the symbol to be used for the variable
-	 * @return an IntTypeParam representing a token for this variable.
-	 */
-	static IntTypeParam getVariableIntParam(char symbol);
-
-	/**
-	 * A factory method to obtain a concrete integer type parameter.
-	 *
-	 * @param value the value to be represented
-	 * @return an IntTypeParam representing a token for this value.
-	 */
-	static IntTypeParam getConcreteIntParam(std::size_t value);
-
-	/**
-	 * A factory method to obtain a integer type parameter representing
-	 * the infinite value.
-	 *
-	 * @return an IntTypeParam representing a token for the infinite value.
-	 */
-	static IntTypeParam getInfiniteIntParam();
-
-	/**
-	 * Tests whether all of the given integer type parameter are concrete.
-	 *
-	 * @param intTypeParams the list of parameters to be tested
-	 * @return true if all are concrete, false otherwise
-	 */
-	static bool allConcrete(const vector<IntTypeParam>& intTypeParams);
-
-	/**
-	 * Implements the equality operator for the IntTypeParam type.
-	 */
-	bool operator==(const IntTypeParam&) const;
-
-	/**
-	 * Implements the in-equality operator for the IntTypeParam type.
-	 */
-	bool operator!=(const IntTypeParam& other) const {
-		return !(*this == other);
-	}
-
-	/**
-	 * Implements the less-than relation by lexicographical comparison
-	 * of the type / value tuple.
-	 */
-	bool operator<(const IntTypeParam&) const;
-
-	/**
-	 * Provides a string representation for this token type.
-	 *
-	 * @return a string representation for this type.
-	 */
-	const string toString() const {
-		switch (type) {
-		case VARIABLE:
-			return "#" + ::toString(symbol);
-		case CONCRETE:
-			return ::toString(value);
-		case INFINITE:
-			return ::toString("Inf");
-		default:
-			assert(false && "Invalid parameter type discovered!");
-			return "undefined";
+		/**
+		 * Creates a copy of this node using the given mapper.
+		 *
+		 * @param mapper the mapper to to be used for the copying process (will be ignored by this implementation)
+		 * @return a pointer to a clone of this int type parameter node.
+		 */
+		virtual Node* createCopyUsing(NodeMapping& mapper) const {
+			return new VariableIntTypeParam(symbol);
 		}
-	}
+
+	protected:
+
+		/**
+		 * Compares this node with the given node.
+		 */
+		bool equals(const Node& other) const;
+
+	public:
+
+		/**
+		 * A static factory method for instances of this type.
+		 */
+		static VariableIntTypeParamPtr get(NodeManager& manager, char symbol);
+
+		/**
+		 * Prints the name of this identifier to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "#" << symbol;
+		}
+
+		/**
+		 * Obtains the symbol used to represent this variable int-type parameter.
+		 *
+		 * @return the symbol representing this variable (making it unique).
+		 */
+		char getSymbol() const {
+			return symbol;
+		}
+
+		/**
+		 * Compares this variable int type parameter with other int type parameters.
+		 */
+		virtual bool operator<(const IntTypeParam& other) const;
+
+	};
 
 	/**
-	 * Determines whether this instance is representing a variable integer type
-	 * parameter or a concrete value.
-	 *
-	 * @return false if variable, true otherwise
+	 * A node type representing infinite int-type parameters.
 	 */
-	bool isConcrete() const {
-		return type != VARIABLE;
-	}
+	class InfiniteIntTypeParam : public IntTypeParam {
 
-	/**
-	 * Obtains the type of parameter this instance is.
-	 *
-	 * @return the type of int-type parameter
-	 *
-	 * @see Type
-	 */
-	Type getType() const {
-		return type;
-	}
+		/**
+		 * A constructor for this type of int type parameter.
+		 */
+		InfiniteIntTypeParam();
 
-	/**
-	 * Obtains the value of a concrete int-type parameter. The value is only
-	 * properly defined in case the type is CONCRETE. Otherwise an assertion
-	 * violation will be triggered.
-	 */
-	std::size_t getValue() const {
-		// TODO: replace with an exception
-		assert( type == CONCRETE );
-		return value;
-	}
+	private:
 
-	/**
-	 * Obtains the symbol of a variable int-type parameter. The symbol is only
-	 * properly defined in case the type is VARIABLE. Otherwise an assertion
-	 * violation will be triggered.
-	 */
-	char getSymbol() const {
-		// TODO: replace with an exception
-		assert( type == VARIABLE );
-		return symbol;
-	}
+		/**
+		 * Creates a copy of this node using the given mapper.
+		 *
+		 * @param mapper the mapper to to be used for the copying process (will be ignored by this implementation)
+		 * @return a pointer to a clone of this int type parameter node.
+		 */
+		virtual Node* createCopyUsing(NodeMapping& mapper) const {
+			return new InfiniteIntTypeParam();
+		}
 
-};
+	protected:
 
-/**
- * Integrates the hash code computation for int type parameter into the boost hash code framework.
- *
- * @param param the parameter for which a hash code should be obtained.
- * @return the hash code of the given instance
- */
-inline std::size_t hash_value(const IntTypeParam& param) {
-	switch(param.getType()) {
-	case IntTypeParam::VARIABLE:
-		return boost::hash_value(param.getSymbol());
-	case IntTypeParam::CONCRETE:
-		return ~boost::hash_value(param.getValue());
-	case IntTypeParam::INFINITE:
-		return std::numeric_limits<std::size_t>::max();
-	}
-	return 0;
-}
+		/**
+		 * Compares this node with the given node.
+		 */
+		bool equals(const Node& other) const;
+
+	public:
+
+		/**
+		 * A static factory method for instances of this type.
+		 */
+		static InfiniteIntTypeParamPtr get(NodeManager& manager);
+
+		/**
+		 * Prints the name of this identifier to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "Inf";
+		}
+
+		/**
+		 * Compares this infinite int type parameter with other int type parameters.
+		 */
+		virtual bool operator<(const IntTypeParam& other) const;
+
+	};
+
 
 } // end namespace core
 } // end namespace insieme
-
-namespace std {
-
-	/**
-	 * Enable int type parameter to be printed to an output stream.
-	 */
-	ostream& operator<<(ostream& os, const insieme::core::IntTypeParam& p);
-}

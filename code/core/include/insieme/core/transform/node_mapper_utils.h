@@ -103,16 +103,10 @@ class ChildListMapping : public NodeMapping {
 	 */
 	bool different;
 
-	/**
-	 * The node mapping to be wrapped.
-	 */
-	NodeMapping& mapping;
-
 public:
 
 	ChildListMapping(const Node::ChildList& list, NodeMapping& mapping)
-		: NodeMapping(mapping.isManipulatingIntTypeParameter()), children(mapping.map(0, list)),
-		  different(mapping.isManipulatingIntTypeParameter() || !equals(children, list)), mapping(mapping) {}
+		: NodeMapping(), children(mapping.map(0, list)), different(!equals(children, list)) {}
 
 	/**
 	 * Determines whether this mapping would cause any modification when being applied
@@ -134,15 +128,6 @@ public:
 		return children[index];
 	}
 
-	/**
-	 * Forwards int type parameter mappings to the wrapped sub-mapping.
-	 *
-	 * @param param the int type parameter to be mapped
-	 * @return the mapped int type parameter
-	 */
-	virtual IntTypeParam mapParam(const IntTypeParam& param) {
-		return mapping.mapParam(param);
-	}
 };
 
 

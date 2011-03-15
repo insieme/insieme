@@ -128,7 +128,7 @@ core::CallExprPtr getSizeOfType(const core::ASTBuilder& builder, const core::Typ
 	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		return builder.callExpr(
 			gen.getUnsignedIntMul(),
-			builder.literal( gen.getUInt8(), toString(vecTy->getSize().getValue()) ),
+			builder.literal( gen.getUInt8(), toString(*(vecTy->getSize())) ),
 			getSizeOfType( builder, vecTy->getElementType() )
 		);
 	}

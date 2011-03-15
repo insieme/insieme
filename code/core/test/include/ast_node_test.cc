@@ -72,9 +72,6 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 		case insieme::core::NT_RefType:  {
 			const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
 			hash_combine(seed, type->getFamilyName());
-			for_each(type->getIntTypeParameter(), [&](const core::IntTypeParam& cur) {
-				hash_combine(seed, insieme::core::hash_value(cur));
-			});
 			break;
 		}
 		case insieme::core::NT_StructType:   { hash_combine(seed, "struct"); break; }
@@ -93,14 +90,10 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 
 hash_t computeHashChildOnly(const NodePtr& cur) {
 
-	// special treatment for named composite types (for simplicity reasons)
-//	if (auto type = dynamic_pointer_cast<const NamedCompositeType>(cur)) {
-//		return type->hash();
-//	}
-//	if (auto expr = dynamic_pointer_cast<const StructExpr>(cur)) {
-//		return expr->hash();
-//	}
-
+	// handle int-type parameters extra
+	if (IntTypeParamPtr param = dynamic_pointer_cast<const IntTypeParam>(cur)) {
+		return param->hash();
+	}
 
 	hash_t seed = 0;
 	hash_node(seed, cur);

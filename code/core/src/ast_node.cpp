@@ -47,22 +47,6 @@ using namespace insieme::core;
 namespace insieme {
 namespace core {
 
-	IntTypeParam NodeMapping::mapParam(const IntTypeParam& param) {
-		return param;
-	}
-
-	vector<IntTypeParam> NodeMapping::mapParam(const vector<IntTypeParam>& list) {
-		// check whether there are manipulations
-		if (!manipulatesIntTypeParameter) {
-			return list;
-		}
-
-		// apply transformation
-		return ::transform(list, [&](const IntTypeParam& cur) {
-			return this->mapParam(cur);
-		});
-	}
-
 	const Node::ChildList& Node::getChildList() const {
 		if (!children) {
 			children = getChildNodes();

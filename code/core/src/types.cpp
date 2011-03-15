@@ -226,12 +226,12 @@ bool FunctionType::equalsType(const Type& type) const {
 
 namespace {
 
-	static std::size_t hashGenericType(std::size_t hashSeed, const string& name, const vector<TypePtr>& typeParams, const vector<IntTypeParam>& intTypeParams, const TypePtr& baseType) {
+	static std::size_t hashGenericType(std::size_t hashSeed, const string& name, const vector<TypePtr>& typeParams, const vector<IntTypeParamPtr>& intTypeParams, const TypePtr& baseType) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, hashSeed);
 		boost::hash_combine(seed, name);
-		boost::hash_range(seed, intTypeParams.begin(), intTypeParams.end());
 		hashPtrRange(seed, typeParams);
+		hashPtrRange(seed, intTypeParams);
 		if (baseType) { boost::hash_combine(seed, *baseType); }
 		return seed;
 	}
@@ -242,32 +242,32 @@ namespace {
  */
 GenericType::GenericType(const string& name,
 		const vector<TypePtr>& typeParams,
-		const vector<IntTypeParam>& intTypeParams,
+		const vector<IntTypeParamPtr>& intTypeParams,
 		const TypePtr& baseType)
 	:
 		Type(NT_GenericType, hashGenericType(HS_GenericType, name, typeParams, intTypeParams, baseType)),
 		familyName(name),
 		typeParams(isolate(typeParams)),
-		intParams(intTypeParams),
+		intParams(isolate(intTypeParams)),
 		baseType(isolate(baseType)) { }
 
 
 GenericType::GenericType(NodeType nodeType, std::size_t hashSeed, const string& name,
 		const vector<TypePtr>& typeParams,
-		const vector<IntTypeParam>& intTypeParams,
+		const vector<IntTypeParamPtr>& intTypeParams,
 		const TypePtr& baseType)
 	:
 		Type(nodeType, hashGenericType(hashSeed, name, typeParams, intTypeParams, baseType)),
 		familyName(name),
 		typeParams(isolate(typeParams)),
-		intParams(intTypeParams),
+		intParams(isolate(intTypeParams)),
 		baseType(isolate(baseType)) { }
 
 GenericType* GenericType::createCopyUsing(NodeMapping& mapper) const {
 	return new GenericType(familyName,
 			mapper.map(0, typeParams),
-			mapper.mapParam(intParams),
-			mapper.map(0+typeParams.size(), baseType)
+			mapper.map(0+typeParams.size(), intParams),
+			mapper.map(0+typeParams.size()+intParams.size(), baseType)
 	);
 }
 
@@ -284,7 +284,7 @@ GenericType* GenericType::createCopyUsing(NodeMapping& mapper) const {
 GenericTypePtr GenericType::get(NodeManager& manager,
 			const string& name,
 			const vector<TypePtr>& typeParams,
-			const vector<IntTypeParam>& intTypeParams,
+			const vector<IntTypeParamPtr>& intTypeParams,
 			const TypePtr& baseType) {
 
 	// create resulting data element
@@ -294,7 +294,7 @@ GenericTypePtr GenericType::get(NodeManager& manager,
 GenericTypePtr GenericType::getFromID(NodeManager& manager,
 			const IdentifierPtr& name,
 			const vector<TypePtr>& typeParams,
-			const vector<IntTypeParam>& intTypeParams,
+			const vector<IntTypeParamPtr>& intTypeParams,
 			const TypePtr& baseType) {
 
 	// create result using alternative get
@@ -309,6 +309,7 @@ GenericTypePtr GenericType::getFromID(NodeManager& manager,
 Node::OptionChildList GenericType::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	std::copy(typeParams.cbegin(), typeParams.cend(), back_inserter(*res));
+	std::copy(intParams.cbegin(), intParams.cend(), back_inserter(*res));
 	if (baseType) {
 		res->push_back(baseType);
 	}
@@ -327,7 +328,7 @@ std::ostream& GenericType::printTypeTo(std::ostream& out) const {
 		if (!typeParams.empty() && !intParams.empty()) {
 			out << ',';
 		}
-		out << join(",", intParams);
+		out << join(",", intParams, print<deref<IntTypeParamPtr>>());
 		out << '>';
 	}
 	return out;
@@ -342,7 +343,7 @@ bool GenericType::equalsType(const Type& type) const {
 	res = res && intParams.size() == other.intParams.size();
 	res = res && ((!baseType && !other.baseType) || (baseType && other.baseType && *baseType==*other.baseType));
 	res = res && ::equals(typeParams, other.typeParams, equal_target<TypePtr>());
-	res = res && ::equals(intParams, other.intParams);
+	res = res && ::equals(intParams, other.intParams, equal_target<IntTypeParamPtr>());
 	return  res;
 }
 
@@ -636,42 +637,46 @@ UnionType* UnionType::createCopyUsing(NodeMapping& mapper) const {
 // ------------------------------------ Single Element Type ---------------------------
 
 SingleElementType::SingleElementType(NodeType nodeType, std::size_t hashSeed, const string& name,
-		const TypePtr& elementType, const vector<IntTypeParam>& intTypeParams) :
+		const TypePtr& elementType, const vector<IntTypeParamPtr>& intTypeParams) :
 	GenericType(nodeType, hashSeed, name, toVector(elementType), intTypeParams) {};
 
 
 // ------------------------------------ Array Type ---------------------------
 
-ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParam& dim) :
+ArrayType::ArrayType(const TypePtr& elementType, const IntTypeParamPtr& dim) :
 	SingleElementType(NT_ArrayType, HS_ArrayType, "array", elementType, toVector(dim)) {}
 
 ArrayType* ArrayType::createCopyUsing(NodeMapping& mapper) const {
-	return new ArrayType(mapper.map(0, getElementType()), mapper.mapParam(getDimension()));
+	return new ArrayType(mapper.map(0, getElementType()), mapper.map(1, getDimension()));
 }
 
-ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim) {
+ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType) {
+	return manager.get(ArrayType(elementType, ConcreteIntTypeParam::get(manager, 1)));
+}
+
+ArrayTypePtr ArrayType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& dim) {
 	return manager.get(ArrayType(elementType, dim));
 }
 
-const IntTypeParam ArrayType::getDimension() const {
+const IntTypeParamPtr& ArrayType::getDimension() const {
 	return getIntTypeParameter()[0];
 }
 
 
 // ------------------------------------ Vector Type ---------------------------
 
-VectorType::VectorType(const TypePtr& elementType, const IntTypeParam& size) :
+VectorType::VectorType(const TypePtr& elementType, const IntTypeParamPtr& size) :
 	SingleElementType(NT_VectorType, HS_VectorType, "vector", elementType, toVector(size)) {}
 
 VectorType* VectorType::createCopyUsing(NodeMapping& mapper) const {
-	return new VectorType(mapper.map(0, getElementType()), mapper.mapParam(getSize()));
+	return new VectorType(mapper.map(0, getElementType()), mapper.map(1, getSize()));
 }
 
-VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
+VectorTypePtr VectorType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& size) {
 	return manager.get(VectorType(elementType, size));
 }
 
-const IntTypeParam VectorType::getSize() const {
+const IntTypeParamPtr& VectorType::getSize() const {
 	return getIntTypeParameter()[0];
 }
 
@@ -691,17 +696,17 @@ RefType* RefType::createCopyUsing(NodeMapping& mapper) const {
 
 // ------------------------------------ Channel Type ---------------------------
 
-ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParam& size) :
+ChannelType::ChannelType(const TypePtr& elementType, const IntTypeParamPtr& size) :
 	SingleElementType(NT_ChannelType, HS_ChannelType, "channel", elementType, toVector(size)) {}
 
 ChannelType* ChannelType::createCopyUsing(NodeMapping& mapper) const {
-	return new ChannelType(mapper.map(0, getElementType()), mapper.mapParam(getSize()));
+	return new ChannelType(mapper.map(0, getElementType()), mapper.map(1, getSize()));
 }
 
-ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size) {
+ChannelTypePtr ChannelType::get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& size) {
 	return manager.get(ChannelType(elementType, size));
 }
 
-const IntTypeParam ChannelType::getSize() const {
+const IntTypeParamPtr& ChannelType::getSize() const {
 	return getIntTypeParameter()[0];
 }

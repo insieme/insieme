@@ -38,7 +38,6 @@
 
 #include <string>
 
-#include "insieme/core/int_type_param.h"
 #include <boost/utility.hpp>
 
 namespace insieme {
@@ -56,6 +55,8 @@ class Literal;
 typedef Pointer<const Literal> LiteralPtr;
 class VectorType;
 typedef Pointer<const VectorType> VectorTypePtr;
+class IntTypeParam;
+typedef Pointer<const IntTypeParam> IntTypeParamPtr;
 
 class Node;
 typedef Pointer<const Node> NodePtr;
@@ -64,6 +65,8 @@ typedef Pointer<const Statement> StatementPtr;
 
 
 namespace lang {
+
+using std::string;
 
 class LiteralNotFoundException : std::exception {
 	string msg;
@@ -120,7 +123,7 @@ public:
 	bool isNoOp(const NodePtr& p) const;
 
 	// a factory method for intTypeParam literals
-	LiteralPtr getIntTypeParamLiteral(IntTypeParam param) const;
+	LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
 
 	// a factory method for a type literal
 	LiteralPtr getTypeLiteral(const TypePtr& type) const;

@@ -80,7 +80,7 @@ VariablePtr VariableTable::get(const TypePtr& typ, const IdentifierPtr& id) {
     return newVar;
 }
 
-VariablePtr VariableTable::lookup(const Identifier& id) {
+VariablePtr VariableTable::lookup(const IdentifierPtr& id) {
     auto entry = table.find(id);
 
     if(entry == table.end()) {

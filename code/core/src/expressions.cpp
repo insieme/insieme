@@ -233,12 +233,14 @@ VectorExprPtr VectorExpr::get(NodeManager& manager, const vector<ExpressionPtr>&
 		elementType = expressions[0]->getType();
 	}
 
-	VectorTypePtr resultType = VectorType::get(manager, elementType, IntTypeParam::getConcreteIntParam(expressions.size()));
+	VectorTypePtr resultType = VectorType::get(manager, elementType, ConcreteIntTypeParam::get(manager, expressions.size()));
 	return get(manager, resultType, expressions);
 }
 
 VectorExprPtr VectorExpr::get(NodeManager& manager, const VectorTypePtr& type, const vector<ExpressionPtr>& expressions) {
-	assert (type->getSize().getType() == IntTypeParam::CONCRETE && type->getSize().getValue() == expressions.size() && "Invalid vector type specified!");
+	assert (type->getSize()->getNodeType() == NT_ConcreteIntTypeParam
+			&& static_pointer_cast<const ConcreteIntTypeParam>(type->getSize())->getValue() == expressions.size()
+			&& "Invalid vector type specified!");
 	return manager.get(VectorExpr(type, expressions));
 }
 

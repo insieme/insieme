@@ -209,7 +209,7 @@ public:
 		// }
 
 		core::TypePtr&& retTy =
-				convFact.builder.vectorType( elemTy, core::IntTypeParam::getConcreteIntParam(arrSize) );
+				convFact.builder.vectorType( elemTy, core::ConcreteIntTypeParam::get(convFact.mgr, arrSize) );
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -372,7 +372,7 @@ public:
 
         // get the number of elements
         size_t num = vecTy->getNumElements();
-        core::IntTypeParam numElem = core::IntTypeParam::getConcreteIntParam(num);
+        core::IntTypeParamPtr numElem = core::ConcreteIntTypeParam::get(convFact.mgr, num);
 
         //note: members of OpenCL vectors are never refs
         return convFact.builder.vectorType( subType, numElem);

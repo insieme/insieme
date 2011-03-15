@@ -202,7 +202,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	recVisitor.visit(program);
 	EXPECT_EQ ( 1, visitor.counter );
 
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector(IntTypeParam::getVariableIntParam('p')), type);
+	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')), type);
 
 	visitor.reset();
 	visitor.visit(type2);
@@ -210,7 +210,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	visitor.reset();
 	recVisitor.visit(type2);
-	EXPECT_EQ ( 4, visitor.counter );
+	EXPECT_EQ ( 5, visitor.counter );
 
 	IfStmtPtr ifStmt = IfStmt::get(manager,
 		Literal::get(manager, type, "12"),

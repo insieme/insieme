@@ -66,7 +66,7 @@ class VariableTable {
 public:
     VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
 
-    VariablePtr lookup(const Identifier& id);
+    VariablePtr lookup(const IdentifierPtr& id);
     VariablePtr get(const TypePtr& typ, const IdentifierPtr& id);
 };
 

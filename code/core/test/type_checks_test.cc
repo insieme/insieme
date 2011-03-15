@@ -50,9 +50,10 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 
 TEST(CallExprTypeCheck, Basic) {
 	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
 
 	// OK ... create a function literal
-	TypePtr type = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getVariableIntParam('a')));
+	TypePtr type = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
 
 	// ... define some types
 	TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
@@ -72,7 +73,7 @@ TEST(CallExprTypeCheck, Basic) {
 	LiteralPtr x = builder.literal(type, "1");
 	EXPECT_EQ("1", toString(*x));
 
-	TypePtr concreteType = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(4)));
+	TypePtr concreteType = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 4)));
 	LiteralPtr y = builder.literal(concreteType, "2");
 	EXPECT_EQ("2", toString(*y));
 
@@ -122,7 +123,7 @@ TEST(CallExprTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 
 	// invalid argument types
-	TypePtr concreteType2 = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParam>(IntTypeParam::getConcreteIntParam(2)));
+	TypePtr concreteType2 = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 2)));
 	LiteralPtr z = builder.literal(concreteType2, "3");
 	EXPECT_EQ("3", toString(*z));
 
@@ -419,14 +420,14 @@ TEST(KeywordCheck, Basic) {
 	// OK ... create correct and wrong instances
 
 	TypePtr element = builder.genericType("A");
-	IntTypeParam param = IntTypeParam::getConcreteIntParam(8);
+	IntTypeParamPtr param = builder.concreteIntTypeParam(8);
 
 	CheckPtr typeCheck = make_check<KeywordCheck>();
 
 	// test vector
 	{
 		TypePtr ok = builder.vectorType(element, param);
-		TypePtr err = builder.genericType("vector", toVector<TypePtr>(element), toVector<IntTypeParam>(param));
+		TypePtr err = builder.genericType("vector", toVector<TypePtr>(element), toVector<IntTypeParamPtr>(param));
 
 		EXPECT_FALSE(*ok == *err);
 
@@ -439,7 +440,7 @@ TEST(KeywordCheck, Basic) {
 	// test array
 	{
 		TypePtr ok = builder.arrayType(element, param);
-		TypePtr err = builder.genericType("array", toVector<TypePtr>(element), toVector<IntTypeParam>(param));
+		TypePtr err = builder.genericType("array", toVector<TypePtr>(element), toVector<IntTypeParamPtr>(param));
 
 		EXPECT_FALSE(*ok == *err);
 
@@ -463,7 +464,7 @@ TEST(KeywordCheck, Basic) {
 	// test channel
 	{
 		TypePtr ok = builder.channelType(element, param);
-		TypePtr err = builder.genericType("channel", toVector<TypePtr>(element), toVector<IntTypeParam>(param));
+		TypePtr err = builder.genericType("channel", toVector<TypePtr>(element), toVector<IntTypeParamPtr>(param));
 
 		EXPECT_FALSE(*ok == *err);
 

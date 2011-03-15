@@ -128,6 +128,8 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
+	// TODO: handle basic types using a map
+
 	// check some primitive types
 	if(basic.isUnit(ptr)) {
 		return toEntry("void");
@@ -135,12 +137,14 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	if(basic.isInt(ptr)) {
 		string qualifier = basic.isUnsignedInt(ptr) ? "unsigned " : "";
 		auto intParm = ptr->getIntTypeParameter().front();
-		if(intParm.isConcrete()) switch(intParm.getValue()) {
-			case 1: return toEntry(qualifier + "char");
-			case 2: return toEntry(qualifier + "short");
-			case 4: return toEntry(qualifier + "int");
-			case 8: return toEntry(qualifier + "long"); // long long ?
-			default: return toEntry(ptr->toString());
+		if(intParm->getNodeType() == NT_ConcreteIntTypeParam) {
+			switch(static_pointer_cast<const ConcreteIntTypeParam>(intParm)->getValue()) {
+				case 1: return toEntry(qualifier + "char");
+				case 2: return toEntry(qualifier + "short");
+				case 4: return toEntry(qualifier + "int");
+				case 8: return toEntry(qualifier + "long"); // long long ?
+				default: return toEntry(ptr->toString());
+			}
 		}
 		// TODO Warn?
 		return toEntry(ptr->toString());
@@ -150,11 +154,13 @@ TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	}
 	if(basic.isReal(ptr)) {
 		auto intParm = ptr->getIntTypeParameter().front();
-		if(intParm.isConcrete()) switch(intParm.getValue()) {
-			case 4: return toEntry("float");
-			case 8: return toEntry("double");
-			case 16: return toEntry("long double");
-			default: return toEntry(ptr->toString());
+		if(intParm->getNodeType() == NT_ConcreteIntTypeParam) {
+			switch(static_pointer_cast<const ConcreteIntTypeParam>(intParm)->getValue()) {
+				case 4: return toEntry("float");
+				case 8: return toEntry("double");
+				case 16: return toEntry("long double");
+				default: return toEntry(ptr->toString());
+			}
 		}
 		// TODO Warn?
 		return toEntry(ptr->toString());
@@ -353,11 +359,11 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 		ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
 
 		// check type of dimension
-		IntTypeParam dim = arrayType->getDimension();
-		if (dim.getType() != IntTypeParam::CONCRETE) {
+		IntTypeParamPtr dim = arrayType->getDimension();
+		if (dim->getNodeType() != NT_ConcreteIntTypeParam) {
 			return toEntry("[[ Unsupported generic array types ]]");
 		}
-		arrayCount += dim.getValue();
+		arrayCount += static_pointer_cast<const ConcreteIntTypeParam>(dim)->getValue();
 
 		type = arrayType->getElementType();
 		kind = type->getNodeType();
@@ -396,11 +402,11 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 			ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
 
 			// check type of dimension
-			IntTypeParam dim = arrayType->getDimension();
-			if (dim.getType() != IntTypeParam::CONCRETE) {
+			IntTypeParamPtr dim = arrayType->getDimension();
+			if (dim->getNodeType() != NT_ConcreteIntTypeParam) {
 				return toEntry("[[ Unsupported generic array types ]]");
 			}
-			arrayCount += dim.getValue();
+			arrayCount += static_pointer_cast<const ConcreteIntTypeParam>(dim)->getValue();
 
 			type = arrayType->getElementType();
 			kind = type->getNodeType();

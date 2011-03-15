@@ -45,7 +45,6 @@
 
 #include "insieme/core/annotation.h"
 #include "insieme/core/ast_pointer.h"
-#include "insieme/core/int_type_param.h"
 
 #include "insieme/core/lang/basic.h"
 
@@ -81,6 +80,7 @@ typedef utils::set::PointerSet<NodePtr> NodeSet;
 typedef utils::set::PointerSet<StatementPtr> StatementSet;
 typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
 typedef utils::set::PointerSet<TypePtr> TypeSet;
+typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
 
 /**
  * Defines an enumeration containing an entry for every node type. This
@@ -149,12 +149,6 @@ template<typename T> Pointer<T> clonePtr(NodeManager& manager, const Pointer<T>&
  */
 class NodeMapping {
 
-	/**
-	 * A flag indicating whether this node mapping is manipulating int type parameter. By default,
-	 * this flag will be set to false by the constructor of this class.
-	 */
-	const bool manipulatesIntTypeParameter;
-
 protected:
 
 	/**
@@ -170,34 +164,9 @@ protected:
 public:
 
 	/**
-	 * A constructor for this class.
-	 *
-	 * @param manipulatesIntTypeParameter should be set to true if this mapping is manipulating int type parameter.
-	 */
-	NodeMapping(bool manipulatesIntTypeParameter = false) : manipulatesIntTypeParameter(manipulatesIntTypeParameter) {};
-
-	/**
 	 * A virtual destructor of the mapping for a proper cleanup.
 	 */
 	virtual ~NodeMapping() { };
-
-	/**
-	 * Requests to map the given integer type parameter to another element.
-	 */
-	virtual IntTypeParam mapParam(const IntTypeParam& param);
-
-	/**
-	 * Requests to map the given vector if integer type parameters to the corresponding
-	 * int type parameters assigned by this mapping.
-	 */
-	virtual vector<IntTypeParam> mapParam(const vector<IntTypeParam>& list);
-
-	/**
-	 * Obtains whether this mapping is manipulating int type parameter or not.
-	 */
-	bool isManipulatingIntTypeParameter() const {
-		return manipulatesIntTypeParameter;
-	}
 
 	/**
 	 * A generic version of the map operation handling pointer types properly.

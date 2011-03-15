@@ -193,8 +193,8 @@ void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 	std::ostringstream ss("");
 	// special handling for integer type parameters
 	if(!genTy->getIntTypeParameter().empty()) {
-		ss << "<" << join(", ", genTy->getIntTypeParameter(), [ ](std::ostream& out, const IntTypeParam& cur) {
-			out << (cur.isConcrete() ? insieme::utils::numeric_cast<std::string>(cur.getValue()) : ""+cur.getSymbol());
+		ss << "<" << join(", ", genTy->getIntTypeParameter(), [ ](std::ostream& out, const IntTypeParamPtr& cur) {
+			out << toString(*cur);
 		}) << ">";
 	}
 	TypeNode genNode(NODE_ID(genTy), "\"" + genTy->getFamilyName() + " " + ss.str() + "\"");
