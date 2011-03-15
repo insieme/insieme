@@ -116,7 +116,6 @@ ExpressionGrammarPart::ExpressionGrammarPart(NodeManager& nodeMan, ExpressionGra
     auto basicRef = ph::ref(nodeMan.basic);
 
     auto intTypeRef = ph::cref(nodeMan.basic.getInt4());
-std::cout << "ExprG: " << exprG << std::endl;
     // RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 
     // terminals, no skip parser
@@ -159,8 +158,8 @@ std::cout << "ExprG: " << exprG << std::endl;
 
     // --------------------------------------------------------------------------------------
     captureInitExpr =
-        ( qi::lit("[#") >> +( exprG->expressionRule                 [ ph::push_back(qi::_a, qi::_1) ]
-          % ',') >> qi::lit("#]") >> exprG->expressionRule)         [ qi::_val = ph::bind(&CaptureInitExpr::get, nManRef, qi::_2, qi::_a ) ];
+        ( qi::lit("[") >> +( exprG->expressionRule                 [ ph::push_back(qi::_a, qi::_1) ]
+          % ',') >> qi::lit("]") >> exprG->expressionRule)         [ qi::_val = ph::bind(&CaptureInitExpr::get, nManRef, qi::_2, qi::_a ) ];
 
     tupleExpr =
         ( qi::lit("tuple[") >> -(exprG->expressionRule              [ ph::push_back(qi::_a, qi::_1) ]

@@ -82,7 +82,6 @@ CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, Exp
 
 
 LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params, const StatementPtr& body ) {
-//std::cout << "BODY: " << body << std::endl;
     // build a stmtExpr bc the builder cannot at the moment
     ASTBuilder build(nodeMan);
 //    vector<StatementPtr> stmts;
@@ -103,19 +102,17 @@ LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const Va
 
 JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
         const GuardedStmts guardedStmts, const vector<DeclarationStmtPtr>& localDecls) {
-std::cout << "started jobhelp\n";
 
     if(!dynamic_pointer_cast<const LambdaExpr>(defaultStmt) && !dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)) {
         throw ParseException();
     }
 
-std::cout << "fi\n";
     for_each(guardedStmts, [&](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
         //TODO add check for guard
         if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const CaptureInitExpr>(guardedStmt.second))
             throw ParseException();
     });
-std::cout << "looped\n";
+
     return JobExpr::get(manager, threadNumRange, defaultStmt, guardedStmts, localDecls);
 }
 
@@ -298,7 +295,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 //    BOOST_SPIRIT_DEBUG_NODE(captureInitExpr);
 //    BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
 //    BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
-    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
+//    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
 //    BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
 //    BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
 //    BOOST_SPIRIT_DEBUG_NODE(structExpr);

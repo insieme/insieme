@@ -118,14 +118,13 @@ TEST(IRParser, ExpressionTests) {
 	ASTBuilder builder(manager);
 
 	// literal
-std::cout << "hallo\n";
+    EXPECT_EQ(builder.intLit(42), parser.parseExpression("42"));
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 
 	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var"));
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
-std::cout << "hallo0\n";
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
 
 	// merge all
@@ -146,16 +145,14 @@ std::cout << "hallo0\n";
     EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
             toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
-    std::cout << "hallo1\n";
 
     // captureInitExpr
-    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[# uint<2>:a, real<4>:b #] fun [uint<2>, real<4>]()->int<4>:\
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
 
 	// jobExpr
     vector<std::pair<ExpressionPtr, ExpressionPtr> > guardedStmts;
-    std::cout << "hallo2\n";
 
     auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \
             default: [ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
@@ -175,7 +172,6 @@ std::cout << "hallo0\n";
 	// vectorExpr
 	auto vectorExpr = builder.vectorExpr(toVector<ExpressionPtr>(builder.intLit(0), builder.intLit(3)));
     EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
-    std::cout << "hallo3\n";
 
     // structExpr
     IdentifierPtr first = Identifier::get(manager, "first");
@@ -285,8 +281,7 @@ TEST(IRParser, StatementTests) {
     EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0; } </ms>"));
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
-    std::cout << "aösf\n";
-    std::cout << printer::PrettyPrinter(tmp) << std::endl;
+//    std::cout << printer::PrettyPrinter(tmp) << std::endl;
 
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("\
@@ -299,7 +294,7 @@ TEST(IRParser, StatementTests) {
            } }\
         } ");
 //(op<ref.assign>((op<array.ref.elem.1D>(result, int<4>:i)), fct((op<vector.subscript>(a,int<4>:i)), (op<vector.subscript>(b,int<4>:i)))) )
-    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
+//    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 
 }
 
