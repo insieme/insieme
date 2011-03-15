@@ -382,7 +382,7 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 		vectorCount++;
 
 		VectorTypePtr vectorType = static_pointer_cast<const VectorType>(type);
-		postfix = postfix + "[" + toString(vectorType->getSize()) + "]";
+		postfix = postfix + "[" + toString(*vectorType->getSize()) + "]";
 
 		type = vectorType->getElementType();
 		kind = type->getNodeType();
