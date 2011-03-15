@@ -42,32 +42,22 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_work_item_id);
+IRT_MAKE_ID_TYPE(irt_data_view);
 
-typedef struct _irt_work_item_range {
+typedef struct _irt_data_view_range {
 	int64 begin, end, step;
-} irt_work_item_range;
+} irt_data_view_range;
 
-typedef struct _irt_work_item {
-	irt_work_item_id id;
-	irt_work_item_range range;
-	irt_implementation_id impl_id;
-	irt_work_group_id group;
-	irt_work_group_id* additional_groups;
-	unsigned priority; // ?
-} irt_work_item;
+typedef struct _irt_data_view {
+	irt_data_view_id id;
+	irt_data_item_id data_item;
+	irt_data_view_range range;
+	void* data;
+ } irt_data_view;
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_wi_create(irt_work_item** out_wi);
-irt_errcode irt_wi_destroy(irt_work_item* wi);
+irt_errcode irt_dv_create(/* ... */);
+irt_errcode irt_dv_destroy(irt_data_view* di);
 
-irt_errcode irt_wi_enqueue(irt_work_item* wi);
-irt_errcode irt_wi_enqueue_remote(irt_work_item* wi, irt_worker* worker);
-
-irt_errcode irt_wi_yield();
-
-irt_errcode irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
-irt_errcode irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);
-irt_errcode irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis);

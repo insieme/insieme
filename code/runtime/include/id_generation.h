@@ -44,5 +44,6 @@ typedef union _##__type##_id {
 		uint16 thread;
 		uint32 index;
 	};
+	__type* cached;
 } ##__type##_id;
 
