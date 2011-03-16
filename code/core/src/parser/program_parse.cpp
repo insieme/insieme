@@ -75,7 +75,7 @@ ProgramGrammar::ProgramGrammar(NodeManager& nodeMan) : ProgramGrammar::base_type
         program                                                    [ qi::_val = ph::construct<ProgramPtr>(qi::_1) ];
 
 
-    BOOST_SPIRIT_DEBUG_NODE(programRule);
+//    BOOST_SPIRIT_DEBUG_NODE(programRule);
 }
 
 ProgramGrammar::~ProgramGrammar() {
