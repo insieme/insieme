@@ -66,7 +66,7 @@ TEST(IRParser, TypeTests) {
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
-	auto intType = builder.genericType("int", vector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
+	auto intType = builder.genericType("int", vector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
 	EXPECT_EQ(intType, parser.parseType("int<#a>"));
 	EXPECT_EQ(intType, parser.parseType("(|int<#a>|)"));
 
@@ -82,14 +82,14 @@ TEST(IRParser, TypeTests) {
 	auto arrayType = builder.arrayType(intType);
 	EXPECT_EQ(arrayType, parser.parseType("array<int<#a>, 1>"));
 
-	auto vectorType = builder.vectorType(intType, IntTypeParam::getConcreteIntParam(10));
+	auto vectorType = builder.vectorType(intType, ConcreteIntTypeParam::get(manager, 10));
 	EXPECT_EQ(vectorType, parser.parseType("vector<int<#a>, 10>"));
 
 	auto refType = builder.refType(intType);
 	EXPECT_EQ(refType, parser.parseType("ref<int<#a>>"));
 
 	auto multiParamType = builder.genericType("multi", toVector<TypePtr>(builder.typeVariable("tvar"), intType, intPairType), 
-		toVector(IntTypeParam::getConcreteIntParam(2), IntTypeParam::getInfiniteIntParam(), IntTypeParam::getVariableIntParam('v')));
+		toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 2), InfiniteIntTypeParam::get(manager), VariableIntTypeParam::get(manager, 'v')));
 	EXPECT_EQ(multiParamType, parser.parseType("multi<'tvar,int<#a>,(int<#a>,int<#a>),2,#inf,#v>"));
 
 	EXPECT_THROW(parser.parseType("fail1<#1,'alpha>"), ParseException);
@@ -101,7 +101,7 @@ TEST(IRParser, TypeTests) {
 	// vector parameter test
 	{
 		TypeVariablePtr var = builder.typeVariable("a");
-		TypePtr vector = builder.vectorType(var, IntTypeParam::getVariableIntParam('l'));
+		TypePtr vector = builder.vectorType(var, VariableIntTypeParam::get(manager, 'l'));
 
 		auto funType = builder.functionType(TypeList(), toVector<TypePtr>(vector, var), var);
 		EXPECT_EQ(funType, parser.parseType("(vector<'a,#l>, 'a)->'a"));

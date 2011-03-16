@@ -122,42 +122,6 @@ TEST(TypeTest, MultipleNodeManager ) {
 }
 
 
-
-
-
-TEST(TypeTest, GenericType_AllConcrete) {
-
-	// create some integer type parameter
-	IntTypeParam var = IntTypeParam::getVariableIntParam('p');
-	IntTypeParam con = IntTypeParam::getConcreteIntParam(12);
-	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
-
-	EXPECT_EQ ( IntTypeParam::VARIABLE, var.getType());
-	EXPECT_EQ ( IntTypeParam::CONCRETE, con.getType());
-
-	// check basic
-	EXPECT_FALSE ( var.isConcrete() );
-	EXPECT_TRUE ( con.isConcrete() );
-	EXPECT_TRUE ( inf.isConcrete() );
-
-	// check vectors if entries
-	vector<IntTypeParam> params;
-	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
-	params.push_back(var);
-	EXPECT_FALSE ( IntTypeParam::allConcrete(params) );
-
-	params.clear();
-	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
-	params.push_back(con);
-	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
-	params.push_back(inf);
-	EXPECT_TRUE ( IntTypeParam::allConcrete(params) );
-	params.push_back(var);
-	EXPECT_FALSE ( IntTypeParam::allConcrete(params) );
-	params.push_back(con);
-	EXPECT_FALSE ( IntTypeParam::allConcrete(params) );
-}
-
 TEST(TypeTest, GenericType) {
 
 	// create a type manager for this test
@@ -165,11 +129,15 @@ TEST(TypeTest, GenericType) {
 
 	// some empty lists (required as arguments)
 	vector<TypePtr> emptyPtr;
-	vector<IntTypeParam> emptyPar;
+	vector<IntTypeParamPtr> emptyPar;
 
 	// create some variable types
 	TypeVariablePtr varA = TypeVariable::get(manager, "alpha");
 	TypeVariablePtr varB = TypeVariable::get(manager, "beta");
+
+	// create some int type parameter
+	IntTypeParamPtr paramA = VariableIntTypeParam::get(manager, 'a');
+	IntTypeParamPtr paramB = ConcreteIntTypeParam::get(manager, 12);
 
 	// create some concrete types
 	GenericTypePtr typeA = GenericType::get(manager, "A");
@@ -180,7 +148,7 @@ TEST(TypeTest, GenericType) {
 	// create complex types
 	GenericTypePtr typeC = GenericType::get(manager, "C", toVector<TypePtr>(varA));
 	EXPECT_EQ ( "C<'alpha>" , toString(*typeC) );
-	GenericTypePtr typeD = GenericType::get(manager, "D", emptyPtr, toVector(IntTypeParam::getVariableIntParam('a')));
+	GenericTypePtr typeD = GenericType::get(manager, "D", emptyPtr, toVector(paramA));
 	EXPECT_EQ ( "D<#a>" , toString(*typeD) );
 
 	// create complex type with multiple parameter
@@ -194,7 +162,7 @@ TEST(TypeTest, GenericType) {
 	GenericTypePtr typeF = GenericType::get(manager, "F", emptyPtr, emptyPar, typeA );
 	EXPECT_EQ ( "F" , toString(*typeF) );
 
-	GenericTypePtr typeG = GenericType::get(manager, "G", typeListA, toVector(IntTypeParam::getConcreteIntParam(12)), typeA );
+	GenericTypePtr typeG = GenericType::get(manager, "G", typeListA, toVector(paramB), typeA );
 	EXPECT_EQ ( "G<A,B,12>" , toString(*typeG) );
 
 	// perform general test cases
@@ -209,7 +177,7 @@ TEST(TypeTest, GenericType) {
 		basicTypeTests(typeC, false, toVector<NodePtr>(varA));
 	}{
 		SCOPED_TRACE ( "typeD" );
-		basicTypeTests(typeD, false);
+		basicTypeTests(typeD, false, toVector<NodePtr>(paramA));
 	}{
 		SCOPED_TRACE ( "typeE" );
 		basicTypeTests(typeE, true, toList(typeListA));
@@ -219,6 +187,7 @@ TEST(TypeTest, GenericType) {
 	}{
 		SCOPED_TRACE ( "typeG" );
 		Node::ChildList list = toList(typeListA);
+		list.push_back(paramB);
 		list.push_back(typeA);
 		basicTypeTests(typeG, true, list);
 	}
@@ -524,8 +493,10 @@ TEST(TypeTest, ArrayType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
+	IntTypeParamPtr param1 = ConcreteIntTypeParam::get(manager, 1);
+	IntTypeParamPtr param3 = ConcreteIntTypeParam::get(manager, 3);
 	ArrayTypePtr arrayTypeA = ArrayType::get(manager, elementTypeA);
-	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
+	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, param3);
 
 	// check names
 	EXPECT_EQ ( "array<A,1>", toString(*arrayTypeA) );
@@ -536,12 +507,14 @@ TEST(TypeTest, ArrayType) {
 	EXPECT_EQ ( elementTypeB, arrayTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( static_cast<unsigned>(1), arrayTypeA->getDimension().getValue());
-	EXPECT_EQ ( static_cast<unsigned>(3), arrayTypeB->getDimension().getValue());
+	ASSERT_TRUE ( arrayTypeA->getDimension()->getNodeType()==NT_ConcreteIntTypeParam);
+	ASSERT_TRUE ( arrayTypeB->getDimension()->getNodeType()==NT_ConcreteIntTypeParam);
+	EXPECT_EQ ( static_cast<unsigned>(1), static_pointer_cast<const ConcreteIntTypeParam>(arrayTypeA->getDimension())->getValue());
+	EXPECT_EQ ( static_cast<unsigned>(3), static_pointer_cast<const ConcreteIntTypeParam>(arrayTypeB->getDimension())->getValue());
 
 	// check remaining type properties
-	basicTypeTests(arrayTypeA, true, toList(toVector(elementTypeA)));
-	basicTypeTests(arrayTypeB, false, toList(toVector(elementTypeB)));
+	basicTypeTests(arrayTypeA, true, toList(toVector<NodePtr>(elementTypeA, param1)));
+	basicTypeTests(arrayTypeB, false, toList(toVector<NodePtr>(elementTypeB, param3)));
 }
 
 TEST(TypeTest, VectorType) {
@@ -552,8 +525,10 @@ TEST(TypeTest, VectorType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
-	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, IntTypeParam::getConcreteIntParam(1));
-	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
+	IntTypeParamPtr param1 = ConcreteIntTypeParam::get(manager, 1);
+	IntTypeParamPtr param3 = ConcreteIntTypeParam::get(manager, 3);
+	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, param1);
+	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, param3);
 
 	// check names
 	EXPECT_EQ ( "vector<A,1>", toString(*vectorTypeA) );
@@ -564,12 +539,14 @@ TEST(TypeTest, VectorType) {
 	EXPECT_EQ ( elementTypeB, vectorTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( static_cast<unsigned>(1), vectorTypeA->getSize().getValue());
-	EXPECT_EQ ( static_cast<unsigned>(3), vectorTypeB->getSize().getValue());
+	ASSERT_TRUE ( vectorTypeA->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
+	ASSERT_TRUE ( vectorTypeB->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
+	EXPECT_EQ ( static_cast<unsigned>(1), static_pointer_cast<const ConcreteIntTypeParam>(vectorTypeA->getSize())->getValue());
+	EXPECT_EQ ( static_cast<unsigned>(3), static_pointer_cast<const ConcreteIntTypeParam>(vectorTypeB->getSize())->getValue());
 
 	// check remaining type properties
-	basicTypeTests(vectorTypeA, true, toList(toVector(elementTypeA)));
-	basicTypeTests(vectorTypeB, false, toList(toVector(elementTypeB)));
+	basicTypeTests(vectorTypeA, true, toList(toVector<NodePtr>(elementTypeA, param1)));
+	basicTypeTests(vectorTypeB, false, toList(toVector<NodePtr>(elementTypeB, param3)));
 }
 
 TEST(TypeTest, ChannelType) {
@@ -580,8 +557,10 @@ TEST(TypeTest, ChannelType) {
 	TypePtr elementTypeB = TypeVariable::get(manager,"a");
 
 	// obtain array types
-	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, IntTypeParam::getConcreteIntParam(1));
-	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, IntTypeParam::getConcreteIntParam(3));
+	IntTypeParamPtr param1 = ConcreteIntTypeParam::get(manager, 1);
+	IntTypeParamPtr param3 = ConcreteIntTypeParam::get(manager, 3);
+	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, param1);
+	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, param3);
 
 	// check names
 	EXPECT_EQ ( "channel<A,1>", toString(*channelTypeA) );
@@ -592,12 +571,14 @@ TEST(TypeTest, ChannelType) {
 	EXPECT_EQ ( elementTypeB, channelTypeB->getElementType() );
 
 	// check dimensions
-	EXPECT_EQ ( static_cast<unsigned>(1), channelTypeA->getSize().getValue());
-	EXPECT_EQ ( static_cast<unsigned>(3), channelTypeB->getSize().getValue());
+	ASSERT_TRUE ( channelTypeA->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
+	ASSERT_TRUE ( channelTypeB->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
+	EXPECT_EQ ( static_cast<unsigned>(1), static_pointer_cast<const ConcreteIntTypeParam>(channelTypeA->getSize())->getValue());
+	EXPECT_EQ ( static_cast<unsigned>(3), static_pointer_cast<const ConcreteIntTypeParam>(channelTypeB->getSize())->getValue());
 
 	// check remaining type properties
-	basicTypeTests(channelTypeA, true, toList(toVector(elementTypeA)));
-	basicTypeTests(channelTypeB, false, toList(toVector(elementTypeB)));
+	basicTypeTests(channelTypeA, true, toList(toVector<NodePtr>(elementTypeA, param1)));
+	basicTypeTests(channelTypeB, false, toList(toVector<NodePtr>(elementTypeB, param3)));
 }
 
 TEST(TypeTest, RefType) {
@@ -637,42 +618,40 @@ TEST(TypeTest, BuiltInCheck) {
 
 
 TEST(TypeTest, IntTypeParam) {
-#ifndef WIN32
-	// test size limitation
-	EXPECT_LE (sizeof(IntTypeParam), 2*(std::size_t) sizeof(int*));
-#endif
+
+	NodeManager manager;
 
 	// test toString format
-	IntTypeParam p12 = IntTypeParam::getConcreteIntParam(12);
-	EXPECT_EQ (p12.toString(), "12");
+	ConcreteIntTypeParamPtr p12 = ConcreteIntTypeParam::get(manager, 12);
+	EXPECT_EQ (toString(*p12), "12");
 
-	IntTypeParam inf = IntTypeParam::getInfiniteIntParam();
-	EXPECT_EQ (inf.toString(), "Inf");
+	InfiniteIntTypeParamPtr inf = InfiniteIntTypeParam::get(manager);
+	EXPECT_EQ (toString(*inf), "Inf");
 
-	IntTypeParam pvp = IntTypeParam::getVariableIntParam('p');
-	EXPECT_EQ (pvp.toString(), "#p");
-
-	// test isConcrete()
-	EXPECT_EQ (p12.isConcrete(), true);
-	EXPECT_EQ (inf.isConcrete(), true);
-	EXPECT_EQ (pvp.isConcrete(), false);
+	VariableIntTypeParamPtr pvp = VariableIntTypeParam::get(manager, 'p');
+	EXPECT_EQ (toString(*pvp), "#p");
 
 	// test == operator
-	IntTypeParam params[] = {p12, inf, pvp};
+	IntTypeParamPtr params[] = {p12, inf, pvp};
 	for (int i=0; i<3; i++) {
 		for (int j=0; j<3; j++) {
 			EXPECT_EQ(params[i]==params[j], i==j);
 		}
 	}
 
-	IntTypeParam p12b = IntTypeParam::getConcreteIntParam(12);
+	IntTypeParamPtr p12b = ConcreteIntTypeParam::get(manager, 12);
 	EXPECT_TRUE (p12 == p12b);
 
-	IntTypeParam pvpb = IntTypeParam::getVariableIntParam('p');
+	IntTypeParamPtr pvpb = VariableIntTypeParam::get(manager, 'p');
 	EXPECT_TRUE (pvp == pvpb);
 
-	IntTypeParam infb = IntTypeParam::getInfiniteIntParam();
+	IntTypeParamPtr infb = InfiniteIntTypeParam::get(manager);
 	EXPECT_TRUE (inf == infb);
+
+	// conduct basic node checks
+	basicNodeTests(p12);
+	basicNodeTests(inf);
+	basicNodeTests(pvp);
 }
 
 

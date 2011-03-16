@@ -36,86 +36,106 @@
 
 #include "insieme/core/int_type_param.h"
 
+#include "insieme/utils/hash_utils.h"
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
 
-// -------------------------------- Integer Type Parameter ----------------------------
 
-const IntTypeParam IntTypeParam::ZERO = IntTypeParam::getConcreteIntParam(0);
-const IntTypeParam IntTypeParam::ONE  = IntTypeParam::getConcreteIntParam(1);
-const IntTypeParam IntTypeParam::INF  = IntTypeParam(INFINITE);
+	// ----------------------- Variable Integer Type Parameter ------------------------
 
-bool IntTypeParam::operator==(const IntTypeParam& param) const {
-	// quick check on reference
-	if (this == &param) {
-		return true;
+	VariableIntTypeParam::VariableIntTypeParam(char symbol)
+		: IntTypeParam(NT_VariableIntTypeParam, symbol), symbol(symbol) {}
+
+	VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
+		return manager.get(VariableIntTypeParam(symbol));
 	}
 
-	// different type => different
-	if (type != param.type) {
-		return false;
+	bool VariableIntTypeParam::equals(const Node& other) const {
+		if (this == &other) {
+			return true;
+		}
+
+		if (other.getNodeType() != NT_VariableIntTypeParam) {
+			return false;
+		}
+
+		return symbol == static_cast<const VariableIntTypeParam&>(other).symbol;
 	}
 
-	// check type dependent content
-	switch (type) {
-	case VARIABLE:
-		return symbol == param.symbol;
-	case CONCRETE:
-		return value == param.value;
-	case INFINITE:
-		return true;
-	}
-	return false;
-}
+	bool VariableIntTypeParam::operator<(const IntTypeParam& other) const {
+		// variable int type parameters are smaller than all other parameters
+		if (other.getNodeType() != NT_VariableIntTypeParam) {
+			return false;
+		}
 
-bool IntTypeParam::operator<(const IntTypeParam& param) const {
-	// check type first ...
-	if (type != param.type) {
-		return type < param.type;
+		// compare the symbol
+		return symbol < static_cast<const VariableIntTypeParam&>(other).symbol;
 	}
 
-	// so ... type is the same
-	switch(type) {
-	case INFINITE: return false; /* < infinite is always identical */
-	case VARIABLE: return symbol < param.symbol;
-	case CONCRETE: return value < param.value;
+
+	// ----------------------- Concrete Integer Type Parameter ------------------------
+
+
+	ConcreteIntTypeParam::ConcreteIntTypeParam(std::size_t value)
+		: IntTypeParam(NT_ConcreteIntTypeParam, value), value(value) {}
+
+	ConcreteIntTypeParamPtr ConcreteIntTypeParam::get(NodeManager& manager, std::size_t value) {
+		return manager.get(ConcreteIntTypeParam(value));
 	}
 
-	assert(false && "Illegal object state!");
-	return false;
-}
+	bool ConcreteIntTypeParam::equals(const Node& other) const {
+		if (this == &other) {
+			return true;
+		}
 
-/**
- * Tests whether all of the given integer type parameter are concrete.
- *
- * @param intTypeParams the list of parameters to be tested
- * @return true if all are concrete, false otherwise
- */
-bool IntTypeParam::allConcrete(const vector<IntTypeParam>& intTypeParams) {
-	// just use all-functionality of container utils
-	return all(intTypeParams, [](const IntTypeParam& param) { return param.isConcrete(); });
-}
+		if (other.getNodeType() != NT_ConcreteIntTypeParam) {
+			return false;
+		}
 
-IntTypeParam IntTypeParam::getVariableIntParam(char symbol) {
-	return IntTypeParam(symbol);
-}
+		return value == static_cast<const ConcreteIntTypeParam&>(other).value;
+	}
 
-IntTypeParam IntTypeParam::getConcreteIntParam(std::size_t value) {
-	return IntTypeParam(value);
-}
+	bool ConcreteIntTypeParam::operator<(const IntTypeParam& other) const {
+		// variable int type parameters are smaller than all other parameters
+		if (other.getNodeType() != NT_ConcreteIntTypeParam) {
+			if (other.getNodeType() == NT_InfiniteIntTypeParam) {
+				// it is smaller than an infinite int type param ...
+				return true;
+			}
 
-IntTypeParam IntTypeParam::getInfiniteIntParam() {
-	return IntTypeParam(INFINITE);
-}
+			// compare based on parameters type
+			return getNodeType() < other.getNodeType();
+		}
+
+		// compare the symbol
+		return value < static_cast<const ConcreteIntTypeParam&>(other).value;
+	}
+
+
+	// ----------------------- Infinite Integer Type Parameter ------------------------
+
+	InfiniteIntTypeParam::InfiniteIntTypeParam()
+		: IntTypeParam(NT_InfiniteIntTypeParam, std::numeric_limits<std::size_t>::max()) {}
+
+	InfiniteIntTypeParamPtr InfiniteIntTypeParam::get(NodeManager& manager) {
+		return manager.get(InfiniteIntTypeParam());
+	}
+
+
+	bool InfiniteIntTypeParam::equals(const Node& other) const {
+		if (this == &other) {
+			return true;
+		}
+		return other.getNodeType() == NT_InfiniteIntTypeParam;
+	}
+
+	bool InfiniteIntTypeParam::operator<(const IntTypeParam& other) const {
+			// nothing is larger than infinite
+			return false;
+		}
 
 
 } // end namespace core
 } // end namespace insieme
-
-namespace std {
-	ostream& operator<<(ostream& os, const insieme::core::IntTypeParam& p) {
-		return (os << p.toString());
-	}
-}

@@ -84,7 +84,7 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 		( qi::char_('\'') >> identifier )							[ qi::_val = ph::bind(&TypeVariable::getFromId, nManRef, qi::_2) ];
 
 	intTypeParamLabel = 
-		( qi::char_('#') >> qi::char_ )								[ qi::_val = ph::bind(&IntTypeParam::getVariableIntParam, qi::_2) ];
+		( qi::char_('#') >> qi::char_ )								[ qi::_val = ph::bind(&VariableIntTypeParam::get, nManRef, qi::_2) ];
 
 	// nonterminals, skip parser
 
@@ -93,8 +93,8 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 		| typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
 
 	intTypeParam =
-		qi::uint_													[ qi::_val = ph::bind(&IntTypeParam::getConcreteIntParam, qi::_1) ]
-		| qi::lit("#inf")											[ qi::_val = ph::bind(&IntTypeParam::getInfiniteIntParam) ]
+		qi::uint_													[ qi::_val = ph::bind(&ConcreteIntTypeParam::get, nManRef, qi::_1) ]
+		| qi::lit("#inf")											[ qi::_val = ph::bind(&InfiniteIntTypeParam::get, nManRef) ]
 		| intTypeParamLabel											[ qi::_val = qi::_1 ];
 
 	arrayType =

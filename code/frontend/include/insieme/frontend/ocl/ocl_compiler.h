@@ -88,7 +88,7 @@ public:
     }
 
     static core::VariablePtr get3DvecVar(const core::ASTBuilder& builder) {
-        return builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+        return builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
     }
 
     //default constructor
