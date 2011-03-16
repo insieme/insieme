@@ -97,11 +97,6 @@ LiteralPtr buildCharLiteral(NodeManager& nodeMan, char val) {
     return build.literal(nodeMan.basic.getChar(), toString(val));
 }
 
-LiteralPtr buildDoubleLiteral(NodeManager& nodeMan, double val) {
-    ASTBuilder build(nodeMan);
-    return build.literal(nodeMan.basic.getDouble(), toString(val));
-}
-
 // obsolete
 LiteralPtr buildNat(NodeManager& nodeMan, uint64_t val) {
     ASTBuilder build(nodeMan);

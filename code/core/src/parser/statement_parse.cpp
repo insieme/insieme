@@ -63,8 +63,7 @@ CompoundStmtPtr compoundHelp(NodeManager& nodeMan, Stmts stmts) {
     return CompoundStmt::get(nodeMan, stmts);
 }
 
-ForStmtPtr forHelp(NodeManager& nodeMan, DeclarationStmtPtr loopVar, ExpressionPtr end, ExpressionPtr step, StatementPtr body,
-        ExpressionGrammar* exprG) {
+ForStmtPtr forHelp(NodeManager& nodeMan, DeclarationStmtPtr loopVar, ExpressionPtr end, ExpressionPtr step, StatementPtr body) {
     ASTBuilder builder(nodeMan);
 //    DeclarationStmtPtr loopVar = builder.declarationStmt(exprG->varTab.get(start->getType(), id), start);
     return ForStmt::get(nodeMan, loopVar, body, end, step);
@@ -120,7 +119,7 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
         (qi::lit("for") >> '(' >> declarationStmt /*>> '='
         >> exprG->expressionRule*/ >> qi::lit("..")
         >> exprG->expressionRule >> ':' >> exprG->expressionRule
-        >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&forHelp, nManRef, qi::_1, qi::_2, qi::_3, qi::_4, exprG) ];
+        >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&forHelp, nManRef, qi::_1, qi::_2, qi::_3, qi::_4) ];
 
     ifStmt =
         (qi::lit("if") >> '(' >> exprG->expressionRule >> ')'
