@@ -185,7 +185,7 @@ TEST(CFGBuilder, IfStmt1) {
 	CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(ifStmt);
 
 	// print the graph on standard output
-//	std::cout << *cfg;
+	std::cout << *cfg;
 
 	EXPECT_EQ(static_cast<unsigned>(5), cfg->getSize());
 
@@ -195,9 +195,7 @@ TEST(CFGBuilder, IfStmt1) {
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
 	    ( cfg->getGraph(), entry,
-	    	boost::color_map(boost::get(&CFG::NodeProperty::color, cfg->getGraph())).visitor(
-	    			boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) )
-	    		)
+	    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
 	    );
 
 	// std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
@@ -264,9 +262,7 @@ TEST(CFGBuilder, IfStmt2) {
 	CFG::VertexTy entry = cfg->getEntry();
 	boost::breadth_first_search
 	    ( cfg->getGraph(), entry,
-	    	boost::color_map(boost::get(&CFG::NodeProperty::color, cfg->getGraph())).visitor(
-    			boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) )
-    		)
+	    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
     	);
 
 //	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
@@ -331,9 +327,7 @@ TEST(CFGBuilder, ForStmt) {
 	CFG::VertexTy entry = cfg->getEntry();
 		boost::breadth_first_search
 		    ( cfg->getGraph(), entry,
-		    	boost::color_map(boost::get(&CFG::NodeProperty::color, cfg->getGraph())).visitor(
-	    			boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) )
-	    		)
+		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
 	    	);
 //	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;
@@ -405,9 +399,7 @@ TEST(CFGBuilder, WhileStmt) {
 	CFG::VertexTy entry = cfg->getEntry();
 		boost::breadth_first_search
 		    ( cfg->getGraph(), entry,
-		    	boost::color_map(boost::get(&CFG::NodeProperty::color, cfg->getGraph())).visitor(
-	    			boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) )
-	    		)
+		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
 	    	);
 //	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;
@@ -462,9 +454,7 @@ TEST(CFGBuilder, SwitchStmt) {
 	CFG::VertexTy entry = cfg->getEntry();
 		boost::breadth_first_search
 		    ( cfg->getGraph(), entry,
-		    	boost::color_map(boost::get(&CFG::NodeProperty::color, cfg->getGraph())).visitor(
-	    			boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) )
-	    		)
+		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
 	    	);
 //	std::copy(blocks.begin(), blocks.end(), std::ostream_iterator<int, char>(std::cout, " "));
 //	std::cout << std::endl;

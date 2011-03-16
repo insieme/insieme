@@ -490,16 +490,19 @@ CFGPtr CFG::buildCFG<MultiStmtPerBasicBlock>(const NodePtr& rootNode) {
 }
 
 CFG::VertexTy CFG::addBlock(cfg::Block* block) {
-	CFG::VertexTy&& v = boost::add_vertex(CFG::NodeProperty(block), graph);
+	CFG::VertexTy&& v = boost::add_vertex(graph);
+	CFG::NodePropertyMapTy&& block_map = get(&NodeProperty::block, graph);
 	block->blockId() = v;
-	boost::property_map< CFG::IPControlFlowGraph, size_t CFG::NodeProperty::* >::type&& blockID =
-			get(&CFG::NodeProperty::id, graph);
+	put(block_map, v, block);
+
+	// Set the index appropriately
+	boost::property_map< CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
 	put(blockID, v, currId++);
 	return v;
 }
 
 CFG::~CFG() {
-	boost::graph_traits<IPControlFlowGraph>::vertex_iterator vi, vi_end;
+	boost::graph_traits<ControlFlowGraph>::vertex_iterator vi, vi_end;
 	for (boost::tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
 		const cfg::Block* block = &getBlock(*vi);
 		delete block;
@@ -519,8 +522,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 
 	boost::write_graphviz(out, cfg.graph,
 			CFG::BlockLabelWriter<CFG::ConstNodePropertyMapTy>(node),
-			CFG::EdgeLabelWriter<CFG::ConstEdgePropertyMapTy>(edge), boost::default_writer(),
-			get(&CFG::NodeProperty::id, cfg.graph)
+			CFG::EdgeLabelWriter<CFG::ConstEdgePropertyMapTy>(edge)
 	);
 	return out;
 }
