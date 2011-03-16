@@ -563,11 +563,6 @@ const ExpressionPtr& CallExpr::getArgument(size_t pos) const {
 	return arguments[pos];
 }
 
-// TODO: re-add with proper result type inference (after everybody has switched to alternative)
-//CallExprPtr CallExpr::get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-//	return manager.get(CallExpr(functionExpr, arguments));
-//}
-
 CallExprPtr CallExpr::get(NodeManager& manager, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 	return manager.get(CallExpr(resultType, functionExpr, arguments));
 }

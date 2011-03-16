@@ -697,8 +697,6 @@ public:
 	const ExpressionPtr& getArgument(size_t pos) const;
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
-	// TODO: re-add with proper type inferencing of return type
-	// static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	static CallExprPtr get(NodeManager& manager, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 
