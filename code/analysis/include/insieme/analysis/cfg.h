@@ -183,30 +183,32 @@ public:
 								  boost::listS,
 								  boost::bidirectionalS,
 								  NodeProperty,
-								  EdgeProperty> ControlFlowGraph;
+								  EdgeProperty> IPControlFlowGraph;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::type
+	typedef boost::subgraph<IPControlFlowGraph> ControlFlowGraph;
+
+	typedef typename boost::property_map< IPControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::type
 			NodePropertyMapTy;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::const_type
+	typedef typename boost::property_map< IPControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::const_type
 			ConstNodePropertyMapTy;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::type
+	typedef typename boost::property_map< IPControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::type
 			EdgePropertyMapTy;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::const_type
+	typedef typename boost::property_map< IPControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::const_type
 			ConstEdgePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 					VertexTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   					VertexIterator;
+	typedef typename boost::graph_traits<IPControlFlowGraph>::vertex_descriptor 					VertexTy;
+	typedef typename boost::graph_traits<IPControlFlowGraph>::vertex_iterator   					VertexIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 					EdgeTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 					OutEdgeIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 					InEdgeIterator;
+	typedef typename boost::graph_traits<IPControlFlowGraph>::edge_descriptor 					EdgeTy;
+	typedef typename boost::graph_traits<IPControlFlowGraph>::out_edge_iterator 					OutEdgeIterator;
+	typedef typename boost::graph_traits<IPControlFlowGraph>::in_edge_iterator 					InEdgeIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator 					AdjacencyIterator;
+	typedef typename boost::graph_traits<IPControlFlowGraph>::adjacency_iterator 					AdjacencyIterator;
 
-	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
+	typedef typename boost::inv_adjacency_iterator_generator<IPControlFlowGraph,
 															 VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
 	/**
 	 * This iterator transforms iterators returned by boost::Graph iterating through vertex indexes into an iterator
@@ -279,7 +281,7 @@ public:
 	/**
 	 * Returns the internal representation of this CFG.
 	 */
-	ControlFlowGraph& getGraph() { return graph; }
+	IPControlFlowGraph& getGraph() { return graph; }
 
 	/**
 	 * Returns the number of CFG Blocks in this graph.
@@ -327,7 +329,7 @@ public:
 	static CFGPtr buildCFG(const core::NodePtr& rootNode);
 
 private:
-	ControlFlowGraph	graph;
+	IPControlFlowGraph	graph;
 	size_t				currId;
 	VertexTy			entry, exit;
 };

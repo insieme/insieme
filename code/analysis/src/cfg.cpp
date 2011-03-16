@@ -426,9 +426,7 @@ template <>
 void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 	const std::vector<StatementPtr>& body = compStmt->getStatements();
 
-	if(body.empty()) {
-		return;
-	}
+	if(body.empty()) 	return;
 
 	CFG::VertexTy old = succ;
 	appendPendingBlock();
@@ -439,10 +437,6 @@ void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& 
 			this->createBlock();
 			this->visit(curr);
 			appendPendingBlock();
-			if(this->succ != old) {
-				this->cfg.addEdge(this->succ, old);
-				old = succ;
-			}
 		}
 	);
 }
@@ -451,9 +445,8 @@ template <>
 void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 	const std::vector<StatementPtr>& body = compStmt->getStatements();
 
-	if(body.empty()) {
-		return;
-	}
+	if(body.empty())	return;
+
 	createBlock();
 	// we are sure there is at least 1 element in this compound statement
 	for_each(body.rbegin(), body.rend(),
@@ -499,14 +492,14 @@ CFGPtr CFG::buildCFG<MultiStmtPerBasicBlock>(const NodePtr& rootNode) {
 CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	CFG::VertexTy&& v = boost::add_vertex(CFG::NodeProperty(block), graph);
 	block->blockId() = v;
-	boost::property_map< CFG::ControlFlowGraph, size_t CFG::NodeProperty::* >::type&& blockID =
+	boost::property_map< CFG::IPControlFlowGraph, size_t CFG::NodeProperty::* >::type&& blockID =
 			get(&CFG::NodeProperty::id, graph);
 	put(blockID, v, currId++);
 	return v;
 }
 
 CFG::~CFG() {
-	boost::graph_traits<ControlFlowGraph>::vertex_iterator vi, vi_end;
+	boost::graph_traits<IPControlFlowGraph>::vertex_iterator vi, vi_end;
 	for (boost::tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
 		const cfg::Block* block = &getBlock(*vi);
 		delete block;
