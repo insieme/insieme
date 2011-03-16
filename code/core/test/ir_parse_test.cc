@@ -215,6 +215,7 @@ TEST(IRParser, StatementTests) {
 
     // return statement
     EXPECT_EQ(builder.returnStmt(builder.intLit(-1)), parser.parseStatement("return -1"));
+    EXPECT_EQ(builder.returnStmt(builder.getBasicGenerator().getUnitConstant()), parser.parseStatement("return unit"));
 
     // declaration statement
     auto builtDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>

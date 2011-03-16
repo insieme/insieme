@@ -91,6 +91,7 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
 
     auto nManRef = ph::ref(nodeMan);
     auto basicRef = ph::ref(nodeMan.basic);
+    ASTBuilder builder(nodeMan);
 
     // RULES --------------------------------------------------------------------------------------------------------------
 
@@ -101,7 +102,8 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
         qi::lit("continue")                                         [ qi::_val = ph::bind(&ContinueStmt::get, nManRef) ];
 
     returnStmt =
-        (qi::lit("return") >> exprG->expressionRule)                [ qi::_val = ph::bind(&ReturnStmt::get, nManRef, qi::_1) ];
+       (qi::lit("return") >> qi::lit("unit"))                       [ qi::_val = ph::bind(&ReturnStmt::get, nManRef, builder.getBasicGenerator().getUnitConstant()) ]
+       | (qi::lit("return") >> exprG->expressionRule)               [ qi::_val = ph::bind(&ReturnStmt::get, nManRef, qi::_1) ];
 
     declarationStmt =
         (qi::lit("decl") >> exprG->variableExpr >> '='
