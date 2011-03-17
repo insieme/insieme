@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include "irt_inttypes.h"
 
 /* ------------------------------ data structures ----- */
 

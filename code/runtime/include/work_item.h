@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include "irt_inttypes.h"
 
 #include "id_generation.h"
 
@@ -52,9 +52,10 @@ typedef struct _irt_work_item {
 	irt_work_item_id id;
 	irt_work_item_range range;
 	irt_implementation_id impl_id;
-	irt_work_group_id group;
-	irt_work_group_id* additional_groups;
+	size_t num_groups;
+	irt_work_group_id* work_groups;
 	unsigned priority; // ?
+	irt_lw_data_item *parameters;
 } irt_work_item;
 
 

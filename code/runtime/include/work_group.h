@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include "irt_inttypes.h"
 
 #include "id_generation.h"
 
@@ -58,4 +58,12 @@ typedef struct _irt_work_group {
 irt_errcode irt_wg_create(irt_work_group** out_wg);
 irt_errcode irt_wg_destroy(irt_work_group* wg);
 
+irt_errcode irt_wg_join(irt_work_group* wg);
+irt_errcode irt_wg_leave(irt_work_group* wg);
+
+irt_errcode irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
+irt_errcode irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
+
 irt_errcode irt_wg_barrier(irt_work_group* wg, irt_barrier_id barrier);
+irt_errcode irt_wg_distribute(irt_work_group* wg, irt_distribute_id dist /*, ???*/);
+
