@@ -36,14 +36,20 @@
 
 #pragma once
 
-#define IRT_MAKE_ID_TYPE(__type) \
-typedef union _##__type##_id { \
-	uint64 id; \
-	struct { \
-		uint16 node; \
-		uint16 thread; \
-		uint32 index; \
-	}; \
-	__type* cached; \
-} ##__type##_id;
+#include "irt_inttypes.h"
+
+#include "id_generation.h"
+
+/* ------------------------------ data structures ----- */
+
+IRT_MAKE_ID_TYPE(irt_client_app);
+
+typedef struct _irt_client_app {
+	irt_client_app_id id;
+	size_t pid;
+ } irt_client_app;
+
+
+/* ------------------------------ operations ----- */
+
 

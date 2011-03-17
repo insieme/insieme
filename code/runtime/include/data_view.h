@@ -36,28 +36,42 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include "irt_inttypes.h"
 
 #include "id_generation.h"
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_data_view);
+typedef enum _irt_view_mode {
+	READ_ONLY,
+	WRITE_ONLY,
+	WRITE_FIRST,
+	READ_WRITE
+} irt_view_mode;
 
 typedef struct _irt_data_view_range {
 	int64 begin, end, step;
 } irt_data_view_range;
 
-typedef struct _irt_data_view {
-	irt_data_view_id id;
-	irt_data_item_id data_item;
-	irt_data_view_range range;
+typedef struct _irt_data_block {
+	uint32 use_count;
+//	irt_hw_id location;
 	void* data;
+} irt_data_block;
+
+typedef struct _irt_data_view {
+	irt_data_item_id data_item;
+	uint8 mode;
+	// range has as many entries as data_item has dimensions
+	irt_data_view_range* range;
+	irt_data_block* data_block;
+	// cache data pointer?
  } irt_data_view;
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_dv_create(/* ... */);
+irt_errcode irt_dv_create(irt_data_item_id data, irt_data_view_range* range, irt_view_mode mode, irt_hw_id location, irt_data_view** di_out);
+//// parent has to fully contain all elements specified by range
+//irt_errcode irt_dv_create_sub(irt_data_view parent, irt_data_view_range range, irt_data_view** di_out);
 irt_errcode irt_dv_destroy(irt_data_view* di);
-

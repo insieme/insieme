@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include "irt_inttypes.h"
 
 #include "id_generation.h"
 
@@ -57,3 +57,11 @@ typedef struct _irt_data_item {
 irt_errcode irt_di_create(irt_type_id tid, uint32 dimensions, uint64* sizes, irt_data_item** out_di);
 irt_errcode irt_di_destroy(irt_data_item* di);
 
+
+/* ============================== light weight data item ===== */
+
+// size of an actual lw_data_item: sizeof(irt_type_id) + size of the irt_type referenced by type_id
+typedef struct _irt_lw_data_item {
+	irt_type_id type_id;
+	// actual content will be stored here
+} irt_lw_data_item;
