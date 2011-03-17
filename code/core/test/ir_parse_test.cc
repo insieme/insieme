@@ -310,6 +310,24 @@ TEST(IRParser, StatementTests) {
 //    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 }
 
+TEST(IRParser, OperationTests) {
+    NodeManager manager;
+    IRParser parser(manager);
+    ASTBuilder builder(manager);
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAdd(), builder.intLit(0), builder.intLit(1)), parser.parseExpression("(0 + 1)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealSub(), builder.literal("42.0", manager.basic.getDouble()), builder.literal("41.0", manager.basic.getDouble())),
+        parser.parseExpression("(42.0 - 41.0)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntMul(), builder.literal("7", manager.basic.getUInt4()), builder.literal("6", manager.basic.getInt4())),
+        parser.parseExpression("(lit<uint<4>, 7> - 6)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealDiv(), builder.literal("5", manager.basic.getFloat()), builder.literal("9.6", manager.basic.getDouble())),
+        parser.parseExpression("(lit<real<4>, 5> / 9.6)"));
+
+}
+
 TEST(IRParser, ProgramTest) {
     NodeManager manager;
     IRParser parser(manager);

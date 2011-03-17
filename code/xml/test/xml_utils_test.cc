@@ -372,8 +372,8 @@ TEST(XmlTest, TypeVariableTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
+	xml.convertDomToXml("dump2.xml");
+	xml.convertXmlToDom("dump2.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	

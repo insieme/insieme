@@ -92,7 +92,7 @@ public:
 			annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
 		}
 	}
-
+	
 	void visitGenericType(const GenericTypePtr& cur) {
 		XmlElement genType("genType", doc);
 		genType << XmlElement::Attribute("id", GET_ID(cur))
@@ -118,30 +118,63 @@ public:
 		if (!intParam.empty()){
 			XmlElement intTypeParams("intTypeParams", doc);
 			genType << intTypeParams;
-
-			for(IntParamList::const_iterator iter = intParam.begin(), end = intParam.end(); iter != end; ++iter) {
-				XmlElement intTypeParam("intTypeParam", doc);
-				intTypeParams << intTypeParam;
-
-				// FIXME: this is a quick-fix - int type param should be treated like all other nodes
-				switch ((*iter)->getNodeType()) {
-				case NT_VariableIntTypeParam:
-					intTypeParam << (XmlElement("variable", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const VariableIntTypeParam>(*iter)->getSymbol())));
-					break;
-				case NT_ConcreteIntTypeParam:
-					intTypeParam << (XmlElement("concrete", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const ConcreteIntTypeParam>(*iter)->getValue())));
-					break;
-				case NT_InfiniteIntTypeParam:
-					intTypeParam << XmlElement("infinite", doc);
-					break;
-				default:
-					assert(false && "Invalid integer parameter type");
-					break;
-				}
-			}
+			for_each(intParam.begin(), intParam.end(), [ this, &intTypeParams ](const IntTypeParamPtr& curr) { this->append(intTypeParams, curr, "intTypeParamPtr"); });
 		}
 		visitAnnotations(cur->getAnnotations(), genType);
 	}
+	
+	void visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& cur) {
+		XmlElement concreteIntTypeParam("concreteIntTypeParam", doc);
+		concreteIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
+		rootElem << concreteIntTypeParam;
+		
+		XmlElement concrete("concrete", doc);
+		concrete << XmlElement::Attribute("value", numeric_cast<std::string>(cur->getValue()));
+		concreteIntTypeParam << concrete;
+		visitAnnotations(cur->getAnnotations(), concreteIntTypeParam);
+	}
+	
+	void visitVariableIntTypeParam(const VariableIntTypeParamPtr& cur) {
+		XmlElement variableIntTypeParam("variableIntTypeParam", doc);
+		variableIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
+		rootElem << variableIntTypeParam;
+		
+		XmlElement variable("variable", doc);
+		variable << XmlElement::Attribute("value", numeric_cast<std::string>(cur->getSymbol()));
+		variableIntTypeParam << variable;
+		visitAnnotations(cur->getAnnotations(), variableIntTypeParam);
+	}
+	
+	void visitInfiniteIntTypeParam(const InfiniteIntTypeParamPtr& cur) {
+		XmlElement infiniteIntTypeParam("infiniteIntTypeParam", doc);
+		infiniteIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
+		rootElem << infiniteIntTypeParam;
+		
+		XmlElement infinite("infinite", doc);
+		infiniteIntTypeParam << infinite;
+		visitAnnotations(cur->getAnnotations(), infiniteIntTypeParam);
+	}
+
+	
+	/*for(IntParamList::const_iterator iter = intParam.begin(), end = intParam.end(); iter != end; ++iter) {
+		// FIXME: this is a quick-fix - int type param should be treated like all other nodes
+		XmlElement intTypeParam("intTypeParam", doc);
+		intTypeParams << intTypeParam;
+		switch ((*iter)->getNodeType()) {
+		case NT_VariableIntTypeParam:
+			intTypeParam << (XmlElement("variable", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const VariableIntTypeParam>(*iter)->getSymbol())));
+			break;
+		case NT_ConcreteIntTypeParam:
+			intTypeParam << (XmlElement("concrete", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const ConcreteIntTypeParam>(*iter)->getValue())));
+			break;
+		case NT_InfiniteIntTypeParam:
+			intTypeParam << XmlElement("infinite", doc);
+			break;
+		default:
+			assert(false && "Invalid integer parameter type");
+			break;
+		}
+	}*/
 
 	void visitFunctionType(const FunctionTypePtr& cur) {
 		XmlElement functionType("functionType", doc);

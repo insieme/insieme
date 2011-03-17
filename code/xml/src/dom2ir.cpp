@@ -145,21 +145,9 @@ public:
 		vector<IntTypeParamPtr> intTypeParams;
 		XmlElementPtr&& intParam = elem.getFirstChildByName("intTypeParams");
 		if (intParam){
-			XmlElementList&& intPar = intParam->getChildrenByName("intTypeParam");
-			for(XmlElementList::const_iterator iter = intPar.begin(), end = intPar.end(); iter != end; ++iter) {
-				if (iter->getChildrenByName("variable").size() != 0){
-					intTypeParams.push_back(
-							VariableIntTypeParam::get(mgr, (iter->getFirstChildByName("variable"))->getAttr("value")[0])
-					);
-					continue;
-				}
-				if (iter->getChildrenByName("concrete").size() != 0){
-					intTypeParams.push_back(
-							ConcreteIntTypeParam::get(mgr, numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value")))
-					);
-					continue;
-				}
-				intTypeParams.push_back(InfiniteIntTypeParam::get(mgr));
+			XmlElementList&& types = intParam->getChildrenByName("intTypeParamPtr");
+			for(auto iter = types.begin(), end = types.end(); iter != end; ++iter) {
+				intTypeParams.push_back( createNode<IntTypeParam>(*iter) );
 			}
 		}
 		string&& name = elem.getAttr("familyName");
@@ -168,6 +156,20 @@ public:
 		if (name == "channel") 	return createIrNode<ChannelType>(elem, typeParams[0], intTypeParams[0]);
 		if (name == "ref")		return createIrNode<RefType>(elem, typeParams[0]);
 		return createIrNode<GenericType>(elem, name, typeParams, intTypeParams, baseType);
+	}
+	
+	NodePtr handle_concreteIntTypeParam(const XmlElement& elem) {
+		const unsigned value = numeric_cast<unsigned>(elem.getFirstChildByName("concrete")->getAttr("value"));
+		return createIrNode<ConcreteIntTypeParam>(elem, value);
+	}
+	
+	NodePtr handle_variableIntTypeParam(const XmlElement& elem) {
+		const char value = elem.getFirstChildByName("variable")->getAttr("value")[0];
+		return createIrNode<VariableIntTypeParam>(elem, value);
+	}
+	
+	NodePtr handle_infiniteIntTypeParam(const XmlElement& elem) {
+		return createIrNode<InfiniteIntTypeParam>(elem);
 	}
 
 	NodePtr handle_functionType(const XmlElement& elem) {
@@ -499,14 +501,14 @@ public:
 
 		// different types of nodes
 		string&& nodeName = elem.getName();
-		DISPATCH(genType)			DISPATCH(functionType)		DISPATCH(unionType)			DISPATCH(structType)			DISPATCH(tupleType)
-		DISPATCH(typeVariable)		DISPATCH(recType)			DISPATCH(recTypeDefinition)	DISPATCH(literal)				DISPATCH(returnStmt)
-		DISPATCH(forStmt)			DISPATCH(ifStmt)			DISPATCH(switchStmt)		DISPATCH(whileStmt)				DISPATCH(breakStmt)
+		DISPATCH(genType)			DISPATCH(functionType)		DISPATCH(unionType)			DISPATCH(structType)			DISPATCH(concreteIntTypeParam)
+		DISPATCH(typeVariable)		DISPATCH(recType)			DISPATCH(recTypeDefinition)	DISPATCH(literal)				DISPATCH(variableIntTypeParam)
+		DISPATCH(forStmt)			DISPATCH(ifStmt)			DISPATCH(switchStmt)		DISPATCH(whileStmt)				DISPATCH(infiniteIntTypeParam)
 		DISPATCH(continueStmt)		DISPATCH(compoundStmt)		DISPATCH(declarationStmt)	DISPATCH(structExpr)			DISPATCH(unionExpr)
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
 		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(captureInitExpr)	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
-		DISPATCH(markerExpr)
+		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(returnStmt)		DISPATCH(breakStmt)
 		assert(false && "XML node not handled!");
 	}
 
