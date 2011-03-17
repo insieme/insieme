@@ -63,7 +63,7 @@ public:
 	/**
 	 * The definition of the data structure used to maintain int type parameter mappings.
 	 */
-	typedef std::map<IntTypeParam, IntTypeParam> IntTypeParamMapping;
+	typedef utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr> IntTypeParamMapping;
 
 private:
 
@@ -98,7 +98,7 @@ public:
 	 * @param var the parameter to be substituted
 	 * @param parameter the int-type-parameter the parameter is substituted for
 	 */
-	Substitution(const IntTypeParam& var, const IntTypeParam& parameter);
+	Substitution(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& parameter);
 
 	/**
 	 * Applies this substitution to the given type.
@@ -113,7 +113,7 @@ public:
 	 * @param param the int type param this substitution should be applied to
 	 * @return the resulting int type parameter
 	 */
-	IntTypeParam applyTo(const IntTypeParam& param) const;
+	IntTypeParamPtr applyTo(const IntTypeParamPtr& param) const;
 
 	/**
 	 * Extends this substitution by the given mapping. If the same variable
@@ -131,7 +131,7 @@ public:
 	 * @param var the int type parameter variable to be substituted. This has to be a int type parameter variable.
 	 * @param value the value the variable should be substituted with.
 	 */
-	void addMapping(const IntTypeParam& var, const IntTypeParam& value);
+	void addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value);
 
 	/**
 	 * Removes the mapping stored for the given variable from this substitution.
@@ -143,7 +143,7 @@ public:
 	 * Removes the mapping stored for the given variable from this substitution.
 	 * @param var the variable which's entry should be removed
 	 */
-	void remMappingOf(const IntTypeParam& var);
+	void remMappingOf(const VariableIntTypeParamPtr& var);
 
 	/**
 	 * Obtains a constant reference to the type variable mapping constituting this substitution.

@@ -81,8 +81,8 @@ public:
 	 * @param substitution the substitution to be wrapped by the resulting instance.
 	 */
 	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-		: NodeMapping(!substitution.getIntTypeParamMapping().empty()), manager(manager),
-		  mapping(substitution.getMapping()), paramMapping(substitution.getIntTypeParamMapping()) {};
+		: NodeMapping(), manager(manager), mapping(substitution.getMapping()),
+		  paramMapping(substitution.getIntTypeParamMapping()) {};
 
 	/**
 	 * The procedure mapping a node to its substitution.
@@ -91,37 +91,45 @@ public:
 	 */
 	const NodePtr mapElement(unsigned, const NodePtr& element) {
 		// quick check - only variables are substituted
-		if (element->getNodeType() != NT_TypeVariable) {
+		auto currentType = element->getNodeType();
+		if (currentType != NT_TypeVariable && currentType != NT_VariableIntTypeParam) {
 			return element->substitute(manager, *this);
 		}
 
-		// lookup current variable within the mapping
-		auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
-		if (pos != mapping.end()) {
-			// found! => replace
-			return (*pos).second;
+		switch (currentType) {
+
+			case NT_TypeVariable: {
+				// lookup current variable within the mapping
+				auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
+				if (pos != mapping.end()) {
+					// found! => replace
+					return (*pos).second;
+				}
+
+				// not found => return current node
+				// (since nothing within a variable node may be substituted)
+				return element;
+			}
+			case NT_VariableIntTypeParam: {
+				// lookup int type param variable ...
+				auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(element));
+				if (pos != paramMapping.end()) {
+					// found! => replace
+					return (*pos).second;
+				}
+				// not found => return current node
+				return element;
+			}
+
+			default:
+				assert(false && "Only type and parameter variables should reach this point!");
 		}
 
-		// not found => return current node
-		// (since nothing within a variable node may be substituted)
+		//should never be reached
+		assert(false && "This point shouldn't be reachable!");
 		return element;
 	}
 
-	/**
-	 * The procedure mapping an int-type-parameter to its substitution.
-	 *
-	 * @param param the parameter to be resolved
-	 */
-	virtual IntTypeParam mapParam(const IntTypeParam& param) {
-		if (param.getType() != IntTypeParam::VARIABLE) {
-			return param;
-		}
-		auto pos = paramMapping.find(param);
-		if (pos != paramMapping.end()) {
-			return (*pos).second;
-		}
-		return param;
-	}
 };
 
 
@@ -131,9 +139,8 @@ Substitution::Substitution(const TypeVariablePtr& var, const TypePtr& type) {
 	mapping.insert(std::make_pair(var, type));
 };
 
-Substitution::Substitution(const IntTypeParam& var, const IntTypeParam& type) {
-	assert( var.getType()==IntTypeParam::VARIABLE && "Cannot add mapping for non-variable parameter!");
-	paramMapping.insert(std::make_pair(var,type));
+Substitution::Substitution(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& param) {
+	paramMapping.insert(std::make_pair(var, param));
 }
 
 TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
@@ -142,11 +149,11 @@ TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
 	return mapper.map(0, type);
 }
 
-IntTypeParam Substitution::applyTo(const IntTypeParam& param) const {
-	if (param.getType() != IntTypeParam::VARIABLE) {
+IntTypeParamPtr Substitution::applyTo(const IntTypeParamPtr& param) const {
+	if (param->getNodeType() != core::NT_VariableIntTypeParam) {
 		return param;
 	}
-	auto pos = paramMapping.find(param);
+	auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(param));
 	if (pos == paramMapping.end()) {
 		return param;
 	}
@@ -164,9 +171,7 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	}
 }
 
-void Substitution::addMapping(const IntTypeParam& var, const IntTypeParam& value) {
-
-	assert( var.getType()==IntTypeParam::VARIABLE && "Cannot add mapping for non-variable parameter!");
+void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value) {
 
 	auto element = std::make_pair(var,value);
 	auto res = paramMapping.insert(element);
@@ -178,16 +183,10 @@ void Substitution::addMapping(const IntTypeParam& var, const IntTypeParam& value
 }
 
 void Substitution::remMappingOf(const TypeVariablePtr& var) {
-	if (var->getNodeType() != NT_TypeVariable) {
-		return;
-	}
 	mapping.erase(var);
 }
 
-void Substitution::remMappingOf(const IntTypeParam& var) {
-	if (var.getType() != IntTypeParam::VARIABLE) {
-		return;
-	}
+void Substitution::remMappingOf(const VariableIntTypeParamPtr& var) {
 	paramMapping.erase(var);
 }
 
@@ -260,11 +259,11 @@ namespace {
 		}
 
 		// get int type parameter
-		const IntTypeParam& superSize = superType->getIntTypeParameter()[0];
-		const IntTypeParam& subSize = subType->getIntTypeParameter()[0];
+		const IntTypeParamPtr& superSize = superType->getIntTypeParameter()[0];
+		const IntTypeParamPtr& subSize = subType->getIntTypeParameter()[0];
 
 		// check whether sizes are comparable
-		if (!(superSize.isConcrete() && subSize.isConcrete())) {
+		if (superSize->getNodeType() == NT_VariableIntTypeParam || subSize->getNodeType() == NT_VariableIntTypeParam) {
 			return false;
 		}
 
@@ -274,13 +273,13 @@ namespace {
 
 		// if same sized => just compare size
 		if (superSigned == subSigned) {
-			return subSize < superSize || subSize == superSize;
+			return *subSize < *superSize || *subSize == *superSize;
 		}
 
 		// sign is different => depends on super type
 		if (superSigned) {
 			// size has to strictly less
-			return subSize < superSize || superSize == IntTypeParam::INF;
+			return *subSize < *superSize || superSize->getNodeType()==NT_InfiniteIntTypeParam;
 		}
 
 		// sign is different and super is unsigned
@@ -301,9 +300,19 @@ namespace {
 		// if only the parameter is a vector, replace the vector with an array ...
 		if (a == NT_ArrayType && b == NT_VectorType) {
 			TypePtr elementType = static_pointer_cast<const VectorType>(argument)->getElementType();
-			argument = ArrayType::get(manager, elementType, IntTypeParam::getConcreteIntParam(1));
+			argument = ArrayType::get(manager, elementType, ConcreteIntTypeParam::get(manager, 1));
 			return;
 		}
+	}
+
+	/**
+	 * Tests whether the given type int type parameter is a variable int type parameters.
+	 *
+	 * @param param the instances to be tested
+	 * @return true if param is a variable, false otherwise
+	 */
+	inline bool isVariable(const IntTypeParamPtr& param) {
+		return param->getNodeType() == NT_VariableIntTypeParam;
 	}
 
 	/**
@@ -437,6 +446,11 @@ namespace {
 					return unmatchable;
 				}
 
+				// check same number of type parameters
+				if (genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) {
+					return unmatchable;
+				}
+
 				// ---- unify int type parameter ---
 
 				// get lists
@@ -450,8 +464,8 @@ namespace {
 				}
 
 				for(std::size_t i=0; i<paramsA.size(); i++) {
-					IntTypeParam paramA = paramsA[i];
-					IntTypeParam paramB = paramsB[i];
+					IntTypeParamPtr paramA = paramsA[i];
+					IntTypeParamPtr paramB = paramsB[i];
 
 					// equivalent pairs can be ignored ...
 					if (paramA == paramB) {
@@ -459,26 +473,26 @@ namespace {
 					}
 
 					// check for variables
-					if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() != IntTypeParam::VARIABLE) {
+					if (!isVariable(paramA) && !isVariable(paramB)) {
 						// different constants => not matchable / unifyable!
 						return unmatchable;
 					}
 
 					// move variable to first place
-					if (paramA.getType() != IntTypeParam::VARIABLE && paramB.getType() ==IntTypeParam::VARIABLE) {
+					if (!isVariable(paramA) && isVariable(paramB)) {
 						if (!unify) {
 							// => only allowed for unification
 							return unmatchable;
 						}
 
 						// switch sides
-						IntTypeParam tmp = paramA;
+						IntTypeParamPtr tmp = paramA;
 						paramA = paramB;
 						paramB = tmp;
 					}
 
 					// add mapping
-					Substitution mapping(paramA,paramB);
+					Substitution mapping(static_pointer_cast<const VariableIntTypeParam>(paramA),paramB);
 
 					// apply substitution to remaining pairs
 					for_each(list, [&mapping, &manager](Pair& cur) {
@@ -505,10 +519,15 @@ namespace {
 					make_paired_iterator(childrenA.end(), childrenB.end()),
 
 					[&list](const std::pair<NodePtr, NodePtr>& cur) {
-						list.push_back(std::make_pair(
-								static_pointer_cast<const Type>(cur.first),
-								static_pointer_cast<const Type>(cur.second)
-						));
+						if (cur.first->getNodeCategory() == NC_Type) {
+							list.push_back(std::make_pair(
+									static_pointer_cast<const Type>(cur.first),
+									static_pointer_cast<const Type>(cur.second)
+							));
+						} else {
+							assert(cur.second->getNodeCategory() == cur.first->getNodeCategory()
+									&& "Unexpected incompatible node pair!");
+						}
 			});
 		}
 
@@ -574,11 +593,11 @@ namespace {
 
 		// sets of used variables
 		TypeSet& varSet;
-		std::set<IntTypeParam>& paramSet;
+		IntTypeParamSet& paramSet;
 
 		// a container for "remembering" replacements
 		utils::map::PointerMap<TypeVariablePtr, TypeVariablePtr> varMap;
-		std::map<IntTypeParam, IntTypeParam> paramMap;
+		utils::map::PointerMap<VariableIntTypeParamPtr, VariableIntTypeParamPtr> paramMap;
 
 		// some utilities for generating variables
 		unsigned varCounter;
@@ -586,50 +605,59 @@ namespace {
 
 	public:
 
-		FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, std::set<IntTypeParam>& paramSet)
-			: NodeMapping(true), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
+		FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, IntTypeParamSet& paramSet)
+			: NodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
 
 		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 			// only handle type variables
-			if (ptr->getNodeType() != NT_TypeVariable) {
+			NodeType curType = ptr->getNodeType();
+			if (curType != NT_TypeVariable && curType != NT_VariableIntTypeParam) {
 				return ptr->substitute(manager, *this);
 			}
 
-			// cast type variable
-			TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
 
-			// search for parameter ...
-			auto pos = varMap.find(cur);
-			if (pos != varMap.end()) {
-				// found => return result
-				return pos->second;
+			switch(curType) {
+				case NT_TypeVariable: {
+
+					// cast type variable
+					TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
+
+					// search for parameter ...
+					auto pos = varMap.find(cur);
+					if (pos != varMap.end()) {
+						// found => return result
+						return pos->second;
+					}
+
+					// create new variable substitution
+					TypeVariablePtr res = getFreshVar();
+					varMap.insert(std::make_pair(cur, res));
+					varSet.insert(res);
+					return res;
+				}
+
+				case NT_VariableIntTypeParam: {
+
+					// cast int type parameter
+					VariableIntTypeParamPtr cur = static_pointer_cast<const VariableIntTypeParam>(ptr);
+
+					// search for parameter ...
+					auto pos = paramMap.find(cur);
+					if (pos != paramMap.end()) {
+						// found => return result
+						return pos->second;
+					}
+
+					// create fresh parameter ...
+					VariableIntTypeParamPtr res = getFreshParam();
+					paramMap.insert(std::make_pair(cur, res));
+					paramSet.insert(res);
+					return res;
+				}
+				default:
+					assert(false && "Should be impossible to reach!");
 			}
-
-			// create new variable substitution
-			TypeVariablePtr res = getFreshVar();
-			varMap.insert(std::make_pair(cur, res));
-			varSet.insert(res);
-			return res;
-		}
-
-		virtual IntTypeParam mapParam(const IntTypeParam& param) {
-			// only variables need to be considered
-			if (param.getType() != IntTypeParam::VARIABLE) {
-				return param;
-			}
-
-			// search for parameter ...
-			auto pos = paramMap.find(param);
-			if (pos != paramMap.end()) {
-				// found => return result
-				return pos->second;
-			}
-
-			// create fresh parameter ...
-			IntTypeParam res = getFreshParam();
-			paramMap.insert(std::make_pair(param, res));
-			paramSet.insert(res);
-			return res;
+			return ptr;
 		}
 
 	private:
@@ -642,10 +670,10 @@ namespace {
 			return res;
 		}
 
-		IntTypeParam getFreshParam() {
-			IntTypeParam res;
+		VariableIntTypeParamPtr getFreshParam() {
+			VariableIntTypeParamPtr res;
 			do {
-				res = IntTypeParam::getVariableIntParam('a' + (paramCounter++));
+				res = VariableIntTypeParam::get(manager, 'a' + (paramCounter++));
 			} while (paramSet.find(res) != paramSet.end());
 			return res;
 		}
@@ -653,7 +681,7 @@ namespace {
 	};
 
 
-	void collectAllTypeVariables(const TypeList& types, TypeSet& varSet, std::set<IntTypeParam>& paramSet) {
+	void collectAllTypeVariables(const TypeList& types, TypeSet& varSet, IntTypeParamSet& paramSet) {
 
 		// assemble type-variable collecting visitor
 		auto visitor = makeLambdaPtrVisitor([&](const NodePtr& cur) {
@@ -663,13 +691,8 @@ namespace {
 			}
 
 			// collect variable int-type parameters
-			if (cur->getNodeType() == NT_GenericType) {
-				const GenericTypePtr& type = static_pointer_cast<const GenericType>(cur);
-				for_each(type->getIntTypeParameter(), [&](const IntTypeParam& cur) {
-					if (cur.getType() == IntTypeParam::VARIABLE) {
-						paramSet.insert(cur);
-					}
-				});
+			if (cur->getNodeType() == NT_VariableIntTypeParam) {
+				paramSet.insert(static_pointer_cast<const VariableIntTypeParam>(cur));
 			}
 
 		}, true);
@@ -682,7 +705,7 @@ namespace {
 	}
 
 	template<typename T>
-	Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, std::set<IntTypeParam>& paramSet) {
+	Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, IntTypeParamSet& paramSet) {
 		NodeManager& manager = target->getNodeManager();
 		FreshVariableSubstitution mapper(manager, usedTypes, paramSet);
 		return static_pointer_cast<T>(target->substitute(manager, mapper));
@@ -696,7 +719,7 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 
 	// make type variables within function types unique
 	TypeSet usedVars;
-	std::set<IntTypeParam> usedParams;
+	IntTypeParamSet usedParams;
 	collectAllTypeVariables(argumentTypes, usedVars, usedParams);
 	FunctionTypePtr modFunType = makeTypeVariablesUnique(funType, usedVars, usedParams);
 
@@ -733,7 +756,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::Substitution& s
 	});
 	out << "/";
 	out << join(",", substitution.getIntTypeParamMapping(), [](std::ostream& out, const insieme::core::Substitution::IntTypeParamMapping::value_type& cur)->std::ostream& {
-		return out << cur.first.toString() << "->" << cur.second.toString();
+		return out << *cur.first << "->" << *cur.second;
 	});
 	out << "}";
 	return out;

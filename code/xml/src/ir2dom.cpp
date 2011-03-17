@@ -113,7 +113,7 @@ public:
 			for_each(param.begin(), param.end(), [ this, &typeParams ](const TypePtr& curr) { this->append(typeParams, curr, "typePtr"); });
 		}
 
-		typedef vector<IntTypeParam> IntParamList;
+		typedef vector<IntTypeParamPtr> IntParamList;
 		const IntParamList& intParam = cur->getIntTypeParameter();
 		if (!intParam.empty()){
 			XmlElement intTypeParams("intTypeParams", doc);
@@ -123,14 +123,15 @@ public:
 				XmlElement intTypeParam("intTypeParam", doc);
 				intTypeParams << intTypeParam;
 
-				switch (iter->getType()) {
-				case IntTypeParam::VARIABLE:
-					intTypeParam << (XmlElement("variable", doc) << XmlElement::Attribute("value", numeric_cast<string>(iter->getSymbol())));
+				// FIXME: this is a quick-fix - int type param should be treated like all other nodes
+				switch ((*iter)->getNodeType()) {
+				case NT_VariableIntTypeParam:
+					intTypeParam << (XmlElement("variable", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const VariableIntTypeParam>(*iter)->getSymbol())));
 					break;
-				case IntTypeParam::CONCRETE:
-					intTypeParam << (XmlElement("concrete", doc) << XmlElement::Attribute("value", numeric_cast<string>(iter->getValue())));
+				case NT_ConcreteIntTypeParam:
+					intTypeParam << (XmlElement("concrete", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const ConcreteIntTypeParam>(*iter)->getValue())));
 					break;
-				case IntTypeParam::INFINITE:
+				case NT_InfiniteIntTypeParam:
 					intTypeParam << XmlElement("infinite", doc);
 					break;
 				default:

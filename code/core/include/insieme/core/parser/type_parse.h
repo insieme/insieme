@@ -49,20 +49,20 @@ struct TypeGrammar : public qi::grammar<ParseIt, TypePtr(), qi::space_type> {
 	// terminal rules, no skip parsing
 	qi::rule<ParseIt, IdentifierPtr()> identifier;
 	qi::rule<ParseIt, TypePtr()> typeVarLabel;
-	qi::rule<ParseIt, IntTypeParam()> intTypeParamLabel;
+	qi::rule<ParseIt, IntTypeParamPtr()> intTypeParamLabel;
+	qi::rule<ParseIt, IntTypeParamPtr(), qi::space_type> intTypeParam;
 
 	// nonterminal rules with skip parsing
 	qi::rule<ParseIt, FunctionTypePtr(), qi::locals<vector<TypePtr>, vector<TypePtr>, TypePtr>, qi::space_type> functionType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeVariable;
-	qi::rule<ParseIt, IntTypeParam(), qi::space_type> intTypeParam;
 	qi::rule<ParseIt, RefTypePtr(), qi::space_type> refType;
 	qi::rule<ParseIt, ChannelTypePtr(), qi::space_type> channelType;
 	qi::rule<ParseIt, VectorTypePtr(), qi::space_type> vectorType;
-	qi::rule<ParseIt, ArrayTypePtr(), qi::locals<TypePtr, IntTypeParam>, qi::space_type> arrayType;
+	qi::rule<ParseIt, ArrayTypePtr(), qi::locals<TypePtr, IntTypeParamPtr>, qi::space_type> arrayType;
 	qi::rule<ParseIt, TupleTypePtr(), qi::locals<vector<TypePtr>>, qi::space_type> tupleType;
 	qi::rule<ParseIt, StructTypePtr(), qi::locals<StructType::Entries>, qi::space_type> structType;
 	qi::rule<ParseIt, UnionTypePtr(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
-	qi::rule<ParseIt, TypePtr(), qi::locals<IdentifierPtr, vector<TypePtr>, vector<IntTypeParam>>, qi::space_type> genericType;
+	qi::rule<ParseIt, TypePtr(), qi::locals<IdentifierPtr, vector<TypePtr>, vector<IntTypeParamPtr>>, qi::space_type> genericType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeRule;
 };
 

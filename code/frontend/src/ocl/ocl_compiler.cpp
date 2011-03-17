@@ -116,8 +116,8 @@ core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionP
 core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr idx){
     // construct local variables
     core::VariablePtr idxVar = builder.variable(BASIC.getUInt4());
-    core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
-    core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3))));
+    core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
+    core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
 
     core::LiteralPtr zero = builder.uintLit(0u);
     core::LiteralPtr one = builder.uintLit(1u);
@@ -982,7 +982,7 @@ public:
                     else {
                         // add a variable that will never be used just to keep interface consistent
                         newParams.push_back(builder.variable(builder.vectorType(BASIC.getUInt4(),
-                            core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)))));
+                        		builder.concreteIntTypeParam(static_cast<size_t>(3)))));
 
                         //declare and set the local range if provided by work group size attribute
                         core::DeclarationStmtPtr lrd = builder.declarationStmt(kd.localRange, builder.vectorExpr(toVector<core::ExpressionPtr>(
@@ -990,7 +990,7 @@ public:
                         newBodyStmts.push_back(lrd);
                     }
                     //declare group range TODO fix error of checker
-                    core::TypePtr vecUint = builder.vectorType(BASIC.getUInt4(), core::IntTypeParam::getConcreteIntParam(static_cast<size_t>(3)));
+                    core::TypePtr vecUint = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
                             builder.callExpr(vecUint,
                             builder.callExpr(builder.functionType(toVector(vecUint, vecUint), vecUint ),

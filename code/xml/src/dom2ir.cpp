@@ -142,24 +142,24 @@ public:
 			}
 		}
 
-		vector<IntTypeParam> intTypeParams;
+		vector<IntTypeParamPtr> intTypeParams;
 		XmlElementPtr&& intParam = elem.getFirstChildByName("intTypeParams");
 		if (intParam){
 			XmlElementList&& intPar = intParam->getChildrenByName("intTypeParam");
 			for(XmlElementList::const_iterator iter = intPar.begin(), end = intPar.end(); iter != end; ++iter) {
 				if (iter->getChildrenByName("variable").size() != 0){
 					intTypeParams.push_back(
-						IntTypeParam::getVariableIntParam((iter->getFirstChildByName("variable"))->getAttr("value")[0])
+							VariableIntTypeParam::get(mgr, (iter->getFirstChildByName("variable"))->getAttr("value")[0])
 					);
 					continue;
 				}
 				if (iter->getChildrenByName("concrete").size() != 0){
 					intTypeParams.push_back(
-							IntTypeParam::getConcreteIntParam(numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value")))
+							ConcreteIntTypeParam::get(mgr, numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value")))
 					);
 					continue;
 				}
-				intTypeParams.push_back(IntTypeParam::getInfiniteIntParam());
+				intTypeParams.push_back(InfiniteIntTypeParam::get(mgr));
 			}
 		}
 		string&& name = elem.getAttr("familyName");

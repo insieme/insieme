@@ -56,6 +56,7 @@
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/identifier.h"
+#include "insieme/core/int_type_param.h"
 
 using std::string;
 using std::vector;
@@ -438,7 +439,7 @@ class GenericType: public Type {
 	/**
 	 * The list of integer type parameter being part of this type specification.
 	 */
-	const vector<IntTypeParam> intParams;
+	const vector<IntTypeParamPtr> intParams;
 
 	/**
 	 * The base type of this type if there is any. The pointer is pointing toward
@@ -459,7 +460,7 @@ protected:
 	 */
 	GenericType(const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
-			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
 			const TypePtr& baseType = NULL);
 
 	/**
@@ -477,7 +478,7 @@ protected:
 			std::size_t hashSeed,
 			const string& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
-			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
 			const TypePtr& baseType = NULL);
 
 
@@ -507,8 +508,8 @@ public:
 	 */
 	static GenericTypePtr get(NodeManager& manager,
 			const string& name,
-			const vector<TypePtr>& typeParams = vector<TypePtr> (),
-			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const vector<TypePtr>& typeParams = vector<TypePtr>(),
+			const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
 			const TypePtr& baseType = NULL);
 
 	/**
@@ -525,7 +526,7 @@ public:
 	static GenericTypePtr getFromID(NodeManager& manager,
 			const IdentifierPtr& name,
 			const vector<TypePtr>& typeParams = vector<TypePtr> (),
-			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> (),
+			const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
 			const TypePtr& baseType = NULL);
 
 	/**
@@ -549,7 +550,7 @@ public:
 	 *
 	 * @return a const reference to the internally maintained integer type parameter list.
 	 */
-	const vector<IntTypeParam>& getIntTypeParameter() const {
+	const vector<IntTypeParamPtr>& getIntTypeParameter() const {
 		return intParams;
 	}
 
@@ -913,7 +914,7 @@ protected:
 	 */
 	SingleElementType(NodeType nodeType, std::size_t hashSeed,
 			const string& name, const TypePtr& elementType,
-			const vector<IntTypeParam>& intTypeParams = vector<IntTypeParam> ());
+			const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr> ());
 
 public:
 
@@ -943,7 +944,7 @@ public:
 	 * @param elementType the element type of this array
 	 * @param dim the dimension of the represented array
 	 */
-	ArrayType(const TypePtr& elementType, const IntTypeParam& dim = IntTypeParam::ONE);
+	ArrayType(const TypePtr& elementType, const IntTypeParamPtr& dim);
 
 private:
 
@@ -956,23 +957,37 @@ public:
 
 	/**
 	 * A factory method allowing to obtain a pointer to a array type representing
+	 * an instance managed by the given manager. The dimension of the resulting array is
+	 * one.
+	 *
+	 * @param manager 		the manager which should be responsible for maintaining the new
+	 * 				  		type instance and all its referenced elements.
+	 * @param elementType 	the type of element to be maintained within the array
+	 * @return a pointer to a instance of the requested type. Multiple requests using
+	 * 		   the same parameters will lead to pointers addressing the same instance.
+	 */
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType);
+
+
+	/**
+	 * A factory method allowing to obtain a pointer to a array type representing
 	 * an instance managed by the given manager.
 	 *
 	 * @param manager 		the manager which should be responsible for maintaining the new
 	 * 				  		type instance and all its referenced elements.
 	 * @param elementType 	the type of element to be maintained within the array
-	 * @param dim 			the dimension of the requested array (default is set to 1)
+	 * @param dim 			the dimension of the requested array
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& dim = IntTypeParam::ONE);
+	static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& dim);
 
 	/**
 	 * Retrieves the dimension of the represented array.
 	 *
 	 * @return the dimension of the represented array type
 	 */
-	const IntTypeParam getDimension() const;
+	const IntTypeParamPtr& getDimension() const;
 };
 
 // --------------------------------- Vector Type ----------------------------
@@ -990,7 +1005,7 @@ public:
 	 * @param elementType the element type of the new vector
 	 * @param size the size of the new vector
 	 */
-	VectorType(const TypePtr& elementType, const IntTypeParam& size);
+	VectorType(const TypePtr& elementType, const IntTypeParamPtr& size);
 
 private:
 
@@ -1012,14 +1027,14 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size);
+	static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& size);
 
 	/**
 	 * Retrieves the size (=number of elements) of the represented vector type.
 	 *
 	 * @return the size of the represented array type
 	 */
-	const IntTypeParam getSize() const;
+	const IntTypeParamPtr& getSize() const;
 };
 
 
@@ -1080,7 +1095,7 @@ public:
 	 * 						obtained within this channel until it starts blocking writte operations. If
 	 * 						set to 0, the channel will represent a handshake channel.
 	 */
-	ChannelType(const TypePtr& elementType, const IntTypeParam& size);
+	ChannelType(const TypePtr& elementType, const IntTypeParamPtr& size);
 
 private:
 
@@ -1102,14 +1117,14 @@ public:
 	 * @return a pointer to a instance of the requested type. Multiple requests using
 	 * 		   the same parameters will lead to pointers addressing the same instance.
 	 */
-	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParam& size);
+	static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& size);
 
 	/**
 	 * Retrieves the (buffer) size of this channel.
 	 *
 	 * @return the buffer size of the channel
 	 */
-	const IntTypeParam getSize() const;
+	const IntTypeParamPtr& getSize() const;
 };
 
 } // end namespace core

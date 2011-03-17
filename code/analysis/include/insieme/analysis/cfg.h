@@ -38,6 +38,7 @@
 
 #include "insieme/core/statements.h"
 
+#include <boost/graph/subgraph.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
 
@@ -71,16 +72,16 @@ namespace cfg {
  * Element - Represents a top-level expression in a basic block. A type is included to distinguish expression from
  * terminal nodes.
  */
-struct Element {
+struct Element : public core::StatementPtr {
 	enum Type { None, CtrlCond, LoopInit, LoopIncrement };
 
-	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) : stmt(stmt), type(type) { }
-	void operator=(const Element& other) { stmt = other.stmt; type = other.type; }
+	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = None) :
+		core::StatementPtr(stmt), type(type) { }
+
+	void operator=(const Element& other) { core::StatementPtr::operator=(other); type = other.type; }
 
 	const Type& getType() const { return type; }
-	const core::StatementPtr& operator*() const { return stmt; }
 private:
-	core::StatementPtr stmt;
 	Type type;
 };
 
@@ -90,10 +91,8 @@ private:
  * If the control-flow is conditional, the condition expression will appear within the set of statements in the block
  * (usually the last statement).
  */
-struct Terminator : public core::StatementPtr {
-	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : core::StatementPtr(stmt) { }
-
-	void operator=(const core::StatementPtr& other) { core::StatementPtr::operator=(other); }
+struct Terminator : public Element {
+	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : Element(stmt) { }
 };
 
 /**
@@ -110,6 +109,8 @@ struct Edge {
 class CFG;
 typedef std::shared_ptr<CFG> CFGPtr;
 
+enum CreationPolicy { OneStmtPerBasicBlock, MultiStmtPerBasicBlock };
+
 /**
  * CFG: represents the graph built from IR. Boost.Graph is used as internal representation.
  */
@@ -118,14 +119,13 @@ public:
 	// Each node of the boost::graph is mapped to a CFGBlock.
 	struct NodeProperty {
 		const cfg::Block* block;
-		boost::default_color_type color;
-		size_t id;
 
 		NodeProperty(const cfg::Block* block=NULL) : block(block) { }
 	};
 
 	struct EdgeProperty {
 		cfg::Edge edge;
+
 		EdgeProperty() { }
 		EdgeProperty(const cfg::Edge& edge) : edge(edge) { }
 	};
@@ -171,13 +171,16 @@ private:
 
 	friend std::ostream& std::operator<<(std::ostream& out, const CFG& cfg);
 public:
+
+	typedef boost::property<boost::vertex_index_t, size_t, NodeProperty> vertex_prop;
+
 	// The CFG will be internally represented by an adjacency list (we cannot use an adjacency matrix because the number
 	// of nodes in the graph is not known before hand), the CFG is a directed graph node and edge property classes
 	// are used to represent control flow blocks and edges properties
 	typedef boost::adjacency_list<boost::listS,
 								  boost::listS,
 								  boost::bidirectionalS,
-								  NodeProperty,
+								  vertex_prop,
 								  EdgeProperty> ControlFlowGraph;
 
 	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::type
@@ -203,8 +206,6 @@ public:
 
 	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
 															 VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
-
-
 	/**
 	 * This iterator transforms iterators returned by boost::Graph iterating through vertex indexes into an iterator
 	 * iterating through cfg::Blocks. Makes traversing of the CFG easier.
@@ -223,15 +224,18 @@ public:
 			assert(iter != end && "Incrementing an invalid iterator");
 			++iter;
 		}
-		// checks whether 2 iterators are equals
+		// checks whether 2 iterators are equal
 		bool operator==(const CFGBlockIterator<IterT>& other) const { return iter == other.iter; }
-
+		bool operator!=(const CFGBlockIterator<IterT>& other) const { return !(*this == other); }
 		// Returns a reference to the block referenced by this iterator
 		const cfg::Block& operator*() const {
 			assert(iter != end && cfg && "Iterator out of scope!");
 			return cfg->getBlock(*iter);
 		}
 	};
+
+	typedef CFGBlockIterator<AdjacencyIterator> SuccessorsIterator;
+	typedef CFGBlockIterator<InvAdjacencyIterator> PredecessorsIterator;
 
 	CFG() { }
 	~CFG();
@@ -294,22 +298,22 @@ public:
 
 	void setExit(const CFG::VertexTy& v) { exit = v; }
 
-	CFGBlockIterator<AdjacencyIterator> successors_begin(const VertexTy& v) const {
+	SuccessorsIterator successors_begin(const VertexTy& v) const {
 		std::pair<AdjacencyIterator, AdjacencyIterator>&& adjIt = adjacent_vertices(v, graph);
-		return CFGBlockIterator<AdjacencyIterator>(this, adjIt.first, adjIt.second);
+		return SuccessorsIterator( this, adjIt.first, adjIt.second );
 	}
 
-	CFGBlockIterator<AdjacencyIterator> successors_end(const VertexTy& v) const {
-		return CFGBlockIterator<AdjacencyIterator>( adjacent_vertices(v, graph).second );
+	SuccessorsIterator successors_end(const VertexTy& v) const {
+		return SuccessorsIterator( adjacent_vertices(v, graph).second );
 	}
 
-	CFGBlockIterator<InvAdjacencyIterator> predecessors_begin(const VertexTy& v) const {
+	PredecessorsIterator predecessors_begin(const VertexTy& v) const {
 		std::pair<InvAdjacencyIterator, InvAdjacencyIterator>&& adjIt = inv_adjacent_vertices(v, graph);
-		return CFGBlockIterator<InvAdjacencyIterator>(this, adjIt.first, adjIt.second);
+		return PredecessorsIterator( this, adjIt.first, adjIt.second );
 	}
 
-	CFGBlockIterator<InvAdjacencyIterator> predecessors_end(const VertexTy& v) const {
-		return CFGBlockIterator<InvAdjacencyIterator>( inv_adjacent_vertices(v, graph).second );
+	PredecessorsIterator predecessors_end(const VertexTy& v) const {
+		return PredecessorsIterator( inv_adjacent_vertices(v, graph).second );
 	}
 
 	/**
@@ -317,6 +321,7 @@ public:
 	 *
 	 * @param rootNode
 	 */
+	template <CreationPolicy CP = OneStmtPerBasicBlock>
 	static CFGPtr buildCFG(const core::NodePtr& rootNode);
 
 private:
@@ -356,12 +361,20 @@ struct Block {
 
 	// Setters/Getters for the block ID
 	const CFG::VertexTy& blockId() const { return id; }
-	operator CFG::VertexTy() const { return id; }
 	CFG::VertexTy& blockId() { return id; }
 
-	bool operator==(const Block& other) const {
-		return id == other.id;
+	bool operator==(const Block& other) const {	return id == other.id; }
+
+	Element& operator[](size_t idx) {
+		assert(idx < size() && "Out of bound array access");
+		return stmtList[size()-1-idx];
 	}
+
+	const Element& operator[](size_t idx) const {
+		assert(idx < size() && "Out of bound array access");
+		return stmtList[size()-1-idx];
+	}
+
 	/// Returns an iterator through the statements contained in this block
 	const_iterator stmt_begin() const { return stmtList.rbegin(); }
 	const_iterator stmt_end() const { return stmtList.rend(); }

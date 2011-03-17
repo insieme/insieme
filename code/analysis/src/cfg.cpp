@@ -122,6 +122,7 @@ private:
  * Builder of the Control Flow Graph. Traverses the IR and creates blocks appending them to the CFG.
  * The visit is done in reverse order in a way the number of CFG nodes is minimized.
  */
+template < CreationPolicy CP >
 struct CFGBuilder: public ASTVisitor< void > {
 
 	CFG& cfg;
@@ -169,7 +170,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 			cfg.addEdge(node, succ);
 			succ = node;
 			currBlock = NULL;
-			isPending = false;
 		}
 
 		if( isPending ) {
@@ -180,12 +180,16 @@ struct CFGBuilder: public ASTVisitor< void > {
 		if ( !isPending && currBlock ) {
 			currBlock = NULL;
 		}
+		isPending = false;
+
+		// check post conditions
+		assert(!isPending && !currBlock && "Failed to satisfy postconditions");
 	}
 
 	void visitIfStmt(const IfStmtPtr& ifStmt) {
 		cfg::Block* ifBlock = new cfg::Block;
 		ifBlock->appendElement( cfg::Element(ifStmt->getCondition(), cfg::Element::CtrlCond) );
-		ifBlock->terminator() = ifStmt;
+		ifBlock->terminator() = cfg::Element(ifStmt);
 		CFG::VertexTy&& src = cfg.addBlock( ifBlock );
 
 		// the current node needs to be append to the graph (if not empty)
@@ -216,7 +220,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
-		currBlock->terminator() = continueStmt;
+		currBlock->terminator() = cfg::Element(continueStmt);
 		succ = scopeStack.getContinueTarget().entry;
 	}
 
@@ -224,7 +228,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
-		currBlock->terminator() = breakStmt;
+		currBlock->terminator() = cfg::Element(breakStmt);
 		succ = scopeStack.getBreakTarget().exit;
 	}
 
@@ -232,7 +236,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
-		currBlock->terminator() = retStmt;
+		currBlock->terminator() = cfg::Element(retStmt);
 		currBlock->appendElement( cfg::Element(retStmt->getReturnExpr()) );
 		succ = scopeStack.getEnclosingLambda().exit;
 	}
@@ -243,7 +247,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitForStmt(const ForStmtPtr& forStmt) {
 		cfg::Block* forBlock = new cfg::Block;
-		forBlock->terminator() = forStmt;
+		forBlock->terminator() = cfg::Element(forStmt);
 		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
 		CFG::VertexTy&& src = cfg.addBlock( forBlock );
 
@@ -278,7 +282,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
 		cfg::Block* whileBlock = new cfg::Block;
 		whileBlock->appendElement( cfg::Element(whileStmt->getCondition()) );
-		whileBlock->terminator() = whileStmt;
+		whileBlock->terminator() = cfg::Element(whileStmt);
 		CFG::VertexTy&& src = cfg.addBlock( whileBlock );
 
 		// the current node needs to be append to the graph (if not empty)
@@ -303,7 +307,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
 		cfg::Block* switchBlock = new cfg::Block;
 		switchBlock->appendElement( cfg::Element(switchStmt->getSwitchExpr()) );
-		switchBlock->terminator() = switchStmt;
+		switchBlock->terminator() = cfg::Element(switchStmt);
 		CFG::VertexTy&& src = cfg.addBlock( switchBlock );
 
 		// the current node needs to be appendend to the graph (if not empty)
@@ -312,15 +316,16 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		scopeStack.push( Scope(switchStmt, src, sink) );
 		const std::vector<SwitchStmt::Case>& cases = switchStmt->getCases();
-		std::for_each(cases.begin(), cases.end(), [this, &src, &sink](const SwitchStmt::Case& curr){
-			this->succ = sink;
-			this->createBlock();
+		for(auto it = cases.begin(), end = cases.end(); it != end; ++it) {
+			const SwitchStmt::Case& curr = *it;
+			succ = sink;
+			createBlock();
 			// push scope into the stack for this compound statement
-			this->visit(curr.second);
+			visit(curr.second);
 
 			appendPendingBlock();
-			this->cfg.addEdge(src, succ, cfg::Edge( curr.first->toString() ));
-		});
+			cfg.addEdge(src, succ);
+		}
 
 		succ = sink;
 		createBlock();
@@ -338,7 +343,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 		const std::vector<StatementPtr>& body = compStmt->getStatements();
 
-		createBlock();
+		if(body.empty()) {
+			return;
+		}
+
 		// we are sure there is at least 1 element in this compound statement
 		for_each(body.rbegin(), body.rend(),
 			[ this ](const StatementPtr& curr) { this->visit(curr); }
@@ -381,7 +389,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			[ this ]( const ExpressionPtr& curr ) {
 				this->succ = this->exit;
 				this->visit(curr);
-				// connect the resulting block with the entry point
+				// connect the resulting block with the entry pointpol
 				this->cfg.addEdge( this->entry, this->succ );
 			}
 		);
@@ -414,16 +422,49 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 };
 
+template <>
+void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
+	const std::vector<StatementPtr>& body = compStmt->getStatements();
+
+	if(body.empty()) 	return;
+
+	CFG::VertexTy old = succ;
+	appendPendingBlock();
+
+	// we are sure there is at least 1 element in this compound statement
+	for_each(body.rbegin(), body.rend(),
+		[ this, &old ](const StatementPtr& curr) {
+			this->createBlock();
+			this->visit(curr);
+			appendPendingBlock();
+		}
+	);
+}
+
+template <>
+void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
+	const std::vector<StatementPtr>& body = compStmt->getStatements();
+
+	if(body.empty())	return;
+
+	createBlock();
+	// we are sure there is at least 1 element in this compound statement
+	for_each(body.rbegin(), body.rend(),
+		[ this ](const StatementPtr& curr) { this->visit(curr); }
+	);
+}
+
+
 // insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr> CFGBuilder::cfgMap = insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr>();
 } // end anonymous namespace
 
 namespace insieme {
 namespace analysis {
 
-
-CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
+template <>
+CFGPtr CFG::buildCFG<OneStmtPerBasicBlock>(const NodePtr& rootNode) {
 	CFGPtr cfg = std::make_shared<CFG>();
-	CFGBuilder builder(*cfg);
+	CFGBuilder<OneStmtPerBasicBlock> builder(*cfg);
 	builder.visit(rootNode);
 	builder.completeGraph();
 
@@ -439,11 +480,23 @@ CFGPtr CFG::buildCFG(const NodePtr& rootNode) {
 	return cfg;
 }
 
+template <>
+CFGPtr CFG::buildCFG<MultiStmtPerBasicBlock>(const NodePtr& rootNode) {
+	CFGPtr cfg = std::make_shared<CFG>();
+	CFGBuilder<MultiStmtPerBasicBlock> builder(*cfg);
+	builder.visit(rootNode);
+	builder.completeGraph();
+	return cfg;
+}
+
 CFG::VertexTy CFG::addBlock(cfg::Block* block) {
-	CFG::VertexTy&& v = boost::add_vertex(CFG::NodeProperty(block), graph);
+	CFG::VertexTy&& v = boost::add_vertex(graph);
+	CFG::NodePropertyMapTy&& block_map = get(&NodeProperty::block, graph);
 	block->blockId() = v;
-	boost::property_map< CFG::ControlFlowGraph, size_t CFG::NodeProperty::* >::type&& blockID =
-			get(&CFG::NodeProperty::id, graph);
+	put(block_map, v, block);
+
+	// Set the index appropriately
+	boost::property_map< CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
 	put(blockID, v, currId++);
 	return v;
 }
@@ -469,8 +522,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 
 	boost::write_graphviz(out, cfg.graph,
 			CFG::BlockLabelWriter<CFG::ConstNodePropertyMapTy>(node),
-			CFG::EdgeLabelWriter<CFG::ConstEdgePropertyMapTy>(edge), boost::default_writer(),
-			get(&CFG::NodeProperty::id, cfg.graph)
+			CFG::EdgeLabelWriter<CFG::ConstEdgePropertyMapTy>(edge)
 	);
 	return out;
 }
@@ -484,19 +536,19 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 			out << num++ << ": ";
 			switch(curr.getType()) {
 			case cfg::Element::None:
-				out << printer::PrettyPrinter( *curr, 1<<5 );
+				out << printer::PrettyPrinter( curr, 1<<5 );
 				break;
 			case cfg::Element::CtrlCond:
-				out << printer::PrettyPrinter( *curr, 1<<5 ) << " <CTRL>";
+				out << printer::PrettyPrinter( curr, 1<<5 ) << " <CTRL>";
 				break;
 			case cfg::Element::LoopInit: {
 				out << printer::PrettyPrinter(
-						static_pointer_cast<const ForStmt>(*curr)->getDeclaration(), 1<<5
+						static_pointer_cast<const ForStmt>(curr)->getDeclaration(), 1<<5
 					) << " <LOOP_INIT>";
 				break;
 			}
 			case cfg::Element::LoopIncrement: {
-				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(*curr);
+				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
 				out << printer::PrettyPrinter(forStmt->getDeclaration()->getVariable()) << " += "
 				    << printer::PrettyPrinter( forStmt->getStep(), 1<<5 ) << " <LOOP_INC>";
 				break;

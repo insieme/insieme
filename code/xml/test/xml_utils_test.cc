@@ -165,7 +165,7 @@ TEST(XmlTest, GenericTypeTest) {
 	type2->addAnnotation(dummy_tp2n);
 	GenericTypePtr type3 = GenericType::get(manager, "type3");
 	type3->addAnnotation(dummy_bn);
-	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector(IntTypeParam::getVariableIntParam('p')), type3);
+	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')), type3);
 	type4->addAnnotation(dummy_gtn);
 	
 	NodePtr root = type4;
@@ -365,7 +365,7 @@ TEST(XmlTest, TypeVariableTest) {
 	varTypeG->addAnnotation(dummy_Gn);
 	
 	GenericTypePtr type1 = GenericType::get(manager, "int", toVector<TypePtr>(varTypeA, varTypeB), 
-								toVector(IntTypeParam::getVariableIntParam('p')), varTypeG);
+								toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')), varTypeG);
 	
 	NodePtr root = type1;
 	

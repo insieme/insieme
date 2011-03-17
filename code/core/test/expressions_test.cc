@@ -130,8 +130,8 @@ TEST(ExpressionsTest, VectorExpr) {
 	VectorExprPtr empty = VectorExpr::get(manager, toVector<ExpressionPtr>());
 	VectorExprPtr more = VectorExpr::get(manager, toVector<ExpressionPtr>(manager.basic.getTrue(), manager.basic.getFalse()));
 
-	TypePtr first = VectorType::get(manager, TypeVariable::get(manager, "a"), IntTypeParam::getConcreteIntParam(0));
-	TypePtr second = VectorType::get(manager, manager.basic.getBool(), IntTypeParam::getConcreteIntParam(2));
+	TypePtr first = VectorType::get(manager, TypeVariable::get(manager, "a"), ConcreteIntTypeParam::get(manager, 0));
+	TypePtr second = VectorType::get(manager, manager.basic.getBool(), ConcreteIntTypeParam::get(manager, 2));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
 

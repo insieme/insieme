@@ -263,7 +263,7 @@ namespace simple_backend {
 					this->visit(value);
 					code << "), sizeof(";
 					code << elementName;
-					code << ") * " << vectorType->getSize();
+					code << ") * " << toString(*(vectorType->getSize()));
 					code << ")";
 					return;
 				}

@@ -224,6 +224,12 @@ AST_TERMINAL(Program, Node)
 //
 
 AST_TERMINAL(Identifier, Node)
+
+AST_NODE(IntTypeParam, Node)
+AST_TERMINAL(VariableIntTypeParam, IntTypeParam)
+AST_TERMINAL(ConcreteIntTypeParam, IntTypeParam)
+AST_TERMINAL(InfiniteIntTypeParam, IntTypeParam)
+
 AST_TERMINAL(Lambda, Node)
 AST_TERMINAL(LambdaDefinition, Node)
 

@@ -66,7 +66,7 @@ TEST(IRParser, TypeTests) {
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
-	auto intType = builder.genericType("int", vector<TypePtr>(), toVector(IntTypeParam::getVariableIntParam('a')));
+	auto intType = builder.genericType("int", vector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
 	EXPECT_EQ(intType, parser.parseType("int<#a>"));
 	EXPECT_EQ(intType, parser.parseType("(|int<#a>|)"));
 
@@ -82,14 +82,14 @@ TEST(IRParser, TypeTests) {
 	auto arrayType = builder.arrayType(intType);
 	EXPECT_EQ(arrayType, parser.parseType("array<int<#a>, 1>"));
 
-	auto vectorType = builder.vectorType(intType, IntTypeParam::getConcreteIntParam(10));
+	auto vectorType = builder.vectorType(intType, ConcreteIntTypeParam::get(manager, 10));
 	EXPECT_EQ(vectorType, parser.parseType("vector<int<#a>, 10>"));
 
 	auto refType = builder.refType(intType);
 	EXPECT_EQ(refType, parser.parseType("ref<int<#a>>"));
 
 	auto multiParamType = builder.genericType("multi", toVector<TypePtr>(builder.typeVariable("tvar"), intType, intPairType), 
-		toVector(IntTypeParam::getConcreteIntParam(2), IntTypeParam::getInfiniteIntParam(), IntTypeParam::getVariableIntParam('v')));
+		toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 2), InfiniteIntTypeParam::get(manager), VariableIntTypeParam::get(manager, 'v')));
 	EXPECT_EQ(multiParamType, parser.parseType("multi<'tvar,int<#a>,(int<#a>,int<#a>),2,#inf,#v>"));
 
 	EXPECT_THROW(parser.parseType("fail1<#1,'alpha>"), ParseException);
@@ -101,7 +101,7 @@ TEST(IRParser, TypeTests) {
 	// vector parameter test
 	{
 		TypeVariablePtr var = builder.typeVariable("a");
-		TypePtr vector = builder.vectorType(var, IntTypeParam::getVariableIntParam('l'));
+		TypePtr vector = builder.vectorType(var, VariableIntTypeParam::get(manager, 'l'));
 
 		auto funType = builder.functionType(TypeList(), toVector<TypePtr>(vector, var), var);
 		EXPECT_EQ(funType, parser.parseType("(vector<'a,#l>, 'a)->'a"));
@@ -111,21 +111,19 @@ TEST(IRParser, TypeTests) {
 }
 
 TEST(IRParser, ExpressionTests) {
-
 	string testStr("testGenType");
 	NodeManager manager;
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
 	// literal
-std::cout << "hallo\n";
+    EXPECT_EQ(builder.literal("42.7", manager.basic.getDouble()), parser.parseExpression("42.7"));
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 
 	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var"));
 	EXPECT_TRUE(!!v && v->getType() == manager.basic.getInt4());
-std::cout << "hallo0\n";
 	EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(5)), parser.parseExpression("CAST<uint<4>>(lit<int<4>,5>)"));
 
 	// merge all
@@ -146,16 +144,14 @@ std::cout << "hallo0\n";
     EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
             toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
-    std::cout << "hallo1\n";
 
     // captureInitExpr
-    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[# uint<2>:a, real<4>:b #] fun [uint<2>, real<4>]()->int<4>:\
+    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
 
 	// jobExpr
     vector<std::pair<ExpressionPtr, ExpressionPtr> > guardedStmts;
-    std::cout << "hallo2\n";
 
     auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \
             default: [ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
@@ -175,7 +171,6 @@ std::cout << "hallo0\n";
 	// vectorExpr
 	auto vectorExpr = builder.vectorExpr(toVector<ExpressionPtr>(builder.intLit(0), builder.intLit(3)));
     EXPECT_EQ(vectorExpr, parser.parseExpression("vector<int<4>,2>(0, lit<int<4>, 3>)"));
-    std::cout << "hallo3\n";
 
     // structExpr
     IdentifierPtr first = Identifier::get(manager, "first");
@@ -220,6 +215,7 @@ TEST(IRParser, StatementTests) {
 
     // return statement
     EXPECT_EQ(builder.returnStmt(builder.intLit(-1)), parser.parseStatement("return -1"));
+    EXPECT_EQ(builder.returnStmt(builder.getBasicGenerator().getUnitConstant()), parser.parseStatement("return unit"));
 
     // declaration statement
     auto builtDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>
@@ -249,7 +245,7 @@ TEST(IRParser, StatementTests) {
 
     // for statement
     auto builtForStmt = dynamic_pointer_cast<const ForStmt>(builder.forStmt(builtDeclarationStmt, compoundStmt, builder.intLit(7), builder.intLit(-1)));
-    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(i = 42 .. 7 : -1) { 7; break; return 0; }" ));
+    auto parsedForStmt = dynamic_pointer_cast<const ForStmt>(parser.parseStatement("for(decl int<4>:i = 42 .. 7 : -1) { 7; break; return 0; }" ));
     EXPECT_TRUE(!!builtForStmt && !!parsedForStmt);
     EXPECT_EQ(builtForStmt->getStep(), parsedForStmt->getStep());
     EXPECT_EQ(builtForStmt->getEnd(), parsedForStmt->getEnd());
@@ -285,22 +281,33 @@ TEST(IRParser, StatementTests) {
     EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0; } </ms>"));
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
-    std::cout << "aösf\n";
-    std::cout << printer::PrettyPrinter(tmp) << std::endl;
+//    std::cout << printer::PrettyPrinter(tmp) << std::endl;
 
     // pointwise operator implementation with simple means
-    auto vectorPointwise = parser.parseStatement("\
-        fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>  {\
-           return [ fct ] fun [('elem, 'elem) -> 'res:fct2](vector<'elem,#l>:a, vector<'elem,#l>:b) -> vector<'res, #l>{ { \
-               decl ref<vector<'res,#l>>:result = (op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>)))); \
-                for(i = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
-                     (op<ref.assign>((op<array.ref.elem.1D>(result, int<4>:i)), (fct((op<vector.subscript>(a,int<4>:i)), (op<vector.subscript>(b,int<4>:i))))) );\
-                return (op<ref.deref>(result));\
+    auto vectorPointwise = parser.parseStatement("{\
+        fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
+           return [ fct ] fun [('elem, 'elem) -> 'res:fct2](vector<'elem, #l>:a, vector<'elem,#l>:b) -> vector<'res, #l>{ { \
+               decl ref<vector<'res, #l> >:result = (op<ref.var>((op<undefined>(lit<type<vector<'res, #l> >, arbitraryText>)))); \
+               for(decl int<4>:i = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
+                    (op<ref.assign>((op<array.ref.elem.1D>(result, i)), (fct((op<vector.subscript>(a, i)), (op<vector.subscript>(b, i))))) );\
+               return (op<ref.deref>(result));\
            } }\
-        } ");
-//(op<ref.assign>((op<array.ref.elem.1D>(result, int<4>:i)), fct((op<vector.subscript>(a,int<4>:i)), (op<vector.subscript>(b,int<4>:i)))) )
-    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
+        };\
+        fun [](('elem) -> 'res:fct3) -> (vector<elem, #l>) -> vector<'res, #l> { \
+            return[ fct3 ] fun[('elem) -> 'res:fct4](vector<'elem, #l>:a2) -> vector<'res, #l>{ { \
+                decl ref<vector<'res, 'l> >:result2 = (op<ref.var>((op<undefined>(lit<type<vector<'res, #l> >, arbitraryText>)))); \
+                for(decl int<4>:i2 = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
+                    (op<ref.assign>((op<array.ref.elem.1D>(result2, i2)), (fct3((op<vector.subscript>(a2, i2)) ))));\
+                return (op<ref.deref>(result2));\
+            } }\
+        }; } ");
+/*
+  ");
 
+    auto vectorPointwiseUnary = parser.parseStatement("
+
+ */
+//    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 }
 
 TEST(IRParser, ProgramTest) {
@@ -327,11 +334,11 @@ TEST(IRParser, ProgramTest) {
 
 TEST(IRParser, InteractiveTest) {
 
-	string testStr("testGenType");
+	string testStr("1");
 	if(getenv("IR_PARSE_STR")) testStr = string(getenv("IR_PARSE_STR"));
 	NodeManager nm;
 	try {
-		TypePtr t = parseType(nm, testStr);
+		ExpressionPtr t = parseExpression(nm, testStr);
 		std::cout << "--------------------------------------\n Parsing succeeded, "
 			<< "result: \n" << t << std::endl << "--------------------------------------\n";
 	} catch(ParseException e) {
