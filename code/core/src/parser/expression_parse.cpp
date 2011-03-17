@@ -37,6 +37,7 @@
 #include "insieme/core/parser/expression_parse_part.h"
 #include "insieme/core/parser/expression_parse.h"
 #include "insieme/core/parser/statement_parse.h"
+#include "insieme/core/parser/operator_parse.h"
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/lang/basic.h"
@@ -139,10 +140,11 @@ string buildString(string s) {
 }
 
 ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar)
-    : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), /*exprGpart(new ExpressionGrammarPart(nodeMan, this)),*/ varTab(nodeMan) {
+    : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
     exprGpart = new ExpressionGrammarPart(nodeMan, this);
+    opG = new OperatorGrammar(nodeMan, this);
     if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar(nodeMan);
         deleteStmtG = true;
@@ -299,6 +301,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
       | markerExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | variableExpr                                                [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | doubleExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | opG->operatorRule                                           [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 //      | intExpr                                                     [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
       | qi::int_                                                    [ qi::_val = ph::bind(&builtIntLiteral, nManRef, qi::_1) ];
 //      | qi::double_                                                 [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1) ];
