@@ -84,8 +84,39 @@ inline void transform(Container& c, OutputIterator out, const Functor& f) {
 }
 
 
+namespace {
+
+	/**
+	 * The terminal case of a function where a variable number of arguments is written into a vector in proper order.
+	 *
+	 * @tparam T the element type maintained within the extended vector
+	 * @param vector the vector to which nothing is written to
+	 */
+	template<typename T>
+	inline void appendToVector(vector<T>& vector) {}
+
+	/**
+	 * A variable-argument function writing elements into a vector in the given order.
+	 *
+	 * @tparam T the type of element maintained within the modified vector
+	 * @tparam Elements the types of the remaining elements (need to be convertible to T)
+	 * @param vector the vector to be written to
+	 * @param first the next element to be added
+	 * @param rest the remaining elements to be added
+	 */
+	template<typename T, typename ... Elements>
+	inline void appendToVector(vector<T>& vector, const T& first, const Elements& ... rest) {
+		vector.push_back(first);
+		appendToVector<T>(vector, rest...);
+	}
+
+}
+
 /**
  * Create an empty vector containing no elements.
+ *
+ * @tparam T the type of element to be stored in the resulting vector
+ * @return the resulting vector
  */
 template<typename T>
 inline vector<T> toVector() {
@@ -93,62 +124,22 @@ inline vector<T> toVector() {
 }
 
 /**
- * Create a vector containing a single element.
+ * Creates a vector containing the given elements.
+ *
+ * @tparam T the type of element to be stored in the resulting vector
+ * @tparam Elements the types of the remaining elements (need to be convertible to T)
+ * @param first the first element to be within the list
+ * @param rest the remaining elements to be stored within the list
+ * @return the resulting vector
  */
-template<typename T>
-inline vector<T> toVector(const T& a) {
-	return vector<T> (1, a);
-}
-
-/**
- * Create a vector containing two elements.
- */
-template<typename T>
-inline vector<T> toVector(const T& a, const T& b) {
-	vector<T> res = toVector(a);
-	res.push_back(b);
+template<typename T, typename ... Elements>
+inline vector<T> toVector(const T& first, const Elements& ... rest) {
+	vector<T> res;
+	res.reserve(1 + sizeof...(rest));
+	appendToVector<T>(res, first, rest...);
 	return res;
 }
 
-/**
- * Create a vector containing three elements.
- */
-template<typename T>
-inline vector<T> toVector(const T& a, const T& b, const T& c) {
-	vector<T> res = toVector(a,b);
-	res.push_back(c);
-	return res;
-}
-
-/**
- * Create a vector containing four elements.
- */
-template<typename T>
-inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d) {
-	vector<T> res = toVector(a,b,c);
-	res.push_back(d);
-	return res;
-}
-
-/**
- * Create a vector containing five elements.
- */
-template<typename T>
-inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const T& e) {
-	vector<T> res = toVector(a,b,c,d);
-	res.push_back(e);
-	return res;
-}
-
-/**
- * Create a vector containing six elements.
- */
-template<typename T>
-inline vector<T> toVector(const T& a, const T& b, const T& c, const T& d, const T& e, const T& f) {
-	vector<T> res = toVector(a,b,c,d,e);
-	res.push_back(f);
-	return res;
-}
 
 /**
  * A small utility function capable of appending all elements of one vector to another.
