@@ -40,8 +40,10 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
+#include <boost/property_map/property_map.hpp>
 
 #include <iterator>
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -101,6 +103,7 @@ struct Terminator : public Element {
 struct Edge {
 	std::string label; // fixme: replace the string label with an expression
 	Edge(const std::string& label = std::string()) : label(label) { }
+	void operator=(const Edge& other) { label = other.label; }
 };
 
 } // end cfg namespace
@@ -119,18 +122,12 @@ public:
 	struct NodeProperty {
 		const cfg::Block* block;
 
-		// we need to have unique integer IDs in order to print the DOT representation of the graph
-		// via boost utilities
-		size_t id;
-
-		// this property is needed by the boost::visitor in order to traverse the graph
-		boost::default_color_type color;
-
 		NodeProperty(const cfg::Block* block=NULL) : block(block) { }
 	};
 
 	struct EdgeProperty {
 		cfg::Edge edge;
+
 		EdgeProperty() { }
 		EdgeProperty(const cfg::Edge& edge) : edge(edge) { }
 	};
@@ -147,7 +144,7 @@ private:
 
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			const cfg::Block* node = prop[v];
+			const cfg::Block* node = get(prop, v);
 			assert(node);
 			out << *node;
 		}
@@ -175,15 +172,20 @@ private:
 	};
 
 	friend std::ostream& std::operator<<(std::ostream& out, const CFG& cfg);
+
+	typedef boost::property<boost::vertex_index_t, size_t, NodeProperty> vertex_prop;
+	typedef boost::property<boost::edge_index_t, size_t, EdgeProperty> edge_prop;
+
 public:
+
 	// The CFG will be internally represented by an adjacency list (we cannot use an adjacency matrix because the number
 	// of nodes in the graph is not known before hand), the CFG is a directed graph node and edge property classes
 	// are used to represent control flow blocks and edges properties
 	typedef boost::adjacency_list<boost::listS,
 								  boost::listS,
 								  boost::bidirectionalS,
-								  NodeProperty,
-								  EdgeProperty> ControlFlowGraph;
+								  vertex_prop,
+								  edge_prop>  ControlFlowGraph;
 
 	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::type
 			NodePropertyMapTy;
@@ -197,17 +199,22 @@ public:
 	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::const_type
 			ConstEdgePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 					VertexTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   					VertexIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 	VertexTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   	VertexIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 					EdgeTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 					OutEdgeIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 					InEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 	EdgeTy;
+	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 	OutEdgeIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 	InEdgeIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator 					AdjacencyIterator;
+	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator 	AdjacencyIterator;
 
 	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
 															 VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
+
+
+	typedef std::pair<CFG::VertexTy, CFG::VertexTy> GraphBounds;
+	typedef insieme::utils::map::PointerMap<core::NodePtr, GraphBounds> SubGraphMap;
+
 	/**
 	 * This iterator transforms iterators returned by boost::Graph iterating through vertex indexes into an iterator
 	 * iterating through cfg::Blocks. Makes traversing of the CFG easier.
@@ -257,12 +264,15 @@ public:
 	 * @return A reference to the CFG Block associated to this vertex
 	 */
 	const cfg::Block& getBlock(const VertexTy& vertexId) const {
-		ConstNodePropertyMapTy&& node = get(&NodeProperty::block, graph);
-		return *node[vertexId];
+		ConstNodePropertyMapTy&& nodeMap = get(&NodeProperty::block, graph);
+		return *nodeMap[vertexId];
 	}
 
-	EdgeTy addEdge(VertexTy src, VertexTy dest, const cfg::Edge& edge) {
-		return boost::add_edge(src, dest, CFG::EdgeProperty(edge), graph).first;
+	EdgeTy addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge) {
+		EdgeTy&& edgeId = boost::add_edge(src, dest, graph).first;
+		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
+		put(edgeMap, edgeId, edge);
+		return edgeId;
 	}
 
 	/**
@@ -279,7 +289,7 @@ public:
 	/**
 	 * Returns the internal representation of this CFG.
 	 */
-	ControlFlowGraph& getGraph() { return graph; }
+	ControlFlowGraph& getRawGraph() { return graph; }
 
 	/**
 	 * Returns the number of CFG Blocks in this graph.
@@ -324,10 +334,17 @@ public:
 	 * @param rootNode
 	 */
 	template <CreationPolicy CP = OneStmtPerBasicBlock>
-	static CFGPtr buildCFG(const core::NodePtr& rootNode);
+	static CFGPtr buildCFG(const core::NodePtr& rootNode, CFGPtr cfg = std::make_shared<CFG>());
+
+	GraphBounds addSubGraph(const core::NodePtr& root);
+
+	bool hasSubGraph(const core::NodePtr& root) { return subGraphs.find(root) != subGraphs.end(); }
+
+	void printStats(std::ostream& out);
 
 private:
 	ControlFlowGraph	graph;
+	SubGraphMap			subGraphs;
 	size_t				currId;
 	VertexTy			entry, exit;
 };

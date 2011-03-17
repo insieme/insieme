@@ -70,6 +70,13 @@ namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
 
+LiteralPtr buildDoubleLiteral(NodeManager& nodeMan, int integer, vector<char> fraction) {
+    ASTBuilder build(nodeMan);
+
+
+    return build.literal(nodeMan.basic.getDouble(), toString(integer) + "." + toString(join("", fraction)));
+}
+
 LiteralPtr builtIntLiteral(NodeManager& nodeMan, int val) {
     ASTBuilder build(nodeMan);
     return build.intLit(val);
@@ -187,14 +194,14 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 //        ( typeG->functionType >> ':' >> typeG->identifier )         [ qi::_val = ph::bind(&VariableTable::get, &varTab, qi::_1, qi::_2) ];
 
     callExpr =
-        ( /*'(' >> ( variableExpr                                             [ qi::_a = qi::_1 ]
+        ( '('  >> /*( variableExpr                                             [ qi::_a = qi::_1 ]
           | literalExpr                                             [ qi::_a = qi::_1 ]
           | opExpr                                                  [ qi::_a = qi::_1 ]
           | captureInitExpr                                         [ qi::_a = qi::_1 ]
           | castExpr                                                [ qi::_a = qi::_1 ]
           | callExpr                                                [ qi::_a = qi::_1 ]
          )*/
-         qi::lit("(") >> expressionRule >> '(' >> -(expressionRule [ ph::push_back(qi::_b, qi::_1) ]
+         expressionRule >> '(' >> -(expressionRule                  [ ph::push_back(qi::_b, qi::_1) ]
           % ',') >> ')' >> ')')                                           [ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_b) ];
 
     castExpr = exprGpart->castExpr;
@@ -265,6 +272,11 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 //        >> qi::ulong_long >> '>' >> expressionRule >> '<'
 //        >> '/' >> qi::lit("me") >> '>')                             [ qi::_val = ph::bind(&MarkerExpr::get, nManRef, qi::_2, qi::_1) ];
 
+    doubleExpr =
+        ( qi::int_ >> '.' >> +(qi::char_('0')|qi::char_('1')
+          |qi::char_('2')|qi::char_('3')|qi::char_('4')
+          |qi::char_('5')|qi::char_('6')|qi::char_('7')
+          |qi::char_('8')|qi::char_('9')) )                         [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1, qi::_2) ];
     // --------------------------------------------------------------------------------------
 
 
@@ -286,31 +298,34 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
       | tupleProjectionExpr                                         [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | markerExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | variableExpr                                                [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
-//need to change policy      | qi::double_                                                 [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1) ]
+      | doubleExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+//      | intExpr                                                     [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
       | qi::int_                                                    [ qi::_val = ph::bind(&builtIntLiteral, nManRef, qi::_1) ];
+//      | qi::double_                                                 [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1) ];
 
     // --------------------------------------------------------------------------------------
-//    BOOST_SPIRIT_DEBUG_NODE(literalString);
-//    BOOST_SPIRIT_DEBUG_NODE(charLiteral);
-//    BOOST_SPIRIT_DEBUG_NODE(lambda);
-//    BOOST_SPIRIT_DEBUG_NODE(captureInitExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
-//    BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(structExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(unionExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(memberAccessExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(tupleProjectionExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(markerExpr);
+/*    BOOST_SPIRIT_DEBUG_NODE(literalString);
+    BOOST_SPIRIT_DEBUG_NODE(charLiteral);
+    BOOST_SPIRIT_DEBUG_NODE(lambda);
+    BOOST_SPIRIT_DEBUG_NODE(captureInitExpr);
+    BOOST_SPIRIT_DEBUG_NODE(lambdaDef);
+    BOOST_SPIRIT_DEBUG_NODE(lambdaExpr);
+    BOOST_SPIRIT_DEBUG_NODE(jobExpr);
+    BOOST_SPIRIT_DEBUG_NODE(tupleExpr);
+    BOOST_SPIRIT_DEBUG_NODE(vectorExpr);
+    BOOST_SPIRIT_DEBUG_NODE(structExpr);
+    BOOST_SPIRIT_DEBUG_NODE(unionExpr);
+    BOOST_SPIRIT_DEBUG_NODE(memberAccessExpr);
+    BOOST_SPIRIT_DEBUG_NODE(tupleProjectionExpr);
+    BOOST_SPIRIT_DEBUG_NODE(markerExpr);
     // --------------------------------------------------------------------------------------
-//    BOOST_SPIRIT_DEBUG_NODE(literalExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(opExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(variableExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(callExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(castExpr);
-//    BOOST_SPIRIT_DEBUG_NODE(expressionRule);
+    BOOST_SPIRIT_DEBUG_NODE(literalExpr);
+    BOOST_SPIRIT_DEBUG_NODE(opExpr);
+    BOOST_SPIRIT_DEBUG_NODE(variableExpr);
+    BOOST_SPIRIT_DEBUG_NODE(callExpr);
+    BOOST_SPIRIT_DEBUG_NODE(castExpr);
+    BOOST_SPIRIT_DEBUG_NODE(expressionRule);
+    BOOST_SPIRIT_DEBUG_NODE(doubleExpr);*/
 }
 
 ExpressionGrammar::~ExpressionGrammar() {

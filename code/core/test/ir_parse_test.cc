@@ -111,14 +111,13 @@ TEST(IRParser, TypeTests) {
 }
 
 TEST(IRParser, ExpressionTests) {
-
 	string testStr("testGenType");
 	NodeManager manager;
 	IRParser parser(manager);
 	ASTBuilder builder(manager);
 
 	// literal
-    EXPECT_EQ(builder.intLit(42), parser.parseExpression("42"));
+    EXPECT_EQ(builder.literal("42.7", manager.basic.getDouble()), parser.parseExpression("42.7"));
 	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 
@@ -216,6 +215,7 @@ TEST(IRParser, StatementTests) {
 
     // return statement
     EXPECT_EQ(builder.returnStmt(builder.intLit(-1)), parser.parseStatement("return -1"));
+    EXPECT_EQ(builder.returnStmt(builder.getBasicGenerator().getUnitConstant()), parser.parseStatement("return unit"));
 
     // declaration statement
     auto builtDeclarationStmt = dynamic_pointer_cast<const DeclarationStmt>
@@ -307,7 +307,7 @@ TEST(IRParser, StatementTests) {
     auto vectorPointwiseUnary = parser.parseStatement("
 
  */
-    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
+//    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 }
 
 TEST(IRParser, ProgramTest) {
@@ -334,11 +334,11 @@ TEST(IRParser, ProgramTest) {
 
 TEST(IRParser, InteractiveTest) {
 
-	string testStr("testGenType");
+	string testStr("1");
 	if(getenv("IR_PARSE_STR")) testStr = string(getenv("IR_PARSE_STR"));
 	NodeManager nm;
 	try {
-		TypePtr t = parseType(nm, testStr);
+		ExpressionPtr t = parseExpression(nm, testStr);
 		std::cout << "--------------------------------------\n Parsing succeeded, "
 			<< "result: \n" << t << std::endl << "--------------------------------------\n";
 	} catch(ParseException e) {
