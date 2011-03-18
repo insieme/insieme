@@ -334,6 +334,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 ExpressionGrammar::~ExpressionGrammar() {
     delete typeG;
     delete exprGpart;
+    delete opG;
     if(deleteStmtG)
         delete stmtG;
 }
