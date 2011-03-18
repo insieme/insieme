@@ -126,33 +126,36 @@ template < CreationPolicy CP >
 struct CFGBuilder: public ASTVisitor< void > {
 
 	CFGPtr cfg;
+
+	// A pointer to the block which is currently the head of graph which is built
+	// bottom-up visiting the statements in reverse order
 	cfg::Block* currBlock;
 
+	// Tells us if currBlock has been already inserted in the CFG graph or it is only a temporary element
 	bool isPending;
 
 	CFG::VertexTy entry, exit, succ;
 	ScopeStack 	scopeStack;
 
-	CFGBuilder(CFGPtr cfg, const NodePtr& root) :
-		ASTVisitor<void>(false),
-		cfg(cfg),
-		currBlock(NULL),
-		isPending(false)
-	{
-		std::pair<CFG::VertexTy, CFG::VertexTy> bounds = cfg->addSubGraph(root);
+	CFGBuilder(CFGPtr cfg, const NodePtr& root) : ASTVisitor<>(false), cfg(cfg), currBlock(NULL), isPending(false) {
+
+		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
+		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
+		// initialize the entry/exit blocks for this CFG
 		entry = bounds.first;
 		exit = bounds.second;
 		succ = exit;
 
-		visit(root);
+		visit(root); 				// Visit the IR
 
-		completeGraph();
+		// Performs the final steps to finalize the CFG
+		appendPendingBlock(); 		// if we still have pending node we add them to the CFG
+		cfg->addEdge(entry, succ);	// connect the entry with the top node
 	}
 
 	void createBlock() {
 		// if we already have a block allocated and the block is empty we return it
 		if ( isPending || (currBlock && currBlock->empty()) ) {
-			isPending = true;
 			return;
 		}
 
@@ -163,8 +166,13 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void appendPendingBlock() {
-		// In the case the currBlock is pending and not empty we add it to the Graph and connect it with the successive
-		// node in the CFG
+
+		// if we already have allocated an empty block and it is not pending
+		if ( !isPending && currBlock && currBlock->empty() )
+			return;
+
+		// In the case the currBlock is pending and not empty we add it to the Graph and connect
+		// it with the successive node in the CFG
 		if ( isPending && currBlock && !currBlock->empty() ) {
 			CFG::VertexTy&& node = cfg->addBlock(currBlock);
 			cfg->addEdge(node, succ);
@@ -172,7 +180,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			currBlock = NULL;
 		}
 
-		if( isPending ) {
+		if ( isPending && currBlock ) {
 			delete currBlock;
 			currBlock = NULL;
 		}
@@ -186,9 +194,38 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!isPending && !currBlock && "Failed to satisfy postconditions");
 	}
 
+	void visitContinueStmt(const ContinueStmtPtr& continueStmt) {
+		assert(!currBlock || (currBlock && currBlock->empty()));
+
+		createBlock();
+		currBlock->terminator() = cfg::Element(continueStmt);
+		succ = scopeStack.getContinueTarget().entry;
+	}
+
+	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
+		assert(!currBlock || (currBlock && currBlock->empty()));
+
+		createBlock();
+		currBlock->terminator() = cfg::Element(breakStmt);
+		succ = scopeStack.getBreakTarget().exit;
+	}
+
+	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
+		assert(!currBlock || (currBlock && currBlock->empty()));
+
+		createBlock();
+		currBlock->terminator() = cfg::Element(retStmt);
+		succ = scopeStack.getEnclosingLambda().exit;
+
+		visit( retStmt->getReturnExpr() );
+	}
+
+	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
+		visit( markerStmt->getSubStatement() );
+	}
+
 	void visitIfStmt(const IfStmtPtr& ifStmt) {
 		cfg::Block* ifBlock = new cfg::Block;
-		ifBlock->appendElement( cfg::Element(ifStmt->getCondition(), cfg::Element::CtrlCond) );
 		ifBlock->terminator() = cfg::Element(ifStmt);
 		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
 
@@ -214,35 +251,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = src;
 		currBlock = ifBlock;
 		isPending = false;
-	}
 
-	void visitContinueStmt(const ContinueStmtPtr& continueStmt) {
-		assert(!currBlock || (currBlock && currBlock->empty()));
-
-		createBlock();
-		currBlock->terminator() = cfg::Element(continueStmt);
-		succ = scopeStack.getContinueTarget().entry;
-	}
-
-	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
-		assert(!currBlock || (currBlock && currBlock->empty()));
-
-		createBlock();
-		currBlock->terminator() = cfg::Element(breakStmt);
-		succ = scopeStack.getBreakTarget().exit;
-	}
-
-	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
-		assert(!currBlock || (currBlock && currBlock->empty()));
-
-		createBlock();
-		currBlock->terminator() = cfg::Element(retStmt);
-		currBlock->appendElement( cfg::Element(retStmt->getReturnExpr()) );
-		succ = scopeStack.getEnclosingLambda().exit;
-	}
-
-	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
-		visit( markerStmt->getSubStatement() );
+		visit( ifStmt->getCondition() );
 	}
 
 	void visitForStmt(const ForStmtPtr& forStmt) {
@@ -281,7 +291,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
 		cfg::Block* whileBlock = new cfg::Block;
-		whileBlock->appendElement( cfg::Element(whileStmt->getCondition()) );
 		whileBlock->terminator() = cfg::Element(whileStmt);
 		CFG::VertexTy&& src = cfg->addBlock( whileBlock );
 
@@ -301,22 +310,24 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
 
 		succ = src;
+		currBlock = whileBlock;
 		isPending = false;
+
+		visit( whileStmt->getCondition() );
 	}
 
 	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
 		cfg::Block* switchBlock = new cfg::Block;
-		switchBlock->appendElement( cfg::Element(switchStmt->getSwitchExpr()) );
 		switchBlock->terminator() = cfg::Element(switchStmt);
 		CFG::VertexTy&& src = cfg->addBlock( switchBlock );
 
-		// the current node needs to be appendend to the graph (if not empty)
+		// the current node needs to be appent to the graph (if not empty)
 		appendPendingBlock();
 		CFG::VertexTy sink = succ;
 
 		scopeStack.push( Scope(switchStmt, src, sink) );
 		const std::vector<SwitchStmt::Case>& cases = switchStmt->getCases();
-		for(auto it = cases.begin(), end = cases.end(); it != end; ++it) {
+		for ( auto it = cases.begin(), end = cases.end(); it != end; ++it ) {
 			const SwitchStmt::Case& curr = *it;
 			succ = sink;
 			createBlock();
@@ -330,7 +341,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = sink;
 		createBlock();
 		// Default case
-		this->visit(switchStmt->getDefaultCase());
+		visit(switchStmt->getDefaultCase());
 		appendPendingBlock();
 		cfg->addEdge(src, succ);
 
@@ -338,60 +349,95 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = src;
 		currBlock = switchBlock;
 		isPending = false;
+
+		visit( switchStmt->getSwitchExpr() );
 	}
 
-	void visitCompoundStmt(const CompoundStmtPtr& compStmt) {
-		const std::vector<StatementPtr>& body = compStmt->getStatements();
-
-		if(body.empty()) {
-			return;
-		}
-
-		// we are sure there is at least 1 element in this compound statement
-		for_each(body.rbegin(), body.rend(),
-			[ this ](const StatementPtr& curr) { this->visit(curr); }
-		);
-	}
+	void visitCompoundStmt(const CompoundStmtPtr& compStmt);
 
 	void visitCaptureInitExpr(const CaptureInitExprPtr& captExpr) {
 		visit( captExpr->getLambda() );
 	}
 
 	void visitCallExpr(const CallExprPtr& callExpr) {
-		// std::cout << "Visiting CallExpr: " << printer::PrettyPrinter(callExpr, 1<<5) << std::endl;
+		// if the call expression is calling a lambda the body of the lambda is processed and the sub graph is built
 		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
 			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+
 			if( !cfg->hasSubGraph(lambdaExpr) ) {
-				// VLOG(1) << "Building CFG for function";
+				// In the case the body has not been visited yet, proceed with the graph construction
 				CFG::buildCFG<CP>(lambdaExpr, cfg);
 			}
-		} else if(callExpr->getFunctionExpr()->getNodeType() == NT_CaptureInitExpr) {
-			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(
-					static_pointer_cast<const CaptureInitExpr>(callExpr->getFunctionExpr())->getLambda()
-				);
-			if( !cfg->hasSubGraph(lambdaExpr) ) {
-				// VLOG(1) << "Building CFG for function";
-				CFG::buildCFG<CP>(lambdaExpr, cfg);
-			}
+
+			appendPendingBlock();
+
+			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
+			// A call expression creates 2 blocks, 1 spawning the function call and the second one collecting
+			// the return value
+			cfg::CallBlock* call = new cfg::CallBlock;
+			cfg::RetBlock* ret = new cfg::RetBlock;
+			call->returnBlock() = ret;
+			ret->callBlock() = call;
+
+			CFG::VertexTy&& callVertex = cfg->addBlock( call );
+			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
+
+			cfg->addEdge(callVertex, bounds.first);
+			cfg->addEdge(bounds.second, retVertex);
+
+			cfg->addEdge(retVertex, succ);
+
+			succ = callVertex;
+			currBlock = call;
+			isPending = false;
+
+		} else if ( callExpr->getFunctionExpr()->getNodeType() == NT_CaptureInitExpr ) {
+			visit( callExpr->getFunctionExpr() );
+			return;
+		} else {
+			appendPendingBlock();
+			createBlock();
+			currBlock->appendElement( cfg::Element(callExpr) );
 		}
 
-//		if(!subExpr) {
-//			if(!currBlock)
-//				currBlock = new cfg::Block;
-//			currBlock->appendElement(StatementPtr(callExpr));
-//		}
-//		subExpr = true;
+		appendPendingBlock();
+		CFG::VertexTy sink = succ;
+
+		std::vector<CFG::VertexTy> explodedArgs;
 		const vector<ExpressionPtr>& args = callExpr->getArguments();
-		std::for_each(args.begin(), args.end(), [this](const ExpressionPtr& curr){ this->visit(curr); });
-//		subExpr = false;
+		std::for_each(args.begin(), args.end(), [this, sink, &explodedArgs](const ExpressionPtr& curr){
+
+			// in the case the argument is a call expression, we need to allocate a separate block in order to
+			// perform the inter-procedural function call
+			if ( dynamic_pointer_cast<const CallExpr>(curr) ) {
+				this->createBlock();
+				this->visit(curr);
+				this->appendPendingBlock();
+				// this->cfg->addEdge(argSpawn, this->succ);
+				explodedArgs.push_back(this->succ);
+				this->succ = sink;
+			}
+		});
+
+		if ( !explodedArgs.empty() ) {
+			cfg::Block* spawn = new cfg::Block(cfg::Block::DEFAULT);
+			CFG::VertexTy&& argSpawn = cfg->addBlock( spawn );
+
+			std::for_each(explodedArgs.begin(), explodedArgs.end(),
+				[this, argSpawn](const CFG::VertexTy& curr){
+					this->cfg->addEdge(argSpawn, curr);
+				}
+			);
+			succ = argSpawn;
+			currBlock = spawn;
+			isPending = false;
+		}
 	}
 
 	void visitLambdaExpr(const LambdaExprPtr& lambda) {
-
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
 		visit(lambda->getBody());
 		scopeStack.pop();
-		// cfgMap.insert( std::make_pair(lambda, CFGPtr(&cfg)) );
 		appendPendingBlock();
 	}
 
@@ -401,7 +447,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			[ this ]( const ExpressionPtr& curr ) {
 				this->succ = this->exit;
 				this->visit(curr);
-				// connect the resulting block with the entry pointpol
+				// connect the resulting block with the entry point
 				this->cfg->addEdge( this->entry, this->succ );
 			}
 		);
@@ -413,32 +459,13 @@ struct CFGBuilder: public ASTVisitor< void > {
 		currBlock->appendElement(stmt);
 	}
 
-	void completeGraph() {
-
-		if( isPending && currBlock && currBlock->empty()) {
-			delete currBlock;
-			currBlock = NULL;
-		}
-
-		if (entry == succ) {
-			return;
-		}
-
-		if (isPending) {
-			appendPendingBlock();
-		}
-
-		cfg->addEdge(entry, succ);
-		succ = entry;
-	}
-
 };
 
 template <>
 void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 	const std::vector<StatementPtr>& body = compStmt->getStatements();
 
-	if(body.empty()) 	return;
+	if ( body.empty() ) 	return;
 
 	CFG::VertexTy old = succ;
 	appendPendingBlock();
@@ -448,7 +475,7 @@ void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& 
 		[ this, &old ](const StatementPtr& curr) {
 			this->createBlock();
 			this->visit(curr);
-			appendPendingBlock();
+			this->appendPendingBlock();
 		}
 	);
 }
@@ -457,7 +484,7 @@ template <>
 void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 	const std::vector<StatementPtr>& body = compStmt->getStatements();
 
-	if(body.empty())	return;
+	if ( body.empty() )		return;
 
 	createBlock();
 	// we are sure there is at least 1 element in this compound statement
@@ -476,16 +503,6 @@ namespace analysis {
 template <>
 CFGPtr CFG::buildCFG<OneStmtPerBasicBlock>(const NodePtr& rootNode, CFGPtr cfg) {
 	CFGBuilder<OneStmtPerBasicBlock> builder(cfg, rootNode);
-
-	// print stats
-//	VLOG(2) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-//	VLOG(2) << "Num of CFG graphs: " << CFGBuilder::cfgMap.size();
-//	std::for_each(CFGBuilder::cfgMap.begin(), CFGBuilder::cfgMap.end(),
-//		[](insieme::utils::map::PointerMap<LambdaExprPtr, CFGPtr>::value_type curr){
-//			VLOG(2) << "number of nodes: " << curr.second->getSize();
-//		}
-//	);
-//	VLOG(2) << "Main: " << cfg->getSize();
 	cfg->printStats(std::cout);
 	return cfg;
 }
@@ -510,8 +527,8 @@ CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 }
 
 std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
-	CFG::VertexTy&& entry = addBlock(new cfg::Block );
-	CFG::VertexTy&& exit = addBlock(new cfg::Block );
+	CFG::VertexTy&& entry = addBlock(new cfg::Block(cfg::Block::ENTRY) );
+	CFG::VertexTy&& exit = addBlock(new cfg::Block(cfg::Block::EXIT) );
 	if(subGraphs.empty()) {
 		setEntry(entry);
 		setExit(exit);
@@ -522,9 +539,9 @@ std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
 
 void CFG::printStats(std::ostream& out) {
 	out << "***********************************************" << std::endl;
-	out << "* Num of CFG graphs: " << subGraphs.size() << std::endl;
-	out << "* Num of total nodes: " << boost::num_vertices(graph) << std::endl;
-	out << "* Num of total edges: " << boost::num_edges(graph) << std::endl;
+	out << "* Num. of CFGs:        " << subGraphs.size() << std::endl;
+	out << "* Num. of total nodes: " << boost::num_vertices(graph) << std::endl;
+	out << "* Num. of total edges: " << boost::num_edges(graph) << std::endl;
 	out << "***********************************************" << std::endl;
 }
 
@@ -556,7 +573,9 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block) {
-	if(!block.empty()) {
+	switch ( block.type() ) {
+	case cfg::Block::DEFAULT:
+	{
 		out << "[shape=box,label=\"";
 		out << "[B" << block.blockId() << "]\\l";
 		size_t num = 0;
@@ -564,21 +583,21 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 			out << num++ << ": ";
 			switch(curr.getType()) {
 			case cfg::Element::None:
-				out << printer::PrettyPrinter( curr, 1<<5 );
+				out << printer::PrettyPrinter( curr, 10001 );
 				break;
 			case cfg::Element::CtrlCond:
-				out << printer::PrettyPrinter( curr, 1<<5 ) << " <CTRL>";
+				out << printer::PrettyPrinter( curr, 10001 ) << " <CTRL>";
 				break;
 			case cfg::Element::LoopInit: {
 				out << printer::PrettyPrinter(
-						static_pointer_cast<const ForStmt>(curr)->getDeclaration(), 1<<5
+						static_pointer_cast<const ForStmt>(curr)->getDeclaration(), 10001
 					) << " <LOOP_INIT>";
 				break;
 			}
 			case cfg::Element::LoopIncrement: {
 				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
 				out << printer::PrettyPrinter(forStmt->getDeclaration()->getVariable()) << " += "
-				    << printer::PrettyPrinter( forStmt->getStep(), 1<<5 ) << " <LOOP_INC>";
+				    << printer::PrettyPrinter( forStmt->getStep(), 10001 ) << " <LOOP_INC>";
 				break;
 			}
 			default:
@@ -591,8 +610,17 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 
 		return out << "\"]";
 	}
-	// assert(block.getBlockID() == 0 || block.getBlockID() == 1); // entry and exit block are the only allowed empty blocks
-	return out << "[shape=diamond,label=\""<< (block.blockId() == 0 ? "ENTRY" : "EXIT") << "\"]";
+	case cfg::Block::CALL:
+		return out << "[shape=box,label=\"CALL\"]";
+	case cfg::Block::RET:
+		return out << "[shape=box,label=\"RET\"]";
+	case cfg::Block::ENTRY:
+		return out << "[shape=diamond,label=\"ENTRY\"]";
+	case cfg::Block::EXIT:
+		return out << "[shape=diamond,label=\"EXIT\"]";
+	default:
+		return out;
+	}
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Terminator& term) {
@@ -603,8 +631,8 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Termin
 	case NT_ForStmt: {
 		ForStmtPtr forStmt = static_pointer_cast<const ForStmt>(term);
 		return out << "FOR( " << "... ; "
-				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 1<<5 ) << " < "
-				<< printer::PrettyPrinter(forStmt->getEnd(), 1<<5 ) << "; ...)\\l";
+				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 10001 ) << " < "
+				<< printer::PrettyPrinter(forStmt->getEnd(), 10001 ) << "; ...)\\l";
 	}
 	case NT_WhileStmt:
 		return out << "WHILE(...)\\l";
