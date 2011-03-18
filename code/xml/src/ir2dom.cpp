@@ -155,27 +155,6 @@ public:
 		visitAnnotations(cur->getAnnotations(), infiniteIntTypeParam);
 	}
 
-	
-	/*for(IntParamList::const_iterator iter = intParam.begin(), end = intParam.end(); iter != end; ++iter) {
-		// FIXME: this is a quick-fix - int type param should be treated like all other nodes
-		XmlElement intTypeParam("intTypeParam", doc);
-		intTypeParams << intTypeParam;
-		switch ((*iter)->getNodeType()) {
-		case NT_VariableIntTypeParam:
-			intTypeParam << (XmlElement("variable", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const VariableIntTypeParam>(*iter)->getSymbol())));
-			break;
-		case NT_ConcreteIntTypeParam:
-			intTypeParam << (XmlElement("concrete", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const ConcreteIntTypeParam>(*iter)->getValue())));
-			break;
-		case NT_InfiniteIntTypeParam:
-			intTypeParam << XmlElement("infinite", doc);
-			break;
-		default:
-			assert(false && "Invalid integer parameter type");
-			break;
-		}
-	}*/
-
 	void visitFunctionType(const FunctionTypePtr& cur) {
 		XmlElement functionType("functionType", doc);
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
