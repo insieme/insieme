@@ -46,7 +46,7 @@ struct empty {};
 
 template<typename T>
 struct id : public std::unary_function<T, T> {
-	T& operator()(const T& element) const { return element; }
+	const T& operator()(const T& element) const { return element; }
 };
 
 

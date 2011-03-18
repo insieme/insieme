@@ -41,9 +41,42 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
+	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
 
 	std::ostream& operator<<(std::ostream& out, const PatternPtr& pattern) {
-		return pattern->printTo(out);
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const TreePatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const NodePatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	namespace trees {
+
+		bool contains(const TreePtr& tree, const TreePatternPtr& pattern) {
+			bool res = false;
+			res = res || pattern->match(tree);
+			for_each(tree->getSubTrees(), [&](const TreePtr& cur) {
+				res = res || contains(cur, pattern);
+			});
+			return res;
+//			return pattern->match(tree) || any(tree->getSubTrees(), [&](const TreePtr& cur) {
+//				return contains(cur, pattern);
+//			});
+		}
+
+		bool Descendant::match(const TreePtr& tree) const {
+			// search for all patterns occuring in the sub-trees
+			return all(subPatterns, [&](const TreePatternPtr& cur) {
+				return contains(tree, cur);
+			});
+		}
+
+
 	}
 
 } // end namespace pattern

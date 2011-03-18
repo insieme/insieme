@@ -52,25 +52,29 @@ namespace pattern {
 
 
 	class Tree {
+		const std::vector<TreePtr> subTrees;
 	public:
+		template<typename... Args>
+		Tree(Args && ... args) : subTrees(toVector<TreePtr>(args...)) {}
+
+		const std::vector<TreePtr> getSubTrees() const { return subTrees; }
 		virtual std::ostream& printTo(std::ostream& out) const =0;
 		virtual bool operator==(const Tree& other) const =0;
 	};
 
 
 	class Inner : public Tree {
-		const std::vector<TreePtr> subTrees;
 	public:
 		template<typename... Args>
-		Inner(Args && ... args) : subTrees(toVector<TreePtr>(args...)) {}
+		Inner(Args && ... args) : Tree(args...) {}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+			return out << "(" << join(",", getSubTrees(), print<deref<TreePtr>>()) << ")";
 		}
 
 		virtual bool operator==(const Tree& other) const {
 			if (const Inner* otherInner = dynamic_cast<const Inner*>(&other)) {
-				return equals(subTrees, otherInner->subTrees, equal_target<TreePtr>());
+				return equals(getSubTrees(), otherInner->getSubTrees(), equal_target<TreePtr>());
 			}
 			return false;
 		}

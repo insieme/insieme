@@ -53,8 +53,11 @@ namespace pattern {
 	class Pattern;
 	typedef std::shared_ptr<Pattern> PatternPtr;
 
-	class ListPattern;
-	typedef std::shared_ptr<ListPattern> ListPatternPtr;
+	class TreePattern;
+	typedef std::shared_ptr<TreePattern> TreePatternPtr;
+
+	class NodePattern;
+	typedef std::shared_ptr<NodePattern> NodePatternPtr;
 
 	class Match;
 	typedef std::shared_ptr<Match> MatchPtr;
@@ -67,85 +70,269 @@ namespace pattern {
 
 //	MatchPtr match(PatternPtr, TreePtr);
 
-	bool match(PatternPtr, TreePtr);
+//	bool match(PatternPtr, TreePtr);
 
 
-	// The abstract base class
 	class Pattern {
-//		const std::vector<FilterPtr> filter;
 	public:
-		virtual bool match(const TreePtr& tree) const =0;
 		virtual std::ostream& printTo(std::ostream& out) const =0;
 	};
 
-	// An atomic value - a pure IR node
-	class Atom : public Pattern {
-		const TreePtr atom;
+
+	// The abstract base class for tree patterns
+	class TreePattern : public Pattern {
+//		const std::vector<FilterPtr> filter;
 	public:
-		Atom(const TreePtr& atom) : atom(atom) {}
-		virtual bool match(const TreePtr& tree) const {
-			return atom == tree;
-		}
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return atom->printTo(out);
-		}
+		virtual bool match(const TreePtr& tree) const =0;
 	};
 
-	// A simple variable
-	class Variable : public Pattern {
-		const std::string name;
-	};
 
-	// Alternative
-	class Alternative : public Pattern {
-		const PatternPtr alternative1;
-		const PatternPtr alternative2;
+	// An abstract base node for node patterns
+	class NodePattern : public Pattern {
 	public:
-		Alternative(const PatternPtr& a, const PatternPtr& b) : alternative1(a), alternative2(b) {}
-
-		virtual bool match(const TreePtr& tree) const {
-			return alternative1->match(tree) || alternative2->match(tree);
-		}
-		virtual std::ostream& printTo(std::ostream& out) const {
-			alternative1->printTo(out);
-			out << " | ";
-			alternative2->printTo(out);
-			return out;
-		}
-	};
-
-	// Negation
-	class Negation : public Pattern {
-		const PatternPtr pattern;
-	public:
-		Negation(const PatternPtr& pattern) : pattern(pattern) {}
-
-		virtual bool match(const TreePtr& tree) const {
-			return !pattern->match(tree);
-		}
-		virtual std::ostream& printTo(std::ostream& out) const {
-			out << "!(";
-			pattern->printTo(out);
-			out << ")";
-			return out;
-		}
+		/**
+		 * Consumes parts of the vector starting from the given position. The return value
+		 * points to the next element not consumed so far or -1 if the pattern is not matching.
+		 */
+		virtual int match(const std::vector<TreePtr>& trees, int start) const =0;
 	};
 
 
-	PatternPtr atom(const TreePtr& tree) {
-		return std::make_shared<Atom>(tree);
+	namespace trees {
+
+		// An atomic value - a pure IR node
+		class Atom : public TreePattern {
+			const TreePtr atom;
+		public:
+			Atom(const TreePtr& atom) : atom(atom) {}
+			virtual bool match(const TreePtr& tree) const {
+				return atom == tree;
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return atom->printTo(out);
+			}
+		};
+
+		// A simple variable
+		class Variable : public TreePattern {
+			const std::string name;
+		};
+
+		// A wildcard for the pattern matching of a tree - accepts everything
+		class Wildcard : public TreePattern {
+		public:
+			virtual bool match(const TreePtr& tree) const {
+				return true;
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "_";
+			}
+		};
+
+
+		// bridge to Node Pattern
+		class NodeTreePattern : public TreePattern {
+			const NodePatternPtr pattern;
+		public:
+			NodeTreePattern(const NodePatternPtr& pattern) : pattern(pattern) {}
+
+			virtual bool match(const TreePtr& tree) const {
+				// match list of sub-nodes
+				auto list = tree->getSubTrees();
+				return pattern->match(list, 0) == static_cast<int>(list.size());
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				out << "(";
+				pattern->printTo(out);
+				return out << ")";
+			}
+		};
+
+
+		// Alternative
+		class Alternative : public TreePattern {
+			const TreePatternPtr alternative1;
+			const TreePatternPtr alternative2;
+		public:
+			Alternative(const TreePatternPtr& a, const TreePatternPtr& b) : alternative1(a), alternative2(b) {}
+
+			virtual bool match(const TreePtr& tree) const {
+				return alternative1->match(tree) || alternative2->match(tree);
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				alternative1->printTo(out);
+				out << " | ";
+				alternative2->printTo(out);
+				return out;
+			}
+		};
+
+		// Negation
+		class Negation : public TreePattern {
+			const TreePatternPtr pattern;
+		public:
+			Negation(const TreePatternPtr& pattern) : pattern(pattern) {}
+
+			virtual bool match(const TreePtr& tree) const {
+				return !pattern->match(tree);
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				out << "!(";
+				pattern->printTo(out);
+				out << ")";
+				return out;
+			}
+		};
+
+		class Descendant : public TreePattern {
+			const std::vector<TreePatternPtr> subPatterns;
+		public:
+			template<typename ... Patterns>
+			Descendant(Patterns ... patterns) : subPatterns(toVector<TreePatternPtr>(patterns...)) {};
+
+			virtual bool match(const TreePtr& tree) const;
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "t**(" << join(",", subPatterns, print<id<TreePatternPtr>>()) << ")";
+			}
+
+		};
+
 	}
 
-	PatternPtr operator|(const PatternPtr& a, const PatternPtr& b) {
-		return std::make_shared<Alternative>(a,b);
+	namespace nodes {
+
+		// The most simple node pattern covering a single tree
+		class Single : public NodePattern {
+			const TreePatternPtr element;
+		public:
+			Single(const TreePatternPtr& element) : element(element) {}
+			virtual int match(const std::vector<TreePtr>& trees, int start) const {
+				if (start < 0 || start >= static_cast<int>(trees.size())) {
+					return -1;
+				}
+				if (!element->match(trees[start])) {
+					return -1;
+				}
+				return start+1;
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return element->printTo(out);
+			}
+		};
+
+		// A sequence node pattern representing the composition of two node patterns
+		class Sequence : public NodePattern {
+			const NodePatternPtr left;
+			const NodePatternPtr right;
+		public:
+			Sequence(const NodePatternPtr& left, const NodePatternPtr& right) : left(left), right(right) {}
+
+			virtual int match(const std::vector<TreePtr>& trees, int start) const {
+				// just concatenate the two patterns
+				return right->match(trees, left->match(trees, start));
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				left->printTo(out);
+				out << ",";
+				right->printTo(out);
+				return out;
+			}
+		};
+
+		// A node pattern alternative
+		class Alternative : public NodePattern {
+			const NodePatternPtr alternative1;
+			const NodePatternPtr alternative2;
+		public:
+			Alternative(const NodePatternPtr& A, const NodePatternPtr& B) : alternative1(A), alternative2(B) {}
+
+			virtual int match(const std::vector<TreePtr>& trees, int start) const {
+				int res = alternative1->match(trees, start);
+				if (res >= 0) {
+					return res;
+				}
+				return alternative2->match(trees, start);
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				alternative1->printTo(out);
+				out << "|";
+				alternative2->printTo(out);
+				return out;
+			}
+		};
+
+		// Realizes the star operator for node patterns
+		class Repetition : public NodePattern {
+			const NodePatternPtr pattern;
+		public:
+			Repetition(const NodePatternPtr& pattern) : pattern(pattern) {}
+
+			virtual int match(const std::vector<TreePtr>& trees, int start) const {
+				int last = start;
+				int cur = start;
+				// match greedy
+				while (cur != -1) {
+					last = cur;
+					cur = pattern->match(trees, cur);
+				}
+				return last;
+			}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				out << "[";
+				pattern->printTo(out);
+				out << "]*";
+				return out;
+			}
+		};
+
 	}
 
-	PatternPtr operator!(const PatternPtr& a) {
-		return std::make_shared<Negation>(a);
+	extern const TreePatternPtr any;
+
+	TreePatternPtr atom(const TreePtr& tree) {
+		return std::make_shared<trees::Atom>(tree);
 	}
 
+	TreePatternPtr operator|(const TreePatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<trees::Alternative>(a,b);
+	}
+
+	TreePatternPtr operator!(const TreePatternPtr& a) {
+		return std::make_shared<trees::Negation>(a);
+	}
+
+	TreePatternPtr node(const NodePatternPtr& pattern) {
+		return std::make_shared<trees::NodeTreePattern>(pattern);
+	}
+
+	template<typename ... Patterns>
+	TreePatternPtr aT(Patterns ... patterns) {
+		return std::make_shared<trees::Descendant>(patterns...);
+	}
+
+	NodePatternPtr single(const TreePatternPtr& pattern) {
+		return std::make_shared<nodes::Single>(pattern);
+	}
+
+	NodePatternPtr single(const TreePtr& tree) {
+		return single(atom(tree));
+	}
+
+	NodePatternPtr operator|(const NodePatternPtr& a, const NodePatternPtr& b) {
+		return std::make_shared<nodes::Alternative>(a,b);
+	}
+
+	NodePatternPtr operator*(const NodePatternPtr& pattern) {
+		return std::make_shared<nodes::Repetition>(pattern);
+	}
+
+	NodePatternPtr operator,(const NodePatternPtr& a, const NodePatternPtr& b) {
+		return std::make_shared<nodes::Sequence>(a,b);
+	}
 
 	std::ostream& operator<<(std::ostream& out, const PatternPtr& pattern);
+	std::ostream& operator<<(std::ostream& out, const TreePatternPtr& pattern);
+	std::ostream& operator<<(std::ostream& out, const NodePatternPtr& pattern);
 
 
 //	// A pattern for a list
