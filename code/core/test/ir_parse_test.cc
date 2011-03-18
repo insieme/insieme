@@ -321,7 +321,7 @@ TEST(IRParser, OperationTests) {
         parser.parseExpression("(42.0 - 41.0)"));
 
     EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntMul(), builder.literal("7", manager.basic.getUInt4()), builder.literal("6", manager.basic.getInt4())),
-        parser.parseExpression("(lit<uint<4>, 7> - 6)"));
+        parser.parseExpression("(lit<uint<4>, 7> * 6)"));
 
     EXPECT_EQ(builder.callExpr(manager.basic.getRealDiv(), builder.literal("5", manager.basic.getFloat()), builder.literal("9.6", manager.basic.getDouble())),
         parser.parseExpression("(lit<real<4>, 5> / 9.6)"));
