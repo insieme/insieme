@@ -372,8 +372,8 @@ TEST(XmlTest, TypeVariableTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump2.xml");
-	xml.convertXmlToDom("dump2.xml", true);
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
 	string s2 = xml.convertDomToString();
 	EXPECT_EQ (s1, s2);
 	
@@ -1274,6 +1274,84 @@ TEST(XmlTest, MarkerExprTest) {
 	markerA->addAnnotation(dummy_mn);
 
 	NodePtr root = markerA;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
+
+TEST(XmlTest, ConcreteIntTypeParamTest) {
+	NodeManager manager;
+
+	ConcreteIntTypeParamPtr cType = ConcreteIntTypeParam::get(manager, 12);
+	
+	DummyAnnotationPtr dummy_ct(new DummyAnnotation("ctype n"));
+	cType->addAnnotation(dummy_ct);
+
+	NodePtr root = cType;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
+
+TEST(XmlTest, InfiniteIntTypeParamTest) {
+	NodeManager manager;
+
+	InfiniteIntTypeParamPtr iType = InfiniteIntTypeParam::get(manager);
+	
+	DummyAnnotationPtr dummy_it(new DummyAnnotation("itype n"));
+	iType->addAnnotation(dummy_it);
+
+	NodePtr root = iType;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
+
+TEST(XmlTest, VariableIntTypeParamTest) {
+	NodeManager manager;
+
+	VariableIntTypeParamPtr vType = VariableIntTypeParam::get(manager, 'p');
+	
+	DummyAnnotationPtr dummy_vt(new DummyAnnotation("vtype n"));
+	vType->addAnnotation(dummy_vt);
+
+	NodePtr root = vType;
 	
 	XmlUtil xml;
 	xml.convertIrToDom(root);

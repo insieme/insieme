@@ -211,7 +211,6 @@ public:
 	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
 															 VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
 
-
 	typedef std::pair<CFG::VertexTy, CFG::VertexTy> GraphBounds;
 	typedef insieme::utils::map::PointerMap<core::NodePtr, GraphBounds> SubGraphMap;
 
@@ -338,7 +337,20 @@ public:
 
 	GraphBounds addSubGraph(const core::NodePtr& root);
 
-	bool hasSubGraph(const core::NodePtr& root) { return subGraphs.find(root) != subGraphs.end(); }
+	/**
+	 * Check whether a graph for the root node has been already created
+	 * @param root
+	 * @return
+	 */
+	bool hasSubGraph(const core::NodePtr& root) const {
+		return subGraphs.find(root) != subGraphs.end();
+	}
+
+	GraphBounds getNodeBounds(const core::NodePtr& root) {
+		auto fit = subGraphs.find(root);
+		assert( fit != subGraphs.end() );
+		return fit->second;
+	}
 
 	void printStats(std::ostream& out);
 
@@ -361,8 +373,11 @@ struct Block {
 
 	typedef StatementList::const_reverse_iterator const_iterator;
 	typedef StatementList::const_iterator const_reverse_iterator;
-	Block() { }
-	Block(const CFG::VertexTy& id) : id(id) { }
+
+	enum Type { DEFAULT, ENTRY, EXIT, CALL, RET };
+
+	Block(const Type& blockType = DEFAULT) : blockType(blockType) { }
+	Block(const CFG::VertexTy& id, const Type& blockType) : blockType(blockType), id(id) { }
 
 	/// Appends a statement to an existing CFGBlock
 	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
@@ -377,6 +392,9 @@ struct Block {
 	size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	bool empty() const { return stmtList.empty() && !term; }
+
+	// return the block type
+	const Type& type() const { return blockType; }
 
 	// Setters/Getters for the block ID
 	const CFG::VertexTy& blockId() const { return id; }
@@ -402,11 +420,35 @@ struct Block {
 	const_reverse_iterator stmt_rbegin() const { return stmtList.begin(); }
 	const_reverse_iterator stmt_rend() const { return stmtList.end(); }
 
+	virtual ~Block() { }
 private:
+	const Type		blockType;
 	CFG::VertexTy	id;
 	StatementList 	stmtList;
 	Terminator		term;
 };
+
+struct RetBlock;
+
+struct CallBlock: public Block {
+	CallBlock(): Block(CALL), ret(NULL) { }
+
+	const RetBlock* returnBlock() const { return ret; }
+	RetBlock*& returnBlock() { return ret; }
+private:
+	RetBlock* ret;
+};
+
+struct RetBlock: public Block {
+	RetBlock(): Block(RET), call(NULL) { }
+
+	const CallBlock* callBlock() const { return call; }
+	CallBlock*& callBlock() { return call; }
+
+private:
+	CallBlock* call;
+};
+
 } // end cfg namespace
 } // end analysis namespace
 } // end insieme namespace
