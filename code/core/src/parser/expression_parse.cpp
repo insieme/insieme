@@ -83,6 +83,16 @@ LiteralPtr builtIntLiteral(NodeManager& nodeMan, int val) {
     return build.intLit(val);
 }
 
+LiteralPtr builtBoolLiteral(NodeManager& nodeMan, bool val) {
+    ASTBuilder build(nodeMan);
+
+    if(val)
+        return build.literal("true", nodeMan.basic.getBool());
+
+    return build.literal("false", nodeMan.basic.getBool());
+}
+
+
 CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, ExpressionList arguments) {
     //TODO determine return type by inference (arguments may be empty!)
     ASTBuilder build(nodeMan);
@@ -303,6 +313,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
       | doubleExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | opG->operatorRule                                           [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
 //      | intExpr                                                     [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
+      | qi::bool_                                                   [ qi::_val = ph::bind(&builtIntLiteral, nManRef, qi::_1) ]
       | qi::int_                                                    [ qi::_val = ph::bind(&builtIntLiteral, nManRef, qi::_1) ];
 //      | qi::double_                                                 [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1) ];
 

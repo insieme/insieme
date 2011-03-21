@@ -73,6 +73,25 @@ struct OperatorGrammar : public qi::grammar<ParseIt, CallExprPtr(), qi::space_ty
 
     // --------------------------------------------------------------------------------------
 
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> preInc;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> postInc;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> preDec;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> postDec;
+
+    // --------------------------------------------------------------------------------------
+
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lAnd;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lOr;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lNot;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Eq;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Ne;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Lt;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Le;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Gt;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Ge;
+
+    // --------------------------------------------------------------------------------------
+
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> operatorRule;
 
 };
