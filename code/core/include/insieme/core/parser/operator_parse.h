@@ -58,14 +58,19 @@ struct OperatorGrammar : public qi::grammar<ParseIt, CallExprPtr(), qi::space_ty
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> subtraction;
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> multiplication;
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> division;
-    /*
-    OPERATOR(Div,    "/")
-    OPERATOR(Mod,    "%")
-    OPERATOR(And,    "&")
-    OPERATOR(Or,     "|")
-    OPERATOR(Xor,    "^")
-    OPERATOR(LShift, "<<")
-    OPERATOR(RShift, ">>")*/
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> modulo;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> and_;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> or_;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> xor_;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lShift;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> rShift;
+
+    // --------------------------------------------------------------------------------------
+
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> not_;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> plus;
+    qi::rule<ParseIt, CallExprPtr(), qi::space_type> minus;
+
     // --------------------------------------------------------------------------------------
 
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> operatorRule;

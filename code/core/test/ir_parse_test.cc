@@ -282,7 +282,7 @@ TEST(IRParser, StatementTests) {
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
 //    std::cout << printer::PrettyPrinter(tmp) << std::endl;
-
+/*
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("{\
         fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
@@ -315,16 +315,46 @@ TEST(IRParser, OperationTests) {
     IRParser parser(manager);
     ASTBuilder builder(manager);
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAdd(), builder.intLit(0), builder.intLit(1)), parser.parseExpression("(0 + 1)"));
+    // binary operations
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getRealSub(), builder.literal("42.0", manager.basic.getDouble()), builder.literal("41.0", manager.basic.getDouble())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.intLit(0), builder.intLit(1)), parser.parseExpression("(0 + 1)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getDouble(), manager.basic.getRealSub(), builder.literal("42.0", manager.basic.getDouble()), builder.literal("41.0", manager.basic.getDouble())),
         parser.parseExpression("(42.0 - 41.0)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntMul(), builder.literal("7", manager.basic.getUInt4()), builder.literal("6", manager.basic.getInt4())),
-        parser.parseExpression("(lit<uint<4>, 7> * 6)"));
+    EXPECT_EQ(builder.callExpr(manager.basic.getUInt4(), manager.basic.getUnsignedIntMul(), builder.literal("7", manager.basic.getUInt4()),
+            builder.castExpr(manager.basic.getUInt4(), builder.literal("6", manager.basic.getInt4()))),
+        parser.parseExpression("(lit<uint<4>, 7> * lit<int<4>, 6> )"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getRealDiv(), builder.literal("5", manager.basic.getFloat()), builder.literal("9.6", manager.basic.getDouble())),
-        parser.parseExpression("(lit<real<4>, 5> / 9.6)"));
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealDiv(), builder.literal("5", manager.basic.getFloat()), builder.literal("9.6", manager.basic.getFloat())),
+        parser.parseExpression("(lit<real<4>, 5> / lit<real<4>, 9.6>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntMod(), builder.literal("53452", manager.basic.getInt2()), builder.literal("32", manager.basic.getInt2())),
+        parser.parseExpression("(lit<int<2>, 53452> % lit<int<2>, 32>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAnd(), builder.literal("255", manager.basic.getInt8()), builder.literal("7", manager.basic.getInt8())),
+        parser.parseExpression("(lit<int<8>, 255> & lit<int<8>, 7>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntOr(), builder.literal("255", manager.basic.getUInt2()), builder.literal("169", manager.basic.getUInt2())),
+        parser.parseExpression("(lit<uint<2>, 255> | lit<uint<2>, 169>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntLShift(), builder.literal("3456", manager.basic.getInt4()), builder.literal("1", manager.basic.getInt4())),
+        parser.parseExpression("(lit<int<4>, 3456> << lit<int<4>, 1>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntRShift(), builder.literal("546", manager.basic.getUInt4()), builder.literal("8", manager.basic.getInt4())),
+        parser.parseExpression("(lit<uint<4>, 546> >> lit<int<4>, 8>)"));
+
+    // unary operations
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntNot(), builder.literal("231", manager.basic.getUInt2())),
+        parser.parseExpression("( ~ lit<uint<2>, 231>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAdd(), builder.literal("0", manager.basic.getInt4()), builder.literal("100", manager.basic.getInt4())),
+        parser.parseExpression("( +100 )"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntSub(), builder.literal("0", manager.basic.getInt8()), builder.literal("100", manager.basic.getInt8())),
+        parser.parseExpression("( -lit<int<8>, 100>)"));
+
 
 }
 

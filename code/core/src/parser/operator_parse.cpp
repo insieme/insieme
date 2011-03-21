@@ -54,10 +54,34 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-CallExprPtr getOperation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, const ExpressionPtr a, const ExpressionPtr b) {
+CallExprPtr getBinaryOperation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, const ExpressionPtr a, const ExpressionPtr b) {
     ASTBuilder builder(nodeMan);
 
-    return builder.callExpr(generator->getOperator(a->getType(), op), toVector(a, b));
+    ExpressionPtr B = a->getType() == b->getType() ? b : builder.castExpr(a->getType(), b);
+
+    return builder.callExpr(a->getType(), generator->getOperator(a->getType(), op), toVector(a, B));
+}
+
+CallExprPtr getSignOperation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, const ExpressionPtr b) {
+    ASTBuilder builder(nodeMan);
+
+    ExpressionPtr A = builder.literal("0", b->getType());
+
+    return builder.callExpr(b->getType(), generator->getOperator(b->getType(), op), toVector(A, b));
+}
+
+CallExprPtr getInt4Operation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, const ExpressionPtr a, const ExpressionPtr b) {
+    ASTBuilder builder(nodeMan);
+
+    ExpressionPtr B = nodeMan.basic.getInt4() == b->getType() ? b : builder.castExpr(nodeMan.basic.getInt4(), b);
+
+    return builder.callExpr(a->getType(), generator->getOperator(a->getType(), op), toVector(a, B));
+}
+
+CallExprPtr getUnaryOperation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, const ExpressionPtr a) {
+    ASTBuilder builder(nodeMan);
+
+    return builder.callExpr(generator->getOperator(a->getType(), op), toVector(a));
 }
 
 OperatorGrammar::OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram)
@@ -68,23 +92,59 @@ OperatorGrammar::OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGr
 /*
     assignment =
         ( '(' >> exprG->expressionRule >> '='
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getOperation, nManRef, generator, lang::BasicGenerator::Operator::, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::, qi::_1, qi::_2) ];
 */
     addition =
         ( '(' >> exprG->expressionRule >> '+'
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getOperation, nManRef, generator, lang::BasicGenerator::Operator::Add, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Add, qi::_1, qi::_2) ];
 
     subtraction =
         ( '(' >> exprG->expressionRule >> '-'
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getOperation, nManRef, generator, lang::BasicGenerator::Operator::Sub, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Sub, qi::_1, qi::_2) ];
 
     multiplication =
         ( '(' >> exprG->expressionRule >> '*'
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getOperation, nManRef, generator, lang::BasicGenerator::Operator::Mul, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Mul, qi::_1, qi::_2) ];
 
     division =
         ( '(' >> exprG->expressionRule >> '/'
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getOperation, nManRef, generator, lang::BasicGenerator::Operator::Div, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Div, qi::_1, qi::_2) ];
+
+    modulo =
+        ( '(' >> exprG->expressionRule >> '%'
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Mod, qi::_1, qi::_2) ];
+
+    and_ =
+        ( '(' >> exprG->expressionRule >> '&'
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::And, qi::_1, qi::_2) ];
+
+    or_ =
+        ( '(' >> exprG->expressionRule >> '|'
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Or, qi::_1, qi::_2) ];
+
+    xor_ =
+        ( '(' >> exprG->expressionRule >> '^'
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Xor, qi::_1, qi::_2) ];
+
+    lShift =
+        ( '(' >> exprG->expressionRule >> qi::lit("<<")
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getInt4Operation, nManRef, generator, lang::BasicGenerator::Operator::LShift, qi::_1, qi::_2) ];
+
+    rShift =
+        ( '(' >> exprG->expressionRule >> qi::lit(">>")
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getInt4Operation, nManRef, generator, lang::BasicGenerator::Operator::RShift, qi::_1, qi::_2) ];
+
+    not_ =
+        ( qi::lit("(") >> qi::lit("~")
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getUnaryOperation, nManRef, generator, lang::BasicGenerator::Operator::Not, qi::_1) ];
+
+    plus =
+        ( qi::lit("(") >> '+'
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getSignOperation, nManRef, generator, lang::BasicGenerator::Operator::Add, qi::_1) ];
+
+    minus =
+        ( qi::lit("(") >> '-'
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getSignOperation, nManRef, generator, lang::BasicGenerator::Operator::Sub, qi::_1) ];
 
     //--------------------------------------------------------------------------------------------------------------------------------
 
@@ -93,6 +153,15 @@ OperatorGrammar::OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGr
         | subtraction                                                 [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
         | multiplication                                              [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
         | division                                                    [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | modulo                                                      [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | and_                                                        [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | or_                                                         [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | xor_                                                        [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | lShift                                                      [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | rShift                                                      [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | not_                                                        [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | plus                                                        [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
+        | minus                                                       [ qi::_val = ph::construct<CallExprPtr>(qi::_1) ]
         ;
 
 }
