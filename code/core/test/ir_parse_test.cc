@@ -317,31 +317,43 @@ TEST(IRParser, OperationTests) {
 
     // binary operations
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.intLit(0), builder.intLit(1)), parser.parseExpression("(0 + 1)"));
+    auto add = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<int<4>>:a + uint<4>:b)"));
+    EXPECT_EQ(manager.basic.getSignedIntAdd(), add->getFunctionExpr());
+    EXPECT_EQ(manager.basic.getInt4(), add->getArgument(0)->getType());
+    EXPECT_EQ(manager.basic.getInt4(), add->getArgument(1)->getType());
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getDouble(), manager.basic.getRealSub(), builder.literal("42.0", manager.basic.getDouble()), builder.literal("41.0", manager.basic.getDouble())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.intLit(0), builder.intLit(1)),
+        parser.parseExpression("(0 + 1)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getDouble(), manager.basic.getRealSub(), builder.literal("42.0", manager.basic.getDouble()),
+        builder.literal("41.0", manager.basic.getDouble())),
         parser.parseExpression("(42.0 - 41.0)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getUInt4(), manager.basic.getUnsignedIntMul(), builder.literal("7", manager.basic.getUInt4()),
-            builder.castExpr(manager.basic.getUInt4(), builder.literal("6", manager.basic.getInt4()))),
+    EXPECT_EQ(builder.callExpr(manager.basic.getUInt4(), manager.basic.getUnsignedIntMul(),
+        builder.literal("7", manager.basic.getUInt4()), builder.castExpr(manager.basic.getUInt4(), builder.literal("6", manager.basic.getInt4()))),
         parser.parseExpression("(lit<uint<4>, 7> * lit<int<4>, 6> )"));
 
     EXPECT_EQ(builder.callExpr(manager.basic.getRealDiv(), builder.literal("5", manager.basic.getFloat()), builder.literal("9.6", manager.basic.getFloat())),
         parser.parseExpression("(lit<real<4>, 5> / lit<real<4>, 9.6>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntMod(), builder.literal("53452", manager.basic.getInt2()), builder.literal("32", manager.basic.getInt2())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntMod(), builder.literal("53452", manager.basic.getInt2()),
+        builder.literal("32", manager.basic.getInt2())),
         parser.parseExpression("(lit<int<2>, 53452> % lit<int<2>, 32>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAnd(), builder.literal("255", manager.basic.getInt8()), builder.literal("7", manager.basic.getInt8())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAnd(), builder.literal("255", manager.basic.getInt8()),
+        builder.literal("7", manager.basic.getInt8())),
         parser.parseExpression("(lit<int<8>, 255> & lit<int<8>, 7>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntOr(), builder.literal("255", manager.basic.getUInt2()), builder.literal("169", manager.basic.getUInt2())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntOr(), builder.literal("255", manager.basic.getUInt2()),
+        builder.literal("169", manager.basic.getUInt2())),
         parser.parseExpression("(lit<uint<2>, 255> | lit<uint<2>, 169>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntLShift(), builder.literal("3456", manager.basic.getInt4()), builder.literal("1", manager.basic.getInt4())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntLShift(), builder.literal("3456", manager.basic.getInt4()),
+        builder.literal("1", manager.basic.getInt4())),
         parser.parseExpression("(lit<int<4>, 3456> << lit<int<4>, 1>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntRShift(), builder.literal("546", manager.basic.getUInt4()), builder.literal("8", manager.basic.getInt4())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntRShift(), builder.literal("546", manager.basic.getUInt4()),
+        builder.literal("8", manager.basic.getInt4())),
         parser.parseExpression("(lit<uint<4>, 546> >> lit<int<4>, 8>)"));
 
     // unary operations
@@ -349,27 +361,40 @@ TEST(IRParser, OperationTests) {
     EXPECT_EQ(builder.callExpr(manager.basic.getUInt2(), manager.basic.getUnsignedIntNot(), builder.literal("231", manager.basic.getUInt2())),
         parser.parseExpression("( ~ lit<uint<2>, 231>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.literal("0", manager.basic.getInt4()), builder.literal("100", manager.basic.getInt4())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.literal("0", manager.basic.getInt4()),
+        builder.literal("100", manager.basic.getInt4())),
         parser.parseExpression("( +100 )"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getInt8(), manager.basic.getSignedIntSub(), builder.literal("0", manager.basic.getInt8()), builder.literal("100", manager.basic.getInt8())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt8(), manager.basic.getSignedIntSub(), builder.literal("0", manager.basic.getInt8()),
+        builder.literal("100", manager.basic.getInt8())),
         parser.parseExpression("( -lit<int<8>, 100>)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getUInt8(), manager.basic.getUnsignedIntPreInc(), builder.literal("42", manager.basic.getUInt8())),
-        parser.parseExpression("( ++lit<uint<8>, 42>)"));
+    auto builtPreInc = builder.callExpr(manager.basic.getUInt8(), manager.basic.getUnsignedIntPreInc(),
+        builder.variable(builder.refType(manager.basic.getUInt8())));
+    auto parsedPreInc = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ++ ref<uint<8>>:pri )"));
+    EXPECT_EQ(builtPreInc->getFunctionExpr(), parsedPreInc->getFunctionExpr());
+    EXPECT_EQ(builtPreInc->getArgument(0)->getType(), parsedPreInc->getArgument(0)->getType());
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntPostInc(), builder.literal("1", manager.basic.getInt4())),
-        parser.parseExpression("( 1++ )"));
+    auto parsedPostInc = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<int<4>>:poi++ )"));
+    EXPECT_EQ(manager.basic.getSignedIntPostInc(), parsedPostInc->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getInt4()), parsedPostInc->getArgument(0)->getType());
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntPreDec(), builder.literal("2", manager.basic.getInt4())),
-        parser.parseExpression("(--2)"));
+    auto parsedPreDec = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( --ref<int<2>>:prd )"));
+    EXPECT_EQ(manager.basic.getSignedIntPreDec(), parsedPreDec->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getInt2()), parsedPreDec->getArgument(0)->getType());
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getUInt4(), manager.basic.getUnsignedIntPostDec(), builder.literal("3", manager.basic.getUInt4())),
-        parser.parseExpression("(lit<uint<4>, 3>--)"));
+    auto parsedPostDec = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(ref<uint<16>>:pod -- )"));
+    EXPECT_EQ(manager.basic.getUnsignedIntPostDec(), parsedPostDec->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getUInt16()), parsedPostDec->getArgument(0)->getType());
 
     // logical operations
+    CaptureInitExpr::Values lazyCaptInits;
+    std::vector<VariablePtr> lazyArgs;
+    std::vector<TypePtr> argTypes;
 /*
-    EXPECT_EQ(builder.callExpr(manager.basic.getBoolLAnd(), builder.literal("true", manager.basic.getBool()), builder.literal("true", manager.basic.getBool())),
+    EXPECT_EQ(builder.callExpr(manager.basic.getBool(), manager.basic.getBoolLAnd(), builder.literal("true", manager.basic.getBool()),
+        builder.callExpr(builder.captureInitExpr(builder.lambdaExpr(builder.functionType(argTypes, manager.basic.getBool()), lazyArgs,
+                builder.returnStmt(builder.literal("true", manager.basic.getBool()))), lazyCaptInits))),
         parser.parseExpression("(lit<bool, true> && lit<bool, true> )"));
 
     EXPECT_EQ(builder.callExpr(manager.basic.getBoolLOr(), builder.literal("true", manager.basic.getBool()), builder.literal("false", manager.basic.getBool())),
