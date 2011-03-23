@@ -281,6 +281,9 @@ namespace conversion {
  */
 core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, core::TypePtr retTy) const {
 
+    // only a wrapper any more, i don't wanna change Simone's stuff - Klaus
+    return builder.createCallExpr(body, retTy);
+/*
 	// keeps the list variables used in the body
 	insieme::frontend::analysis::VarRefFinder args(body);
 
@@ -311,7 +314,7 @@ core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, c
 	if ( !values.empty() ) {
 		retExpr = builder.captureInitExpr(retExpr, values);
 	}
-	return retExpr;
+	return retExpr;*/
 }
 
 //---------------------------------------------------------------------------------------------------------------------
