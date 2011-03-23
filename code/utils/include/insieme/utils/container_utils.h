@@ -66,6 +66,14 @@ inline void for_each(Container& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::copy.
+ */
+template<typename Container, typename OutputIterator>
+inline void copy(const Container& c, OutputIterator out) {
+	std::copy(c.begin(), c.end(), out);
+}
+
+/**
  * Convenience function for std::transform.
  */
 template<typename Container, typename Functor>

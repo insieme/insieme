@@ -915,6 +915,72 @@ const StatementPtr& LambdaExpr::getBody() const {
 }
 
 
+// -------------------------------- Bind Expression -----------------------------------
+
+namespace {
+
+	TypePtr getBindExprType(const vector<VariablePtr>& parameters, const TypePtr& resultType) {
+
+		// create list of arguments
+		TypeList paramTypes;
+		transform(parameters, std::back_inserter(paramTypes), [](const VariablePtr& cur) {
+			return cur->getType();
+		});
+
+		// create resulting type
+		return FunctionType::get(resultType->getNodeManager(), paramTypes, resultType);
+	}
+
+	std::size_t hashBindExpr(const vector<VariablePtr>& parameters, const CallExprPtr& call) {
+		std::size_t hash = 0;
+		boost::hash_combine(hash, HS_BindExpr);
+		hashPtrRange(hash, parameters);
+		boost::hash_combine(hash, call->hash());
+		return hash;
+	}
+
+
+}
+
+BindExpr::BindExpr(const vector<VariablePtr>& parameters, const CallExprPtr& call)
+	: Expression(NT_BindExpr, getBindExprType(parameters, call->getType()), ::hashBindExpr(parameters, call)),
+	  parameters(parameters), call(call) {}
+
+BindExpr* BindExpr::createCopyUsing(NodeMapping& mapper) const {
+	// just create a clone converted through the given mapper
+	return new BindExpr(
+			mapper.map(0, parameters),
+			mapper.map(parameters.size(), call)
+	);
+}
+
+Node::OptionChildList BindExpr::getChildNodes() const {
+	OptionChildList res(new ChildList());
+	copy(parameters, std::back_inserter(*res));
+	res->push_back(call);
+	return res;
+}
+
+bool BindExpr::equalsExpr(const Expression& expr) const {
+	// conversion is guaranteed by base operator==
+	const BindExpr& rhs = static_cast<const BindExpr&>(expr);
+
+	// evaluated members
+	bool res = true;
+	res = res && *call == *(rhs.call);
+	res = res && ::equals(parameters, rhs.parameters, equal_target<VariablePtr>());
+	return res;
+}
+
+BindExprPtr BindExpr::get(NodeManager& manager, const vector<VariablePtr>& parameters, const CallExprPtr& call) {
+	return manager.get(BindExpr(parameters, call));
+}
+
+std::ostream& BindExpr::printTo(std::ostream& out) const {
+	return out << "bind(" << join(",", parameters, print<deref<VariablePtr>>()) << ")->" << *call;
+}
+
+
 // ------------------------ Capture Initialization Expression ------------------------
 
 namespace {
