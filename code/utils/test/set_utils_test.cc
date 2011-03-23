@@ -50,6 +50,22 @@ typedef std::unordered_set<int, boost::hash<int>> Set;
 //typedef std::unordered_set<int> Set;
 //typedef boost::unordered_set<int> Set;
 
+TEST(SetUtilsTest, toSet) {
+
+	Set set = toSet<Set>(1,3,4,2,1);
+
+	Set ref;
+	ref.insert(1);
+	ref.insert(3);
+	ref.insert(4);
+	ref.insert(2);
+	ref.insert(1);
+
+	EXPECT_EQ(4, set.size());
+	EXPECT_EQ(4, ref.size());
+	EXPECT_EQ(set, ref);
+}
+
 TEST(SetUtilsTest, Merge) {
 
 	Set setA;
