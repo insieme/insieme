@@ -129,20 +129,24 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	// A pointer to the block which is currently the head of graph which is built
 	// bottom-up visiting the statements in reverse order
-	cfg::Block* currBlock;
+	cfg::Block* currBlock, *spawnBlock;
 
 	// Tells us if currBlock has been already inserted in the CFG graph or it is only a temporary element
 	bool isPending;
 
-	CFG::VertexTy entry, exit, succ;
+	CFG::VertexTy entry, exit, succ, head;
 	ScopeStack 	scopeStack;
 
-	CFGBuilder(CFGPtr cfg, const NodePtr& root) : ASTVisitor<>(false), cfg(cfg), currBlock(NULL), isPending(false) {
+	bool hasHead;
+
+	CFGBuilder(CFGPtr cfg, const NodePtr& root) : ASTVisitor<>(false), cfg(cfg), currBlock(NULL), spawnBlock(NULL),
+			isPending(false), hasHead(false) {
 
 		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
 		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
 		// initialize the entry/exit blocks for this CFG
 		entry = bounds.first;
+		head = entry;
 		exit = bounds.second;
 		succ = exit;
 
@@ -150,6 +154,18 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		// Performs the final steps to finalize the CFG
 		appendPendingBlock(); 		// if we still have pending node we add them to the CFG
+
+		if ( entry == succ )	return;
+
+		if ( cfg->getBlock(succ).empty() ) {
+			// If the first statement of a root element is a function call
+			// we end up with an empty statement at the top of the CFG, we
+			// want to remove that block and connect the outgoing edges to
+			// the entry node
+			cfg->replaceNode(succ, entry);
+			return;
+		}
+
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
 	}
 
@@ -194,6 +210,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 		assert(!isPending && !currBlock && "Failed to satisfy postconditions");
 	}
 
+	/**
+	 * When a continue statement is encountered we jump to the closest enclosing loop scope
+	 * (i.e. for or while stmt)
+	 */
 	void visitContinueStmt(const ContinueStmtPtr& continueStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
@@ -202,6 +222,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = scopeStack.getContinueTarget().entry;
 	}
 
+	/**
+	 * When a break statement is encountered we jump right after the closest enclosing loop scope
+	 * (i.e. for or while stmt)
+	 */
 	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
@@ -210,6 +234,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 		succ = scopeStack.getBreakTarget().exit;
 	}
 
+	/**
+	 * When a return statement is encountered we jump to the exit block of the closest enclosing function scope
+	 * (i.e. lambda expression)
+	 * @param retStmt
+	 */
 	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
@@ -229,26 +258,34 @@ struct CFGBuilder: public ASTVisitor< void > {
 		ifBlock->terminator() = cfg::Element(ifStmt);
 		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
 
-		// the current node needs to be append to the graph (if not empty)
-		appendPendingBlock();
+		appendPendingBlock(); // append any pending block before we fork the CFG for inserting the for stmt
 		CFG::VertexTy sink = succ;
 
 		createBlock();
-		// push scope into the stack for this compound statement
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
+
 		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
 
-		// reset the successor for the thenBody
-		succ = sink;
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
+
+		succ = sink;		// reset the successor for the thenBody
 
 		createBlock();
-		// push scope into the stack for this compound statement
 		visit(ifStmt->getElseBody());
 		appendPendingBlock();
+
 		cfg->addEdge(src, succ, cfg::Edge("F")); // FIXME
 
-		succ = src;
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
+
+		succ = src; 		// succ now points to the head of the IF stmt
 		currBlock = ifBlock;
 		isPending = false;
 
@@ -261,7 +298,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
 		CFG::VertexTy&& src = cfg->addBlock( forBlock );
 
-		appendPendingBlock();
+		appendPendingBlock();  // append any pending block before we fork the CFG for inserting the for stmt
 		CFG::VertexTy sink = succ;
 
 		// increment expression
@@ -282,6 +319,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
 		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
+
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
 
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
@@ -308,6 +350,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 		appendPendingBlock();
 		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
 		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
+
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
 
 		succ = src;
 		currBlock = whileBlock;
@@ -336,6 +383,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 			appendPendingBlock();
 			cfg->addEdge(src, succ);
+
+			// check for empty head block
+			if ( cfg->getBlock(succ).empty() ) {
+				cfg->replaceNode(succ, src);
+			}
 		}
 
 		succ = sink;
@@ -361,10 +413,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitCallExpr(const CallExprPtr& callExpr) {
 		// if the call expression is calling a lambda the body of the lambda is processed and the sub graph is built
-		if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
+		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
 			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 
-			if( !cfg->hasSubGraph(lambdaExpr) ) {
+			if ( !cfg->hasSubGraph(lambdaExpr) ) {
 				// In the case the body has not been visited yet, proceed with the graph construction
 				CFG::buildCFG<CP>(lambdaExpr, cfg);
 			}
@@ -376,61 +428,75 @@ struct CFGBuilder: public ASTVisitor< void > {
 			// the return value
 			cfg::CallBlock* call = new cfg::CallBlock;
 			cfg::RetBlock* ret = new cfg::RetBlock;
+
+			// we interconnect the two blocks so that if we want to have intra-procedural analysis we can jump
+			// directly to the return block without visiting the body of the function
 			call->returnBlock() = ret;
 			ret->callBlock() = call;
 
 			CFG::VertexTy&& callVertex = cfg->addBlock( call );
-			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
+			cfg->addEdge(callVertex, bounds.first); // CALL -> Function Entry
 
-			cfg->addEdge(callVertex, bounds.first);
-			cfg->addEdge(bounds.second, retVertex);
+			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
+			cfg->addEdge(bounds.second, retVertex); // Function Exit -> RET
 
 			cfg->addEdge(retVertex, succ);
 
 			succ = callVertex;
-			currBlock = call;
-			isPending = false;
+			currBlock = NULL;
 
 		} else if ( callExpr->getFunctionExpr()->getNodeType() == NT_CaptureInitExpr ) {
 			visit( callExpr->getFunctionExpr() );
 			return;
 		} else {
-			appendPendingBlock();
+			// we are in the multistmt per block mode we should not append and create a new block here
+			appendPendingBlock(); // FIXME
 			createBlock();
 			currBlock->appendElement( cfg::Element(callExpr) );
+			appendPendingBlock();
 		}
 
-		appendPendingBlock();
+		bool hasAllocated=false;
+		if ( !hasHead ) {
+			assert(!spawnBlock);
+			spawnBlock = new cfg::Block( cfg::Block::DEFAULT );
+			head = cfg->addBlock( spawnBlock );
+			hasHead = true;
+			hasAllocated=true;
+		}
+
 		CFG::VertexTy sink = succ;
 
-		std::vector<CFG::VertexTy> explodedArgs;
+		bool hasSpawned = false;
 		const vector<ExpressionPtr>& args = callExpr->getArguments();
-		std::for_each(args.begin(), args.end(), [this, sink, &explodedArgs](const ExpressionPtr& curr){
+		std::for_each(args.begin(), args.end(), [this, sink, &hasSpawned](const ExpressionPtr& curr){
 
 			// in the case the argument is a call expression, we need to allocate a separate block in order to
 			// perform the inter-procedural function call
-			if ( dynamic_pointer_cast<const CallExpr>(curr) ) {
+			if ( curr->getNodeType() == NT_CallExpr || curr->getNodeType() == NT_CaptureInitExpr ) {
 				this->createBlock();
 				this->visit(curr);
 				this->appendPendingBlock();
-				// this->cfg->addEdge(argSpawn, this->succ);
-				explodedArgs.push_back(this->succ);
+
+				if(this->succ != sink) {
+					hasSpawned = true;
+				}
+
 				this->succ = sink;
 			}
+
 		});
 
-		if ( !explodedArgs.empty() ) {
-			cfg::Block* spawn = new cfg::Block(cfg::Block::DEFAULT);
-			CFG::VertexTy&& argSpawn = cfg->addBlock( spawn );
+		if ( !hasSpawned ) {
+			cfg->addEdge(head, succ);
+		}
 
-			std::for_each(explodedArgs.begin(), explodedArgs.end(),
-				[this, argSpawn](const CFG::VertexTy& curr){
-					this->cfg->addEdge(argSpawn, curr);
-				}
-			);
-			succ = argSpawn;
-			currBlock = spawn;
+		if ( hasAllocated ) {
+			succ = head;
+			currBlock = spawnBlock;
 			isPending = false;
+			hasHead = false;
+			spawnBlock = NULL;
 		}
 	}
 
@@ -536,6 +602,33 @@ std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
 	return subGraphs.insert( std::make_pair(root, std::make_pair(entry, exit)) ).first->second;
 }
 
+void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode) {
+	// collect the outgoing edges
+	std::vector<VertexTy> dest;
+	AdjacencyIterator vi, vi_end;
+	tie(vi, vi_end) = adjacent_vertices(oldNode, graph);
+	std::copy( vi, vi_end, std::back_inserter(dest) );
+
+	std::vector<cfg::Edge> edges;
+
+	OutEdgeIterator ei, ei_end;
+	boost:tie(ei, ei_end) = boost::out_edges(oldNode, graph);
+
+	std::for_each( ei, ei_end, [this, &edges](const EdgeTy& curr) {
+		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
+		edges.push_back( edgeMap[curr] );
+	});
+
+	assert(dest.size() == edges.size() && "Number of outgoing edges and children of the node should be the same");
+
+	boost::clear_out_edges(oldNode, graph);
+	remove_vertex(oldNode, graph);
+
+	std::vector<cfg::Edge>::const_iterator eit = edges.begin();
+	for ( std::vector<VertexTy>::const_iterator vit=dest.begin(), end=dest.end(); vit != end; ++vit, ++eit) {
+		this->addEdge(newNode, *vit, *eit);
+	}
+}
 
 void CFG::printStats(std::ostream& out) {
 	out << "***********************************************" << std::endl;

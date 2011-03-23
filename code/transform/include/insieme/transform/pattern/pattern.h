@@ -70,7 +70,12 @@ namespace pattern {
 
 //	MatchPtr match(PatternPtr, TreePtr);
 
-//	bool match(PatternPtr, TreePtr);
+//	bool match(TreePatternPtr, TreePtr);
+//	bool match(NodePatternPtr, TreePtr);
+
+	class MatchContext {
+
+	};
 
 
 	class Pattern {
@@ -78,23 +83,35 @@ namespace pattern {
 		virtual std::ostream& printTo(std::ostream& out) const =0;
 	};
 
+	namespace nodes {
+		class Single;
+	}
 
 	// The abstract base class for tree patterns
 	class TreePattern : public Pattern {
+		friend class nodes::Single;
 //		const std::vector<FilterPtr> filter;
 	public:
-		virtual bool match(const TreePtr& tree) const =0;
+		bool match(const TreePtr& tree) const;
+	// protected: TODO: make this protected again
+		virtual bool match(MatchContext& context, const TreePtr& tree) const =0;
 	};
 
+	namespace trees {
+		class NodeTreePattern;
+	}
 
 	// An abstract base node for node patterns
 	class NodePattern : public Pattern {
+		friend class trees::NodeTreePattern;
 	public:
+		bool match(const TreePtr& tree) const;
+	// protected: TODO: make this protected again
 		/**
 		 * Consumes parts of the vector starting from the given position. The return value
 		 * points to the next element not consumed so far or -1 if the pattern is not matching.
 		 */
-		virtual int match(const std::vector<TreePtr>& trees, int start) const =0;
+		virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const =0;
 	};
 
 
@@ -105,27 +122,38 @@ namespace pattern {
 			const TreePtr atom;
 		public:
 			Atom(const TreePtr& atom) : atom(atom) {}
-			virtual bool match(const TreePtr& tree) const {
-				return atom == tree;
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return atom->printTo(out);
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+				return atom == tree;
 			}
 		};
 
 		// A simple variable
 		class Variable : public TreePattern {
 			const std::string name;
+		public:
+			Variable(const std::string& name) : name(name) {}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "%" << name << "%";
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+				return true;
+			}
 		};
 
 		// A wildcard for the pattern matching of a tree - accepts everything
 		class Wildcard : public TreePattern {
 		public:
-			virtual bool match(const TreePtr& tree) const {
-				return true;
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "_";
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+				return true;
 			}
 		};
 
@@ -136,15 +164,16 @@ namespace pattern {
 		public:
 			NodeTreePattern(const NodePatternPtr& pattern) : pattern(pattern) {}
 
-			virtual bool match(const TreePtr& tree) const {
-				// match list of sub-nodes
-				auto list = tree->getSubTrees();
-				return pattern->match(list, 0) == static_cast<int>(list.size());
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "(";
 				pattern->printTo(out);
 				return out << ")";
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+				// match list of sub-nodes
+				auto list = tree->getSubTrees();
+				return pattern->match(context, list, 0) == static_cast<int>(list.size());
 			}
 		};
 
@@ -156,14 +185,16 @@ namespace pattern {
 		public:
 			Alternative(const TreePatternPtr& a, const TreePatternPtr& b) : alternative1(a), alternative2(b) {}
 
-			virtual bool match(const TreePtr& tree) const {
-				return alternative1->match(tree) || alternative2->match(tree);
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				alternative1->printTo(out);
 				out << " | ";
 				alternative2->printTo(out);
 				return out;
+			}
+
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+				return alternative1->match(tree) || alternative2->match(tree);
 			}
 		};
 
@@ -173,14 +204,16 @@ namespace pattern {
 		public:
 			Negation(const TreePatternPtr& pattern) : pattern(pattern) {}
 
-			virtual bool match(const TreePtr& tree) const {
-				return !pattern->match(tree);
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "!(";
 				pattern->printTo(out);
 				out << ")";
 				return out;
+			}
+
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+				return !pattern->match(tree);
 			}
 		};
 
@@ -190,11 +223,12 @@ namespace pattern {
 			template<typename ... Patterns>
 			Descendant(Patterns ... patterns) : subPatterns(toVector<TreePatternPtr>(patterns...)) {};
 
-			virtual bool match(const TreePtr& tree) const;
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "t**(" << join(",", subPatterns, print<id<TreePatternPtr>>()) << ")";
+				return out << "aT(" << join(",", subPatterns, print<id<TreePatternPtr>>()) << ")";
 			}
 
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const;
 		};
 
 	}
@@ -206,17 +240,18 @@ namespace pattern {
 			const TreePatternPtr element;
 		public:
 			Single(const TreePatternPtr& element) : element(element) {}
-			virtual int match(const std::vector<TreePtr>& trees, int start) const {
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return element->printTo(out);
+			}
+		protected:
+			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
 				if (start < 0 || start >= static_cast<int>(trees.size())) {
 					return -1;
 				}
-				if (!element->match(trees[start])) {
+				if (!element->match(context, trees[start])) {
 					return -1;
 				}
 				return start+1;
-			}
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return element->printTo(out);
 			}
 		};
 
@@ -227,15 +262,16 @@ namespace pattern {
 		public:
 			Sequence(const NodePatternPtr& left, const NodePatternPtr& right) : left(left), right(right) {}
 
-			virtual int match(const std::vector<TreePtr>& trees, int start) const {
-				// just concatenate the two patterns
-				return right->match(trees, left->match(trees, start));
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				left->printTo(out);
 				out << ",";
 				right->printTo(out);
 				return out;
+			}
+		protected:
+			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
+				// just concatenate the two patterns
+				return right->match(context, trees, left->match(context, trees, start));
 			}
 		};
 
@@ -246,18 +282,19 @@ namespace pattern {
 		public:
 			Alternative(const NodePatternPtr& A, const NodePatternPtr& B) : alternative1(A), alternative2(B) {}
 
-			virtual int match(const std::vector<TreePtr>& trees, int start) const {
-				int res = alternative1->match(trees, start);
-				if (res >= 0) {
-					return res;
-				}
-				return alternative2->match(trees, start);
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				alternative1->printTo(out);
 				out << "|";
 				alternative2->printTo(out);
 				return out;
+			}
+		protected:
+			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
+				int res = alternative1->match(context, trees, start);
+				if (res >= 0) {
+					return res;
+				}
+				return alternative2->match(context, trees, start);
 			}
 		};
 
@@ -267,21 +304,23 @@ namespace pattern {
 		public:
 			Repetition(const NodePatternPtr& pattern) : pattern(pattern) {}
 
-			virtual int match(const std::vector<TreePtr>& trees, int start) const {
-				int last = start;
-				int cur = start;
-				// match greedy
-				while (cur != -1) {
-					last = cur;
-					cur = pattern->match(trees, cur);
-				}
-				return last;
-			}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "[";
 				pattern->printTo(out);
 				out << "]*";
 				return out;
+			}
+
+		protected:
+			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
+				int last = start;
+				int cur = start;
+				// match greedy
+				while (cur != -1) {
+					last = cur;
+					cur = pattern->match(context, trees, cur);
+				}
+				return last;
 			}
 		};
 
@@ -334,25 +373,6 @@ namespace pattern {
 	std::ostream& operator<<(std::ostream& out, const TreePatternPtr& pattern);
 	std::ostream& operator<<(std::ostream& out, const NodePatternPtr& pattern);
 
-
-//	// A pattern for a list
-//	class ListPattern : public Pattern {
-//
-//	};
-//
-//	// A simple pattern for a single list element
-//	class ListPatternElement : public ListPattern {
-//		const PatternPtr pattern;
-//	};
-//
-//	class ListPatternSequence : public ListPattern {
-//		const ListPatternPtr partA;
-//		const PatternPtr partB;
-//	};
-//
-//	class ListPatternStar : public ListPattern {
-//		const ListPatternPtr subPattern;
-//	};
 
 } // end namespace pattern
 } // end namespace transform

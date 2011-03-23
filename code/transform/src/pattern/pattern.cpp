@@ -36,10 +36,22 @@
 
 #include "insieme/transform/pattern/pattern.h"
 
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
+
+	bool TreePattern::match(const TreePtr& tree) const {
+		MatchContext context;
+		return match(context, tree);
+	}
+
+	bool NodePattern::match(const TreePtr& tree) const {
+		MatchContext context;
+		auto list = tree->getSubTrees();
+		return match(context, list, 0) == static_cast<int>(list.size());
+	}
 
 	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
 
@@ -57,22 +69,25 @@ namespace pattern {
 
 	namespace trees {
 
-		bool contains(const TreePtr& tree, const TreePatternPtr& pattern) {
+		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
 			bool res = false;
 			res = res || pattern->match(tree);
 			for_each(tree->getSubTrees(), [&](const TreePtr& cur) {
-				res = res || contains(cur, pattern);
+				res = res || contains(context, cur, pattern);
 			});
 			return res;
+
+			// TODO: figure out why this is not working
 //			return pattern->match(tree) || any(tree->getSubTrees(), [&](const TreePtr& cur) {
-//				return contains(cur, pattern);
+//				return contains(context, cur, pattern);
 //			});
+
 		}
 
-		bool Descendant::match(const TreePtr& tree) const {
+		bool Descendant::match(MatchContext& context, const TreePtr& tree) const {
 			// search for all patterns occuring in the sub-trees
 			return all(subPatterns, [&](const TreePatternPtr& cur) {
-				return contains(tree, cur);
+				return contains(context, tree, cur);
 			});
 		}
 

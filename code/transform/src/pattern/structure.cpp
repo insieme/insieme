@@ -40,12 +40,33 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
-	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
-		return tree.printTo(out);
+
+	std::ostream& Tree::printTo(std::ostream& out) const {
+		// print symbol if present
+		if (symbol) out << symbol;
+
+		// add sub-trees
+		if (!subTrees.empty()) {
+			out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+		}
+
+		// in case neither a symbol nor subtrees are given
+		if (!symbol && subTrees.empty()) {
+			out << "()";
+		}
+		return out;
 	}
 
-	TreePtr makeTree( char symbol ) {
-		return std::make_shared<Leaf>(symbol);
+	bool Tree::operator==(const Tree& other) const {
+		if (this == &other) {
+			return true;
+		}
+		return symbol == other.symbol && equals(subTrees, other.subTrees, equal_target<TreePtr>());
+	}
+
+
+	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
+		return tree.printTo(out);
 	}
 
 	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
