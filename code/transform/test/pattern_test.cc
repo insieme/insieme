@@ -180,6 +180,77 @@ namespace pattern {
 		EXPECT_PRED2(match, node(pattern), makeTree(c));
 	}
 
+	TEST(Descendant, Basic) {
+
+		// build up test-tree
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+		TreePtr c = makeTree('c');
+
+		TreePtr treeA = makeTree(a,a,a);
+		TreePtr treeB = makeTree(a,b,a);
+		TreePtr treeC = makeTree(b,a,b);
+		TreePtr treeD = makeTree(treeA,treeB,treeC);
+		TreePtr treeE = makeTree(b,makeTree(b,makeTree(b,makeTree(a))));
+
+		EXPECT_EQ("a", toString(a));
+		EXPECT_EQ("b", toString(b));
+		EXPECT_EQ("c", toString(c));
+
+		EXPECT_EQ("(a,a,a)", toString(treeA));
+		EXPECT_EQ("(a,b,a)", toString(treeB));
+		EXPECT_EQ("(b,a,b)", toString(treeC));
+		EXPECT_EQ("((a,a,a),(a,b,a),(b,a,b))", toString(treeD));
+		EXPECT_EQ("(b,(b,(b,(a))))", toString(treeE));
+
+
+		// create a descendant pattern
+		auto patternA = aT(atom(a));
+		auto patternB = aT(atom(b));
+		auto patternC = aT(atom(c));
+		auto patternD = aT(atom(a), atom(b));
+
+		EXPECT_PRED2(match, patternA, a);
+		EXPECT_PRED2(notMatch, patternA, b);
+		EXPECT_PRED2(notMatch, patternA, c);
+
+		EXPECT_PRED2(notMatch, patternB, a);
+		EXPECT_PRED2(match, patternB, b);
+		EXPECT_PRED2(notMatch, patternB, c);
+
+		EXPECT_PRED2(notMatch, patternC, a);
+		EXPECT_PRED2(notMatch, patternC, b);
+		EXPECT_PRED2(match, patternC, c);
+
+		EXPECT_PRED2(notMatch, patternD, a);
+		EXPECT_PRED2(notMatch, patternD, b);
+		EXPECT_PRED2(notMatch, patternD, c);
+
+		EXPECT_PRED2(match, patternA, treeA);
+		EXPECT_PRED2(match, patternA, treeB);
+		EXPECT_PRED2(match, patternA, treeC);
+		EXPECT_PRED2(match, patternA, treeD);
+		EXPECT_PRED2(match, patternA, treeE);
+
+		EXPECT_PRED2(notMatch, patternB, treeA);
+		EXPECT_PRED2(match, patternB, treeB);
+		EXPECT_PRED2(match, patternB, treeC);
+		EXPECT_PRED2(match, patternB, treeD);
+		EXPECT_PRED2(match, patternB, treeE);
+
+		EXPECT_PRED2(notMatch, patternC, treeA);
+		EXPECT_PRED2(notMatch, patternC, treeB);
+		EXPECT_PRED2(notMatch, patternC, treeC);
+		EXPECT_PRED2(notMatch, patternC, treeD);
+		EXPECT_PRED2(notMatch, patternC, treeE);
+
+		EXPECT_PRED2(notMatch, patternD, treeA);
+		EXPECT_PRED2(match, patternD, treeB);
+		EXPECT_PRED2(match, patternD, treeC);
+		EXPECT_PRED2(match, patternD, treeD);
+		EXPECT_PRED2(match, patternD, treeE);
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

@@ -52,58 +52,27 @@ namespace pattern {
 
 
 	class Tree {
+		const char symbol;
 		const std::vector<TreePtr> subTrees;
 	public:
 		template<typename... Args>
-		Tree(Args && ... args) : subTrees(toVector<TreePtr>(args...)) {}
+		Tree(char symbol, Args && ... args) : symbol(symbol), subTrees(toVector<TreePtr>(args...)) {}
+
+		std::ostream& printTo(std::ostream& out) const;
+		bool operator==(const Tree& other) const;
 
 		const std::vector<TreePtr> getSubTrees() const { return subTrees; }
-		virtual std::ostream& printTo(std::ostream& out) const =0;
-		virtual bool operator==(const Tree& other) const =0;
+		const char getSymbol() const { return symbol; }
 	};
-
-
-	class Inner : public Tree {
-	public:
-		template<typename... Args>
-		Inner(Args && ... args) : Tree(args...) {}
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << join(",", getSubTrees(), print<deref<TreePtr>>()) << ")";
-		}
-
-		virtual bool operator==(const Tree& other) const {
-			if (const Inner* otherInner = dynamic_cast<const Inner*>(&other)) {
-				return equals(getSubTrees(), otherInner->getSubTrees(), equal_target<TreePtr>());
-			}
-			return false;
-		}
-	};
-
-
-	class Leaf : public Tree {
-		const char symbol;
-	public:
-		Leaf(char symbol) : symbol(symbol) {};
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << symbol;
-		}
-
-		virtual bool operator==(const Tree& other) const {
-			if (const Leaf* otherLeaf = dynamic_cast<const Leaf*>(&other)) {
-				return symbol == otherLeaf->symbol;
-			}
-			return false;
-		}
-	};
-
-
-	TreePtr makeTree( char symbol );
 
 	template<typename... Args>
 	TreePtr makeTree(const Args & ... args ) {
-		return std::make_shared<Inner>(args...);
+		return std::make_shared<Tree>(0, args...);
+	}
+
+	template<typename... Args>
+	TreePtr makeTree(char symbol, const Args & ... args ) {
+		return std::make_shared<Tree>(symbol, args...);
 	}
 
 	std::ostream& operator<<(std::ostream& out, const Tree& tree);
