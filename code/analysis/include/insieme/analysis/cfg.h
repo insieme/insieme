@@ -290,6 +290,9 @@ public:
 	 */
 	ControlFlowGraph& getRawGraph() { return graph; }
 
+
+	void replaceNode(const VertexTy& oldNode, const VertexTy& newNode);
+
 	/**
 	 * Returns the number of CFG Blocks in this graph.
 	 */
