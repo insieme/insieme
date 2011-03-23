@@ -267,6 +267,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
 
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
+
 		succ = sink;		// reset the successor for the thenBody
 
 		createBlock();
@@ -274,6 +279,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 		appendPendingBlock();
 
 		cfg->addEdge(src, succ, cfg::Edge("F")); // FIXME
+
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
 
 		succ = src; 		// succ now points to the head of the IF stmt
 		currBlock = ifBlock;
@@ -310,6 +320,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
 		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
 
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
+
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
 		createBlock();
@@ -335,6 +350,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 		appendPendingBlock();
 		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
 		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
+
+		// check for empty head block
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
 
 		succ = src;
 		currBlock = whileBlock;
@@ -363,6 +383,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 			appendPendingBlock();
 			cfg->addEdge(src, succ);
+
+			// check for empty head block
+			if ( cfg->getBlock(succ).empty() ) {
+				cfg->replaceNode(succ, src);
+			}
 		}
 
 		succ = sink;
