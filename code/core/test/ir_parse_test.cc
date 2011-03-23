@@ -282,7 +282,7 @@ TEST(IRParser, StatementTests) {
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
 //    std::cout << printer::PrettyPrinter(tmp) << std::endl;
-
+/*
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("{\
         fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
@@ -391,15 +391,20 @@ TEST(IRParser, OperationTests) {
     CaptureInitExpr::Values lazyCaptInits;
     std::vector<VariablePtr> lazyArgs;
     std::vector<TypePtr> argTypes;
+
+    auto builtAnd = builder.callExpr(manager.basic.getBool(), manager.basic.getBoolLAnd(), builder.literal("true", manager.basic.getBool()),
+        builder.captureInitExpr(builder.lambdaExpr(builder.functionType(argTypes, manager.basic.getBool()), lazyArgs,
+                builder.returnStmt(builder.literal("true", manager.basic.getBool()))), lazyCaptInits));
+    auto parsedAnd = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(lit<bool, true> && lit<bool, true> )"));
+    EXPECT_EQ(builtAnd->getFunctionExpr(), parsedAnd->getFunctionExpr());
+    EXPECT_EQ(builtAnd->getArgument(0), parsedAnd->getArgument(0));
+    EXPECT_EQ(builtAnd->getArgument(1)->getType(), parsedAnd->getArgument(1)->getType());
+
+    auto parsedOr = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(lit<bool, false> || lit<bool, true> )"));
+    EXPECT_EQ(manager.basic.getBoolLOr(), parsedOr->getFunctionExpr());
+    EXPECT_EQ(builder.literal(manager.basic.getBool(), "false"), parsedOr->getArgument(0));
+    EXPECT_EQ(builtAnd->getArgument(1)->getType(), parsedAnd->getArgument(1)->getType());
 /*
-    EXPECT_EQ(builder.callExpr(manager.basic.getBool(), manager.basic.getBoolLAnd(), builder.literal("true", manager.basic.getBool()),
-        builder.callExpr(builder.captureInitExpr(builder.lambdaExpr(builder.functionType(argTypes, manager.basic.getBool()), lazyArgs,
-                builder.returnStmt(builder.literal("true", manager.basic.getBool()))), lazyCaptInits))),
-        parser.parseExpression("(lit<bool, true> && lit<bool, true> )"));
-
-    EXPECT_EQ(builder.callExpr(manager.basic.getBoolLOr(), builder.literal("true", manager.basic.getBool()), builder.literal("false", manager.basic.getBool())),
-        parser.parseExpression("(lit<bool, true> || lit<bool, false> )"));
-
     EXPECT_EQ(builder.callExpr(manager.basic.getBoolLNot(), builder.literal("false", manager.basic.getBool())),
         parser.parseExpression("(! lit<bool, false> )"));
 
@@ -408,7 +413,10 @@ TEST(IRParser, OperationTests) {
 
     EXPECT_EQ(builder.callExpr(manager.basic.getBoolNe(), builder.literal("false", manager.basic.getBool()), builder.literal("true", manager.basic.getBool())),
         parser.parseExpression("(false != true )"));
-*/
+
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getBoolLt(), builder.literal("true", manager.basic.getBool()), builder.literal("false", manager.basic.getBool())),
+        parser.parseExpression("(false < true )"));
 
     /*
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> Lt;

@@ -119,6 +119,19 @@ CallExprPtr getInplaceOperation(NodeManager& nodeMan, const lang::BasicGenerator
     throw ParseException();
 }
 
+CallExprPtr getLazyOperation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b) {
+    ASTBuilder builder(nodeMan);
+
+    // if arguments are references, automatically deref them
+    TypePtr aType = getDerefedType(a, builder);
+    TypePtr bType = getDerefedType(b, builder);
+
+    ExpressionPtr A = aType == nodeMan.basic.getBool() ? a : builder.castExpr(nodeMan.basic.getBool(), a);
+    ExpressionPtr B = bType == nodeMan.basic.getBool() ? b : builder.castExpr(nodeMan.basic.getBool(), b);
+
+    return builder.callExpr(aType, generator->getOperator(aType, op), a, builder.createCallExpr(builder.returnStmt(b), nodeMan.basic.getBool()));
+}
+
 
 OperatorGrammar::OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram)
     : OperatorGrammar::base_type(operatorRule), exprG(exprGram), generator(new lang::BasicGenerator(nodeMan)) {
@@ -206,11 +219,11 @@ OperatorGrammar::OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGr
 
     lAnd =
         ( '(' >> exprG->expressionRule >> qi::lit("&&")
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lBo::LAnd, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getLazyOperation, nManRef, generator, lBo::LAnd, qi::_1, qi::_2) ];
 
     lOr =
         ( '(' >> exprG->expressionRule >> qi::lit("||")
-          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getBinaryOperation, nManRef, generator, lBo::LOr, qi::_1, qi::_2) ];
+          >> exprG->expressionRule >> ')' )                         [ qi::_val = ph::bind(&getLazyOperation, nManRef, generator, lBo::LOr, qi::_1, qi::_2) ];
 
     lNot =
         ( '(' >> qi::lit("!")

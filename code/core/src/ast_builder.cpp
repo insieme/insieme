@@ -308,6 +308,39 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
 }
 
+core::ExpressionPtr ASTBuilder::createCallExpr(StatementPtr body, TypePtr retTy) const {
+    // keeps the list variables used in the body
+    VarRefFinder args(body);
+
+    core::Lambda::CaptureList capture;
+    core::TypeList captureListType;
+
+    core::CaptureInitExpr::Values values;
+    std::for_each(args.begin(), args.end(),
+        [ &/*capture, &captureListType, &builder, &body, &values*/ ] (const core::ExpressionPtr& curr) {
+            assert(curr->getNodeType() == core::NT_Variable);
+            const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
+            core::VariablePtr&& parmVar = this->variable( bodyVar->getType() );
+            capture.push_back( parmVar );
+            captureListType.push_back( bodyVar->getType() );
+            values.push_back( bodyVar );
+            // we have to replace the variable of the body with the newly created parmVar
+            body = core::static_pointer_cast<const core::Statement>(
+                    core::transform::replaceAll(this->getNodeManager(), body, bodyVar, parmVar, true )
+            );
+        }
+    );
+
+    // build the type of the function
+    core::FunctionTypePtr&& funcTy = this->functionType( captureListType, TypeList(), retTy );
+
+    // build the expression body
+    core::ExpressionPtr&& retExpr = this->lambdaExpr( funcTy, capture, Lambda::ParamList(), body );
+    if ( !values.empty() ) {
+        retExpr = this->captureInitExpr(retExpr, values);
+    }
+    return retExpr;
+}
 
 // ---------------------------- Utilities ---------------------------------------
 
