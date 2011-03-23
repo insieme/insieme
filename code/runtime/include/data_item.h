@@ -44,17 +44,42 @@
 
 IRT_MAKE_ID_TYPE(irt_data_item);
 
+typedef enum _irt_data_mode {
+	READ_ONLY,
+	WRITE_ONLY,
+	WRITE_FIRST,
+	READ_WRITE
+} irt_data_mode;
+
+typedef struct _irt_data_range {
+	int64 begin, end, step;
+} irt_data_range;
+
+typedef struct _irt_data_block {
+	uint32 use_count;
+	//irt_hw_id location;
+	void* data;
+} irt_data_block;
+
 typedef struct _irt_data_item {
 	irt_data_item_id id;
-	irt_type_id type_id; 
+	uint32 use_count;
+	irt_type_id type_id;
 	uint32 dimensions;
-	uint64 *sizes;				// should be stored after this position
+	irt_data_mode mode;
+	// range and sizes have as many entries as data_item has dimensions
+	uint64 *sizes;
+	irt_data_range* range;
+	// can be NULL if data item is abstract
+	irt_data_block* data_block;
  } irt_data_item;
 
 
 /* ------------------------------ operations ----- */
 
 irt_errcode irt_di_create(irt_type_id tid, uint32 dimensions, uint64* sizes, irt_data_item** out_di);
+irt_errcode irt_di_create_sub(irt_data_item_id parent, irt_data_range range, irt_data_item** out_di);
+irt_errcode irt_di_aquire(irt_data_item* di, irt_data_mode mode, void** out_data);
 irt_errcode irt_di_destroy(irt_data_item* di);
 
 
