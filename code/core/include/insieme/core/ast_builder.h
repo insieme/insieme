@@ -172,7 +172,7 @@ public:
 	/*
 	 * creates a function call from a list of expressions
 	 */
-	ExpressionPtr createCallExpr(StatementPtr body, TypePtr retTy) const;
+	ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy=false) const;
 
 	// Utilities
 private:

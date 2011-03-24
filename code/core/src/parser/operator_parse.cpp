@@ -142,7 +142,7 @@ CallExprPtr getLazyOperation(NodeManager& nodeMan, const lang::BasicGenerator* g
     ExpressionPtr A = aType == nodeMan.basic.getBool() ? a : builder.castExpr(nodeMan.basic.getBool(), a);
     ExpressionPtr B = bType == nodeMan.basic.getBool() ? b : builder.castExpr(nodeMan.basic.getBool(), b);
 
-    return builder.callExpr(aType, generator->getOperator(aType, op), a, builder.createCallExpr(builder.returnStmt(b), nodeMan.basic.getBool()));
+    return builder.callExpr(aType, generator->getOperator(aType, op), a, builder.createCallExprFromBody(builder.returnStmt(b), nodeMan.basic.getBool(), true));
 }
 
 CallExprPtr getBoolOperation(NodeManager& nodeMan, const lang::BasicGenerator* generator, const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b) {

@@ -741,9 +741,7 @@ public:
 			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs,
 					(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs)) )
 				);
-			core::ExpressionPtr&& lambdaExpr = builder.createCallExpr(body, rhs->getType());
-			// create a CallExpression
-			return builder.callExpr(lambdaExpr, ExpressionList());
+			return builder.createCallExprFromBody(body, rhs->getType());
 		}
 
 		// the type of this expression is the type of the LHS expression
@@ -880,7 +878,7 @@ public:
 			}
 			// lazy evaluation of RHS
 			exprTy = gen.getBool();
-			rhs = builder.createCallExpr(builder.returnStmt(rhs), gen.getBool());
+			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
 
 		if( !isAssignment ) {
@@ -1060,8 +1058,8 @@ public:
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
 				condExpr,	// Condition
-				builder.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy ), // True
-				builder.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy ) // False
+				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy, true ), // True
+				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy, true ) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node

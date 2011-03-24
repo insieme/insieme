@@ -345,13 +345,13 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
 }
 
-core::ExpressionPtr ASTBuilder::createCallExpr(StatementPtr body, TypePtr retTy) const {
+core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
 	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
 
     core::TypeList argsType;
     core::Lambda::ParamList params;
-    vector<ExpressionPtr> bindArgs;
+    vector<ExpressionPtr> callArgs;
 
     std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
             assert(curr->getNodeType() == core::NT_Variable);
@@ -362,7 +362,7 @@ core::ExpressionPtr ASTBuilder::createCallExpr(StatementPtr body, TypePtr retTy)
             // we create a new variable to replace the captured variable
             core::VariablePtr&& parmVar = this->variable( varType );
             argsType.push_back( varType );
-            bindArgs.push_back(curr);
+            callArgs.push_back(curr);
             params.push_back( parmVar );
             // we have to replace the variable of the body with the newly created parmVar
             body = core::static_pointer_cast<const core::Statement>(
@@ -371,12 +371,13 @@ core::ExpressionPtr ASTBuilder::createCallExpr(StatementPtr body, TypePtr retTy)
         }
     );
 
-    core::FunctionTypePtr&& funcType = functionType( argsType, retTy );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy ), params, body );
+    core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
+
+    if ( !lazy ) 	return callExpr;
 
     // build the expression body
-    return bindExpr(std::vector<VariablePtr>(),
-    				callExpr(retTy, lambdaExpr(funcType , body, core::Lambda::CaptureList(), params ), bindArgs)
-    			);
+    return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
 // ---------------------------- Utilities ---------------------------------------
