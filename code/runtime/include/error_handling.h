@@ -42,7 +42,6 @@
 
 #define irt_errcode uint32;
 
-
 /* ------------------------------ operations ----- */
 
 #define IRT_ERRCHECK(_arg) _arg

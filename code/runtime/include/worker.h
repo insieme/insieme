@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <types.h>
+#include "irt_inttypes.h"
 
 #include "id_generation.h"
 
@@ -49,8 +49,8 @@ IRT_MAKE_ID_TYPE(irt_worker);
 typedef struct _irt_worker {
 	irt_worker_id id;
 	irt_affinity_mask affinity;
-	irt_work_pool *pool;
-	irt_work_queue *queue;
+//	irt_work_pool *pool;
+//	irt_work_queue *queue;
 } irt_worker;
 
 /* ------------------------------ operations ----- */
