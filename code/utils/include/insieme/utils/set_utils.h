@@ -61,60 +61,21 @@ template<class Ptr>
 class PointerMultiSet : public boost::unordered_multiset<Ptr, hash_target<Ptr>, equal_target<Ptr>> { };
 
 /**
- * Creates a set containing no elements.
+ * The base case for the toSet template function creating an empty set.
  */
-template<typename Set, typename Element>
+template<typename Set>
 inline Set toSet() {
 	return Set();
 }
 
 /**
- * Create a set containing a single element.
+ * A function capable of converting an abitrary number of elements into a set containing
+ * the given list of arguments.
  */
-template<typename Set, typename T>
-inline Set toSet(const T& a) {
-	Set res = toSet<Set,T>();
-	res.insert(a);
-	return res;
-}
-
-/**
- * Create a set containing two elements.
- */
-template<typename Set, typename T>
-inline Set toSet(const T& a, const T& b) {
-	Set res = toSet<Set>(a);
-	res.insert(b);
-	return res;
-}
-
-/**
- * Create a set containing three elements.
- */
-template<typename Set, typename T>
-inline Set toSet(const T& a, const T& b, const T& c) {
-	Set res = toSet<Set>(a,b);
-	res.insert(c);
-	return res;
-}
-
-/**
- * Create a set containing four elements.
- */
-template<typename Set, typename T>
-inline Set toSet(const T& a, const T& b, const T& c, const T& d) {
-	Set res = toSet<Set>(a,b,c);
-	res.insert(d);
-	return res;
-}
-
-/**
- * Create a set containing five elements.
- */
-template<typename Set, typename T>
-inline Set toSet(const T& a, const T& b, const T& c, const T& d, const T& e) {
-	Set res = toSet<Set>(a,b,c,d);
-	res.insert(e);
+template<typename Set, typename Element, typename ... Elements>
+inline Set toSet(const Element& first, const Elements& ... rest) {
+	auto res = toSet<Set>(rest...);
+	res.insert(first);
 	return res;
 }
 

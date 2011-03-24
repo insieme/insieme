@@ -119,6 +119,11 @@ Node::ChildList toList(const vector<T>& list) {
 	return res;
 }
 
+bool equalChildLists(const Node::ChildList& listA, const Node::ChildList& listB) {
+	return equals(listA, listB, equal_target<insieme::core::NodePtr>());
+}
+
+
 template<typename NP>
 void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()) {
 
@@ -129,7 +134,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	// ------------ Node Ptr based tests -------------
 
 	// check children
-	EXPECT_TRUE ( equals(children, node->getChildList(), equal_target<insieme::core::NodePtr>()) );
+	EXPECT_PRED2(equalChildLists, children, node->getChildList());
 
 	// ------------ Annotation Tests -------------
 
